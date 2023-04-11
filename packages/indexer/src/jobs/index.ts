@@ -2,8 +2,6 @@
 
 // Initialize all background job queues and crons
 
-import "@/jobs/arweave-relay";
-import "@/jobs/arweave-sync";
 import "@/jobs/backfill";
 import "@/jobs/bid-updates";
 import "@/jobs/cache-check";
@@ -25,16 +23,18 @@ import "@/jobs/token-updates";
 import "@/jobs/update-attribute";
 import "@/jobs/websocket-events";
 import "@/jobs/metrics";
+import "@/jobs/opensea-orders";
 
 // Export all job queues for monitoring through the BullMQ UI
 
 import * as fixActivitiesMissingCollection from "@/jobs/activities/fix-activities-missing-collection";
 import * as processActivityEvent from "@/jobs/activities/process-activity-event";
+import * as processActivityBackfillEvent from "@/jobs/activities/process-activity-event-backfill";
 import * as removeUnsyncedEventsActivities from "@/jobs/activities/remove-unsynced-events-activities";
 
-import * as arweaveSyncBackfill from "@/jobs/arweave-sync/backfill-queue";
-import * as arweaveSyncRealtime from "@/jobs/arweave-sync/realtime-queue";
-
+import * as backfillCancelSeaport11Orders from "@/jobs/backfill/backfill-cancel-seaport-v11-orders";
+import * as backfillInvalidatedOrders from "@/jobs/backfill/backfill-invalidated-orders";
+import * as backfillExpiredOrders from "@/jobs/backfill/backfill-expired-orders";
 import * as backfillFoundationSales from "@/jobs/backfill/backfill-foundation-sales";
 import * as backfillMints from "@/jobs/backfill/backfill-mints";
 import * as backfillSaleRoyalties from "@/jobs/backfill/backfill-sale-royalties";
@@ -62,6 +62,7 @@ import * as updateCollectionDailyVolume from "@/jobs/collection-updates/update-c
 import * as currencies from "@/jobs/currencies/index";
 
 import * as dailyVolumes from "@/jobs/daily-volumes/daily-volumes";
+import * as oneDayVolumes from "@/jobs/daily-volumes/1day-volumes";
 
 import * as exportData from "@/jobs/data-export/export-data";
 
@@ -125,9 +126,13 @@ import * as resyncAttributeKeyCounts from "@/jobs/update-attribute/resync-attrib
 import * as resyncAttributeValueCounts from "@/jobs/update-attribute/resync-attribute-value-counts";
 import * as updateAttributeCounts from "@/jobs/update-attribute/update-attribute-counts";
 
-import * as websocketEventsTriggerQueue from "@/jobs/websocket-events/trigger-queue";
-
+import * as askWebsocketEventsTriggerQueue from "@/jobs/websocket-events/ask-websocket-events-trigger-queue";
+import * as bidWebsocketEventsTriggerQueue from "@/jobs/websocket-events/bid-websocket-events-trigger-queue";
+import * as newTopBidTriggerQueue from "@/jobs/websocket-events/new-top-bid-trigger-queue";
 import * as countApiUsage from "@/jobs/metrics/count-api-usage";
+
+import * as openseaOrdersProcessQueue from "@/jobs/opensea-orders/process-queue";
+import * as openseaOrdersFetchQueue from "@/jobs/opensea-orders/fetch-queue";
 
 export const gracefulShutdownJobWorkers = [
   orderUpdatesById.worker,
@@ -144,11 +149,12 @@ export const gracefulShutdownJobWorkers = [
 export const allJobQueues = [
   fixActivitiesMissingCollection.queue,
   processActivityEvent.queue,
+  processActivityBackfillEvent.queue,
   removeUnsyncedEventsActivities.queue,
 
-  arweaveSyncBackfill.queue,
-  arweaveSyncRealtime.queue,
-
+  backfillCancelSeaport11Orders.queue,
+  backfillInvalidatedOrders.queue,
+  backfillExpiredOrders.queue,
   backfillFoundationSales.queue,
   backfillMints.queue,
   backfillSaleRoyalties.queue,
@@ -177,6 +183,7 @@ export const allJobQueues = [
   updateCollectionDailyVolume.queue,
 
   dailyVolumes.queue,
+  oneDayVolumes.queue,
 
   exportData.queue,
 
@@ -240,7 +247,12 @@ export const allJobQueues = [
   resyncAttributeValueCounts.queue,
   updateAttributeCounts.queue,
 
-  websocketEventsTriggerQueue.queue,
+  askWebsocketEventsTriggerQueue.queue,
+  bidWebsocketEventsTriggerQueue.queue,
+  newTopBidTriggerQueue.queue,
 
   countApiUsage.queue,
+
+  openseaOrdersProcessQueue.queue,
+  openseaOrdersFetchQueue.queue,
 ];

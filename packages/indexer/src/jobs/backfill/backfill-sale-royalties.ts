@@ -171,8 +171,8 @@ if (config.doBackgroundWork) {
 
       const traces = await fetchTransactionTraces(
         Object.keys(fillEventsPerTxHash),
-        process.env.BACKFILL_HTTP_NETWORK_URL
-          ? new StaticJsonRpcProvider(process.env.BACKFILL_HTTP_NETWORK_URL, config.chainId)
+        process.env.BACKFILL_NETWORK_HTTP_URL
+          ? new StaticJsonRpcProvider(process.env.BACKFILL_NETWORK_HTTP_URL, config.chainId)
           : undefined
       );
       await Promise.all(

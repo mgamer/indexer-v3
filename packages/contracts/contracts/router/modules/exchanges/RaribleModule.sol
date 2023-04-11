@@ -20,16 +20,24 @@ contract RaribleModule is BaseExchangeModule {
 
   // --- Fields ---
 
-  IRarible public constant EXCHANGE = IRarible(0x9757F2d2b135150BBeb65308D4a91804107cd8D6);
+  IRarible public immutable EXCHANGE;
 
-  address public constant TRANSFER_MANAGER = 0x4feE7B061C97C9c496b01DbcE9CDb10c02f0a0Be;
+  address public immutable TRANSFER_MANAGER;
 
   bytes4 public constant ERC721_INTERFACE = 0x80ac58cd;
   bytes4 public constant ERC1155_INTERFACE = 0xd9b67a26;
 
   // --- Constructor ---
 
-  constructor(address owner, address router) BaseModule(owner) BaseExchangeModule(router) {}
+  constructor(
+    address owner,
+    address router,
+    address exchange,
+    address transferManager
+  ) BaseModule(owner) BaseExchangeModule(router) {
+    EXCHANGE = IRarible(exchange);
+    TRANSFER_MANAGER = transferManager;
+  }
 
   // --- Fallback ---
 

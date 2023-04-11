@@ -8,6 +8,8 @@ import { logger } from "@/common/logger";
 import { JoiSale, getJoiSaleObject } from "@/common/joi";
 import { buildContinuation, fromBuffer, regex, splitContinuation, toBuffer } from "@/common/utils";
 import * as Boom from "@hapi/boom";
+import _ from "lodash";
+import { format, lastDayOfMonth, isSameMonth, addDays, isSameDay } from "date-fns";
 
 const version = "v1";
 
@@ -23,6 +25,17 @@ export const getSyncSalesV1Options: RouteOptions = {
   },
   validate: {
     query: Joi.object({
+      date: Joi.string()
+        .pattern(/^\d{4}-(0[1-9]|1[0-2])(-(0[1-9]|[12]\d|3[01]))?$/)
+        .description(
+          "Get sales for a given month and year or month, year and date, the format can be YYYY-MM or YYYY-MM-DD."
+        ),
+      contract: Joi.alternatives()
+        .try(
+          Joi.array().items(Joi.string().lowercase().pattern(regex.address)).max(20),
+          Joi.string().lowercase().pattern(regex.address)
+        )
+        .description("Array of contract. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"),
       continuation: Joi.string()
         .pattern(regex.base64)
         .description("Use continuation token to request next offset of items."),
@@ -45,6 +58,9 @@ export const getSyncSalesV1Options: RouteOptions = {
     const CACHE_TTL = 1000 * 60 * 60 * 24;
 
     let paginationFilter = "";
+    let contractFilter = "";
+    let dateFilter = "";
+    let hasDays = false;
 
     if (query.continuation) {
       const contArr = splitContinuation(query.continuation, /^(.+)_(.+)_(\d+)_(\d+)$/);
@@ -53,11 +69,44 @@ export const getSyncSalesV1Options: RouteOptions = {
         throw Boom.badRequest("Invalid continuation string used");
       }
 
-      (query as any).updatedAt = new Date(contArr[0]).toISOString();
+      (query as any).updatedAt = contArr[0];
       (query as any).txHash = toBuffer(contArr[1]);
       (query as any).logIndex = contArr[2];
       (query as any).batchIndex = contArr[3];
-      paginationFilter = ` AND (updated_at, tx_hash, log_index, batch_index) > ($/updatedAt/, $/txHash/, $/logIndex/, $/batchIndex/)`;
+      paginationFilter = ` AND (updated_at, tx_hash, log_index, batch_index) > (to_timestamp($/updatedAt/), $/txHash/, $/logIndex/, $/batchIndex/)`;
+    }
+
+    if (query.contract) {
+      if (!_.isArray(query.contract)) {
+        query.contract = [query.contract];
+      }
+
+      for (const contract of query.contract) {
+        const contractsFilter = `'${_.replace(contract, "0x", "\\x")}'`;
+
+        if (_.isUndefined((query as any).contractsFilter)) {
+          (query as any).contractsFilter = [];
+        }
+
+        (query as any).contractsFilter.push(contractsFilter);
+      }
+
+      (query as any).contractsFilter = _.join((query as any).contractsFilter, ",");
+      contractFilter = `fill_events_2.contract IN ($/contractsFilter:raw/)`;
+    }
+
+    if (query.date) {
+      hasDays = query.date.split("-").length === 3;
+      const fullStartDate = hasDays ? query.date : `${query.date}-01`;
+      (query as any).dateStart = `${fullStartDate} 00:00:00`;
+      if (hasDays) {
+        const endOfDay = addDays(new Date(query.dateStart), 1);
+        (query as any).dateEnd = format(endOfDay, "yyyy-MM-dd 00:00:00");
+      } else {
+        const endOfMonth = lastDayOfMonth(new Date(query.dateStart));
+        (query as any).dateEnd = format(addDays(endOfMonth, 1), "yyyy-MM-01");
+      }
+      dateFilter = `updated_at >= DATE($/dateStart/) AND updated_at < DATE($/dateEnd/)`;
     }
 
     try {
@@ -90,29 +139,54 @@ export const getSyncSalesV1Options: RouteOptions = {
             fill_events_2.royalty_fee_breakdown,
             fill_events_2.marketplace_fee_breakdown,
             fill_events_2.paid_full_royalty,
-            fill_events_2.updated_at,
-            fill_events_2.created_at
+            fill_events_2.created_at,
+            fill_events_2.is_deleted,
+            extract(epoch from updated_at) updated_ts
           FROM fill_events_2
             LEFT JOIN currencies
             ON fill_events_2.currency = currencies.contract
-            WHERE updated_at < NOW() - INTERVAL '5 minutes'
+            WHERE
+            ${dateFilter ? `${dateFilter}` : "TRUE"}
+            ${contractFilter ? `AND ${contractFilter}` : ""}
             ${paginationFilter}
             ORDER BY fill_events_2.updated_at ASC, fill_events_2.tx_hash ASC, fill_events_2.log_index ASC, fill_events_2.batch_index ASC
           LIMIT ${LIMIT};
       `;
 
       const rawResult = await redb.manyOrNone(baseQuery, query);
+      let continuation = null;
+      let continuationToken = null;
+      let cursor = null;
 
-      const continuationToken = buildContinuation(
-        rawResult[rawResult.length - 1].updated_at +
-          "_" +
-          fromBuffer(rawResult[rawResult.length - 1].tx_hash) +
-          "_" +
-          rawResult[rawResult.length - 1].log_index +
-          "_" +
-          rawResult[rawResult.length - 1].batch_index
-      );
-      const continuation = rawResult.length === LIMIT ? continuationToken : null;
+      if (rawResult.length > 0) {
+        continuationToken = buildContinuation(
+          rawResult[rawResult.length - 1].updated_ts +
+            "_" +
+            fromBuffer(rawResult[rawResult.length - 1].tx_hash) +
+            "_" +
+            rawResult[rawResult.length - 1].log_index +
+            "_" +
+            rawResult[rawResult.length - 1].batch_index
+        );
+        continuation = rawResult.length === LIMIT ? continuationToken : null;
+      }
+
+      if (!continuation) {
+        let isSameTimePeriod = true;
+        if (query.date) {
+          const currentDate = new Date();
+          if (hasDays) {
+            const date = new Date(`${query.date} 00:00:00`);
+            isSameTimePeriod = isSameDay(date, currentDate);
+          } else {
+            const monthDateStart = new Date(`${query.date}-01 00:00:00`);
+            isSameTimePeriod = isSameMonth(monthDateStart, currentDate);
+          }
+        }
+
+        cursor = isSameTimePeriod ? continuationToken : null;
+      }
+
       const result = rawResult.map(async (r) => {
         return await getJoiSaleObject({
           prices: {
@@ -147,15 +221,16 @@ export const getSyncSalesV1Options: RouteOptions = {
           txHash: r.tx_hash,
           logIndex: r.log_index,
           batchIndex: r.batch_index,
+          isDeleted: Boolean(r.is_deleted),
           createdAt: new Date(r.created_at).toISOString(),
-          updatedAt: new Date(r.updated_at).toISOString(),
+          updatedAt: new Date(r.updated_ts * 1000).toISOString(),
         });
       });
 
       const response = h.response({
         sales: await Promise.all(result),
         continuation,
-        cursor: !continuation ? continuationToken : null,
+        cursor,
       });
 
       if (rawResult.length === LIMIT) {

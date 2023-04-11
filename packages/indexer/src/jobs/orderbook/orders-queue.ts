@@ -60,120 +60,106 @@ export type GenericOrderInfo =
   | {
       kind: "looks-rare";
       info: orders.looksRare.OrderInfo;
-      relayToArweave?: boolean;
       validateBidValue?: boolean;
     }
   | {
       kind: "zeroex-v4";
       info: orders.zeroExV4.OrderInfo;
-      relayToArweave?: boolean;
       validateBidValue?: boolean;
     }
   | {
       kind: "foundation";
       info: orders.foundation.OrderInfo;
-      relayToArweave?: boolean;
       validateBidValue?: boolean;
     }
   | {
       kind: "x2y2";
       info: orders.x2y2.OrderInfo;
-      relayToArweave?: boolean;
       validateBidValue?: boolean;
     }
   | {
       kind: "seaport";
       info: orders.seaport.OrderInfo;
-      relayToArweave?: boolean;
       validateBidValue?: boolean;
     }
   | {
       kind: "seaport-v1.4";
       info: orders.seaportV14.OrderInfo;
-      relayToArweave?: boolean;
       validateBidValue?: boolean;
     }
   | {
       kind: "cryptopunks";
       info: orders.cryptopunks.OrderInfo;
-      relayToArweave?: boolean;
       validateBidValue?: boolean;
     }
   | {
       kind: "zora-v3";
       info: orders.zora.OrderInfo;
-      relayToArweave?: boolean;
       validateBidValue?: boolean;
     }
   | {
       kind: "sudoswap";
       info: orders.sudoswap.OrderInfo;
-      relayToArweave?: boolean;
       validateBidValue?: boolean;
     }
   | {
       kind: "universe";
       info: orders.universe.OrderInfo;
-      relayToArweave?: boolean;
       validateBidValue?: boolean;
     }
   | {
       kind: "rarible";
       info: orders.rarible.OrderInfo;
-      relayToArweave?: boolean;
       validateBidValue?: boolean;
     }
   | {
       kind: "forward";
       info: orders.forward.OrderInfo;
-      relayToArweave?: boolean;
-      validateBidValue?: boolean;
-    }
-  | {
-      kind: "infinity";
-      info: orders.infinity.OrderInfo;
-      relayToArweave?: boolean;
       validateBidValue?: boolean;
     }
   | {
       kind: "flow";
       info: orders.flow.OrderInfo;
-      relayToArweave?: boolean;
       validateBidValue?: boolean;
     }
   | {
       kind: "blur";
-      info: orders.blur.OrderInfo;
-      relayToArweave?: boolean;
+      info: orders.blur.ListingOrderInfo;
+      validateBidValue?: boolean;
+    }
+  | {
+      kind: "blur-bid";
+      info: orders.blur.BidOrderInfo;
       validateBidValue?: boolean;
     }
   | {
       kind: "manifold";
       info: orders.manifold.OrderInfo;
-      relayToArweave?: boolean;
       validateBidValue?: boolean;
     }
   | {
       kind: "element";
       info: orders.element.OrderInfo;
-      relayToArweave?: boolean;
       validateBidValue?: boolean;
     }
   | {
       kind: "nftx";
       info: orders.nftx.OrderInfo;
-      relayToArweave?: boolean;
       validateBidValue?: boolean;
     }
   | {
       kind: "superrare";
       info: orders.superrare.OrderInfo;
-      relayToArweave?: boolean;
+      validateBidValue?: boolean;
+    }
+  | {
+      kind: "looks-rare-v2";
+      info: orders.looksRareV2.OrderInfo;
       validateBidValue?: boolean;
     };
 
 export const jobProcessor = async (job: Job) => {
-  const { kind, info, relayToArweave, validateBidValue } = job.data as GenericOrderInfo;
+  const { kind, info, validateBidValue } = job.data as GenericOrderInfo;
 
   let result: { status: string; delay?: number }[] = [];
   try {
@@ -209,17 +195,17 @@ export const jobProcessor = async (job: Job) => {
       }
 
       case "looks-rare": {
-        result = await orders.looksRare.save([info], relayToArweave);
+        result = await orders.looksRare.save([info]);
         break;
       }
 
       case "seaport": {
-        result = await orders.seaport.save([info], relayToArweave, validateBidValue);
+        result = await orders.seaport.save([info], validateBidValue);
         break;
       }
 
       case "seaport-v1.4": {
-        result = await orders.seaportV14.save([info], relayToArweave, validateBidValue);
+        result = await orders.seaportV14.save([info], validateBidValue);
         break;
       }
 
@@ -229,7 +215,7 @@ export const jobProcessor = async (job: Job) => {
       }
 
       case "zeroex-v4": {
-        result = await orders.zeroExV4.save([info], relayToArweave);
+        result = await orders.zeroExV4.save([info]);
         break;
       }
 
@@ -239,22 +225,22 @@ export const jobProcessor = async (job: Job) => {
       }
 
       case "rarible": {
-        result = await orders.rarible.save([info], relayToArweave);
-        break;
-      }
-
-      case "infinity": {
-        result = await orders.infinity.save([info], relayToArweave);
+        result = await orders.rarible.save([info]);
         break;
       }
 
       case "flow": {
-        result = await orders.flow.save([info], relayToArweave);
+        result = await orders.flow.save([info]);
         break;
       }
 
       case "blur": {
-        result = await orders.blur.save([info], relayToArweave);
+        result = await orders.blur.saveListings([info]);
+        break;
+      }
+
+      case "blur-bid": {
+        result = await orders.blur.saveBids([info]);
         break;
       }
 
@@ -270,6 +256,11 @@ export const jobProcessor = async (job: Job) => {
 
       case "superrare": {
         result = await orders.superrare.save([info]);
+        break;
+      }
+
+      case "looks-rare-v2": {
+        result = await orders.looksRareV2.save([info]);
         break;
       }
     }

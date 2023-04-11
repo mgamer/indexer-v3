@@ -137,6 +137,10 @@ export const getOrdersAsksV4Options: RouteOptions = {
         .max(1000)
         .default(50)
         .description("Amount of items returned in response."),
+      displayCurrency: Joi.string()
+        .lowercase()
+        .pattern(regex.address)
+        .description("Return result in given currency"),
     })
       .oxor("token", "tokenSetId")
       .with("community", "maker")
@@ -532,7 +536,8 @@ export const getOrdersAsksV4Options: RouteOptions = {
               ? fromBuffer(r.currency)
               : r.side === "sell"
               ? Sdk.Common.Addresses.Eth[config.chainId]
-              : Sdk.Common.Addresses.Weth[config.chainId]
+              : Sdk.Common.Addresses.Weth[config.chainId],
+            query.displayCurrency
           ),
           validFrom: Number(r.valid_from),
           validUntil: Number(r.valid_until),

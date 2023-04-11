@@ -14,15 +14,20 @@ import {INFTXMarketplaceZap} from "../../../interfaces/INFTX.sol";
 contract NFTXModule is BaseExchangeModule {
   // --- Fields ---
 
-  INFTXMarketplaceZap public constant NFTX_MARKETPLACE =
-    INFTXMarketplaceZap(0x0fc584529a2AEfA997697FAfAcbA5831faC0c22d);
+  INFTXMarketplaceZap public immutable NFTX_MARKETPLACE;
 
   bytes4 public constant ERC721_INTERFACE = 0x80ac58cd;
   bytes4 public constant ERC1155_INTERFACE = 0xd9b67a26;
 
   // --- Constructor ---
 
-  constructor(address owner, address router) BaseModule(owner) BaseExchangeModule(router) {}
+  constructor(
+    address owner,
+    address router,
+    address nftxMarketplace
+  ) BaseModule(owner) BaseExchangeModule(router) {
+    NFTX_MARKETPLACE = INFTXMarketplaceZap(nftxMarketplace);
+  }
 
   // --- Fallback ---
 

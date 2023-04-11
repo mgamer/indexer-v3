@@ -1,12 +1,14 @@
 import { Queue, QueueScheduler, Worker } from "bullmq";
+import _ from "lodash";
 import cron from "node-cron";
 
-import { idb } from "@/common/db";
+import { hdb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { redis, redlock } from "@/common/redis";
 import { now } from "@/common/utils";
 import { config } from "@/config/index";
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
+import * as backfillExpiredOrders from "@/jobs/backfill/backfill-expired-orders";
 
 const QUEUE_NAME = "expired-orders";
 
@@ -27,14 +29,25 @@ export let worker: Worker | undefined;
 
 new QueueScheduler(QUEUE_NAME, { connection: redis.duplicate() });
 
-// BACKGROUND WORKER ONLY
-if (config.doBackgroundWork) {
+// BACKGROUND WORKER AND MASTER ONLY
+if (config.doBackgroundWork && config.master) {
+  const intervalInSeconds = 5;
+
   worker = new Worker(
     QUEUE_NAME,
     async () => {
       logger.info(QUEUE_NAME, "Invalidating expired orders");
 
-      const expiredOrders: { id: string }[] = await idb.manyOrNone(
+      // Update the expired orders second by second
+      const currentTime = now();
+      await backfillExpiredOrders.addToQueue(
+        _.range(0, intervalInSeconds).map((s) => currentTime - s)
+      );
+
+      // As a safety mechanism, update any left expired orders
+
+      // Use `hdb` for lower timeouts (to avoid long-running queries which can result in deadlocks)
+      const expiredOrders: { id: string }[] = await hdb.manyOrNone(
         `
           WITH x AS (
             SELECT
@@ -43,7 +56,7 @@ if (config.doBackgroundWork) {
             FROM orders
             WHERE upper(orders.valid_between) < now()
               AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
-            LIMIT 2000
+            LIMIT 5000
           )
           UPDATE orders SET
             fillability_status = 'expired',
@@ -56,7 +69,6 @@ if (config.doBackgroundWork) {
       );
       logger.info(QUEUE_NAME, `Invalidated ${expiredOrders.length} orders`);
 
-      const currentTime = now();
       await orderUpdatesById.addToQueue(
         expiredOrders.map(
           ({ id }) =>
@@ -76,11 +88,10 @@ if (config.doBackgroundWork) {
 
   const addToQueue = async () => queue.add(QUEUE_NAME, {});
   cron.schedule(
-    // Every 5 seconds
-    "*/5 * * * * *",
+    `*/${intervalInSeconds} * * * * *`,
     async () =>
       await redlock
-        .acquire(["expired-orders-check-lock"], (5 - 3) * 1000)
+        .acquire(["expired-orders-check-lock"], (intervalInSeconds - 3) * 1000)
         .then(async () => {
           logger.info(QUEUE_NAME, "Triggering expired orders check");
           await addToQueue();

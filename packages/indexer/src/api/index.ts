@@ -24,8 +24,6 @@ import * as countApiUsage from "@/jobs/metrics/count-api-usage";
 
 let server: Hapi.Server;
 
-export const inject = (options: Hapi.ServerInjectOptions) => server.inject(options);
-
 export const start = async (): Promise<void> => {
   server = Hapi.server({
     port: config.port,
@@ -204,18 +202,18 @@ export const start = async (): Promise<void> => {
         _.isUndefined(key) || _.isEmpty(key) || _.isNull(apiKey) ? remoteAddress : key; // If no api key or the api key is invalid use IP
 
       try {
+        if (key && tier) {
+          request.pre.metrics = {
+            apiKey: key,
+            route: request.route.path,
+            points: 1,
+            timestamp: _.now(),
+          };
+        }
+
         const rateLimiterRes = await rateLimitRule.consume(rateLimitKey, 1);
 
         if (rateLimiterRes) {
-          if (key && tier) {
-            request.pre.metrics = {
-              apiKey: key,
-              route: request.route.path,
-              points: 1,
-              timestamp: _.now(),
-            };
-          }
-
           // Generate the rate limiting header and add them to the request object to be added to the response in the onPreResponse event
           request.headers["X-RateLimit-Limit"] = `${rateLimitRule.points}`;
           request.headers["X-RateLimit-Remaining"] = `${rateLimiterRes.remainingPoints}`;
@@ -278,6 +276,10 @@ export const start = async (): Promise<void> => {
 
     // Set custom response in case of timeout
     if ("isBoom" in response && "output" in response) {
+      if (response["output"]["statusCode"] >= 500) {
+        ApiKeyManager.logUnexpectedErrorResponse(request, response);
+      }
+
       if (response["output"]["statusCode"] == 503) {
         const timeoutResponse = {
           statusCode: 504,
@@ -286,10 +288,6 @@ export const start = async (): Promise<void> => {
         };
 
         return reply.response(timeoutResponse).type("application/json").code(504);
-      }
-
-      if (response["output"]["statusCode"] >= 500) {
-        ApiKeyManager.logUnexpectedErrorResponse(request, response);
       }
     }
 
@@ -323,3 +321,5 @@ export const start = async (): Promise<void> => {
   await server.start();
   logger.info("process", `Started on port ${config.port}`);
 };
+
+export const inject = (options: Hapi.ServerInjectOptions) => server.inject(options);

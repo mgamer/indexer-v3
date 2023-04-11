@@ -32,7 +32,6 @@ addPlatformAddress("wyvern-v2", [
 addPlatformAddress("looks-rare", ["0x5924a28caaf1cc016617874a2f0c3710d881f3c1"]);
 addPlatformAddress("x2y2", [Sdk.X2Y2.Addresses.FeeManager[config.chainId]]);
 addPlatformAddress("foundation", ["0x67df244584b67e8c51b10ad610aaffa9a402fdb6"]);
-addPlatformAddress("infinity", [Sdk.Infinity.Addresses.Exchange[config.chainId]]);
 addPlatformAddress("superrare", [Sdk.SuperRare.Addresses.Treasury[config.chainId]]);
 addPlatformAddress("sudoswap", [
   "0x4e2f98c96e2d595a83afa35888c4af58ac343e44",
@@ -46,7 +45,7 @@ addPlatformAddress("bend-dao", [
 // List of supported exchanges
 export const supportedExchanges: Map<OrderKind, string> = new Map();
 supportedExchanges.set("blur", Sdk.Blur.Addresses.Exchange[config.chainId]);
-supportedExchanges.set("seaport", Sdk.Seaport.Addresses.Exchange[config.chainId]);
+supportedExchanges.set("seaport", Sdk.SeaportV11.Addresses.Exchange[config.chainId]);
 supportedExchanges.set("seaport-v1.4", Sdk.SeaportV14.Addresses.Exchange[config.chainId]);
 supportedExchanges.set("x2y2", Sdk.X2Y2.Addresses.Exchange[config.chainId]);
 supportedExchanges.set("looks-rare", Sdk.LooksRare.Addresses.Exchange[config.chainId]);

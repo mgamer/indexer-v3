@@ -5,7 +5,7 @@ import Joi from "joi";
 
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
-import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
+import { formatEth, fromBuffer, regex, toBuffer } from "@/common/utils";
 import { CollectionSets } from "@/models/collection-sets";
 import { Assets } from "@/utils/assets";
 import { Sources } from "@/models/sources";
@@ -63,6 +63,10 @@ export const getUserCollectionsV3Options: RouteOptions = {
         .max(100)
         .default(20)
         .description("Amount of items returned in response."),
+      displayCurrency: Joi.string()
+        .lowercase()
+        .pattern(regex.address)
+        .description("Return result in given currency"),
     }),
   },
   response: {
@@ -166,6 +170,19 @@ export const getUserCollectionsV3Options: RouteOptions = {
               AND amount > 0
             ORDER BY last_token_appraisal_value DESC NULLS LAST
             LIMIT 10000
+        ),
+        token_images AS (
+            SELECT tokens.collection_id, tokens.image,
+                  ROW_NUMBER() OVER (PARTITION BY tokens.collection_id ORDER BY tokens.token_id) AS image_row_num
+            FROM nbsample
+            JOIN tokens ON nbsample.contract = tokens.contract AND nbsample.token_id = tokens.token_id
+            WHERE tokens.image IS NOT NULL
+        ),
+        filtered_token_images AS (
+            SELECT collection_id, array_agg(image) AS images
+            FROM token_images
+            WHERE image_row_num <= 4
+            GROUP BY collection_id
         )
         SELECT  collections.id,
                 collections.slug,
@@ -179,14 +196,7 @@ export const getUserCollectionsV3Options: RouteOptions = {
                 collections.contract,
                 collections.token_set_id,
                 collections.token_count,
-                (
-                  SELECT array(
-                    SELECT tokens.image FROM tokens
-                    WHERE tokens.collection_id = collections.id
-                    AND tokens.image IS NOT NULL
-                    LIMIT 4
-                  )
-                ) AS sample_images,
+                filtered_token_images.images AS sample_images,
                 collections.day1_volume,
                 collections.day7_volume,
                 collections.day30_volume,
@@ -213,6 +223,7 @@ export const getUserCollectionsV3Options: RouteOptions = {
         JOIN tokens ON nbsample.contract = tokens.contract AND nbsample.token_id = tokens.token_id
         ${liquidCount}
         JOIN collections ON tokens.collection_id = collections.id
+        LEFT JOIN filtered_token_images ON collections.id = filtered_token_images.collection_id
       `;
 
       // Filters
@@ -241,7 +252,7 @@ export const getUserCollectionsV3Options: RouteOptions = {
       }
 
       // Grouping
-      baseQuery += ` GROUP BY collections.id, nbsample.owner`;
+      baseQuery += ` GROUP BY collections.id, nbsample.owner, filtered_token_images.images`;
 
       // Sorting
       baseQuery += ` ORDER BY collections.all_time_volume DESC`;
@@ -284,7 +295,6 @@ export const getUserCollectionsV3Options: RouteOptions = {
       `;
 
       const result = await redb.manyOrNone(baseQuery, { ...params, ...query });
-
       const sources = await Sources.getInstance();
 
       const collections = _.map(result, async (r) => {
@@ -313,7 +323,8 @@ export const getUserCollectionsV3Options: RouteOptions = {
                       nativeAmount: String(r.floor_sell_value),
                     },
                   },
-                  fromBuffer(r.floor_sell_currency)
+                  fromBuffer(r.floor_sell_currency),
+                  query.displayCurrency
                 )
               : undefined,
             rank: {
@@ -357,7 +368,8 @@ export const getUserCollectionsV3Options: RouteOptions = {
                     nativeAmount: String(r.top_buy_value),
                   },
                 },
-                fromBuffer(r.top_buy_currency)
+                fromBuffer(r.top_buy_currency),
+                query.displayCurrency
               )
             : undefined;
 

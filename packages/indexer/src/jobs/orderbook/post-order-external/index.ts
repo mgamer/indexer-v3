@@ -13,18 +13,19 @@ import * as OpenSeaApi from "@/jobs/orderbook/post-order-external/api/opensea";
 import * as LooksrareApi from "@/jobs/orderbook/post-order-external/api/looksrare";
 import * as X2Y2Api from "@/jobs/orderbook/post-order-external/api/x2y2";
 import * as UniverseApi from "@/jobs/orderbook/post-order-external/api/universe";
-import * as InfinityApi from "@/jobs/orderbook/post-order-external/api/infinity";
 import * as FlowApi from "@/jobs/orderbook/post-order-external/api/flow";
 
 import {
-  RequestWasThrottledError,
   InvalidRequestError,
+  InvalidRequestErrorKind,
+  RequestWasThrottledError,
 } from "@/jobs/orderbook/post-order-external/api/errors";
 import { redb } from "@/common/db";
 import { RateLimiterRedis, RateLimiterRes } from "rate-limiter-flexible";
 import * as crossPostingOrdersModel from "@/models/cross-posting-orders";
 import { CrossPostingOrderStatus } from "@/models/cross-posting-orders";
 import { TSTAttribute, TSTCollection, TSTCollectionNonFlagged } from "@/orderbook/token-sets/utils";
+import * as collectionUpdatesMetadata from "@/jobs/collection-updates/metadata-queue";
 
 const QUEUE_NAME = "orderbook-post-order-external-queue";
 const MAX_RETRIES = 5;
@@ -47,23 +48,16 @@ if (config.doBackgroundWork) {
       const { crossPostingOrderId, orderId, orderData, orderSchema, orderbook } =
         job.data as PostOrderExternalParams;
 
-      logger.info(QUEUE_NAME, `Start. jobData=${JSON.stringify(job.data)}`);
+      if (!["blur", "opensea", "looks-rare", "x2y2", "universe", "flow"].includes(orderbook)) {
+        if (crossPostingOrderId) {
+          await crossPostingOrdersModel.updateOrderStatus(
+            crossPostingOrderId,
+            CrossPostingOrderStatus.failed,
+            "Unsupported orderbook"
+          );
+        }
 
-      if (![1, 4, 5].includes(config.chainId)) {
-        throw new Error("Unsupported network");
-      }
-
-      if (
-        !["blur", "opensea", "looks-rare", "x2y2", "universe", "infinity", "flow"].includes(
-          orderbook
-        )
-      ) {
         throw new Error("Unsupported orderbook");
-      }
-
-      // TODO: Remove after deployment
-      if (job.data.orderbookApiKey === null) {
-        delete job.data.orderbookApiKey;
       }
 
       const orderbookApiKey = job.data.orderbookApiKey ?? getOrderbookDefaultApiKey(orderbook);
@@ -86,11 +80,11 @@ if (config.doBackgroundWork) {
 
       if (isRateLimited) {
         // If limit reached, reschedule job based on the limit expiration.
-        logger.info(
+        logger.debug(
           QUEUE_NAME,
           `Post Order Rate Limited. orderbook=${orderbook}, crossPostingOrderId=${crossPostingOrderId}, orderId=${orderId}, orderData=${JSON.stringify(
             orderData
-          )}, rateLimitExpiration: ${rateLimitExpiration}, retry: ${retry}`
+          )}, rateLimitExpiration=${rateLimitExpiration}, retry=${retry}`
         );
 
         await addToQueue(job.data, rateLimitExpiration, true);
@@ -111,17 +105,10 @@ if (config.doBackgroundWork) {
               CrossPostingOrderStatus.posted
             );
           }
-
-          logger.info(
-            QUEUE_NAME,
-            `Post Order Success. orderbook=${orderbook}, crossPostingOrderId=${crossPostingOrderId}, orderId=${orderId}, orderData=${JSON.stringify(
-              orderData
-            )}, retry: ${retry}`
-          );
         } catch (error) {
           if (error instanceof RequestWasThrottledError) {
             // If we got throttled by the api, reschedule job based on the provided delay.
-            const delay = error.delay;
+            const delay = Math.max(error.delay, 5);
 
             try {
               await rateLimiter.block(rateLimiterKey, Math.floor(delay / 1000));
@@ -130,7 +117,7 @@ if (config.doBackgroundWork) {
                 QUEUE_NAME,
                 `Unable to set expiration. orderbook=${orderbook}, crossPostingOrderId=${crossPostingOrderId}, orderId=${orderId}, orderData=${JSON.stringify(
                   orderData
-                )}, retry: ${retry}, delay=${delay}, error: ${error}`
+                )}, retry=${retry}, delay=${delay}, error=${error}`
               );
             }
 
@@ -138,17 +125,17 @@ if (config.doBackgroundWork) {
 
             logger.info(
               QUEUE_NAME,
-              `Post Order Throttled. orderbook=${orderbook}, crossPostingOrderId=${crossPostingOrderId}, orderId=${orderId}, orderData=${JSON.stringify(
+              `Post Order Throttled. orderbook=${orderbook}, orderbookApiKey=${orderbookApiKey}, crossPostingOrderId=${crossPostingOrderId}, orderId=${orderId}, orderData=${JSON.stringify(
                 orderData
-              )}, delay: ${delay}, retry: ${retry}`
+              )}, delay=${delay}, retry=${retry}`
             );
           } else if (error instanceof InvalidRequestError) {
             // If the order is invalid, fail the job.
-            logger.error(
+            logger.info(
               QUEUE_NAME,
               `Post Order Failed - Invalid Order. orderbook=${orderbook}, crossPostingOrderId=${crossPostingOrderId}, orderId=${orderId}, orderData=${JSON.stringify(
                 orderData
-              )}, retry: ${retry}, error: ${error}`
+              )}, retry=${retry}, error=${error}`
             );
 
             if (crossPostingOrderId) {
@@ -157,6 +144,41 @@ if (config.doBackgroundWork) {
                 CrossPostingOrderStatus.failed,
                 error.message
               );
+            }
+
+            if ((error as InvalidRequestError).kind === InvalidRequestErrorKind.InvalidFees) {
+              // If fees are invalid, refresh the collection metadata to refresh the fees
+              const rawResult = await redb.oneOrNone(
+                `
+                SELECT
+                  tokens.contract,
+                  tokens.token_id,
+                  collections.id AS "collection_id",
+                  collections.community
+                FROM orders
+                JOIN token_sets_tokens ON orders.token_set_id = token_sets_tokens.token_set_id
+                JOIN tokens tokens on tokens.contract = token_sets_tokens.contract AND tokens.token_id = token_sets_tokens.token_id
+                JOIN collections ON collections.id = tokens.collection_id
+                WHERE orders.id = $/id/
+                LIMIT 1
+              `,
+                { id: orderId }
+              );
+
+              if (rawResult) {
+                logger.info(
+                  QUEUE_NAME,
+                  `Post Order Failed - Invalid Fees. orderbook=${orderbook}, crossPostingOrderId=${crossPostingOrderId}, orderId=${orderId}, orderData=${JSON.stringify(
+                    orderData
+                  )}, retry: ${retry}`
+                );
+
+                await collectionUpdatesMetadata.addToQueue(
+                  rawResult.contract,
+                  rawResult.token_id,
+                  rawResult.community
+                );
+              }
             }
           } else if (retry < MAX_RETRIES) {
             // If we got an unknown error from the api, reschedule job based on fixed delay.
@@ -171,11 +193,11 @@ if (config.doBackgroundWork) {
 
             await addToQueue(job.data, 1000, true);
           } else {
-            logger.error(
+            logger.info(
               QUEUE_NAME,
               `Post Order Failed - Max Retries Reached. orderbook${orderbook}, crossPostingOrderId=${crossPostingOrderId}, orderId=${orderId}, orderData=${JSON.stringify(
                 orderData
-              )}, retry: ${retry}, error: ${error}`
+              )}, retry=${retry}, error=${error}`
             );
 
             if (crossPostingOrderId) {
@@ -202,18 +224,14 @@ if (config.doBackgroundWork) {
 
 const getOrderbookDefaultApiKey = (orderbook: string) => {
   switch (orderbook) {
-    case "blur":
-      return config.orderFetcherApiKey;
     case "opensea":
-      return config.openSeaApiKey;
+      return config.openSeaCrossPostingApiKey;
     case "looks-rare":
       return config.looksRareApiKey;
     case "x2y2":
       return config.x2y2ApiKey;
     case "universe":
       return "";
-    case "infinity":
-      return config.infinityApiKey;
     case "flow":
       return config.flowApiKey;
   }
@@ -253,12 +271,6 @@ const getRateLimiter = (orderbook: string) => {
         points: UniverseApi.RATE_LIMIT_REQUEST_COUNT,
         duration: UniverseApi.RATE_LIMIT_INTERVAL,
       });
-    case "infinity":
-      return new RateLimiterRedis({
-        storeClient: rateLimitRedis,
-        points: InfinityApi.RATE_LIMIT_REQUEST_COUNT,
-        duration: InfinityApi.RATE_LIMIT_INTERVAL,
-      });
     case "flow":
       return new RateLimiterRedis({
         storeClient: rateLimitRedis,
@@ -281,16 +293,7 @@ const postOrder = async (
     case "opensea": {
       const order = new Sdk.SeaportV14.Order(
         config.chainId,
-        orderData as Sdk.SeaportV14.Types.OrderComponents
-      );
-
-      logger.info(
-        QUEUE_NAME,
-        `Post Order Seaport. orderbook=${orderbook}, orderId=${orderId}, orderSchema=${JSON.stringify(
-          orderSchema
-        )}, orderData=${JSON.stringify(orderData)}, side=${order.getInfo()?.side}, kind=${
-          order.params.kind
-        }`
+        orderData as Sdk.SeaportBase.Types.OrderComponents
       );
 
       if (
@@ -346,21 +349,13 @@ const postOrder = async (
       return X2Y2Api.postOrder(orderData as Sdk.X2Y2.Types.LocalOrder, orderbookApiKey);
     }
 
-    case "infinity": {
-      const order = new Sdk.Infinity.Order(
-        config.chainId,
-        orderData as Sdk.Infinity.Types.OrderInput
-      );
-      return InfinityApi.postOrders(order, orderbookApiKey);
-    }
-
     case "flow": {
       const order = new Sdk.Flow.Order(config.chainId, orderData as Sdk.Flow.Types.OrderInput);
       return FlowApi.postOrders(order, orderbookApiKey);
     }
 
     case "blur": {
-      return BlurApi.postOrder(orderData as BlurApi.BlurData, orderbookApiKey);
+      return BlurApi.postOrder(orderData as BlurApi.BlurData);
     }
   }
 
@@ -371,7 +366,7 @@ export type PostOrderExternalParams =
   | {
       crossPostingOrderId?: number;
       orderId: string;
-      orderData: Sdk.Seaport.Types.OrderComponents;
+      orderData: Sdk.SeaportBase.Types.OrderComponents;
       orderSchema?: TSTCollection | TSTCollectionNonFlagged | TSTAttribute;
       orderbook: "opensea";
       orderbookApiKey?: string | null;
@@ -401,15 +396,6 @@ export type PostOrderExternalParams =
       orderData: Sdk.Universe.Types.Order;
       orderSchema?: TSTCollection | TSTCollectionNonFlagged | TSTAttribute;
       orderbook: "universe";
-      orderbookApiKey?: string | null;
-      retry?: number;
-    }
-  | {
-      crossPostingOrderId: number;
-      orderId: string;
-      orderData: Sdk.Infinity.Types.OrderInput;
-      orderSchema?: TSTCollection | TSTCollectionNonFlagged | TSTAttribute;
-      orderbook: "infinity";
       orderbookApiKey?: string | null;
       retry?: number;
     }

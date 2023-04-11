@@ -3,9 +3,6 @@ import { BigNumberish } from "@ethersproject/bignumber";
 import * as Sdk from "../../index";
 import { TxData } from "../../utils";
 
-import * as UniswapPermit from "./permits/permit2";
-import * as SeaportPermit from "./permits/seaport";
-
 // Approvals and permits
 
 // NFTs
@@ -24,29 +21,14 @@ export type NFTApproval = {
   txData: TxData;
 };
 
-export type NFTPermit = {
-  tokens: NFTToken[];
-  details: {
-    kind: "seaport";
-    data: SeaportPermit.Data;
-  };
-};
-
 // FTs
 
 export type FTApproval = {
   currency: string;
+  amount: BigNumberish;
   owner: string;
   operator: string;
   txData: TxData;
-};
-
-export type FTPermit = {
-  currencies: string[];
-  details: {
-    kind: "permit2";
-    data: UniswapPermit.Data;
-  };
 };
 
 // Misc
@@ -83,11 +65,11 @@ export type GenericOrder =
     }
   | {
       kind: "seaport";
-      order: Sdk.Seaport.Order;
+      order: Sdk.SeaportV11.Order;
     }
   | {
       kind: "seaport-partial";
-      order: Sdk.Seaport.Types.PartialOrder;
+      order: Sdk.SeaportBase.Types.PartialOrder;
     }
   | {
       kind: "seaport-v1.4";
@@ -95,7 +77,7 @@ export type GenericOrder =
     }
   | {
       kind: "seaport-v1.4-partial";
-      order: Sdk.SeaportV14.Types.PartialOrder;
+      order: Sdk.SeaportBase.Types.PartialOrder;
     }
   | {
       kind: "cryptopunks";
@@ -122,10 +104,6 @@ export type GenericOrder =
       order: Sdk.Rarible.Order;
     }
   | {
-      kind: "infinity";
-      order: Sdk.Infinity.Order;
-    }
-  | {
       kind: "forward";
       order: Sdk.Forward.Order;
     }
@@ -148,6 +126,10 @@ export type GenericOrder =
   | {
       kind: "superrare";
       order: Sdk.SuperRare.Order;
+    }
+  | {
+      kind: "looks-rare-v2";
+      order: Sdk.LooksRareV2.Order;
     };
 
 // Listings
@@ -176,7 +158,6 @@ export type PerCurrencyListingDetails = {
 export type FillListingsResult = {
   txs: {
     approvals: FTApproval[];
-    permits: FTPermit[];
     txData: TxData;
     orderIds: string[];
   }[];
@@ -206,7 +187,6 @@ export type BidDetails = GenericOrder & BidFillDetails;
 export type FillBidsResult = {
   txData: TxData;
   approvals: NFTApproval[];
-  permits: NFTPermit[];
   success: boolean[];
 };
 

@@ -23,11 +23,17 @@ contract ZoraModule is BaseExchangeModule {
 
   // --- Fields ---
 
-  IZora public constant EXCHANGE = IZora(0x6170B3C3A54C3d8c854934cBC314eD479b2B29A3);
+  IZora public immutable EXCHANGE;
 
   // --- Constructor ---
 
-  constructor(address owner, address router) BaseModule(owner) BaseExchangeModule(router) {}
+  constructor(
+    address owner,
+    address router,
+    address exchange
+  ) BaseModule(owner) BaseExchangeModule(router) {
+    EXCHANGE = IZora(exchange);
+  }
 
   // --- Fallback ---
 
@@ -126,11 +132,7 @@ contract ZoraModule is BaseExchangeModule {
 
   // --- Internal ---
 
-  function _buy(
-    Ask calldata ask,
-    address receiver,
-    bool revertIfIncomplete
-  ) internal {
+  function _buy(Ask calldata ask, address receiver, bool revertIfIncomplete) internal {
     // Execute fill
     try
       EXCHANGE.fillAsk{value: ask.currency == address(0) ? ask.amount : 0}(

@@ -7,8 +7,12 @@ import Joi from "joi";
 import { logger } from "@/common/logger";
 import { buildContinuation, fromBuffer, regex } from "@/common/utils";
 import { Activities } from "@/models/activities";
-import { Sources } from "@/models/sources";
-import { getJoiPriceObject, JoiOrderCriteria, JoiPrice } from "@/common/joi";
+import {
+  getJoiActivityOrderObject,
+  getJoiPriceObject,
+  JoiActivityOrder,
+  JoiPrice,
+} from "@/common/joi";
 
 const version = "v5";
 
@@ -28,6 +32,10 @@ export const getActivityV5Options: RouteOptions = {
         .description("If true, metadata is included in the response."),
       limit: Joi.number().integer().min(1).max(1000).default(20),
       continuation: Joi.string().pattern(regex.base64),
+      displayCurrency: Joi.string()
+        .lowercase()
+        .pattern(regex.address)
+        .description("Return result in given currency"),
       sortDirection: Joi.string()
         .lowercase()
         .valid("asc", "desc")
@@ -53,12 +61,7 @@ export const getActivityV5Options: RouteOptions = {
           txHash: Joi.string().lowercase().pattern(regex.bytes32).allow(null),
           logIndex: Joi.number().allow(null),
           batchIndex: Joi.number().allow(null),
-          order: Joi.object({
-            id: Joi.string().allow(null),
-            side: Joi.string().valid("ask", "bid").allow(null),
-            source: Joi.object().allow(null),
-            criteria: JoiOrderCriteria.allow(null),
-          }),
+          order: JoiActivityOrder,
         }).description("Amount of items returned in response.")
       ),
     }).label(`getActivity${version.toUpperCase()}Response`),
@@ -85,13 +88,7 @@ export const getActivityV5Options: RouteOptions = {
         return { activities: [] };
       }
 
-      const sources = await Sources.getInstance();
-
       const result = _.map(activities, async (activity) => {
-        const orderSource = activity.order?.sourceIdInt
-          ? sources.get(activity.order.sourceIdInt)
-          : undefined;
-
         return {
           id: Number(activity.id),
           type: activity.type,
@@ -108,7 +105,8 @@ export const getActivityV5Options: RouteOptions = {
                     nativeAmount: String(activity.price),
                   },
                 },
-                fromBuffer(activity.order.currency)
+                fromBuffer(activity.order.currency),
+                query.displayCurrency
               )
             : undefined,
           amount: activity.amount,
@@ -117,22 +115,12 @@ export const getActivityV5Options: RouteOptions = {
           logIndex: activity.metadata.logIndex,
           batchIndex: activity.metadata.batchIndex,
           order: activity.order?.id
-            ? {
+            ? await getJoiActivityOrderObject({
                 id: activity.order.id,
-                side: activity.order.side
-                  ? activity.order.side === "sell"
-                    ? "ask"
-                    : "bid"
-                  : undefined,
-                source: orderSource
-                  ? {
-                      domain: orderSource?.domain,
-                      name: orderSource?.getTitle(),
-                      icon: orderSource?.getIcon(),
-                    }
-                  : undefined,
+                side: activity.order.side,
+                sourceIdInt: activity.order.sourceIdInt,
                 criteria: activity.order.criteria,
-              }
+              })
             : undefined,
         };
       });

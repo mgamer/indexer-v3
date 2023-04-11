@@ -12,7 +12,6 @@ import * as element from "@/events-sync/data/element";
 import * as flow from "@/events-sync/data/flow";
 import * as forward from "@/events-sync/data/forward";
 import * as foundation from "@/events-sync/data/foundation";
-import * as infinity from "@/events-sync/data/infinity";
 import * as looksRare from "@/events-sync/data/looks-rare";
 import * as manifold from "@/events-sync/data/manifold";
 import * as nftTrader from "@/events-sync/data/nft-trader";
@@ -26,13 +25,16 @@ import * as seaportV14 from "@/events-sync/data/seaport-v1.4";
 import * as sudoswap from "@/events-sync/data/sudoswap";
 import * as superrare from "@/events-sync/data/superrare";
 import * as tofu from "@/events-sync/data/tofu";
+import * as treasure from "@/events-sync/data/treasure";
 import * as universe from "@/events-sync/data/universe";
 import * as wyvernV2 from "@/events-sync/data/wyvern-v2";
 import * as wyvernV23 from "@/events-sync/data/wyvern-v2.3";
 import * as x2y2 from "@/events-sync/data/x2y2";
+import * as zeroExV2 from "@/events-sync/data/zeroex-v2";
+import * as zeroExV3 from "@/events-sync/data/zeroex-v3";
 import * as zeroExV4 from "@/events-sync/data/zeroex-v4";
 import * as zora from "@/events-sync/data/zora";
-import * as zeroExV2 from "@/events-sync/data/zeroex-v2";
+import * as looksRareV2 from "@/events-sync/data/looks-rare-v2";
 
 // All events we're syncing should have an associated `EventData`
 // entry which dictates the way the event will be parsed and then
@@ -52,7 +54,6 @@ export type EventKind =
   | "flow"
   | "forward"
   | "foundation"
-  | "infinity"
   | "looks-rare"
   | "manifold"
   | "nft-trader"
@@ -65,12 +66,15 @@ export type EventKind =
   | "sudoswap"
   | "superrare"
   | "tofu"
+  | "treasure"
   | "universe"
   | "wyvern"
   | "x2y2"
+  | "zeroex-v2"
+  | "zeroex-v3"
   | "zeroex-v4"
   | "zora"
-  | "zeroex-v2";
+  | "looks-rare-v2";
 
 // Event sub-kind in each of the above protocol/standard
 export type EventSubKind =
@@ -158,10 +162,6 @@ export type EventSubKind =
   | "nftx-enable-mint-updated"
   | "nftx-enable-target-redeem-updated"
   | "blur-orders-matched"
-  | "infinity-match-order-fulfilled"
-  | "infinity-take-order-fulfilled"
-  | "infinity-cancel-all-orders"
-  | "infinity-cancel-multiple-orders"
   | "flow-match-order-fulfilled"
   | "flow-take-order-fulfilled"
   | "flow-cancel-all-orders"
@@ -187,7 +187,14 @@ export type EventSubKind =
   | "superrare-accept-offer"
   | "superrare-auction-settled"
   | "superrare-set-sale-price"
-  | "zeroex-v2-fill";
+  | "zeroex-v2-fill"
+  | "zeroex-v3-fill"
+  | "treasure-item-sold"
+  | "looks-rare-v2-new-bid-ask-nonces"
+  | "looks-rare-v2-order-nonces-cancelled"
+  | "looks-rare-v2-subset-nonces-cancelled"
+  | "looks-rare-v2-taker-ask"
+  | "looks-rare-v2-taker-bid";
 
 export type EventData = {
   kind: EventKind;
@@ -218,6 +225,11 @@ const allEventData = [
   looksRare.cancelMultipleOrders,
   looksRare.takerAsk,
   looksRare.takerBid,
+  looksRareV2.newBidAskNonces,
+  looksRareV2.orderNoncesCancelled,
+  looksRareV2.subsetNoncesCancelled,
+  looksRareV2.takerAsk,
+  looksRareV2.takerBid,
   seaport.counterIncremented,
   seaport.orderCancelled,
   seaport.orderFulfilled,
@@ -282,10 +294,6 @@ const allEventData = [
   nftx.enableMintUpdated,
   nftx.enableTargetRedeemUpdated,
   blur.ordersMatched,
-  infinity.matchOrderFulfilled,
-  infinity.takeOrderFulfilled,
-  infinity.cancelAllOrders,
-  infinity.cancelMultipleOrders,
   flow.matchOrderFulfilled,
   flow.takeOrderFulfilled,
   flow.cancelAllOrders,
@@ -312,6 +320,8 @@ const allEventData = [
   superrare.auctionSettled,
   superrare.setSalePrice,
   zeroExV2.fill,
+  zeroExV3.fill,
+  treasure.itemSold,
 ];
 
 export const getEventData = (events?: string[]) => {

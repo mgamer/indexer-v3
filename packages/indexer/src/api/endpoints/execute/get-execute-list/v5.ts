@@ -24,12 +24,11 @@ import * as looksRareSellToken from "@/orderbook/orders/looks-rare/build/sell/to
 import * as looksRareCheck from "@/orderbook/orders/looks-rare/check";
 
 // Seaport
-import * as seaportSellToken from "@/orderbook/orders/seaport/build/sell/token";
-import * as seaportCheck from "@/orderbook/orders/seaport/check";
+import * as seaportSellToken from "@/orderbook/orders/seaport-v1.1/build/sell/token";
+import * as seaportCheck from "@/orderbook/orders/seaport-base/check";
 
 // Seaport v1.4
 import * as seaportV14SellToken from "@/orderbook/orders/seaport-v1.4/build/sell/token";
-import * as seaportV14Check from "@/orderbook/orders/seaport-v1.4/check";
 
 // X2Y2
 import * as x2y2SellToken from "@/orderbook/orders/x2y2/build/sell/token";
@@ -43,10 +42,6 @@ import * as zeroExV4Check from "@/orderbook/orders/zeroex-v4/check";
 import * as universeSellToken from "@/orderbook/orders/universe/build/sell/token";
 import * as universeCheck from "@/orderbook/orders/universe/check";
 
-// Infinity
-import * as infinitySellToken from "@/orderbook/orders/infinity/build/sell/token";
-import * as infinityCheck from "@/orderbook/orders/infinity/check";
-
 // Flow
 import * as flowSellToken from "@/orderbook/orders/flow/build/sell/token";
 import * as flowCheck from "@/orderbook/orders/flow/check";
@@ -56,7 +51,7 @@ const version = "v5";
 export const getExecuteListV5Options: RouteOptions = {
   description: "Create asks (listings)",
   notes: "Generate listings and submit them to multiple marketplaces",
-  tags: ["api", "Orderbook"],
+  tags: ["api", "Create Orders (list & bid)"],
   plugins: {
     "hapi-swagger": {
       order: 11,
@@ -104,7 +99,6 @@ export const getExecuteListV5Options: RouteOptions = {
               "seaport-v1.4",
               "x2y2",
               "universe",
-              "infinity",
               "flow"
             )
             .default("seaport-v1.4")
@@ -120,16 +114,7 @@ export const getExecuteListV5Options: RouteOptions = {
             }),
           }).description("Additional options."),
           orderbook: Joi.string()
-            .valid(
-              "blur",
-              "opensea",
-              "looks-rare",
-              "reservoir",
-              "x2y2",
-              "universe",
-              "infinity",
-              "flow"
-            )
+            .valid("blur", "opensea", "looks-rare", "reservoir", "x2y2", "universe", "flow")
             .default("reservoir")
             .description("Orderbook where order is placed. Example: `Reservoir`"),
           orderbookApiKey: Joi.string().description("Optional API key for the target orderbook"),
@@ -263,7 +248,7 @@ export const getExecuteListV5Options: RouteOptions = {
         "seaport-v1.4": [] as {
           order: {
             kind: "seaport-v1.4";
-            data: Sdk.SeaportV14.Types.OrderComponents;
+            data: Sdk.SeaportBase.Types.OrderComponents;
           };
           orderbook: string;
           orderbookApiKey?: string;
@@ -286,11 +271,7 @@ export const getExecuteListV5Options: RouteOptions = {
           let blurAuthChallenge = await b.getAuthChallenge(blurAuthChallengeId);
           if (!blurAuthChallenge) {
             blurAuthChallenge = (await axios
-              .get(`${config.orderFetcherBaseUrl}/api/blur-auth-challenge?taker=${maker}`, {
-                headers: {
-                  "X-Api-Key": config.orderFetcherApiKey,
-                },
-              })
+              .get(`${config.orderFetcherBaseUrl}/api/blur-auth-challenge?taker=${maker}`)
               .then((response) => response.data.authChallenge)) as b.AuthChallenge;
 
             await b.saveAuthChallenge(
@@ -517,74 +498,6 @@ export const getExecuteListV5Options: RouteOptions = {
                 break;
               }
 
-              case "infinity": {
-                if (!["infinity"].includes(params.orderbook)) {
-                  return errors.push({ message: "Unsupported orderbook", orderIndex: i });
-                }
-
-                const order = await infinitySellToken.build({
-                  ...params,
-                  orderbook: "infinity",
-                  maker,
-                  contract,
-                  tokenId,
-                });
-
-                // Will be set if an approval is needed before listing
-                let approvalTx: TxData | undefined;
-
-                // Check the order's fillability
-                try {
-                  await infinityCheck.offChainCheck(order, { onChainApprovalRecheck: true });
-                } catch (error: any) {
-                  switch (error.message) {
-                    case "no-balance-no-approval":
-                    case "no-balance": {
-                      return errors.push({ message: "Maker does not own token", orderIndex: i });
-                    }
-
-                    case "no-approval": {
-                      // Generate an approval transaction
-                      approvalTx = new Sdk.Common.Helpers.Erc721(
-                        baseProvider,
-                        contract
-                      ).approveTransaction(maker, Sdk.Infinity.Addresses.Exchange[config.chainId]);
-
-                      break;
-                    }
-                  }
-                }
-
-                steps[1].items.push({
-                  status: approvalTx ? "incomplete" : "complete",
-                  data: approvalTx,
-                  orderIndexes: [i],
-                });
-                steps[2].items.push({
-                  status: "incomplete",
-                  data: {
-                    sign: order.getSignatureData(),
-                    post: {
-                      endpoint: "/order/v3",
-                      method: "POST",
-                      body: {
-                        order: {
-                          kind: params.orderKind,
-                          data: {
-                            ...order.params,
-                          },
-                        },
-                        orderbook: params.orderbook,
-                        source,
-                      },
-                    },
-                  },
-                  orderIndexes: [i],
-                });
-
-                break;
-              }
-
               case "flow": {
                 if (!["flow"].includes(params.orderbook)) {
                   return errors.push({ message: "Unsupported orderbook", orderIndex: i });
@@ -671,8 +584,11 @@ export const getExecuteListV5Options: RouteOptions = {
                 let approvalTx: TxData | undefined;
 
                 // Check the order's fillability
+                const exchange = new Sdk.SeaportV11.Exchange(config.chainId);
                 try {
-                  await seaportCheck.offChainCheck(order, { onChainApprovalRecheck: true });
+                  await seaportCheck.offChainCheck(order, exchange, {
+                    onChainApprovalRecheck: true,
+                  });
                 } catch (error: any) {
                   switch (error.message) {
                     case "no-balance-no-approval":
@@ -682,8 +598,6 @@ export const getExecuteListV5Options: RouteOptions = {
 
                     case "no-approval": {
                       // Generate an approval transaction
-
-                      const exchange = new Sdk.Seaport.Exchange(config.chainId);
                       const info = order.getInfo()!;
 
                       const kind = order.params.kind?.startsWith("erc721") ? "erc721" : "erc1155";
@@ -766,8 +680,11 @@ export const getExecuteListV5Options: RouteOptions = {
                 let approvalTx: TxData | undefined;
 
                 // Check the order's fillability
+                const exchange = new Sdk.SeaportV14.Exchange(config.chainId);
                 try {
-                  await seaportV14Check.offChainCheck(order, { onChainApprovalRecheck: true });
+                  await seaportCheck.offChainCheck(order, exchange, {
+                    onChainApprovalRecheck: true,
+                  });
                 } catch (error: any) {
                   switch (error.message) {
                     case "no-balance-no-approval":
@@ -777,8 +694,6 @@ export const getExecuteListV5Options: RouteOptions = {
 
                     case "no-approval": {
                       // Generate an approval transaction
-
-                      const exchange = new Sdk.SeaportV14.Exchange(config.chainId);
                       const info = order.getInfo()!;
 
                       const kind = order.params.kind?.startsWith("erc721") ? "erc721" : "erc1155";
@@ -1181,10 +1096,14 @@ export const getExecuteListV5Options: RouteOptions = {
             orderKind: p.orderKind,
             orderbook: p.orderbook,
           })),
+          itemsCount: params.length,
         })
       );
 
-      return { steps, errors };
+      return {
+        steps: blurAuth ? [steps[0], ...steps.slice(1).filter((s) => s.items.length)] : steps,
+        errors,
+      };
     } catch (error) {
       if (!(error instanceof Boom.Boom)) {
         logger.error(`get-execute-list-${version}-handler`, `Handler failure: ${error}`);

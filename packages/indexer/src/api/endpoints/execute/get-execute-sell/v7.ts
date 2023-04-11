@@ -2,7 +2,6 @@ import { BigNumber } from "@ethersproject/bignumber";
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
-import * as SeaportPermit from "@reservoir0x/sdk/dist/router/v6/permits/seaport";
 import { BidDetails, FillBidsResult } from "@reservoir0x/sdk/dist/router/v6/types";
 import Joi from "joi";
 
@@ -10,7 +9,7 @@ import { inject } from "@/api/index";
 import { idb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
-import { bn, formatPrice, fromBuffer, now, regex, toBuffer } from "@/common/utils";
+import { bn, formatPrice, fromBuffer, regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { getNetworkSettings } from "@/config/network";
 import { Sources } from "@/models/sources";
@@ -19,14 +18,13 @@ import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import * as nftx from "@/orderbook/orders/nftx";
 import * as sudoswap from "@/orderbook/orders/sudoswap";
 import { getCurrency } from "@/utils/currencies";
-import { getPermitId, getPermit, savePermit } from "@/utils/permits/nft";
 import { tryGetTokensSuspiciousStatus } from "@/utils/opensea";
 
 const version = "v7";
 
 export const getExecuteSellV7Options: RouteOptions = {
   description: "Sell tokens (accept bids)",
-  tags: ["api", "Router"],
+  tags: ["api", "Fill Orders (buy & sell)"],
   timeout: {
     server: 20 * 1000,
   },
@@ -63,7 +61,6 @@ export const getExecuteSellV7Options: RouteOptions = {
                   "x2y2",
                   "universe",
                   "rarible",
-                  "infinity",
                   "sudoswap",
                   "nftx"
                 )
@@ -106,8 +103,9 @@ export const getExecuteSellV7Options: RouteOptions = {
       maxPriorityFeePerGas: Joi.string()
         .pattern(regex.number)
         .description("Optional custom gas settings."),
-      // TODO: Allow passing other API keys as well (eg. Coinbase)
+      // Various authorization keys
       x2y2ApiKey: Joi.string().description("Optional X2Y2 API key used for filling."),
+      openseaApiKey: Joi.string().description("Optional OpenSea API key used for filling."),
     }),
   },
   response: {
@@ -131,7 +129,7 @@ export const getExecuteSellV7Options: RouteOptions = {
       errors: Joi.array().items(
         Joi.object({
           message: Joi.string(),
-          orderId: Joi.number(),
+          orderId: Joi.string(),
         })
       ),
       path: Joi.array().items(
@@ -384,6 +382,7 @@ export const getExecuteSellV7Options: RouteOptions = {
                 AND token_sets_tokens.token_id = $/tokenId/
                 AND orders.side = 'buy'
                 AND orders.quantity_remaining >= $/quantity/
+                AND orders.maker != $/taker/
                 AND (orders.taker = '\\x0000000000000000000000000000000000000000' OR orders.taker IS NULL)
                 ${
                   payload.allowInactiveOrderIds
@@ -396,6 +395,7 @@ export const getExecuteSellV7Options: RouteOptions = {
               contract: toBuffer(contract),
               tokenId,
               quantity: item.quantity,
+              taker: toBuffer(payload.taker),
             }
           );
           if (!result) {
@@ -498,7 +498,9 @@ export const getExecuteSellV7Options: RouteOptions = {
                 AND token_sets_tokens.token_id = $/tokenId/
                 AND orders.side = 'buy'
                 AND orders.fillability_status = 'fillable' AND orders.approval_status = 'approved'
+                AND orders.maker != $/taker/
                 AND (orders.taker = '\\x0000000000000000000000000000000000000000' OR orders.taker IS NULL)
+                ${payload.normalizeRoyalties ? " AND orders.normalized_value IS NOT NULL" : ""}
                 ${item.exactOrderSource ? " AND orders.source_id_int = $/sourceId/" : ""}
               ORDER BY ${
                 payload.normalizeRoyalties ? "orders.normalized_value" : "orders.value"
@@ -509,6 +511,7 @@ export const getExecuteSellV7Options: RouteOptions = {
               contract: toBuffer(contract),
               tokenId,
               quantity: item.quantity,
+              taker: toBuffer(payload.taker),
               sourceId: item.exactOrderSource
                 ? sources.getByDomain(item.exactOrderSource)?.id ?? -1
                 : undefined,
@@ -588,9 +591,6 @@ export const getExecuteSellV7Options: RouteOptions = {
               continue;
             }
 
-            // Update the quantity to fill with the current order's available quantity
-            quantityToFill -= availableQuantity;
-
             await addToPath(
               {
                 id: result.id,
@@ -607,10 +607,13 @@ export const getExecuteSellV7Options: RouteOptions = {
                 kind: result.token_kind,
                 contract,
                 tokenId,
-                quantity: Math.min(item.quantity, availableQuantity),
+                quantity: Math.min(quantityToFill, availableQuantity),
                 owner,
               }
             );
+
+            // Update the quantity to fill with the current order's available quantity
+            quantityToFill -= availableQuantity;
           }
 
           if (quantityToFill > 0) {
@@ -650,13 +653,6 @@ export const getExecuteSellV7Options: RouteOptions = {
           description:
             "Each NFT collection you want to trade requires a one-time approval transaction",
           kind: "transaction",
-          items: [],
-        },
-        {
-          id: "permit",
-          action: "Sign permits",
-          description: "Sign permits for accessing the NFTs in your wallet",
-          kind: "signature",
           items: [],
         },
         {
@@ -703,13 +699,13 @@ export const getExecuteSellV7Options: RouteOptions = {
 
       const router = new Sdk.RouterV6.Router(config.chainId, baseProvider, {
         x2y2ApiKey: payload.x2y2ApiKey ?? config.x2y2ApiKey,
+        openseaApiKey: payload.openseaApiKey,
         cbApiKey: config.cbApiKey,
         orderFetcherBaseUrl: config.orderFetcherBaseUrl,
-        orderFetcherApiKey: config.orderFetcherApiKey,
       });
 
       const { customTokenAddresses } = getNetworkSettings();
-      const forcePermit = customTokenAddresses.includes(bidDetails[0].contract);
+      const forceApprovalProxy = customTokenAddresses.includes(bidDetails[0].contract);
 
       const errors: { orderId: string; message: string }[] = [];
 
@@ -718,11 +714,11 @@ export const getExecuteSellV7Options: RouteOptions = {
         result = await router.fillBidsTx(bidDetails, payload.taker, {
           source: payload.source,
           partial: payload.partial,
-          forcePermit,
+          forceApprovalProxy,
           onRecoverableError: async (kind, error, data) => {
             errors.push({
               orderId: data.orderId,
-              message: error.response?.data ?? error.message,
+              message: error.response?.data ? JSON.stringify(error.response.data) : error.message,
             });
             await routerOnRecoverableError(kind, error, data);
           },
@@ -734,7 +730,7 @@ export const getExecuteSellV7Options: RouteOptions = {
         throw boomError;
       }
 
-      const { txData, approvals, permits, success } = result;
+      const { txData, approvals, success } = result;
 
       // Filter out any non-fillable orders from the path
       path = path.filter((_, i) => success[i]);
@@ -769,73 +765,23 @@ export const getExecuteSellV7Options: RouteOptions = {
         }
       }
 
-      const permitHandler = new SeaportPermit.Handler(config.chainId, baseProvider);
-      if (permits.length) {
-        for (const permit of permits) {
-          const id = getPermitId(request.payload as object, permit.tokens);
-
-          let cachedPermit = await getPermit(id);
-          if (cachedPermit) {
-            // Always use the cached permit details
-            permit.details = cachedPermit.details;
-
-            // If the cached permit has a signature attached to it, we can skip it
-            const hasSignature = (permit.details.data as SeaportPermit.Data).order.signature;
-            if (hasSignature) {
-              continue;
-            }
-          } else {
-            // Cache the permit if it's the first time we encounter it
-            await savePermit(
-              id,
-              permit,
-              // Give a 1 minute buffer for the permit to expire
-              (permit.details.data as SeaportPermit.Data).order.endTime - now() - 60
-            );
-            cachedPermit = permit;
-          }
-
-          steps[1].items.push({
-            status: "incomplete",
-            data: {
-              sign: permitHandler.getSignatureData(cachedPermit.details.data),
-              post: {
-                endpoint: "/execute/permit-signature/v1",
-                method: "POST",
-                body: {
-                  kind: "nft-permit",
-                  id,
-                },
-              },
-            },
-          });
-        }
-      }
-
-      steps[2].items.push({
+      steps[1].items.push({
         status: "incomplete",
-        data:
-          // Do not return the final step unless all permits have a signature attached
-          steps[1].items.length === 0
-            ? {
-                ...permitHandler.attachToRouterExecution(
-                  txData,
-                  permits.map((p) => p.details.data)
-                ),
-                maxFeePerGas,
-                maxPriorityFeePerGas,
-              }
-            : undefined,
+        data: {
+          ...txData,
+          maxFeePerGas,
+          maxPriorityFeePerGas,
+        },
       });
 
       // Warning! When filtering the steps, we should ensure that it
       // won't affect the client, which might be polling the API and
       // expect to get the steps returned in the same order / at the
       // same index.
-      if (!approvals.length && !permits.length) {
-        // If no approvals/permits are returned from the router then
-        // those are not actually needed and we can cut their steps
-        steps = steps.slice(2);
+      if (!approvals.length) {
+        // If no approvals are returned from the router then those
+        // are not actually needed and we can cut their steps
+        steps = steps.slice(1);
       }
 
       const perfTime2 = performance.now();
@@ -846,6 +792,7 @@ export const getExecuteSellV7Options: RouteOptions = {
           kind: "total-performance",
           totalTime: (perfTime2 - perfTime1) / 1000,
           items: bidDetails.map((b) => ({ orderKind: b.kind, isProtected: b.isProtected })),
+          itemsCount: bidDetails.length,
         })
       );
 

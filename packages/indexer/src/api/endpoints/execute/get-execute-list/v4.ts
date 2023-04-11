@@ -19,12 +19,11 @@ import * as looksRareSellToken from "@/orderbook/orders/looks-rare/build/sell/to
 import * as looksRareCheck from "@/orderbook/orders/looks-rare/check";
 
 // Seaport
-import * as seaportSellToken from "@/orderbook/orders/seaport/build/sell/token";
-import * as seaportCheck from "@/orderbook/orders/seaport/check";
+import * as seaportSellToken from "@/orderbook/orders/seaport-v1.1/build/sell/token";
+import * as seaportCheck from "@/orderbook/orders/seaport-base/check";
 
 // Seaport v1.4
 import * as seaportV14SellToken from "@/orderbook/orders/seaport-v1.4/build/sell/token";
-import * as seaportV14Check from "@/orderbook/orders/seaport-v1.4/check";
 
 // X2Y2
 import * as x2y2SellToken from "@/orderbook/orders/x2y2/build/sell/token";
@@ -37,10 +36,6 @@ import * as zeroExV4Check from "@/orderbook/orders/zeroex-v4/check";
 // Universe
 import * as universeSellToken from "@/orderbook/orders/universe/build/sell/token";
 import * as universeCheck from "@/orderbook/orders/universe/check";
-
-// Infinity
-import * as infinitySellToken from "@/orderbook/orders/infinity/build/sell/token";
-import * as infinityCheck from "@/orderbook/orders/infinity/check";
 
 // Flow
 import * as flowSellToken from "@/orderbook/orders/flow/build/sell/token";
@@ -99,13 +94,12 @@ export const getExecuteListV4Options: RouteOptions = {
               "seaport-forward",
               "x2y2",
               "universe",
-              "infinity",
               "flow"
             )
             .default("seaport-v1.4")
             .description("Exchange protocol used to create order. Example: `seaport-v1.4`"),
           orderbook: Joi.string()
-            .valid("opensea", "looks-rare", "reservoir", "x2y2", "universe", "infinity", "flow")
+            .valid("opensea", "looks-rare", "reservoir", "x2y2", "universe", "flow")
             .default("reservoir")
             .description("Orderbook where order is placed. Example: `Reservoir`"),
           orderbookApiKey: Joi.string().description("Optional API key for the target orderbook"),
@@ -307,78 +301,6 @@ export const getExecuteListV4Options: RouteOptions = {
             continue;
           }
 
-          case "infinity": {
-            if (!["infinity"].includes(params.orderbook)) {
-              throw Boom.badRequest("Only `infinity` is supported as an orderbook");
-            }
-
-            const order = await infinitySellToken.build({
-              ...params,
-              maker,
-              contract,
-              tokenId,
-            });
-
-            if (!order) {
-              throw Boom.internal("Failed to generate order");
-            }
-
-            // Will be set if an approval is needed before listing
-            let approvalTx: TxData | undefined;
-
-            // Check the order's fillability
-            try {
-              await infinityCheck.offChainCheck(order, { onChainApprovalRecheck: true });
-            } catch (error: any) {
-              switch (error.message) {
-                case "no-balance-no-approval":
-                case "no-balance": {
-                  // We cannot do anything if the user doesn't own the listed token
-                  throw Boom.badData("Maker does not own the listed token");
-                }
-
-                case "no-approval": {
-                  // Generate an approval transaction
-                  approvalTx = new Sdk.Common.Helpers.Erc721(
-                    baseProvider,
-                    contract
-                  ).approveTransaction(maker, Sdk.Infinity.Addresses.Exchange[config.chainId]);
-                  break;
-                }
-              }
-            }
-
-            steps[0].items.push({
-              status: approvalTx ? "incomplete" : "complete",
-              data: approvalTx,
-              orderIndex: i,
-            });
-            steps[1].items.push({
-              status: "incomplete",
-              data: {
-                sign: order.getSignatureData(),
-                post: {
-                  endpoint: "/order/v3",
-                  method: "POST",
-                  body: {
-                    order: {
-                      kind: params.orderKind,
-                      data: {
-                        ...order.params,
-                      },
-                    },
-                    orderbook: params.orderbook,
-                    source,
-                  },
-                },
-              },
-              orderIndex: i,
-            });
-
-            // Go on with the next listing
-            continue;
-          }
-
           case "flow": {
             if (!["flow"].includes(params.orderbook)) {
               throw Boom.badRequest("Only `flow` is supported as an orderbook");
@@ -473,7 +395,7 @@ export const getExecuteListV4Options: RouteOptions = {
               contract,
               tokenId,
               source,
-              orderType: isForward ? Sdk.Seaport.Types.OrderType.PARTIAL_OPEN : undefined,
+              orderType: isForward ? Sdk.SeaportBase.Types.OrderType.PARTIAL_OPEN : undefined,
             });
             if (!order) {
               throw Boom.internal("Failed to generate order");
@@ -483,8 +405,9 @@ export const getExecuteListV4Options: RouteOptions = {
             let approvalTx: TxData | undefined;
 
             // Check the order's fillability
+            const exchange = new Sdk.SeaportV11.Exchange(config.chainId);
             try {
-              await seaportCheck.offChainCheck(order, { onChainApprovalRecheck: true });
+              await seaportCheck.offChainCheck(order, exchange, { onChainApprovalRecheck: true });
             } catch (error: any) {
               switch (error.message) {
                 case "no-balance-no-approval":
@@ -500,7 +423,6 @@ export const getExecuteListV4Options: RouteOptions = {
                     throw Boom.badRequest("Token is not approved");
                   }
 
-                  const exchange = new Sdk.Seaport.Exchange(config.chainId);
                   const info = order.getInfo()!;
 
                   const kind = order.params.kind?.startsWith("erc721") ? "erc721" : "erc1155";
@@ -576,8 +498,9 @@ export const getExecuteListV4Options: RouteOptions = {
             let approvalTx: TxData | undefined;
 
             // Check the order's fillability
+            const exchange = new Sdk.SeaportV14.Exchange(config.chainId);
             try {
-              await seaportV14Check.offChainCheck(order, { onChainApprovalRecheck: true });
+              await seaportCheck.offChainCheck(order, exchange, { onChainApprovalRecheck: true });
             } catch (error: any) {
               switch (error.message) {
                 case "no-balance-no-approval":
@@ -588,8 +511,6 @@ export const getExecuteListV4Options: RouteOptions = {
 
                 case "no-approval": {
                   // Generate an approval transaction
-
-                  const exchange = new Sdk.SeaportV14.Exchange(config.chainId);
                   const info = order.getInfo()!;
 
                   const kind = order.params.kind?.startsWith("erc721") ? "erc721" : "erc1155";

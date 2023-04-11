@@ -104,7 +104,7 @@ export const handleEvents = async (events: EnhancedEvent[], _onChainData: OnChai
 
         // Handle: attribution
 
-        const orderKind = eventData.kind.startsWith("wyvern-v2.3") ? "wyvern-v2.3" : "wyvern-v2";
+        const orderKind = subKind === "wyvern-v2.3-orders-matched" ? "wyvern-v2.3" : "wyvern-v2";
         const attributionData = await utils.extractAttributionData(
           baseEventParams.txHash,
           orderKind,

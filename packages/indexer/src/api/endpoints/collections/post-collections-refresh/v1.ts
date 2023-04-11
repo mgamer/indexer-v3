@@ -10,6 +10,7 @@ import { edb } from "@/common/db";
 import { logger } from "@/common/logger";
 import * as collectionsRefreshCache from "@/jobs/collections-refresh/collections-refresh-cache";
 import * as collectionUpdatesMetadata from "@/jobs/collection-updates/metadata-queue";
+
 import * as metadataIndexFetch from "@/jobs/metadata-index/fetch-queue";
 import * as orderFixes from "@/jobs/order-fixes/fixes";
 import { Collections } from "@/models/collections";
@@ -17,15 +18,16 @@ import { OpenseaIndexerApi } from "@/utils/opensea-indexer-api";
 import { ApiKeyManager } from "@/models/api-keys";
 import { Tokens } from "@/models/tokens";
 import { MetadataIndexInfo } from "@/jobs/metadata-index/fetch-queue";
+import * as openseaOrdersProcessQueue from "@/jobs/opensea-orders/process-queue";
 
 const version = "v1";
 
 export const postCollectionsRefreshV1Options: RouteOptions = {
   description: "Refresh Collection",
-  tags: ["api", "Collections"],
+  tags: ["api", "x-deprecated"],
   plugins: {
     "hapi-swagger": {
-      order: 13,
+      deprecated: true,
     },
   },
   validate: {
@@ -106,6 +108,20 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
           0,
           true
         );
+
+        if (collection.slug) {
+          // Refresh opensea collection offers
+          await openseaOrdersProcessQueue.addToQueue([
+            {
+              kind: "collection-offers",
+              data: {
+                contract: collection.contract,
+                collectionId: collection.id,
+                collectionSlug: collection.slug,
+              },
+            },
+          ]);
+        }
       } else {
         const isLargeCollection = collection.tokenCount > 30000;
 
@@ -164,6 +180,20 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
           0,
           payload.overrideCoolDown
         );
+
+        if (collection.slug) {
+          // Refresh opensea collection offers
+          await openseaOrdersProcessQueue.addToQueue([
+            {
+              kind: "collection-offers",
+              data: {
+                contract: collection.contract,
+                collectionId: collection.id,
+                collectionSlug: collection.slug,
+              },
+            },
+          ]);
+        }
 
         // Refresh the contract floor sell and top bid
         await collectionsRefreshCache.addToQueue(collection.id);

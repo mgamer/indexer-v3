@@ -1,5 +1,7 @@
 import { Server } from "@hapi/hapi";
 
+import { config } from "@/config/index";
+
 import * as activitiesEndpoints from "@/api/endpoints/activities";
 import * as adminEndpoints from "@/api/endpoints/admin";
 import * as apiKeysEndpoints from "@/api/endpoints/api-keys";
@@ -24,6 +26,7 @@ import * as syncEndpoints from "@/api/endpoints/sync";
 import * as assetsEndpoints from "@/api/endpoints/assets";
 import * as sourcesEndpoints from "@/api/endpoints/sources";
 import * as websocketEndpoints from "@/api/endpoints/websocket";
+import * as debugEndpoints from "@/api/endpoints/debug";
 
 export const setupRoutes = (server: Server) => {
   // Activity
@@ -290,12 +293,6 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
-    path: "/admin/sync-arweave",
-    options: adminEndpoints.postSyncArweaveOptions,
-  });
-
-  server.route({
-    method: "POST",
     path: "/admin/sync-events",
     options: adminEndpoints.postSyncEventsOptions,
   });
@@ -508,6 +505,12 @@ export const setupRoutes = (server: Server) => {
     method: "POST",
     path: "/collections/refresh/v1",
     options: collectionsEndpoints.postCollectionsRefreshV1Options,
+  });
+
+  server.route({
+    method: "POST",
+    path: "/collections/refresh/v2",
+    options: collectionsEndpoints.postCollectionsRefreshV2Options,
   });
 
   server.route({
@@ -774,12 +777,6 @@ export const setupRoutes = (server: Server) => {
     method: "POST",
     path: "/execute/cancel-signature/v1",
     options: executeEndpoints.postCancelSignatureV1Options,
-  });
-
-  server.route({
-    method: "POST",
-    path: "/execute/permit-signature/v1",
-    options: executeEndpoints.postPermitSignatureV1Options,
   });
 
   // Health
@@ -1361,6 +1358,12 @@ export const setupRoutes = (server: Server) => {
     options: syncEndpoints.getSyncSalesV1Options,
   });
 
+  server.route({
+    method: "GET",
+    path: "/sync/asks/v1",
+    options: syncEndpoints.getSyncOrdersAsksV1Options,
+  });
+
   // sources
 
   server.route({
@@ -1376,4 +1379,31 @@ export const setupRoutes = (server: Server) => {
     path: "/websocket/user-auth",
     options: websocketEndpoints.postWebsocketUserAuthOptions,
   });
+
+  // Debug APIs
+  if (config.enableDebug) {
+    server.route({
+      method: "GET",
+      path: "/debug/event-parsing",
+      options: debugEndpoints.eventParsingOptions,
+    });
+
+    server.route({
+      method: "POST",
+      path: "/debug/order-saving",
+      options: debugEndpoints.orderSavingOptions,
+    });
+
+    server.route({
+      method: "GET",
+      path: "/debug/get-order",
+      options: debugEndpoints.getOrderOptions,
+    });
+
+    server.route({
+      method: "GET",
+      path: "/debug/reset",
+      options: debugEndpoints.resetOptions,
+    });
+  }
 };

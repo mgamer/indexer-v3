@@ -512,7 +512,6 @@ export const getExecuteBuyV4Options: RouteOptions = {
       const router = new Sdk.RouterV5.Router(config.chainId, baseProvider, {
         x2y2ApiKey: config.x2y2ApiKey,
         orderFetcherBaseUrl: config.orderFetcherBaseUrl,
-        orderFetcherApiKey: config.orderFetcherApiKey,
       });
       const tx = await router.fillListingsTx(listingDetails, payload.taker, {
         source: payload.source,
@@ -578,7 +577,7 @@ export const getExecuteBuyV4Options: RouteOptions = {
             config.chainId === 1
               ? // Use OpenSea's conduit for sharing approvals
                 "0x1e0049783f008a0085193e00003d00cd54003c71"
-              : Sdk.Seaport.Addresses.Exchange[config.chainId];
+              : Sdk.SeaportV11.Addresses.Exchange[config.chainId];
         } else if (listingDetails.every((d) => d.kind === "universe")) {
           conduit = Sdk.Universe.Addresses.Exchange[config.chainId];
         } else {

@@ -346,7 +346,6 @@ export const getExecuteBuyV3Options: RouteOptions = {
       const router = new Sdk.RouterV5.Router(config.chainId, baseProvider, {
         x2y2ApiKey: config.x2y2ApiKey,
         orderFetcherBaseUrl: config.orderFetcherBaseUrl,
-        orderFetcherApiKey: config.orderFetcherApiKey,
       });
       const tx = await router.fillListingsTx(listingDetails, query.taker, {
         source: query.source,
@@ -411,7 +410,7 @@ export const getExecuteBuyV3Options: RouteOptions = {
           config.chainId === 1
             ? // Use OpenSea's conduit for sharing approvals
               "0x1e0049783f008a0085193e00003d00cd54003c71"
-            : Sdk.Seaport.Addresses.Exchange[config.chainId];
+            : Sdk.SeaportV11.Addresses.Exchange[config.chainId];
         const allowance = await erc20.getAllowance(query.taker, conduit);
         if (bn(allowance).lt(totalPrice)) {
           const tx = erc20.approveTransaction(query.taker, conduit);

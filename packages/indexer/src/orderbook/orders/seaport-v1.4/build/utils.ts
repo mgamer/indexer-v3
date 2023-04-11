@@ -1,47 +1,17 @@
-import { AddressZero, HashZero } from "@ethersproject/constants";
+import { AddressZero } from "@ethersproject/constants";
 import * as Sdk from "@reservoir0x/sdk";
-import { BaseBuildParams } from "@reservoir0x/sdk/dist/seaport-v1.4/builders/base";
-import { generateSourceBytes, getRandomBytes } from "@reservoir0x/sdk/dist/utils";
+import { getRandomBytes } from "@reservoir0x/sdk/dist/utils";
 
 import { redb } from "@/common/db";
 import { baseProvider } from "@/common/provider";
 import { bn, fromBuffer, now } from "@/common/utils";
 import { config } from "@/config/index";
-import { logger } from "@/common/logger";
 import * as marketplaceFees from "@/utils/marketplace-fees";
-
-export interface BaseOrderBuildOptions {
-  maker: string;
-  contract?: string;
-  weiPrice: string;
-  orderbook: "opensea" | "reservoir";
-  useOffChainCancellation?: boolean;
-  replaceOrderId?: string;
-  orderType?: Sdk.SeaportV14.Types.OrderType;
-  currency?: string;
-  quantity?: number;
-  nonce?: string;
-  fee?: number[];
-  feeRecipient?: string[];
-  listingTime?: number;
-  expirationTime?: number;
-  salt?: string;
-  automatedRoyalties?: boolean;
-  royaltyBps?: number;
-  excludeFlaggedTokens?: boolean;
-  source?: string;
-}
-
-type OrderBuildInfo = {
-  params: BaseBuildParams;
-  kind: "erc721" | "erc1155";
-};
-
-export const padSourceToSalt = (source: string, salt: string) => {
-  const sourceHash = generateSourceBytes(source);
-  const saltHex = bn(salt)._hex.slice(6);
-  return bn(`0x${sourceHash}${saltHex}`).toString();
-};
+import {
+  BaseOrderBuildOptions,
+  OrderBuildInfo,
+  padSourceToSalt,
+} from "@/orderbook/orders/seaport-base/build/utils";
 
 export const getBuildInfo = async (
   options: BaseOrderBuildOptions,
@@ -71,7 +41,7 @@ export const getBuildInfo = async (
   const exchange = new Sdk.SeaportV14.Exchange(config.chainId);
 
   // Use OpenSea's conduit for sharing approvals (where available)
-  const conduitKey = Sdk.SeaportV14.Addresses.OpenseaConduitKey[config.chainId] ?? HashZero;
+  const conduitKey = Sdk.SeaportBase.Addresses.OpenseaConduitKey[config.chainId];
 
   // No zone by default
   let zone = AddressZero;
@@ -89,7 +59,7 @@ export const getBuildInfo = async (
     salt = options.replaceOrderId;
   }
 
-  const buildParams: BaseBuildParams = {
+  const buildParams: Sdk.SeaportBase.BaseBuildParams = {
     offerer: options.maker,
     side,
     tokenKind: collectionResult.kind,
@@ -116,7 +86,6 @@ export const getBuildInfo = async (
   let totalFees = bn(0);
 
   // Include royalties
-  let totalBps = 0;
   if (options.automatedRoyalties) {
     const royalties: { bps: number; recipient: string }[] =
       (options.orderbook === "opensea"
@@ -134,7 +103,6 @@ export const getBuildInfo = async (
         const bps = Math.min(royaltyBpsToPay, r.bps);
         if (bps > 0) {
           royaltyBpsToPay -= bps;
-          totalBps += bps;
 
           const fee = bn(bps).mul(options.weiPrice).div(10000);
           if (fee.gt(0)) {
@@ -163,22 +131,7 @@ export const getBuildInfo = async (
     if (collectionResult.marketplace_fees?.opensea == null) {
       openseaMarketplaceFees = await marketplaceFees.getCollectionOpenseaFees(
         collection,
-        fromBuffer(collectionResult.contract),
-        totalBps
-      );
-
-      logger.info(
-        "getCollectionOpenseaFees",
-        `From api. collection=${collection}, openseaMarketplaceFees=${JSON.stringify(
-          openseaMarketplaceFees
-        )}`
-      );
-    } else {
-      logger.info(
-        "getCollectionOpenseaFees",
-        `From db. collection=${collection}, openseaMarketplaceFees=${JSON.stringify(
-          openseaMarketplaceFees
-        )}`
+        fromBuffer(collectionResult.contract)
       );
     }
 
@@ -186,9 +139,6 @@ export const getBuildInfo = async (
       options.fee.push(openseaMarketplaceFee.bps);
       options.feeRecipient.push(openseaMarketplaceFee.recipient);
     }
-
-    // Refresh opensea fees
-    await marketplaceFees.refreshCollectionOpenseaFeesAsync(collection);
   }
 
   if (options.fee && options.feeRecipient) {

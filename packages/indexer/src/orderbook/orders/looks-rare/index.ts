@@ -6,7 +6,6 @@ import { idb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
 import { bn, now, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
-import * as arweaveRelay from "@/jobs/arweave-relay";
 import * as ordersUpdateById from "@/jobs/order-updates/by-id-queue";
 import { Sources } from "@/models/sources";
 import { DbOrder, OrderMetadata, generateSchemaHash } from "@/orderbook/orders/utils";
@@ -16,6 +15,7 @@ import * as tokenSet from "@/orderbook/token-sets";
 import * as royalties from "@/utils/royalties";
 import { Royalty } from "@/utils/royalties";
 import _ from "lodash";
+// import { checkMarketplaceIsFiltered } from "@/utils/marketplace-blacklists";
 
 export type OrderInfo = {
   orderParams: Sdk.LooksRare.Types.MakerOrderParams;
@@ -28,18 +28,9 @@ type SaveResult = {
   unfillable?: boolean;
 };
 
-export const save = async (
-  orderInfos: OrderInfo[],
-  relayToArweave?: boolean
-): Promise<SaveResult[]> => {
+export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
   const results: SaveResult[] = [];
   const orderValues: DbOrder[] = [];
-
-  const arweaveData: {
-    order: Sdk.LooksRare.Order;
-    schemaHash?: string;
-    source?: string;
-  }[] = [];
 
   const handleOrder = async ({ orderParams, metadata }: OrderInfo) => {
     try {
@@ -68,6 +59,14 @@ export const save = async (
           status: "invalid-listing-time",
         });
       }
+
+      // const isFiltered = await checkMarketplaceIsFiltered(order.params.collection, "looks-rare");
+      // if (isFiltered) {
+      //   return results.push({
+      //     id,
+      //     status: "filtered",
+      //   });
+      // }
 
       // Check: order is not expired
       const expirationTime = order.params.endTime;
@@ -338,10 +337,6 @@ export const save = async (
         status: "success",
         unfillable,
       });
-
-      if (relayToArweave) {
-        arweaveData.push({ order, schemaHash, source: source?.domain });
-      }
     } catch (error) {
       logger.error(
         "orders-looks-rare-save",
@@ -407,10 +402,6 @@ export const save = async (
             } as ordersUpdateById.OrderInfo)
         )
     );
-
-    if (relayToArweave) {
-      await arweaveRelay.addPendingOrdersLooksRare(arweaveData);
-    }
   }
 
   return results;

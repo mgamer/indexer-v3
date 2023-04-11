@@ -22,24 +22,16 @@ export type BlurData = {
   isCollectionBid?: boolean;
 };
 
-export async function postOrder(order: BlurData, apiKey: string): Promise<void> {
+export async function postOrder(order: BlurData): Promise<void> {
   const url = `${config.orderFetcherBaseUrl}/api/blur-submit-order`;
   try {
-    await axios.post(
-      url,
-      {
-        maker: order.maker,
-        marketplaceData: order.marketplaceData,
-        authToken: order.authToken,
-        signature: order.signature,
-        isCollectionBid: order.isCollectionBid ? "true" : undefined,
-      },
-      {
-        headers: {
-          "X-Api-Key": apiKey || config.orderFetcherApiKey,
-        },
-      }
-    );
+    await axios.post(url, {
+      maker: order.maker,
+      marketplaceData: order.marketplaceData,
+      authToken: order.authToken,
+      signature: order.signature,
+      isCollectionBid: order.isCollectionBid ? "true" : undefined,
+    });
   } catch (err: any) {
     if (err?.response) {
       logger.error(
@@ -66,6 +58,8 @@ const handleErrorResponse = (response: any) => {
       throw new RequestWasThrottledError("Request was throttled by Blur", delay);
     }
     case 400:
-      throw new InvalidRequestError("Request was rejected by Blur");
+      throw new InvalidRequestError(
+        response.data ? JSON.stringify(response.data) : "Request was rejected by Blur"
+      );
   }
 };

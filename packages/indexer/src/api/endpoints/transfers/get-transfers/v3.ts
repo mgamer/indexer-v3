@@ -53,6 +53,10 @@ export const getTransfersV3Options: RouteOptions = {
         ),
       limit: Joi.number().integer().min(1).max(100).default(20),
       continuation: Joi.string().pattern(regex.base64),
+      displayCurrency: Joi.string()
+        .lowercase()
+        .pattern(regex.address)
+        .description("Return result in given currency"),
     })
       .oxor("contract", "token", "collection", "txHash")
       .or("contract", "token", "collection", "txHash")
@@ -125,7 +129,7 @@ export const getTransfersV3Options: RouteOptions = {
           AND fill_events_2.log_index = nft_transfer_events.log_index + (
             CASE
               WHEN fill_events_2.order_kind = 'x2y2' THEN 2
-              WHEN fill_events_2.order_kind = 'seaport' THEN -2
+              WHEN fill_events_2.order_kind::text LIKE 'seaport%' THEN -2
               ELSE 1
             END
           )
@@ -263,7 +267,8 @@ export const getTransfersV3Options: RouteOptions = {
                   nativeAmount: String(r.price),
                 },
               },
-              r.currency ? fromBuffer(r.currency) : Sdk.Common.Addresses.Eth[config.chainId]
+              r.currency ? fromBuffer(r.currency) : Sdk.Common.Addresses.Eth[config.chainId],
+              query.displayCurrency
             )
           : null,
       }));
