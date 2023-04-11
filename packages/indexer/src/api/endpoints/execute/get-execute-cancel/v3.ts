@@ -269,6 +269,16 @@ export const getExecuteCancelV3Options: RouteOptions = {
           break;
         }
 
+        case "alienswap": {
+          const orders = orderResults.map((dbOrder) => {
+            return new Sdk.Alienswap.Order(config.chainId, dbOrder.raw_data);
+          });
+          const exchange = new Sdk.Alienswap.Exchange(config.chainId);
+
+          cancelTx = exchange.cancelOrdersTx(maker, orders);
+          break;
+        }
+
         case "looks-rare": {
           const order = new Sdk.LooksRare.Order(config.chainId, orderResult.raw_data);
           const exchange = new Sdk.LooksRare.Exchange(config.chainId);

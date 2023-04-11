@@ -102,7 +102,7 @@ export const getExecuteListV5Options: RouteOptions = {
               "x2y2",
               "universe",
               "flow",
-              "alienswap",
+              "alienswap"
             )
             .default("seaport-v1.4")
             .description("Exchange protocol used to create order. Example: `seaport-v1.4`"),
