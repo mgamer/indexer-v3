@@ -15,10 +15,10 @@ const version = "v4";
 export const getSalesV4Options: RouteOptions = {
   description: "Sales",
   notes: "Get recent sales for a contract or token.",
-  tags: ["api", "Sales"],
+  tags: ["api", "x-deprecated"],
   plugins: {
     "hapi-swagger": {
-      order: 8,
+      deprecated: true,
     },
   },
   validate: {
@@ -34,12 +34,6 @@ export const getSalesV4Options: RouteOptions = {
         .pattern(regex.token)
         .description(
           "Filter to a particular token. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
-        ),
-      tokens: Joi.array()
-        .items(Joi.string().lowercase().pattern(regex.token))
-        .max(20)
-        .description(
-          "Array of tokens. Example: `tokens[0]: 0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:704 tokens[1]: 0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:979`"
         ),
       includeTokenMetadata: Joi.boolean().description(
         "If enabled, also include token metadata in the response."
