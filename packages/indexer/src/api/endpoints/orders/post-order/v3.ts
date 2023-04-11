@@ -76,6 +76,7 @@ export const postOrderV3Options: RouteOptions = {
       crossPostingOrderId: Joi.string().description(
         "Only available when posting to external orderbook. Can be used to retrieve the status of a cross-post order."
       ),
+      crossPostingOrderStatus: Joi.string(),
     }).label(`postOrder${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(`post-order-${version}-handler`, `Wrong response schema: ${error}`);
@@ -311,7 +312,12 @@ export const postOrderV3Options: RouteOptions = {
             }
           }
 
-          return { message: "Success", orderId, crossPostingOrderId: crossPostingOrder?.id };
+          return {
+            message: "Success",
+            orderId,
+            crossPostingOrderId: crossPostingOrder?.id,
+            crossPostingOrderStatus: crossPostingOrder?.status,
+          };
         }
 
         case "seaport-forward": {
@@ -426,7 +432,12 @@ export const postOrderV3Options: RouteOptions = {
             }
           }
 
-          return { message: "Success", orderId, crossPostingOrderId: crossPostingOrder?.id };
+          return {
+            message: "Success",
+            orderId,
+            crossPostingOrderId: crossPostingOrder?.id,
+            crossPostingOrderStatus: crossPostingOrder?.status,
+          };
         }
 
         case "looks-rare": {
@@ -477,7 +488,12 @@ export const postOrderV3Options: RouteOptions = {
             }
           }
 
-          return { message: "Success", orderId, crossPostingOrderId: crossPostingOrder?.id };
+          return {
+            message: "Success",
+            orderId,
+            crossPostingOrderId: crossPostingOrder?.id,
+            crossPostingOrderStatus: crossPostingOrder?.status,
+          };
         }
 
         case "x2y2": {
@@ -529,7 +545,12 @@ export const postOrderV3Options: RouteOptions = {
             }
           }
 
-          return { message: "Success", orderId, crossPostingOrderId: crossPostingOrder?.id };
+          return {
+            message: "Success",
+            orderId,
+            crossPostingOrderId: crossPostingOrder?.id,
+            crossPostingOrderStatus: crossPostingOrder?.status,
+          };
         }
 
         case "universe": {
@@ -557,7 +578,12 @@ export const postOrderV3Options: RouteOptions = {
             orderbookApiKey,
           });
 
-          return { message: "Success", orderId, crossPostingOrderId: crossPostingOrder.id };
+          return {
+            message: "Success",
+            orderId,
+            crossPostingOrderId: crossPostingOrder.id,
+            crossPostingOrderStatus: crossPostingOrder?.status,
+          };
         }
 
         case "flow": {
@@ -585,7 +611,12 @@ export const postOrderV3Options: RouteOptions = {
             orderbookApiKey,
           });
 
-          return { message: "Success", orderId, crossPostingOrderId: crossPostingOrder.id };
+          return {
+            message: "Success",
+            orderId,
+            crossPostingOrderId: crossPostingOrder.id,
+            crossPostingOrderStatus: crossPostingOrder?.status,
+          };
         }
 
         case "forward": {
