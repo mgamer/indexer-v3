@@ -12,7 +12,6 @@ import * as element from "@/events-sync/data/element";
 import * as flow from "@/events-sync/data/flow";
 import * as forward from "@/events-sync/data/forward";
 import * as foundation from "@/events-sync/data/foundation";
-import * as infinity from "@/events-sync/data/infinity";
 import * as looksRare from "@/events-sync/data/looks-rare";
 import * as manifold from "@/events-sync/data/manifold";
 import * as nftTrader from "@/events-sync/data/nft-trader";
@@ -54,7 +53,6 @@ export type EventKind =
   | "flow"
   | "forward"
   | "foundation"
-  | "infinity"
   | "looks-rare"
   | "manifold"
   | "nft-trader"
@@ -162,10 +160,6 @@ export type EventSubKind =
   | "nftx-enable-mint-updated"
   | "nftx-enable-target-redeem-updated"
   | "blur-orders-matched"
-  | "infinity-match-order-fulfilled"
-  | "infinity-take-order-fulfilled"
-  | "infinity-cancel-all-orders"
-  | "infinity-cancel-multiple-orders"
   | "flow-match-order-fulfilled"
   | "flow-take-order-fulfilled"
   | "flow-cancel-all-orders"
@@ -288,10 +282,6 @@ const allEventData = [
   nftx.enableMintUpdated,
   nftx.enableTargetRedeemUpdated,
   blur.ordersMatched,
-  infinity.matchOrderFulfilled,
-  infinity.takeOrderFulfilled,
-  infinity.cancelAllOrders,
-  infinity.cancelMultipleOrders,
   flow.matchOrderFulfilled,
   flow.takeOrderFulfilled,
   flow.cancelAllOrders,
