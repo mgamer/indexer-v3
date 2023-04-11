@@ -622,22 +622,52 @@ export const save = async (
       if (info.side === "buy" && order.params.kind === "single-token" && validateBidValue) {
         const typedInfo = info as typeof info & { tokenId: string };
         const tokenId = typedInfo.tokenId;
-        const seaportBidPercentageThreshold = 80;
+        const seaportBidPercentageThreshold = 50;
 
         try {
-          const collectionFloorAskValue = await getCollectionFloorAskValue(
+          const collectionTopBidValue = await getCollectionTopBidValue(
             info.contract,
             Number(tokenId)
           );
 
-          if (collectionFloorAskValue) {
-            const percentage = (Number(value.toString()) / collectionFloorAskValue) * 100;
-
-            if (percentage < seaportBidPercentageThreshold) {
+          if (collectionTopBidValue) {
+            if (Number(value.toString()) <= collectionTopBidValue) {
               return results.push({
                 id,
                 status: "bid-too-low",
               });
+            } else {
+              // if the bid is higher than the top bid cache it
+
+              const expiry = new Date();
+
+              // set expiry as seconds until order.params.endTime
+              expiry.setSeconds(order.params.endTime - currentTime);
+
+              const seconds = expiry.getSeconds();
+
+              await cacheCollectionTopBidValue(
+                info.contract,
+                Number(tokenId),
+                Number(value.toString()),
+                seconds
+              );
+            }
+          } else {
+            const collectionFloorAskValue = await getCollectionFloorAskValue(
+              info.contract,
+              Number(tokenId)
+            );
+
+            if (collectionFloorAskValue) {
+              const percentage = (Number(value.toString()) / collectionFloorAskValue) * 100;
+
+              if (percentage < seaportBidPercentageThreshold) {
+                return results.push({
+                  id,
+                  status: "bid-too-low",
+                });
+              }
             }
           }
         } catch (error) {
@@ -922,5 +952,45 @@ const getCollectionFloorAskValue = async (
 
       return collectionFloorAskValue;
     }
+  }
+};
+
+const getCollectionTopBidValue = async (
+  contract: string,
+  tokenId: number
+): Promise<number | null> => {
+  let collectionTopBidValue;
+  if (getNetworkSettings().multiCollectionContracts.includes(contract)) {
+    const collection = await Collections.getByContractAndTokenId(contract, tokenId);
+
+    collectionTopBidValue = await redis.get(`collection-top-bid:${collection?.id}`);
+
+    if (collectionTopBidValue) {
+      return Number(collectionTopBidValue);
+    } else {
+      return null;
+    }
+  }
+
+  collectionTopBidValue = await redis.get(`collection-top-bid:${contract}`);
+
+  if (collectionTopBidValue) {
+    return Number(collectionTopBidValue);
+  } else {
+    return null;
+  }
+};
+
+const cacheCollectionTopBidValue = async (
+  contract: string,
+  tokenId: number,
+  value: number,
+  expiry: number
+): Promise<void> => {
+  if (getNetworkSettings().multiCollectionContracts.includes(contract)) {
+    const collection = await Collections.getByContractAndTokenId(contract, tokenId);
+    await redis.set(`collection-top-bid:${collection?.id}`, value, "EX", expiry);
+  } else {
+    await redis.set(`collection-top-bid:${contract}`, value, "EX", expiry);
   }
 };
