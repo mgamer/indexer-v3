@@ -151,6 +151,11 @@ export type GenericOrderInfo =
       kind: "superrare";
       info: orders.superrare.OrderInfo;
       validateBidValue?: boolean;
+    }
+  | {
+      kind: "looks-rare-v2";
+      info: orders.looksRareV2.OrderInfo;
+      validateBidValue?: boolean;
     };
 
 export const jobProcessor = async (job: Job) => {
@@ -251,6 +256,11 @@ export const jobProcessor = async (job: Job) => {
 
       case "superrare": {
         result = await orders.superrare.save([info]);
+        break;
+      }
+
+      case "looks-rare-v2": {
+        result = await orders.looksRareV2.save([info]);
         break;
       }
     }
