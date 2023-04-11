@@ -135,9 +135,9 @@ CREATE INDEX "orders_asks_updated_at_asc_id_index"
   ON "orders" ("updated_at" ASC, "id" ASC)
   WHERE ("side" = 'sell');
 
--- CREATE INDEX "orders_updated_at_asc_id_active_index"
---   ON "orders" ("side", "updated_at" ASC, "id" ASC)
---   WHERE ("fillability_status" = 'fillable' AND "approval_status" = 'approved');
+CREATE INDEX "orders_updated_at_asc_id_active_index"
+  ON "orders" ("side", "updated_at" ASC, "id" ASC)
+  WHERE ("fillability_status" = 'fillable' AND "approval_status" = 'approved');
 
 -- Down Migration
 
