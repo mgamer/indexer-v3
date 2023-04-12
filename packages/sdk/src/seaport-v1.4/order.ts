@@ -399,13 +399,6 @@ export class Order implements IOrder {
   }
 }
 
-// export const EIP712_DOMAIN = (chainId: number, exchangeAddress: string) => ({
-//   name: "Seaport",
-//   version: "1.4",
-//   chainId: 11155111,
-//   verifyingContract: exchangeAddress,
-// });
-
 const normalize = (order: Types.OrderComponents): Types.OrderComponents => {
   // Perform some normalization operations on the order:
   // - convert bignumbers to strings where needed

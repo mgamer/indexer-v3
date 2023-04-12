@@ -58,7 +58,6 @@ export const SeaportV14Module: ChainIdToAddress = {
 };
 
 export const AlienswapModule: ChainIdToAddress = {
-  [Network.Ethereum]: "",
   [Network.EthereumGoerli]: "0xaba7bc68e4e75c290d1181f053328fac89875caf",
 };
 

@@ -7,12 +7,10 @@ import axios from "axios";
 import { idb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
-import { redis } from "@/common/redis";
 import tracer from "@/common/tracer";
 import { bn, now, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { getNetworkSettings } from "@/config/network";
-import { Collections } from "@/models/collections";
 import { Sources } from "@/models/sources";
 import { SourcesEntity } from "@/models/sources/sources-entity";
 import { DbOrder, OrderMetadata, generateSchemaHash } from "@/orderbook/orders/utils";
@@ -38,10 +36,7 @@ type SaveResult = {
   delay?: number;
 };
 
-export const save = async (
-  orderInfos: OrderInfo[],
-  validateBidValue?: boolean
-): Promise<SaveResult[]> => {
+export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
   const results: SaveResult[] = [];
   const orderValues: DbOrder[] = [];
 
@@ -461,35 +456,6 @@ export const save = async (
       }
       const normalizedValue = bn(prices.nativePrice).toString();
 
-      if (info.side === "buy" && order.params.kind === "single-token" && validateBidValue) {
-        const typedInfo = info as typeof info & { tokenId: string };
-        const tokenId = typedInfo.tokenId;
-        const seaportBidPercentageThreshold = 80;
-
-        try {
-          const collectionFloorAskValue = await getCollectionFloorAskValue(
-            info.contract,
-            Number(tokenId)
-          );
-
-          if (collectionFloorAskValue) {
-            const percentage = (Number(value.toString()) / collectionFloorAskValue) * 100;
-
-            if (percentage < seaportBidPercentageThreshold) {
-              return results.push({
-                id,
-                status: "bid-too-low",
-              });
-            }
-          }
-        } catch (error) {
-          logger.warn(
-            "orders-alienswap-save",
-            `Bid value validation - error. orderId=${id}, contract=${info.contract}, tokenId=${tokenId}, error=${error}`
-          );
-        }
-      }
-
       // Handle: off-chain cancellation via replacement
       if (order.params.zone === Sdk.SeaportV14.Addresses.CancellationZone[config.chainId]) {
         const replacedOrderResult = await idb.oneOrNone(
@@ -660,27 +626,4 @@ export const save = async (
   }
 
   return results;
-};
-
-const getCollectionFloorAskValue = async (
-  contract: string,
-  tokenId: number
-): Promise<number | undefined> => {
-  if (getNetworkSettings().multiCollectionContracts.includes(contract)) {
-    const collection = await Collections.getByContractAndTokenId(contract, tokenId);
-    return collection?.floorSellValue;
-  } else {
-    const collectionFloorAskValue = await redis.get(`collection-floor-ask:${contract}`);
-
-    if (collectionFloorAskValue) {
-      return Number(collectionFloorAskValue);
-    } else {
-      const collection = await Collections.getByContractAndTokenId(contract, tokenId);
-      const collectionFloorAskValue = collection?.floorSellValue || 0;
-
-      await redis.set(`collection-floor-ask:${contract}`, collectionFloorAskValue, "EX", 3600);
-
-      return collectionFloorAskValue;
-    }
-  }
 };
