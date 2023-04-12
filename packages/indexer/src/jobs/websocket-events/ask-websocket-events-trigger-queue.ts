@@ -47,7 +47,7 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
 
         const criteriaBuildQuery = Orders.buildCriteriaQuery("orders", "token_set_id", false);
 
-        const rawResult = await redb.oneOrNone(
+        const rawResult = await idb.oneOrNone(
           `
             SELECT orders.id,
             orders.kind,
