@@ -636,22 +636,6 @@ export const save = async (
                 id,
                 status: "bid-too-low",
               });
-            } else {
-              // if the bid is higher than the top bid cache it
-
-              const expiry = new Date();
-
-              // set expiry as seconds until order.params.endTime
-              expiry.setSeconds(order.params.endTime - currentTime);
-
-              const seconds = expiry.getSeconds();
-
-              await cacheCollectionTopBidValue(
-                info.contract,
-                Number(tokenId),
-                Number(value.toString()),
-                seconds
-              );
             }
           } else {
             const collectionFloorAskValue = await getCollectionFloorAskValue(
@@ -955,7 +939,7 @@ const getCollectionFloorAskValue = async (
   }
 };
 
-const getCollectionTopBidValue = async (
+export const getCollectionTopBidValue = async (
   contract: string,
   tokenId: number
 ): Promise<number | null> => {
@@ -981,7 +965,7 @@ const getCollectionTopBidValue = async (
   }
 };
 
-const cacheCollectionTopBidValue = async (
+export const cacheCollectionTopBidValue = async (
   contract: string,
   tokenId: number,
   value: number,

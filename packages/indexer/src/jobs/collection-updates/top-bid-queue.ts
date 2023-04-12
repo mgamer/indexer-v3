@@ -3,12 +3,13 @@ import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import { idb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
-import { toBuffer } from "@/common/utils";
+import { now, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import {
   WebsocketEventKind,
   WebsocketEventRouter,
 } from "../websocket-events/websocket-event-router";
+import { cacheCollectionTopBidValue } from "@/orderbook/orders/seaport-v1.4";
 
 const QUEUE_NAME = "collection-updates-top-bid-queue";
 
@@ -106,6 +107,10 @@ if (config.doBackgroundWork) {
               y.top_buy_id,
               y.top_buy_source_id_int,
               y.top_buy_valid_between,
+              coalesce(
+                nullif(date_part('epoch', upper(y.top_buy_valid_between)), 'Infinity'),
+                0
+              ) AS valid_until,
               y.top_buy_maker,
               y.top_buy_value,
               y.old_top_buy_value,
@@ -128,6 +133,22 @@ if (config.doBackgroundWork) {
             txHash: txHash ? toBuffer(txHash) : null,
             txTimestamp,
           }
+        );
+
+        // cache the new top bid
+
+        const expiry = new Date();
+        // set redis expiry as seconds until the top bid expires
+        expiry.setSeconds(collectionTopBid?.valid_until - now());
+        const seconds = expiry.getSeconds();
+
+        const [, , tokenId] = collectionTopBid.token_set_id.split(":");
+
+        await cacheCollectionTopBidValue(
+          collectionId,
+          Number(tokenId),
+          Number(collectionTopBid?.top_buy_value.toString()),
+          seconds
         );
 
         if (kind === "new-order" && collectionTopBid?.order_id) {
