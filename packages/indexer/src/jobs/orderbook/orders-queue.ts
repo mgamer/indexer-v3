@@ -75,7 +75,7 @@ if (config.doBackgroundWork) {
 
           logger.info(
             "pending-expired-orders-check",
-            JSON.stringify({ count: result.expired_count })
+            JSON.stringify({ pendingExpiredOrdersCount: result.expired_count })
           );
         })
         .catch(() => {
