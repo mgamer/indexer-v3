@@ -87,6 +87,7 @@ export const postOrderV4Options: RouteOptions = {
           crossPostingOrderId: Joi.string().description(
             "Only available when posting to external orderbook. Can be used to retrieve the status of a cross-post order."
           ),
+          crossPostingOrderStatus: Joi.string(),
         })
       ),
     }).label(`postOrder${version.toUpperCase()}Response`),
@@ -134,6 +135,7 @@ export const postOrderV4Options: RouteOptions = {
         orderIndex: number;
         orderId?: string;
         crossPostingOrderId?: number;
+        crossPostingOrderStatus?: string;
       }[] = [];
       await Promise.all(
         items.map(async (item, i) => {
@@ -273,6 +275,7 @@ export const postOrderV4Options: RouteOptions = {
                 orderIndex: i,
                 orderId,
                 crossPostingOrderId: crossPostingOrder?.id,
+                crossPostingOrderStatus: crossPostingOrder?.status,
               });
             }
 
@@ -390,6 +393,7 @@ export const postOrderV4Options: RouteOptions = {
                 orderIndex: i,
                 orderId,
                 crossPostingOrderId: crossPostingOrder?.id,
+                crossPostingOrderStatus: crossPostingOrder?.status,
               });
             }
 
@@ -441,6 +445,7 @@ export const postOrderV4Options: RouteOptions = {
                 orderIndex: i,
                 orderId,
                 crossPostingOrderId: crossPostingOrder?.id,
+                crossPostingOrderStatus: crossPostingOrder?.status,
               });
             }
 
@@ -496,6 +501,7 @@ export const postOrderV4Options: RouteOptions = {
                 orderIndex: i,
                 orderId,
                 crossPostingOrderId: crossPostingOrder?.id,
+                crossPostingOrderStatus: crossPostingOrder?.status,
               });
             }
 
@@ -529,6 +535,7 @@ export const postOrderV4Options: RouteOptions = {
                 orderIndex: i,
                 orderId,
                 crossPostingOrderId: crossPostingOrder.id,
+                crossPostingOrderStatus: crossPostingOrder.status,
               });
             }
 
@@ -562,6 +569,7 @@ export const postOrderV4Options: RouteOptions = {
                 orderIndex: i,
                 orderId,
                 crossPostingOrderId: crossPostingOrder.id,
+                crossPostingOrderStatus: crossPostingOrder.status,
               });
             }
           }
