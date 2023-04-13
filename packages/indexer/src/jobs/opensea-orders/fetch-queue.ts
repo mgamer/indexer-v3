@@ -42,8 +42,6 @@ if (config.doBackgroundWork) {
       let collectionOffers = [];
       let rateLimitExpiredIn = 0;
 
-      logger.info(QUEUE_NAME, `API KEY: ${config.openSeaApiKey}`);
-
       const pendingRefreshOpenseaCollectionOffersCollections =
         new PendingRefreshOpenseaCollectionOffersCollections();
       const refreshOpenseaCollectionOffersCollections =
