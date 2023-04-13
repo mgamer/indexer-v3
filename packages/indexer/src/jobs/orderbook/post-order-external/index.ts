@@ -213,7 +213,7 @@ if (config.doBackgroundWork) {
     },
     {
       connection: redis.duplicate(),
-      concurrency: 10,
+      concurrency: 3,
     }
   );
 
