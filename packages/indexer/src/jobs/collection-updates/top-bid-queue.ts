@@ -9,7 +9,10 @@ import {
   WebsocketEventKind,
   WebsocketEventRouter,
 } from "../websocket-events/websocket-event-router";
-import { cacheCollectionTopBidValue } from "@/orderbook/orders/seaport-v1.4";
+import {
+  cacheCollectionTopBidValue,
+  clearCacheCollectionTopBidValue,
+} from "@/orderbook/orders/seaport-v1.4";
 
 const QUEUE_NAME = "collection-updates-top-bid-queue";
 
@@ -135,21 +138,27 @@ if (config.doBackgroundWork) {
           }
         );
 
-        // cache the new top bid
+        if (collectionTopBid?.order_id) {
+          // cache the new top bid
 
-        const expiry = new Date();
-        // set redis expiry as seconds until the top bid expires
-        expiry.setSeconds(collectionTopBid?.valid_until - now());
-        const seconds = expiry.getSeconds();
+          const expiry = new Date();
+          // set redis expiry as seconds until the top bid expires
+          expiry.setSeconds(collectionTopBid?.valid_until - now());
+          const seconds = expiry.getSeconds();
 
-        const [, , tokenId] = collectionTopBid.token_set_id.split(":");
+          const [, , tokenId] = collectionTopBid.token_set_id.split(":");
 
-        await cacheCollectionTopBidValue(
-          collectionId,
-          Number(tokenId),
-          Number(collectionTopBid?.top_buy_value.toString()),
-          seconds
-        );
+          await cacheCollectionTopBidValue(
+            collectionId,
+            Number(tokenId),
+            Number(collectionTopBid?.top_buy_value.toString()),
+            seconds
+          );
+        } else {
+          // clear the cache
+          const [, , tokenId] = collectionTopBid.token_set_id.split(":");
+          await clearCacheCollectionTopBidValue(collectionId, Number(tokenId));
+        }
 
         if (kind === "new-order" && collectionTopBid?.order_id) {
           await WebsocketEventRouter({

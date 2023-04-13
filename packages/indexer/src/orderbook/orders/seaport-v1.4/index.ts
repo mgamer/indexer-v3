@@ -978,3 +978,15 @@ export const cacheCollectionTopBidValue = async (
     await redis.set(`collection-top-bid:${contract}`, value, "EX", expiry);
   }
 };
+
+export const clearCacheCollectionTopBidValue = async (
+  contract: string,
+  tokenId: number
+): Promise<void> => {
+  if (getNetworkSettings().multiCollectionContracts.includes(contract)) {
+    const collection = await Collections.getByContractAndTokenId(contract, tokenId);
+    await redis.del(`collection-top-bid:${collection?.id}`);
+  } else {
+    await redis.del(`collection-top-bid:${contract}`);
+  }
+};
