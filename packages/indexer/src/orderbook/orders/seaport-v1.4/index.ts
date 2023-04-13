@@ -966,27 +966,13 @@ export const getCollectionTopBidValue = async (
 };
 
 export const cacheCollectionTopBidValue = async (
-  contract: string,
-  tokenId: number,
+  collectionId: string,
   value: number,
   expiry: number
 ): Promise<void> => {
-  if (getNetworkSettings().multiCollectionContracts.includes(contract)) {
-    const collection = await Collections.getByContractAndTokenId(contract, tokenId);
-    await redis.set(`collection-top-bid:${collection?.id}`, value, "EX", expiry);
-  } else {
-    await redis.set(`collection-top-bid:${contract}`, value, "EX", expiry);
-  }
+  await redis.set(`collection-top-bid:${collectionId}`, value, "EX", expiry);
 };
 
-export const clearCacheCollectionTopBidValue = async (
-  contract: string,
-  tokenId: number
-): Promise<void> => {
-  if (getNetworkSettings().multiCollectionContracts.includes(contract)) {
-    const collection = await Collections.getByContractAndTokenId(contract, tokenId);
-    await redis.del(`collection-top-bid:${collection?.id}`);
-  } else {
-    await redis.del(`collection-top-bid:${contract}`);
-  }
+export const clearCacheCollectionTopBidValue = async (collectionId: string): Promise<void> => {
+  await redis.del(`collection-top-bid:${collectionId}`);
 };

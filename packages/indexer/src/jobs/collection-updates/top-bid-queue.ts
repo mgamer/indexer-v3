@@ -128,7 +128,7 @@ if (config.doBackgroundWork) {
               WHERE orders.id = y.top_buy_id
               LIMIT 1
             ) z ON TRUE
-            RETURNING order_id
+            RETURNING order_id, valid_until, top_buy_value, token_set_id
           `,
           {
             kind,
@@ -146,18 +146,14 @@ if (config.doBackgroundWork) {
           expiry.setSeconds(collectionTopBid?.valid_until - now());
           const seconds = expiry.getSeconds();
 
-          const [, , tokenId] = collectionTopBid.token_set_id.split(":");
-
           await cacheCollectionTopBidValue(
             collectionId,
-            Number(tokenId),
             Number(collectionTopBid?.top_buy_value.toString()),
             seconds
           );
         } else {
           // clear the cache
-          const [, , tokenId] = collectionTopBid.token_set_id.split(":");
-          await clearCacheCollectionTopBidValue(collectionId, Number(tokenId));
+          await clearCacheCollectionTopBidValue(collectionId);
         }
 
         if (kind === "new-order" && collectionTopBid?.order_id) {
