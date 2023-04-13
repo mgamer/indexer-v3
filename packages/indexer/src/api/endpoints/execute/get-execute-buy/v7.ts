@@ -52,6 +52,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
                 .lowercase()
                 .valid(
                   "opensea",
+                  "blur",
                   "looks-rare",
                   "zeroex-v4",
                   "seaport",
@@ -59,10 +60,10 @@ export const getExecuteBuyV7Options: RouteOptions = {
                   "x2y2",
                   "universe",
                   "rarible",
-                  "infinity",
                   "sudoswap",
                   "flow",
-                  "nftx"
+                  "nftx",
+                  "alienswap"
                 )
                 .required(),
               data: Joi.object().required(),
@@ -135,8 +136,10 @@ export const getExecuteBuyV7Options: RouteOptions = {
       maxPriorityFeePerGas: Joi.string()
         .pattern(regex.number)
         .description("Optional custom gas settings."),
-      // TODO: Allow passing other API keys as well (eg. Coinbase)
+      // Various authorization keys
       x2y2ApiKey: Joi.string().description("Optional X2Y2 API key used for filling."),
+      openseaApiKey: Joi.string().description("Optional OpenSea API key used for filling."),
+      blurAuth: Joi.string().description("Optional Blur auth used for filling"),
     }),
   },
   response: {
@@ -669,70 +672,70 @@ export const getExecuteBuyV7Options: RouteOptions = {
       // Handle Blur authentication
       let blurAuth: b.Auth | undefined;
       if (path.some((p) => p.source === "blur.io")) {
-        const blurAuthId = b.getAuthId(payload.taker);
-
-        blurAuth = await b.getAuth(blurAuthId);
-        if (!blurAuth) {
-          const blurAuthChallengeId = b.getAuthChallengeId(payload.taker);
-
-          let blurAuthChallenge = await b.getAuthChallenge(blurAuthChallengeId);
-          if (!blurAuthChallenge) {
-            blurAuthChallenge = (await axios
-              .get(`${config.orderFetcherBaseUrl}/api/blur-auth-challenge?taker=${payload.taker}`, {
-                headers: {
-                  "X-Api-Key": config.orderFetcherApiKey,
-                },
-              })
-              .then((response) => response.data.authChallenge)) as b.AuthChallenge;
-
-            await b.saveAuthChallenge(
-              blurAuthChallengeId,
-              blurAuthChallenge,
-              // Give a 1 minute buffer for the auth challenge to expire
-              Math.floor(new Date(blurAuthChallenge?.expiresOn).getTime() / 1000) - now() - 60
-            );
-          }
-
-          steps[0].items.push({
-            status: "incomplete",
-            data: {
-              sign: {
-                signatureKind: "eip191",
-                message: blurAuthChallenge.message,
-              },
-              post: {
-                endpoint: "/execute/auth-signature/v1",
-                method: "POST",
-                body: {
-                  kind: "blur",
-                  id: blurAuthChallengeId,
-                },
-              },
-            },
-          });
-
-          // Force the client to poll
-          steps[1].items.push({
-            status: "incomplete",
-          });
-
-          // Return an early since any next steps are dependent on the Blur auth
-          return {
-            steps,
-            path,
-          };
+        if (payload.blurAuth) {
+          blurAuth = { accessToken: payload.blurAuth };
         } else {
-          steps[0].items.push({
-            status: "complete",
-          });
+          const blurAuthId = b.getAuthId(payload.taker);
+
+          blurAuth = await b.getAuth(blurAuthId);
+          if (!blurAuth) {
+            const blurAuthChallengeId = b.getAuthChallengeId(payload.taker);
+
+            let blurAuthChallenge = await b.getAuthChallenge(blurAuthChallengeId);
+            if (!blurAuthChallenge) {
+              blurAuthChallenge = (await axios
+                .get(`${config.orderFetcherBaseUrl}/api/blur-auth-challenge?taker=${payload.taker}`)
+                .then((response) => response.data.authChallenge)) as b.AuthChallenge;
+
+              await b.saveAuthChallenge(
+                blurAuthChallengeId,
+                blurAuthChallenge,
+                // Give a 1 minute buffer for the auth challenge to expire
+                Math.floor(new Date(blurAuthChallenge?.expiresOn).getTime() / 1000) - now() - 60
+              );
+            }
+
+            steps[0].items.push({
+              status: "incomplete",
+              data: {
+                sign: {
+                  signatureKind: "eip191",
+                  message: blurAuthChallenge.message,
+                },
+                post: {
+                  endpoint: "/execute/auth-signature/v1",
+                  method: "POST",
+                  body: {
+                    kind: "blur",
+                    id: blurAuthChallengeId,
+                  },
+                },
+              },
+            });
+
+            // Force the client to poll
+            steps[1].items.push({
+              status: "incomplete",
+            });
+
+            // Return an early since any next steps are dependent on the Blur auth
+            return {
+              steps,
+              path,
+            };
+          }
         }
+
+        steps[0].items.push({
+          status: "complete",
+        });
       }
 
       const router = new Sdk.RouterV6.Router(config.chainId, baseProvider, {
         x2y2ApiKey: payload.x2y2ApiKey ?? config.x2y2ApiKey,
+        openseaApiKey: payload.openseaApiKey,
         cbApiKey: config.cbApiKey,
         orderFetcherBaseUrl: config.orderFetcherBaseUrl,
-        orderFetcherApiKey: config.orderFetcherApiKey,
       });
 
       const errors: { orderId: string; message: string }[] = [];
@@ -783,8 +786,6 @@ export const getExecuteBuyV7Options: RouteOptions = {
         : undefined;
 
       for (const { txData, approvals, orderIds } of txs) {
-        const subPath = path.filter((p) => orderIds.includes(p.orderId));
-
         // Handle approvals
         for (const approval of approvals) {
           const approvedAmount = await onChainData
@@ -804,23 +805,22 @@ export const getExecuteBuyV7Options: RouteOptions = {
           }
         }
 
-        // Get the total price to be paid in the buy-in currency:
-        // - orders already denominated in the buy-in currency
-        // - approval amounts (which will be denominated in the buy-in currency)
-        const totalBuyInCurrencyPrice = subPath
-          .filter(({ currency }) => currency === buyInCurrency)
-          .map(({ rawQuote }) => bn(rawQuote))
-          .reduce((a, b) => a.add(b), bn(0))
-          .add(approvals.map((a) => bn(a.amount)).reduce((a, b) => a.add(b), bn(0)));
-
         // Check that the transaction sender has enough funds to fill all requested tokens
         const txSender = payload.relayer ?? payload.taker;
         if (buyInCurrency === Sdk.Common.Addresses.Eth[config.chainId]) {
+          // Get the price in the buy-in currency via the transaction value
+          const totalBuyInCurrencyPrice = bn(txData.value ?? 0);
+
           const balance = await baseProvider.getBalance(txSender);
           if (!payload.skipBalanceCheck && bn(balance).lt(totalBuyInCurrencyPrice)) {
             throw Boom.badData("Balance too low to proceed with transaction");
           }
         } else {
+          // Get the price in the buy-in currency via the approval amounts
+          const totalBuyInCurrencyPrice = approvals
+            .map((a) => bn(a.amount))
+            .reduce((a, b) => a.add(b), bn(0));
+
           const erc20 = new Sdk.Common.Helpers.Erc20(baseProvider, buyInCurrency);
           const balance = await erc20.getBalance(txSender);
           if (!payload.skipBalanceCheck && bn(balance).lt(totalBuyInCurrencyPrice)) {

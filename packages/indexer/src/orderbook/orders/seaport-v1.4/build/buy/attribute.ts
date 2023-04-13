@@ -4,10 +4,11 @@ import { BigNumberish } from "@ethersproject/bignumber";
 import { redb } from "@/common/db";
 import { fromBuffer } from "@/common/utils";
 import { config } from "@/config/index";
-import * as utils from "@/orderbook/orders/seaport-v1.4/build/utils";
+import { getBuildInfo } from "@/orderbook/orders/seaport-v1.4/build/utils";
+import { BaseOrderBuildOptions } from "@/orderbook/orders/seaport-base/build/utils";
 import * as OpenSeaApi from "@/jobs/orderbook/post-order-external/api/opensea";
 
-interface BuildOrderOptions extends utils.BaseOrderBuildOptions {
+interface BuildOrderOptions extends BaseOrderBuildOptions {
   // TODO: refactor
   // The following combinations are possible:
   // - collection + attributes
@@ -56,7 +57,7 @@ export const build = async (options: BuildOrderOptions) => {
       throw new Error("Attribute has too many items");
     }
 
-    const buildInfo = await utils.getBuildInfo(
+    const buildInfo = await getBuildInfo(
       {
         ...options,
         contract: fromBuffer(attributeResult.contract),
@@ -73,6 +74,9 @@ export const build = async (options: BuildOrderOptions) => {
         options.attributes[0].key,
         options.attributes[0].value
       );
+
+      // Use the zone returned from OpenSea's API
+      buildInfo.params.zone = buildCollectionOfferParams.partialParameters.zone;
 
       // When cross-posting to OpenSea, if the result from their API is not
       // a contract-wide order, then switch to using a token-list builder
@@ -129,7 +133,7 @@ export const build = async (options: BuildOrderOptions) => {
       }
     );
 
-    const buildInfo = await utils.getBuildInfo(
+    const buildInfo = await getBuildInfo(
       {
         ...options,
         contract: fromBuffer(tokens[0].contract),

@@ -42,6 +42,7 @@ import NFTXModuleAbi from "./abis/NFTXModule.json";
 import RaribleModuleAbi from "./abis/RaribleModule.json";
 import SeaportModuleAbi from "./abis/SeaportModule.json";
 import SeaportV14ModuleAbi from "./abis/SeaportV14Module.json";
+import AlienswapModuleAbi from "./abis/AlienswapModule.json";
 import SudoswapModuleAbi from "./abis/SudoswapModule.json";
 import SwapModuleAbi from "./abis/SwapModule.json";
 import X2Y2ModuleAbi from "./abis/X2Y2Module.json";
@@ -50,9 +51,9 @@ import ZoraModuleAbi from "./abis/ZoraModule.json";
 
 type SetupOptions = {
   x2y2ApiKey?: string;
+  openseaApiKey?: string;
   cbApiKey?: string;
   orderFetcherBaseUrl?: string;
-  orderFetcherApiKey?: string;
 };
 
 export class Router {
@@ -135,6 +136,11 @@ export class Router {
       swapModule: new Contract(
         Addresses.SwapModule[chainId] ?? AddressZero,
         SwapModuleAbi,
+        provider
+      ),
+      alienswapModule: new Contract(
+        Addresses.AlienswapModule[chainId] ?? AddressZero,
+        AlienswapModuleAbi,
         provider
       ),
     };
@@ -259,69 +265,6 @@ export class Router {
       }
     }
 
-    // TODO: Add Infinity router module
-    if (details.some(({ kind }) => kind === "infinity")) {
-      if (options?.relayer) {
-        throw new Error("Relayer not supported for Infinity orders");
-      }
-
-      if (details.length > 1) {
-        throw new Error("Infinity sweeping is not supported");
-      } else {
-        if (options?.globalFees?.length) {
-          throw new Error("Fees not supported for Infinity orders");
-        }
-
-        const detail = details[0];
-
-        let approval: FTApproval | undefined;
-        if (!isETH(this.chainId, detail.currency)) {
-          approval = {
-            currency: detail.currency,
-            amount: detail.price,
-            owner: taker,
-            operator: Sdk.Infinity.Addresses.Exchange[this.chainId],
-            txData: generateFTApprovalTxData(
-              detail.currency,
-              taker,
-              Sdk.Infinity.Addresses.Exchange[this.chainId]
-            ),
-          };
-        }
-
-        const order = detail.order as Sdk.Infinity.Order;
-        const exchange = new Sdk.Infinity.Exchange(this.chainId);
-
-        if (options?.directFillingData) {
-          return {
-            txs: [
-              {
-                approvals: approval ? [approval] : [],
-                txData: exchange.takeOrdersTx(taker, [
-                  {
-                    order,
-                    tokens: options.directFillingData,
-                  },
-                ]),
-                orderIds: [detail.orderId],
-              },
-            ],
-            success: { [detail.orderId]: true },
-          };
-        }
-        return {
-          txs: [
-            {
-              approvals: approval ? [approval] : [],
-              txData: exchange.takeMultipleOneOrdersTx(taker, [order]),
-              orderIds: [detail.orderId],
-            },
-          ],
-          success: { [detail.orderId]: true },
-        };
-      }
-    }
-
     // TODO: Add Flow router module
     if (details.some(({ kind }) => kind === "flow")) {
       if (options?.relayer) {
@@ -425,6 +368,38 @@ export class Router {
       }
     }
 
+    // TODO: Add LooksRareV2 router module
+    if (details.some(({ kind }) => kind === "looks-rare-v2")) {
+      if (options?.relayer) {
+        throw new Error("Relayer not supported for LooksRareV2 orders");
+      }
+
+      if (details.length > 1) {
+        throw new Error("LooksRareV2 sweeping is not supported");
+      } else {
+        if (options?.globalFees?.length) {
+          throw new Error("Fees not supported for LooksRareV2 orders");
+        }
+
+        const detail = details[0];
+
+        const order = detail.order as Sdk.LooksRareV2.Order;
+        const exchange = new Sdk.LooksRareV2.Exchange(this.chainId);
+        const matchOrder = order.buildMatching(taker);
+
+        return {
+          txs: [
+            {
+              approvals: [],
+              txData: exchange.fillOrderTx(taker, order, matchOrder),
+              orderIds: [detail.orderId],
+            },
+          ],
+          success: { [detail.orderId]: true },
+        };
+      }
+    }
+
     if (details.some(({ kind }) => kind === "blur")) {
       if (options?.relayer) {
         throw new Error("Relayer not supported for Blur orders");
@@ -477,24 +452,16 @@ export class Router {
             errors: { tokenId: string; reason: string }[];
           };
         } = await axios
-          .post(
-            url,
-            {
-              taker,
-              tokens: blurCompatibleListings.map((d) => ({
-                contract: d.contract,
-                tokenId: d.tokenId,
-                price: d.price,
-                isFlagged: d.isFlagged,
-              })),
-              authToken: options?.blurAuth?.accessToken,
-            },
-            {
-              headers: {
-                "X-Api-Key": this.options?.orderFetcherApiKey,
-              },
-            }
-          )
+          .post(url, {
+            taker,
+            tokens: blurCompatibleListings.map((d) => ({
+              contract: d.contract,
+              tokenId: d.tokenId,
+              price: d.price,
+              isFlagged: d.isFlagged,
+            })),
+            authToken: options?.blurAuth?.accessToken,
+          })
           .then((response) => response.data.calldata);
 
         for (const [contract, data] of Object.entries(result)) {
@@ -594,13 +561,10 @@ export class Router {
           url += `&taker=${taker}`;
           url += `&chainId=${this.chainId}`;
           url += "&protocolVersion=v1.1";
+          url += this.options?.openseaApiKey ? `&openseaApiKey=${this.options.openseaApiKey}` : "";
 
           try {
-            const result = await axios.get(url, {
-              headers: {
-                "X-Api-Key": this.options?.orderFetcherApiKey,
-              },
-            });
+            const result = await axios.get(url);
 
             // Override the details
             const fullOrder = new Sdk.SeaportV11.Order(this.chainId, result.data.order);
@@ -642,13 +606,10 @@ export class Router {
           url += `&taker=${taker}`;
           url += `&chainId=${this.chainId}`;
           url += "&protocolVersion=v1.4";
+          url += this.options?.openseaApiKey ? `&openseaApiKey=${this.options.openseaApiKey}` : "";
 
           try {
-            const result = await axios.get(url, {
-              headers: {
-                "X-Api-Key": this.options?.orderFetcherApiKey,
-              },
-            });
+            const result = await axios.get(url);
 
             // Override the details
             const fullOrder = new Sdk.SeaportV14.Order(this.chainId, result.data.order);
@@ -775,7 +736,7 @@ export class Router {
       const exchange = new Sdk.SeaportV14.Exchange(this.chainId);
 
       const conduit = exchange.deriveConduit(
-        (details[0].order as Sdk.SeaportV11.Order).params.conduitKey
+        (details[0].order as Sdk.SeaportV14.Order).params.conduitKey
       );
 
       let approval: FTApproval | undefined;
@@ -811,6 +772,81 @@ export class Router {
         };
       } else {
         const orders = details.map((d) => d.order as Sdk.SeaportV14.Order);
+        return {
+          txs: [
+            {
+              approvals: approval ? [approval] : [],
+              txData: await exchange.fillOrdersTx(
+                taker,
+                orders,
+                orders.map((order, i) => order.buildMatching({ amount: details[i].amount })),
+                {
+                  ...options,
+                  ...options?.directFillingData,
+                }
+              ),
+              orderIds: details.map((d) => d.orderId),
+            },
+          ],
+          success: Object.fromEntries(details.map((d) => [d.orderId, true])),
+        };
+      }
+    }
+
+    if (
+      details.every(
+        ({ kind, fees, currency, order }) =>
+          kind === "alienswap" &&
+          buyInCurrency === currency &&
+          // All orders must have the same currency and conduit
+          currency === details[0].currency &&
+          (order as Sdk.Alienswap.Order).params.conduitKey ===
+            (details[0].order as Sdk.Alienswap.Order).params.conduitKey &&
+          !fees?.length
+      ) &&
+      !options?.globalFees?.length &&
+      !options?.forceRouter &&
+      !options?.relayer
+    ) {
+      const exchange = new Sdk.Alienswap.Exchange(this.chainId);
+
+      const conduit = exchange.deriveConduit(
+        (details[0].order as Sdk.Alienswap.Order).params.conduitKey
+      );
+
+      let approval: FTApproval | undefined;
+      if (!isETH(this.chainId, details[0].currency)) {
+        approval = {
+          currency: details[0].currency,
+          amount: details[0].price,
+          owner: taker,
+          operator: conduit,
+          txData: generateFTApprovalTxData(details[0].currency, taker, conduit),
+        };
+      }
+
+      if (details.length === 1) {
+        const order = details[0].order as Sdk.Alienswap.Order;
+        return {
+          txs: [
+            {
+              approvals: approval ? [approval] : [],
+              txData: await exchange.fillOrderTx(
+                taker,
+                order,
+                order.buildMatching({ amount: details[0].amount }),
+                {
+                  ...options,
+                  ...options?.directFillingData,
+                }
+              ),
+              orderIds: [details[0].orderId],
+            },
+          ],
+          success: { [details[0].orderId]: true },
+        };
+      } else {
+        const orders = details.map((d) => d.order as Sdk.Alienswap.Order);
         return {
           txs: [
             {
@@ -875,6 +911,7 @@ export class Router {
     // Only `seaport` and `seaport-v1.4` support non-ETH listings
     const seaportDetails: PerCurrencyListingDetails = {};
     const seaportV14Details: PerCurrencyListingDetails = {};
+    const alienswapDetails: PerCurrencyListingDetails = {};
     const sudoswapDetails: ListingDetails[] = [];
     const x2y2Details: ListingDetails[] = [];
     const zeroexV4Erc721Details: ListingDetails[] = [];
@@ -924,6 +961,13 @@ export class Router {
             seaportV14Details[currency] = [];
           }
           detailsRef = seaportV14Details[currency];
+          break;
+
+        case "alienswap":
+          if (!alienswapDetails[currency]) {
+            alienswapDetails[currency] = [];
+          }
+          detailsRef = alienswapDetails[currency];
           break;
 
         case "sudoswap":
@@ -2467,6 +2511,39 @@ export class Router {
       }
     }
 
+    // TODO: Add LooksRareV2 router module
+    if (details.some(({ kind }) => kind === "looks-rare-v2")) {
+      if (details.length > 1) {
+        throw new Error("LooksRareV2 multi-selling is not supported");
+      } else {
+        const detail = details[0];
+
+        // Approve LooksRareV2's Exchange contract
+        const approval = {
+          contract: detail.contract,
+          owner: taker,
+          operator: Sdk.LooksRareV2.Addresses.TransferManager[this.chainId],
+          txData: generateNFTApprovalTxData(
+            detail.contract,
+            taker,
+            Sdk.LooksRareV2.Addresses.TransferManager[this.chainId]
+          ),
+        };
+
+        const order = detail.order as Sdk.LooksRareV2.Order;
+        const matchOrder = order.buildMatching(taker);
+
+        const exchange = new Sdk.LooksRareV2.Exchange(this.chainId);
+        return {
+          txData: exchange.fillOrderTx(taker, order, matchOrder, {
+            source: options?.source,
+          }),
+          success: [true],
+          approvals: [approval],
+        };
+      }
+    }
+
     // CASE 2
     // Handle exchanges which do have a router module implemented by filling through the router
 
@@ -2513,6 +2590,11 @@ export class Router {
         case "seaport-v1.4":
         case "seaport-v1.4-partial": {
           module = this.contracts.seaportV14Module;
+          break;
+        }
+
+        case "alienswap": {
+          module = this.contracts.alienswapModule;
           break;
         }
 
@@ -2669,13 +2751,10 @@ export class Router {
           url += `&chainId=${this.chainId}`;
           url += "&protocolVersion=v1.1";
           url += order.unitPrice ? `&unitPrice=${order.unitPrice}` : "";
+          url += this.options?.openseaApiKey ? `&openseaApiKey=${this.options.openseaApiKey}` : "";
 
           try {
-            const result = await axios.get(url, {
-              headers: {
-                "X-Api-Key": this.options?.orderFetcherApiKey,
-              },
-            });
+            const result = await axios.get(url);
 
             const fullOrder = new Sdk.SeaportV11.Order(this.chainId, result.data.order);
             executions.push({
@@ -2782,13 +2861,10 @@ export class Router {
           url += "&protocolVersion=v1.4";
           url += order.unitPrice ? `&unitPrice=${order.unitPrice}` : "";
           url += detail.isProtected ? "&isProtected=true" : "";
+          url += this.options?.openseaApiKey ? `&openseaApiKey=${this.options.openseaApiKey}` : "";
 
           try {
-            const result = await axios.get(url, {
-              headers: {
-                "X-Api-Key": this.options?.orderFetcherApiKey,
-              },
-            });
+            const result = await axios.get(url);
 
             if (result.data.calldata) {
               const contract = detail.contract;
@@ -2861,6 +2937,49 @@ export class Router {
               throw new Error(getErrorMessage(error));
             }
           }
+
+          break;
+        }
+
+        case "alienswap": {
+          const order = detail.order as Sdk.Alienswap.Order;
+          const module = this.contracts.alienswapModule;
+
+          const matchParams = order.buildMatching({
+            tokenId: detail.tokenId,
+            amount: detail.amount ?? 1,
+            ...(detail.extraArgs ?? {}),
+          });
+
+          const exchange = new Sdk.Alienswap.Exchange(this.chainId);
+          executions.push({
+            module: module.address,
+            data: module.interface.encodeFunctionData(
+              detail.contractKind === "erc721" ? "acceptERC721Offer" : "acceptERC1155Offer",
+              [
+                {
+                  parameters: {
+                    ...order.params,
+                    totalOriginalConsiderationItems: order.params.consideration.length,
+                  },
+                  numerator: matchParams.amount ?? 1,
+                  denominator: order.getInfo()!.amount,
+                  signature: order.params.signature,
+                  extraData: await exchange.getExtraData(order),
+                },
+                matchParams.criteriaResolvers ?? [],
+                {
+                  fillTo: taker,
+                  refundTo: taker,
+                  revertIfIncomplete: Boolean(!options?.partial),
+                },
+                detail.fees ?? [],
+              ]
+            ),
+            value: 0,
+          });
+
+          success[i] = true;
 
           break;
         }

@@ -5,12 +5,13 @@ import { idb } from "@/common/db";
 import { redis } from "@/common/redis";
 import { fromBuffer } from "@/common/utils";
 import { config } from "@/config/index";
-import * as utils from "@/orderbook/orders/seaport-v1.4/build/utils";
+import { getBuildInfo } from "@/orderbook/orders/seaport-v1.4/build/utils";
+import { BaseOrderBuildOptions } from "@/orderbook/orders/seaport-base/build/utils";
 import { generateSchemaHash } from "@/orderbook/orders/utils";
 import * as OpenSeaApi from "@/jobs/orderbook/post-order-external/api/opensea";
 import { Tokens } from "@/models/tokens";
 
-interface BuildOrderOptions extends utils.BaseOrderBuildOptions {
+interface BuildOrderOptions extends BaseOrderBuildOptions {
   collection: string;
 }
 
@@ -36,7 +37,7 @@ export const build = async (options: BuildOrderOptions) => {
     throw new Error("Collection has too many tokens");
   }
 
-  const buildInfo = await utils.getBuildInfo(
+  const buildInfo = await getBuildInfo(
     {
       ...options,
       contract: fromBuffer(collectionResult.contract),
@@ -58,6 +59,9 @@ export const build = async (options: BuildOrderOptions) => {
         options.quantity || 1,
         collectionResult.slug
       );
+
+      // Use the zone returned from OpenSea's API
+      buildInfo.params.zone = buildCollectionOfferParams.partialParameters.zone;
 
       // When cross-posting to OpenSea, if the result from their API is not
       // a contract-wide order, then switch to using a token-list builder
@@ -87,6 +91,9 @@ export const build = async (options: BuildOrderOptions) => {
         options.quantity || 1,
         collectionResult.slug
       );
+
+      // Use the zone returned from OpenSea's API
+      buildInfo.params.zone = buildCollectionOfferParams.partialParameters.zone;
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (buildInfo.params as any).merkleRoot =

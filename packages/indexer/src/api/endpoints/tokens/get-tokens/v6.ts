@@ -102,7 +102,9 @@ export const getTokensV6Options: RouteOptions = {
         }),
       attributes: Joi.object()
         .unknown()
-        .description("Filter to a particular attribute. Example: `attributes[Type]=Original`"),
+        .description(
+          "Filter to a particular attribute. Note: Our docs do not support this parameter correctly. To test, you can use the following URL in your browser. Example: `https://api.reservoir.tools/owners/v1?collection=0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63&attributes[Type]=Original` or `https://api.reservoir.tools/owners/v1?collection=0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63&attributes[Type]=Original&attributes[Type]=Sibling`"
+        ),
       source: Joi.string().description(
         "Domain of the order source. Example `opensea.io` (Only listed tokens are returned when filtering by source)"
       ),
@@ -316,6 +318,7 @@ export const getTokensV6Options: RouteOptions = {
                 AND nb.amount > 0
                 AND nb.owner != o.maker
             )
+            ${query.normalizeRoyalties ? " AND o.normalized_value IS NOT NULL" : ""}
           ORDER BY o.value DESC
           LIMIT 1
         ) y ON TRUE
@@ -416,10 +419,10 @@ export const getTokensV6Options: RouteOptions = {
       includeRoyaltyBreakdownQuery = `
         LEFT JOIN LATERAL (
         SELECT
-          fe.timestamp AS last_sale_timestamp,          
+          fe.timestamp AS last_sale_timestamp,
           fe.currency AS last_sale_currency,
-          fe.currency_price AS last_sale_currency_price,            
-          fe.price AS last_sale_price,    
+          fe.currency_price AS last_sale_currency_price,
+          fe.price AS last_sale_price,
           fe.usd_price AS last_sale_usd_price,
           fe.marketplace_fee_bps AS last_sale_marketplace_fee_bps,
           fe.royalty_fee_bps AS last_sale_royalty_fee_bps,
@@ -427,7 +430,7 @@ export const getTokensV6Options: RouteOptions = {
           fe.royalty_fee_breakdown AS last_sale_royalty_fee_breakdown,
           fe.marketplace_fee_breakdown AS last_sale_marketplace_fee_breakdown
         FROM fill_events_2 fe
-        WHERE fe.contract = t.contract AND fe.token_id = t.token_id
+        WHERE fe.contract = t.contract AND fe.token_id = t.token_id AND fe.is_deleted = 0
         ORDER BY timestamp DESC LIMIT 1
         ) r ON TRUE
         `;
@@ -462,6 +465,13 @@ export const getTokensV6Options: RouteOptions = {
       if (query.currencies) {
         sourceConditions.push(`o.currency IN ($/currenciesFilter:raw/)`);
       }
+
+      sourceConditions.push(`
+        tst.token_id IN (
+          SELECT token_id FROM orders
+          WHERE ${sourceConditions.join(" AND ")}
+        )
+      `);
 
       if (query.contract) {
         sourceConditions.push(`tst.contract = $/contract/`);
@@ -508,7 +518,7 @@ export const getTokensV6Options: RouteOptions = {
           ORDER BY token_id, contract, ${
             query.normalizeRoyalties ? "o.normalized_value" : "o.value"
           }
-        ) s ON s.contract = t.contract AND s.token_id = t.token_id      
+        ) s ON s.contract = t.contract AND s.token_id = t.token_id
       `;
     }
 

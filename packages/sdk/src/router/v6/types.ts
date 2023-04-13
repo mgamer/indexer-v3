@@ -80,6 +80,10 @@ export type GenericOrder =
       order: Sdk.SeaportBase.Types.PartialOrder;
     }
   | {
+      kind: "alienswap";
+      order: Sdk.Alienswap.Order;
+    }
+  | {
       kind: "cryptopunks";
       order: Sdk.CryptoPunks.Order;
     }
@@ -104,10 +108,6 @@ export type GenericOrder =
       order: Sdk.Rarible.Order;
     }
   | {
-      kind: "infinity";
-      order: Sdk.Infinity.Order;
-    }
-  | {
       kind: "forward";
       order: Sdk.Forward.Order;
     }
@@ -130,6 +130,10 @@ export type GenericOrder =
   | {
       kind: "superrare";
       order: Sdk.SuperRare.Order;
+    }
+  | {
+      kind: "looks-rare-v2";
+      order: Sdk.LooksRareV2.Order;
     };
 
 // Listings

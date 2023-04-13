@@ -61,7 +61,6 @@ export const getExecuteSellV7Options: RouteOptions = {
                   "x2y2",
                   "universe",
                   "rarible",
-                  "infinity",
                   "sudoswap",
                   "nftx"
                 )
@@ -104,8 +103,9 @@ export const getExecuteSellV7Options: RouteOptions = {
       maxPriorityFeePerGas: Joi.string()
         .pattern(regex.number)
         .description("Optional custom gas settings."),
-      // TODO: Allow passing other API keys as well (eg. Coinbase)
+      // Various authorization keys
       x2y2ApiKey: Joi.string().description("Optional X2Y2 API key used for filling."),
+      openseaApiKey: Joi.string().description("Optional OpenSea API key used for filling."),
     }),
   },
   response: {
@@ -500,6 +500,7 @@ export const getExecuteSellV7Options: RouteOptions = {
                 AND orders.fillability_status = 'fillable' AND orders.approval_status = 'approved'
                 AND orders.maker != $/taker/
                 AND (orders.taker = '\\x0000000000000000000000000000000000000000' OR orders.taker IS NULL)
+                ${payload.normalizeRoyalties ? " AND orders.normalized_value IS NOT NULL" : ""}
                 ${item.exactOrderSource ? " AND orders.source_id_int = $/sourceId/" : ""}
               ORDER BY ${
                 payload.normalizeRoyalties ? "orders.normalized_value" : "orders.value"
@@ -698,9 +699,9 @@ export const getExecuteSellV7Options: RouteOptions = {
 
       const router = new Sdk.RouterV6.Router(config.chainId, baseProvider, {
         x2y2ApiKey: payload.x2y2ApiKey ?? config.x2y2ApiKey,
+        openseaApiKey: payload.openseaApiKey,
         cbApiKey: config.cbApiKey,
         orderFetcherBaseUrl: config.orderFetcherBaseUrl,
-        orderFetcherApiKey: config.orderFetcherApiKey,
       });
 
       const { customTokenAddresses } = getNetworkSettings();

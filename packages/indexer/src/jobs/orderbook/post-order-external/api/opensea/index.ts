@@ -7,6 +7,7 @@ import { config } from "@/config/index";
 import {
   RequestWasThrottledError,
   InvalidRequestError,
+  InvalidRequestErrorKind,
 } from "@/jobs/orderbook/post-order-external/api/errors";
 import { getOpenseaBaseUrl, getOpenseaNetworkName, getOpenseaSubDomain } from "@/config/network";
 
@@ -44,14 +45,14 @@ export const postOrder = async (order: Sdk.SeaportV14.Order, apiKey: string) => 
               }
             : {
                 "Content-Type": "application/json",
-                // The request will fail if passing the API key on Rinkeby
+                // The request will fail if passing the API key on Opensea Testnet APIs
               },
       }
     )
     .catch((error) => {
       logger.error(
         "opensea-orderbook-api",
-        `Post OpenSea order error. order=${JSON.stringify(order)}, error=${error}, responseStatus=${
+        `Post OpenSea order error. apiKey=${apiKey}, error=${error}, responseStatus=${
           error.response?.status
         }, responseData=${JSON.stringify(error.response?.data)}`
       );
@@ -95,7 +96,7 @@ export const buildCollectionOffer = async (
                 }
               : {
                   "Content-Type": "application/json",
-                  // The request will fail if passing the API key on Rinkeby
+                  // The request will fail if passing the API key on Opensea Testnet APIs
                 },
         }
       )
@@ -104,7 +105,7 @@ export const buildCollectionOffer = async (
       .catch((error) => {
         logger.error(
           "opensea-orderbook-api",
-          `Build OpenSea collection offer error. offerer=${offerer}, quantity=${quantity}, collectionSlug=${collectionSlug}, url=${url}, error=${error}, responseStatus=${
+          `Build OpenSea collection offer error. offerer=${offerer}, quantity=${quantity}, collectionSlug=${collectionSlug}, apiKey=${apiKey}, error=${error}, responseStatus=${
             error.response?.status
           }, responseData=${JSON.stringify(error.response?.data)}`
         );
@@ -154,7 +155,7 @@ export const buildTraitOffer = async (
                 }
               : {
                   "Content-Type": "application/json",
-                  // The request will fail if passing the API key on Rinkeby
+                  // The request will fail if passing the API key on Opensea Testnet APIs
                 },
         }
       )
@@ -163,7 +164,7 @@ export const buildTraitOffer = async (
       .catch((error) => {
         logger.error(
           "opensea_orderbook_api",
-          `Build OpenSea trait offer error. offerer=${offerer}, quantity=${quantity}, collectionSlug=${collectionSlug}, traitType=${traitType}, traitValue=${traitValue}, error=${error}, responseStatus=${
+          `Build OpenSea trait offer error. offerer=${offerer}, quantity=${quantity}, collectionSlug=${collectionSlug}, traitType=${traitType}, traitValue=${traitValue}, apiKey=${apiKey}, error=${error}, responseStatus=${
             error.response?.status
           }, responseData=${JSON.stringify(error.response?.data)}`
         );
@@ -182,7 +183,8 @@ export const postCollectionOffer = async (
   collectionSlug: string,
   apiKey: string
 ) => {
-  const url = `https://${getOpenseaSubDomain()}.opensea.io/v2/offers`;
+  const url = `${getOpenseaBaseUrl()}/v2/offers`;
+
   const data = JSON.stringify({
     criteria: {
       collection: {
@@ -209,15 +211,13 @@ export const postCollectionOffer = async (
             }
           : {
               "Content-Type": "application/json",
-              // The request will fail if passing the API key on Rinkeby
+              // The request will fail if passing the API key on Opensea Testnet APIs
             },
     })
     .catch((error) => {
       logger.error(
         "opensea-orderbook-api",
-        `Post OpenSea collection offer error. order=${JSON.stringify(
-          order
-        )}, collectionSlug=${collectionSlug}, url=${url}, data=${data}, error=${error}, responseStatus=${
+        `Post OpenSea collection offer error. collectionSlug=${collectionSlug}, apiKey=${apiKey}, data=${data}, error=${error}, responseStatus=${
           error.response?.status
         }, responseData=${JSON.stringify(error.response?.data)}`
       );
@@ -267,7 +267,7 @@ export const postTraitOffer = async (
             }
           : {
               "Content-Type": "application/json",
-              // The request will fail if passing the API key on Rinkeby
+              // The request will fail if passing the API key on Opensea Testnet APIs
             },
     })
     .catch((error) => {
@@ -275,7 +275,7 @@ export const postTraitOffer = async (
         "opensea-orderbook-api",
         `Post OpenSea trait offer error. order=${JSON.stringify(
           order
-        )}, collectionSlug=${collectionSlug}, url=${url}, data=${data}, error=${error}, responseStatus=${
+        )}, collectionSlug=${collectionSlug}, apiKey=${apiKey}, data=${data}, error=${error}, responseStatus=${
           error.response?.status
         }, responseData=${JSON.stringify(error.response?.data)}`
       );
@@ -304,9 +304,30 @@ const handleErrorResponse = (response: any) => {
 
       throw new RequestWasThrottledError("Request was throttled by OpenSea", delay);
     }
-    case 400:
-      throw new InvalidRequestError(
-        `Request was rejected by OpenSea. error=${response.data.errors?.toString()}`
+    case 400: {
+      const error = response.data.errors?.toString();
+      const message = `Request was rejected by OpenSea. error=${error}`;
+
+      const invalidFeeErrors = [
+        "You have provided a fee",
+        "You have not provided all required creator fees",
+        "You have provided fees that we cannot attribute to OpenSea or the collection",
+      ];
+
+      logger.info(
+        "opensea-orderbook-api",
+        `handleErrorResponse. error=${error}, message=${message}, invalidFeeErrors=${JSON.stringify(
+          invalidFeeErrors
+        )}`
       );
+
+      for (const invalidFeeError of invalidFeeErrors) {
+        if (error.startsWith(invalidFeeError)) {
+          throw new InvalidRequestError(message, InvalidRequestErrorKind.InvalidFees);
+        }
+      }
+
+      throw new InvalidRequestError(message);
+    }
   }
 };

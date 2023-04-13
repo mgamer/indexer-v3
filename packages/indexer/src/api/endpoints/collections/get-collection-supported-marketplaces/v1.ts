@@ -111,7 +111,7 @@ export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
             bps: 200,
           },
           orderbook: "looks-rare",
-          orderKind: "looks-rare",
+          orderKind: "looks-rare-v2",
           listingEnabled: false,
         },
         {
@@ -149,9 +149,6 @@ export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
           collectionResult.contract
         );
       }
-
-      // Refresh opensea fees
-      await marketplaceFees.refreshCollectionOpenseaFeesAsync(params.collection);
 
       const openseaRoyalties: { bps: number; recipient: string }[] =
         collectionResult.new_royalties?.opensea;

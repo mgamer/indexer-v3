@@ -16,7 +16,13 @@ import {
 import { CollectionSets } from "@/models/collection-sets";
 import * as Sdk from "@reservoir0x/sdk";
 import { config } from "@/config/index";
-import { getJoiPriceObject, getJoiSaleObject, JoiPrice, JoiSale } from "@/common/joi";
+import {
+  getJoiPriceObject,
+  getJoiSaleObject,
+  JoiAttributeValue,
+  JoiPrice,
+  JoiSale,
+} from "@/common/joi";
 import { Sources } from "@/models/sources";
 import _ from "lodash";
 
@@ -102,11 +108,17 @@ export const getUserTokensV7Options: RouteOptions = {
       includeTopBid: Joi.boolean()
         .default(false)
         .description("If true, top bid will be returned in the response."),
+      includeAttributes: Joi.boolean()
+        .default(false)
+        .description("If true, attributes will be returned in the response."),
       includeLastSale: Joi.boolean()
         .default(false)
         .description(
           "If true, last sale data including royalties paid will be returned in the response."
         ),
+      includeRawData: Joi.boolean()
+        .default(false)
+        .description("If true, raw data is included in the response."),
       useNonFlaggedFloorAsk: Joi.boolean()
         .default(false)
         .description("If true, will return the collection non flagged floor ask."),
@@ -148,6 +160,20 @@ export const getUserTokensV7Options: RouteOptions = {
               price: JoiPrice.allow(null),
             }).optional(),
             lastAppraisalValue: Joi.number().unsafe().allow(null),
+            attributes: Joi.array()
+              .items(
+                Joi.object({
+                  key: Joi.string(),
+                  kind: Joi.string(),
+                  value: JoiAttributeValue,
+                  tokenCount: Joi.number(),
+                  onSaleCount: Joi.number(),
+                  floorAskPrice: Joi.number().unsafe().allow(null),
+                  topBidValue: Joi.number().unsafe().allow(null),
+                  createdAt: Joi.string(),
+                })
+              )
+              .optional(),
           }),
           ownership: Joi.object({
             tokenCount: Joi.string(),
@@ -156,9 +182,11 @@ export const getUserTokensV7Options: RouteOptions = {
               id: Joi.string().allow(null),
               price: JoiPrice.allow(null),
               maker: Joi.string().lowercase().pattern(regex.address).allow(null),
+              kind: Joi.string().allow(null),
               validFrom: Joi.number().unsafe().allow(null),
               validUntil: Joi.number().unsafe().allow(null),
               source: Joi.object().allow(null),
+              rawData: Joi.object().optional().allow(null),
             },
             acquiredAt: Joi.string().allow(null),
           }),
@@ -198,16 +226,27 @@ export const getUserTokensV7Options: RouteOptions = {
           AND nft_balances.token_id <= $/endTokenId${i}/)
         `);
       } else if (id.match(/^0x[a-f0-9]{40}:[a-zA-Z]+-.+$/g)) {
+        const collectionParts = id.split(":");
+
         (query as any)[`collection${i}`] = id;
+        (query as any)[`contract${i}`] = toBuffer(collectionParts[0]);
 
         // List based collections
         tokensCollectionFilters.push(`
           collection_id = $/collection${i}/
         `);
+
+        nftBalanceCollectionFilters.push(`(nft_balances.contract = $/contract${i}/)`);
       } else {
         // Contract side collection
         (query as any)[`contract${i}`] = toBuffer(id);
+        (query as any)[`collection${i}`] = id;
+
         nftBalanceCollectionFilters.push(`(nft_balances.contract = $/contract${i}/)`);
+
+        tokensCollectionFilters.push(`
+          collection_id = $/collection${i}/
+        `);
       }
     };
 
@@ -313,7 +352,7 @@ export const getUserTokensV7Options: RouteOptions = {
           fe.royalty_fee_breakdown AS last_sale_royalty_fee_breakdown,
           fe.marketplace_fee_breakdown AS last_sale_marketplace_fee_breakdown
         FROM fill_events_2 fe
-        WHERE fe.contract = t.contract AND fe.token_id = t.token_id
+        WHERE fe.contract = t.contract AND fe.token_id = t.token_id AND fe.is_deleted = 0
         ORDER BY timestamp DESC LIMIT 1
         ) r ON TRUE
         `;
@@ -393,6 +432,7 @@ export const getUserTokensV7Options: RouteOptions = {
           AND "o"."side" = 'buy'
           AND "o"."fillability_status" = 'fillable'
           AND "o"."approval_status" = 'approved'
+          ${query.normalizeRoyalties ? " AND o.normalized_value IS NOT NULL" : ""}
           AND EXISTS(
             SELECT FROM "nft_balances" "nb"
               WHERE "nb"."contract" = "b"."contract"
@@ -406,6 +446,34 @@ export const getUserTokensV7Options: RouteOptions = {
       `;
     }
 
+    // Include attributes
+    let selectAttributes = "";
+    if (query.includeAttributes) {
+      selectAttributes = `
+            , (
+              SELECT
+                array_agg(
+                  json_build_object(
+                    'key', ta.key,
+                    'kind', attributes.kind,
+                    'value', ta.value,
+                    'createdAt', ta.created_at,
+                    'tokenCount', attributes.token_count,
+                    'onSaleCount', attributes.on_sale_count,
+                    'floorAskPrice', attributes.floor_sell_value::TEXT,
+                    'topBidValue', attributes.top_buy_value::TEXT
+                  )
+                )
+              FROM token_attributes ta
+              JOIN attributes
+                ON ta.attribute_id = attributes.id
+              WHERE ta.contract = b.contract
+                AND ta.token_id = b.token_id
+                AND ta.key != ''
+            ) AS attributes
+          `;
+    }
+
     try {
       let baseQuery = `
         SELECT b.contract, b.token_id, b.token_count, extract(epoch from b.acquired_at) AS acquired_at, b.last_token_appraisal_value,
@@ -415,7 +483,10 @@ export const getUserTokensV7Options: RouteOptions = {
                top_bid_id, top_bid_price, top_bid_value, top_bid_currency, top_bid_currency_price, top_bid_currency_value,
                o.currency AS collection_floor_sell_currency, o.currency_price AS collection_floor_sell_currency_price,
                c.name as collection_name, con.kind, c.metadata, c.royalties,
-               c.royalties_bps, ${
+               c.royalties_bps, 
+               (SELECT kind FROM orders WHERE id = t.floor_sell_id) AS floor_sell_kind,
+               ${query.includeRawData ? "o.raw_data," : ""}
+               ${
                  query.useNonFlaggedFloorAsk
                    ? "c.floor_sell_value"
                    : "c.non_flagged_floor_sell_value"
@@ -426,6 +497,7 @@ export const getUserTokensV7Options: RouteOptions = {
                     ELSE 0
                     END
                ) AS on_sale_count
+               ${selectAttributes}
         FROM (
             SELECT amount AS token_count, token_id, contract, acquired_at, last_token_appraisal_value
             FROM nft_balances
@@ -530,6 +602,9 @@ export const getUserTokensV7Options: RouteOptions = {
         const topBidCurrency = r.top_bid_currency
           ? fromBuffer(r.top_bid_currency)
           : Sdk.Common.Addresses.Weth[config.chainId];
+        const collectionFloorSellCurrency = r.collection_floor_sell_currency
+          ? fromBuffer(r.collection_floor_sell_currency)
+          : Sdk.Common.Addresses.Eth[config.chainId];
         const floorSellSource = r.floor_sell_value
           ? sources.get(Number(r.floor_sell_source_id_int), contract, tokenId)
           : undefined;
@@ -558,7 +633,7 @@ export const getUserTokensV7Options: RouteOptions = {
                         nativeAmount: String(r.collection_floor_sell_value),
                       },
                     },
-                    fromBuffer(r.collection_floor_sell_currency),
+                    collectionFloorSellCurrency,
                     query.displayCurrency
                   )
                 : null,
@@ -610,6 +685,24 @@ export const getUserTokensV7Options: RouteOptions = {
             lastAppraisalValue: r.last_token_appraisal_value
               ? formatEth(r.last_token_appraisal_value)
               : null,
+            attributes: query.includeAttributes
+              ? r.attributes
+                ? _.map(r.attributes, (attribute) => ({
+                    key: attribute.key,
+                    kind: attribute.kind,
+                    value: attribute.value,
+                    tokenCount: attribute.tokenCount,
+                    onSaleCount: attribute.onSaleCount,
+                    floorAskPrice: attribute.floorAskPrice
+                      ? formatEth(attribute.floorAskPrice)
+                      : attribute.floorAskPrice,
+                    topBidValue: attribute.topBidValue
+                      ? formatEth(attribute.topBidValue)
+                      : attribute.topBidValue,
+                    createdAt: new Date(attribute.createdAt).toISOString(),
+                  }))
+                : []
+              : undefined,
           },
           ownership: {
             tokenCount: String(r.token_count),
@@ -629,6 +722,7 @@ export const getUserTokensV7Options: RouteOptions = {
                   )
                 : null,
               maker: r.floor_sell_maker ? fromBuffer(r.floor_sell_maker) : null,
+              kind: r.floor_sell_kind,
               validFrom: r.floor_sell_value ? r.floor_sell_valid_from : null,
               validUntil: r.floor_sell_value ? r.floor_sell_valid_to : null,
               source: {
@@ -638,6 +732,7 @@ export const getUserTokensV7Options: RouteOptions = {
                 icon: floorSellSource?.getIcon(),
                 url: floorSellSource?.metadata.url,
               },
+              rawData: query.includeRawData ? r.raw_data : undefined,
             },
             acquiredAt: acquiredTime,
           },
