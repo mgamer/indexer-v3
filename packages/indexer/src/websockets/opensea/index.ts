@@ -25,7 +25,7 @@ import { handleEvent as handleCollectionOfferEvent } from "@/websockets/opensea/
 import { handleEvent as handleTraitOfferEvent } from "@/websockets/opensea/handlers/trait_offer";
 import MetadataApi from "@/utils/metadata-api";
 import * as metadataIndexWrite from "@/jobs/metadata-index/write-queue";
-import { redb } from "@/common/db";
+import { ridb } from "@/common/db";
 
 if (config.doWebsocketWork && config.openSeaApiKey) {
   const network = config.chainId === 5 ? Network.TESTNET : Network.MAINNET;
@@ -116,7 +116,7 @@ if (config.doWebsocketWork && config.openSeaApiKey) {
 
       const [, contract, tokenId] = event.payload.item.nft_id.split("/");
 
-      const token = await redb.oneOrNone(
+      const token = await ridb.oneOrNone(
         `SELECT metadata_indexed
               FROM tokens
               WHERE contract = $/contract/
