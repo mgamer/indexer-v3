@@ -187,6 +187,7 @@ export const getExecuteSellV5Options: RouteOptions = {
               AND orders.fillability_status = 'fillable'
               AND orders.approval_status = 'approved'
               AND orders.quantity_remaining >= $/quantity/
+              ${payload.normalizeRoyalties ? " AND orders.normalized_value IS NOT NULL" : ""}
               AND (orders.taker = '\\x0000000000000000000000000000000000000000' OR orders.taker IS NULL)
             ORDER BY orders.value DESC
             LIMIT 1
@@ -249,7 +250,6 @@ export const getExecuteSellV5Options: RouteOptions = {
         x2y2ApiKey: payload.x2y2ApiKey ?? config.x2y2ApiKey,
         cbApiKey: config.cbApiKey,
         orderFetcherBaseUrl: config.orderFetcherBaseUrl,
-        orderFetcherApiKey: config.orderFetcherApiKey,
       });
       const { txData } = await router.fillBidsTx([bidDetails!], payload.taker, {
         source: payload.source,

@@ -27,7 +27,6 @@ import * as x2y2 from "@/events-sync/handlers/x2y2";
 import * as zeroExV4 from "@/events-sync/handlers/zeroex-v4";
 import * as zora from "@/events-sync/handlers/zora";
 import * as universe from "@/events-sync/handlers/universe";
-import * as infinity from "@/events-sync/handlers/infinity";
 import * as flow from "@/events-sync/handlers/flow";
 import * as rarible from "@/events-sync/handlers/rarible";
 import * as manifold from "@/events-sync/handlers/manifold";
@@ -37,6 +36,9 @@ import * as okex from "@/events-sync/handlers/okex";
 import * as bendDao from "@/events-sync/handlers/bend-dao";
 import * as superrare from "@/events-sync/handlers/superrare";
 import * as zeroExV2 from "@/events-sync/handlers/zeroex-v2";
+import * as zeroExV3 from "@/events-sync/handlers/zeroex-v3";
+import * as treasure from "@/events-sync/handlers/treasure";
+import * as looksRareV2 from "@/events-sync/handlers/looks-rare-v2";
 
 // A list of events having the same high-level kind
 export type EventsByKind = {
@@ -76,7 +78,6 @@ export const eventKindToHandler = new Map<
   ["zeroex-v4", (e, d, b) => zeroExV4.handleEvents(e, d, b)],
   ["zora", (e, d) => zora.handleEvents(e, d)],
   ["universe", (e, d) => universe.handleEvents(e, d)],
-  ["infinity", (e, d) => infinity.handleEvents(e, d)],
   ["rarible", (e, d) => rarible.handleEvents(e, d)],
   ["manifold", (e, d) => manifold.handleEvents(e, d)],
   ["tofu", (e, d) => tofu.handleEvents(e, d)],
@@ -86,6 +87,9 @@ export const eventKindToHandler = new Map<
   ["superrare", (e, d) => superrare.handleEvents(e, d)],
   ["flow", (e, d) => flow.handleEvents(e, d)],
   ["zeroex-v2", (e, d) => zeroExV2.handleEvents(e, d)],
+  ["zeroex-v3", (e, d) => zeroExV3.handleEvents(e, d)],
+  ["treasure", (e, d) => treasure.handleEvents(e, d)],
+  ["looks-rare-v2", (e, d) => looksRareV2.handleEvents(e, d)],
 ]);
 
 export const processEventsBatch = async (batch: EventsBatch, skipProcessing?: boolean) => {

@@ -42,7 +42,7 @@ if (config.doBackgroundWork) {
       const floorAsk = await idb.oneOrNone(
         `
           SELECT
-            tokens.floor_sell_id
+            tokens.floor_sell_id AS id
           FROM tokens
           WHERE tokens.contract = $/contract/
             AND tokens.token_id = $/tokenId/
@@ -56,7 +56,8 @@ if (config.doBackgroundWork) {
         // Revalidate
         await orderFixes.addToQueue([{ by: "id", data: { id: floorAsk.id } }]);
 
-        // Simulate
+        // Simulate - temporarily paused
+        /*
         await inject({
           method: "POST",
           url: `/management/orders/simulate/v1`,
@@ -67,6 +68,7 @@ if (config.doBackgroundWork) {
             id: floorAsk.id,
           },
         });
+        */
       }
 
       // Top bid simulation is very costly so we only do it if explicitly requested
@@ -74,26 +76,26 @@ if (config.doBackgroundWork) {
         // Simulate and revalidate the top bid on the token
         const topBid = await idb.oneOrNone(
           `
-          SELECT
-            o.id
-          FROM orders o
-          JOIN token_sets_tokens tst
-            ON o.token_set_id = tst.token_set_id
-          WHERE tst.contract = $/contract/
-            AND tst.token_id = $/tokenId/
-            AND o.side = 'buy'
-            AND o.fillability_status = 'fillable'
-            AND o.approval_status = 'approved'
-            AND EXISTS(
-              SELECT FROM nft_balances nb
-                WHERE nb.contract = $/contract/
-                AND nb.token_id = $/tokenId/
-                AND nb.amount > 0
-                AND nb.owner != o.maker
-            )
-          ORDER BY o.value DESC
-          LIMIT 1
-        `,
+            SELECT
+              o.id
+            FROM orders o
+            JOIN token_sets_tokens tst
+              ON o.token_set_id = tst.token_set_id
+            WHERE tst.contract = $/contract/
+              AND tst.token_id = $/tokenId/
+              AND o.side = 'buy'
+              AND o.fillability_status = 'fillable'
+              AND o.approval_status = 'approved'
+              AND EXISTS(
+                SELECT FROM nft_balances nb
+                  WHERE nb.contract = $/contract/
+                  AND nb.token_id = $/tokenId/
+                  AND nb.amount > 0
+                  AND nb.owner != o.maker
+              )
+            ORDER BY o.value DESC
+            LIMIT 1
+          `,
           {
             contract: toBuffer(contract),
             tokenId,

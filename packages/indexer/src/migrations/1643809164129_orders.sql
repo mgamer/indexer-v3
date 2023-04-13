@@ -81,9 +81,9 @@ CREATE INDEX "orders_upper_valid_between_index"
   INCLUDE ("id")
   WHERE ("fillability_status" = 'fillable' OR "fillability_status" = 'no-balance');
 
-CREATE INDEX "orders_conduit_index"
+CREATE INDEX "orders_maker_side_conduit_index"
   ON "orders" ("maker", "side", "conduit")
-  WHERE ("fillability_status" = 'fillable' OR "fillability_status" = 'no-balance');
+  WHERE ("fillability_status" = 'fillable' OR "fillability_status" = 'no-balance' OR "fillability_status" = 'filled');
 
 CREATE INDEX "orders_kind_maker_nonce_full_index"
   ON "orders" ("kind", "maker", "nonce")
@@ -130,6 +130,14 @@ ALTER TABLE "orders" SET (
   autovacuum_analyze_scale_factor=0.0,
   autovacuum_analyze_threshold=100000
 );
+
+CREATE INDEX "orders_asks_updated_at_asc_id_index"
+  ON "orders" ("updated_at" ASC, "id" ASC)
+  WHERE ("side" = 'sell');
+
+CREATE INDEX "orders_updated_at_asc_id_active_index"
+  ON "orders" ("side", "updated_at" ASC, "id" ASC)
+  WHERE ("fillability_status" = 'fillable' AND "approval_status" = 'approved');
 
 -- Down Migration
 

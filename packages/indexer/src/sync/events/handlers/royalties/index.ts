@@ -2,7 +2,6 @@ import { BigNumberish } from "@ethersproject/bignumber";
 import pLimit from "p-limit";
 
 import { idb } from "@/common/db";
-import { logger } from "@/common/logger";
 import { bn, fromBuffer, toBuffer } from "@/common/utils";
 import * as fallback from "@/events-sync/handlers/royalties/core";
 import * as es from "@/events-sync/storage";
@@ -142,14 +141,14 @@ export const assignRoyaltiesToFillEvents = async (
               );
             }
           }
-        } catch (error) {
-          logger.error(
-            "assign-royalties-to-fill-events",
-            JSON.stringify({
-              error,
-              fillEvent,
-            })
-          );
+        } catch {
+          // logger.error(
+          //   "assign-royalties-to-fill-events",
+          //   JSON.stringify({
+          //     error,
+          //     fillEvent,
+          //   })
+          // );
         }
       })
     )

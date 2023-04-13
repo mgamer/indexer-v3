@@ -2,7 +2,6 @@ import { Interface } from "@ethersproject/abi";
 import { Provider } from "@ethersproject/abstract-provider";
 import { TypedDataSigner } from "@ethersproject/abstract-signer";
 import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
-import { HashZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import { _TypedDataEncoder } from "@ethersproject/hash";
 import { keccak256 as solidityKeccak256 } from "@ethersproject/solidity";
@@ -10,21 +9,26 @@ import { recoverAddress } from "@ethersproject/transactions";
 import { verifyTypedData } from "@ethersproject/wallet";
 
 import * as Addresses from "./addresses";
-import { Builders } from "./builders";
-import { BaseBuilder, BaseOrderInfo } from "./builders/base";
-import * as Types from "./types";
+import { Builders } from "../seaport-base/builders";
+import { BaseBuilder, BaseOrderInfo } from "../seaport-base/builders/base";
+import * as Types from "../seaport-base/types";
+import { IOrder, ORDER_EIP712_TYPES, SeaportOrderKind } from "../seaport-base/order";
 import * as Common from "../common";
 import { bn, getCurrentTimestamp, lc, n, s } from "../utils";
 
-import ConduitControllerAbi from "./abis/ConduitController.json";
-import ExchangeAbi from "./abis/Exchange.json";
+import { Exchange } from "./exchange";
+import { SeaportBaseExchange } from "../seaport-base";
 
-export class Order {
+export class Order implements IOrder {
   public chainId: number;
   public params: Types.OrderComponents;
+  protected exchangeAddress: string;
+  protected exchange: SeaportBaseExchange;
 
   constructor(chainId: number, params: Types.OrderComponents) {
     this.chainId = chainId;
+    this.exchangeAddress = Addresses.Exchange[chainId];
+    this.exchange = new Exchange(chainId);
 
     try {
       this.params = normalize(params);
@@ -47,7 +51,7 @@ export class Order {
 
   public async sign(signer: TypedDataSigner) {
     const signature = await signer._signTypedData(
-      EIP712_DOMAIN(this.chainId),
+      this.exchange.eip712Domain(),
       ORDER_EIP712_TYPES,
       this.params
     );
@@ -61,9 +65,10 @@ export class Order {
   public getSignatureData() {
     return {
       signatureKind: "eip712",
-      domain: EIP712_DOMAIN(this.chainId),
+      domain: this.exchange.eip712Domain(),
       types: ORDER_EIP712_TYPES,
       value: this.params,
+      primaryType: _TypedDataEncoder.getPrimaryType(ORDER_EIP712_TYPES),
     };
   }
 
@@ -121,7 +126,7 @@ export class Order {
           ["bytes"],
           [
             "0x1901" +
-              _TypedDataEncoder.hashDomain(EIP712_DOMAIN(this.chainId)).slice(2) +
+              _TypedDataEncoder.hashDomain(this.exchange.eip712Domain()).slice(2) +
               bulkOrderHash.slice(2),
           ]
         );
@@ -132,7 +137,7 @@ export class Order {
         }
       } else {
         const signer = verifyTypedData(
-          EIP712_DOMAIN(this.chainId),
+          this.exchange.eip712Domain(),
           ORDER_EIP712_TYPES,
           this.params,
           signature
@@ -148,7 +153,7 @@ export class Order {
       }
 
       const eip712Hash = _TypedDataEncoder.hash(
-        EIP712_DOMAIN(this.chainId),
+        this.exchange.eip712Domain(),
         ORDER_EIP712_TYPES,
         this.params
       );
@@ -177,13 +182,17 @@ export class Order {
       throw new Error("Price not evenly divisible to the amount");
     }
 
-    if (!this.getBuilder().isValid(this)) {
+    if (!this.getBuilder().isValid(this, Order)) {
       throw new Error("Invalid order");
     }
   }
 
   public getInfo(): BaseOrderInfo | undefined {
     return this.getBuilder().getInfo(this);
+  }
+
+  public getKind(): SeaportOrderKind {
+    return SeaportOrderKind.SEAPORT_V14;
   }
 
   public getMatchingPrice(timestampOverride?: number): BigNumberish {
@@ -240,14 +249,7 @@ export class Order {
   }
 
   public async checkFillability(provider: Provider) {
-    const conduitController = new Contract(
-      Addresses.ConduitController[this.chainId],
-      ConduitControllerAbi,
-      provider
-    );
-    const exchange = new Contract(Addresses.Exchange[this.chainId], ExchangeAbi, provider);
-
-    const status = await exchange.getOrderStatus(this.hash());
+    const status = await this.exchange.contract.connect(provider).getOrderStatus(this.hash());
     if (status.isCancelled) {
       throw new Error("not-fillable");
     }
@@ -255,18 +257,7 @@ export class Order {
       throw new Error("not-fillable");
     }
 
-    const makerConduit =
-      this.params.conduitKey === HashZero
-        ? Addresses.Exchange[this.chainId]
-        : await conduitController
-            .getConduit(this.params.conduitKey)
-            .then((result: { exists: boolean; conduit: string }) => {
-              if (!result.exists) {
-                throw new Error("invalid-conduit");
-              } else {
-                return result.conduit;
-              }
-            });
+    const makerConduit = this.exchange.deriveConduit(this.params.conduitKey);
 
     const info = this.getInfo()! as BaseOrderInfo;
     if (info.side === "buy") {
@@ -340,7 +331,7 @@ export class Order {
     // contract-wide
     {
       const builder = new Builders.ContractWide(this.chainId);
-      if (builder.isValid(this)) {
+      if (builder.isValid(this, Order)) {
         return "contract-wide";
       }
     }
@@ -348,7 +339,7 @@ export class Order {
     // single-token
     {
       const builder = new Builders.SingleToken(this.chainId);
-      if (builder.isValid(this)) {
+      if (builder.isValid(this, Order)) {
         return "single-token";
       }
     }
@@ -356,7 +347,7 @@ export class Order {
     // token-list
     {
       const builder = new Builders.TokenList(this.chainId);
-      if (builder.isValid(this)) {
+      if (builder.isValid(this, Order)) {
         return "token-list";
       }
     }
@@ -407,44 +398,6 @@ export class Order {
     }
   }
 }
-
-export const EIP712_DOMAIN = (chainId: number) => ({
-  name: "Seaport",
-  version: "1.4",
-  chainId,
-  verifyingContract: Addresses.Exchange[chainId],
-});
-
-export const ORDER_EIP712_TYPES = {
-  OrderComponents: [
-    { name: "offerer", type: "address" },
-    { name: "zone", type: "address" },
-    { name: "offer", type: "OfferItem[]" },
-    { name: "consideration", type: "ConsiderationItem[]" },
-    { name: "orderType", type: "uint8" },
-    { name: "startTime", type: "uint256" },
-    { name: "endTime", type: "uint256" },
-    { name: "zoneHash", type: "bytes32" },
-    { name: "salt", type: "uint256" },
-    { name: "conduitKey", type: "bytes32" },
-    { name: "counter", type: "uint256" },
-  ],
-  OfferItem: [
-    { name: "itemType", type: "uint8" },
-    { name: "token", type: "address" },
-    { name: "identifierOrCriteria", type: "uint256" },
-    { name: "startAmount", type: "uint256" },
-    { name: "endAmount", type: "uint256" },
-  ],
-  ConsiderationItem: [
-    { name: "itemType", type: "uint8" },
-    { name: "token", type: "address" },
-    { name: "identifierOrCriteria", type: "uint256" },
-    { name: "startAmount", type: "uint256" },
-    { name: "endAmount", type: "uint256" },
-    { name: "recipient", type: "address" },
-  ],
-};
 
 const normalize = (order: Types.OrderComponents): Types.OrderComponents => {
   // Perform some normalization operations on the order:

@@ -97,6 +97,10 @@ export const getUserTokensV5Options: RouteOptions = {
       includeTopBid: Joi.boolean()
         .default(false)
         .description("If true, top bid will be returned in the response."),
+      displayCurrency: Joi.string()
+        .lowercase()
+        .pattern(regex.address)
+        .description("Return result in given currency"),
     }),
   },
   response: {
@@ -302,6 +306,7 @@ export const getUserTokensV5Options: RouteOptions = {
           AND "o"."side" = 'buy'
           AND "o"."fillability_status" = 'fillable'
           AND "o"."approval_status" = 'approved'
+          ${query.normalizeRoyalties ? " AND o.normalized_value IS NOT NULL" : ""}
           AND EXISTS(
             SELECT FROM "nft_balances" "nb"
               WHERE "nb"."contract" = "b"."contract"
@@ -395,7 +400,8 @@ export const getUserTokensV5Options: RouteOptions = {
                             nativeAmount: r.top_bid_price,
                           },
                         },
-                        topBidCurrency
+                        topBidCurrency,
+                        query.displayCurrency
                       )
                     : null,
                 }
@@ -414,7 +420,8 @@ export const getUserTokensV5Options: RouteOptions = {
                         nativeAmount: r.floor_sell_value,
                       },
                     },
-                    floorAskCurrency
+                    floorAskCurrency,
+                    query.displayCurrency
                   )
                 : null,
               maker: r.floor_sell_maker ? fromBuffer(r.floor_sell_maker) : null,

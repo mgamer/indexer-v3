@@ -23,11 +23,17 @@ contract SeaportModule is BaseExchangeModule {
 
   // --- Fields ---
 
-  ISeaport public constant EXCHANGE = ISeaport(0x00000000006c3852cbEf3e08E8dF289169EdE581);
+  ISeaport public immutable EXCHANGE;
 
   // --- Constructor ---
 
-  constructor(address owner, address router) BaseModule(owner) BaseExchangeModule(router) {}
+  constructor(
+    address owner,
+    address router,
+    address exchange
+  ) BaseModule(owner) BaseExchangeModule(router) {
+    EXCHANGE = ISeaport(exchange);
+  }
 
   // --- Fallback ---
 

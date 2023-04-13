@@ -61,6 +61,15 @@ export const getOpenseaSubDomain = () => {
   }
 };
 
+export const getOpenseaBaseUrl = () => {
+  switch (config.chainId) {
+    case 5:
+      return "https://testnets-api.opensea.io";
+    default:
+      return "https://api.opensea.io";
+  }
+};
+
 export const getServiceName = () => {
   return `indexer-${config.version}-${getNetworkName()}`;
 };
@@ -72,6 +81,7 @@ type NetworkSettings = {
   realtimeSyncFrequencySeconds: number;
   realtimeSyncMaxBlockLag: number;
   lastBlockLatency: number;
+  headBlockDelay: number;
   backfillBlockBatchSize: number;
   metadataMintDelay: number;
   enableMetadataAutoRefresh: boolean;
@@ -99,6 +109,7 @@ export const getNetworkSettings = (): NetworkSettings => {
     realtimeSyncFrequencySeconds: 15,
     realtimeSyncMaxBlockLag: 16,
     lastBlockLatency: 5,
+    headBlockDelay: 0,
     backfillBlockBatchSize: 16,
     metadataMintDelay: 120,
     enableMetadataAutoRefresh: false,
@@ -356,9 +367,10 @@ export const getNetworkSettings = (): NetworkSettings => {
         ...defaultNetworkSettings,
         metadataMintDelay: 180,
         enableWebSocket: true,
-        realtimeSyncFrequencySeconds: 5,
         realtimeSyncMaxBlockLag: 32,
-        lastBlockLatency: 5,
+        realtimeSyncFrequencySeconds: 5,
+        lastBlockLatency: 8,
+        headBlockDelay: 5,
         backfillBlockBatchSize: 60,
         reorgCheckFrequency: [30],
         subDomain: "api-polygon",
@@ -412,7 +424,8 @@ export const getNetworkSettings = (): NetworkSettings => {
         enableWebSocket: false,
         realtimeSyncMaxBlockLag: 32,
         realtimeSyncFrequencySeconds: 5,
-        lastBlockLatency: 10,
+        lastBlockLatency: 5,
+        headBlockDelay: 10,
         subDomain: "api-arbitrum",
         coingecko: {
           networkId: "arbitrum-one",

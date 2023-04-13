@@ -1,5 +1,7 @@
 import { Server } from "@hapi/hapi";
 
+import { config } from "@/config/index";
+
 import * as activitiesEndpoints from "@/api/endpoints/activities";
 import * as adminEndpoints from "@/api/endpoints/admin";
 import * as apiKeysEndpoints from "@/api/endpoints/api-keys";
@@ -24,6 +26,7 @@ import * as syncEndpoints from "@/api/endpoints/sync";
 import * as assetsEndpoints from "@/api/endpoints/assets";
 import * as sourcesEndpoints from "@/api/endpoints/sources";
 import * as websocketEndpoints from "@/api/endpoints/websocket";
+import * as debugEndpoints from "@/api/endpoints/debug";
 
 export const setupRoutes = (server: Server) => {
   // Activity
@@ -60,6 +63,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
+    path: "/collections/activity/v6",
+    options: activitiesEndpoints.getCollectionActivityV6Options,
+  });
+
+  server.route({
+    method: "GET",
     path: "/tokens/{token}/activity/v1",
     options: activitiesEndpoints.getTokenActivityV1Options,
   });
@@ -80,6 +89,12 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/tokens/{token}/activity/v4",
     options: activitiesEndpoints.getTokenActivityV4Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/tokens/{token}/activity/v5",
+    options: activitiesEndpoints.getTokenActivityV5Options,
   });
 
   server.route({
@@ -114,6 +129,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
+    path: "/users/activity/v6",
+    options: activitiesEndpoints.getUserActivityV6Options,
+  });
+
+  server.route({
+    method: "GET",
     path: "/activity/v1",
     options: activitiesEndpoints.getActivityV1Options,
   });
@@ -134,6 +155,12 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/activity/v4",
     options: activitiesEndpoints.getActivityV4Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/activity/v5",
+    options: activitiesEndpoints.getActivityV5Options,
   });
 
   // Admin
@@ -266,12 +293,6 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
-    path: "/admin/sync-arweave",
-    options: adminEndpoints.postSyncArweaveOptions,
-  });
-
-  server.route({
-    method: "POST",
     path: "/admin/sync-events",
     options: adminEndpoints.postSyncEventsOptions,
   });
@@ -350,6 +371,12 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/collections/{collection}/attributes/all/v3",
     options: attributesEndpoints.getAttributesAllV3Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/collections/{collection}/attributes/all/v4",
+    options: attributesEndpoints.getAttributesAllV4Options,
   });
 
   server.route({
@@ -469,9 +496,21 @@ export const setupRoutes = (server: Server) => {
   });
 
   server.route({
+    method: "GET",
+    path: "/users/{user}/collections/v3",
+    options: collectionsEndpoints.getUserCollectionsV3Options,
+  });
+
+  server.route({
     method: "POST",
     path: "/collections/refresh/v1",
     options: collectionsEndpoints.postCollectionsRefreshV1Options,
+  });
+
+  server.route({
+    method: "POST",
+    path: "/collections/refresh/v2",
+    options: collectionsEndpoints.postCollectionsRefreshV2Options,
   });
 
   server.route({
@@ -526,6 +565,12 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/events/collections/floor-ask/v1",
     options: eventsEndpoints.getCollectionsFloorAskV1Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/events/collections/floor-ask/v2",
+    options: eventsEndpoints.getCollectionsFloorAskV2Options,
   });
 
   server.route({
@@ -734,12 +779,6 @@ export const setupRoutes = (server: Server) => {
     options: executeEndpoints.postCancelSignatureV1Options,
   });
 
-  server.route({
-    method: "POST",
-    path: "/execute/permit-signature/v1",
-    options: executeEndpoints.postPermitSignatureV1Options,
-  });
-
   // Health
 
   // Both `/readyz` and `/livez` point to the same handler,
@@ -946,6 +985,12 @@ export const setupRoutes = (server: Server) => {
   });
 
   server.route({
+    method: "GET",
+    path: "/orders/users/{user}/top-bids/v4",
+    options: ordersEndpoints.getUserTopBidsV4Options,
+  });
+
+  server.route({
     method: "POST",
     path: "/order/v2",
     options: ordersEndpoints.postOrderV2Options,
@@ -987,6 +1032,12 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/owners/v1",
     options: ownersEndpoints.getOwnersV1Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/owners/v2",
+    options: ownersEndpoints.getOwnersV2Options,
   });
 
   server.route({
@@ -1051,6 +1102,12 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/search/collections/v1",
     options: searchEndpoints.getSearchCollectionsV1Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/search/collections/v2",
+    options: searchEndpoints.getSearchCollectionsV2Options,
   });
 
   // Stats
@@ -1283,6 +1340,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
+    path: "/transfers/v3",
+    options: transfersEndpoints.getTransfersV3Options,
+  });
+
+  server.route({
+    method: "GET",
     path: "/transfers/bulk/v1",
     options: transfersEndpoints.getTransfersBulkV1Options,
   });
@@ -1293,6 +1356,12 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/sync/sales/v1",
     options: syncEndpoints.getSyncSalesV1Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/sync/asks/v1",
+    options: syncEndpoints.getSyncOrdersAsksV1Options,
   });
 
   // sources
@@ -1310,4 +1379,31 @@ export const setupRoutes = (server: Server) => {
     path: "/websocket/user-auth",
     options: websocketEndpoints.postWebsocketUserAuthOptions,
   });
+
+  // Debug APIs
+  if (config.enableDebug) {
+    server.route({
+      method: "GET",
+      path: "/debug/event-parsing",
+      options: debugEndpoints.eventParsingOptions,
+    });
+
+    server.route({
+      method: "POST",
+      path: "/debug/order-saving",
+      options: debugEndpoints.orderSavingOptions,
+    });
+
+    server.route({
+      method: "GET",
+      path: "/debug/get-order",
+      options: debugEndpoints.getOrderOptions,
+    });
+
+    server.route({
+      method: "GET",
+      path: "/debug/reset",
+      options: debugEndpoints.resetOptions,
+    });
+  }
 };

@@ -19,7 +19,7 @@ const version = "v4";
 
 export const postOrderV4Options: RouteOptions = {
   description: "Submit signed orders",
-  tags: ["api", "Orderbook"],
+  tags: ["api", "Create Orders (list & bid)"],
   plugins: {
     "hapi-swagger": {
       order: 5,
@@ -39,31 +39,22 @@ export const postOrderV4Options: RouteOptions = {
                 .valid(
                   "blur",
                   "opensea",
-                  "looks-rare",
+                  "looks-rare-v2",
                   "zeroex-v4",
                   "seaport",
                   "seaport-v1.4",
                   "x2y2",
                   "universe",
                   "forward",
-                  "infinity",
-                  "flow"
+                  "flow",
+                  "alienswap"
                 )
                 .required(),
               data: Joi.object().required(),
             }),
             orderbook: Joi.string()
               .lowercase()
-              .valid(
-                "blur",
-                "reservoir",
-                "opensea",
-                "looks-rare",
-                "x2y2",
-                "universe",
-                "infinity",
-                "flow"
-              )
+              .valid("blur", "reservoir", "opensea", "looks-rare", "x2y2", "universe", "flow")
               .default("reservoir"),
             orderbookApiKey: Joi.string().description("Optional API key for the target orderbook"),
             attribute: Joi.object({
@@ -75,7 +66,7 @@ export const postOrderV4Options: RouteOptions = {
             tokenSetId: Joi.string(),
             isNonFlagged: Joi.boolean(),
             bulkData: Joi.object({
-              kind: "seaport-v1.4",
+              kind: Joi.string().valid("seaport-v1.4", "alienswap").default("seaport-v1.4"),
               data: Joi.object({
                 orderIndex: Joi.number().required(),
                 merkleProof: Joi.array().items(Joi.string()).required(),
@@ -97,6 +88,7 @@ export const postOrderV4Options: RouteOptions = {
           crossPostingOrderId: Joi.string().description(
             "Only available when posting to external orderbook. Can be used to retrieve the status of a cross-post order."
           ),
+          crossPostingOrderStatus: Joi.string(),
         })
       ),
     }).label(`postOrder${version.toUpperCase()}Response`),
@@ -124,7 +116,7 @@ export const postOrderV4Options: RouteOptions = {
         isNonFlagged?: boolean;
         source?: string;
         bulkData?: {
-          kind: "seaport-v1.4";
+          kind: "seaport-v1.4" | "alienswap";
           data: {
             orderIndex: number;
             merkleProof: string[];
@@ -132,10 +124,14 @@ export const postOrderV4Options: RouteOptions = {
         };
       }[];
 
-      // Only Seaport v1.4 supports bulk orders
+      // Only Seaport v1.4 and forks support bulk orders
       if (items.length > 1) {
-        if (!items.every((item) => item.order.kind === "seaport-v1.4")) {
-          throw Boom.badRequest("Bulk orders are only supported on Seaport v1.4");
+        if (
+          !items.every(
+            (item) => item.order.kind === "seaport-v1.4" || item.order.kind === "alienswap"
+          )
+        ) {
+          throw Boom.badRequest("Bulk orders are only supported on Seaport v1.4 and forks");
         }
       }
 
@@ -144,6 +140,7 @@ export const postOrderV4Options: RouteOptions = {
         orderIndex: number;
         orderId?: string;
         crossPostingOrderId?: number;
+        crossPostingOrderStatus?: string;
       }[] = [];
       await Promise.all(
         items.map(async (item, i) => {
@@ -172,6 +169,14 @@ export const postOrderV4Options: RouteOptions = {
               if (bulkData?.kind === "seaport-v1.4") {
                 // Encode the merkle proof of inclusion together with the signature
                 order.data.signature = new Sdk.SeaportV14.Exchange(
+                  config.chainId
+                ).encodeBulkOrderProofAndSignature(
+                  bulkData.data.orderIndex,
+                  bulkData.data.merkleProof,
+                  signature
+                );
+              } else if (bulkData?.kind === "alienswap") {
+                order.data.signature = new Sdk.Alienswap.Exchange(
                   config.chainId
                 ).encodeBulkOrderProofAndSignature(
                   bulkData.data.orderIndex,
@@ -236,33 +241,54 @@ export const postOrderV4Options: RouteOptions = {
 
           switch (order.kind) {
             case "blur": {
-              if (orderbook !== "blur") {
+              let crossPostingOrder;
+              let orderId: string;
+
+              if (orderbook === "blur") {
+                orderId = order.data.id;
+
+                crossPostingOrder = await crossPostingOrdersModel.saveOrder({
+                  orderId,
+                  kind: order.kind,
+                  orderbook,
+                  source,
+                  schema,
+                  rawData: order.data,
+                } as crossPostingOrdersModel.CrossPostingOrder);
+
+                await postOrderExternal.addToQueue({
+                  crossPostingOrderId: crossPostingOrder.id,
+                  orderId,
+                  orderData: { ...order.data, signature },
+                  orderSchema: schema,
+                  orderbook,
+                  orderbookApiKey,
+                });
+              } else if (orderbook === "reservoir") {
+                const [result] = await orders.blur.saveListings([
+                  {
+                    orderParams: order.data,
+                    metadata: {
+                      schema,
+                    },
+                  },
+                ]);
+
+                orderId = result.id;
+
+                if (!["success", "already-exists"].includes(result.status)) {
+                  return results.push({ message: result.status, orderIndex: i, orderId });
+                }
+              } else {
                 return results.push({ message: "unsupported-orderbook", orderIndex: i });
               }
-
-              const crossPostingOrder = await crossPostingOrdersModel.saveOrder({
-                orderId: order.data.id,
-                kind: order.kind,
-                orderbook,
-                source,
-                schema,
-                rawData: order.data,
-              } as crossPostingOrdersModel.CrossPostingOrder);
-
-              await postOrderExternal.addToQueue({
-                crossPostingOrderId: crossPostingOrder.id,
-                orderId: order.data.id,
-                orderData: { ...order.data, signature },
-                orderSchema: schema,
-                orderbook,
-                orderbookApiKey,
-              });
 
               return results.push({
                 message: "success",
                 orderIndex: i,
-                orderId: order.data.id,
-                crossPostingOrderId: crossPostingOrder.id,
+                orderId,
+                crossPostingOrderId: crossPostingOrder?.id,
+                crossPostingOrderStatus: crossPostingOrder?.status,
               });
             }
 
@@ -293,6 +319,7 @@ export const postOrderV4Options: RouteOptions = {
               }
             }
 
+            case "alienswap":
             case "seaport":
             case "seaport-v1.4": {
               if (!["opensea", "reservoir"].includes(orderbook)) {
@@ -303,7 +330,7 @@ export const postOrderV4Options: RouteOptions = {
 
               const orderId =
                 order.kind === "seaport"
-                  ? new Sdk.Seaport.Order(config.chainId, order.data).hash()
+                  ? new Sdk.SeaportV11.Order(config.chainId, order.data).hash()
                   : new Sdk.SeaportV14.Order(config.chainId, order.data).hash();
 
               if (orderbook === "opensea") {
@@ -325,43 +352,57 @@ export const postOrderV4Options: RouteOptions = {
                   orderbookApiKey,
                 });
               } else if (orderbook === "reservoir") {
-                const [result] =
-                  order.kind === "seaport"
-                    ? await orders.seaport.save([
-                        {
-                          kind: "full",
-                          orderParams: order.data,
-                          isReservoir: true,
-                          metadata: {
-                            schema,
-                            source,
-                          },
-                        },
-                      ])
-                    : await orders.seaportV14.save([
-                        {
-                          kind: "full",
-                          orderParams: order.data,
-                          isReservoir: true,
-                          metadata: {
-                            schema,
-                            source,
-                          },
-                        },
-                      ]);
-
-                if (!["success", "already-exists"].includes(result.status)) {
-                  return results.push({ message: result.status, orderIndex: i, orderId });
+                if (order.kind === "seaport") {
+                  const [result] = await orders.seaport.save([
+                    {
+                      orderParams: order.data,
+                      isReservoir: true,
+                      metadata: {
+                        schema,
+                        source,
+                      },
+                    },
+                  ]);
+                  if (!["success", "already-exists"].includes(result.status)) {
+                    return results.push({ message: result.status, orderIndex: i, orderId });
+                  }
+                } else if (order.kind == "seaport-v1.4") {
+                  const [result] = await orders.seaportV14.save([
+                    {
+                      orderParams: order.data,
+                      isReservoir: true,
+                      metadata: {
+                        schema,
+                        source,
+                      },
+                    },
+                  ]);
+                  if (!["success", "already-exists"].includes(result.status)) {
+                    return results.push({ message: result.status, orderIndex: i, orderId });
+                  }
+                } else {
+                  const [result] = await orders.alienswap.save([
+                    {
+                      orderParams: order.data,
+                      metadata: {
+                        schema,
+                        source,
+                      },
+                    },
+                  ]);
+                  if (!["success", "already-exists"].includes(result.status)) {
+                    return results.push({ message: result.status, orderIndex: i, orderId });
+                  }
                 }
 
                 if (config.forwardReservoirApiKeys.includes(request.headers["x-api-key"])) {
                   const orderResult = await idb.oneOrNone(
                     `
-                    SELECT
-                      orders.token_set_id
-                    FROM orders
-                    WHERE orders.id = $/id/
-                  `,
+                      SELECT
+                        orders.token_set_id
+                      FROM orders
+                      WHERE orders.id = $/id/
+                    `,
                     { id: orderId }
                   );
 
@@ -374,54 +415,6 @@ export const postOrderV4Options: RouteOptions = {
                       orderbookApiKey: config.forwardOpenseaApiKey,
                     });
                   }
-                } else {
-                  const collectionResult = await idb.oneOrNone(
-                    `
-                      SELECT
-                        collections.new_royalties,
-                        orders.token_set_id
-                      FROM orders
-                      JOIN token_sets_tokens
-                        ON orders.token_set_id = token_sets_tokens.token_set_id
-                      JOIN tokens
-                        ON tokens.contract = token_sets_tokens.contract
-                        AND tokens.token_id = token_sets_tokens.token_id
-                      JOIN collections
-                        ON tokens.collection_id = collections.id
-                      WHERE orders.id = $/id/
-                      LIMIT 1
-                    `,
-                    { id: orderId }
-                  );
-
-                  if (
-                    collectionResult?.token_set_id?.startsWith("token") &&
-                    collectionResult?.new_royalties?.["opensea"]
-                  ) {
-                    const osRoyaltyRecipients = collectionResult.new_royalties["opensea"].map(
-                      (r: any) => r.recipient.toLowerCase()
-                    );
-                    const maker = order.data.offerer.toLowerCase();
-                    const consideration = order.data.consideration;
-
-                    let hasMarketplaceFee = false;
-                    for (const c of consideration) {
-                      const recipient = c.recipient.toLowerCase();
-                      if (recipient !== maker && !osRoyaltyRecipients.includes(recipient)) {
-                        hasMarketplaceFee = true;
-                      }
-                    }
-
-                    if (!hasMarketplaceFee) {
-                      await postOrderExternal.addToQueue({
-                        orderId,
-                        orderData: order.data,
-                        orderSchema: schema,
-                        orderbook: "opensea",
-                        orderbookApiKey: config.openSeaApiKey,
-                      });
-                    }
-                  }
                 }
               }
 
@@ -430,17 +423,18 @@ export const postOrderV4Options: RouteOptions = {
                 orderIndex: i,
                 orderId,
                 crossPostingOrderId: crossPostingOrder?.id,
+                crossPostingOrderStatus: crossPostingOrder?.status,
               });
             }
 
-            case "looks-rare": {
+            case "looks-rare-v2": {
               if (!["looks-rare", "reservoir"].includes(orderbook)) {
                 return results.push({ message: "unsupported-orderbook", orderIndex: i });
               }
 
               let crossPostingOrder;
 
-              const orderId = new Sdk.LooksRare.Order(config.chainId, order.data).hash();
+              const orderId = new Sdk.LooksRareV2.Order(config.chainId, order.data).hash();
 
               if (orderbook === "looks-rare") {
                 crossPostingOrder = await crossPostingOrdersModel.saveOrder({
@@ -461,7 +455,7 @@ export const postOrderV4Options: RouteOptions = {
                   orderbookApiKey,
                 });
               } else {
-                const [result] = await orders.looksRare.save([
+                const [result] = await orders.looksRareV2.save([
                   {
                     orderParams: order.data,
                     metadata: {
@@ -481,6 +475,7 @@ export const postOrderV4Options: RouteOptions = {
                 orderIndex: i,
                 orderId,
                 crossPostingOrderId: crossPostingOrder?.id,
+                crossPostingOrderStatus: crossPostingOrder?.status,
               });
             }
 
@@ -490,7 +485,7 @@ export const postOrderV4Options: RouteOptions = {
               }
 
               let crossPostingOrder;
-              const orderId = undefined;
+              let orderId = undefined;
 
               if (orderbook === "x2y2") {
                 // We do not save the order directly since X2Y2 orders are not fillable
@@ -524,6 +519,8 @@ export const postOrderV4Options: RouteOptions = {
                   },
                 ]);
 
+                orderId = result.id;
+
                 if (!["success", "already-exists"].includes(result.status)) {
                   return results.push({ message: result.status, orderIndex: i, orderId });
                 }
@@ -534,6 +531,7 @@ export const postOrderV4Options: RouteOptions = {
                 orderIndex: i,
                 orderId,
                 crossPostingOrderId: crossPostingOrder?.id,
+                crossPostingOrderStatus: crossPostingOrder?.status,
               });
             }
 
@@ -567,39 +565,7 @@ export const postOrderV4Options: RouteOptions = {
                 orderIndex: i,
                 orderId,
                 crossPostingOrderId: crossPostingOrder.id,
-              });
-            }
-
-            case "infinity": {
-              if (!["infinity"].includes(orderbook)) {
-                return results.push({ message: "unsupported-orderbook", orderIndex: i });
-              }
-
-              const orderId = new Sdk.Infinity.Order(config.chainId, order.data).hash();
-
-              const crossPostingOrder = await crossPostingOrdersModel.saveOrder({
-                orderId,
-                kind: order.kind,
-                orderbook,
-                source,
-                schema,
-                rawData: order.data,
-              } as crossPostingOrdersModel.CrossPostingOrder);
-
-              await postOrderExternal.addToQueue({
-                crossPostingOrderId: crossPostingOrder.id,
-                orderId,
-                orderData: order.data,
-                orderSchema: schema,
-                orderbook: "infinity",
-                orderbookApiKey,
-              });
-
-              return results.push({
-                message: "success",
-                orderIndex: i,
-                orderId,
-                crossPostingOrderId: crossPostingOrder.id,
+                crossPostingOrderStatus: crossPostingOrder.status,
               });
             }
 
@@ -633,6 +599,7 @@ export const postOrderV4Options: RouteOptions = {
                 orderIndex: i,
                 orderId,
                 crossPostingOrderId: crossPostingOrder.id,
+                crossPostingOrderStatus: crossPostingOrder.status,
               });
             }
           }

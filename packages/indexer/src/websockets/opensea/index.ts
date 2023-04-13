@@ -12,10 +12,10 @@ import * as Sdk from "@reservoir0x/sdk";
 import { WebSocket } from "ws";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
-import { now } from "@/common/utils";
+import { now, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { OpenseaWebsocketEvents } from "@/models/opensea-websocket-events";
-import { PartialOrderComponents } from "@/orderbook/orders/seaport";
+import { OpenseaOrderParams } from "@/orderbook/orders/seaport-v1.1";
 import { generateHash, getSupportedChainName } from "@/websockets/opensea/utils";
 import * as orderbookOrders from "@/jobs/orderbook/orders-queue";
 import * as orderbookOpenseaListings from "@/jobs/orderbook/opensea-listings-queue";
@@ -23,9 +23,9 @@ import { handleEvent as handleItemListedEvent } from "@/websockets/opensea/handl
 import { handleEvent as handleItemReceivedBidEvent } from "@/websockets/opensea/handlers/item_received_bid";
 import { handleEvent as handleCollectionOfferEvent } from "@/websockets/opensea/handlers/collection_offer";
 import { handleEvent as handleTraitOfferEvent } from "@/websockets/opensea/handlers/trait_offer";
-import { Tokens } from "@/models/tokens";
 import MetadataApi from "@/utils/metadata-api";
 import * as metadataIndexWrite from "@/jobs/metadata-index/write-queue";
+import { ridb } from "@/common/db";
 
 if (config.doWebsocketWork && config.openSeaApiKey) {
   const network = config.chainId === 5 ? Network.TESTNET : Network.MAINNET;
@@ -77,7 +77,6 @@ if (config.doWebsocketWork && config.openSeaApiKey) {
             orderInfo = {
               kind: protocolData.kind,
               info: {
-                kind: "full",
                 orderParams: protocolData.order.params,
                 metadata: {
                   originatedAt: event.sent_at,
@@ -85,7 +84,6 @@ if (config.doWebsocketWork && config.openSeaApiKey) {
                 isOpenSea: true,
                 openSeaOrderParams,
               },
-              relayToArweave: eventType === EventType.ITEM_LISTED,
               validateBidValue: true,
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
             } as any;
@@ -117,7 +115,17 @@ if (config.doWebsocketWork && config.openSeaApiKey) {
       }
 
       const [, contract, tokenId] = event.payload.item.nft_id.split("/");
-      const token = await Tokens.getByContractAndTokenId(contract, tokenId);
+
+      const token = await ridb.oneOrNone(
+        `SELECT metadata_indexed
+              FROM tokens
+              WHERE contract = $/contract/
+              AND token_id = $/tokenId/`,
+        {
+          contract: toBuffer(contract),
+          tokenId,
+        }
+      );
 
       logger.debug(
         "opensea-websocket-item-metadata-update-event",
@@ -126,7 +134,7 @@ if (config.doWebsocketWork && config.openSeaApiKey) {
         )}, token=${JSON.stringify(token)}`
       );
 
-      if (!token || token.metadataIndexed) {
+      if (!token || token.metadata_indexed) {
         return;
       }
 
@@ -213,7 +221,7 @@ export const handleEvent = (
   type: EventType,
   payload: unknown
   // `PartialOrderComponents` has the same types for both `seaport` and `seaport-v1.4`
-): PartialOrderComponents | null => {
+): OpenseaOrderParams | null => {
   switch (type) {
     case EventType.ITEM_LISTED:
       return handleItemListedEvent(payload as ItemListedEventPayload);
@@ -231,7 +239,7 @@ export const handleEvent = (
 type ProtocolData =
   | {
       kind: "seaport";
-      order: Sdk.Seaport.Order;
+      order: Sdk.SeaportV11.Order;
     }
   | {
       kind: "seaport-v1.4";
@@ -250,8 +258,8 @@ export const parseProtocolData = (payload: unknown): ProtocolData | undefined =>
     }
 
     const protocol = (payload as any).protocol_address;
-    if (protocol === Sdk.Seaport.Addresses.Exchange[config.chainId]) {
-      const order = new Sdk.Seaport.Order(config.chainId, {
+    if (protocol === Sdk.SeaportV11.Addresses.Exchange[config.chainId]) {
+      const order = new Sdk.SeaportV11.Order(config.chainId, {
         endTime: protocolData.parameters.endTime,
         startTime: protocolData.parameters.startTime,
         consideration: protocolData.parameters.consideration,

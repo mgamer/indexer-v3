@@ -7,20 +7,21 @@ export * as element from "@/orderbook/orders/element";
 export * as forward from "@/orderbook/orders/forward";
 export * as foundation from "@/orderbook/orders/foundation";
 export * as looksRare from "@/orderbook/orders/looks-rare";
-export * as seaport from "@/orderbook/orders/seaport";
+export * as seaport from "@/orderbook/orders/seaport-v1.1";
 export * as seaportV14 from "@/orderbook/orders/seaport-v1.4";
+export * as alienswap from "@/orderbook/orders/alienswap";
 export * as sudoswap from "@/orderbook/orders/sudoswap";
 export * as x2y2 from "@/orderbook/orders/x2y2";
 export * as zeroExV4 from "@/orderbook/orders/zeroex-v4";
 export * as zora from "@/orderbook/orders/zora";
 export * as universe from "@/orderbook/orders/universe";
-export * as infinity from "@/orderbook/orders/infinity";
 export * as flow from "@/orderbook/orders/flow";
 export * as blur from "@/orderbook/orders/blur";
 export * as rarible from "@/orderbook/orders/rarible";
 export * as nftx from "@/orderbook/orders/nftx";
 export * as manifold from "@/orderbook/orders/manifold";
 export * as superrare from "@/orderbook/orders/superrare";
+export * as looksRareV2 from "@/orderbook/orders/looks-rare-v2";
 
 // Imports
 import * as Sdk from "@reservoir0x/sdk";
@@ -49,6 +50,7 @@ export type OrderKind =
   | "x2y2"
   | "seaport"
   | "seaport-v1.4"
+  | "alienswap"
   | "rarible"
   | "element-erc721"
   | "element-erc1155"
@@ -61,7 +63,6 @@ export type OrderKind =
   | "universe"
   | "nftx"
   | "blur"
-  | "infinity"
   | "flow"
   | "forward"
   | "manifold"
@@ -71,7 +72,10 @@ export type OrderKind =
   | "okex"
   | "bend-dao"
   | "superrare"
-  | "zeroex-v2";
+  | "zeroex-v2"
+  | "zeroex-v3"
+  | "treasure"
+  | "looks-rare-v2";
 
 // In case we don't have the source of an order readily available, we use
 // a default value where possible (since very often the exchange protocol
@@ -126,6 +130,7 @@ export const getOrderSourceByOrderKind = async (
       case "foundation":
         return sources.getOrInsert("foundation.app");
       case "looks-rare":
+      case "looks-rare-v2":
         return sources.getOrInsert("looksrare.org");
       case "seaport":
       case "seaport-v1.4":
@@ -153,8 +158,6 @@ export const getOrderSourceByOrderKind = async (
         return sources.getOrInsert("nftx.io");
       case "blur":
         return sources.getOrInsert("blur.io");
-      case "infinity":
-        return sources.getOrInsert("infinity.xyz");
       case "flow":
         return sources.getOrInsert("flow.so");
       case "manifold":
@@ -171,6 +174,8 @@ export const getOrderSourceByOrderKind = async (
         return sources.getOrInsert("benddao.xyz");
       case "superrare":
         return sources.getOrInsert("superrare.com");
+      case "alienswap":
+        return sources.getOrInsert("alienswap.xyz");
 
       case "mint": {
         if (address && mintsSources.has(address)) {
@@ -200,7 +205,12 @@ export const routerOnRecoverableError = async (
 
   logger.warn(
     "router-on-recoverable-error",
-    JSON.stringify({ kind, status: error.response?.status, error: error.response?.data, data })
+    JSON.stringify({
+      kind,
+      status: error.response?.status,
+      error: error.response?.data?.error,
+      data,
+    })
   );
 };
 
@@ -297,26 +307,11 @@ export const generateListingDetailsV6 = (
     }
 
     case "seaport": {
-      if (order.rawData && !order.rawData.partial) {
-        return {
-          kind: "seaport",
-          ...common,
-          order: new Sdk.Seaport.Order(config.chainId, order.rawData),
-        };
-      } else {
-        // Sorry for all the below `any` types
-        return {
-          // eslint-disable-next-line
-          kind: "seaport-partial" as any,
-          ...common,
-          order: {
-            contract: token.contract,
-            tokenId: token.tokenId,
-            id: order.id,
-            // eslint-disable-next-line
-          } as any,
-        };
-      }
+      return {
+        kind: "seaport",
+        ...common,
+        order: new Sdk.SeaportV11.Order(config.chainId, order.rawData),
+      };
     }
 
     case "seaport-v1.4": {
@@ -342,6 +337,14 @@ export const generateListingDetailsV6 = (
       }
     }
 
+    case "alienswap": {
+      return {
+        kind: "alienswap",
+        ...common,
+        order: new Sdk.Alienswap.Order(config.chainId, order.rawData),
+      };
+    }
+
     case "zora-v3": {
       return {
         kind: "zora",
@@ -355,15 +358,6 @@ export const generateListingDetailsV6 = (
         kind: "universe",
         ...common,
         order: new Sdk.Universe.Order(config.chainId, order.rawData),
-      };
-    }
-
-    case "infinity": {
-      const sdkOrder = new Sdk.Infinity.Order(config.chainId, order.rawData);
-      return {
-        kind: "infinity",
-        ...common,
-        order: sdkOrder,
       };
     }
 
@@ -416,6 +410,14 @@ export const generateListingDetailsV6 = (
       };
     }
 
+    case "looks-rare-v2": {
+      return {
+        kind: "looks-rare-v2",
+        ...common,
+        order: new Sdk.LooksRareV2.Order(config.chainId, order.rawData),
+      };
+    }
+
     default: {
       throw new Error("Unsupported order kind");
     }
@@ -454,53 +456,37 @@ export const generateBidDetailsV6 = async (
 
   switch (order.kind) {
     case "seaport": {
-      if (order.rawData && !order.rawData.partial) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const extraArgs: any = {};
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const extraArgs: any = {};
 
-        const sdkOrder = new Sdk.Seaport.Order(config.chainId, order.rawData);
-        if (sdkOrder.params.kind?.includes("token-list")) {
-          // When filling a "token-list" order, we also need to pass in the
-          // full list of tokens the order was made on (in order to be able
-          // to generate a valid merkle proof)
-          const tokens = await idb.manyOrNone(
-            `
+      const sdkOrder = new Sdk.SeaportV11.Order(config.chainId, order.rawData);
+      if (sdkOrder.params.kind?.includes("token-list")) {
+        // When filling a "token-list" order, we also need to pass in the
+        // full list of tokens the order was made on (in order to be able
+        // to generate a valid merkle proof)
+        const tokens = await idb.manyOrNone(
+          `
+            SELECT
+              token_sets_tokens.token_id
+            FROM token_sets_tokens
+            WHERE token_sets_tokens.token_set_id = (
               SELECT
-                token_sets_tokens.token_id
-              FROM token_sets_tokens
-              WHERE token_sets_tokens.token_set_id = (
-                SELECT
-                  orders.token_set_id
-                FROM orders
-                WHERE orders.id = $/id/
-              )
-            `,
-            { id: sdkOrder.hash() }
-          );
-          extraArgs.tokenIds = tokens.map(({ token_id }) => token_id);
-        }
-
-        return {
-          kind: "seaport",
-          ...common,
-          extraArgs,
-          order: sdkOrder,
-        };
-      } else {
-        // Sorry for all the below `any` types
-        return {
-          // eslint-disable-next-line
-          kind: "seaport-partial" as any,
-          ...common,
-          order: {
-            contract: token.contract,
-            tokenId: token.tokenId,
-            id: order.id,
-            unitPrice: order.unitPrice,
-            // eslint-disable-next-line
-          } as any,
-        };
+                orders.token_set_id
+              FROM orders
+              WHERE orders.id = $/id/
+            )
+          `,
+          { id: sdkOrder.hash() }
+        );
+        extraArgs.tokenIds = tokens.map(({ token_id }) => token_id);
       }
+
+      return {
+        kind: "seaport",
+        ...common,
+        extraArgs,
+        order: sdkOrder,
+      };
     }
 
     case "seaport-v1.4": {
@@ -551,6 +537,38 @@ export const generateBidDetailsV6 = async (
           } as any,
         };
       }
+    }
+
+    case "alienswap": {
+      const extraArgs: any = {};
+
+      const sdkOrder = new Sdk.Alienswap.Order(config.chainId, order.rawData);
+      if (sdkOrder.params.kind?.includes("token-list")) {
+        // When filling a "token-list" order, we also need to pass in the
+        // full list of tokens the order was made on (in order to be able
+        // to generate a valid merkle proof)
+        const tokens = await idb.manyOrNone(
+          `
+            SELECT
+              token_sets_tokens.token_id
+            FROM token_sets_tokens
+            WHERE token_sets_tokens.token_set_id = (
+              SELECT
+                orders.token_set_id
+              FROM orders
+              WHERE orders.id = $/id/
+            )
+          `,
+          { id: sdkOrder.hash() }
+        );
+        extraArgs.tokenIds = tokens.map(({ token_id }) => token_id);
+      }
+      return {
+        kind: "alienswap",
+        ...common,
+        order: sdkOrder,
+        extraArgs,
+      };
     }
 
     case "looks-rare": {
@@ -617,15 +635,6 @@ export const generateBidDetailsV6 = async (
       };
     }
 
-    case "infinity": {
-      const sdkOrder = new Sdk.Infinity.Order(config.chainId, order.rawData);
-      return {
-        kind: "infinity",
-        ...common,
-        order: sdkOrder,
-      };
-    }
-
     case "flow": {
       const sdkOrder = new Sdk.Flow.Order(config.chainId, order.rawData);
       return {
@@ -681,6 +690,15 @@ export const generateBidDetailsV6 = async (
       const sdkOrder = new Sdk.Blur.Order(config.chainId, order.rawData);
       return {
         kind: "blur",
+        ...common,
+        order: sdkOrder,
+      };
+    }
+
+    case "looks-rare-v2": {
+      const sdkOrder = new Sdk.LooksRareV2.Order(config.chainId, order.rawData);
+      return {
+        kind: "looks-rare-v2",
         ...common,
         order: sdkOrder,
       };
@@ -765,7 +783,7 @@ export const generateListingDetailsV5 = (
         return {
           kind: "seaport",
           ...common,
-          order: new Sdk.Seaport.Order(config.chainId, order.rawData),
+          order: new Sdk.SeaportV11.Order(config.chainId, order.rawData),
         };
       } else {
         // Sorry for all the below `any` types
@@ -841,7 +859,7 @@ export const generateBidDetailsV5 = async (
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const extraArgs: any = {};
 
-        const sdkOrder = new Sdk.Seaport.Order(config.chainId, order.rawData);
+        const sdkOrder = new Sdk.SeaportV11.Order(config.chainId, order.rawData);
         if (sdkOrder.params.kind?.includes("token-list")) {
           // When filling a "token-list" order, we also need to pass in the
           // full list of tokens the order was made on (in order to be able

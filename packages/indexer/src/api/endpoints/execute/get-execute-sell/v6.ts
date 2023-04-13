@@ -47,7 +47,6 @@ export const getExecuteSellV6Options: RouteOptions = {
             "seaport-v1.4-partial",
             "x2y2",
             "universe",
-            "infinity",
             "flow"
           )
           .required(),
@@ -267,6 +266,7 @@ export const getExecuteSellV6Options: RouteOptions = {
                 AND orders.approval_status = 'approved'
                 AND orders.quantity_remaining >= $/quantity/
                 AND (orders.taker = '\\x0000000000000000000000000000000000000000' OR orders.taker IS NULL)
+                ${payload.normalizeRoyalties ? " AND orders.normalized_value IS NOT NULL" : ""}
                 ${isFlagged ? "AND orders.kind NOT IN ('x2y2', 'seaport')" : ""}
               ORDER BY orders.value DESC
             `,
@@ -455,7 +455,6 @@ export const getExecuteSellV6Options: RouteOptions = {
         x2y2ApiKey: payload.x2y2ApiKey ?? config.x2y2ApiKey,
         cbApiKey: config.cbApiKey,
         orderFetcherBaseUrl: config.orderFetcherBaseUrl,
-        orderFetcherApiKey: config.orderFetcherApiKey,
       });
 
       const errors: { orderId: string; message: string }[] = [];
@@ -483,11 +482,10 @@ export const getExecuteSellV6Options: RouteOptions = {
 
       // Direct filling on OpenSea might require an approval
       if (txData.to === Sdk.SeaportV14.Addresses.Exchange[config.chainId]) {
-        const isApproved = await getNftApproval(
-          bidDetails.contract,
-          payload.taker,
-          Sdk.SeaportV14.Addresses.OpenseaConduit[config.chainId]
+        const conduit = new Sdk.SeaportV14.Exchange(config.chainId).deriveConduit(
+          Sdk.SeaportBase.Addresses.OpenseaConduitKey[config.chainId]
         );
+        const isApproved = await getNftApproval(bidDetails.contract, payload.taker, conduit);
 
         if (!isApproved) {
           steps[0].items.push({
@@ -523,43 +521,6 @@ export const getExecuteSellV6Options: RouteOptions = {
                   baseProvider,
                   bidDetails.contract
                 ).approveTransaction(payload.taker, Sdk.Forward.Addresses.Exchange[config.chainId]);
-
-          steps[0].items.push({
-            status: "incomplete",
-            data: {
-              ...approveTx,
-              maxFeePerGas: payload.maxFeePerGas
-                ? bn(payload.maxFeePerGas).toHexString()
-                : undefined,
-              maxPriorityFeePerGas: payload.maxPriorityFeePerGas
-                ? bn(payload.maxPriorityFeePerGas).toHexString()
-                : undefined,
-            },
-          });
-        }
-      }
-
-      if (bidDetails.kind === "infinity") {
-        const isApproved = await getNftApproval(
-          bidDetails.contract,
-          payload.taker,
-          Sdk.Infinity.Addresses.Exchange[config.chainId]
-        );
-
-        if (!isApproved) {
-          const approveTx =
-            bidDetails.contractKind === "erc721"
-              ? new Sdk.Common.Helpers.Erc721(baseProvider, bidDetails.contract).approveTransaction(
-                  payload.taker,
-                  Sdk.Infinity.Addresses.Exchange[config.chainId]
-                )
-              : new Sdk.Common.Helpers.Erc1155(
-                  baseProvider,
-                  bidDetails.contract
-                ).approveTransaction(
-                  payload.taker,
-                  Sdk.Infinity.Addresses.Exchange[config.chainId]
-                );
 
           steps[0].items.push({
             status: "incomplete",

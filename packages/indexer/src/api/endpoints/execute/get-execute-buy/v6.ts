@@ -51,7 +51,6 @@ export const getExecuteBuyV6Options: RouteOptions = {
               "x2y2",
               "universe",
               "rarible",
-              "infinity",
               "sudoswap",
               "flow",
               "nftx"
@@ -742,11 +741,7 @@ export const getExecuteBuyV6Options: RouteOptions = {
           let blurAuthChallenge = await b.getAuthChallenge(blurAuthChallengeId);
           if (!blurAuthChallenge) {
             blurAuthChallenge = (await axios
-              .get(`${config.orderFetcherBaseUrl}/api/blur-auth-challenge?taker=${payload.taker}`, {
-                headers: {
-                  "X-Api-Key": config.orderFetcherApiKey,
-                },
-              })
+              .get(`${config.orderFetcherBaseUrl}/api/blur-auth-challenge?taker=${payload.taker}`)
               .then((response) => response.data.authChallenge)) as b.AuthChallenge;
 
             await b.saveAuthChallenge(
@@ -796,7 +791,6 @@ export const getExecuteBuyV6Options: RouteOptions = {
         x2y2ApiKey: payload.x2y2ApiKey ?? config.x2y2ApiKey,
         cbApiKey: config.cbApiKey,
         orderFetcherBaseUrl: config.orderFetcherBaseUrl,
-        orderFetcherApiKey: config.orderFetcherApiKey,
       });
 
       const errors: { orderId: string; message: string }[] = [];
@@ -869,7 +863,7 @@ export const getExecuteBuyV6Options: RouteOptions = {
               config.chainId === 1
                 ? // Use OpenSea's conduit for sharing approvals
                   "0x1e0049783f008a0085193e00003d00cd54003c71"
-                : Sdk.Seaport.Addresses.Exchange[config.chainId];
+                : Sdk.SeaportV11.Addresses.Exchange[config.chainId];
           } else if (listings.every((d) => d.kind === "universe")) {
             conduit = Sdk.Universe.Addresses.Exchange[config.chainId];
           } else if (listings.every((d) => d.kind === "rarible")) {
