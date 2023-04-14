@@ -686,7 +686,7 @@ export const save = async (
             {
               newOrders: [order.params],
               replacedOrders: [replacedOrderResult.raw_data],
-              orderKind: "alienswap",
+              orderKind: "seaport-v1.4",
             }
           );
         }
