@@ -77,3 +77,56 @@ export const setupListings = async (listings: Listing[]) => {
     }
   }
 };
+
+// --- Offers ---
+
+export type Offer = {
+  buyer: SignerWithAddress;
+  nft: {
+    kind: "erc721" | "erc1155";
+    contract: Contract;
+    id: number;
+  };
+  // For the moment, all orders are in WETH
+  price: BigNumberish;
+  // Whether the order is to be cancelled
+  isCancelled?: boolean;
+  order?: Sdk.LooksRareV2.Order;
+};
+
+export const setupOffers = async (offers: Offer[]) => {
+  const chainId = getChainId();
+  const exchange = new Sdk.LooksRareV2.Exchange(chainId);
+
+  for (const offer of offers) {
+    const { buyer, nft, price } = offer;
+
+    const weth = new Sdk.Common.Helpers.Weth(ethers.provider, chainId);
+    await weth.deposit(buyer, price);
+    await weth.approve(buyer, Sdk.LooksRareV2.Addresses.Exchange[chainId]);
+
+    // Build and sign the order
+    const builder = new Sdk.LooksRareV2.Builders.ContractWide(chainId);
+    const order = builder.build({
+      quoteType: Sdk.LooksRareV2.Types.QuoteType.Bid,
+      collectionType:
+        nft.kind === "erc721"
+          ? Sdk.LooksRareV2.Types.CollectionType.ERC721
+          : Sdk.LooksRareV2.Types.CollectionType.ERC1155,
+      signer: buyer.address,
+      collection: nft.contract.address,
+      currency: Sdk.Common.Addresses.Weth[chainId],
+      price,
+      startTime: await getCurrentTimestamp(ethers.provider),
+      endTime: (await getCurrentTimestamp(ethers.provider)) + 60,
+    });
+    await order.sign(buyer);
+
+    offer.order = order;
+
+    // Cancel the order if requested
+    if (offer.isCancelled) {
+      await exchange.cancelOrder(buyer, order);
+    }
+  }
+};
