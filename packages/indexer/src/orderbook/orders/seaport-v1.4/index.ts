@@ -27,6 +27,7 @@ import * as royalties from "@/utils/royalties";
 import * as refreshContractCollectionsMetadata from "@/jobs/collection-updates/refresh-contract-collections-metadata-queue";
 import * as ordersUpdateById from "@/jobs/order-updates/by-id-queue";
 import { allPlatformFeeRecipients } from "@/events-sync/handlers/royalties/config";
+import { topBidsCache } from "@/models/top-bids-caching";
 
 export type OrderInfo = {
   kind?: "full";
@@ -625,7 +626,7 @@ export const save = async (
         const seaportBidPercentageThreshold = 80;
 
         try {
-          const collectionTopBidValue = await getCollectionTopBidValue(
+          const collectionTopBidValue = await topBidsCache.getCollectionTopBidValue(
             info.contract,
             Number(tokenId)
           );
@@ -937,42 +938,4 @@ const getCollectionFloorAskValue = async (
       return collectionFloorAskValue;
     }
   }
-};
-
-export const getCollectionTopBidValue = async (
-  contract: string,
-  tokenId: number
-): Promise<number | null> => {
-  let collectionTopBidValue;
-  if (getNetworkSettings().multiCollectionContracts.includes(contract)) {
-    const collection = await Collections.getByContractAndTokenId(contract, tokenId);
-
-    collectionTopBidValue = await redis.get(`collection-top-bid:${collection?.id}`);
-
-    if (collectionTopBidValue) {
-      return Number(collectionTopBidValue);
-    } else {
-      return null;
-    }
-  }
-
-  collectionTopBidValue = await redis.get(`collection-top-bid:${contract}`);
-
-  if (collectionTopBidValue) {
-    return Number(collectionTopBidValue);
-  } else {
-    return null;
-  }
-};
-
-export const cacheCollectionTopBidValue = async (
-  collectionId: string,
-  value: number,
-  expiry: number
-): Promise<void> => {
-  await redis.set(`collection-top-bid:${collectionId}`, value, "EX", expiry);
-};
-
-export const clearCacheCollectionTopBidValue = async (collectionId: string): Promise<void> => {
-  await redis.del(`collection-top-bid:${collectionId}`);
 };

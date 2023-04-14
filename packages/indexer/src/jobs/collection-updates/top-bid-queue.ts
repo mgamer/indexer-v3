@@ -9,10 +9,7 @@ import {
   WebsocketEventKind,
   WebsocketEventRouter,
 } from "../websocket-events/websocket-event-router";
-import {
-  cacheCollectionTopBidValue,
-  clearCacheCollectionTopBidValue,
-} from "@/orderbook/orders/seaport-v1.4";
+import { topBidsCache } from "@/models/top-bids-caching";
 
 const QUEUE_NAME = "collection-updates-top-bid-queue";
 
@@ -146,14 +143,14 @@ if (config.doBackgroundWork) {
           expiry.setSeconds(collectionTopBid?.valid_until - now());
           const seconds = expiry.getSeconds();
 
-          await cacheCollectionTopBidValue(
+          await topBidsCache.cacheCollectionTopBidValue(
             collectionId,
             Number(collectionTopBid?.top_buy_value.toString()),
             seconds
           );
         } else {
           // clear the cache
-          await clearCacheCollectionTopBidValue(collectionId);
+          await topBidsCache.clearCacheCollectionTopBidValue(collectionId);
         }
 
         if (kind === "new-order" && collectionTopBid?.order_id) {
