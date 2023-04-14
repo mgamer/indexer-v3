@@ -329,6 +329,15 @@ if (config.doBackgroundWork) {
                 data: eventData,
               };
             }
+
+            await WebsocketEventRouter({
+              eventInfo: {
+                kind: trigger.kind,
+                orderId: order.id,
+              },
+              eventKind:
+                order.side === "sell" ? WebsocketEventKind.SellOrder : WebsocketEventKind.BuyOrder,
+            });
           }
 
           if (eventInfo) {

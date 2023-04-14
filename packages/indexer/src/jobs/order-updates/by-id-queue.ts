@@ -11,10 +11,6 @@ import { TriggerKind } from "@/jobs/order-updates/types";
 
 import * as buyOrderQueue from "@/jobs/order-updates/buy-order-queue";
 import * as sellOrderQueue from "@/jobs/order-updates/sell-order-queue";
-import {
-  WebsocketEventKind,
-  WebsocketEventRouter,
-} from "../websocket-events/websocket-event-router";
 
 const QUEUE_NAME = "order-updates-by-id";
 
@@ -40,7 +36,7 @@ if (config.doBackgroundWork) {
   worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      const { id, trigger } = job.data as OrderInfo;
+      const { id } = job.data as OrderInfo;
       let { side, tokenSetId } = job.data as OrderInfo;
 
       try {
@@ -91,17 +87,6 @@ if (config.doBackgroundWork) {
 
           if (side === "sell") {
             await sellOrderQueue.addToQueue([job.data]);
-          }
-
-          if (order) {
-            await WebsocketEventRouter({
-              eventInfo: {
-                kind: trigger.kind,
-                orderId: order.id,
-              },
-              eventKind:
-                order.side === "sell" ? WebsocketEventKind.SellOrder : WebsocketEventKind.BuyOrder,
-            });
           }
         }
 
