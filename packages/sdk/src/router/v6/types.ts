@@ -80,6 +80,10 @@ export type GenericOrder =
       order: Sdk.SeaportBase.Types.PartialOrder;
     }
   | {
+      kind: "alienswap";
+      order: Sdk.Alienswap.Order;
+    }
+  | {
       kind: "cryptopunks";
       order: Sdk.CryptoPunks.Order;
     }
@@ -104,16 +108,16 @@ export type GenericOrder =
       order: Sdk.Rarible.Order;
     }
   | {
-      kind: "infinity";
-      order: Sdk.Infinity.Order;
-    }
-  | {
       kind: "forward";
       order: Sdk.Forward.Order;
     }
   | {
       kind: "blur";
       order: Sdk.Blur.Order;
+    }
+  | {
+      kind: "blur-bid";
+      order: Sdk.Blur.Types.BlurBidPool;
     }
   | {
       kind: "manifold";
@@ -130,6 +134,10 @@ export type GenericOrder =
   | {
       kind: "superrare";
       order: Sdk.SuperRare.Order;
+    }
+  | {
+      kind: "looks-rare-v2";
+      order: Sdk.LooksRareV2.Order;
     };
 
 // Listings
@@ -172,6 +180,8 @@ export type BidFillDetails = {
   contractKind: "erc721" | "erc1155";
   contract: string;
   tokenId: string;
+  price: string;
+  source?: string;
   // Relevant for partially-fillable orders
   amount?: number | string;
   // Relevant for merkle orders
@@ -185,9 +195,12 @@ export type BidFillDetails = {
 export type BidDetails = GenericOrder & BidFillDetails;
 
 export type FillBidsResult = {
-  txData: TxData;
-  approvals: NFTApproval[];
-  success: boolean[];
+  txs: {
+    approvals: NFTApproval[];
+    txData: TxData;
+    orderIds: string[];
+  }[];
+  success: { [orderId: string]: boolean };
 };
 
 // Swaps

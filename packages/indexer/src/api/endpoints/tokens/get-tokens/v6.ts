@@ -102,7 +102,9 @@ export const getTokensV6Options: RouteOptions = {
         }),
       attributes: Joi.object()
         .unknown()
-        .description("Filter to a particular attribute. Example: `attributes[Type]=Original`"),
+        .description(
+          "Filter to a particular attribute. Note: Our docs do not support this parameter correctly. To test, you can use the following URL in your browser. Example: `https://api.reservoir.tools/owners/v1?collection=0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63&attributes[Type]=Original` or `https://api.reservoir.tools/owners/v1?collection=0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63&attributes[Type]=Original&attributes[Type]=Sibling`"
+        ),
       source: Joi.string().description(
         "Domain of the order source. Example `opensea.io` (Only listed tokens are returned when filtering by source)"
       ),
@@ -428,7 +430,7 @@ export const getTokensV6Options: RouteOptions = {
           fe.royalty_fee_breakdown AS last_sale_royalty_fee_breakdown,
           fe.marketplace_fee_breakdown AS last_sale_marketplace_fee_breakdown
         FROM fill_events_2 fe
-        WHERE fe.contract = t.contract AND fe.token_id = t.token_id
+        WHERE fe.contract = t.contract AND fe.token_id = t.token_id AND fe.is_deleted = 0
         ORDER BY timestamp DESC LIMIT 1
         ) r ON TRUE
         `;

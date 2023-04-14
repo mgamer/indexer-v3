@@ -438,6 +438,7 @@ export const getJoiOrderObject = async (order: {
     | Sdk.Nftx.Types.OrderParams;
   normalizeRoyalties: boolean;
   missingRoyalties: any;
+  includeDynamicPricing?: boolean;
   dynamic?: boolean;
   token?: string;
 }) => {
@@ -508,18 +509,19 @@ export const getJoiOrderObject = async (order: {
     validUntil: Number(order.validUntil),
     quantityFilled: Number(order.quantityFilled),
     quantityRemaining: Number(order.quantityRemaining),
-    dynamicPricing: order.dynamic
-      ? await getJoiDynamicPricingObject(
-          order.dynamic,
-          order.kind,
-          order.normalizeRoyalties,
-          order.rawData,
-          order.prices.currency ? fromBuffer(order.prices.currency) : undefined,
-          order.missingRoyalties ? order.missingRoyalties : undefined
-        )
-      : order.dynamic !== undefined
-      ? null
-      : undefined,
+    dynamicPricing:
+      order.includeDynamicPricing && order.dynamic
+        ? await getJoiDynamicPricingObject(
+            order.dynamic,
+            order.kind,
+            order.normalizeRoyalties,
+            order.rawData,
+            order.prices.currency ? fromBuffer(order.prices.currency) : undefined,
+            order.missingRoyalties ? order.missingRoyalties : undefined
+          )
+        : order.dynamic !== undefined
+        ? null
+        : undefined,
     criteria: order.criteria,
     source: {
       id: source?.address,
@@ -603,6 +605,7 @@ export const JoiSale = Joi.object({
   marketplaceFeeBps: Joi.number().optional(),
   paidFullRoyalty: Joi.boolean().optional(),
   feeBreakdown: Joi.array().items(JoiFeeBreakdown).optional(),
+  isDeleted: Joi.boolean().optional(),
   createdAt: Joi.string().optional(),
   updatedAt: Joi.string().optional(),
 });
@@ -682,6 +685,7 @@ export const getJoiSaleObject = async (sale: {
   txHash?: Buffer;
   logIndex?: number;
   batchIndex?: number;
+  isDeleted?: boolean;
   updatedAt?: string;
   createdAt?: string;
 }) => {
@@ -785,6 +789,7 @@ export const getJoiSaleObject = async (sale: {
       sale.fees.marketplaceFeeBreakdown,
       lastSaleFeeInfoIsValid
     ),
+    isDeleted: sale.isDeleted,
     createdAt: sale.createdAt,
     updatedAt: sale.updatedAt,
   };

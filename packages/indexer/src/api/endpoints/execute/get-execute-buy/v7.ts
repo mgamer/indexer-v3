@@ -60,10 +60,10 @@ export const getExecuteBuyV7Options: RouteOptions = {
                   "x2y2",
                   "universe",
                   "rarible",
-                  "infinity",
                   "sudoswap",
                   "flow",
-                  "nftx"
+                  "nftx",
+                  "alienswap"
                 )
                 .required(),
               data: Joi.object().required(),
@@ -136,9 +136,10 @@ export const getExecuteBuyV7Options: RouteOptions = {
       maxPriorityFeePerGas: Joi.string()
         .pattern(regex.number)
         .description("Optional custom gas settings."),
-      // TODO: Allow passing other API keys as well (eg. Coinbase)
+      // Various authorization keys
       x2y2ApiKey: Joi.string().description("Optional X2Y2 API key used for filling."),
-      blurAuth: Joi.string().description("Optional Blur auth to be used"),
+      openseaApiKey: Joi.string().description("Optional OpenSea API key used for filling."),
+      blurAuth: Joi.string().description("Optional Blur auth used for filling"),
     }),
   },
   response: {
@@ -683,14 +684,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
             let blurAuthChallenge = await b.getAuthChallenge(blurAuthChallengeId);
             if (!blurAuthChallenge) {
               blurAuthChallenge = (await axios
-                .get(
-                  `${config.orderFetcherBaseUrl}/api/blur-auth-challenge?taker=${payload.taker}`,
-                  {
-                    headers: {
-                      "X-Api-Key": config.orderFetcherApiKey,
-                    },
-                  }
-                )
+                .get(`${config.orderFetcherBaseUrl}/api/blur-auth-challenge?taker=${payload.taker}`)
                 .then((response) => response.data.authChallenge)) as b.AuthChallenge;
 
               await b.saveAuthChallenge(
@@ -739,9 +733,9 @@ export const getExecuteBuyV7Options: RouteOptions = {
 
       const router = new Sdk.RouterV6.Router(config.chainId, baseProvider, {
         x2y2ApiKey: payload.x2y2ApiKey ?? config.x2y2ApiKey,
+        openseaApiKey: payload.openseaApiKey,
         cbApiKey: config.cbApiKey,
         orderFetcherBaseUrl: config.orderFetcherBaseUrl,
-        orderFetcherApiKey: config.orderFetcherApiKey,
       });
 
       const errors: { orderId: string; message: string }[] = [];

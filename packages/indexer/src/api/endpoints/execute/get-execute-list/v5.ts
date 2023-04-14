@@ -20,15 +20,19 @@ import * as blurSellToken from "@/orderbook/orders/blur/build/sell/token";
 import * as blurCheck from "@/orderbook/orders/blur/check";
 
 // LooksRare
-import * as looksRareSellToken from "@/orderbook/orders/looks-rare/build/sell/token";
-import * as looksRareCheck from "@/orderbook/orders/looks-rare/check";
+import * as looksRareV2SellToken from "@/orderbook/orders/looks-rare-v2/build/sell/token";
+import * as looksRareV2Check from "@/orderbook/orders/looks-rare-v2/check";
+
+import * as seaportBaseCheck from "@/orderbook/orders/seaport-base/check";
 
 // Seaport
 import * as seaportSellToken from "@/orderbook/orders/seaport-v1.1/build/sell/token";
-import * as seaportCheck from "@/orderbook/orders/seaport-base/check";
 
 // Seaport v1.4
 import * as seaportV14SellToken from "@/orderbook/orders/seaport-v1.4/build/sell/token";
+
+// Alienswap
+import * as alienswapSellToken from "@/orderbook/orders/alienswap/build/sell/token";
 
 // X2Y2
 import * as x2y2SellToken from "@/orderbook/orders/x2y2/build/sell/token";
@@ -41,10 +45,6 @@ import * as zeroExV4Check from "@/orderbook/orders/zeroex-v4/check";
 // Universe
 import * as universeSellToken from "@/orderbook/orders/universe/build/sell/token";
 import * as universeCheck from "@/orderbook/orders/universe/check";
-
-// Infinity
-import * as infinitySellToken from "@/orderbook/orders/infinity/build/sell/token";
-import * as infinityCheck from "@/orderbook/orders/infinity/check";
 
 // Flow
 import * as flowSellToken from "@/orderbook/orders/flow/build/sell/token";
@@ -98,13 +98,14 @@ export const getExecuteListV5Options: RouteOptions = {
             .valid(
               "blur",
               "looks-rare",
+              "looks-rare-v2",
               "zeroex-v4",
               "seaport",
               "seaport-v1.4",
               "x2y2",
               "universe",
-              "infinity",
-              "flow"
+              "flow",
+              "alienswap"
             )
             .default("seaport-v1.4")
             .description("Exchange protocol used to create order. Example: `seaport-v1.4`"),
@@ -117,18 +118,17 @@ export const getExecuteListV5Options: RouteOptions = {
                 otherwise: Joi.forbidden(),
               }),
             }),
+            alienswap: Joi.object({
+              useOffChainCancellation: Joi.boolean().required(),
+              replaceOrderId: Joi.string().when("useOffChainCancellation", {
+                is: true,
+                then: Joi.optional(),
+                otherwise: Joi.forbidden(),
+              }),
+            }),
           }).description("Additional options."),
           orderbook: Joi.string()
-            .valid(
-              "blur",
-              "opensea",
-              "looks-rare",
-              "reservoir",
-              "x2y2",
-              "universe",
-              "infinity",
-              "flow"
-            )
+            .valid("blur", "opensea", "looks-rare", "reservoir", "x2y2", "universe", "flow")
             .default("reservoir")
             .description("Orderbook where order is placed. Example: `Reservoir`"),
           orderbookApiKey: Joi.string().description("Optional API key for the target orderbook"),
@@ -257,11 +257,21 @@ export const getExecuteListV5Options: RouteOptions = {
         },
       ];
 
-      // Keep track of orders which can be signed in bulk
       const bulkOrders = {
         "seaport-v1.4": [] as {
           order: {
             kind: "seaport-v1.4";
+            data: Sdk.SeaportBase.Types.OrderComponents;
+          };
+          orderbook: string;
+          orderbookApiKey?: string;
+          source?: string;
+          orderIndex: number;
+        }[],
+
+        alienswap: [] as {
+          order: {
+            kind: "alienswap";
             data: Sdk.SeaportBase.Types.OrderComponents;
           };
           orderbook: string;
@@ -285,11 +295,7 @@ export const getExecuteListV5Options: RouteOptions = {
           let blurAuthChallenge = await b.getAuthChallenge(blurAuthChallengeId);
           if (!blurAuthChallenge) {
             blurAuthChallenge = (await axios
-              .get(`${config.orderFetcherBaseUrl}/api/blur-auth-challenge?taker=${maker}`, {
-                headers: {
-                  "X-Api-Key": config.orderFetcherApiKey,
-                },
-              })
+              .get(`${config.orderFetcherBaseUrl}/api/blur-auth-challenge?taker=${maker}`)
               .then((response) => response.data.authChallenge)) as b.AuthChallenge;
 
             await b.saveAuthChallenge(
@@ -342,6 +348,10 @@ export const getExecuteListV5Options: RouteOptions = {
           // Force usage of seaport-v1.4
           if (params.orderKind === "seaport") {
             params.orderKind = "seaport-v1.4";
+          }
+          // Force usage of looks-rare-v2
+          if (params.orderKind === "looks-rare") {
+            params.orderKind = "looks-rare-v2";
           }
 
           // For now, ERC20 listings are only supported on Seaport
@@ -516,74 +526,6 @@ export const getExecuteListV5Options: RouteOptions = {
                 break;
               }
 
-              case "infinity": {
-                if (!["infinity"].includes(params.orderbook)) {
-                  return errors.push({ message: "Unsupported orderbook", orderIndex: i });
-                }
-
-                const order = await infinitySellToken.build({
-                  ...params,
-                  orderbook: "infinity",
-                  maker,
-                  contract,
-                  tokenId,
-                });
-
-                // Will be set if an approval is needed before listing
-                let approvalTx: TxData | undefined;
-
-                // Check the order's fillability
-                try {
-                  await infinityCheck.offChainCheck(order, { onChainApprovalRecheck: true });
-                } catch (error: any) {
-                  switch (error.message) {
-                    case "no-balance-no-approval":
-                    case "no-balance": {
-                      return errors.push({ message: "Maker does not own token", orderIndex: i });
-                    }
-
-                    case "no-approval": {
-                      // Generate an approval transaction
-                      approvalTx = new Sdk.Common.Helpers.Erc721(
-                        baseProvider,
-                        contract
-                      ).approveTransaction(maker, Sdk.Infinity.Addresses.Exchange[config.chainId]);
-
-                      break;
-                    }
-                  }
-                }
-
-                steps[1].items.push({
-                  status: approvalTx ? "incomplete" : "complete",
-                  data: approvalTx,
-                  orderIndexes: [i],
-                });
-                steps[2].items.push({
-                  status: "incomplete",
-                  data: {
-                    sign: order.getSignatureData(),
-                    post: {
-                      endpoint: "/order/v3",
-                      method: "POST",
-                      body: {
-                        order: {
-                          kind: params.orderKind,
-                          data: {
-                            ...order.params,
-                          },
-                        },
-                        orderbook: params.orderbook,
-                        source,
-                      },
-                    },
-                  },
-                  orderIndexes: [i],
-                });
-
-                break;
-              }
-
               case "flow": {
                 if (!["flow"].includes(params.orderbook)) {
                   return errors.push({ message: "Unsupported orderbook", orderIndex: i });
@@ -672,7 +614,7 @@ export const getExecuteListV5Options: RouteOptions = {
                 // Check the order's fillability
                 const exchange = new Sdk.SeaportV11.Exchange(config.chainId);
                 try {
-                  await seaportCheck.offChainCheck(order, exchange, {
+                  await seaportBaseCheck.offChainCheck(order, exchange, {
                     onChainApprovalRecheck: true,
                   });
                 } catch (error: any) {
@@ -768,7 +710,7 @@ export const getExecuteListV5Options: RouteOptions = {
                 // Check the order's fillability
                 const exchange = new Sdk.SeaportV14.Exchange(config.chainId);
                 try {
-                  await seaportCheck.offChainCheck(order, exchange, {
+                  await seaportBaseCheck.offChainCheck(order, exchange, {
                     onChainApprovalRecheck: true,
                   });
                 } catch (error: any) {
@@ -816,7 +758,83 @@ export const getExecuteListV5Options: RouteOptions = {
                 break;
               }
 
-              case "looks-rare": {
+              case "alienswap": {
+                if (!["reservoir"].includes(params.orderbook)) {
+                  return errors.push({ message: "Unsupported orderbook", orderIndex: i });
+                }
+
+                const options = params.options?.[params.orderKind] as
+                  | {
+                      useOffChainCancellation?: boolean;
+                      replaceOrderId?: string;
+                    }
+                  | undefined;
+
+                const order = await alienswapSellToken.build({
+                  ...params,
+                  ...options,
+                  orderbook: params.orderbook as "reservoir" | "opensea",
+                  maker,
+                  contract,
+                  tokenId,
+                  source,
+                });
+
+                // Will be set if an approval is needed before listing
+                let approvalTx: TxData | undefined;
+
+                // Check the order's fillability
+                const exchange = new Sdk.Alienswap.Exchange(config.chainId);
+                try {
+                  await seaportBaseCheck.offChainCheck(order, exchange, {
+                    onChainApprovalRecheck: true,
+                  });
+                } catch (error: any) {
+                  switch (error.message) {
+                    case "no-balance-no-approval":
+                    case "no-balance": {
+                      return errors.push({ message: "Maker does not own token", orderIndex: i });
+                    }
+
+                    case "no-approval": {
+                      // Generate an approval transaction
+                      const info = order.getInfo()!;
+
+                      const kind = order.params.kind?.startsWith("erc721") ? "erc721" : "erc1155";
+                      approvalTx = (
+                        kind === "erc721"
+                          ? new Sdk.Common.Helpers.Erc721(baseProvider, info.contract)
+                          : new Sdk.Common.Helpers.Erc1155(baseProvider, info.contract)
+                      ).approveTransaction(maker, exchange.deriveConduit(order.params.conduitKey));
+
+                      break;
+                    }
+                  }
+                }
+
+                steps[1].items.push({
+                  status: approvalTx ? "incomplete" : "complete",
+                  data: approvalTx,
+                  orderIndexes: [i],
+                });
+
+                bulkOrders["alienswap"].push({
+                  order: {
+                    kind: params.orderKind,
+                    data: {
+                      ...order.params,
+                    },
+                  },
+                  orderbook: params.orderbook,
+                  orderbookApiKey: params.orderbookApiKey,
+                  source,
+                  orderIndex: i,
+                });
+
+                break;
+              }
+
+              case "looks-rare-v2": {
                 if (!["reservoir", "looks-rare"].includes(params.orderbook)) {
                   return errors.push({ message: "Unsupported orderbook", orderIndex: i });
                 }
@@ -824,7 +842,7 @@ export const getExecuteListV5Options: RouteOptions = {
                   return errors.push({ message: "Custom fees not supported", orderIndex: i });
                 }
 
-                const order = await looksRareSellToken.build({
+                const order = await looksRareV2SellToken.build({
                   ...params,
                   maker,
                   contract,
@@ -836,7 +854,7 @@ export const getExecuteListV5Options: RouteOptions = {
 
                 // Check the order's fillability
                 try {
-                  await looksRareCheck.offChainCheck(order, { onChainApprovalRecheck: true });
+                  await looksRareV2Check.offChainCheck(order, { onChainApprovalRecheck: true });
                 } catch (error: any) {
                   switch (error.message) {
                     case "no-balance-no-approval":
@@ -857,9 +875,7 @@ export const getExecuteListV5Options: RouteOptions = {
                           : new Sdk.Common.Helpers.Erc1155(baseProvider, order.params.collection)
                       ).approveTransaction(
                         maker,
-                        contractKind === "erc721"
-                          ? Sdk.LooksRare.Addresses.TransferManagerErc721[config.chainId]
-                          : Sdk.LooksRare.Addresses.TransferManagerErc1155[config.chainId]
+                        Sdk.LooksRareV2.Addresses.TransferManager[config.chainId]
                       );
 
                       break;
@@ -881,7 +897,7 @@ export const getExecuteListV5Options: RouteOptions = {
                       method: "POST",
                       body: {
                         order: {
-                          kind: "looks-rare",
+                          kind: "looks-rare-v2",
                           data: {
                             ...order.params,
                           },
@@ -1069,10 +1085,8 @@ export const getExecuteListV5Options: RouteOptions = {
         })
       );
 
-      // Post any bulk orders together
+      // Post any seaport-v1.4 bulk orders together
       {
-        const exchange = new Sdk.SeaportV14.Exchange(config.chainId);
-
         const orders = bulkOrders["seaport-v1.4"];
         if (orders.length === 1) {
           const order = new Sdk.SeaportV14.Order(config.chainId, orders[0].order.data);
@@ -1099,6 +1113,7 @@ export const getExecuteListV5Options: RouteOptions = {
             orderIndexes: [orders[0].orderIndex],
           });
         } else if (orders.length > 1) {
+          const exchange = new Sdk.SeaportV14.Exchange(config.chainId);
           const { signatureData, proofs } = exchange.getBulkSignatureDataWithProofs(
             orders.map((o) => new Sdk.SeaportV14.Order(config.chainId, o.order.data))
           );
@@ -1117,6 +1132,68 @@ export const getExecuteListV5Options: RouteOptions = {
                     orderbookApiKey: o.orderbookApiKey,
                     bulkData: {
                       kind: "seaport-v1.4",
+                      data: {
+                        orderIndex: i,
+                        merkleProof: proofs[i],
+                      },
+                    },
+                  })),
+                  source,
+                },
+              },
+            },
+            orderIndexes: orders.map(({ orderIndex }) => orderIndex),
+          });
+        }
+      }
+
+      // Post any alienswap bulk orders together
+      {
+        const orders = bulkOrders["alienswap"];
+        if (orders.length === 1) {
+          const order = new Sdk.Alienswap.Order(config.chainId, orders[0].order.data);
+          steps[2].items.push({
+            status: "incomplete",
+            data: {
+              sign: order.getSignatureData(),
+              post: {
+                endpoint: "/order/v3",
+                method: "POST",
+                body: {
+                  order: {
+                    kind: "alienswap",
+                    data: {
+                      ...order.params,
+                    },
+                  },
+                  orderbook: orders[0].orderbook,
+                  orderbookApiKey: orders[0].orderbookApiKey,
+                  source,
+                },
+              },
+            },
+            orderIndexes: [orders[0].orderIndex],
+          });
+        } else if (orders.length > 1) {
+          const exchange = new Sdk.Alienswap.Exchange(config.chainId);
+          const { signatureData, proofs } = exchange.getBulkSignatureDataWithProofs(
+            orders.map((o) => new Sdk.Alienswap.Order(config.chainId, o.order.data))
+          );
+
+          steps[2].items.push({
+            status: "incomplete",
+            data: {
+              sign: signatureData,
+              post: {
+                endpoint: "/order/v4",
+                method: "POST",
+                body: {
+                  items: orders.map((o, i) => ({
+                    order: o.order,
+                    orderbook: o.orderbook,
+                    orderbookApiKey: o.orderbookApiKey,
+                    bulkData: {
+                      kind: "alienswap",
                       data: {
                         orderIndex: i,
                         merkleProof: proofs[i],

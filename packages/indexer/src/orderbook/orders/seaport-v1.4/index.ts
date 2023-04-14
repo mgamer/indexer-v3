@@ -1,4 +1,4 @@
-import { AddressZero } from "@ethersproject/constants";
+import { AddressZero, HashZero } from "@ethersproject/constants";
 import * as Sdk from "@reservoir0x/sdk";
 import { generateMerkleTree } from "@reservoir0x/sdk/dist/common/helpers/merkle";
 import { OrderKind } from "@reservoir0x/sdk/dist/seaport-base/types";
@@ -24,7 +24,6 @@ import { TokenSet } from "@/orderbook/token-sets/token-list";
 import { getUSDAndNativePrices } from "@/utils/prices";
 import * as royalties from "@/utils/royalties";
 
-import * as arweaveRelay from "@/jobs/arweave-relay";
 import * as refreshContractCollectionsMetadata from "@/jobs/collection-updates/refresh-contract-collections-metadata-queue";
 import * as ordersUpdateById from "@/jobs/order-updates/by-id-queue";
 import { allPlatformFeeRecipients } from "@/events-sync/handlers/royalties/config";
@@ -66,17 +65,10 @@ type SaveResult = {
 
 export const save = async (
   orderInfos: OrderInfo[],
-  relayToArweave?: boolean,
   validateBidValue?: boolean
 ): Promise<SaveResult[]> => {
   const results: SaveResult[] = [];
   const orderValues: DbOrder[] = [];
-
-  const arweaveData: {
-    order: Sdk.SeaportV14.Order;
-    schemaHash?: string;
-    source?: string;
-  }[] = [];
 
   const handleOrder = async (
     orderParams: Sdk.SeaportBase.Types.OrderComponents,
@@ -121,6 +113,20 @@ export const save = async (
         return results.push({
           id,
           status: "already-exists",
+        });
+      }
+
+      // Check: order has a supported conduit
+      if (
+        ![
+          HashZero,
+          Sdk.SeaportBase.Addresses.OpenseaConduitKey[config.chainId],
+          Sdk.SeaportBase.Addresses.OriginConduitKey[config.chainId],
+        ].includes(order.params.conduitKey)
+      ) {
+        return results.push({
+          id,
+          status: "unsupported-conduit",
         });
       }
 
@@ -530,13 +536,16 @@ export const save = async (
 
       // Handle: source
       const sources = await Sources.getInstance();
-      let source: SourcesEntity | undefined = await sources.getOrInsert("opensea.io");
+      let source: SourcesEntity | undefined;
 
-      // If cross posting, source should always be opensea.
       const sourceHash = bn(order.params.salt)._hex.slice(0, 10);
       const matchedSource = sources.getByDomainHash(sourceHash);
       if (matchedSource) {
         source = matchedSource;
+      }
+
+      if (isOpenSea) {
+        source = await sources.getOrInsert("opensea.io");
       }
 
       // If the order is native, override any default source
@@ -677,6 +686,7 @@ export const save = async (
             {
               newOrders: [order.params],
               replacedOrders: [replacedOrderResult.raw_data],
+              orderKind: "seaport-v1.4",
             }
           );
         }
@@ -735,10 +745,6 @@ export const save = async (
         status: "success",
         unfillable,
       });
-
-      if (relayToArweave) {
-        arweaveData.push({ order, schemaHash, source: source?.domain });
-      }
     } catch (error) {
       logger.warn(
         "orders-seaport-v1.4-save",
@@ -827,10 +833,6 @@ export const save = async (
             } as ordersUpdateById.OrderInfo)
         )
     );
-
-    if (relayToArweave) {
-      await arweaveRelay.addPendingOrdersSeaport(arweaveData);
-    }
   }
 
   return results;
