@@ -12,14 +12,14 @@ const QUEUE_NAME = "blur-bids-refresh";
 export const queue = new Queue(QUEUE_NAME, {
   connection: redis.duplicate(),
   defaultJobOptions: {
-    attempts: 1,
+    attempts: 3,
     backoff: {
       type: "exponential",
       delay: 10000,
     },
-    removeOnComplete: 1000,
+    removeOnComplete: 0,
     removeOnFail: 10000,
-    timeout: 60000,
+    timeout: 10000,
   },
 });
 new QueueScheduler(QUEUE_NAME, { connection: redis.duplicate() });
@@ -60,22 +60,27 @@ if (config.doBackgroundWork) {
         throw error;
       }
     },
-    { connection: redis.duplicate(), concurrency: 20 }
+    { connection: redis.duplicate(), concurrency: 1 }
   );
   worker.on("error", (error) => {
     logger.error(QUEUE_NAME, `Worker errored: ${error}`);
   });
 }
 
-export const addToQueue = async (collection: string) =>
-  queue.add(
-    collection,
-    { collection },
-    {
-      jobId: collection,
-      repeat: {
-        // Run every 5 minutes
-        every: 5 * 60 * 1000,
-      },
-    }
-  );
+export const addToQueue = async (collection: string) => {
+  const delayInSeconds = 5 * 60;
+
+  const lockKey = `blur-bids-refresh-lock:${collection}`;
+  const lock = await redis.get(lockKey);
+  if (!lock) {
+    await redis.set(lockKey, "locked", "EX", delayInSeconds - 1);
+    await queue.add(
+      collection,
+      { collection },
+      {
+        jobId: collection,
+        delay: delayInSeconds * 1000,
+      }
+    );
+  }
+};
