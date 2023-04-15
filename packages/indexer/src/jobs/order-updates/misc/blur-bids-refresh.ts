@@ -32,6 +32,10 @@ if (config.doBackgroundWork) {
       const { collection } = job.data as { collection: string };
 
       try {
+        logger.info(
+          QUEUE_NAME,
+          `${config.orderFetcherBaseUrl}/api/blur-collection-bids?collection=${collection}`
+        );
         const pricePoints = await axios
           .get(`${config.orderFetcherBaseUrl}/api/blur-collection-bids?collection=${collection}`)
           .then((result) => result.data.bids as Sdk.Blur.Types.BlurBidPricePoint[]);
