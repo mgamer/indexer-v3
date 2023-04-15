@@ -32,13 +32,9 @@ if (config.doBackgroundWork) {
       const { collection } = job.data as { collection: string };
 
       try {
-        logger.info(
-          QUEUE_NAME,
-          `${config.orderFetcherBaseUrl}/api/blur-collection-bids?collection=${collection}`
-        );
         const pricePoints = await axios
           .get(`${config.orderFetcherBaseUrl}/api/blur-collection-bids?collection=${collection}`)
-          .then((result) => result.data.bids as Sdk.Blur.Types.BlurBidPricePoint[]);
+          .then((response) => response.data.bids as Sdk.Blur.Types.BlurBidPricePoint[]);
 
         await orderbook.addToQueue([
           {
@@ -53,10 +49,13 @@ if (config.doBackgroundWork) {
             },
           },
         ]);
-      } catch (error) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } catch (error: any) {
         logger.error(
           QUEUE_NAME,
-          `Failed to refresh Blur bids for collection ${collection}: ${error}`
+          `Failed to refresh Blur bids for collection ${collection}: ${
+            error?.response.data ? JSON.stringify(error.response.data) : error
+          }`
         );
         throw error;
       }
