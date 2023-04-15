@@ -29,6 +29,8 @@ if (config.doWebsocketWork && config.blurWsUrl && config.blurWsApiKey) {
         updates: Sdk.Blur.Types.BlurBidPricePoint[];
       } = JSON.parse(message);
 
+      logger.info(COMPONENT, JSON.stringify(parsedMessage));
+
       await orderbook.addToQueue([
         {
           kind: "blur-bid",
