@@ -441,7 +441,7 @@ export const saveBids = async (orderInfos: BidOrderInfo[]): Promise<SaveResult[]
           // Update the current bid in place
           for (const newPricePoint of bidUpdates.pricePoints) {
             const existingPricePointIndex = currentBid.pricePoints.findIndex(
-              (pp) => pp.price === newPricePoint.price
+              (pp) => Number(pp.price) === Number(newPricePoint.price)
             );
             if (existingPricePointIndex !== -1) {
               currentBid.pricePoints[existingPricePointIndex] = newPricePoint;
