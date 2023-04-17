@@ -25,7 +25,6 @@ import {
 } from "@/common/joi";
 import { Sources } from "@/models/sources";
 import _ from "lodash";
-import pgPromise from "pg-promise";
 
 const version = "v7";
 
@@ -566,7 +565,7 @@ export const getUserTokensV7Options: RouteOptions = {
         LIMIT $/limit/
       `;
       }
-      console.log(pgPromise.as.format(baseQuery, { ...query, ...params }));
+
       const userTokens = await redb.manyOrNone(baseQuery, { ...query, ...params });
 
       let continuation = null;
