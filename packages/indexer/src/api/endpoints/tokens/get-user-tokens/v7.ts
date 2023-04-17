@@ -516,7 +516,7 @@ export const getUserTokensV7Options: RouteOptions = {
           ${tokensJoin}
           JOIN collections c ON c.id = t.collection_id
           LEFT JOIN orders o ON o.id = c.floor_sell_id
-          LEFT JOIN orders ot ON ot.id = t.floor_sell_id
+          ${query.includeRawData ? "LEFT JOIN orders ot ON ot.id = t.floor_sell_id" : ""}
           JOIN contracts con ON b.contract = con.address
       `;
 
