@@ -186,7 +186,10 @@ export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
           royalties: royalties
             ? {
                 minBps: royalties.minimumRoyaltyBps,
-                maxBps: royalties.maximumRoyaltyBps,
+                // If the maximum royalty is not available for Blur, use the OpenSea one
+                maxBps:
+                  royalties.maximumRoyaltyBps ??
+                  marketplaces[marketplaces.length - 1].royalties?.maxBps,
               }
             : undefined,
           orderbook: "blur",
