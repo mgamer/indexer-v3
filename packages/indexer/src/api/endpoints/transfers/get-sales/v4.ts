@@ -173,7 +173,7 @@ export const getSalesV4Options: RouteOptions = {
     }
 
     if (query.continuation) {
-      const contArr = splitContinuation(query.continuation, /^(\d+)_(\d+)_(\d+)_(\d+)$/);
+      const contArr = splitContinuation(query.continuation, /^(.+)_(\d+)_(\d+)_(\d+)$/);
 
       if (contArr.length !== 4) {
         throw Boom.badRequest("Invalid continuation string used");
