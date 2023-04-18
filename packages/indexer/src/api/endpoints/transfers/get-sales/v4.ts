@@ -303,6 +303,7 @@ export const getSalesV4Options: RouteOptions = {
             : ""
         }
       `;
+
       const rawResult = await redb.manyOrNone(baseQuery, query);
 
       let continuation = null;
