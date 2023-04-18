@@ -1,4 +1,5 @@
 import { idb, pgp } from "@/common/db";
+import { logger } from "@/common/logger";
 import { toBuffer } from "@/common/utils";
 import { DbEvent, Event } from "@/events-sync/storage/fill-events";
 
@@ -140,6 +141,19 @@ export const addEvents = async (events: Event[]) => {
         "expiration" = EXCLUDED."expiration",
         "updated_at" = now()
     `);
+
+    // Log average latency of fill events
+    logger.info(
+      "sales-latency",
+      JSON.stringify({
+        latency: Math.round(
+          fillValues.reduce(
+            (acc, event) => acc + Math.floor(Date.now() / 1000) - event.timestamp,
+            0
+          ) / fillValues.length
+        ),
+      })
+    );
   }
 
   if (queries.length) {
