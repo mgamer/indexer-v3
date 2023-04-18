@@ -19,7 +19,7 @@ import {
   WebsocketEventRouter,
 } from "../websocket-events/websocket-event-router";
 
-const QUEUE_NAME = "buy-order-queue";
+const QUEUE_NAME = "order-updates-buy-order";
 
 export const queue = new Queue(QUEUE_NAME, {
   connection: redis.duplicate(),
@@ -43,47 +43,12 @@ if (config.doBackgroundWork) {
   worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      const { id, trigger } = job.data as OrderInfo;
-      let { tokenSetId } = job.data as OrderInfo;
+      const { id, trigger, tokenSetId, order } = job.data as OrderInfo;
 
       try {
-        let order: any;
-        if (id) {
-          // Fetch the order's associated data
-          order = await idb.oneOrNone(
-            `
-              SELECT
-                orders.id,
-                orders.side,
-                orders.token_set_id AS "tokenSetId",
-                orders.source_id_int AS "sourceIdInt",
-                orders.valid_between AS "validBetween",
-                COALESCE(orders.quantity_remaining, 1) AS "quantityRemaining",
-                orders.nonce,
-                orders.maker,
-                orders.price,
-                orders.value,
-                orders.fillability_status AS "fillabilityStatus",
-                orders.approval_status AS "approvalStatus",
-                orders.kind,
-                orders.dynamic,
-                orders.currency,
-                orders.currency_price,
-                orders.normalized_value,
-                orders.currency_normalized_value,
-                orders.raw_data,
-                token_sets_tokens.contract,
-                token_sets_tokens.token_id AS "tokenId"
-              FROM orders
-              JOIN token_sets_tokens
-                ON orders.token_set_id = token_sets_tokens.token_set_id
-              WHERE orders.id = $/id/
-              LIMIT 1
-            `,
-            { id }
-          );
-
-          tokenSetId = order?.tokenSetId;
+        if (!tokenSetId) {
+          logger.error(QUEUE_NAME, `No token set ID found for orderId=${id}, ${job.data}`);
+          return;
         }
 
         let buyOrderResult = await idb.manyOrNone(
@@ -164,7 +129,6 @@ if (config.doBackgroundWork) {
             buyOrderResult[0].topBuyId &&
             buyOrderResult[0].attributeId
           ) {
-            //  Only trigger websocket event for non collection offers.
             await WebsocketEventRouter({
               eventKind: WebsocketEventKind.NewTopBid,
               eventInfo: {
@@ -178,7 +142,7 @@ if (config.doBackgroundWork) {
               await handleNewBuyOrder.addToQueue(result);
             }
 
-            if (!_.isNull(result.collectionId)) {
+            if (!_.isNull(result.collectionId) && !tokenSetId.startsWith("token")) {
               await collectionUpdatesTopBid.addToQueue([
                 {
                   collectionId: result.collectionId,
@@ -390,6 +354,7 @@ export type OrderInfo = {
   // we don't have an order to check against.
   tokenSetId?: string;
   side?: "sell" | "buy";
+  order?: any;
 };
 
 export const addToQueue = async (orderInfos: OrderInfo[]) => {
