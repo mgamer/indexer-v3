@@ -308,14 +308,12 @@ export const getSalesV4Options: RouteOptions = {
 
       let continuation = null;
       if (rawResult.length === query.limit) {
+        const result = rawResult[rawResult.length - 1];
+        const timestamp =
+          query.orderBy && query.orderBy === "updated_at" ? result.updated_ts : result.timestamp;
+
         continuation = buildContinuation(
-          rawResult[rawResult.length - 1].timestamp +
-            "_" +
-            rawResult[rawResult.length - 1].log_index +
-            "_" +
-            rawResult[rawResult.length - 1].batch_index +
-            "_" +
-            rawResult[rawResult.length - 1].price
+          timestamp + "_" + result.log_index + "_" + result.batch_index + "_" + result.price
         );
       }
 
