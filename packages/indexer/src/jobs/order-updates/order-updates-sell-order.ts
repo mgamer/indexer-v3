@@ -46,7 +46,7 @@ if (config.doBackgroundWork) {
 
       logger.info(
         QUEUE_NAME,
-        `Processing job ${job.id} for orderId=${order.id}, ${JSON.stringify(job.data)}`
+        `Processing job ${job.id} for orderId=${order.id}, jobData=${JSON.stringify(job.data)}`
       );
 
       try {

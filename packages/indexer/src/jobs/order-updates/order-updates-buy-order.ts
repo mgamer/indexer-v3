@@ -47,7 +47,7 @@ if (config.doBackgroundWork) {
 
       logger.info(
         QUEUE_NAME,
-        `Processing job ${job.id} for orderId=${id}, ${JSON.stringify(job.data)}`
+        `Processing job ${job.id} for orderId=${id}, jobData=${JSON.stringify(job.data)}`
       );
       try {
         order.contract = toBuffer(order.contract);
