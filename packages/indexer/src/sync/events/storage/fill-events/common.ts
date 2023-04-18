@@ -142,18 +142,22 @@ export const addEvents = async (events: Event[]) => {
         "updated_at" = now()
     `);
 
-    // Log average latency of fill events
-    logger.info(
-      "sales-latency",
-      JSON.stringify({
-        latency: Math.round(
-          fillValues.reduce(
-            (acc, event) => acc + Math.floor(Date.now() / 1000) - event.timestamp,
-            0
-          ) / fillValues.length
-        ),
-      })
-    );
+    try {
+      // Log average latency of fill events
+      logger.info(
+        "sales-latency",
+        JSON.stringify({
+          latency: Math.round(
+            fillValues.reduce(
+              (acc, event) => acc + Math.floor(Date.now() / 1000) - event.timestamp,
+              0
+            ) / fillValues.length
+          ),
+        })
+      );
+    } catch (error) {
+      logger.error("sales-latency", `Failed to log sales latency ${error}`);
+    }
   }
 
   if (queries.length) {
