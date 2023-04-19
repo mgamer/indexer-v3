@@ -255,6 +255,11 @@ export const getOrdersAsksV4Options: RouteOptions = {
         }
       }
 
+      /*
+      Since status = any is allowed when sorting by updatedAt, this if statement blocks 
+      requests which include expensive query params (token, tokenSetId, community, etc.) 
+      unless "maker" or "ids" are passed (as any status is already permitted when using these params)
+      */
       if (
         query.sortBy === "updatedAt" &&
         !query.maker &&
