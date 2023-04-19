@@ -32,7 +32,7 @@ if (config.doBackgroundWork) {
         case "bid_events":
           // Archive bid events
           await redlock
-            .acquire([getLockName(tableName)], 30 * 60 * 1000)
+            .acquire([getLockName(tableName)], 60 * 60 * 1000)
             .then(async (lock) => {
               job.data.lock = lock;
               await ArchiveBidEvents.archive();
@@ -78,5 +78,3 @@ function getLockName(tableName: string) {
 export const addToQueue = async (tableName: string) => {
   await queue.add(randomUUID(), { tableName });
 };
-
-addToQueue("bid_events");
