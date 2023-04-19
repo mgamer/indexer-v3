@@ -267,12 +267,8 @@ export const getOrdersAsksV4Options: RouteOptions = {
           query.tokenSetId ||
           query.community ||
           query.collectionsSetId ||
-          query.source ||
           query.native ||
-          query.includePrivate ||
-          query.includeCriteriaMetadata ||
-          query.includeDynamicPricing ||
-          query.excludeEOA)
+          query.source)
       ) {
         throw Boom.badRequest(
           `You must provide one of the following: [ids, maker, contracts] in order to filter querys with sortBy = updatedAt and status != 'active.`
