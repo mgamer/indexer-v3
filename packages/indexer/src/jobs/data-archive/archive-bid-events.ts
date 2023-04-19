@@ -11,7 +11,7 @@ import fs, { createReadStream, createWriteStream } from "fs";
 import { createGzip } from "zlib";
 import AWS from "aws-sdk";
 import { logger } from "@/common/logger";
-import JSONStream from "JSONStream";
+import jsontream from "jsonstream";
 
 export class ArchiveBidEvents {
   static tableName = "bid_events";
@@ -117,7 +117,7 @@ export class ArchiveBidEvents {
       } while (limit === _.size(events));
 
       // Stream to JSON file
-      const jsonStream = JSONStream.stringify();
+      const jsonStream = jsontream.stringify();
       jsonStream.pipe(fs.createWriteStream(filename));
       jsonEvents.forEach((item) => {
         jsonStream.write(item);
