@@ -69,6 +69,11 @@ export const getOrdersAsksV4Options: RouteOptions = {
           "Filter to an array of contracts. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
         ),
       status: Joi.string()
+        .when("ids", {
+          is: Joi.exist(),
+          then: Joi.valid("active", "inactive", "expired", "cancelled", "filled", "any"),
+          otherwise: Joi.valid("active"),
+        })
         .when("maker", {
           is: Joi.exist(),
           then: Joi.valid("active", "inactive", "expired", "cancelled", "filled"),
