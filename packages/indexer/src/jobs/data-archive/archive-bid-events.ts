@@ -11,7 +11,6 @@ import fs, { createReadStream, createWriteStream } from "fs";
 import { createGzip } from "zlib";
 import AWS from "aws-sdk";
 import { logger } from "@/common/logger";
-import JSONStream from "jsonstream";
 
 export class ArchiveBidEvents {
   static tableName = "bid_events";
@@ -81,6 +80,11 @@ export class ArchiveBidEvents {
       let continuation = "";
       let count = 0;
 
+      logger.info(
+        "archive-bid-events",
+        `start archive from ${ArchiveBidEvents.tableName} [${startTime} to ${endTime}]`
+      );
+
       // Get all relevant events for the given time frame
       do {
         const query = `
@@ -109,6 +113,11 @@ export class ArchiveBidEvents {
 
         count += _.size(events);
 
+        logger.info(
+          "archive-bid-events",
+          `Collected ${count} records from ${ArchiveBidEvents.tableName} [${startTime} to ${endTime}]`
+        );
+
         // Construct the JSON object
         jsonEvents = jsonEvents.concat(JSON.parse(JSON.stringify(events)));
         continuation = `AND created_at > '${_.last(events).created_at}' AND id > ${
@@ -116,20 +125,10 @@ export class ArchiveBidEvents {
         }`;
       } while (limit === _.size(events));
 
-      // Stream to JSON file
-      const jsonStream = JSONStream.stringify();
-      jsonStream.pipe(fs.createWriteStream(filename));
-      jsonEvents.forEach((item) => {
-        jsonStream.write(item);
-      });
+      // Write to JSON file
+      await fs.promises.writeFile(filename, JSON.stringify(jsonEvents));
 
-      jsonStream.end();
-
-      await new Promise<void>((resolve) => {
-        jsonStream.on("finish", () => {
-          resolve();
-        });
-      });
+      logger.info("archive-bid-events", `Created JSON file [${startTime} to ${endTime}]`);
 
       // Compress the JSON file to GZIP file
       const sourceStream = createReadStream(filename);
@@ -144,6 +143,8 @@ export class ArchiveBidEvents {
         });
       });
 
+      logger.info("archive-bid-events", `Created GZIP file [${startTime} to ${endTime}]`);
+
       // Upload the GZIP file to S3
       const gzFileContent = fs.readFileSync(filenameGzip);
 
@@ -153,6 +154,8 @@ export class ArchiveBidEvents {
 
       try {
         if (await ArchiveBidEvents.fileExists(s3Bucket, s3Key)) {
+          logger.error("archive-bid-events", `${s3Key} already exist in bucket ${s3Bucket}`);
+
           // Delete local files
           await fs.promises.unlink(filename);
           await fs.promises.unlink(filenameGzip);
@@ -168,6 +171,8 @@ export class ArchiveBidEvents {
             ContentType: "gzip",
           })
           .promise();
+
+        logger.info("archive-bid-events", `Uploaded GZIP to S3 [${startTime} to ${endTime}]`);
 
         // Delete local files
         await fs.promises.unlink(filename);
