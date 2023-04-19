@@ -254,6 +254,9 @@ export const getOrdersAsksV4Options: RouteOptions = {
 
       if (
         query.sortBy === "updatedAt" &&
+        !query.maker &&
+        !query.contracts &&
+        !query.ids &&
         query.status !== "active" &&
         (query.token ||
           query.tokenSetId ||
@@ -266,7 +269,9 @@ export const getOrdersAsksV4Options: RouteOptions = {
           query.includeDynamicPricing ||
           query.excludeEOA)
       ) {
-        throw Boom.badRequest(`Filtering is disabled for updatedAt when status != 'active`);
+        throw Boom.badRequest(
+          `You must provide one of the following: [ids, maker, contracts] in order to filter querys with sortBy = updatedAt and status != 'active.`
+        );
       }
 
       switch (query.status) {
@@ -326,14 +331,6 @@ export const getOrdersAsksV4Options: RouteOptions = {
 
         (query as any).contractsFilter = query.contracts.map(toBuffer);
         conditions.push(`orders.contract IN ($/contractsFilter:list/)`);
-
-        if (query.status === "any") {
-          orderStatusFilter = "";
-
-          // Fix for the issue with negative prices for dutch auction orders
-          // (eg. due to orders not properly expired on time)
-          conditions.push(`coalesce(orders.price, 0) >= 0`);
-        }
       }
 
       if (query.maker) {
