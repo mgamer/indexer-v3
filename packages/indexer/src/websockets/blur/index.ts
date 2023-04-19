@@ -3,7 +3,7 @@ import { io } from "socket.io-client";
 
 import { logger } from "@/common/logger";
 import { config } from "@/config/index";
-import { handleNewPricePoints, addToQueue } from "@/jobs/order-updates/misc/blur-bids-buffer";
+import { addToQueue } from "@/jobs/order-updates/misc/blur-bids-buffer";
 
 const COMPONENT = "blur-websocket";
 
@@ -33,9 +33,7 @@ if (config.doWebsocketWork && config.blurWsUrl && config.blurWsApiKey) {
 
       const collection = parsedMessage.contractAddress.toLowerCase();
       const pricePoints = parsedMessage.updates;
-
-      await handleNewPricePoints(collection, pricePoints);
-      await addToQueue(collection);
+      await addToQueue(collection, pricePoints);
     } catch (error) {
       logger.error(COMPONENT, `Error handling bid: ${error} (message = ${message})`);
     }
