@@ -79,6 +79,11 @@ export const getOrdersAsksV4Options: RouteOptions = {
           then: Joi.valid("active", "any"),
           otherwise: Joi.valid("active"),
         })
+        .when("sortBy", {
+          is: Joi.valid("updatedAt"),
+          then: Joi.valid("any", "active").default("any"),
+          otherwise: Joi.valid("active"),
+        })
         .description(
           "active = currently valid\ninactive = temporarily invalid\nexpired, cancelled, filled = permanently invalid\nany = any status\nAvailable when filtering by maker, otherwise only valid orders will be returned"
         ),
@@ -247,6 +252,51 @@ export const getOrdersAsksV4Options: RouteOptions = {
         orderStatusFilter = `orders.fillability_status = 'fillable' AND orders.approval_status = 'approved'`;
       }
 
+      if (
+        query.sortBy === "updatedAt" &&
+        query.status !== "active" &&
+        (query.token ||
+          query.tokenSetId ||
+          query.community ||
+          query.collectionsSetId ||
+          query.source ||
+          query.native ||
+          query.includePrivate ||
+          query.includeCriteriaMetadata ||
+          query.includeDynamicPricing ||
+          query.excludeEOA)
+      ) {
+        throw Boom.badRequest(`Filtering is disabled for updatedAt when status != 'active`);
+      }
+
+      switch (query.status) {
+        case "inactive": {
+          // Potentially-valid orders
+          orderStatusFilter = `orders.fillability_status = 'no-balance' OR (orders.fillability_status = 'fillable' AND orders.approval_status != 'approved')`;
+          break;
+        }
+        case "expired": {
+          orderStatusFilter = `orders.fillability_status = 'expired'`;
+          break;
+        }
+        case "filled": {
+          orderStatusFilter = `orders.fillability_status = 'filled'`;
+          break;
+        }
+        case "cancelled": {
+          orderStatusFilter = `orders.fillability_status = 'cancelled'`;
+          break;
+        }
+        case "any": {
+          orderStatusFilter = "";
+
+          // Fix for the issue with negative prices for dutch auction orders
+          // (eg. due to orders not properly expired on time)
+          conditions.push(`coalesce(orders.price, 0) >= 0`);
+          break;
+        }
+      }
+
       if (query.token) {
         (query as any).tokenSetId = `token:${query.token}`;
         conditions.push(`orders.token_set_id = $/tokenSetId/`);
@@ -287,26 +337,6 @@ export const getOrdersAsksV4Options: RouteOptions = {
       }
 
       if (query.maker) {
-        switch (query.status) {
-          case "inactive": {
-            // Potentially-valid orders
-            orderStatusFilter = `orders.fillability_status = 'no-balance' OR (orders.fillability_status = 'fillable' AND orders.approval_status != 'approved')`;
-            break;
-          }
-          case "expired": {
-            orderStatusFilter = `orders.fillability_status = 'expired'`;
-            break;
-          }
-          case "filled": {
-            orderStatusFilter = `orders.fillability_status = 'filled'`;
-            break;
-          }
-          case "cancelled": {
-            orderStatusFilter = `orders.fillability_status = 'cancelled'`;
-            break;
-          }
-        }
-
         (query as any).maker = toBuffer(query.maker);
         conditions.push(`orders.maker = $/maker/`);
 
