@@ -253,14 +253,11 @@ export const getOrdersAsksV4Options: RouteOptions = {
         } else {
           conditions.push(`orders.id = $/ids/`);
         }
-      } else {
-        orderStatusFilter = `orders.fillability_status = 'fillable' AND orders.approval_status = 'approved'`;
       }
 
       if (
         query.sortBy === "updatedAt" &&
         !query.maker &&
-        !query.contracts &&
         !query.ids &&
         query.status !== "active" &&
         (query.token ||
@@ -275,7 +272,18 @@ export const getOrdersAsksV4Options: RouteOptions = {
         );
       }
 
+      // TODO Remove this restriction once an index is created for updatedAt and contracts
+      if (query.sortBy === "updatedAt" && query.contracts && query.status === "any") {
+        throw Boom.badRequest(
+          `Cannot filter by contracts while sortBy = "updatedAt" and status = "any"`
+        );
+      }
+
       switch (query.status) {
+        case "active": {
+          orderStatusFilter = `orders.fillability_status = 'fillable' AND orders.approval_status = 'approved'`;
+          break;
+        }
         case "inactive": {
           // Potentially-valid orders
           orderStatusFilter = `orders.fillability_status = 'no-balance' OR (orders.fillability_status = 'fillable' AND orders.approval_status != 'approved')`;
@@ -300,6 +308,9 @@ export const getOrdersAsksV4Options: RouteOptions = {
           // (eg. due to orders not properly expired on time)
           conditions.push(`coalesce(orders.price, 0) >= 0`);
           break;
+        }
+        default: {
+          orderStatusFilter = `orders.fillability_status = 'fillable' AND orders.approval_status = 'approved'`;
         }
       }
 
