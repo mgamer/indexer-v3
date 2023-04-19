@@ -3,6 +3,7 @@
 import _ from "lodash";
 
 import { idb, redb } from "@/common/db";
+import { logger } from "@/common/logger";
 import { toBuffer, now } from "@/common/utils";
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 import {
@@ -11,11 +12,11 @@ import {
   CollectionsEntityUpdateParams,
 } from "@/models/collections/collections-entity";
 import { Tokens } from "@/models/tokens";
+import { updateBlurRoyalties } from "@/utils/blur";
 import MetadataApi from "@/utils/metadata-api";
-import * as royalties from "@/utils/royalties";
 import * as marketplaceBlacklist from "@/utils/marketplace-blacklists";
 import * as marketplaceFees from "@/utils/marketplace-fees";
-import { logger } from "@/common/logger";
+import * as royalties from "@/utils/royalties";
 
 export class Collections {
   public static async getById(collectionId: string, readReplica = false) {
@@ -131,13 +132,14 @@ export class Collections {
     );
     await royalties.refreshDefaultRoyalties(collection.id);
 
-    // Refresh marketplace fees
-    await marketplaceFees.updateMarketplaceFeeSpec(
-      collection.id,
-      "opensea",
-      collection.openseaFees as royalties.Royalty[] | undefined
-    );
+    // Refresh Blur royalties (which get stored separately)
+    await updateBlurRoyalties(collection.id);
 
+    // Refresh OpenSea marketplace fees
+    const openseaFees = collection.openseaFees as royalties.Royalty[] | undefined;
+    await marketplaceFees.updateMarketplaceFeeSpec(collection.id, "opensea", openseaFees);
+
+    // Refresh any contract blacklists
     await marketplaceBlacklist.updateMarketplaceBlacklist(collection.contract);
   }
 

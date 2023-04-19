@@ -9,6 +9,7 @@ import "@/jobs/collections-refresh";
 import "@/jobs/collection-updates";
 import "@/jobs/currencies";
 import "@/jobs/daily-volumes";
+import "@/jobs/data-archive";
 import "@/jobs/data-export";
 import "@/jobs/events-sync";
 import "@/jobs/fill-updates";
@@ -24,6 +25,7 @@ import "@/jobs/update-attribute";
 import "@/jobs/websocket-events";
 import "@/jobs/metrics";
 import "@/jobs/opensea-orders";
+import "@/jobs/monitoring";
 
 // Export all job queues for monitoring through the BullMQ UI
 
@@ -35,6 +37,7 @@ import * as removeUnsyncedEventsActivities from "@/jobs/activities/remove-unsync
 import * as backfillCancelSeaport11Orders from "@/jobs/backfill/backfill-cancel-seaport-v11-orders";
 import * as backfillInvalidatedOrders from "@/jobs/backfill/backfill-invalidated-orders";
 import * as backfillExpiredOrders from "@/jobs/backfill/backfill-expired-orders";
+import * as backfillExpiredOrders2 from "@/jobs/backfill/backfill-expired-orders-2";
 import * as backfillFoundationSales from "@/jobs/backfill/backfill-foundation-sales";
 import * as backfillMints from "@/jobs/backfill/backfill-mints";
 import * as backfillSaleRoyalties from "@/jobs/backfill/backfill-sale-royalties";
@@ -64,6 +67,7 @@ import * as currencies from "@/jobs/currencies/index";
 import * as dailyVolumes from "@/jobs/daily-volumes/daily-volumes";
 import * as oneDayVolumes from "@/jobs/daily-volumes/1day-volumes";
 
+import * as processArchiveData from "@/jobs/data-archive/process-archive-data";
 import * as exportData from "@/jobs/data-export/export-data";
 
 import * as eventsSyncProcessResyncRequest from "@/jobs/events-sync/process-resync-request-queue";
@@ -102,6 +106,8 @@ import * as dynamicOrdersCron from "@/jobs/order-updates/cron/dynamic-orders-que
 import * as erc20OrdersCron from "@/jobs/order-updates/cron/erc20-orders-queue";
 import * as expiredOrdersCron from "@/jobs/order-updates/cron/expired-orders-queue";
 import * as oracleOrdersCron from "@/jobs/order-updates/cron/oracle-orders-queue";
+import * as blurBidsBufferMisc from "@/jobs/order-updates/misc/blur-bids-buffer";
+import * as blurBidsRefreshMisc from "@/jobs/order-updates/misc/blur-bids-refresh";
 
 import * as orderbookOrders from "@/jobs/orderbook/orders-queue";
 import * as orderbookPostOrderExternal from "@/jobs/orderbook/post-order-external";
@@ -155,6 +161,7 @@ export const allJobQueues = [
   backfillCancelSeaport11Orders.queue,
   backfillInvalidatedOrders.queue,
   backfillExpiredOrders.queue,
+  backfillExpiredOrders2.queue,
   backfillFoundationSales.queue,
   backfillMints.queue,
   backfillSaleRoyalties.queue,
@@ -184,6 +191,8 @@ export const allJobQueues = [
 
   dailyVolumes.queue,
   oneDayVolumes.queue,
+
+  processArchiveData.queue,
 
   exportData.queue,
 
@@ -223,6 +232,8 @@ export const allJobQueues = [
   erc20OrdersCron.queue,
   expiredOrdersCron.queue,
   oracleOrdersCron.queue,
+  blurBidsBufferMisc.queue,
+  blurBidsRefreshMisc.queue,
 
   orderbookOrders.queue,
   orderbookPostOrderExternal.queue,

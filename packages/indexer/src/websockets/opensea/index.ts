@@ -14,7 +14,6 @@ import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
 import { now } from "@/common/utils";
 import { config } from "@/config/index";
-import { OpenseaWebsocketEvents } from "@/models/opensea-websocket-events";
 import { OpenseaOrderParams } from "@/orderbook/orders/seaport-v1.1";
 import { generateHash, getSupportedChainName } from "@/websockets/opensea/utils";
 import * as orderbookOrders from "@/jobs/orderbook/orders-queue";
@@ -23,7 +22,6 @@ import { handleEvent as handleItemListedEvent } from "@/websockets/opensea/handl
 import { handleEvent as handleItemReceivedBidEvent } from "@/websockets/opensea/handlers/item_received_bid";
 import { handleEvent as handleCollectionOfferEvent } from "@/websockets/opensea/handlers/collection_offer";
 import { handleEvent as handleTraitOfferEvent } from "@/websockets/opensea/handlers/trait_offer";
-import { Tokens } from "@/models/tokens";
 import MetadataApi from "@/utils/metadata-api";
 import * as metadataIndexWrite from "@/jobs/metadata-index/write-queue";
 
@@ -64,7 +62,7 @@ if (config.doWebsocketWork && config.openSeaApiKey) {
           `Processing event. network=${network}, event=${JSON.stringify(event)}`
         );
 
-        await saveEvent(event);
+        // await saveEvent(event);
 
         const eventType = event.event_type as EventType;
         const openSeaOrderParams = handleEvent(eventType, event.payload);
@@ -115,18 +113,28 @@ if (config.doWebsocketWork && config.openSeaApiKey) {
       }
 
       const [, contract, tokenId] = event.payload.item.nft_id.split("/");
-      const token = await Tokens.getByContractAndTokenId(contract, tokenId);
 
-      logger.debug(
-        "opensea-websocket-item-metadata-update-event",
-        `Metadata received. contract=${contract}, tokenId=${tokenId}, event=${JSON.stringify(
-          event
-        )}, token=${JSON.stringify(token)}`
-      );
-
-      if (!token || token.metadataIndexed) {
-        return;
-      }
+      // const token = await ridb.oneOrNone(
+      //   `SELECT metadata_indexed
+      //         FROM tokens
+      //         WHERE contract = $/contract/
+      //         AND token_id = $/tokenId/`,
+      //   {
+      //     contract: toBuffer(contract),
+      //     tokenId,
+      //   }
+      // );
+      //
+      // logger.debug(
+      //   "opensea-websocket-item-metadata-update-event",
+      //   `Metadata received. contract=${contract}, tokenId=${tokenId}, event=${JSON.stringify(
+      //     event
+      //   )}, token=${JSON.stringify(token)}`
+      // );
+      //
+      // if (!token || token.metadata_indexed) {
+      //   return;
+      // }
 
       const metadata = {
         asset_contract: {
@@ -165,19 +173,19 @@ if (config.doWebsocketWork && config.openSeaApiKey) {
   });
 }
 
-const saveEvent = async (event: BaseStreamMessage<unknown>) => {
-  if (!config.openseaWebsocketEventsAwsFirehoseDeliveryStreamName) {
-    return;
-  }
-
-  const openseaWebsocketEvents = new OpenseaWebsocketEvents();
-  await openseaWebsocketEvents.add([
-    {
-      event,
-      createdAt: new Date().toISOString(),
-    },
-  ]);
-};
+// const saveEvent = async (event: BaseStreamMessage<unknown>) => {
+//   if (!config.openseaWebsocketEventsAwsFirehoseDeliveryStreamName) {
+//     return;
+//   }
+//
+//   const openseaWebsocketEvents = new OpenseaWebsocketEvents();
+//   await openseaWebsocketEvents.add([
+//     {
+//       event,
+//       createdAt: new Date().toISOString(),
+//     },
+//   ]);
+// };
 
 export const getEventHash = (event: BaseStreamMessage<unknown>): string => {
   /* eslint-disable @typescript-eslint/no-explicit-any */

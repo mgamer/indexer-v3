@@ -90,7 +90,7 @@ export const getCollectionsV5Options: RouteOptions = {
           }),
         })
         .description(
-          "If true, owner count will be included in the response. (supported only when filtering to a particular collection using `id` or `slug`)"
+          "If true, owner count will be included in the response. (supported only when filtering to a particular collection using `id` or `slug` and for collections with less than 50k tokens)"
         ),
       includeSalesCount: Joi.boolean()
         .when("id", {
@@ -246,6 +246,7 @@ export const getCollectionsV5Options: RouteOptions = {
             )
             .optional(),
           contractKind: Joi.string().allow("", null),
+          mintedTimestamp: Joi.number().allow(null),
         })
       ),
     }).label(`getCollections${version.toUpperCase()}Response`),
@@ -317,18 +318,40 @@ export const getCollectionsV5Options: RouteOptions = {
       // Include owner count
       let ownerCountSelectQuery = "";
       let ownerCountJoinQuery = "";
+      let includeOwnerCount = false;
+
+      // TODO: Cache owners count on collection instead of not allowing for big collections.
       if (query.includeOwnerCount) {
-        ownerCountSelectQuery = ", z.*";
-        ownerCountJoinQuery = `
-          LEFT JOIN LATERAL (
-            SELECT
-              COUNT(DISTINCT(owner)) AS owner_count
-            FROM nft_balances
-            WHERE nft_balances.contract = x.contract
-              AND nft_balances.token_id <@ x.token_id_range
-            AND amount > 0
-          ) z ON TRUE
-        `;
+        const collectionResult = await redb.oneOrNone(
+          `
+              SELECT
+                collections.token_count
+              FROM collections
+              WHERE ${query.id ? "collections.id = $/id/" : "collections.slug = $/slug/"}
+              ORDER BY created_at DESC  
+              LIMIT 1  
+            `,
+          { slug: query.slug, id: query.id }
+        );
+
+        if (collectionResult) {
+          const isLargeCollection = collectionResult.token_count > 50000;
+
+          if (!isLargeCollection) {
+            includeOwnerCount = true;
+            ownerCountSelectQuery = ", z.*";
+            ownerCountJoinQuery = `
+                  LEFT JOIN LATERAL (
+                    SELECT
+                      COUNT(DISTINCT(owner)) AS owner_count
+                    FROM nft_balances
+                    WHERE nft_balances.contract = x.contract
+                      AND nft_balances.token_id <@ x.token_id_range
+                    AND amount > 0
+                  ) z ON TRUE
+                `;
+          }
+        }
       }
 
       let saleCountSelectQuery = "";
@@ -426,6 +449,7 @@ export const getCollectionsV5Options: RouteOptions = {
           ${floorAskSelectQuery}
           collections.token_count,
           collections.created_at,
+          collections.minted_timestamp,
           (
             SELECT
               COUNT(*)
@@ -752,7 +776,7 @@ export const getCollectionsV5Options: RouteOptions = {
                 }
               : undefined,
             collectionBidSupported: Number(r.token_count) <= config.maxTokenSetSize,
-            ownerCount: query.includeOwnerCount ? Number(r.owner_count) : undefined,
+            ownerCount: includeOwnerCount ? Number(r.owner_count) : undefined,
             attributes: query.includeAttributes
               ? _.map(_.sortBy(r.attributes, ["rank", "key"]), (attribute) => ({
                   key: attribute.key,
@@ -761,6 +785,7 @@ export const getCollectionsV5Options: RouteOptions = {
                 }))
               : undefined,
             contractKind: r.contract_kind,
+            mintedTimestamp: r.minted_timestamp,
           };
         })
       );

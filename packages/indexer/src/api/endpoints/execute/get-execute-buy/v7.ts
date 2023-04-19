@@ -12,6 +12,7 @@ import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { bn, formatPrice, fromBuffer, now, regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
+import { ApiKeyManager } from "@/models/api-keys";
 import { Sources } from "@/models/sources";
 import { OrderKind, generateListingDetailsV6, routerOnRecoverableError } from "@/orderbook/orders";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
@@ -60,10 +61,10 @@ export const getExecuteBuyV7Options: RouteOptions = {
                   "x2y2",
                   "universe",
                   "rarible",
-                  "infinity",
                   "sudoswap",
                   "flow",
-                  "nftx"
+                  "nftx",
+                  "alienswap"
                 )
                 .required(),
               data: Joi.object().required(),
@@ -138,7 +139,9 @@ export const getExecuteBuyV7Options: RouteOptions = {
         .description("Optional custom gas settings."),
       // Various authorization keys
       x2y2ApiKey: Joi.string().description("Optional X2Y2 API key used for filling."),
-      openseaApiKey: Joi.string().description("Optional OpenSea API key used for filling."),
+      openseaApiKey: Joi.string().description(
+        "Optional OpenSea API key used for filling. You don't need to pass your own key, but if you don't, you are more likely to be rate-limited."
+      ),
       blurAuth: Joi.string().description("Optional Blur auth used for filling"),
     }),
   },
@@ -684,14 +687,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
             let blurAuthChallenge = await b.getAuthChallenge(blurAuthChallengeId);
             if (!blurAuthChallenge) {
               blurAuthChallenge = (await axios
-                .get(
-                  `${config.orderFetcherBaseUrl}/api/blur-auth-challenge?taker=${payload.taker}`,
-                  {
-                    headers: {
-                      "X-Api-Key": config.orderFetcherApiKey,
-                    },
-                  }
-                )
+                .get(`${config.orderFetcherBaseUrl}/api/blur-auth-challenge?taker=${payload.taker}`)
                 .then((response) => response.data.authChallenge)) as b.AuthChallenge;
 
               await b.saveAuthChallenge(
@@ -743,7 +739,9 @@ export const getExecuteBuyV7Options: RouteOptions = {
         openseaApiKey: payload.openseaApiKey,
         cbApiKey: config.cbApiKey,
         orderFetcherBaseUrl: config.orderFetcherBaseUrl,
-        orderFetcherApiKey: config.orderFetcherApiKey,
+        orderFetcherMetadata: {
+          apiKey: await ApiKeyManager.getApiKey(request.headers["x-api-key"]),
+        },
       });
 
       const errors: { orderId: string; message: string }[] = [];
@@ -756,10 +754,6 @@ export const getExecuteBuyV7Options: RouteOptions = {
           forceRouter: payload.forceRouter,
           relayer: payload.relayer,
           globalFees: feesOnTop,
-          // TODO: Move this defaulting to the core SDK
-          directFillingData: {
-            conduitKey: Sdk.SeaportBase.Addresses.OpenseaConduitKey[config.chainId],
-          },
           blurAuth,
           onRecoverableError: async (kind, error, data) => {
             errors.push({

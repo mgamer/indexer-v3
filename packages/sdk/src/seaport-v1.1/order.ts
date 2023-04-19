@@ -6,30 +6,29 @@ import { Contract } from "@ethersproject/contracts";
 import { _TypedDataEncoder } from "@ethersproject/hash";
 import { verifyTypedData } from "@ethersproject/wallet";
 
-import * as Addresses from "./addresses";
+import * as Common from "../common";
+import { Exchange } from "./exchange";
 import { Builders } from "../seaport-base/builders";
 import { BaseBuilder, BaseOrderInfo } from "../seaport-base/builders/base";
+import { IOrder, ORDER_EIP712_TYPES, SeaportOrderKind } from "../seaport-base/order";
 import * as Types from "../seaport-base/types";
-import * as Common from "../common";
 import { bn, getCurrentTimestamp, lc, n, s } from "../utils";
 
-import { Exchange } from "./exchange";
-import { ORDER_EIP712_TYPES, SeaportOrderKind } from "../seaport-base/order";
-
-export class Order {
+export class Order implements IOrder {
   public chainId: number;
   public params: Types.OrderComponents;
 
   constructor(chainId: number, params: Types.OrderComponents) {
     this.chainId = chainId;
 
+    // Normalize
     try {
       this.params = normalize(params);
     } catch {
       throw new Error("Invalid params");
     }
 
-    // Detect kind
+    // Detect kind (if missing)
     if (!params.kind) {
       this.params.kind = this.detectKind();
     }
@@ -38,13 +37,19 @@ export class Order {
     this.fixSignature();
   }
 
+  // Public methods
+
+  public exchange() {
+    return new Exchange(this.chainId);
+  }
+
   public hash() {
     return _TypedDataEncoder.hashStruct("OrderComponents", ORDER_EIP712_TYPES, this.params);
   }
 
   public async sign(signer: TypedDataSigner) {
     const signature = await signer._signTypedData(
-      EIP712_DOMAIN(this.chainId),
+      this.exchange().eip712Domain(),
       ORDER_EIP712_TYPES,
       this.params
     );
@@ -58,7 +63,7 @@ export class Order {
   public getSignatureData() {
     return {
       signatureKind: "eip712",
-      domain: EIP712_DOMAIN(this.chainId),
+      domain: this.exchange().eip712Domain(),
       types: ORDER_EIP712_TYPES,
       value: this.params,
       primaryType: _TypedDataEncoder.getPrimaryType(ORDER_EIP712_TYPES),
@@ -68,7 +73,7 @@ export class Order {
   public async checkSignature(provider?: Provider) {
     try {
       const signer = verifyTypedData(
-        EIP712_DOMAIN(this.chainId),
+        this.exchange().eip712Domain(),
         ORDER_EIP712_TYPES,
         this.params,
         this.params.signature!
@@ -83,7 +88,7 @@ export class Order {
       }
 
       const eip712Hash = _TypedDataEncoder.hash(
-        EIP712_DOMAIN(this.chainId),
+        this.exchange().eip712Domain(),
         ORDER_EIP712_TYPES,
         this.params
       );
@@ -179,9 +184,7 @@ export class Order {
   }
 
   public async checkFillability(provider: Provider) {
-    const exchange = new Exchange(this.chainId);
-
-    const status = await exchange.contract.connect(provider).getOrderStatus(this.hash());
+    const status = await this.exchange().contract.connect(provider).getOrderStatus(this.hash());
     if (status.isCancelled) {
       throw new Error("not-fillable");
     }
@@ -189,7 +192,7 @@ export class Order {
       throw new Error("not-fillable");
     }
 
-    const makerConduit = exchange.deriveConduit(this.params.conduitKey);
+    const makerConduit = this.exchange().deriveConduit(this.params.conduitKey);
 
     const info = this.getInfo()! as BaseOrderInfo;
     if (info.side === "buy") {
@@ -238,6 +241,8 @@ export class Order {
       }
     }
   }
+
+  // Private methods
 
   private getBuilder(): BaseBuilder {
     switch (this.params.kind) {
@@ -303,13 +308,6 @@ export class Order {
     }
   }
 }
-
-const EIP712_DOMAIN = (chainId: number) => ({
-  name: "Seaport",
-  version: "1.1",
-  chainId,
-  verifyingContract: Addresses.Exchange[chainId],
-});
 
 const normalize = (order: Types.OrderComponents): Types.OrderComponents => {
   // Perform some normalization operations on the order:

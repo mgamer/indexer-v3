@@ -14,6 +14,7 @@ import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import { DbOrder, OrderMetadata, generateSchemaHash } from "@/orderbook/orders/utils";
 import { offChainCheck } from "@/orderbook/orders/blur/check";
 import * as tokenSet from "@/orderbook/token-sets";
+import { getBlurRoyalties } from "@/utils/blur";
 // import { checkMarketplaceIsFiltered } from "@/utils/marketplace-blacklists";
 
 type SaveResult = {
@@ -294,6 +295,7 @@ export const saveListings = async (orderInfos: ListingOrderInfo[]): Promise<Save
 export type BidOrderInfo = {
   orderParams: Sdk.Blur.Types.BlurBidPool;
   metadata: OrderMetadata;
+  fullUpdate?: boolean;
 };
 
 const getBlurBidId = (collection: string) =>
@@ -304,7 +306,7 @@ export const saveBids = async (orderInfos: BidOrderInfo[]): Promise<SaveResult[]
   const results: SaveResult[] = [];
   const orderValues: DbOrder[] = [];
 
-  const handleOrder = async ({ orderParams }: BidOrderInfo) => {
+  const handleOrder = async ({ orderParams, fullUpdate }: BidOrderInfo) => {
     const id = getBlurBidId(orderParams.collection);
 
     // const isFiltered = await checkMarketplaceIsFiltered(orderParams.collection, "blur");
@@ -316,6 +318,8 @@ export const saveBids = async (orderInfos: BidOrderInfo[]): Promise<SaveResult[]
     // }
 
     try {
+      const royalties = await getBlurRoyalties(orderParams.collection);
+
       const orderResult = await idb.oneOrNone(
         `
           SELECT
@@ -356,8 +360,21 @@ export const saveBids = async (orderInfos: BidOrderInfo[]): Promise<SaveResult[]
           });
         }
 
+        // Handle: royalties
+        let feeBps = 0;
+        const feeBreakdown: { kind: string; recipient: string; bps: number }[] = [];
+        if (royalties) {
+          feeBreakdown.push({
+            recipient: royalties.recipient,
+            bps: royalties.minimumRoyaltyBps,
+            kind: "royalty",
+          });
+          feeBps += feeBreakdown[0].bps;
+        }
+
         // Handle: price
         const price = parseEther(orderParams.pricePoints[0].price).toString();
+        const value = bn(price).sub(bn(price).mul(feeBps).div(10000)).toString();
 
         const totalQuantity = orderParams.pricePoints
           .map((p) => p.executableSize)
@@ -376,10 +393,10 @@ export const saveBids = async (orderInfos: BidOrderInfo[]): Promise<SaveResult[]
           maker: toBuffer(Sdk.Blur.Addresses.Beth[config.chainId]),
           taker: toBuffer(AddressZero),
           price,
-          value: price,
+          value,
           currency: toBuffer(Sdk.Blur.Addresses.Beth[config.chainId]),
           currency_price: price,
-          currency_value: price,
+          currency_value: value,
           needs_conversion: null,
           quantity_remaining: totalQuantity.toString(),
           valid_between: `tstzrange(${validFrom}, ${validTo}, '[]')`,
@@ -388,9 +405,8 @@ export const saveBids = async (orderInfos: BidOrderInfo[]): Promise<SaveResult[]
           is_reservoir: null,
           contract: toBuffer(orderParams.collection),
           conduit: null,
-          // TODO: Include royalty fees
-          fee_bps: 0,
-          fee_breakdown: null,
+          fee_bps: feeBps,
+          fee_breakdown: feeBreakdown,
           dynamic: null,
           raw_data: orderParams,
           expiration: validTo,
@@ -416,15 +432,27 @@ export const saveBids = async (orderInfos: BidOrderInfo[]): Promise<SaveResult[]
           });
         }
 
-        // Update the current bid in place
-        for (const newPricePoint of bidUpdates.pricePoints) {
-          const existingPricePointIndex = currentBid.pricePoints.findIndex(
-            (pp) => pp.price === newPricePoint.price
-          );
-          if (existingPricePointIndex !== -1) {
-            currentBid.pricePoints[existingPricePointIndex] = newPricePoint;
-          } else {
-            currentBid.pricePoints.push(newPricePoint);
+        if (fullUpdate) {
+          // Assume `JSON.stringify` is deterministic
+          if (JSON.stringify(currentBid.pricePoints) === JSON.stringify(bidUpdates.pricePoints)) {
+            return results.push({
+              id,
+              status: "redundant",
+            });
+          }
+
+          currentBid.pricePoints = bidUpdates.pricePoints;
+        } else {
+          // Update the current bid in place
+          for (const newPricePoint of bidUpdates.pricePoints) {
+            const existingPricePointIndex = currentBid.pricePoints.findIndex(
+              (pp) => Number(pp.price) === Number(newPricePoint.price)
+            );
+            if (existingPricePointIndex !== -1) {
+              currentBid.pricePoints[existingPricePointIndex] = newPricePoint;
+            } else {
+              currentBid.pricePoints.push(newPricePoint);
+            }
           }
         }
 
@@ -445,8 +473,21 @@ export const saveBids = async (orderInfos: BidOrderInfo[]): Promise<SaveResult[]
             { id }
           );
         } else {
+          // Handle: royalties
+          let feeBps = 0;
+          const feeBreakdown: { kind: string; recipient: string; bps: number }[] = [];
+          if (royalties) {
+            feeBreakdown.push({
+              recipient: royalties.recipient,
+              bps: royalties.minimumRoyaltyBps,
+              kind: "royalty",
+            });
+            feeBps += feeBreakdown[0].bps;
+          }
+
           // Handle: price
           const price = parseEther(currentBid.pricePoints[0].price).toString();
+          const value = bn(price).sub(bn(price).mul(feeBps).div(10000)).toString();
 
           const totalQuantity = currentBid.pricePoints
             .map((p) => p.executableSize)
@@ -458,8 +499,8 @@ export const saveBids = async (orderInfos: BidOrderInfo[]): Promise<SaveResult[]
                 fillability_status = 'fillable',
                 price = $/price/,
                 currency_price = $/price/,
-                value = $/price/,
-                currency_value = $/price/,
+                value = $/value/,
+                currency_value = $/value/,
                 quantity_remaining = $/totalQuantity/,
                 valid_between = tstzrange(date_trunc('seconds', now()), 'Infinity', '[]'),
                 expiration = 'Infinity',
@@ -470,6 +511,7 @@ export const saveBids = async (orderInfos: BidOrderInfo[]): Promise<SaveResult[]
             {
               id,
               price,
+              value,
               totalQuantity,
               rawData: currentBid,
             }
@@ -493,8 +535,6 @@ export const saveBids = async (orderInfos: BidOrderInfo[]): Promise<SaveResult[]
   // Process all orders concurrently
   const limit = pLimit(20);
   await Promise.all(orderInfos.map((orderInfo) => limit(() => handleOrder(orderInfo))));
-
-  logger.info("orders-blur-save", JSON.stringify(results));
 
   if (orderValues.length) {
     const columns = new pgp.helpers.ColumnSet(

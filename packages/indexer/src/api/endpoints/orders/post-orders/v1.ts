@@ -29,7 +29,6 @@ export const postOrdersV1Options: RouteOptions = {
             .lowercase()
             .valid(
               "blur",
-              "looks-rare",
               "zeroex-v4",
               "x2y2",
               "seaport",
@@ -38,8 +37,8 @@ export const postOrdersV1Options: RouteOptions = {
               "blur",
               "rarible",
               "manifold",
-              "infinity",
-              "flow"
+              "flow",
+              "looks-rare-v2"
             )
             .required(),
           data: Joi.object().required(),

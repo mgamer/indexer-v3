@@ -34,8 +34,8 @@ export const getExecuteCancelV3Options: RouteOptions = {
         "zeroex-v4-erc1155",
         "universe",
         "rarible",
-        "infinity",
-        "flow"
+        "flow",
+        "alienswap"
       ),
       token: Joi.string().pattern(regex.token),
       maxFeePerGas: Joi.string()
@@ -97,6 +97,12 @@ export const getExecuteCancelV3Options: RouteOptions = {
 
         case "seaport-v1.4": {
           const exchange = new Sdk.SeaportV14.Exchange(config.chainId);
+          cancelTx = exchange.cancelAllOrdersTx(maker);
+          break;
+        }
+
+        case "alienswap": {
+          const exchange = new Sdk.Alienswap.Exchange(config.chainId);
           cancelTx = exchange.cancelAllOrdersTx(maker);
           break;
         }
@@ -178,7 +184,7 @@ export const getExecuteCancelV3Options: RouteOptions = {
       const orderResult = orderResults[0];
 
       // When bulk-cancelling, make sure all orders have the same kind
-      const supportedKinds = ["seaport", "seaport-v1.4"];
+      const supportedKinds = ["seaport", "seaport-v1.4", "alienswap"];
       if (isBulkCancel) {
         const supportsBulkCancel =
           supportedKinds.includes(orderResult.kind) &&
@@ -191,10 +197,20 @@ export const getExecuteCancelV3Options: RouteOptions = {
       // Handle off-chain cancellations
 
       const cancellationZone = Sdk.SeaportV14.Addresses.CancellationZone[config.chainId];
-      const areAllOracleCancellable = orderResults.every(
+      const areAllSeaportV14OracleCancellable = orderResults.every(
         (o) => o.kind === "seaport-v1.4" && o.raw_data.zone === cancellationZone
       );
-      if (areAllOracleCancellable) {
+      const areAllAlienswapOracleCancellable = orderResults.every(
+        (o) => o.kind === "alienswap" && o.raw_data.zone === cancellationZone
+      );
+      let allOracleCancellableKind = "";
+      if (areAllSeaportV14OracleCancellable) {
+        allOracleCancellableKind = "seaport-v1.4";
+      } else if (areAllAlienswapOracleCancellable) {
+        allOracleCancellableKind = "alienswap";
+      }
+
+      if (allOracleCancellableKind) {
         return {
           steps: [
             {
@@ -225,6 +241,7 @@ export const getExecuteCancelV3Options: RouteOptions = {
                       method: "POST",
                       body: {
                         orderIds: orderResults.map((o) => o.id).sort(),
+                        orderKind: allOracleCancellableKind,
                       },
                     },
                   },
@@ -261,6 +278,16 @@ export const getExecuteCancelV3Options: RouteOptions = {
           break;
         }
 
+        case "alienswap": {
+          const orders = orderResults.map((dbOrder) => {
+            return new Sdk.Alienswap.Order(config.chainId, dbOrder.raw_data);
+          });
+          const exchange = new Sdk.Alienswap.Exchange(config.chainId);
+
+          cancelTx = exchange.cancelOrdersTx(maker, orders);
+          break;
+        }
+
         case "looks-rare": {
           const order = new Sdk.LooksRare.Order(config.chainId, orderResult.raw_data);
           const exchange = new Sdk.LooksRare.Exchange(config.chainId);
@@ -291,15 +318,6 @@ export const getExecuteCancelV3Options: RouteOptions = {
           const order = new Sdk.Rarible.Order(config.chainId, orderResult.raw_data);
           const exchange = new Sdk.Rarible.Exchange(config.chainId);
           cancelTx = await exchange.cancelOrderTx(order.params);
-
-          break;
-        }
-
-        case "infinity": {
-          const order = new Sdk.Infinity.Order(config.chainId, orderResult.raw_data);
-          const exchange = new Sdk.Infinity.Exchange(config.chainId);
-          const nonce = order.nonce;
-          cancelTx = exchange.cancelMultipleOrdersTx(order.signer, [nonce]);
 
           break;
         }

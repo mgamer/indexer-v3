@@ -14,6 +14,7 @@ import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { bn, formatPrice, fromBuffer, now, regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
+import { ApiKeyManager } from "@/models/api-keys";
 import { Sources } from "@/models/sources";
 import { OrderKind, generateListingDetailsV6, routerOnRecoverableError } from "@/orderbook/orders";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
@@ -51,7 +52,6 @@ export const getExecuteBuyV6Options: RouteOptions = {
               "x2y2",
               "universe",
               "rarible",
-              "infinity",
               "sudoswap",
               "flow",
               "nftx"
@@ -742,11 +742,7 @@ export const getExecuteBuyV6Options: RouteOptions = {
           let blurAuthChallenge = await b.getAuthChallenge(blurAuthChallengeId);
           if (!blurAuthChallenge) {
             blurAuthChallenge = (await axios
-              .get(`${config.orderFetcherBaseUrl}/api/blur-auth-challenge?taker=${payload.taker}`, {
-                headers: {
-                  "X-Api-Key": config.orderFetcherApiKey,
-                },
-              })
+              .get(`${config.orderFetcherBaseUrl}/api/blur-auth-challenge?taker=${payload.taker}`)
               .then((response) => response.data.authChallenge)) as b.AuthChallenge;
 
             await b.saveAuthChallenge(
@@ -796,7 +792,9 @@ export const getExecuteBuyV6Options: RouteOptions = {
         x2y2ApiKey: payload.x2y2ApiKey ?? config.x2y2ApiKey,
         cbApiKey: config.cbApiKey,
         orderFetcherBaseUrl: config.orderFetcherBaseUrl,
-        orderFetcherApiKey: config.orderFetcherApiKey,
+        orderFetcherMetadata: {
+          apiKey: await ApiKeyManager.getApiKey(request.headers["x-api-key"]),
+        },
       });
 
       const errors: { orderId: string; message: string }[] = [];
@@ -809,12 +807,6 @@ export const getExecuteBuyV6Options: RouteOptions = {
           globalFees: buyInCurrency === Sdk.Common.Addresses.Eth[config.chainId] ? feesOnTop : [],
           partial: payload.partial,
           forceRouter: payload.forceRouter,
-          directFillingData: {
-            conduitKey:
-              config.chainId === 1
-                ? "0x0000007b02230091a7ed01230072f7006a004d60a8d4e71d599b8104250f0000"
-                : undefined,
-          },
           relayer: payload.relayer,
           blurAuth,
           onRecoverableError: async (kind, error, data) => {

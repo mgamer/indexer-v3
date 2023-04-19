@@ -1,15 +1,20 @@
-import * as Types from "./types";
-import { BaseOrderInfo } from "./builders/base";
 import { BigNumberish } from "@ethersproject/bignumber";
+
+import { BaseOrderInfo } from "./builders/base";
+import * as Types from "./types";
+import { SeaportBaseExchange } from "../seaport-base/exchange";
 
 export enum SeaportOrderKind {
   SEAPORT_V11 = "seaport",
   SEAPORT_V14 = "seaport-v1.4",
+  ALIENSWAP = "alienswap",
 }
 
 export interface IOrder {
   chainId: number;
   params: Types.OrderComponents;
+
+  exchange(): SeaportBaseExchange;
 
   getInfo(): BaseOrderInfo | undefined;
 
@@ -18,6 +23,9 @@ export interface IOrder {
   getMatchingPrice(timestampOverride?: number): BigNumberish;
 
   hash(): string;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  getSignatureData(): any;
 }
 
 export const ORDER_EIP712_TYPES = {
