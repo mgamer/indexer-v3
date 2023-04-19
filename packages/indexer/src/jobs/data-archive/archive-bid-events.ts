@@ -11,7 +11,7 @@ import fs, { createReadStream, createWriteStream } from "fs";
 import { createGzip } from "zlib";
 import AWS from "aws-sdk";
 import { logger } from "@/common/logger";
-import jsontream from "jsonstream";
+// import jsontream from "jsonstream";
 
 export class ArchiveBidEvents {
   static tableName = "bid_events";
@@ -117,19 +117,19 @@ export class ArchiveBidEvents {
       } while (limit === _.size(events));
 
       // Stream to JSON file
-      const jsonStream = jsontream.stringify();
-      jsonStream.pipe(fs.createWriteStream(filename));
-      jsonEvents.forEach((item) => {
-        jsonStream.write(item);
-      });
-
-      jsonStream.end();
-
-      await new Promise<void>((resolve) => {
-        jsonStream.on("finish", () => {
-          resolve();
-        });
-      });
+      // const jsonStream = jsontream.stringify();
+      // jsonStream.pipe(fs.createWriteStream(filename));
+      // jsonEvents.forEach((item) => {
+      //   jsonStream.write(item);
+      // });
+      //
+      // jsonStream.end();
+      //
+      // await new Promise<void>((resolve) => {
+      //   jsonStream.on("finish", () => {
+      //     resolve();
+      //   });
+      // });
 
       // Compress the JSON file to GZIP file
       const sourceStream = createReadStream(filename);
