@@ -86,11 +86,6 @@ if (config.doBackgroundWork) {
 
 export type GenericOrderInfo =
   | {
-      kind: "looks-rare";
-      info: orders.looksRare.OrderInfo;
-      validateBidValue?: boolean;
-    }
-  | {
       kind: "zeroex-v4";
       info: orders.zeroExV4.OrderInfo;
       validateBidValue?: boolean;
@@ -222,11 +217,6 @@ export const jobProcessor = async (job: Job) => {
         break;
       }
 
-      case "looks-rare": {
-        result = await orders.looksRare.save([info]);
-        break;
-      }
-
       case "seaport": {
         result = await orders.seaport.save([info], validateBidValue);
         break;
@@ -297,17 +287,14 @@ export const jobProcessor = async (job: Job) => {
     throw error;
   }
 
-  if (result.length && result[0].status === "delayed") {
-    await addToQueue([job.data], false, result[0].delay);
-  } else {
-    logger.debug(job.queueName, `[${kind}] Order save result: ${JSON.stringify(result)}`);
-  }
+  logger.debug(job.queueName, `[${kind}] Order save result: ${JSON.stringify(result)}`);
 };
 
 export const addToQueue = async (
   orderInfos: GenericOrderInfo[],
   prioritized = false,
-  delay = 0
+  delay = 0,
+  jobId?: string
 ) => {
   await queue.addBulk(
     orderInfos.map((orderInfo) => ({
@@ -316,6 +303,7 @@ export const addToQueue = async (
       opts: {
         priority: prioritized ? 1 : undefined,
         delay: delay ? delay * 1000 : undefined,
+        jobId,
       },
     }))
   );

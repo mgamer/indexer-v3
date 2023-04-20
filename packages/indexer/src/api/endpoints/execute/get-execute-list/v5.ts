@@ -111,6 +111,7 @@ export const getExecuteListV5Options: RouteOptions = {
             .description("Exchange protocol used to create order. Example: `seaport-v1.4`"),
           options: Joi.object({
             "seaport-v1.4": Joi.object({
+              conduitKey: Joi.string().pattern(regex.bytes32),
               useOffChainCancellation: Joi.boolean().required(),
               replaceOrderId: Joi.string().when("useOffChainCancellation", {
                 is: true,
@@ -379,6 +380,9 @@ export const getExecuteListV5Options: RouteOptions = {
               case "blur": {
                 if (!["blur"].includes(params.orderbook)) {
                   return errors.push({ message: "Unsupported orderbook", orderIndex: i });
+                }
+                if (params.fees?.length) {
+                  return errors.push({ message: "Custom fees not supported", orderIndex: i });
                 }
 
                 const { order, marketplaceData } = await blurSellToken.build({
@@ -689,6 +693,7 @@ export const getExecuteListV5Options: RouteOptions = {
 
                 const options = params.options?.[params.orderKind] as
                   | {
+                      conduitKey?: string;
                       useOffChainCancellation?: boolean;
                       replaceOrderId?: string;
                     }
