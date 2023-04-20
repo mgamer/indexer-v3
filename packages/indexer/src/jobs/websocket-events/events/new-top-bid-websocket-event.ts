@@ -141,10 +141,6 @@ export class NewTopBidWebsocketEvent {
     }
 
     try {
-      logger.info(
-        "top-bids-websocket-event",
-        `Triggering event. orderId=${data.orderId}, tokenSetId=${order.token_set_id}`
-      );
       await Promise.all(
         payloads.map((payload) =>
           redisWebsocketPublisher.publish(
