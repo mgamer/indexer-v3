@@ -370,7 +370,7 @@ export const getNetworkSettings = (): NetworkSettings => {
         realtimeSyncMaxBlockLag: 32,
         realtimeSyncFrequencySeconds: 2,
         lastBlockLatency: 8,
-        headBlockDelay: 5,
+        headBlockDelay: 2,
         backfillBlockBatchSize: 60,
         reorgCheckFrequency: [30],
         subDomain: "api-polygon",
