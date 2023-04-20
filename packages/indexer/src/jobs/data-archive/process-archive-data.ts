@@ -34,11 +34,11 @@ if (config.doBackgroundWork) {
           if (await acquireLock(getLockName(tableName), 60 * 60)) {
             job.data.lock = true;
 
-            //try {
-            //  await ArchiveBidEvents.archive();
-            //} catch (error) {
-            //  logger.error(QUEUE_NAME, `Bid events archive errored: ${error}`);
-            //}
+            try {
+              await ArchiveBidEvents.archive();
+            } catch (error) {
+              logger.error(QUEUE_NAME, `Bid events archive errored: ${error}`);
+            }
           }
           break;
       }
