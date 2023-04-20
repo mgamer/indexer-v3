@@ -4,6 +4,7 @@ import { PgPromiseQuery, idb, pgp, redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { fromBuffer, toBuffer } from "@/common/utils";
 import { generateSchemaHash } from "@/orderbook/orders/utils";
+import { Tokens } from "@/models/tokens";
 
 export type TokenSet = {
   id: string;
@@ -49,6 +50,11 @@ export type TokenSet = {
 const isValid = async (tokenSet: TokenSet) => {
   try {
     if (!tokenSet.items && !tokenSet.schema) {
+      logger.info(
+        "seaport-token-set-save",
+        `no associated items or schema. tokenSet=${JSON.stringify(tokenSet)}`
+      );
+
       // In case we have no associated items or schema, we just skip the token set
       return false;
     }
@@ -61,6 +67,11 @@ const isValid = async (tokenSet: TokenSet) => {
 
       // Make sure the passed tokens match the token set id
       if (itemsId !== tokenSet.id) {
+        logger.info(
+          "seaport-token-set-save",
+          `Items check failed. tokenSet=${JSON.stringify(tokenSet)}, itemsId=${itemsId}`
+        );
+
         return false;
       }
     }
@@ -72,10 +83,17 @@ const isValid = async (tokenSet: TokenSet) => {
       // Validate the schema against the schema hash
       const schemaHash = generateSchemaHash(tokenSet.schema);
       if (schemaHash !== tokenSet.schemaHash) {
+        logger.info(
+          "seaport-token-set-save",
+          `schema check failed. tokenSet=${JSON.stringify(tokenSet)}, schemaHash=${schemaHash}`
+        );
+
         return false;
       }
 
-      let tokens: { token_id: string; contract: Buffer }[] | undefined;
+      let tokens: { token_id: string; contract: Buffer }[] | undefined = [];
+      let tokenIds: string[] | undefined;
+
       if (tokenSet.schema.kind === "attribute") {
         // TODO: Add support for multiple attributes
         if (tokenSet.schema.data.attributes.length !== 1) {
@@ -109,6 +127,10 @@ const isValid = async (tokenSet: TokenSet) => {
             value: tokenSet.schema!.data.attributes[0].value,
           }
         );
+
+        if (!tokens || !tokens.length) {
+          return false;
+        }
       } else if (tokenSet.schema.kind === "token-set") {
         tokens = await redb.manyOrNone(
           `
@@ -122,36 +144,40 @@ const isValid = async (tokenSet: TokenSet) => {
             tokenSetId: tokenSet.schema.data.tokenSetId,
           }
         );
-      } else if (tokenSet.schema.kind.startsWith("collection")) {
-        tokens = await redb.manyOrNone(
-          `
-            SELECT
-              tokens.token_id
-            FROM tokens
-            WHERE tokens.collection_id = $/collection/
-              ${
-                tokenSet.schema.kind === "collection-non-flagged"
-                  ? " AND (tokens.is_flagged = 0 OR tokens.is_flagged IS NULL)"
-                  : ""
-              }
-          `,
-          {
-            collection: tokenSet.schema.data.collection,
-          }
-        );
-      }
 
-      if (!tokens || !tokens.length) {
-        return false;
+        if (!tokens || !tokens.length) {
+          return false;
+        }
+      } else if (tokenSet.schema.kind.startsWith("collection")) {
+        const nonFlaggedOnly = tokenSet.schema.kind === "collection-non-flagged";
+        tokenIds = await Tokens.getTokenIdsInCollection(
+          tokenSet.schema.data.collection,
+          "",
+          nonFlaggedOnly
+        );
+
+        if (!tokenIds || !tokenIds.length) {
+          logger.info(
+            "seaport-token-set-save",
+            `no associated items or schema. tokenSet=${JSON.stringify(tokenSet)} tokenIds.length=${
+              tokenIds.length
+            } nonFlaggedOnly=${nonFlaggedOnly}`
+          );
+
+          return false;
+        }
       }
 
       // All tokens will share the same underlying contract
-      const contract = tokens[0].contract
+      const contract = tokens[0]?.contract
         ? fromBuffer(tokens[0].contract)
         : // Assume the collection id always starts with the contract
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           (tokenSet.schema.data as any).collection.slice(0, 42);
-      const tokenIds = tokens.map(({ token_id }) => token_id);
+
+      if (!tokenIds) {
+        tokenIds = tokens.map(({ token_id }) => token_id);
+      }
 
       // Generate the token set id corresponding to the passed schema
       const merkleTree = Common.Helpers.generateMerkleTree(tokenIds);
@@ -159,6 +185,11 @@ const isValid = async (tokenSet: TokenSet) => {
 
       // Make sure the passed schema matches the token set id
       if (schemaId !== tokenSet.id) {
+        logger.info(
+          "seaport-token-set-save",
+          `schemaId check fail. tokenSet=${JSON.stringify(tokenSet)}, schemaId=${schemaId}`
+        );
+
         return false;
       }
 
@@ -169,6 +200,13 @@ const isValid = async (tokenSet: TokenSet) => {
     }
 
     if (!itemsId && !schemaId) {
+      logger.info(
+        "seaport-token-set-save",
+        `valid items or schema check fail. tokenSet=${JSON.stringify(
+          tokenSet
+        )}, itemsId=${itemsId}, schemaId=${schemaId}`
+      );
+
       // Skip if we couldn't detect any valid items or schema
       return false;
     }
@@ -200,6 +238,8 @@ export const save = async (tokenSets: TokenSet[]): Promise<TokenSet[]> => {
       // If the token set already exists, we can simply skip any other further actions
       valid.add(tokenSet);
     } else if (!tokenSetExists && !(await isValid(tokenSet))) {
+      logger.info("seaport-token-set-save", `TokenList. tokenSet=${JSON.stringify(tokenSet)}`);
+
       continue;
     }
 

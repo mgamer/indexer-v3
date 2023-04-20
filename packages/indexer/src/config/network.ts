@@ -61,6 +61,15 @@ export const getOpenseaSubDomain = () => {
   }
 };
 
+export const getOpenseaBaseUrl = () => {
+  switch (config.chainId) {
+    case 5:
+      return "https://testnets-api.opensea.io";
+    default:
+      return "https://api.opensea.io";
+  }
+};
+
 export const getServiceName = () => {
   return `indexer-${config.version}-${getNetworkName()}`;
 };
@@ -72,6 +81,7 @@ type NetworkSettings = {
   realtimeSyncFrequencySeconds: number;
   realtimeSyncMaxBlockLag: number;
   lastBlockLatency: number;
+  headBlockDelay: number;
   backfillBlockBatchSize: number;
   metadataMintDelay: number;
   enableMetadataAutoRefresh: boolean;
@@ -79,6 +89,7 @@ type NetworkSettings = {
   washTradingWhitelistedAddresses: string[];
   washTradingBlacklistedAddresses: string[];
   customTokenAddresses: string[];
+  nonSimulatableContracts: string[];
   mintsAsSalesBlacklist: string[];
   mintAddresses: string[];
   multiCollectionContracts: string[];
@@ -98,6 +109,7 @@ export const getNetworkSettings = (): NetworkSettings => {
     realtimeSyncFrequencySeconds: 15,
     realtimeSyncMaxBlockLag: 16,
     lastBlockLatency: 5,
+    headBlockDelay: 0,
     backfillBlockBatchSize: 16,
     metadataMintDelay: 120,
     enableMetadataAutoRefresh: false,
@@ -105,6 +117,7 @@ export const getNetworkSettings = (): NetworkSettings => {
     washTradingWhitelistedAddresses: [],
     washTradingBlacklistedAddresses: [],
     customTokenAddresses: [],
+    nonSimulatableContracts: [],
     multiCollectionContracts: [],
     mintsAsSalesBlacklist: [],
     mintAddresses: [AddressZero],
@@ -157,6 +170,10 @@ export const getNetworkSettings = (): NetworkSettings => {
           "0x0a1bbd57033f57e7b6743621b79fcb9eb2ce3676",
           "0x942bc2d3e7a589fe5bd4a5c6ef9727dfd82f5c8a",
           "0x32d4be5ee74376e08038d652d4dc26e62c67f436",
+        ],
+        nonSimulatableContracts: [
+          "0x4d04bba7f5ea45ac59769a1095762467b1157cc4",
+          "0x36e73e5e0aaacf4f9c4e67a32b87e8a4273484a5",
         ],
         customTokenAddresses: [
           "0x95784f7b5c8849b0104eaf5d13d6341d8cc40750",
@@ -311,9 +328,11 @@ export const getNetworkSettings = (): NetworkSettings => {
         ...defaultNetworkSettings,
         enableWebSocket: false,
         enableReorgCheck: false,
-        realtimeSyncFrequencySeconds: 10,
-        realtimeSyncMaxBlockLag: 128,
-        backfillBlockBatchSize: 512,
+        realtimeSyncFrequencySeconds: 5,
+        realtimeSyncMaxBlockLag: 32,
+        lastBlockLatency: 15,
+        backfillBlockBatchSize: 60,
+        reorgCheckFrequency: [30],
         subDomain: "api-optimism",
         coingecko: {
           networkId: "optimistic-ethereum",
@@ -348,12 +367,24 @@ export const getNetworkSettings = (): NetworkSettings => {
         ...defaultNetworkSettings,
         metadataMintDelay: 180,
         enableWebSocket: true,
-        realtimeSyncFrequencySeconds: 15,
-        realtimeSyncMaxBlockLag: 45,
-        lastBlockLatency: 20,
+        realtimeSyncMaxBlockLag: 32,
+        realtimeSyncFrequencySeconds: 2,
+        lastBlockLatency: 8,
+        headBlockDelay: 2,
         backfillBlockBatchSize: 60,
         reorgCheckFrequency: [30],
         subDomain: "api-polygon",
+        whitelistedCurrencies: new Map([
+          [
+            "0xba777ae3a3c91fcd83ef85bfe65410592bdd0f7c",
+            {
+              contract: "0xba777ae3a3c91fcd83ef85bfe65410592bdd0f7c",
+              name: "BitCone",
+              symbol: "CONE",
+              decimals: 18,
+            },
+          ],
+        ]),
         coingecko: {
           networkId: "polygon-pos",
         },
@@ -391,9 +422,10 @@ export const getNetworkSettings = (): NetworkSettings => {
       return {
         ...defaultNetworkSettings,
         enableWebSocket: false,
-        realtimeSyncMaxBlockLag: 125,
-        realtimeSyncFrequencySeconds: 10,
-        lastBlockLatency: 10,
+        realtimeSyncMaxBlockLag: 32,
+        realtimeSyncFrequencySeconds: 5,
+        lastBlockLatency: 5,
+        headBlockDelay: 10,
         subDomain: "api-arbitrum",
         coingecko: {
           networkId: "arbitrum-one",

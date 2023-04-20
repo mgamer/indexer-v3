@@ -41,11 +41,21 @@ export const uniqBy = <T>(items: T[], uniqId: (item: T) => string): T[] => {
   return result;
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const getErrorMessage = (error: any) => {
+  const errorMessage = error.response?.data ? JSON.stringify(error.response.data) : error.message;
+  return errorMessage;
+};
+
 // Misc
 
-export const generateSourceBytes = (source?: string) => {
-  return source ? keccak256(toUtf8Bytes(source)).slice(2, 10) : "";
-};
+export const getSourceHash = (source?: string) =>
+  source ? keccak256(toUtf8Bytes(source)).slice(2, 10) : "";
+
+export const generateSourceBytes = (source?: string) =>
+  source === "reservoir.tools"
+    ? getSourceHash(source)
+    : getSourceHash("reservoir.tools") + getSourceHash(source);
 
 export const getSourceV1 = (calldata: string) => {
   // Use the ASCII US (unit separator) character (code = 31) as a delimiter

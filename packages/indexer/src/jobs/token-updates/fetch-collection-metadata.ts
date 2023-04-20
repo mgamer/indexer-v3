@@ -12,6 +12,8 @@ import { getNetworkSettings } from "@/config/network";
 import * as metadataIndexFetch from "@/jobs/metadata-index/fetch-queue";
 import MetadataApi from "@/utils/metadata-api";
 import * as royalties from "@/utils/royalties";
+import * as marketplaceFees from "@/utils/marketplace-fees";
+
 import * as collectionRecalcTokenCount from "@/jobs/collection-updates/recalc-token-count-queue";
 import * as collectionUpdatesFloorAsk from "@/jobs/collection-updates/floor-queue";
 import * as collectionUpdatesNonFlaggedFloorAsk from "@/jobs/collection-updates/non-flagged-floor-queue";
@@ -39,7 +41,7 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      const { contract, tokenId, mintedTimestamp, newCollection } =
+      const { contract, tokenId, mintedTimestamp, newCollection, oldCollectionId } =
         job.data as FetchCollectionMetadataInfo;
 
       try {
@@ -125,6 +127,11 @@ if (config.doBackgroundWork) {
         // Schedule a job to re-count tokens in the collection
         await collectionRecalcTokenCount.addToQueue(collection.id);
 
+        // If token has moved collections, update the old collection's token count
+        if (oldCollectionId) {
+          await collectionRecalcTokenCount.addToQueue(oldCollectionId, true);
+        }
+
         // If this is a new collection, recalculate floor price
         if (collection?.id && newCollection) {
           const floorAskInfo = {
@@ -167,6 +174,13 @@ if (config.doBackgroundWork) {
           collection.openseaRoyalties as royalties.Royalty[] | undefined
         );
         await royalties.refreshDefaultRoyalties(collection.id);
+
+        // Refresh marketplace fees
+        await marketplaceFees.updateMarketplaceFeeSpec(
+          collection.id,
+          "opensea",
+          collection.openseaFees as royalties.Royalty[] | undefined
+        );
       } catch (error) {
         logger.error(
           QUEUE_NAME,
@@ -187,6 +201,7 @@ export type FetchCollectionMetadataInfo = {
   tokenId: string;
   mintedTimestamp: number;
   newCollection?: boolean;
+  oldCollectionId?: string;
 };
 
 export const addToQueue = async (infos: FetchCollectionMetadataInfo[], jobId = "") => {

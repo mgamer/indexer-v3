@@ -58,6 +58,10 @@ export const getAsksEventsV3Options: RouteOptions = {
       normalizeRoyalties: Joi.boolean()
         .default(false)
         .description("If true, prices will include missing royalties to be added on-top."),
+      displayCurrency: Joi.string()
+        .lowercase()
+        .pattern(regex.address)
+        .description("Return result in given currency"),
     }).oxor("contract"),
   },
   response: {
@@ -249,7 +253,8 @@ export const getAsksEventsV3Options: RouteOptions = {
                         : r.price,
                     },
                   },
-                  fromBuffer(r.order_currency)
+                  fromBuffer(r.order_currency),
+                  query.displayCurrency
                 )
               : null,
             quantityRemaining: Number(r.order_quantity_remaining),

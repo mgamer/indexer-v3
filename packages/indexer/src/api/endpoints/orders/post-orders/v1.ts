@@ -28,7 +28,7 @@ export const postOrdersV1Options: RouteOptions = {
           kind: Joi.string()
             .lowercase()
             .valid(
-              "looks-rare",
+              "blur",
               "zeroex-v4",
               "x2y2",
               "seaport",
@@ -37,11 +37,12 @@ export const postOrdersV1Options: RouteOptions = {
               "blur",
               "rarible",
               "manifold",
-              "infinity",
-              "flow"
+              "flow",
+              "looks-rare-v2"
             )
             .required(),
           data: Joi.object().required(),
+          originatedAt: Joi.string(),
         })
       ),
     }),
@@ -66,15 +67,16 @@ export const postOrdersV1Options: RouteOptions = {
       logger.info(`post-orders-${version}-handler`, `Got ${orders.length} orders`);
 
       const orderInfos: orderbookOrders.GenericOrderInfo[] = [];
-      for (const { kind, data } of orders) {
+      for (const { kind, data, originatedAt } of orders) {
         orderInfos.push({
           kind,
           info: {
-            kind: "full",
             orderParams: data,
-            metadata: {},
+            metadata: {
+              originatedAt,
+            },
+            isOpenSea: true,
           },
-          relayToArweave: true,
           validateBidValue: true,
         });
       }

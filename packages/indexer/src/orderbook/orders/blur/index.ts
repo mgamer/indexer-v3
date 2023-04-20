@@ -1,3 +1,6 @@
+import { AddressZero } from "@ethersproject/constants";
+import { keccak256 } from "@ethersproject/solidity";
+import { parseEther } from "@ethersproject/units";
 import * as Sdk from "@reservoir0x/sdk";
 import pLimit from "p-limit";
 
@@ -5,45 +8,37 @@ import { idb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
 import { bn, now, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
-import * as arweaveRelay from "@/jobs/arweave-relay";
 import * as ordersUpdateById from "@/jobs/order-updates/by-id-queue";
+import { Sources } from "@/models/sources";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import { DbOrder, OrderMetadata, generateSchemaHash } from "@/orderbook/orders/utils";
 import { offChainCheck } from "@/orderbook/orders/blur/check";
 import * as tokenSet from "@/orderbook/token-sets";
-import { Sources } from "@/models/sources";
-import { AddressZero } from "@ethersproject/constants";
-
-export type OrderInfo = {
-  orderParams: Sdk.Blur.Types.BaseOrder;
-  metadata: OrderMetadata;
-};
+import { getBlurRoyalties } from "@/utils/blur";
+// import { checkMarketplaceIsFiltered } from "@/utils/marketplace-blacklists";
 
 type SaveResult = {
   id: string;
   status: string;
   unfillable?: boolean;
+  triggerKind?: "new-order" | "reprice";
 };
 
-export const save = async (
-  orderInfos: OrderInfo[],
-  relayToArweave?: boolean
-): Promise<SaveResult[]> => {
+// Listings
+
+export type ListingOrderInfo = {
+  orderParams: Sdk.Blur.Types.BaseOrder;
+  metadata: OrderMetadata;
+};
+
+export const saveListings = async (orderInfos: ListingOrderInfo[]): Promise<SaveResult[]> => {
   const results: SaveResult[] = [];
   const orderValues: DbOrder[] = [];
 
-  const arweaveData: {
-    order: Sdk.Blur.Order;
-    schemaHash?: string;
-    source?: string;
-  }[] = [];
-
-  const handleOrder = async ({ orderParams, metadata }: OrderInfo) => {
+  const handleOrder = async ({ orderParams, metadata }: ListingOrderInfo) => {
     try {
       const order = new Sdk.Blur.Order(config.chainId, orderParams);
       const id = order.hash();
-
-      const expirationTime = order.params.expirationTime;
 
       // Check: order doesn't already exist
       const orderExists = await idb.oneOrNone(`SELECT 1 FROM orders WHERE orders.id = $/id/`, {
@@ -65,7 +60,16 @@ export const save = async (
         });
       }
 
+      // const isFiltered = await checkMarketplaceIsFiltered(order.params.collection, "blur");
+      // if (isFiltered) {
+      //   return results.push({
+      //     id,
+      //     status: "filtered",
+      //   });
+      // }
+
       const currentTime = now();
+      const expirationTime = order.params.expirationTime;
 
       // Check: order is not expired
       if (currentTime >= Number(expirationTime)) {
@@ -75,14 +79,11 @@ export const save = async (
         });
       }
 
-      // Check: buy order has Weth as payment token
-      if (
-        order.params.side === Sdk.Blur.Types.TradeDirection.BUY &&
-        order.params.paymentToken !== Sdk.Common.Addresses.Weth[config.chainId]
-      ) {
+      // Check: order is not a bid
+      if (order.params.side === Sdk.Blur.Types.TradeDirection.BUY) {
         return results.push({
           id,
-          status: "unsupported-payment-token",
+          status: "unsupported-side",
         });
       }
 
@@ -94,16 +95,6 @@ export const save = async (
         return results.push({
           id,
           status: "unsupported-payment-token",
-        });
-      }
-
-      // Check: order is valid
-      try {
-        order.checkValidity();
-      } catch {
-        return results.push({
-          id,
-          status: "invalid",
         });
       }
 
@@ -121,7 +112,10 @@ export const save = async (
       let fillabilityStatus = "fillable";
       let approvalStatus = "approved";
       try {
-        await offChainCheck(order, { onChainApprovalRecheck: true });
+        await offChainCheck(order, metadata.originatedAt, {
+          onChainApprovalRecheck: true,
+          checkFilledOrCancelled: true,
+        });
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (error: any) {
         // Keep any orders that can potentially get valid in the future
@@ -159,22 +153,21 @@ export const save = async (
         });
       }
 
-      // Handle: fees
-      const side = order.params.side === Sdk.Blur.Types.TradeDirection.BUY ? "buy" : "sell";
-
       // Handle: price and value
       const price = bn(order.params.price);
 
       // Handle: source
       const sources = await Sources.getInstance();
-      const source = metadata.source ? await sources.getOrInsert(metadata.source) : undefined;
+      let source = await sources.getOrInsert("blur.io");
+      if (metadata.source) {
+        source = await sources.getOrInsert(metadata.source);
+      }
 
       // Handle: native Reservoir orders
       const isReservoir = false;
 
+      // Handle: fees
       const feeBps = order.params.fees.reduce((total, { rate }) => total + rate, 0);
-
-      // Handle: fee breakdown
       const feeBreakdown = order.params.fees.map(({ recipient, rate }) => ({
         kind: "royalty",
         recipient,
@@ -184,12 +177,12 @@ export const save = async (
       // Handle: currency
       const currency = order.params.paymentToken;
 
-      const validFrom = `date_trunc('seconds', to_timestamp(0))`;
+      const validFrom = `date_trunc('seconds', to_timestamp(${order.params.listingTime}))`;
       const validTo = `date_trunc('seconds', to_timestamp(${expirationTime}))`;
       orderValues.push({
         id,
         kind: `blur`,
-        side,
+        side: "sell",
         fillability_status: fillabilityStatus,
         approval_status: approvalStatus,
         token_set_id: tokenSetId,
@@ -217,6 +210,7 @@ export const save = async (
         missing_royalties: null,
         normalized_value: null,
         currency_normalized_value: null,
+        originated_at: metadata.originatedAt ?? null,
       });
 
       const unfillable =
@@ -227,14 +221,313 @@ export const save = async (
         status: "success",
         unfillable,
       });
+    } catch (error) {
+      logger.error(
+        "orders-blur-save",
+        `Failed to handle listing with params ${JSON.stringify(orderParams)}: ${error}`
+      );
+    }
+  };
 
-      if (relayToArweave) {
-        arweaveData.push({ order, schemaHash, source: source?.domain });
+  // Process all orders concurrently
+  const limit = pLimit(20);
+  await Promise.all(orderInfos.map((orderInfo) => limit(() => handleOrder(orderInfo))));
+
+  if (orderValues.length) {
+    const columns = new pgp.helpers.ColumnSet(
+      [
+        "id",
+        "kind",
+        "side",
+        "fillability_status",
+        "approval_status",
+        "token_set_id",
+        "token_set_schema_hash",
+        "maker",
+        "taker",
+        "price",
+        "value",
+        "currency",
+        "currency_price",
+        "currency_value",
+        "needs_conversion",
+        "quantity_remaining",
+        { name: "valid_between", mod: ":raw" },
+        "nonce",
+        "source_id_int",
+        "is_reservoir",
+        "contract",
+        "conduit",
+        "fee_bps",
+        { name: "fee_breakdown", mod: ":json" },
+        "dynamic",
+        "raw_data",
+        { name: "expiration", mod: ":raw" },
+        "originated_at",
+      ],
+      {
+        table: "orders",
+      }
+    );
+    await idb.none(pgp.helpers.insert(orderValues, columns) + " ON CONFLICT DO NOTHING");
+
+    await ordersUpdateById.addToQueue(
+      results
+        .filter((r) => r.status === "success" && !r.unfillable)
+        .map(
+          ({ id }) =>
+            ({
+              context: `new-order-${id}`,
+              id,
+              trigger: {
+                kind: "new-order",
+              },
+            } as ordersUpdateById.OrderInfo)
+        )
+    );
+  }
+
+  return results;
+};
+
+// Bids
+
+export type BidOrderInfo = {
+  orderParams: Sdk.Blur.Types.BlurBidPool;
+  metadata: OrderMetadata;
+  fullUpdate?: boolean;
+};
+
+const getBlurBidId = (collection: string) =>
+  // Buy orders have a single order id per collection
+  keccak256(["string", "address"], ["blur", collection]);
+
+export const saveBids = async (orderInfos: BidOrderInfo[]): Promise<SaveResult[]> => {
+  const results: SaveResult[] = [];
+  const orderValues: DbOrder[] = [];
+
+  const handleOrder = async ({ orderParams, fullUpdate }: BidOrderInfo) => {
+    const id = getBlurBidId(orderParams.collection);
+
+    // const isFiltered = await checkMarketplaceIsFiltered(orderParams.collection, "blur");
+    // if (isFiltered) {
+    //   return results.push({
+    //     id,
+    //     status: "filtered",
+    //   });
+    // }
+
+    try {
+      const royalties = await getBlurRoyalties(orderParams.collection);
+
+      const orderResult = await idb.oneOrNone(
+        `
+          SELECT
+            orders.raw_data
+          FROM orders
+          WHERE orders.id = $/id/
+        `,
+        { id }
+      );
+      if (!orderResult) {
+        // Handle: token set
+        const schemaHash = generateSchemaHash();
+        const [{ id: tokenSetId }] = await tokenSet.contractWide.save([
+          {
+            id: `contract:${orderParams.collection}`.toLowerCase(),
+            schemaHash,
+            contract: orderParams.collection,
+          },
+        ]);
+        if (!tokenSetId) {
+          throw new Error("No token set available");
+        }
+
+        // Handle: source
+        const sources = await Sources.getInstance();
+        const source = await sources.getOrInsert("blur.io");
+
+        // The price points should be kept sorted
+        orderParams.pricePoints.sort((a, b) => Number(b.price) - Number(a.price));
+
+        // Remove any empty price points
+        orderParams.pricePoints = orderParams.pricePoints.filter((pp) => pp.executableSize > 0);
+
+        if (!orderParams.pricePoints.length) {
+          return results.push({
+            id,
+            status: "redundant",
+          });
+        }
+
+        // Handle: royalties
+        let feeBps = 0;
+        const feeBreakdown: { kind: string; recipient: string; bps: number }[] = [];
+        if (royalties) {
+          feeBreakdown.push({
+            recipient: royalties.recipient,
+            bps: royalties.minimumRoyaltyBps,
+            kind: "royalty",
+          });
+          feeBps += feeBreakdown[0].bps;
+        }
+
+        // Handle: price
+        const price = parseEther(orderParams.pricePoints[0].price).toString();
+        const value = bn(price).sub(bn(price).mul(feeBps).div(10000)).toString();
+
+        const totalQuantity = orderParams.pricePoints
+          .map((p) => p.executableSize)
+          .reduce((a, b) => a + b, 0);
+
+        const validFrom = `date_trunc('seconds', now())`;
+        const validTo = `'Infinity'`;
+        orderValues.push({
+          id,
+          kind: "blur",
+          side: "buy",
+          fillability_status: "fillable",
+          approval_status: "approved",
+          token_set_id: tokenSetId,
+          token_set_schema_hash: toBuffer(schemaHash),
+          maker: toBuffer(Sdk.Blur.Addresses.Beth[config.chainId]),
+          taker: toBuffer(AddressZero),
+          price,
+          value,
+          currency: toBuffer(Sdk.Blur.Addresses.Beth[config.chainId]),
+          currency_price: price,
+          currency_value: value,
+          needs_conversion: null,
+          quantity_remaining: totalQuantity.toString(),
+          valid_between: `tstzrange(${validFrom}, ${validTo}, '[]')`,
+          nonce: null,
+          source_id_int: source?.id,
+          is_reservoir: null,
+          contract: toBuffer(orderParams.collection),
+          conduit: null,
+          fee_bps: feeBps,
+          fee_breakdown: feeBreakdown,
+          dynamic: null,
+          raw_data: orderParams,
+          expiration: validTo,
+          missing_royalties: null,
+          normalized_value: null,
+          currency_normalized_value: null,
+          block_number: null,
+          log_index: null,
+        });
+
+        results.push({
+          id,
+          status: "success",
+        });
+      } else {
+        const currentBid = orderResult.raw_data as Sdk.Blur.Types.BlurBidPool;
+        const bidUpdates = orderParams;
+
+        if (currentBid.collection !== bidUpdates.collection) {
+          return results.push({
+            id,
+            status: "unreachable",
+          });
+        }
+
+        if (fullUpdate) {
+          // Assume `JSON.stringify` is deterministic
+          if (JSON.stringify(currentBid.pricePoints) === JSON.stringify(bidUpdates.pricePoints)) {
+            return results.push({
+              id,
+              status: "redundant",
+            });
+          }
+
+          currentBid.pricePoints = bidUpdates.pricePoints;
+        } else {
+          // Update the current bid in place
+          for (const newPricePoint of bidUpdates.pricePoints) {
+            const existingPricePointIndex = currentBid.pricePoints.findIndex(
+              (pp) => Number(pp.price) === Number(newPricePoint.price)
+            );
+            if (existingPricePointIndex !== -1) {
+              currentBid.pricePoints[existingPricePointIndex] = newPricePoint;
+            } else {
+              currentBid.pricePoints.push(newPricePoint);
+            }
+          }
+        }
+
+        // The price points should be kept sorted
+        currentBid.pricePoints.sort((a, b) => Number(b.price) - Number(a.price));
+
+        // Remove any empty price points
+        currentBid.pricePoints = currentBid.pricePoints.filter((pp) => pp.executableSize > 0);
+
+        if (!currentBid.pricePoints.length) {
+          await idb.none(
+            `
+              UPDATE orders SET
+                fillability_status = 'filled',
+                updated_at = now()
+              WHERE orders.id = $/id/
+            `,
+            { id }
+          );
+        } else {
+          // Handle: royalties
+          let feeBps = 0;
+          const feeBreakdown: { kind: string; recipient: string; bps: number }[] = [];
+          if (royalties) {
+            feeBreakdown.push({
+              recipient: royalties.recipient,
+              bps: royalties.minimumRoyaltyBps,
+              kind: "royalty",
+            });
+            feeBps += feeBreakdown[0].bps;
+          }
+
+          // Handle: price
+          const price = parseEther(currentBid.pricePoints[0].price).toString();
+          const value = bn(price).sub(bn(price).mul(feeBps).div(10000)).toString();
+
+          const totalQuantity = currentBid.pricePoints
+            .map((p) => p.executableSize)
+            .reduce((a, b) => a + b, 0);
+
+          await idb.none(
+            `
+              UPDATE orders SET
+                fillability_status = 'fillable',
+                price = $/price/,
+                currency_price = $/price/,
+                value = $/value/,
+                currency_value = $/value/,
+                quantity_remaining = $/totalQuantity/,
+                valid_between = tstzrange(date_trunc('seconds', now()), 'Infinity', '[]'),
+                expiration = 'Infinity',
+                updated_at = now(),
+                raw_data = $/rawData:json/
+              WHERE orders.id = $/id/
+            `,
+            {
+              id,
+              price,
+              value,
+              totalQuantity,
+              rawData: currentBid,
+            }
+          );
+        }
+
+        results.push({
+          id,
+          status: "success",
+          triggerKind: "reprice",
+        });
       }
     } catch (error) {
       logger.error(
         "orders-blur-save",
-        `Failed to handle order with params ${JSON.stringify(orderParams)}: ${error}`
+        `Failed to handle bid with params ${JSON.stringify(orderParams)}: ${error}`
       );
     }
   };
@@ -282,7 +575,7 @@ export const save = async (
 
     await ordersUpdateById.addToQueue(
       results
-        .filter((r) => r.status === "success" && !r.unfillable)
+        .filter((r) => r.status === "success")
         .map(
           ({ id }) =>
             ({
@@ -294,10 +587,6 @@ export const save = async (
             } as ordersUpdateById.OrderInfo)
         )
     );
-
-    if (relayToArweave) {
-      await arweaveRelay.addPendingOrdersBlur(arweaveData);
-    }
   }
 
   return results;

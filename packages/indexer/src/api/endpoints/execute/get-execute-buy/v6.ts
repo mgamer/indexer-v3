@@ -4,33 +4,36 @@ import { BigNumber } from "@ethersproject/bignumber";
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
-import { ListingDetails } from "@reservoir0x/sdk/dist/router/v6/types";
+import { FillListingsResult, ListingDetails } from "@reservoir0x/sdk/dist/router/v6/types";
+import axios from "axios";
 import Joi from "joi";
 
 import { inject } from "@/api/index";
 import { idb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
-import { bn, formatPrice, fromBuffer, regex, toBuffer } from "@/common/utils";
+import { bn, formatPrice, fromBuffer, now, regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
+import { ApiKeyManager } from "@/models/api-keys";
 import { Sources } from "@/models/sources";
-import { OrderKind, generateListingDetailsV6 } from "@/orderbook/orders";
+import { OrderKind, generateListingDetailsV6, routerOnRecoverableError } from "@/orderbook/orders";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import * as sudoswap from "@/orderbook/orders/sudoswap";
 import * as nftx from "@/orderbook/orders/nftx";
+import * as b from "@/utils/auth/blur";
 import { getCurrency } from "@/utils/currencies";
 
 const version = "v6";
 
 export const getExecuteBuyV6Options: RouteOptions = {
   description: "Buy tokens",
-  tags: ["api", "Router"],
+  tags: ["api", "x-deprecated"],
   timeout: {
     server: 20 * 1000,
   },
   plugins: {
     "hapi-swagger": {
-      order: 10,
+      deprecated: true,
     },
   },
   validate: {
@@ -49,7 +52,6 @@ export const getExecuteBuyV6Options: RouteOptions = {
               "x2y2",
               "universe",
               "rarible",
-              "infinity",
               "sudoswap",
               "flow",
               "nftx"
@@ -123,6 +125,11 @@ export const getExecuteBuyV6Options: RouteOptions = {
         .description(
           "If true, do not filter out inactive orders (only relevant for order id filtering)."
         ),
+      excludeEOA: Joi.boolean()
+        .default(false)
+        .description(
+          "Exclude orders that can only be filled by EOAs, to support filling with smart contracts."
+        ),
       x2y2ApiKey: Joi.string().description("Override the X2Y2 API key used for filling."),
     }),
   },
@@ -133,7 +140,7 @@ export const getExecuteBuyV6Options: RouteOptions = {
           id: Joi.string().required(),
           action: Joi.string().required(),
           description: Joi.string().required(),
-          kind: Joi.string().valid("transaction").required(),
+          kind: Joi.string().valid("signature", "transaction").required(),
           items: Joi.array()
             .items(
               Joi.object({
@@ -142,6 +149,12 @@ export const getExecuteBuyV6Options: RouteOptions = {
               })
             )
             .required(),
+        })
+      ),
+      errors: Joi.array().items(
+        Joi.object({
+          message: Joi.string(),
+          orderId: Joi.number(),
         })
       ),
       path: Joi.array().items(
@@ -273,12 +286,29 @@ export const getExecuteBuyV6Options: RouteOptions = {
           rawQuote: totalPrice.toString(),
         });
 
+        const flaggedResult = await idb.oneOrNone(
+          `
+            SELECT
+              tokens.is_flagged
+            FROM tokens
+            WHERE tokens.contract = $/contract/
+              AND tokens.token_id = $/tokenId/
+            LIMIT 1
+          `,
+          {
+            contract: toBuffer(token.contract),
+            tokenId: token.tokenId,
+          }
+        );
+
         listingDetails.push(
           generateListingDetailsV6(
             {
               id: order.id,
               kind: order.kind,
               currency: order.currency,
+              price: order.price,
+              source: path[path.length - 1].source ?? undefined,
               rawData: order.rawData,
               // TODO: We don't support ERC20 fees because of potential direct filling which
               // does not work with fees on top. We'll need to integrate permits in order to
@@ -290,6 +320,7 @@ export const getExecuteBuyV6Options: RouteOptions = {
               contract: token.contract,
               tokenId: token.tokenId,
               amount: token.quantity,
+              isFlagged: Boolean(flaggedResult.is_flagged),
             }
           )
         );
@@ -423,6 +454,12 @@ export const getExecuteBuyV6Options: RouteOptions = {
           const [contract, tokenId] = token.split(":");
 
           if (payload.quantity === 1) {
+            // TODO: Right now we filter out Blur orders since those don't yet
+            // support royalty normalization. A better approach to handling it
+            // would be to set the normalized fields to `null` for every order
+            // which doesn't support royalty normalization and then filter out
+            // such `null` fields in various normalized events/caches.
+
             // Filling a quantity of 1 implies getting the best listing for that token
             const bestOrderResult = await idb.oneOrNone(
               `
@@ -448,6 +485,11 @@ export const getExecuteBuyV6Options: RouteOptions = {
                     payload.currency &&
                     payload.currency !== Sdk.Common.Addresses.Eth[config.chainId]
                       ? " AND orders.currency = $/currency/"
+                      : ""
+                  }
+                  ${
+                    payload.normalizeRoyalties || payload.excludeEOA
+                      ? " AND orders.kind != 'blur'"
                       : ""
                   }
                 ORDER BY
@@ -673,32 +715,8 @@ export const getExecuteBuyV6Options: RouteOptions = {
         }
       }
 
-      const router = new Sdk.RouterV6.Router(config.chainId, baseProvider, {
-        x2y2ApiKey: payload.x2y2ApiKey ?? config.x2y2ApiKey,
-        cbApiKey: config.cbApiKey,
-      });
-      const { txData, success } = await router.fillListingsTx(
-        listingDetails,
-        payload.taker,
-        buyInCurrency,
-        {
-          source: payload.source,
-          // TODO: Add support for buying any listing via any ERC20 token
-          globalFees: buyInCurrency === Sdk.Common.Addresses.Eth[config.chainId] ? feesOnTop : [],
-          partial: payload.partial,
-          forceRouter: payload.forceRouter,
-          directFillingData: {
-            conduitKey:
-              config.chainId === 1
-                ? "0x0000007b02230091a7ed01230072f7006a004d60a8d4e71d599b8104250f0000"
-                : undefined,
-          },
-          relayer: payload.relayer,
-        }
-      );
-
       // Set up generic filling steps
-      const steps: {
+      let steps: {
         id: string;
         action: string;
         description: string;
@@ -708,6 +726,13 @@ export const getExecuteBuyV6Options: RouteOptions = {
           data?: any;
         }[];
       }[] = [
+        {
+          id: "auth",
+          action: "Sign in to Blur",
+          description: "Some marketplaces require signing an auth message before filling",
+          kind: "signature",
+          items: [],
+        },
         {
           id: "currency-approval",
           action: "Approve exchange contract",
@@ -724,78 +749,207 @@ export const getExecuteBuyV6Options: RouteOptions = {
         },
       ];
 
-      const taker = payload.taker;
-      const relayer = payload.relayer;
-      const txSender = relayer ?? taker;
+      // Handle Blur authentication
+      let blurAuth: b.Auth | undefined;
+      if (path.some((p) => p.source === "blur.io")) {
+        const blurAuthId = b.getAuthId(payload.taker);
 
-      // Check that the taker has enough funds to fill all requested tokens
-      const totalPrice = path.map(({ rawQuote }) => bn(rawQuote)).reduce((a, b) => a.add(b));
-      if (buyInCurrency === Sdk.Common.Addresses.Eth[config.chainId]) {
-        const balance = await baseProvider.getBalance(txSender);
-        if (!payload.skipBalanceCheck && bn(balance).lt(totalPrice)) {
-          throw Boom.badData("Balance too low to proceed with transaction");
-        }
-      } else {
-        const erc20 = new Sdk.Common.Helpers.Erc20(baseProvider, buyInCurrency);
+        blurAuth = await b.getAuth(blurAuthId);
+        if (!blurAuth) {
+          const blurAuthChallengeId = b.getAuthChallengeId(payload.taker);
 
-        const balance = await erc20.getBalance(txSender);
-        if (!payload.skipBalanceCheck && bn(balance).lt(totalPrice)) {
-          throw Boom.badData("Balance too low to proceed with transaction");
-        }
+          let blurAuthChallenge = await b.getAuthChallenge(blurAuthChallengeId);
+          if (!blurAuthChallenge) {
+            blurAuthChallenge = (await axios
+              .get(`${config.orderFetcherBaseUrl}/api/blur-auth-challenge?taker=${payload.taker}`)
+              .then((response) => response.data.authChallenge)) as b.AuthChallenge;
 
-        let conduit: string;
-        if (listingDetails.every((d) => d.kind === "seaport")) {
-          // TODO: Have a default conduit for each exchange per chain
-          conduit =
-            config.chainId === 1
-              ? // Use OpenSea's conduit for sharing approvals
-                "0x1e0049783f008a0085193e00003d00cd54003c71"
-              : Sdk.Seaport.Addresses.Exchange[config.chainId];
-        } else if (listingDetails.every((d) => d.kind === "universe")) {
-          conduit = Sdk.Universe.Addresses.Exchange[config.chainId];
-        } else if (listingDetails.every((d) => d.kind === "rarible")) {
-          conduit = Sdk.Rarible.Addresses.Exchange[config.chainId];
-        } else {
-          throw new Error("Only Seaport, Universe and Rarible ERC20 listings are supported");
-        }
+            await b.saveAuthChallenge(
+              blurAuthChallengeId,
+              blurAuthChallenge,
+              // Give a 1 minute buffer for the auth challenge to expire
+              Math.floor(new Date(blurAuthChallenge?.expiresOn).getTime() / 1000) - now() - 60
+            );
+          }
 
-        const allowance = await erc20.getAllowance(txSender, conduit);
-        if (bn(allowance).lt(totalPrice)) {
-          const tx = erc20.approveTransaction(txSender, conduit);
           steps[0].items.push({
             status: "incomplete",
             data: {
-              ...tx,
-              from: txSender,
-              maxFeePerGas: payload.maxFeePerGas
-                ? bn(payload.maxFeePerGas).toHexString()
-                : undefined,
-              maxPriorityFeePerGas: payload.maxPriorityFeePerGas
-                ? bn(payload.maxPriorityFeePerGas).toHexString()
-                : undefined,
+              sign: {
+                signatureKind: "eip191",
+                message: blurAuthChallenge.message,
+              },
+              post: {
+                endpoint: "/execute/auth-signature/v1",
+                method: "POST",
+                body: {
+                  kind: "blur",
+                  id: blurAuthChallengeId,
+                },
+              },
             },
+          });
+
+          // Force the client to poll
+          steps[1].items.push({
+            status: "incomplete",
+          });
+
+          // Return an early since any next steps are dependent on the Blur auth
+          return {
+            steps,
+            path,
+          };
+        } else {
+          steps[0].items.push({
+            status: "complete",
           });
         }
       }
 
-      steps[1].items.push({
-        status: "incomplete",
-        data: {
-          ...txData,
-          maxFeePerGas: payload.maxFeePerGas ? bn(payload.maxFeePerGas).toHexString() : undefined,
-          maxPriorityFeePerGas: payload.maxPriorityFeePerGas
-            ? bn(payload.maxPriorityFeePerGas).toHexString()
-            : undefined,
+      const router = new Sdk.RouterV6.Router(config.chainId, baseProvider, {
+        x2y2ApiKey: payload.x2y2ApiKey ?? config.x2y2ApiKey,
+        cbApiKey: config.cbApiKey,
+        orderFetcherBaseUrl: config.orderFetcherBaseUrl,
+        orderFetcherMetadata: {
+          apiKey: await ApiKeyManager.getApiKey(request.headers["x-api-key"]),
         },
       });
 
+      const errors: { orderId: string; message: string }[] = [];
+
+      let result: FillListingsResult;
+      try {
+        result = await router.fillListingsTx(listingDetails, payload.taker, buyInCurrency, {
+          source: payload.source,
+          // TODO: Add support for buying any listing via any ERC20 token
+          globalFees: buyInCurrency === Sdk.Common.Addresses.Eth[config.chainId] ? feesOnTop : [],
+          partial: payload.partial,
+          forceRouter: payload.forceRouter,
+          relayer: payload.relayer,
+          blurAuth,
+          onRecoverableError: async (kind, error, data) => {
+            errors.push({
+              orderId: data.orderId,
+              message: error.response?.data ?? error.message,
+            });
+            await routerOnRecoverableError(kind, error, data);
+          },
+        });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } catch (error: any) {
+        const boomError = Boom.badRequest(error.message);
+        boomError.output.payload.errors = errors;
+        throw boomError;
+      }
+
+      const { txs, success } = result;
+
+      const taker = payload.taker;
+      const relayer = payload.relayer;
+      const txSender = relayer ?? taker;
+
+      for (const tx of txs) {
+        const subPath = path.filter((p) => tx.orderIds.includes(p.orderId));
+        const listings = listingDetails.filter((d) => tx.orderIds.includes(d.orderId));
+
+        // Check that the taker has enough funds to fill all requested tokens
+        const totalPrice = subPath
+          .map(({ rawQuote }) => bn(rawQuote))
+          .reduce((a, b) => a.add(b), bn(0));
+        if (buyInCurrency === Sdk.Common.Addresses.Eth[config.chainId]) {
+          const balance = await baseProvider.getBalance(txSender);
+          if (!payload.skipBalanceCheck && bn(balance).lt(totalPrice)) {
+            throw Boom.badData("Balance too low to proceed with transaction");
+          }
+        } else {
+          const erc20 = new Sdk.Common.Helpers.Erc20(baseProvider, buyInCurrency);
+
+          const balance = await erc20.getBalance(txSender);
+          if (!payload.skipBalanceCheck && bn(balance).lt(totalPrice)) {
+            throw Boom.badData("Balance too low to proceed with transaction");
+          }
+
+          let conduit: string;
+          if (
+            listings.every((d) => d.kind === "seaport") ||
+            listings.every((d) => d.kind === "seaport-v1.4")
+          ) {
+            // TODO: Have a default conduit for each exchange per chain
+            conduit =
+              config.chainId === 1
+                ? // Use OpenSea's conduit for sharing approvals
+                  "0x1e0049783f008a0085193e00003d00cd54003c71"
+                : Sdk.SeaportV11.Addresses.Exchange[config.chainId];
+          } else if (listings.every((d) => d.kind === "universe")) {
+            conduit = Sdk.Universe.Addresses.Exchange[config.chainId];
+          } else if (listings.every((d) => d.kind === "rarible")) {
+            conduit = Sdk.Rarible.Addresses.Exchange[config.chainId];
+          } else {
+            throw new Error("Only Seaport, Universe and Rarible ERC20 listings are supported");
+          }
+
+          const allowance = await erc20.getAllowance(txSender, conduit);
+          if (bn(allowance).lt(totalPrice)) {
+            const tx = erc20.approveTransaction(txSender, conduit);
+            steps[1].items.push({
+              status: "incomplete",
+              data: {
+                ...tx,
+                from: txSender,
+                maxFeePerGas: payload.maxFeePerGas
+                  ? bn(payload.maxFeePerGas).toHexString()
+                  : undefined,
+                maxPriorityFeePerGas: payload.maxPriorityFeePerGas
+                  ? bn(payload.maxPriorityFeePerGas).toHexString()
+                  : undefined,
+              },
+            });
+          }
+        }
+
+        steps[2].items.push({
+          status: "incomplete",
+          data: {
+            ...tx.txData,
+            maxFeePerGas: payload.maxFeePerGas ? bn(payload.maxFeePerGas).toHexString() : undefined,
+            maxPriorityFeePerGas: payload.maxPriorityFeePerGas
+              ? bn(payload.maxPriorityFeePerGas).toHexString()
+              : undefined,
+          },
+        });
+      }
+
+      // Warning! When filtering the steps, we should ensure that it
+      // won't affect the client, which might be polling the API and
+      // expect to get the steps returned in the same order / at the
+      // same index.
+      if (buyInCurrency === Sdk.Common.Addresses.Eth[config.chainId]) {
+        // Buying in ETH will never require an approval
+        steps = [steps[0], ...steps.slice(2)];
+      }
+      if (!blurAuth) {
+        // If we reached this point and the Blur auth is missing then we
+        // can be sure that no Blur orders were requested and it is safe
+        // to remove the auth step
+        steps = steps.slice(1);
+      }
+
       return {
-        steps,
+        steps: blurAuth ? [steps[0], ...steps.slice(1).filter((s) => s.items.length)] : steps,
+        errors,
         // Remove any unsuccessfully handled listings from the path
-        path: path.filter((_, i) => success[i]),
+        path: path.filter((p) => success[p.orderId]),
       };
     } catch (error) {
-      logger.error(`get-execute-buy-${version}-handler`, `Handler failure: ${error}`);
+      if (!(error instanceof Boom.Boom)) {
+        logger.error(
+          `get-execute-buy-${version}-handler`,
+          `Handler failure: ${error} (path = ${JSON.stringify({})}, request = ${JSON.stringify(
+            payload
+          )})`
+        );
+      }
       throw error;
     }
   },

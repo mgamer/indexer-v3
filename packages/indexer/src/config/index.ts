@@ -41,6 +41,8 @@ export const config = {
   ),
   redisUrl: String(process.env.REDIS_URL),
   rateLimitRedisUrl: String(process.env.RATE_LIMIT_REDIS_URL || process.env.REDIS_URL),
+  redisWebsocketUrl: String(process.env.REDIS_WEBSOCKET_URL || process.env.REDIS_URL),
+  metricsRedisUrl: String(process.env.METRICS_REDIS_URL || process.env.REDIS_URL),
   redshiftUrl: String(process.env.REDSHIFT_URL),
 
   master: Boolean(Number(process.env.MASTER)),
@@ -81,11 +83,23 @@ export const config = {
 
   looksRareApiKey: String(process.env.LOOKSRARE_API_KEY),
   openSeaApiKey: String(process.env.OPENSEA_API_KEY),
+  openSeaCrossPostingApiKey: String(
+    process.env.OPENSEA_CROSS_POSTING_API_KEY || process.env.OPENSEA_API_KEY
+  ),
+  openSeaCrossPostingApiUrl: String(process.env.OPENSEA_CROSS_POSTING_API_URL || ""),
+  openSeaCrossPostingApiKeyHeader: String(
+    process.env.OPENSEA_CROSS_POSTING_API_HEADER || "X-Api-Key"
+  ),
+
   x2y2ApiKey: String(process.env.X2Y2_API_KEY),
   cbApiKey: String(process.env.CB_API_KEY),
-  infinityApiKey: String(process.env.INFINITY_API_KEY),
   flowApiKey: String(process.env.FLOW_API_KEY),
+  orderFetcherApiKey: String(process.env.ORDER_FETCHER_API_KEY),
 
+  blurWsApiKey: process.env.BLUR_WS_API_KEY,
+  blurWsUrl: process.env.BLUR_WS_URL,
+
+  orderFetcherBaseUrl: String(process.env.ORDER_FETCHER_BASE_URL),
   railwayStaticUrl: String(process.env.RAILWAY_STATIC_URL || ""),
 
   cipherSecret: String(process.env.CIPHER_SECRET),
@@ -93,13 +107,6 @@ export const config = {
   slackApiKeyWebhookUrl: String(process.env.SLACK_API_KEY_WEBHOOK_URL),
   // Used to prevent redis from being overloaded in heavy process like backfilling
   redisMaxMemoryGB: Number(process.env.REDIS_MAX_MEMORY_GB || 25),
-
-  websocketServerHost: String(process.env.WEBSOCKET_SERVER_HOST),
-  websocketServerAppId: String(process.env.WEBSOCKET_SERVER_APP_ID),
-  websocketServerAppKey: String(process.env.WEBSOCKET_SERVER_APP_KEY),
-  websocketServerAppSecret: String(process.env.WEBSOCKET_SERVER_APP_SECRET),
-  websocketServerEventMaxSizeInKb: String(process.env.WEBSOCKET_SERVER_EVENT_MAX_SIZE_IN_KB || 100),
-  websocketServerEventMaxBatchSize: String(process.env.WEBSOCKET_SERVER_EVENT_MAX_BATCH_SIZE || 10),
 
   maxParallelTokenRefreshJobs: Number(process.env.MAX_PARALLEL_TOKEN_REFRESH_JOBS || 1),
   maxParallelTokenCollectionSlugRefreshJobs: Number(
@@ -110,4 +117,6 @@ export const config = {
   doNftTransfersWrite: Boolean(Number(process.env.DO_NFT_TRANSFERS_WRITE)),
   doProcessBackfilling: Boolean(Number(process.env.DO_PROCESS_BACKFILLING)),
   doProcessRealtime: Boolean(Number(process.env.DO_PROCESS_REALTIME)),
+
+  enableDebug: Boolean(Number(process.env.ENABLE_DEBUG)),
 };

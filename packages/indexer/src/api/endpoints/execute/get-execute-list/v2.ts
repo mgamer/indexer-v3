@@ -14,13 +14,9 @@ import { regex } from "@/common/utils";
 import { config } from "@/config/index";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
 
-// LooksRare
-import * as looksRareSellToken from "@/orderbook/orders/looks-rare/build/sell/token";
-import * as looksRareCheck from "@/orderbook/orders/looks-rare/check";
-
 // Seaport
-import * as seaportSellToken from "@/orderbook/orders/seaport/build/sell/token";
-import * as seaportCheck from "@/orderbook/orders/seaport/check";
+import * as seaportSellToken from "@/orderbook/orders/seaport-v1.1/build/sell/token";
+import * as seaportCheck from "@/orderbook/orders/seaport-base/check";
 
 // X2Y2
 import * as x2y2SellToken from "@/orderbook/orders/x2y2/build/sell/token";
@@ -65,11 +61,11 @@ export const getExecuteListV2Options: RouteOptions = {
         .required()
         .description("Amount seller is willing to sell for in wei. Example: `1000000000000000000`"),
       orderKind: Joi.string()
-        .valid("looks-rare", "zeroex-v4", "seaport", "x2y2")
+        .valid("zeroex-v4", "seaport", "x2y2")
         .default("seaport")
         .description("Exchange protocol used to create order. Example: `seaport`"),
       orderbook: Joi.string()
-        .valid("opensea", "looks-rare", "reservoir", "x2y2")
+        .valid("opensea", "reservoir", "x2y2")
         .default("reservoir")
         .description("Orderbook where order is placed. Example: `Reservoir`"),
       source: Joi.string().description(
@@ -293,8 +289,9 @@ export const getExecuteListV2Options: RouteOptions = {
           let approvalTx: TxData | undefined;
 
           // Check the order's fillability
+          const exchange = new Sdk.SeaportV11.Exchange(config.chainId);
           try {
-            await seaportCheck.offChainCheck(order, { onChainApprovalRecheck: true });
+            await seaportCheck.offChainCheck(order, exchange, { onChainApprovalRecheck: true });
           } catch (error: any) {
             switch (error.message) {
               case "no-balance-no-approval":
@@ -306,7 +303,6 @@ export const getExecuteListV2Options: RouteOptions = {
               case "no-approval": {
                 // Generate an approval transaction
 
-                const exchange = new Sdk.Seaport.Exchange(config.chainId);
                 const info = order.getInfo()!;
 
                 const kind = order.params.kind?.startsWith("erc721") ? "erc721" : "erc1155";
@@ -367,106 +363,6 @@ export const getExecuteListV2Options: RouteOptions = {
           };
         }
 
-        case "looks-rare": {
-          if (!["reservoir", "looks-rare"].includes(query.orderbook)) {
-            throw Boom.badRequest("Unsupported orderbook");
-          }
-          if (query.fee) {
-            throw Boom.badRequest("LooksRare does not supported custom fees");
-          }
-
-          const order = await looksRareSellToken.build({
-            ...query,
-            contract,
-            tokenId,
-          });
-          if (!order) {
-            throw Boom.internal("Failed to generate order");
-          }
-
-          // Will be set if an approval is needed before listing
-          let approvalTx: TxData | undefined;
-
-          // Check the order's fillability
-          try {
-            await looksRareCheck.offChainCheck(order, { onChainApprovalRecheck: true });
-          } catch (error: any) {
-            switch (error.message) {
-              case "no-balance-no-approval":
-              case "no-balance": {
-                // We cannot do anything if the user doesn't own the listed token
-                throw Boom.badData("Maker does not own the listed token");
-              }
-
-              case "no-approval": {
-                const contractKind = await commonHelpers.getContractKind(contract);
-                if (!contractKind) {
-                  throw Boom.internal("Missing contract kind");
-                }
-
-                // Generate an approval transaction
-                approvalTx = (
-                  contractKind === "erc721"
-                    ? new Sdk.Common.Helpers.Erc721(baseProvider, order.params.collection)
-                    : new Sdk.Common.Helpers.Erc1155(baseProvider, order.params.collection)
-                ).approveTransaction(
-                  query.maker,
-                  contractKind === "erc721"
-                    ? Sdk.LooksRare.Addresses.TransferManagerErc721[config.chainId]
-                    : Sdk.LooksRare.Addresses.TransferManagerErc1155[config.chainId]
-                );
-
-                break;
-              }
-            }
-          }
-
-          const hasSignature = query.v && query.r && query.s;
-          return {
-            steps: [
-              {
-                ...steps[0],
-                status: approvalTx ? "incomplete" : "complete",
-                data: approvalTx,
-              },
-              {
-                ...steps[1],
-                status: hasSignature ? "complete" : "incomplete",
-                data: hasSignature ? undefined : order.getSignatureData(),
-              },
-              {
-                ...steps[2],
-                status: "incomplete",
-                data: !hasSignature
-                  ? undefined
-                  : {
-                      endpoint: "/order/v2",
-                      method: "POST",
-                      body: {
-                        order: {
-                          kind: "looks-rare",
-                          data: {
-                            ...order.params,
-                            v: query.v,
-                            r: query.r,
-                            s: query.s,
-                          },
-                        },
-                        orderbook: query.orderbook,
-                        source: query.source,
-                      },
-                    },
-              },
-            ],
-            query: {
-              ...query,
-              listingTime: order.params.startTime,
-              expirationTime: order.params.endTime,
-              nonce: order.params.nonce,
-            },
-          };
-        }
-
         case "x2y2": {
           if (!["x2y2"].includes(query.orderbook)) {
             throw Boom.badRequest("Unsupported orderbook");
@@ -490,7 +386,7 @@ export const getExecuteListV2Options: RouteOptions = {
           // Check the order's fillability
           const upstreamOrder = Sdk.X2Y2.Order.fromLocalOrder(config.chainId, order);
           try {
-            await x2y2Check.offChainCheck(upstreamOrder, {
+            await x2y2Check.offChainCheck(upstreamOrder, undefined, {
               onChainApprovalRecheck: true,
             });
           } catch (error: any) {

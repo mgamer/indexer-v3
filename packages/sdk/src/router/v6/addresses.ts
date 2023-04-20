@@ -2,83 +2,101 @@ import { ChainIdToAddress, Network } from "../../utils";
 
 // Router
 
-// V6_0_0
+// V6_0_1
 export const Router: ChainIdToAddress = {
-  [Network.Ethereum]: "0x178a86d36d89c7fdebea90b739605da7b131ff6a",
-  [Network.EthereumGoerli]: "0xb35d22a4553ab9d2b85e2a606cbae55f844df50c",
-  [Network.Polygon]: "0x819327e005a3ed85f7b634e195b8f25d4a2a45f8",
-  [Network.Optimism]: "0xc0f489a34672d5b960a19279d99d77e94221d0c9",
+  [Network.Ethereum]: "0xc2c862322e9c97d6244a3506655da95f05246fd8",
+  [Network.EthereumGoerli]: "0xc2c862322e9c97d6244a3506655da95f05246fd8",
+  [Network.Polygon]: "0xc2c862322e9c97d6244a3506655da95f05246fd8",
+  [Network.Optimism]: "0xc2c862322e9c97d6244a3506655da95f05246fd8",
+  [Network.Arbitrum]: "0xc2c862322e9c97d6244a3506655da95f05246fd8",
+};
+
+// Approval proxy
+
+export const ApprovalProxy: ChainIdToAddress = {
+  [Network.Ethereum]: "0x79ce8f93063f8be4573a58f250b003859ebb7a24",
+  [Network.EthereumGoerli]: "0x79ce8f93063f8be4573a58f250b003859ebb7a24",
+  [Network.Polygon]: "0x79ce8f93063f8be4573a58f250b003859ebb7a24",
+  [Network.Optimism]: "0x79ce8f93063f8be4573a58f250b003859ebb7a24",
+  [Network.Arbitrum]: "0x79ce8f93063f8be4573a58f250b003859ebb7a24",
 };
 
 // Utility modules
 
-export const Permit2Module: ChainIdToAddress = {
-  [Network.Ethereum]: "0x482e4d362c8a2ea19e07b7234a14084a7d740b42",
-  [Network.Polygon]: "0x5db9abb17333f6eb12386eda955d6fc779bd78f4",
-  [Network.Optimism]: "0xc10d7937a42865d9355384b884f7d694c15e7781",
-};
-
 export const SwapModule: ChainIdToAddress = {
-  [Network.Ethereum]: "0x96fefdb0a543b3e30d8aaae865b7a48378d85382",
-  [Network.Polygon]: "0xd56789e9d7513fcafbf45a0e6333f381766092d2",
-  [Network.Optimism]: "0x3d2f5a97b70ee178bc0a7ad2068406e6d62c8b52",
+  [Network.Ethereum]: "0x5cf0a457d2b6c003232184178e87c91248f73477",
+  [Network.Polygon]: "0x5cf0a457d2b6c003232184178e87c91248f73477",
+  [Network.Optimism]: "0x5cf0a457d2b6c003232184178e87c91248f73477",
+  [Network.Arbitrum]: "0x5cf0a457d2b6c003232184178e87c91248f73477",
 };
 
 // Exchange modules
 
-export const BlurModule: ChainIdToAddress = {
-  [Network.Ethereum]: "0xb1096516fc33bb64a77158b10f155846e74bd7fa",
-};
-
 export const FoundationModule: ChainIdToAddress = {
-  [Network.Ethereum]: "0x5c8a351d4ff680203e05af56cb9d748898c7b39a",
+  [Network.Ethereum]: "0x29155db9c01ac5412ad03c577d71bd9d0e90db97",
 };
 
 export const LooksRareModule: ChainIdToAddress = {
-  [Network.Ethereum]: "0x385df8cbc196f5f780367f3cdc96af072a916f7e",
-  [Network.EthereumGoerli]: "0x532486bb46581b032134159c1d31962cdab1e6a7",
+  [Network.Ethereum]: "0x71f52a45b4d79977156e410314e1cb16814dbc3b",
+  [Network.EthereumGoerli]: "0x71f52a45b4d79977156e410314e1cb16814dbc3b",
+};
+
+export const LooksRareV2Module: ChainIdToAddress = {
+  [Network.Ethereum]: "0x9561e33b68d7c21e4010f027d751d417127cc5b5",
+  [Network.EthereumGoerli]: "0x9561e33b68d7c21e4010f027d751d417127cc5b5",
 };
 
 export const SeaportModule: ChainIdToAddress = {
-  [Network.Ethereum]: "0x20794ef7693441799a3f38fcc22a12b3e04b9572",
-  [Network.EthereumGoerli]: "0x04c3af2cad3d1c037930184161ec24ba3a631129",
-  [Network.Polygon]: "0xe225afd0b78a265a60ccaeb1c1310e0016716e7b",
-  [Network.Optimism]: "0x51e59caf8980d4284707daa2267ec4cc05f48374",
+  [Network.Ethereum]: "0xd8741e5e73fbc7b30863282de5595e49359910d2",
+  [Network.EthereumGoerli]: "0xd8741e5e73fbc7b30863282de5595e49359910d2",
+  [Network.Polygon]: "0xd8741e5e73fbc7b30863282de5595e49359910d2",
+  [Network.Optimism]: "0xd8741e5e73fbc7b30863282de5595e49359910d2",
+  [Network.Arbitrum]: "0xd8741e5e73fbc7b30863282de5595e49359910d2",
 };
 
 export const SeaportV14Module: ChainIdToAddress = {
-  [Network.Ethereum]: "0xfb3f14829f15b1303d6ca677e3fae5a558e064d1",
-  [Network.EthereumGoerli]: "0x9ec973b9471fd632aee6d67e0c74855d115bdbad",
-  [Network.Polygon]: "0xe37fc9756307dc29767f7952664d9f81b00c07b6",
-  [Network.Optimism]: "0x955a3019b4662dcb68d6cc71f198faf1f64c1bf9",
+  [Network.Ethereum]: "0x07c163b007b3db7ccffef77848a766047d8ffc2d",
+  [Network.EthereumGoerli]: "0x07c163b007b3db7ccffef77848a766047d8ffc2d",
+  [Network.Polygon]: "0x07c163b007b3db7ccffef77848a766047d8ffc2d",
+  [Network.Optimism]: "0x07c163b007b3db7ccffef77848a766047d8ffc2d",
+  [Network.Arbitrum]: "0x07c163b007b3db7ccffef77848a766047d8ffc2d",
+};
+
+export const AlienswapModule: ChainIdToAddress = {
+  [Network.Ethereum]: "0xb56fa88072f5e299331cbb810d25075f6caa889c",
+  [Network.EthereumGoerli]: "0xb56fa88072f5e299331cbb810d25075f6caa889c",
 };
 
 export const SudoswapModule: ChainIdToAddress = {
-  [Network.Ethereum]: "0x79abbfdf20fc6dd0c51693bf9a481f7351a70fd2",
+  [Network.Ethereum]: "0xa97727370e2592f83602bc92975c49c4fea4491f",
 };
 
 export const X2Y2Module: ChainIdToAddress = {
-  [Network.Ethereum]: "0x613d3c588f6b8f89302b463f8f19f7241b2857e2",
-  [Network.EthereumGoerli]: "0x6a789513b2e555f9d3539bf9a053a57d2bfca426",
+  [Network.Ethereum]: "0x7562e6d5d901ece54a89530f1c8d63e7cfaeebff",
+  [Network.EthereumGoerli]: "0x7562e6d5d901ece54a89530f1c8d63e7cfaeebff",
 };
 
 export const ZeroExV4Module: ChainIdToAddress = {
-  [Network.Ethereum]: "0x8162beec776442afd262b672730bb5d0d8af16a1",
-  [Network.EthereumGoerli]: "0x29fcac61d9b2a3c55f3e1149d0278126c31abe74",
+  [Network.Ethereum]: "0xb6c0cf204d7872fff613fa090f723d9d520ede2a",
+  [Network.EthereumGoerli]: "0xb6c0cf204d7872fff613fa090f723d9d520ede2a",
 };
 
 export const ZoraModule: ChainIdToAddress = {
-  [Network.Ethereum]: "0x982b49de82a3ea5b8c42895482d9dd9bfefadf82",
+  [Network.Ethereum]: "0xace0df31b8759c97b7b06dd5db3335fc190225e0",
 };
 
 export const ElementModule: ChainIdToAddress = {
-  [Network.Ethereum]: "0xef82b43719dd13ba33ef7d93e6f0d1f690eea5b2",
+  [Network.Ethereum]: "0x5d92ac3936b6a02a684b214d2ecbc2e75fd9e0b4",
 };
 
 export const NFTXModule: ChainIdToAddress = {
-  [Network.Ethereum]: "0x27eb35119dda39df73db6681019edc4c16311acc",
+  [Network.Ethereum]: "0x716d13135f6a5bdb3fbc6beeb8dea35776d20da7",
 };
 
 export const RaribleModule: ChainIdToAddress = {
-  [Network.Ethereum]: "0xa29d7914cd525dea9afad0dceec6f49404476486",
+  [Network.Ethereum]: "0x428a6be88fc0d25778e3c3f6e09fcfdc9a526fad",
+};
+
+export const SuperRareModule: ChainIdToAddress = {
+  [Network.Ethereum]: "0x512a6a1a74f1f08aac8155605b9da8ace46b3d9c",
 };

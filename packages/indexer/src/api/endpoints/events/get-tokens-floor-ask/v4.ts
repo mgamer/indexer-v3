@@ -56,6 +56,10 @@ export const getTokensFloorAskV4Options: RouteOptions = {
         .description("If true, prices will include missing royalties to be added on-top."),
       continuation: Joi.string().pattern(regex.base64),
       limit: Joi.number().integer().min(1).max(1000).default(50),
+      displayCurrency: Joi.string()
+        .lowercase()
+        .pattern(regex.address)
+        .description("Return result in given currency"),
     }).oxor("contract", "token"),
   },
   response: {
@@ -232,7 +236,7 @@ export const getTokensFloorAskV4Options: RouteOptions = {
             : bn(0);
 
           if (r.dynamic && r.order_kind === "seaport" && r.raw_data) {
-            const order = new Sdk.Seaport.Order(config.chainId, r.raw_data);
+            const order = new Sdk.SeaportV11.Order(config.chainId, r.raw_data);
 
             // Dutch auction
             dynamicPricing = {
@@ -247,7 +251,8 @@ export const getTokensFloorAskV4Options: RouteOptions = {
                           .toString(),
                       },
                     },
-                    floorAskCurrency
+                    floorAskCurrency,
+                    query.displayCurrency
                   ),
                   end: await getJoiPriceObject(
                     {
@@ -257,7 +262,8 @@ export const getTokensFloorAskV4Options: RouteOptions = {
                           .toString(),
                       },
                     },
-                    floorAskCurrency
+                    floorAskCurrency,
+                    query.displayCurrency
                   ),
                 },
                 time: {
@@ -280,7 +286,8 @@ export const getTokensFloorAskV4Options: RouteOptions = {
                           amount: bn(price).add(missingRoyalties).toString(),
                         },
                       },
-                      floorAskCurrency
+                      floorAskCurrency,
+                      query.displayCurrency
                     )
                   )
                 ),
@@ -300,7 +307,8 @@ export const getTokensFloorAskV4Options: RouteOptions = {
                           amount: bn(price).add(missingRoyalties).toString(),
                         },
                       },
-                      floorAskCurrency
+                      floorAskCurrency,
+                      query.displayCurrency
                     )
                   )
                 ),
@@ -325,7 +333,8 @@ export const getTokensFloorAskV4Options: RouteOptions = {
                         nativeAmount: r.price,
                       },
                     },
-                    fromBuffer(r.currency)
+                    fromBuffer(r.currency),
+                    query.displayCurrency
                   )
                 : null,
               validFrom: r.price ? Number(r.valid_from) : null,

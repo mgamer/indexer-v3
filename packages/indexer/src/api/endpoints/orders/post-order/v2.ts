@@ -3,16 +3,15 @@
 import { splitSignature } from "@ethersproject/bytes";
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
-import { EventType } from "@opensea/stream-js";
 import * as Sdk from "@reservoir0x/sdk";
 import Joi from "joi";
 
 import { logger } from "@/common/logger";
 import { config } from "@/config/index";
 import * as orders from "@/orderbook/orders";
-import { handleEvent } from "@/websockets/opensea/index";
 
 import * as postOrderExternal from "@/jobs/orderbook/post-order-external";
+import * as crossPostingOrdersModel from "@/models/cross-posting-orders";
 
 const version = "v2";
 
@@ -32,16 +31,10 @@ export const postOrderV2Options: RouteOptions = {
     }),
     payload: Joi.object({
       order: Joi.object({
-        kind: Joi.string()
-          .lowercase()
-          .valid("opensea", "looks-rare", "zeroex-v4", "seaport", "seaport-partial", "x2y2")
-          .required(),
+        kind: Joi.string().lowercase().valid("opensea", "zeroex-v4", "seaport", "x2y2").required(),
         data: Joi.object().required(),
       }),
-      orderbook: Joi.string()
-        .lowercase()
-        .valid("reservoir", "opensea", "looks-rare")
-        .default("reservoir"),
+      orderbook: Joi.string().lowercase().valid("reservoir", "opensea").default("reservoir"),
       orderbookApiKey: Joi.string(),
       source: Joi.string().description("The name of the source"),
       attribute: Joi.object({
@@ -54,6 +47,20 @@ export const postOrderV2Options: RouteOptions = {
       isNonFlagged: Joi.boolean(),
     }).oxor("tokenSetId", "collection", "attribute"),
   },
+  response: {
+    schema: Joi.object({
+      message: Joi.string(),
+      orderId: Joi.string().allow(null),
+      crossPostingOrderId: Joi.string().description(
+        "Only available when posting to external orderbook. Can be used to retrieve the status of a cross-post order."
+      ),
+      crossPostingOrderStatus: Joi.string(),
+    }).label(`postOrder${version.toUpperCase()}Response`),
+    failAction: (_request, _h, error) => {
+      logger.error(`post-order-${version}-handler`, `Wrong response schema: ${error}`);
+      throw error;
+    },
+  },
   handler: async (request: Request) => {
     if (config.disableOrders) {
       throw Boom.badRequest("Order posting is disabled");
@@ -65,7 +72,7 @@ export const postOrderV2Options: RouteOptions = {
     try {
       const order = payload.order;
       const orderbook = payload.orderbook;
-      const orderbookApiKey = payload.orderbookApiKey || null;
+      const orderbookApiKey = payload.orderbookApiKey;
       const source = payload.source;
 
       // We'll always have only one of the below cases:
@@ -177,113 +184,56 @@ export const postOrderV2Options: RouteOptions = {
             throw new Error("Unsupported orderbook");
           }
 
-          const orderInfo: orders.seaport.OrderInfo = {
-            kind: "full",
-            orderParams: order.data,
-            isReservoir: orderbook === "reservoir",
-            metadata: {
-              schema,
-              source: orderbook === "reservoir" ? source : undefined,
-            },
-          };
+          let crossPostingOrder;
 
-          const [result] = await orders.seaport.save([orderInfo]);
-
-          if (result.status === "already-exists") {
-            return { message: "Success", orderId: result.id };
-          }
-
-          if (result.status !== "success") {
-            const error = Boom.badRequest(result.status);
-            error.output.payload.orderId = result.id;
-            throw error;
-          }
+          const orderId = new Sdk.SeaportV11.Order(
+            config.chainId,
+            order.data as Sdk.SeaportBase.Types.OrderComponents
+          ).hash();
 
           if (orderbook === "opensea") {
-            await postOrderExternal.addToQueue(result.id, order.data, orderbook, orderbookApiKey);
-
-            logger.info(
-              `post-order-${version}-handler`,
-              `orderbook: ${orderbook}, orderData: ${JSON.stringify(order.data)}, orderId: ${
-                result.id
-              }`
-            );
-          }
-
-          return { message: "Success", orderId: result.id };
-        }
-
-        case "seaport-partial": {
-          if (!["reservoir"].includes(orderbook)) {
-            throw new Error("Unsupported orderbook");
-          }
-
-          const orderParams = await handleEvent(
-            order.data.event_type as EventType,
-            order.data.payload
-          );
-          if (!orderParams) {
-            throw new Error("Could not parse order");
-          }
-
-          const orderInfo: orders.seaport.OrderInfo = {
-            kind: "partial",
-            orderParams,
-            metadata: {},
-          };
-
-          const [result] = await orders.seaport.save([orderInfo]);
-
-          if (result.status === "already-exists") {
-            return { message: "Success", orderId: result.id };
-          }
-
-          if (result.status !== "success") {
-            const error = Boom.badRequest(result.status);
-            error.output.payload.orderId = result.id;
-            throw error;
-          }
-
-          return { message: "Success", orderId: result.id };
-        }
-
-        case "looks-rare": {
-          if (!["looks-rare", "reservoir"].includes(orderbook)) {
-            throw new Error("Unsupported orderbook");
-          }
-
-          const orderInfo: orders.looksRare.OrderInfo = {
-            orderParams: order.data,
-            metadata: {
+            crossPostingOrder = await crossPostingOrdersModel.saveOrder({
+              orderId,
+              kind: order.kind,
+              orderbook,
+              source,
               schema,
-              source: orderbook === "reservoir" ? source : undefined,
-            },
+              rawData: order.data,
+            } as crossPostingOrdersModel.CrossPostingOrder);
+
+            await postOrderExternal.addToQueue({
+              crossPostingOrderId: crossPostingOrder.id,
+              orderId,
+              orderData: order.data,
+              orderSchema: schema,
+              orderbook,
+              orderbookApiKey,
+            });
+          } else {
+            const orderInfo: orders.seaport.OrderInfo = {
+              orderParams: order.data,
+              isReservoir: true,
+              metadata: {
+                schema,
+                source,
+              },
+            };
+
+            const [result] = await orders.seaport.save([orderInfo]);
+
+            if (!["success", "already-exists"].includes(result.status)) {
+              const error = Boom.badRequest(result.status);
+              error.output.payload.orderId = result.id;
+              throw error;
+            }
+          }
+
+          return {
+            message: "Success",
+            orderId,
+            crossPostingOrderId: crossPostingOrder?.id,
+            crossPostingOrderStatus: crossPostingOrder?.status,
           };
-
-          const [result] = await orders.looksRare.save([orderInfo]);
-
-          if (result.status === "already-exists") {
-            return { message: "Success", orderId: result.id };
-          }
-
-          if (result.status !== "success") {
-            const error = Boom.badRequest(result.status);
-            error.output.payload.orderId = result.id;
-            throw error;
-          }
-
-          if (orderbook === "looks-rare") {
-            await postOrderExternal.addToQueue(result.id, order.data, orderbook, orderbookApiKey);
-
-            logger.info(
-              `post-order-${version}-handler`,
-              `orderbook: ${orderbook}, orderData: ${JSON.stringify(order.data)}, orderId: ${
-                result.id
-              }`
-            );
-          }
-
-          return { message: "Success", orderId: result.id };
         }
 
         case "opensea": {
@@ -291,13 +241,12 @@ export const postOrderV2Options: RouteOptions = {
             throw new Error("Unsupported orderbook");
           }
 
-          const orderObject = new Sdk.Seaport.Order(config.chainId, {
+          const orderObject = new Sdk.SeaportV11.Order(config.chainId, {
             ...order.data.parameters,
             signature: order.data.signature,
           });
 
           const orderInfo: orders.seaport.OrderInfo = {
-            kind: "full",
             orderParams: orderObject.params,
             metadata: {
               schema,

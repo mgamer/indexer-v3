@@ -3,6 +3,7 @@
 import _ from "lodash";
 
 import { idb, redb } from "@/common/db";
+import { logger } from "@/common/logger";
 import { toBuffer, now } from "@/common/utils";
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 import {
@@ -11,7 +12,10 @@ import {
   CollectionsEntityUpdateParams,
 } from "@/models/collections/collections-entity";
 import { Tokens } from "@/models/tokens";
+import { updateBlurRoyalties } from "@/utils/blur";
 import MetadataApi from "@/utils/metadata-api";
+import * as marketplaceBlacklist from "@/utils/marketplace-blacklists";
+import * as marketplaceFees from "@/utils/marketplace-fees";
 import * as royalties from "@/utils/royalties";
 
 export class Collections {
@@ -85,6 +89,21 @@ export class Collections {
     const collection = await MetadataApi.getCollectionMetadata(contract, tokenId, community);
     const tokenCount = await Tokens.countTokensInCollection(collection.id);
 
+    if (collection.metadata == null) {
+      const collectionResult = await Collections.getById(collection.id);
+
+      if (collectionResult?.metadata != null) {
+        logger.error(
+          "updateCollectionCache",
+          `InvalidUpdateCollectionCache. contract=${contract}, tokenId=${tokenId}, community=${community}, collection=${JSON.stringify(
+            collection
+          )}, collectionResult=${JSON.stringify(collectionResult)}`
+        );
+
+        throw new Error("Invalid collection metadata");
+      }
+    }
+
     const query = `
       UPDATE collections SET
         metadata = $/metadata:json/,
@@ -112,6 +131,16 @@ export class Collections {
       collection.openseaRoyalties as royalties.Royalty[] | undefined
     );
     await royalties.refreshDefaultRoyalties(collection.id);
+
+    // Refresh Blur royalties (which get stored separately)
+    await updateBlurRoyalties(collection.id);
+
+    // Refresh OpenSea marketplace fees
+    const openseaFees = collection.openseaFees as royalties.Royalty[] | undefined;
+    await marketplaceFees.updateMarketplaceFeeSpec(collection.id, "opensea", openseaFees);
+
+    // Refresh any contract blacklists
+    await marketplaceBlacklist.updateMarketplaceBlacklist(collection.contract);
   }
 
   public static async update(collectionId: string, fields: CollectionsEntityUpdateParams) {
@@ -189,7 +218,7 @@ export class Collections {
           orders.source_id_int,
           orders.valid_between
         FROM tokens
-        JOIN orders
+        LEFT JOIN orders
         ON tokens.floor_sell_id = orders.id
         WHERE tokens.collection_id = $/collection/
         ORDER BY tokens.floor_sell_value
@@ -286,5 +315,16 @@ export class Collections {
         }))
       );
     }
+  }
+
+  public static async getIdsByCommunity(community: string) {
+    const query = `
+      SELECT id
+      FROM collections
+      WHERE community = $/community/
+    `;
+
+    const collectionIds = await idb.manyOrNone(query, { community });
+    return _.map(collectionIds, "id");
   }
 }

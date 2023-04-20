@@ -25,6 +25,8 @@ export type OrderInfo = {
     txTimestamp: number;
     txBlock: number;
     logIndex: number;
+    // Misc options
+    forceRecheck?: boolean;
   };
   metadata: OrderMetadata;
 };
@@ -73,18 +75,23 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         return;
       }
 
-      // Handle: fees
-      let feeBps = 0;
-      const feeBreakdown: {
-        kind: string;
-        recipient: string;
-        bps: number;
-      }[] = [];
-
       const poolFeatures = await Sdk.Nftx.Helpers.getPoolFeatures(orderParams.pool, baseProvider);
+
+      // Force recheck at most once per hour
+      const recheckCondition = orderParams.forceRecheck
+        ? `AND orders.updated_at < to_timestamp(${orderParams.txTimestamp - 3600})`
+        : `AND lower(orders.valid_between) < to_timestamp(${orderParams.txTimestamp})`;
 
       // Handle buy orders
       try {
+        // Handle: fees
+        let feeBps = 0;
+        const feeBreakdown: {
+          kind: string;
+          recipient: string;
+          bps: number;
+        }[] = [];
+
         const id = getOrderId(orderParams.pool, "buy");
 
         // Requirements for buy orders:
@@ -104,7 +111,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                 expiration = to_timestamp(${orderParams.txTimestamp}),
                 updated_at = now()
               WHERE orders.id = $/id/
-                AND lower(orders.valid_between) < to_timestamp(${orderParams.txTimestamp})
+                ${recheckCondition}
             `,
             { id }
           );
@@ -310,7 +317,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                     block_number = $/blockNumber/,
                     log_index = $/logIndex/
                   WHERE orders.id = $/id/
-                    AND lower(orders.valid_between) < to_timestamp(${orderParams.txTimestamp})
+                    ${recheckCondition}
                 `,
                 {
                   id,
@@ -344,7 +351,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                   expiration = to_timestamp(${orderParams.txTimestamp}),
                   updated_at = now()
                 WHERE orders.id = $/id/
-                  AND lower(orders.valid_between) < to_timestamp(${orderParams.txTimestamp})
+                  ${recheckCondition}
               `,
               { id }
             );
@@ -394,6 +401,14 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         // Handle: prices
         const { price, feeBps: bps } = priceList[0];
         const value = price;
+
+        // Handle: fees
+        let feeBps = 0;
+        const feeBreakdown: {
+          kind: string;
+          recipient: string;
+          bps: number;
+        }[] = [];
 
         // Handle: fees
         feeBps = Number(bps);
@@ -460,7 +475,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                         expiration = to_timestamp(${orderParams.txTimestamp}),
                         updated_at = now()
                       WHERE orders.id = $/id/
-                        AND lower(orders.valid_between) < to_timestamp(${orderParams.txTimestamp})
+                        ${recheckCondition}
                     `,
                     { id }
                   );
@@ -585,7 +600,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                           block_number = $/blockNumber/,
                           log_index = $/logIndex/
                         WHERE orders.id = $/id/
-                          AND lower(orders.valid_between) < to_timestamp(${orderParams.txTimestamp})
+                          ${recheckCondition}
                       `,
                       {
                         id,

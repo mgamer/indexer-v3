@@ -63,6 +63,9 @@ export const getOpenApiOptions: RouteOptions = {
         {
           url: "https://api-polygon.reservoir.tools",
         },
+        {
+          url: "https://api-arbitrum.reservoir.tools",
+        },
       ];
 
       data.openapi["paths"] = Object.fromEntries(
@@ -70,6 +73,9 @@ export const getOpenApiOptions: RouteOptions = {
         Object.entries(data.openapi["paths"]).sort((a: any, b: any) => {
           const aMethod = parseMethod(a[1]);
           const bMethod = parseMethod(b[1]);
+
+          aMethod["tags"] = aMethod["tags"] ? aMethod["tags"] : [];
+          bMethod["tags"] = bMethod["tags"] ? bMethod["tags"] : [];
 
           if (aMethod["tags"][0] < bMethod["tags"][0]) {
             return -1;

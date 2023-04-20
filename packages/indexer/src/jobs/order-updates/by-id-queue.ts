@@ -10,6 +10,7 @@ import { redis } from "@/common/redis";
 import { fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { TriggerKind } from "@/jobs/order-updates/types";
+import { Sources } from "@/models/sources";
 
 import * as processActivityEvent from "@/jobs/activities/process-activity-event";
 import * as collectionUpdatesTopBid from "@/jobs/collection-updates/top-bid-queue";
@@ -17,7 +18,10 @@ import * as updateNftBalanceFloorAskPriceQueue from "@/jobs/nft-balance-updates/
 import * as tokenUpdatesFloorAsk from "@/jobs/token-updates/floor-queue";
 import * as tokenUpdatesNormalizedFloorAsk from "@/jobs/token-updates/normalized-floor-queue";
 import * as handleNewBuyOrder from "@/jobs/update-attribute/handle-new-buy-order";
-import * as websocketEventsTriggerQueue from "@/jobs/websocket-events/trigger-queue";
+import {
+  WebsocketEventKind,
+  WebsocketEventRouter,
+} from "@/jobs/websocket-events/websocket-event-router";
 
 const QUEUE_NAME = "order-updates-by-id";
 
@@ -168,12 +172,12 @@ if (config.doBackgroundWork) {
                 buyOrderResult[0].attributeId
               ) {
                 //  Only trigger websocket event for non collection offers.
-                await websocketEventsTriggerQueue.addToQueue([
-                  {
-                    kind: websocketEventsTriggerQueue.EventKind.NewTopBid,
-                    data: { orderId: buyOrderResult[0].topBuyId },
+                await WebsocketEventRouter({
+                  eventKind: WebsocketEventKind.NewTopBid,
+                  eventInfo: {
+                    orderId: buyOrderResult[0].topBuyId,
                   },
-                ]);
+                });
               }
 
               for (const result of buyOrderResult) {
@@ -451,6 +455,38 @@ if (config.doBackgroundWork) {
             if (eventInfo) {
               await processActivityEvent.addToQueue([eventInfo as processActivityEvent.EventInfo]);
             }
+
+            await WebsocketEventRouter({
+              eventInfo: {
+                kind: trigger.kind,
+                orderId: order.id,
+              },
+              eventKind:
+                order.side === "sell" ? WebsocketEventKind.SellOrder : WebsocketEventKind.BuyOrder,
+            });
+          }
+        }
+
+        // Log order latency for new orders
+        if (order && order.validBetween && trigger.kind === "new-order") {
+          try {
+            const orderStart = Math.floor(
+              new Date(JSON.parse(order.validBetween)[0]).getTime() / 1000
+            );
+            const currentTime = Math.floor(Date.now() / 1000);
+            const source = (await Sources.getInstance()).get(order.sourceIdInt);
+
+            if (orderStart <= currentTime) {
+              logger.info(
+                "order-latency",
+                JSON.stringify({
+                  latency: currentTime - orderStart,
+                  source: source?.getTitle(),
+                })
+              );
+            }
+          } catch {
+            // Ignore errors
           }
         }
       } catch (error) {

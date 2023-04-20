@@ -1,5 +1,3 @@
-import { arrayify } from "@ethersproject/bytes";
-import { verifyMessage } from "@ethersproject/wallet";
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import axios from "axios";
@@ -7,14 +5,12 @@ import Joi from "joi";
 
 import { idb } from "@/common/db";
 import { logger } from "@/common/logger";
-import { fromBuffer } from "@/common/utils";
 import { config } from "@/config/index";
-import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 
 const version = "v1";
 
 export const postCancelSignatureV1Options: RouteOptions = {
-  description: "Off-chain cancel an order",
+  description: "Off-chain cancel orders",
   tags: ["api", "Misc"],
   plugins: {
     "hapi-swagger": {
@@ -26,8 +22,15 @@ export const postCancelSignatureV1Options: RouteOptions = {
       signature: Joi.string().required().description("Cancellation signature"),
     }),
     payload: Joi.object({
-      orderId: Joi.string().required().description("Id of the order to cancel"),
-      softCancel: Joi.boolean().default(false),
+      orderIds: Joi.array()
+        .items(Joi.string())
+        .min(1)
+        .required()
+        .description("Ids of the orders to cancel"),
+      orderKind: Joi.string()
+        .valid("seaport-v1.4", "alienswap")
+        .default("seaport-v1.4")
+        .description("Exchange protocol used to bulk cancel order. Example: `seaport-v1.4`"),
     }),
   },
   response: {
@@ -46,61 +49,34 @@ export const postCancelSignatureV1Options: RouteOptions = {
 
     try {
       const signature = query.signature;
-      const orderId = payload.orderId;
+      const orderIds = payload.orderIds;
+      const orderKind = payload.orderKind;
 
-      const orderResult = await idb.oneOrNone(
+      const ordersResult = await idb.manyOrNone(
         `
           SELECT
             orders.maker,
             orders.raw_data
           FROM orders
-          WHERE orders.id = $/id/
+          WHERE orders.id IN ($/ids:list/)
+          ORDER BY orders.id
         `,
-        { id: orderId }
+        { ids: orderIds }
       );
-      if (!orderResult) {
-        throw Boom.badRequest("Unknown order");
+      if (ordersResult.length !== orderIds.length) {
+        throw Boom.badRequest("Could not find all relevant orders");
       }
 
-      if (payload.softCancel) {
-        // Check signature
-        const signer = verifyMessage(arrayify(orderId), signature);
-        if (signer.toLowerCase() !== fromBuffer(orderResult.maker)) {
-          throw Boom.unauthorized("Invalid signature");
+      await axios.post(
+        `https://seaport-oracle-${
+          config.chainId === 1 ? "mainnet" : "goerli"
+        }.up.railway.app/api/cancellations`,
+        {
+          signature,
+          orders: ordersResult.map((o) => o.raw_data),
+          orderKind,
         }
-
-        // Mark the order as cancelled
-        await idb.none(
-          `
-            UPDATE orders SET
-              fillability_status = 'cancelled',
-              updated_at = now()
-            WHERE orders.id = $/id/
-          `,
-          { id: query.id }
-        );
-
-        // Update any caches
-        await orderUpdatesById.addToQueue([
-          {
-            context: `cancel-${query.id}`,
-            id: query.id,
-            trigger: {
-              kind: "cancel",
-            },
-          } as orderUpdatesById.OrderInfo,
-        ]);
-      } else {
-        await axios.post(
-          `https://seaport-oracle-${
-            config.chainId === 1 ? "mainnet" : "goerli"
-          }.up.railway.app/api/cancellations`,
-          {
-            signature,
-            orders: [orderResult.raw_data],
-          }
-        );
-      }
+      );
 
       return { message: "Success" };
     } catch (error) {

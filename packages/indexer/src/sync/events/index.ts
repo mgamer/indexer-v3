@@ -12,12 +12,14 @@ import { parseEvent } from "@/events-sync/parser";
 import * as es from "@/events-sync/storage";
 import * as syncEventsUtils from "@/events-sync/utils";
 import * as blocksModel from "@/models/blocks";
+import getUuidByString from "uuid-by-string";
 
 import * as removeUnsyncedEventsActivities from "@/jobs/activities/remove-unsynced-events-activities";
 import * as blockCheck from "@/jobs/events-sync/block-check-queue";
 import * as eventsSyncBackfillProcess from "@/jobs/events-sync/process/backfill";
 import * as eventsSyncRealtimeProcess from "@/jobs/events-sync/process/realtime";
 import { BlocksToCheck } from "@/jobs/events-sync/block-check-queue";
+import { idb } from "@/common/db";
 
 export const extractEventsBatches = async (
   enhancedEvents: EnhancedEvent[],
@@ -45,10 +47,17 @@ export const extractEventsBatches = async (
     [...txHashToEvents.entries()].map(([txHash, events]) =>
       limit(() => {
         const kindToEvents = new Map<EventKind, EnhancedEvent[]>();
+        let blockHash = "";
+
         for (const event of events) {
           if (!kindToEvents.has(event.kind)) {
             kindToEvents.set(event.kind, []);
           }
+
+          if (!blockHash) {
+            blockHash = event.baseEventParams.blockHash;
+          }
+
           kindToEvents.get(event.kind)!.push(event);
         }
 
@@ -170,16 +179,6 @@ export const extractEventsBatches = async (
             data: kindToEvents.get("universe") ?? [],
           },
           {
-            kind: "infinity",
-            data: kindToEvents.has("infinity")
-              ? [
-                  ...kindToEvents.get("infinity")!,
-                  // To properly validate bids, we need some additional events
-                  ...events.filter((e) => e.subKind === "erc20-transfer"),
-                ]
-              : [],
-          },
-          {
             kind: "rarible",
             data: kindToEvents.has("rarible")
               ? [
@@ -227,10 +226,22 @@ export const extractEventsBatches = async (
             kind: "zeroex-v2",
             data: kindToEvents.get("zeroex-v2") ?? [],
           },
+          {
+            kind: "zeroex-v3",
+            data: kindToEvents.get("zeroex-v3") ?? [],
+          },
+          {
+            kind: "treasure",
+            data: kindToEvents.get("treasure") ?? [],
+          },
+          {
+            kind: "looks-rare-v2",
+            data: kindToEvents.get("looks-rare-v2") ?? [],
+          },
         ];
 
         txHashToEventsBatch.set(txHash, {
-          id: txHash,
+          id: getUuidByString(`${txHash}:${blockHash}`),
           events: eventsByKind,
           backfill,
         });
@@ -275,9 +286,26 @@ export const syncEvents = async (
   // too inefficient to do it and in this case we just proceed (and let any further
   // processes fetch those blocks as needed / if needed).
   if (!backfill && toBlock - fromBlock + 1 <= 32) {
+    const existingBlocks = await idb.manyOrNone(
+      `
+        SELECT blocks.number
+        FROM blocks
+        WHERE blocks.number IN ($/blocks:list/)
+      `,
+      { blocks: _.range(fromBlock, toBlock + 1) }
+    );
+
+    let blocksToFetch = _.range(fromBlock, toBlock + 1);
+    if (existingBlocks) {
+      blocksToFetch = _.difference(
+        blocksToFetch,
+        existingBlocks.map((block) => block.number)
+      );
+    }
+
     const limit = pLimit(32);
     await Promise.all(
-      _.range(fromBlock, toBlock + 1).map((block) => limit(() => syncEventsUtils.fetchBlock(block)))
+      blocksToFetch.map((block) => limit(() => syncEventsUtils.fetchBlock(block, true)))
     );
   }
 
@@ -361,8 +389,12 @@ export const syncEvents = async (
 
     // Process the retrieved events asynchronously
     const eventsBatches = await extractEventsBatches(enhancedEvents, backfill);
-    const eventsSyncProcess = backfill ? eventsSyncBackfillProcess : eventsSyncRealtimeProcess;
-    await eventsSyncProcess.addToQueue(eventsBatches);
+
+    if (backfill) {
+      await eventsSyncBackfillProcess.addToQueue(eventsBatches);
+    } else {
+      await eventsSyncRealtimeProcess.addToQueue(eventsBatches, true);
+    }
 
     // Make sure to recheck the ingested blocks with a delay in order to undo any reorgs
     const ns = getNetworkSettings();
@@ -379,11 +411,13 @@ export const syncEvents = async (
       }
 
       const blocksToCheck: BlocksToCheck[] = [];
+      let blockNumbersArray = _.range(fromBlock, toBlock + 1);
 
       // Put all fetched blocks on a delayed queue
       [...blocksSet.values()].map(async (blockData) => {
         const block = Number(blockData.split("-")[0]);
         const blockHash = blockData.split("-")[1];
+        blockNumbersArray = _.difference(blockNumbersArray, [block]);
 
         ns.reorgCheckFrequency.map((frequency) =>
           blocksToCheck.push({
@@ -393,6 +427,14 @@ export const syncEvents = async (
           })
         );
       });
+
+      // Log blocks for which no logs were fetched from the RPC provider
+      if (!_.isEmpty(blockNumbersArray)) {
+        logger.warn(
+          "sync-events",
+          `[${fromBlock}, ${toBlock}] No logs fetched for ${JSON.stringify(blockNumbersArray)}`
+        );
+      }
 
       await blockCheck.addBulk(blocksToCheck);
     }

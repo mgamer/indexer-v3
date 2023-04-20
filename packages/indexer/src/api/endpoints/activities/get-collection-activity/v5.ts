@@ -16,7 +16,7 @@ const version = "v5";
 export const getCollectionActivityV5Options: RouteOptions = {
   description: "Collection activity",
   notes: "This API can be used to build a feed for a collection",
-  tags: ["api", "Activity"],
+  tags: ["api", "x-deprecated"],
   plugins: {
     "hapi-swagger": {
       order: 1,
@@ -35,6 +35,9 @@ export const getCollectionActivityV5Options: RouteOptions = {
       community: Joi.string()
         .lowercase()
         .description("Filter to a particular community. Example: `artblocks`"),
+      attributes: Joi.object()
+        .unknown()
+        .description("Filter to a particular attribute. Example: `attributes[Type]=Original`"),
       limit: Joi.number()
         .integer()
         .min(1)
@@ -71,7 +74,9 @@ export const getCollectionActivityV5Options: RouteOptions = {
             .valid(..._.values(ActivityType))
         )
         .description("Types of events returned in response. Example: 'types=sale'"),
-    }).xor("collection", "collectionsSetId", "community"),
+    })
+      .xor("collection", "collectionsSetId", "community")
+      .with("attributes", "collection"),
   },
   response: {
     schema: Joi.object({
@@ -134,6 +139,7 @@ export const getCollectionActivityV5Options: RouteOptions = {
         query.collectionsSetId,
         query.continuation,
         query.types,
+        query.attributes,
         query.limit,
         query.sortBy,
         query.includeMetadata,

@@ -14,10 +14,10 @@ const version = "v2";
 export const getExecuteCancelV2Options: RouteOptions = {
   description: "Cancel order",
   notes: "Cancel an existing order on any marketplace",
-  tags: ["api", "Router"],
+  tags: ["api", "x-deprecated"],
   plugins: {
     "hapi-swagger": {
-      order: 11,
+      deprecated: true,
     },
   },
   validate: {
@@ -25,9 +25,6 @@ export const getExecuteCancelV2Options: RouteOptions = {
       id: Joi.string()
         .required()
         .description("Order Id. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"),
-      softCancel: Joi.boolean()
-        .default(false)
-        .description("If true, the order will be soft-cancelled."),
       maxFeePerGas: Joi.string()
         .pattern(regex.number)
         .description("Optional. Set custom gas price"),
@@ -90,7 +87,7 @@ export const getExecuteCancelV2Options: RouteOptions = {
       const cancellationZone = Sdk.SeaportV14.Addresses.CancellationZone[config.chainId];
       const isOracleCancellable =
         orderResult.kind === "seaport-v1.4" && orderResult.raw_data.zone === cancellationZone;
-      if (isOracleCancellable || query.softCancel) {
+      if (isOracleCancellable) {
         return {
           steps: [
             {
@@ -102,30 +99,25 @@ export const getExecuteCancelV2Options: RouteOptions = {
                 {
                   status: "incomplete",
                   data: {
-                    sign: isOracleCancellable
-                      ? {
-                          signatureKind: "eip712",
-                          domain: {
-                            name: "SignedZone",
-                            version: "1.0.0",
-                            chainId: config.chainId,
-                            verifyingContract: cancellationZone,
-                          },
-                          types: { OrderHashes: [{ name: "orderHashes", type: "bytes32[]" }] },
-                          value: {
-                            orderHashes: [orderResult.id],
-                          },
-                        }
-                      : {
-                          signatureKind: "eip191",
-                          message: orderResult.id,
-                        },
+                    sign: {
+                      signatureKind: "eip712",
+                      domain: {
+                        name: "SignedZone",
+                        version: "1.0.0",
+                        chainId: config.chainId,
+                        verifyingContract: cancellationZone,
+                      },
+                      types: { OrderHashes: [{ name: "orderHashes", type: "bytes32[]" }] },
+                      value: {
+                        orderHashes: [orderResult.id],
+                      },
+                      primaryType: "OrderHashes",
+                    },
                     post: {
                       endpoint: "/execute/cancel-signature/v1",
                       method: "POST",
                       body: {
-                        orderId: orderResult.id,
-                        softCancel: !isOracleCancellable,
+                        orderIds: [orderResult.id],
                       },
                     },
                   },
@@ -147,8 +139,28 @@ export const getExecuteCancelV2Options: RouteOptions = {
       // REFACTOR: Move to SDK and handle X2Y2
       switch (orderResult.kind) {
         case "seaport": {
-          const order = new Sdk.Seaport.Order(config.chainId, orderResult.raw_data);
-          const exchange = new Sdk.Seaport.Exchange(config.chainId);
+          const order = new Sdk.SeaportV11.Order(config.chainId, orderResult.raw_data);
+          const exchange = new Sdk.SeaportV11.Exchange(config.chainId);
+
+          cancelTx = exchange.cancelOrderTx(maker, order);
+          orderSide = order.getInfo()!.side;
+
+          break;
+        }
+
+        case "seaport-v1.4": {
+          const order = new Sdk.SeaportV14.Order(config.chainId, orderResult.raw_data);
+          const exchange = new Sdk.SeaportV14.Exchange(config.chainId);
+
+          cancelTx = exchange.cancelOrderTx(maker, order);
+          orderSide = order.getInfo()!.side;
+
+          break;
+        }
+
+        case "alienswap": {
+          const order = new Sdk.Alienswap.Order(config.chainId, orderResult.raw_data);
+          const exchange = new Sdk.Alienswap.Exchange(config.chainId);
 
           cancelTx = exchange.cancelOrderTx(maker, order);
           orderSide = order.getInfo()!.side;
@@ -194,16 +206,6 @@ export const getExecuteCancelV2Options: RouteOptions = {
           const { side } = order.getInfo()!;
           cancelTx = await exchange.cancelOrderTx(order.params);
           orderSide = side;
-
-          break;
-        }
-
-        case "infinity": {
-          const order = new Sdk.Infinity.Order(config.chainId, orderResult.raw_data);
-          const exchange = new Sdk.Infinity.Exchange(config.chainId);
-          const nonce = order.nonce;
-          cancelTx = exchange.cancelMultipleOrdersTx(order.signer, [nonce]);
-          orderSide = order.isSellOrder ? "sell" : "buy";
 
           break;
         }

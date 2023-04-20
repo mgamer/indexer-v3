@@ -108,12 +108,16 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           txTrace = buyOrderNonceResult.txTrace;
         }
 
+        let nonceCancelEventBatchIndex = baseEventParams.batchIndex;
         if (sellOrderNonce) {
           onChainData.nonceCancelEvents.push({
             orderKind,
             maker: seller,
             nonce: sellOrderNonce,
-            baseEventParams,
+            baseEventParams: {
+              ...baseEventParams,
+              batchIndex: nonceCancelEventBatchIndex++,
+            },
           });
         }
         if (buyOrderNonce) {
@@ -121,7 +125,10 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
             orderKind,
             maker: buyer,
             nonce: buyOrderNonce,
-            baseEventParams,
+            baseEventParams: {
+              ...baseEventParams,
+              batchIndex: nonceCancelEventBatchIndex++,
+            },
           });
         }
 
@@ -161,6 +168,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
             const tokenId = bn(token.tokenId).toString();
             const numTokens = bn(token.numTokens).toString();
 
+            let fillEventBatchIndex = baseEventParams.batchIndex;
             onChainData.fillEvents.push({
               orderKind,
               orderId: sellOrderHash,
@@ -177,9 +185,11 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
               orderSourceId: attributionData.orderSource?.id,
               aggregatorSourceId: attributionData.aggregatorSource?.id,
               fillSourceId: attributionData.fillSource?.id,
-              baseEventParams,
+              baseEventParams: {
+                ...baseEventParams,
+                batchIndex: fillEventBatchIndex++,
+              },
             });
-
             onChainData.fillEvents.push({
               orderKind,
               orderId: buyOrderHash,
@@ -196,7 +206,10 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
               orderSourceId: attributionData.orderSource?.id,
               aggregatorSourceId: attributionData.aggregatorSource?.id,
               fillSourceId: attributionData.fillSource?.id,
-              baseEventParams,
+              baseEventParams: {
+                ...baseEventParams,
+                batchIndex: fillEventBatchIndex++,
+              },
             });
 
             onChainData.fillInfos.push({

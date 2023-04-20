@@ -29,6 +29,9 @@ const getNetworkConfig = (chainId?: number) => {
       case 137:
         url = `https://polygon-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`;
         break;
+      case 42161:
+        url = `https://arb-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`;
+        break;
       default:
         throw new Error("Unsupported chain id");
     }
@@ -73,6 +76,10 @@ const config: HardhatUserConfig = {
     },
     localhost: {
       url: "http://127.0.0.1:8545",
+      forking: {
+        url: networkConfig.url,
+        blockNumber: Number(process.env.BLOCK_NUMBER),
+      },
     },
     // Testnets
     goerli: getNetworkConfig(5),
@@ -80,6 +87,7 @@ const config: HardhatUserConfig = {
     mainnet: getNetworkConfig(1),
     optimism: getNetworkConfig(10),
     polygon: getNetworkConfig(137),
+    arbitrum: getNetworkConfig(42161),
   },
   etherscan: {
     apiKey: process.env.ETHERSCAN_API_KEY,

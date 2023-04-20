@@ -10,6 +10,11 @@ export const Erc721Delegate: ChainIdToAddress = {
   [Network.EthereumGoerli]: "0x095be13d86000260852e4f92ea48dc333fa35249",
 };
 
+export const Erc1155Delegate: ChainIdToAddress = {
+  [Network.Ethereum]: "0x024ac22acdb367a3ae52a3d94ac6649fdc1f0779",
+  [Network.EthereumGoerli]: "0x675b92ed07184635dea2ef6fb403875dfa09d74a",
+};
+
 export const FeeManager: ChainIdToAddress = {
   [Network.Ethereum]: "0xd823c605807cc5e6bd6fc0d7e4eea50d3e2d66cd",
   [Network.EthereumGoerli]: "0x809eed76f38d7c62461f8c5ececce3a8224c1707",
