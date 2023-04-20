@@ -88,7 +88,7 @@ export const getOrdersAsksV4Options: RouteOptions = {
         })
         .when("sortBy", {
           is: Joi.valid("updatedAt"),
-          then: Joi.valid("any", "active", "expired").default("any"),
+          then: Joi.valid("any", "active").default("any"),
           otherwise: Joi.valid("active"),
         })
         .description(
