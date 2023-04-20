@@ -81,7 +81,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
       // Check: order has a supported conduit
       if (
-        ![HashZero, Sdk.SeaportBase.Addresses.ReservoirConduitKey[config.chainId]].includes(
+        ![HashZero, Sdk.Alienswap.Addresses.AlienswapConduitKey[config.chainId]].includes(
           order.params.conduitKey
         )
       ) {
@@ -469,6 +469,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
             {
               newOrders: [order.params],
               replacedOrders: [replacedOrderResult.raw_data],
+              orderKind: "alienswap",
             }
           );
         }

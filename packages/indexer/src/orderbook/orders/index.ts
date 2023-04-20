@@ -6,7 +6,6 @@ export * as cryptopunks from "@/orderbook/orders/cryptopunks";
 export * as element from "@/orderbook/orders/element";
 export * as forward from "@/orderbook/orders/forward";
 export * as foundation from "@/orderbook/orders/foundation";
-export * as looksRare from "@/orderbook/orders/looks-rare";
 export * as seaport from "@/orderbook/orders/seaport-v1.1";
 export * as seaportV14 from "@/orderbook/orders/seaport-v1.4";
 export * as alienswap from "@/orderbook/orders/alienswap";
@@ -307,11 +306,26 @@ export const generateListingDetailsV6 = (
     }
 
     case "seaport": {
-      return {
-        kind: "seaport",
-        ...common,
-        order: new Sdk.SeaportV11.Order(config.chainId, order.rawData),
-      };
+      if (order.rawData && !order.rawData.partial) {
+        return {
+          kind: "seaport",
+          ...common,
+          order: new Sdk.SeaportV11.Order(config.chainId, order.rawData),
+        };
+      } else {
+        // Sorry for all the below `any` types
+        return {
+          // eslint-disable-next-line
+          kind: "seaport-partial" as any,
+          ...common,
+          order: {
+            contract: token.contract,
+            tokenId: token.tokenId,
+            id: order.id,
+            // eslint-disable-next-line
+          } as any,
+        };
+      }
     }
 
     case "seaport-v1.4": {
@@ -432,6 +446,7 @@ export const generateBidDetailsV6 = async (
     unitPrice: string;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     rawData: any;
+    source?: string;
     fees?: Sdk.RouterV6.Types.Fee[];
     isProtected?: boolean;
   },
@@ -448,6 +463,8 @@ export const generateBidDetailsV6 = async (
     contractKind: token.kind,
     contract: token.contract,
     tokenId: token.tokenId,
+    price: order.unitPrice,
+    source: order.source,
     amount: token.amount ?? 1,
     owner: token.owner,
     isProtected: order.isProtected,
@@ -687,9 +704,9 @@ export const generateBidDetailsV6 = async (
     }
 
     case "blur": {
-      const sdkOrder = new Sdk.Blur.Order(config.chainId, order.rawData);
+      const sdkOrder = order.rawData as Sdk.Blur.Types.BlurBidPool;
       return {
-        kind: "blur",
+        kind: "blur-bid",
         ...common,
         order: sdkOrder,
       };
@@ -750,14 +767,6 @@ export const generateListingDetailsV5 = (
         kind: "foundation",
         ...common,
         order: new Sdk.Foundation.Order(config.chainId, order.rawData),
-      };
-    }
-
-    case "looks-rare": {
-      return {
-        kind: "looks-rare",
-        ...common,
-        order: new Sdk.LooksRare.Order(config.chainId, order.rawData),
       };
     }
 
@@ -901,15 +910,6 @@ export const generateBidDetailsV5 = async (
           } as any,
         };
       }
-    }
-
-    case "looks-rare": {
-      const sdkOrder = new Sdk.LooksRare.Order(config.chainId, order.rawData);
-      return {
-        kind: "looks-rare",
-        ...common,
-        order: sdkOrder,
-      };
     }
 
     case "zeroex-v4-erc721":

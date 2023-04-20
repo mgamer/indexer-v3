@@ -14,6 +14,7 @@ import tracer from "@/common/tracer";
 import { bn, now, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { getNetworkSettings } from "@/config/network";
+import { allPlatformFeeRecipients } from "@/events-sync/handlers/royalties/config";
 import { Collections } from "@/models/collections";
 import { Sources } from "@/models/sources";
 import { SourcesEntity } from "@/models/sources/sources-entity";
@@ -26,10 +27,10 @@ import * as royalties from "@/utils/royalties";
 
 import * as refreshContractCollectionsMetadata from "@/jobs/collection-updates/refresh-contract-collections-metadata-queue";
 import * as ordersUpdateById from "@/jobs/order-updates/by-id-queue";
-import { allPlatformFeeRecipients } from "@/events-sync/handlers/royalties/config";
+import { topBidsCache } from "@/models/top-bids-caching";
+import * as orderbook from "@/jobs/orderbook/orders-queue";
 
 export type OrderInfo = {
-  kind?: "full";
   orderParams: Sdk.SeaportBase.Types.OrderComponents;
   metadata: OrderMetadata;
   isReservoir?: boolean;
@@ -144,7 +145,6 @@ export const save = async (
       // Check: order has a valid start time
       const startTime = order.params.startTime;
       if (startTime - inTheFutureThreshold >= currentTime) {
-        // TODO: Add support for not-yet-valid orders
         return results.push({
           id,
           status: "invalid-start-time",
@@ -153,10 +153,22 @@ export const save = async (
 
       // Delay the validation of the order if it's start time is very soon in the future
       if (startTime > currentTime) {
+        await orderbook.addToQueue(
+          [
+            {
+              kind: "seaport-v1.4",
+              info: { orderParams, metadata, isReservoir, isOpenSea, openSeaOrderParams },
+              validateBidValue,
+            },
+          ],
+          false,
+          startTime - currentTime + 5,
+          id
+        );
+
         return results.push({
           id,
           status: "delayed",
-          delay: startTime - currentTime + 5,
         });
       }
 
@@ -631,19 +643,33 @@ export const save = async (
         const seaportBidPercentageThreshold = 80;
 
         try {
-          const collectionFloorAskValue = await getCollectionFloorAskValue(
+          const collectionTopBidValue = await topBidsCache.getCollectionTopBidValue(
             info.contract,
             Number(tokenId)
           );
 
-          if (collectionFloorAskValue) {
-            const percentage = (Number(value.toString()) / collectionFloorAskValue) * 100;
-
-            if (percentage < seaportBidPercentageThreshold) {
+          if (collectionTopBidValue) {
+            if (Number(value.toString()) <= collectionTopBidValue) {
               return results.push({
                 id,
                 status: "bid-too-low",
               });
+            }
+          } else {
+            const collectionFloorAskValue = await getCollectionFloorAskValue(
+              info.contract,
+              Number(tokenId)
+            );
+
+            if (collectionFloorAskValue) {
+              const percentage = (Number(value.toString()) / collectionFloorAskValue) * 100;
+
+              if (percentage < seaportBidPercentageThreshold) {
+                return results.push({
+                  id,
+                  status: "bid-too-low",
+                });
+              }
             }
           }
         } catch (error) {
@@ -686,6 +712,7 @@ export const save = async (
             {
               newOrders: [order.params],
               replacedOrders: [replacedOrderResult.raw_data],
+              orderKind: "seaport-v1.4",
             }
           );
         }
