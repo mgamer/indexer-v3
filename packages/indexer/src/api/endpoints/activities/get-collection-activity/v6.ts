@@ -64,7 +64,7 @@ export const getCollectionActivityV6Options: RouteOptions = {
         .valid("eventTimestamp", "createdAt")
         .default("eventTimestamp")
         .description(
-          "Order the items are returned in the response. The blockchain event time is `eventTimestamp`. The event time recorded is `createdAt`. `Default is eventTimestamp`"
+          "Order the items are returned in the response. The blockchain event time is `eventTimestamp`. The event time recorded is `createdAt`."
         ),
       continuation: Joi.string().description(
         "Use continuation token to request next offset of items."
