@@ -27,7 +27,6 @@ import * as royalties from "@/utils/royalties";
 
 import * as refreshContractCollectionsMetadata from "@/jobs/collection-updates/refresh-contract-collections-metadata-queue";
 import * as ordersUpdateById from "@/jobs/order-updates/by-id-queue";
-import { allPlatformFeeRecipients } from "@/events-sync/handlers/royalties/config";
 import { topBidsCache } from "@/models/top-bids-caching";
 import * as orderbook from "@/jobs/orderbook/orders-queue";
 
