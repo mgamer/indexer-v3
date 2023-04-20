@@ -11,7 +11,7 @@ import fs, { createReadStream, createWriteStream } from "fs";
 import { createGzip } from "zlib";
 import AWS from "aws-sdk";
 import { logger } from "@/common/logger";
-// import jsontream from "jsonstream";
+import { EOL } from "os";
 
 export class ArchiveBidEvents {
   static tableName = "bid_events";
@@ -63,7 +63,7 @@ export class ArchiveBidEvents {
 
     const randomUuid = randomUUID();
     const filename = `${ArchiveBidEvents.tableName}-${randomUuid}.json`;
-    const filenameGzip = `${ArchiveBidEvents.tableName}-${randomUuid}.gz`;
+    const filenameGzip = `${filename}.gz`;
 
     const event = await ArchiveBidEvents.getFirstEvent();
 
@@ -77,7 +77,7 @@ export class ArchiveBidEvents {
       )}.gz`;
       const startTime = format(new Date(event.created_at), "yyyy-MM-dd HH:00:00");
       const endTime = format(add(new Date(event.created_at), { hours: 1 }), "yyyy-MM-dd HH:00:00");
-      let jsonEvents: any[] = [];
+      let jsonEventsArray: any[] = [];
       let continuation = "";
       let count = 0;
 
@@ -110,26 +110,26 @@ export class ArchiveBidEvents {
         count += _.size(events);
 
         // Construct the JSON object
-        jsonEvents = jsonEvents.concat(JSON.parse(JSON.stringify(events)));
+        jsonEventsArray = jsonEventsArray.concat(JSON.parse(JSON.stringify(events)));
         continuation = `AND created_at > '${_.last(events).created_at}' AND id > ${
           _.last(events).id
         }`;
       } while (limit === _.size(events));
 
       // Stream to JSON file
-      // const jsonStream = jsontream.stringify();
-      // jsonStream.pipe(fs.createWriteStream(filename));
-      // jsonEvents.forEach((item) => {
-      //   jsonStream.write(item);
-      // });
-      //
-      // jsonStream.end();
-      //
-      // await new Promise<void>((resolve) => {
-      //   jsonStream.on("finish", () => {
-      //     resolve();
-      //   });
-      // });
+      const writerStream = fs.createWriteStream(filename);
+
+      jsonEventsArray.forEach((item) => {
+        writerStream.write(JSON.stringify(item) + EOL);
+      });
+
+      writerStream.end();
+
+      await new Promise<void>((resolve) => {
+        writerStream.on("finish", () => {
+          resolve();
+        });
+      });
 
       // Compress the JSON file to GZIP file
       const sourceStream = createReadStream(filename);
