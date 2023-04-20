@@ -61,11 +61,6 @@ export class NewTopBidWebsocketEvent {
     );
 
     if (await NewTopBidWebsocketEvent.isRateLimited(order.token_set_id)) {
-      logger.info(
-        "new-top-bid-websocket-event",
-        `Rate limited. orderId=${data.orderId}, tokenSetId=${order.token_set_id}`
-      );
-
       return;
     }
 
