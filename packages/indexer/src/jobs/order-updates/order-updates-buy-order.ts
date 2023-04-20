@@ -45,10 +45,6 @@ if (config.doBackgroundWork) {
     async (job: Job) => {
       const { id, trigger, tokenSetId, order } = job.data as OrderInfo;
 
-      logger.info(
-        QUEUE_NAME,
-        `Processing job ${job.id} for orderId=${id}, jobData=${JSON.stringify(job.data)}`
-      );
       try {
         if (!tokenSetId) {
           logger.error(QUEUE_NAME, `No token set ID found for orderId=${id}, ${job.data}`);
