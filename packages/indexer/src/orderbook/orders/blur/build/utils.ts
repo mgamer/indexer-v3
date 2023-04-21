@@ -45,12 +45,6 @@ export const getBuildInfo = async (options: BaseOrderBuildOptions): Promise<Orde
         // The royalty bps to pay will be min(collectionRoyaltyBps, requestedRoyaltyBps)
         feeRate = Math.min(options.royaltyBps, feeRate);
       }
-
-      if (feeRate < royalties.minimumRoyaltyBps || feeRate > royalties.maximumRoyaltyBps) {
-        throw new Error(
-          `Royalty bps should be between ${royalties.minimumRoyaltyBps} and ${royalties.maximumRoyaltyBps}`
-        );
-      }
     }
   }
 
