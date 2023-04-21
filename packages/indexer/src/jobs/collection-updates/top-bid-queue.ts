@@ -121,7 +121,14 @@ if (config.doBackgroundWork) {
               WHERE orders.id = y.top_buy_id
               LIMIT 1
             ) z ON TRUE
-            RETURNING order_id, valid_until, top_buy_value, token_set_id
+            RETURNING
+              order_id,
+              coalesce(
+                nullif(date_part('epoch', upper(top_buy_valid_between)), 'Infinity'),
+                0
+              ) AS valid_until,
+              top_buy_value,
+              token_set_id
           `,
           {
             kind,
