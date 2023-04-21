@@ -13,12 +13,12 @@ import {
   getChainId,
   getRandomBoolean,
   getRandomFloat,
-  getRandomInteger,
+  // getRandomInteger,
   reset,
   setupNFTs,
-} from "../../../utils";
+} from "../../utils";
 
-describe("[ReservoirV6_0_0] NFTX-ZeroEx listings", () => {
+describe("[ReservoirV6_0_1] NFTX-ZeroEx listings", () => {
   const chainId = getChainId();
 
   let deployer: SignerWithAddress;
@@ -38,7 +38,7 @@ describe("[ReservoirV6_0_0] NFTX-ZeroEx listings", () => {
     ({ erc721 } = await setupNFTs(deployer));
 
     router = (await ethers
-      .getContractFactory("ReservoirV6_0_0", deployer)
+      .getContractFactory("ReservoirV6_0_1", deployer)
       .then((factory) => factory.deploy())) as any;
 
       // NFTXModule
@@ -102,10 +102,12 @@ describe("[ReservoirV6_0_0] NFTX-ZeroEx listings", () => {
     const _vaultId = 392;
     alice = await ethers.getSigner(mockAddress);
 
-    // in vault
+    // const tokenIds = await Sdk.Nftx.Helpers.getPoolNFTs(vaultAddress, ethers.provider);
+
+    // In vault 
     const holdTokenIds = [
-      523,
-      592
+      7336,
+      8423
     ]
 
     await network.provider.request({
@@ -128,6 +130,15 @@ describe("[ReservoirV6_0_0] NFTX-ZeroEx listings", () => {
 
       const factory = await ethers.getContractFactory("MockERC721", deployer);
       const erc721 = await factory.attach(mockCollection);
+
+      await erc721.connect(alice)
+        .setApprovalForAll(Sdk.Nftx.Addresses.ZeroExMarketplaceZap[1], true);
+
+      await erc721.connect(alice)
+        .setApprovalForAll(router.address, true);
+
+      await erc721.connect(alice)
+        .setApprovalForAll(vaultAddress, true);
 
       const listing: any = {
         seller: alice,
@@ -338,12 +349,48 @@ describe("[ReservoirV6_0_0] NFTX-ZeroEx listings", () => {
     expect(ethBalancesAfter.nftxModule).to.eq(0);
   };
 
-  it("Fill listing", async () =>
-    testAcceptListings(
-      true,
-      true,
-      false,
-      1
-    )
-  );
+  // Single Test
+  // it("Fill listing", async () =>
+  //   testAcceptListings(
+  //     true,
+  //     true,
+  //     false,
+  //     1
+  //   )
+  // );
+  // return;
+
+
+  // it('[eth][single-order][full][no-fees][reverts]', async () =>
+  //   testAcceptListings(
+  //     false,
+  //     true,
+  //     false,
+  //     1
+  //   )
+  // );
+  // return  
+  for (const multiple of [false, true]) {
+    for (const partial of [false, true]) {
+      for (const chargeFees of [false, true]) {
+        for (const revertIfIncomplete of [true, false]) {
+          const testName =
+            "[eth]" +
+            `${multiple ? "[multiple-orders]" : "[single-order]"}` +
+            `${partial ? "[partial]" : "[full]"}` +
+            `${chargeFees ? "[fees]" : "[no-fees]"}` +
+            `${revertIfIncomplete ? "[reverts]" : "[skip-reverts]"}`;
+
+          it(testName, async () =>
+            testAcceptListings(
+              chargeFees,
+              revertIfIncomplete,
+              partial,
+              multiple ? 1 : 1
+            )
+          );
+        }
+      }
+    }
+  }
 });

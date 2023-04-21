@@ -171,7 +171,7 @@ export const getPoolNFTs = async (vault: string, provider: Provider) => {
     holdingNFTs.forEach((c: BigNumber) => {
       tokenIds.push(c.toString());
     });
-  } catch {
+  } catch (err) {
     // Skip errors
   }
 

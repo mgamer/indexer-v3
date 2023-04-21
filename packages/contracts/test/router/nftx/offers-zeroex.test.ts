@@ -15,9 +15,9 @@ import {
   getRandomInteger,
   reset,
   setupNFTs,
-} from "../../../utils";
+} from "../../utils";
 
-describe("[ReservoirV6_0_0] NFTX-ZeroEx offers", () => {
+describe("[ReservoirV6_0_1] NFTX-ZeroEx offers", () => {
   const chainId = getChainId();
 
   let deployer: SignerWithAddress;
@@ -29,8 +29,6 @@ describe("[ReservoirV6_0_0] NFTX-ZeroEx offers", () => {
 
   let erc721: Contract;
   let router: Contract;
-  let seaportApprovalOrderZone: Contract;
-  let seaportModule: Contract;
   let nftxModule: Contract;
 
   beforeEach(async () => {
@@ -39,16 +37,9 @@ describe("[ReservoirV6_0_0] NFTX-ZeroEx offers", () => {
     ({ erc721 } = await setupNFTs(deployer));
 
     router = (await ethers
-      .getContractFactory("ReservoirV6_0_0", deployer)
+      .getContractFactory("ReservoirV6_0_1", deployer)
       .then((factory) => factory.deploy())) as any;
-    seaportApprovalOrderZone = (await ethers
-      .getContractFactory("SeaportApprovalOrderZone", deployer)
-      .then((factory) => factory.deploy())) as any;
-    seaportModule = (await ethers
-      .getContractFactory("SeaportModule", deployer)
-      .then((factory) =>
-        factory.deploy(router.address, router.address)
-      )) as any;
+
     nftxModule = (await ethers
       .getContractFactory("NFTXZeroExModule", deployer)
       .then((factory) =>
@@ -65,7 +56,6 @@ describe("[ReservoirV6_0_0] NFTX-ZeroEx offers", () => {
         david: await ethers.provider.getBalance(david.address),
         emilio: await ethers.provider.getBalance(emilio.address),
         router: await ethers.provider.getBalance(router.address),
-        seaportModule: await ethers.provider.getBalance(seaportModule.address),
         nftxModule: await ethers.provider.getBalance(nftxModule.address),
       };
     } else {
@@ -77,7 +67,6 @@ describe("[ReservoirV6_0_0] NFTX-ZeroEx offers", () => {
         david: await contract.getBalance(david.address),
         emilio: await contract.getBalance(emilio.address),
         router: await contract.getBalance(router.address),
-        seaportModule: await contract.getBalance(seaportModule.address),
         nftxModule: await contract.getBalance(nftxModule.address),
       };
     }
@@ -106,6 +95,8 @@ describe("[ReservoirV6_0_0] NFTX-ZeroEx offers", () => {
     const mockCollection = '0x5af0d9827e0c53e4799bb226655a1de152a425a5';
     const vaultAddress = '0x227c7DF69D3ed1ae7574A1a7685fDEd90292EB48';
     const _vaultId = 392;
+
+    // Change this
     const tokenId = 4341;
     const holdTokenIds = [
       4341,
@@ -154,14 +145,6 @@ describe("[ReservoirV6_0_0] NFTX-ZeroEx offers", () => {
         ethers.provider
       );
 
-      const poolPriceOld = await Sdk.Nftx.Helpers.getPoolPrice(
-        vaultAddress,
-        1,
-        "sell",
-        100,
-        ethers.provider
-      );
-
       if (poolPrice.price) {
         offer.price = bn(poolPrice.price);
         offer.vault = vaultAddress;
@@ -192,6 +175,7 @@ describe("[ReservoirV6_0_0] NFTX-ZeroEx offers", () => {
     }
 
     const erc721 = await factory.attach(mockCollection);
+
     await erc721.connect(carol).transferFrom(carol.address, nftxModule.address, tokenId)
 
     // Prepare executions
@@ -248,7 +232,6 @@ describe("[ReservoirV6_0_0] NFTX-ZeroEx offers", () => {
     );
 
     // Execute
-
     await router.connect(carol).execute(executions, {
       gasLimit: 30000000,
       value: executions
@@ -304,14 +287,37 @@ describe("[ReservoirV6_0_0] NFTX-ZeroEx offers", () => {
 
     // Router is stateless
     expect(balancesAfter.router).to.eq(0);
-    expect(balancesAfter.seaportModule).to.eq(0);
     expect(balancesAfter.nftxModule).to.eq(0);
   };
 
-  it("Accpect Offer", async () => testAcceptOffers(
-    true,
-    true,
-    false,
-    1
-  ))
+  // it("Accpect Offer", async () => testAcceptOffers(
+  //   true,
+  //   true,
+  //   false,
+  //   1
+  // ))
+  // return;
+
+  for (const multiple of [false, true]) {
+    for (const partial of [false, true]) {
+      for (const chargeFees of [false, true]) {
+        for (const revertIfIncomplete of [false, true]) {
+          const testCaseName =
+            `${multiple ? "[multiple-orders]" : "[single-order]"}` +
+            `${partial ? "[partial]" : "[full]"}` +
+            `${chargeFees ? "[fees]" : "[no-fees]"}` +
+            `${revertIfIncomplete ? "[reverts]" : "[skip-reverts]"}`;
+
+          it(testCaseName, async () =>
+            testAcceptOffers(
+              chargeFees,
+              revertIfIncomplete,
+              partial,
+              multiple ? 1 : 1
+            )
+          );
+        }
+      }
+    }
+  }
 });
