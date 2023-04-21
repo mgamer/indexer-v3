@@ -124,10 +124,10 @@ if (config.doBackgroundWork) {
             RETURNING
               order_id,
               coalesce(
-                nullif(date_part('epoch', upper(y.top_buy_valid_between)), 'Infinity'),
+                nullif(date_part('epoch', upper(order_valid_between)), 'Infinity'),
                 0
               ) AS valid_until,
-              top_buy_value,
+              price AS top_buy_value,
               token_set_id
           `,
           {
