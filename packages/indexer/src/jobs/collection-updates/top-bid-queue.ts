@@ -107,10 +107,6 @@ if (config.doBackgroundWork) {
               y.top_buy_id,
               y.top_buy_source_id_int,
               y.top_buy_valid_between,
-              coalesce(
-                nullif(date_part('epoch', upper(y.top_buy_valid_between)), 'Infinity'),
-                0
-              ) AS valid_until,
               y.top_buy_maker,
               y.top_buy_value,
               y.old_top_buy_value,
