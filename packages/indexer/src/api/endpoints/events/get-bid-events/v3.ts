@@ -54,7 +54,7 @@ export const getBidEventsV3Options: RouteOptions = {
         .min(1)
         .max(1000)
         .default(50)
-        .description("Amount of items returned in response."),
+        .description("Amount of items returned in response. Max limit is 1000."),
       normalizeRoyalties: Joi.boolean()
         .default(false)
         .description("If true, prices will include missing royalties to be added on-top."),
