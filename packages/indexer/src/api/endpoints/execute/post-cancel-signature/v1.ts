@@ -27,6 +27,10 @@ export const postCancelSignatureV1Options: RouteOptions = {
         .min(1)
         .required()
         .description("Ids of the orders to cancel"),
+      orderKind: Joi.string()
+        .valid("seaport-v1.4", "alienswap")
+        .default("seaport-v1.4")
+        .description("Exchange protocol used to bulk cancel order. Example: `seaport-v1.4`"),
     }),
   },
   response: {
@@ -46,6 +50,7 @@ export const postCancelSignatureV1Options: RouteOptions = {
     try {
       const signature = query.signature;
       const orderIds = payload.orderIds;
+      const orderKind = payload.orderKind;
 
       const ordersResult = await idb.manyOrNone(
         `
@@ -62,17 +67,27 @@ export const postCancelSignatureV1Options: RouteOptions = {
         throw Boom.badRequest("Could not find all relevant orders");
       }
 
-      await axios.post(
-        `https://seaport-oracle-${
-          config.chainId === 1 ? "mainnet" : "goerli"
-        }.up.railway.app/api/cancellations`,
-        {
-          signature,
-          orders: ordersResult.map((o) => o.raw_data),
-        }
-      );
+      try {
+        await axios.post(
+          `https://seaport-oracle-${
+            config.chainId === 1 ? "mainnet" : "goerli"
+          }.up.railway.app/api/cancellations`,
+          {
+            signature,
+            orders: ordersResult.map((o) => o.raw_data),
+            orderKind,
+          }
+        );
 
-      return { message: "Success" };
+        return { message: "Success" };
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } catch (error: any) {
+        if (error.response?.data) {
+          throw Boom.badRequest(error.response.data.message);
+        }
+
+        throw Boom.badRequest("Cancellation failed");
+      }
     } catch (error) {
       logger.error(`post-cancel-signature-${version}-handler`, `Handler failure: ${error}`);
       throw error;

@@ -4,12 +4,14 @@ import axios from "axios";
 import { logger } from "@/common/logger";
 import { now } from "@/common/utils";
 import { config } from "@/config/index";
+import { getOpenseaBaseUrl, getOpenseaNetworkName, getOpenseaSubDomain } from "@/config/network";
 import {
   RequestWasThrottledError,
   InvalidRequestError,
   InvalidRequestErrorKind,
 } from "@/jobs/orderbook/post-order-external/api/errors";
-import { getOpenseaBaseUrl, getOpenseaNetworkName, getOpenseaSubDomain } from "@/config/network";
+
+import * as orderbook from "@/jobs/orderbook/orders-queue";
 
 // Open Sea default rate limit - 2 requests per second for post apis
 export const RATE_LIMIT_REQUEST_COUNT = 2;
@@ -63,6 +65,17 @@ export const postOrder = async (order: Sdk.SeaportV14.Order, apiKey: string) => 
 
       throw new Error(`Failed to post order to OpenSea`);
     });
+
+  // If the cross-posting was successful, save the order directly
+  await orderbook.addToQueue([
+    {
+      kind: "seaport-v1.4",
+      info: {
+        orderParams: order.params,
+        metadata: {},
+      },
+    },
+  ]);
 };
 
 export const buildCollectionOffer = async (
@@ -323,13 +336,6 @@ const handleErrorResponse = (response: any) => {
         "You have not provided all required creator fees",
         "You have provided fees that we cannot attribute to OpenSea or the collection",
       ];
-
-      logger.info(
-        "opensea-orderbook-api",
-        `handleErrorResponse. error=${error}, message=${message}, invalidFeeErrors=${JSON.stringify(
-          invalidFeeErrors
-        )}`
-      );
 
       for (const invalidFeeError of invalidFeeErrors) {
         if (error.startsWith(invalidFeeError)) {

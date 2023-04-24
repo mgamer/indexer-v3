@@ -56,8 +56,7 @@ if (config.doBackgroundWork) {
         // Revalidate
         await orderFixes.addToQueue([{ by: "id", data: { id: floorAsk.id } }]);
 
-        // Simulate - temporarily paused
-        /*
+        // Simulate
         await inject({
           method: "POST",
           url: `/management/orders/simulate/v1`,
@@ -68,7 +67,6 @@ if (config.doBackgroundWork) {
             id: floorAsk.id,
           },
         });
-        */
       }
 
       // Top bid simulation is very costly so we only do it if explicitly requested

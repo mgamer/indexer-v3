@@ -10,6 +10,7 @@ import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { bn, formatEth, regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
+import { ApiKeyManager } from "@/models/api-keys";
 import { Sources } from "@/models/sources";
 import { generateBidDetailsV6 } from "@/orderbook/orders";
 import { getNftApproval } from "@/orderbook/orders/common/helpers";
@@ -212,6 +213,7 @@ export const getExecuteSellV5Options: RouteOptions = {
 
       const sources = await Sources.getInstance();
       const sourceId = orderResult.source_id_int;
+      const source = sourceId ? sources.get(sourceId)?.domain ?? null : null;
 
       const path = [
         {
@@ -219,7 +221,7 @@ export const getExecuteSellV5Options: RouteOptions = {
           contract,
           tokenId,
           quantity: payload.quantity ?? 1,
-          source: sourceId ? sources.get(sourceId)?.domain ?? null : null,
+          source,
           // TODO: Add support for multiple currencies
           currency: Sdk.Common.Addresses.Weth[config.chainId],
           quote: formatEth(orderResult.price),
@@ -232,6 +234,7 @@ export const getExecuteSellV5Options: RouteOptions = {
           kind: orderResult.kind,
           unitPrice: orderResult.price,
           rawData: orderResult.raw_data,
+          source: source || undefined,
         },
         {
           kind: orderResult.token_kind,
@@ -250,8 +253,11 @@ export const getExecuteSellV5Options: RouteOptions = {
         x2y2ApiKey: payload.x2y2ApiKey ?? config.x2y2ApiKey,
         cbApiKey: config.cbApiKey,
         orderFetcherBaseUrl: config.orderFetcherBaseUrl,
+        orderFetcherMetadata: {
+          apiKey: await ApiKeyManager.getApiKey(request.headers["x-api-key"]),
+        },
       });
-      const { txData } = await router.fillBidsTx([bidDetails!], payload.taker, {
+      const { txs } = await router.fillBidsTx([bidDetails!], payload.taker, {
         source: payload.source,
       });
 
@@ -280,39 +286,7 @@ export const getExecuteSellV5Options: RouteOptions = {
         },
       ];
 
-      // Forward / Rarible bids are to be filled directly (because we have no modules for them yet)
-      if (bidDetails.kind === "forward") {
-        const isApproved = await getNftApproval(
-          bidDetails.contract,
-          payload.taker,
-          Sdk.Forward.Addresses.Exchange[config.chainId]
-        );
-        if (!isApproved) {
-          const approveTx =
-            bidDetails.contractKind === "erc721"
-              ? new Sdk.Common.Helpers.Erc721(baseProvider, bidDetails.contract).approveTransaction(
-                  payload.taker,
-                  Sdk.Forward.Addresses.Exchange[config.chainId]
-                )
-              : new Sdk.Common.Helpers.Erc1155(
-                  baseProvider,
-                  bidDetails.contract
-                ).approveTransaction(payload.taker, Sdk.Forward.Addresses.Exchange[config.chainId]);
-
-          steps[0].items.push({
-            status: "incomplete",
-            data: {
-              ...approveTx,
-              maxFeePerGas: payload.maxFeePerGas
-                ? bn(payload.maxFeePerGas).toHexString()
-                : undefined,
-              maxPriorityFeePerGas: payload.maxPriorityFeePerGas
-                ? bn(payload.maxPriorityFeePerGas).toHexString()
-                : undefined,
-            },
-          });
-        }
-      }
+      // Rarible bids are to be filled directly (because we have no modules for them yet)
       if (bidDetails.kind === "rarible") {
         const isApproved = await getNftApproval(
           bidDetails.contract,
@@ -353,7 +327,7 @@ export const getExecuteSellV5Options: RouteOptions = {
       steps[1].items.push({
         status: "incomplete",
         data: {
-          ...txData,
+          ...txs[0].txData,
           maxFeePerGas: payload.maxFeePerGas ? bn(payload.maxFeePerGas).toHexString() : undefined,
           maxPriorityFeePerGas: payload.maxPriorityFeePerGas
             ? bn(payload.maxPriorityFeePerGas).toHexString()

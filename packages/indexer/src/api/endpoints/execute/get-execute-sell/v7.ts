@@ -1,22 +1,28 @@
 import { BigNumber } from "@ethersproject/bignumber";
+import { parseEther } from "@ethersproject/units";
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
 import { BidDetails, FillBidsResult } from "@reservoir0x/sdk/dist/router/v6/types";
+import { TxData } from "@reservoir0x/sdk/src/utils";
+import axios from "axios";
+import _ from "lodash";
 import Joi from "joi";
 
 import { inject } from "@/api/index";
 import { idb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
-import { bn, formatPrice, fromBuffer, regex, toBuffer } from "@/common/utils";
+import { bn, formatPrice, fromBuffer, now, regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { getNetworkSettings } from "@/config/network";
+import { ApiKeyManager } from "@/models/api-keys";
 import { Sources } from "@/models/sources";
 import { OrderKind, generateBidDetailsV6, routerOnRecoverableError } from "@/orderbook/orders";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import * as nftx from "@/orderbook/orders/nftx";
 import * as sudoswap from "@/orderbook/orders/sudoswap";
+import * as b from "@/utils/auth/blur";
 import { getCurrency } from "@/utils/currencies";
 import { tryGetTokensSuspiciousStatus } from "@/utils/opensea";
 
@@ -91,6 +97,11 @@ export const getExecuteSellV7Options: RouteOptions = {
         .default(false)
         .description("If true, only the filling path will be returned."),
       normalizeRoyalties: Joi.boolean().default(false).description("Charge any missing royalties."),
+      excludeEOA: Joi.boolean()
+        .default(false)
+        .description(
+          "Exclude orders that can only be filled by EOAs, to support filling with smart contracts."
+        ),
       allowInactiveOrderIds: Joi.boolean()
         .default(false)
         .description(
@@ -99,13 +110,20 @@ export const getExecuteSellV7Options: RouteOptions = {
       partial: Joi.boolean()
         .default(false)
         .description("If true, any off-chain or on-chain errors will be skipped."),
+      forceRouter: Joi.boolean()
+        .default(false)
+        .description(
+          "If true, filling will be forced to use the common 'approval + transfer' method instead of the approval-less 'on-received hook' method"
+        ),
       maxFeePerGas: Joi.string().pattern(regex.number).description("Optional custom gas settings."),
       maxPriorityFeePerGas: Joi.string()
         .pattern(regex.number)
         .description("Optional custom gas settings."),
       // Various authorization keys
       x2y2ApiKey: Joi.string().description("Optional X2Y2 API key used for filling."),
-      openseaApiKey: Joi.string().description("Optional OpenSea API key used for filling."),
+      openseaApiKey: Joi.string().description(
+        "Optional OpenSea API key used for filling. You don't need to pass your own key, but if you don't, you are more likely to be rate-limited."
+      ),
     }),
   },
   response: {
@@ -120,6 +138,7 @@ export const getExecuteSellV7Options: RouteOptions = {
             .items(
               Joi.object({
                 status: Joi.string().valid("complete", "incomplete").required(),
+                tip: Joi.string(),
                 data: Joi.object(),
               })
             )
@@ -206,11 +225,23 @@ export const getExecuteSellV7Options: RouteOptions = {
           .reduce((a, b) => a.add(b), bn(0));
 
         // Handle dynamically-priced orders
-        if (["sudoswap", "nftx"].includes(order.kind)) {
+        if (["blur", "sudoswap", "nftx"].includes(order.kind)) {
+          // TODO: Handle the case when the next best-priced order in the database
+          // has a better price than the current dynamically-priced order (because
+          // of a quantity > 1 being filled on this current order).
+
           let poolId: string;
           let priceList: string[];
 
-          if (order.kind === "sudoswap") {
+          if (order.kind === "blur") {
+            const rawData = order.rawData as Sdk.Blur.Types.BlurBidPool;
+            poolId = rawData.collection;
+            priceList = rawData.pricePoints
+              .map((pp) =>
+                Array.from({ length: pp.executableSize }, () => parseEther(pp.price).toString())
+              )
+              .flat();
+          } else if (order.kind === "sudoswap") {
             const rawData = order.rawData as Sdk.Sudoswap.OrderParams;
             poolId = rawData.pair;
             priceList = rawData.extra.prices;
@@ -247,13 +278,15 @@ export const getExecuteSellV7Options: RouteOptions = {
         }
         makerBalances[key] = makerBalances[key].sub(price);
 
+        const source = order.sourceId !== null ? sources.get(order.sourceId)?.domain ?? null : null;
+
         const netPrice = price.sub(price.mul(order.builtInFeeBps).div(10000)).sub(totalFeeOnTop);
         path.push({
           orderId: order.id,
           contract: token.contract,
           tokenId: token.tokenId,
           quantity,
-          source: order.sourceId !== null ? sources.get(order.sourceId)?.domain ?? null : null,
+          source,
           currency: order.currency,
           quote: formatPrice(netPrice, (await getCurrency(order.currency)).decimals, true),
           rawQuote: netPrice.toString(),
@@ -266,6 +299,7 @@ export const getExecuteSellV7Options: RouteOptions = {
               kind: order.kind,
               unitPrice: order.price,
               rawData: order.rawData,
+              source: source || undefined,
               fees: feesOnTop,
               isProtected:
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -501,6 +535,7 @@ export const getExecuteSellV7Options: RouteOptions = {
                 AND orders.maker != $/taker/
                 AND (orders.taker = '\\x0000000000000000000000000000000000000000' OR orders.taker IS NULL)
                 ${payload.normalizeRoyalties ? " AND orders.normalized_value IS NOT NULL" : ""}
+                ${payload.excludeEOA ? " AND orders.kind != 'blur'" : ""}
                 ${item.exactOrderSource ? " AND orders.source_id_int = $/sourceId/" : ""}
               ORDER BY ${
                 payload.normalizeRoyalties ? "orders.normalized_value" : "orders.value"
@@ -644,9 +679,17 @@ export const getExecuteSellV7Options: RouteOptions = {
         kind: string;
         items: {
           status: string;
+          tip?: string;
           data?: object;
         }[];
       }[] = [
+        {
+          id: "auth",
+          action: "Sign in to Blur",
+          description: "Some marketplaces require signing an auth message before filling",
+          kind: "signature",
+          items: [],
+        },
         {
           id: "nft-approval",
           action: "Approve NFT contract",
@@ -663,6 +706,121 @@ export const getExecuteSellV7Options: RouteOptions = {
           items: [],
         },
       ];
+
+      // Custom gas settings
+      const maxFeePerGas = payload.maxFeePerGas
+        ? bn(payload.maxFeePerGas).toHexString()
+        : undefined;
+      const maxPriorityFeePerGas = payload.maxPriorityFeePerGas
+        ? bn(payload.maxPriorityFeePerGas).toHexString()
+        : undefined;
+
+      // Handle Blur authentication
+      let blurAuth: b.Auth | undefined;
+      if (path.some((p) => p.source === "blur.io")) {
+        const missingApprovals: TxData[] = [];
+
+        const contracts = _.uniqBy(path, (p) => p.contract).map((p) => p.contract);
+        for (const contract of contracts) {
+          const operator = Sdk.Blur.Addresses.ExecutionDelegate[config.chainId];
+          const isApproved = await commonHelpers.getNftApproval(contract, payload.taker, operator);
+          if (!isApproved) {
+            missingApprovals.push({
+              maxFeePerGas,
+              maxPriorityFeePerGas,
+              ...new Sdk.Common.Helpers.Erc721(baseProvider, contract).approveTransaction(
+                payload.taker,
+                operator
+              ),
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            } as any);
+          }
+        }
+
+        if (payload.blurAuth) {
+          blurAuth = { accessToken: payload.blurAuth };
+        } else {
+          const blurAuthId = b.getAuthId(payload.taker);
+
+          blurAuth = await b.getAuth(blurAuthId);
+          if (!blurAuth) {
+            const blurAuthChallengeId = b.getAuthChallengeId(payload.taker);
+
+            let blurAuthChallenge = await b.getAuthChallenge(blurAuthChallengeId);
+            if (!blurAuthChallenge) {
+              blurAuthChallenge = (await axios
+                .get(`${config.orderFetcherBaseUrl}/api/blur-auth-challenge?taker=${payload.taker}`)
+                .then((response) => response.data.authChallenge)) as b.AuthChallenge;
+
+              await b.saveAuthChallenge(
+                blurAuthChallengeId,
+                blurAuthChallenge,
+                // Give a 1 minute buffer for the auth challenge to expire
+                Math.floor(new Date(blurAuthChallenge?.expiresOn).getTime() / 1000) - now() - 60
+              );
+            }
+
+            steps[0].items.push({
+              status: "incomplete",
+              data: {
+                sign: {
+                  signatureKind: "eip191",
+                  message: blurAuthChallenge.message,
+                },
+                post: {
+                  endpoint: "/execute/auth-signature/v1",
+                  method: "POST",
+                  body: {
+                    kind: "blur",
+                    id: blurAuthChallengeId,
+                  },
+                },
+              },
+            });
+
+            // Force the client to poll
+            steps[1].items.push({
+              status: "incomplete",
+              tip: "This step is dependent on a previous step. Once you've completed it, re-call the API to get the data for this step.",
+            });
+
+            // Return an early since any next steps are dependent on the Blur auth
+            return {
+              steps,
+              path,
+            };
+          }
+        }
+
+        steps[0].items.push({
+          status: "complete",
+        });
+
+        if (missingApprovals.length) {
+          for (const approval of missingApprovals) {
+            steps[1].items.push({
+              status: "incomplete",
+              data: {
+                ...approval,
+                maxFeePerGas,
+                maxPriorityFeePerGas,
+              },
+            });
+          }
+
+          // Force the client to poll
+          steps[2].items.push({
+            status: "incomplete",
+            tip: "This step is dependent on a previous step. Once you've completed it, re-call the API to get the data for this step.",
+          });
+
+          // Return an early since any next steps are dependent on the approvals
+          return {
+            steps,
+            path,
+          };
+        }
+      }
 
       const protectedOffers = bidDetails.filter((d) => d.isProtected);
       if (protectedOffers.length > 1) {
@@ -702,10 +860,14 @@ export const getExecuteSellV7Options: RouteOptions = {
         openseaApiKey: payload.openseaApiKey,
         cbApiKey: config.cbApiKey,
         orderFetcherBaseUrl: config.orderFetcherBaseUrl,
+        orderFetcherMetadata: {
+          apiKey: await ApiKeyManager.getApiKey(request.headers["x-api-key"]),
+        },
       });
 
       const { customTokenAddresses } = getNetworkSettings();
-      const forceApprovalProxy = customTokenAddresses.includes(bidDetails[0].contract);
+      const forceApprovalProxy =
+        payload.forceRouter || customTokenAddresses.includes(bidDetails[0].contract);
 
       const errors: { orderId: string; message: string }[] = [];
 
@@ -722,6 +884,7 @@ export const getExecuteSellV7Options: RouteOptions = {
             });
             await routerOnRecoverableError(kind, error, data);
           },
+          blurAuth,
         });
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (error: any) {
@@ -730,23 +893,16 @@ export const getExecuteSellV7Options: RouteOptions = {
         throw boomError;
       }
 
-      const { txData, approvals, success } = result;
+      const { txs, success } = result;
 
       // Filter out any non-fillable orders from the path
-      path = path.filter((_, i) => success[i]);
+      path = path.filter((p) => success[p.orderId]);
 
       if (!path.length) {
         throw Boom.badRequest("No available orders");
       }
 
-      // Custom gas settings
-      const maxFeePerGas = payload.maxFeePerGas
-        ? bn(payload.maxFeePerGas).toHexString()
-        : undefined;
-      const maxPriorityFeePerGas = payload.maxPriorityFeePerGas
-        ? bn(payload.maxPriorityFeePerGas).toHexString()
-        : undefined;
-
+      const approvals = txs.map(({ approvals }) => approvals).flat();
       for (const approval of approvals) {
         const isApproved = await commonHelpers.getNftApproval(
           approval.contract,
@@ -754,7 +910,7 @@ export const getExecuteSellV7Options: RouteOptions = {
           approval.operator
         );
         if (!isApproved) {
-          steps[0].items.push({
+          steps[1].items.push({
             status: "incomplete",
             data: {
               ...approval.txData,
@@ -765,22 +921,25 @@ export const getExecuteSellV7Options: RouteOptions = {
         }
       }
 
-      steps[1].items.push({
-        status: "incomplete",
-        data: {
-          ...txData,
-          maxFeePerGas,
-          maxPriorityFeePerGas,
-        },
-      });
+      for (const { txData } of txs) {
+        steps[2].items.push({
+          status: "incomplete",
+          data: {
+            ...txData,
+            maxFeePerGas,
+            maxPriorityFeePerGas,
+          },
+        });
+      }
 
       // Warning! When filtering the steps, we should ensure that it
       // won't affect the client, which might be polling the API and
       // expect to get the steps returned in the same order / at the
       // same index.
-      if (!approvals.length) {
-        // If no approvals are returned from the router then those
-        // are not actually needed and we can cut their steps
+      if (!blurAuth) {
+        // If we reached this point and the Blur auth is missing then we
+        // can be sure that no Blur orders were requested and it is safe
+        // to remove the auth step
         steps = steps.slice(1);
       }
 
@@ -797,7 +956,7 @@ export const getExecuteSellV7Options: RouteOptions = {
       );
 
       return {
-        steps,
+        steps: blurAuth ? [steps[0], ...steps.slice(1).filter((s) => s.items.length)] : steps,
         errors,
         path,
       };
