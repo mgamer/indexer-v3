@@ -53,7 +53,7 @@ export const getCollectionActivityV6Options: RouteOptions = {
         .min(1)
         .default(50)
         .description(
-          "Amount of items returned. Default is 50. Max is 1000 when `includeMetadata=false`""
+          "Amount of items returned. Default is 50. Max is 50 when `includedMetadata=true` otherwise max is 1000"
         )
         .when("includeMetadata", {
           is: true,
