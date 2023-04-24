@@ -76,6 +76,29 @@ if (config.doBackgroundWork) {
           }
         );
       } else {
+        // First get all relevant transactions
+        const tmpResult = await redb.manyOrNone(
+          `
+            SELECT
+              fill_events_2.tx_hash
+            FROM fill_events_2
+            WHERE fill_events_2.contract = $/contract/
+              AND fill_events_2.timestamp <= $/timestamp/
+              AND fill_events_2.timestamp > $/timestamp/ - $/timestampRange/
+              AND fill_events_2.order_kind != 'mint'
+            ORDER BY fill_events_2.timestamp DESC
+          `,
+          {
+            contract: toBuffer(details.data.contract),
+            timestamp: details.data.toTimestamp,
+            timestampRange,
+          }
+        );
+
+        // Then fetch all sales across all relevant transactions
+        // THIS IS IMPORTANT! For accurate results, we must have
+        // all sales within a given transaction processed in the
+        // same batch.
         results = await redb.manyOrNone(
           `
             SELECT
@@ -97,16 +120,10 @@ if (config.doBackgroundWork) {
               fill_events_2.currency,
               fill_events_2.currency_price
             FROM fill_events_2
-            WHERE fill_events_2.contract = $/contract/
-              AND fill_events_2.timestamp <= $/timestamp/
-              AND fill_events_2.timestamp > $/timestamp/ - $/timestampRange/
-              AND fill_events_2.order_kind != 'mint'
-            ORDER BY fill_events_2.timestamp DESC
+            WHERE fill_events_2.tx_hash IN ($/txHashes:list/)
           `,
           {
-            contract: toBuffer(details.data.contract),
-            timestamp: details.data.toTimestamp,
-            timestampRange,
+            txHashes: tmpResult.map((r) => r.tx_hash),
           }
         );
       }
