@@ -781,7 +781,7 @@ export const getExecuteSellV7Options: RouteOptions = {
             // Force the client to poll
             steps[1].items.push({
               status: "incomplete",
-              tip: "This step is dependent on the previous one, so make sure to complete that one",
+              tip: "This step is dependent on a previous step. Once you've completed it, re-call the API to get the data for this step.",
             });
 
             // Return an early since any next steps are dependent on the Blur auth
@@ -811,7 +811,7 @@ export const getExecuteSellV7Options: RouteOptions = {
           // Force the client to poll
           steps[2].items.push({
             status: "incomplete",
-            tip: "This step is dependent on the previous one, so make sure to complete that one",
+            tip: "This step is dependent on a previous step. Once you've completed it, re-call the API to get the data for this step.",
           });
 
           // Return an early since any next steps are dependent on the approvals
