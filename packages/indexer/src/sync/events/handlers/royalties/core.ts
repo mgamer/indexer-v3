@@ -396,7 +396,7 @@ export async function extractRoyalties(
           excludeOtherRecipients &&
           !notRoyaltyRecipients.has(address);
 
-        // For multiple sales we should check if the current payment is
+        // For multiple sales, we should check if the current payment is
         // in the range of payments associated to the current fill event
         let isInRange =
           hasMultiple && !shareSameRecipient
