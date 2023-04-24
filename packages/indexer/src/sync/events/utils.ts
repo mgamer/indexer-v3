@@ -15,6 +15,8 @@ import { getTransactionLogs, saveTransactionLogs } from "@/models/transaction-lo
 import { getTransactionTraces, saveTransactionTraces } from "@/models/transaction-traces";
 import { OrderKind, getOrderSourceByOrderId, getOrderSourceByOrderKind } from "@/orderbook/orders";
 import { getRouters } from "@/utils/routers";
+import { extractNestedTx } from "@/events-sync/handlers/attribution";
+import { Transaction } from "@/models/transactions";
 
 export const fetchBlock = async (blockNumber: number, force = false) => {
   if (!force) {
@@ -180,7 +182,16 @@ export const extractAttributionData = async (
   const routers = await getRouters();
 
   // Properly set the taker when filling through router contracts
-  const tx = await fetchTransaction(txHash);
+  let tx: Pick<Transaction, "hash" | "from" | "to" | "data"> = await fetchTransaction(txHash);
+  try {
+    const nestedTx = await extractNestedTx(tx, true);
+    if (nestedTx) {
+      tx = nestedTx;
+    }
+  } catch {
+    // Skip errors
+  }
+
   let router = routers.get(tx.to);
   if (!router) {
     // Handle cases where we transfer directly to the router when filling bids
