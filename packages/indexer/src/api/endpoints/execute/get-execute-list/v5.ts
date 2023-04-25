@@ -443,7 +443,7 @@ export const getExecuteListV5Options: RouteOptions = {
                                 id: order.hash(),
                                 maker,
                                 marketplaceData,
-                                authToken: blurAuth!,
+                                authToken: blurAuth!.accessToken,
                                 originalData: order.params,
                               },
                             },
