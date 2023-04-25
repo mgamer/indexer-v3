@@ -12,6 +12,7 @@ import { buildContinuation, regex, splitContinuation, toBuffer } from "@/common/
 import { Attributes } from "@/models/attributes";
 import { CollectionSets } from "@/models/collection-sets";
 import { Sources } from "@/models/sources";
+import { ContractSets } from "@/models/contract-sets";
 import { Orders } from "@/utils/orders";
 
 const version = "v5";
@@ -54,6 +55,7 @@ export const getOrdersBidsV5Options: RouteOptions = {
       collectionsSetId: Joi.string()
         .lowercase()
         .description("Filter to a particular collection set."),
+      contractsSetId: Joi.string().lowercase().description("Filter to a particular contracts set."),
       collection: Joi.string()
         .lowercase()
         .description(
@@ -137,7 +139,15 @@ export const getOrdersBidsV5Options: RouteOptions = {
         .pattern(regex.address)
         .description("Return result in given currency"),
     })
-      .oxor("token", "tokenSetId", "contracts", "ids", "collection", "collectionsSetId")
+      .oxor(
+        "token",
+        "tokenSetId",
+        "contracts",
+        "ids",
+        "collection",
+        "collectionsSetId",
+        "contractsSetId"
+      )
       .with("community", "maker")
       .with("collectionsSetId", "maker")
       .with("attribute", "collection"),
@@ -293,6 +303,13 @@ export const getOrdersBidsV5Options: RouteOptions = {
 
         baseQuery += ` JOIN token_sets ON token_sets.id = orders.token_set_id AND token_sets.schema_hash = orders.token_set_schema_hash`;
         conditions.push(`token_sets.attribute_id IN ($/attributeIds:csv/)`);
+      }
+
+      if (query.contractsSetId) {
+        query.contracts = await ContractSets.getContracts(query.contractsSetId);
+        if (_.isEmpty(query.contracts)) {
+          throw Boom.badRequest(`No contracts for contracts set ${query.contractsSetId}`);
+        }
       }
 
       if (query.contracts) {
