@@ -10,8 +10,8 @@ import { config } from "@/config/index";
 import { TriggerKind } from "@/jobs/order-updates/types";
 import { Sources } from "@/models/sources";
 
-import * as buyOrderQueue from "@/jobs/order-updates/order-updates-buy-order";
-import * as sellOrderQueue from "@/jobs/order-updates/order-updates-sell-order";
+import * as buyOrderQueue from "@/jobs/order-updates/order-updates-buy-order-queue";
+import * as sellOrderQueue from "@/jobs/order-updates/order-updates-sell-order-queue";
 import { fromBuffer } from "@/common/utils";
 
 const QUEUE_NAME = "order-updates-by-id";
