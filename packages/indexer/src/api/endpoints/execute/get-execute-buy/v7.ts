@@ -158,7 +158,6 @@ export const getExecuteBuyV7Options: RouteOptions = {
               Joi.object({
                 status: Joi.string().valid("complete", "incomplete").required(),
                 tip: Joi.string(),
-                extraData: Joi.object(),
                 orderIds: Joi.array().items(Joi.string()),
                 data: Joi.object(),
               })
@@ -648,7 +647,6 @@ export const getExecuteBuyV7Options: RouteOptions = {
         items: {
           status: string;
           tip?: string;
-          extraData?: object;
           orderIds?: string[];
           data?: object;
         }[];
@@ -736,7 +734,6 @@ export const getExecuteBuyV7Options: RouteOptions = {
 
         steps[0].items.push({
           status: "complete",
-          extraData: { blurAuth },
         });
       }
 
