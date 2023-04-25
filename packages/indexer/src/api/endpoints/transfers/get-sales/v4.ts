@@ -15,10 +15,10 @@ const version = "v4";
 export const getSalesV4Options: RouteOptions = {
   description: "Sales",
   notes: "Get recent sales for a contract or token.",
-  tags: ["api", "Sales"],
+  tags: ["api", "x-deprecated"],
   plugins: {
     "hapi-swagger": {
-      order: 8,
+      deprecated: true,
     },
   },
   validate: {
@@ -269,7 +269,7 @@ export const getSalesV4Options: RouteOptions = {
             fill_events_2.marketplace_fee_breakdown,
             fill_events_2.paid_full_royalty,
             fill_events_2.is_deleted,
-            extract(epoch from updated_at) updated_ts,
+            extract(epoch from fill_events_2.updated_at) updated_ts,
             fill_events_2.created_at
           FROM fill_events_2
           LEFT JOIN currencies

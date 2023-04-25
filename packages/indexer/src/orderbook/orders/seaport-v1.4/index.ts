@@ -27,6 +27,7 @@ import * as royalties from "@/utils/royalties";
 
 import * as refreshContractCollectionsMetadata from "@/jobs/collection-updates/refresh-contract-collections-metadata-queue";
 import * as ordersUpdateById from "@/jobs/order-updates/by-id-queue";
+import { topBidsCache } from "@/models/top-bids-caching";
 import * as orderbook from "@/jobs/orderbook/orders-queue";
 
 export type OrderInfo = {
@@ -642,19 +643,33 @@ export const save = async (
         const seaportBidPercentageThreshold = 80;
 
         try {
-          const collectionFloorAskValue = await getCollectionFloorAskValue(
+          const collectionTopBidValue = await topBidsCache.getCollectionTopBidValue(
             info.contract,
             Number(tokenId)
           );
 
-          if (collectionFloorAskValue) {
-            const percentage = (Number(value.toString()) / collectionFloorAskValue) * 100;
-
-            if (percentage < seaportBidPercentageThreshold) {
+          if (collectionTopBidValue) {
+            if (Number(value.toString()) <= collectionTopBidValue) {
               return results.push({
                 id,
                 status: "bid-too-low",
               });
+            }
+          } else {
+            const collectionFloorAskValue = await getCollectionFloorAskValue(
+              info.contract,
+              Number(tokenId)
+            );
+
+            if (collectionFloorAskValue) {
+              const percentage = (Number(value.toString()) / collectionFloorAskValue) * 100;
+
+              if (percentage < seaportBidPercentageThreshold) {
+                return results.push({
+                  id,
+                  status: "bid-too-low",
+                });
+              }
             }
           }
         } catch (error) {
@@ -933,7 +948,19 @@ const getCollectionFloorAskValue = async (
     if (collectionFloorAskValue) {
       return Number(collectionFloorAskValue);
     } else {
-      const collection = await Collections.getByContractAndTokenId(contract, tokenId);
+      const query = `
+        SELECT floor_sell_value
+        FROM collections
+        WHERE collections.contract = $/contract/
+          AND collections.token_id_range @> $/tokenId/::NUMERIC(78, 0)
+        LIMIT 1
+      `;
+
+      const collection = await redb.oneOrNone(query, {
+        contract: toBuffer(contract),
+        tokenId,
+      });
+
       const collectionFloorAskValue = collection?.floorSellValue || 0;
 
       await redis.set(`collection-floor-ask:${contract}`, collectionFloorAskValue, "EX", 3600);

@@ -133,6 +133,7 @@ export const getNetworkSettings = (): NetworkSettings => {
       return {
         ...defaultNetworkSettings,
         metadataMintDelay: 900,
+        realtimeSyncFrequencySeconds: 5,
         enableMetadataAutoRefresh: true,
         washTradingExcludedContracts: [
           // ArtBlocks Contracts
@@ -370,7 +371,7 @@ export const getNetworkSettings = (): NetworkSettings => {
         realtimeSyncMaxBlockLag: 32,
         realtimeSyncFrequencySeconds: 2,
         lastBlockLatency: 8,
-        headBlockDelay: 2,
+        headBlockDelay: 0,
         backfillBlockBatchSize: 60,
         reorgCheckFrequency: [30],
         subDomain: "api-polygon",

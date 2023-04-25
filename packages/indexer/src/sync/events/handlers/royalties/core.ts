@@ -9,6 +9,7 @@ import {
   PartialFillEvent,
   StateCache,
   getFillEventsFromTx,
+  getOrderInfos,
 } from "@/events-sync/handlers/royalties";
 import {
   platformFeeRecipientsRegistry,
@@ -20,11 +21,12 @@ import * as es from "@/events-sync/storage";
 import * as utils from "@/events-sync/utils";
 import { TransactionTrace } from "@/models/transaction-traces";
 import { Royalty, getRoyalties } from "@/utils/royalties";
+import { splitPayments } from "./payments";
 
 const findMatchingPayment = (payments: Payment[], fillEvent: PartialFillEvent) =>
   payments.find((payment) => paymentMatches(payment, fillEvent));
 
-const paymentMatches = (payment: Payment, fillEvent: PartialFillEvent) => {
+export const paymentMatches = (payment: Payment, fillEvent: PartialFillEvent) => {
   // Cover regular ERC721/ERC1155 transfers
   const matchesNFTTransfer = payment.token.includes(`${fillEvent.contract}:${fillEvent.tokenId}`);
   // But also non-standard ERC20 transfers (which some NFTs still use)
@@ -42,6 +44,7 @@ export async function extractRoyalties(
   const creatorRoyaltyFeeBreakdown: Royalty[] = [];
   const marketplaceFeeBreakdown: Royalty[] = [];
   const royaltyFeeBreakdown: Royalty[] = [];
+  const royaltyFeeOnTop: Royalty[] = [];
 
   const { txHash } = fillEvent.baseEventParams;
   const { tokenId, contract, price, currency } = fillEvent;
@@ -87,6 +90,22 @@ export async function extractRoyalties(
     fillEvents = (await getFillEventsFromTxOnChain(txHash)).fillEvents;
   }
 
+  // Extract the orders associated to the current fill events
+  const orderIds: string[] = [];
+  fillEvents.forEach((c) => {
+    if (c.orderId && !cache.orderInfos.get(c.orderId)) {
+      orderIds.push(c.orderId);
+    }
+  });
+
+  // Get the infos of the orders associated to the current fill events
+  const orderInfos = await getOrderInfos(orderIds);
+  orderInfos.forEach((info) => {
+    cache.orderInfos.set(info.orderId, info);
+  });
+
+  const orderInfo = fillEvent.orderId ? cache.orderInfos.get(fillEvent.orderId) : undefined;
+
   // For every fill event, get the current royalties (ones cached in our database)
   const fillEventsWithRoyaltyData = await Promise.all(
     fillEvents.map(async (f) => {
@@ -112,6 +131,16 @@ export async function extractRoyalties(
 
   // The (sub)call where the current fill occured
   let subcallToAnalyze = txTrace.calls;
+  const globalState = getStateChange(txTrace.calls);
+
+  const routerCall = searchForCall(
+    txTrace.calls,
+    {
+      // Reservoir Router
+      sigHashes: ["0x760f2a0b"],
+    },
+    0
+  );
 
   const exchangeAddress = supportedExchanges.get(fillEvent.orderKind);
   if (exchangeAddress) {
@@ -121,7 +150,11 @@ export async function extractRoyalties(
     for (let i = 0; i < 20; i++) {
       const exchangeCall = searchForCall(txTrace.calls, { to: exchangeAddress }, i);
       if (exchangeCall) {
-        exchangeCalls.push(exchangeCall);
+        const payments = getPayments(exchangeCall);
+        // Filter no payments call
+        if (payments.length) {
+          exchangeCalls.push(exchangeCall);
+        }
       }
     }
 
@@ -243,13 +276,27 @@ export async function extractRoyalties(
 
   // Some addresses we know for sure cannot be royalty recipients
   const notRoyaltyRecipients = new Set();
+  // Common addresses
   notRoyaltyRecipients.add(Sdk.Common.Addresses.Weth[config.chainId]);
   notRoyaltyRecipients.add(Sdk.Common.Addresses.Eth[config.chainId]);
   notRoyaltyRecipients.add(Sdk.BendDao.Addresses.BendWETH[config.chainId]);
+  // Misc addresses
+  // (BendDAO suspicious liquidator)
+  notRoyaltyRecipients.add("0x0b292a7748e52c89f93e66482026c92a335e0d41");
+
   fillEvents.forEach((fillEvent) => {
     notRoyaltyRecipients.add(fillEvent.maker);
     notRoyaltyRecipients.add(fillEvent.taker);
   });
+
+  const payments = paymentsToAnalyze.filter((_) => {
+    return !platformFeeRecipientsRegistry.has(_.to);
+  });
+
+  // Try to split the fill events and their associated payments
+  const { chunkedFillEvents, isReliable, hasMultiple } = splitPayments(fillEvents, payments);
+
+  const currentFillEvent = chunkedFillEvents.find((c) => c.fillEvent.orderId === fillEvent.orderId);
 
   const sameContractFillsWithRoyaltyData = fillEventsWithRoyaltyData.filter((c) => {
     return c.contract != contract;
@@ -260,8 +307,10 @@ export async function extractRoyalties(
 
   // Iterate through all of the state changes of the (sub)call associated to the current fill event
   const state = getStateChange(subcallToAnalyze);
+
   for (const address in state) {
     const { tokenBalanceState } = state[address];
+    const globalChange = globalState[address];
 
     const ETH = Sdk.Common.Addresses.Eth[config.chainId];
     const BETH = Sdk.Blur.Addresses.Beth[config.chainId];
@@ -271,6 +320,38 @@ export async function extractRoyalties(
         ? // The fill event will map any BETH fills to ETH so we need to cover that here
           tokenBalanceState[`native:${ETH}`] || tokenBalanceState[`erc20:${BETH}`]
         : tokenBalanceState[`erc20:${currency}`];
+
+    try {
+      // Fees on the top, make sure it's a single-sale transaction
+      if (fillEvents.length === 1 && routerCall && globalChange) {
+        const { tokenBalanceState } = globalChange;
+        const globalBalanceChange =
+          currency === ETH
+            ? // The fill event will map any BETH fills to ETH so we need to cover that here
+              tokenBalanceState[`native:${ETH}`] || tokenBalanceState[`erc20:${BETH}`]
+            : tokenBalanceState[`erc20:${currency}`];
+
+        if (globalBalanceChange && !globalBalanceChange.startsWith("-")) {
+          const balanceChangeAmount =
+            balanceChange && !balanceChange.startsWith("-") ? bn(balanceChange) : bn(0);
+          const paidOnTop = bn(globalBalanceChange).sub(balanceChangeAmount);
+          const topFeeBps = paidOnTop.gt(0) ? paidOnTop.mul(10000).div(bn(price)) : bn(0);
+          if (topFeeBps.gt(0)) {
+            royaltyFeeOnTop.push({
+              recipient: address,
+              bps: topFeeBps.toNumber(),
+            });
+          }
+        }
+      }
+    } catch {
+      // Skip any errors
+    }
+
+    // For multiple sales we should check if it in the range of payments
+    const matchRangePayment = currentFillEvent?.relatedPayments.find(
+      (c) => c.to.toLowerCase() === address.toLowerCase()
+    );
 
     // If the balance change is positive that means a payment was received
     if (balanceChange && !balanceChange.startsWith("-")) {
@@ -284,9 +365,13 @@ export async function extractRoyalties(
 
       if (knownPlatformFeeRecipients.includes(address)) {
         // This is a marketplace fee payment
-
         // Reset the bps
         royalty.bps = bn(balanceChange).mul(10000).div(sameProtocolTotalPrice).toNumber();
+
+        // Calculate by matched payment amount in split payments
+        if (matchRangePayment && isReliable && hasMultiple) {
+          royalty.bps = bn(matchRangePayment.amount).mul(10000).div(fillEvent.price).toNumber();
+        }
 
         marketplaceFeeBreakdown.push(royalty);
       } else {
@@ -328,9 +413,23 @@ export async function extractRoyalties(
           excludeOtherRecipients &&
           !notRoyaltyRecipients.has(address);
 
+        // For multiple sales, we should check if the current payment is
+        // in the range of payments associated to the current fill event
+        let isInRange =
+          hasMultiple && !shareSameRecipient
+            ? currentFillEvent?.relatedPayments.find(
+                (c) => c.to.toLowerCase() === address.toLowerCase()
+              )
+            : true;
+
+        // Match with the order's fee breakdown
+        if (!isInRange) {
+          isInRange = orderInfo?.feeBreakdown.find((c) => c.recipient === address) != null;
+        }
+
         // For now we exclude AMMs which don't pay royalties
         const isAMM = ["sudoswap", "nftx"].includes(fillEvent.orderKind);
-        if (recipientIsEligible && !isAMM) {
+        if (recipientIsEligible && !isAMM && isInRange) {
           // Reset the bps
           royalty.bps = bps;
           royaltyFeeBreakdown.push(royalty);
@@ -342,6 +441,10 @@ export async function extractRoyalties(
   const getTotalRoyaltyBps = (royalties: Royalty[]) =>
     royalties.map(({ bps }) => bps).reduce((a, b) => a + b, 0);
 
+  if (royaltyFeeOnTop.length) {
+    royaltyFeeOnTop.forEach((c) => royaltyFeeBreakdown.push(c));
+  }
+
   const creatorRoyaltyFeeBps = getTotalRoyaltyBps(creatorRoyaltyFeeBreakdown);
   const royaltyFeeBps = getTotalRoyaltyBps(royaltyFeeBreakdown);
   const creatorBps = Math.min(...royalties.map(getTotalRoyaltyBps));
@@ -349,6 +452,7 @@ export async function extractRoyalties(
   const paidFullRoyalty = creatorRoyaltyFeeBps >= creatorBps;
 
   return {
+    royaltyFeeOnTop,
     royaltyFeeBps,
     marketplaceFeeBps: getTotalRoyaltyBps(marketplaceFeeBreakdown),
     royaltyFeeBreakdown,
