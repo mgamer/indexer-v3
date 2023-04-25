@@ -47,7 +47,8 @@ export async function extractRoyalties(
   const royaltyFeeOnTop: Royalty[] = [];
 
   const { txHash } = fillEvent.baseEventParams;
-  const { tokenId, contract, price, currency } = fillEvent;
+  const { tokenId, contract, currency } = fillEvent;
+  const price = fillEvent.currencyPrice ?? fillEvent.price;
 
   // Fetch the current transaction's trace
   let txTrace: TransactionTrace | undefined;
@@ -424,7 +425,7 @@ export async function extractRoyalties(
 
         // Match with the order's fee breakdown
         if (!isInRange) {
-          isInRange = orderInfo?.feeBreakdown.find((c) => c.recipient === address) != null;
+          isInRange = Boolean(orderInfo?.feeBreakdown.find((c) => c.recipient === address));
         }
 
         // For now we exclude AMMs which don't pay royalties

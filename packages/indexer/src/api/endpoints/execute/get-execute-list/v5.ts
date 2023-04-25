@@ -178,6 +178,7 @@ export const getExecuteListV5Options: RouteOptions = {
               Joi.object({
                 status: Joi.string().valid("complete", "incomplete").required(),
                 tip: Joi.string(),
+                extraData: Joi.object(),
                 data: Joi.object(),
                 orderIndexes: Joi.array().items(Joi.number()),
               })
@@ -232,6 +233,7 @@ export const getExecuteListV5Options: RouteOptions = {
         items: {
           status: string;
           tip?: string;
+          extraData?: any;
           data?: any;
           orderIndexes?: number[];
         }[];
@@ -285,13 +287,11 @@ export const getExecuteListV5Options: RouteOptions = {
       };
 
       // Handle Blur authentication
-      let blurAuth: string | undefined;
+      let blurAuth: b.Auth | undefined;
       if (params.some((p) => p.orderKind === "blur")) {
         const blurAuthId = b.getAuthId(maker);
 
-        blurAuth = await b
-          .getAuth(blurAuthId)
-          .then((auth) => (auth ? auth.accessToken : undefined));
+        blurAuth = await b.getAuth(blurAuthId);
         if (!blurAuth) {
           const blurAuthChallengeId = b.getAuthChallengeId(maker);
 
@@ -340,6 +340,7 @@ export const getExecuteListV5Options: RouteOptions = {
         } else {
           steps[0].items.push({
             status: "complete",
+            extraData: { blurAuth },
           });
         }
       }
@@ -393,7 +394,7 @@ export const getExecuteListV5Options: RouteOptions = {
                   maker,
                   contract,
                   tokenId,
-                  authToken: blurAuth!,
+                  authToken: blurAuth!.accessToken,
                 });
 
                 // Will be set if an approval is needed before listing
