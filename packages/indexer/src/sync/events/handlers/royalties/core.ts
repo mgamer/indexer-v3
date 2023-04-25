@@ -339,7 +339,7 @@ export async function extractRoyalties(
     }
 
     // For multiple sales we should check if it in the range of payments
-    let matchRangePayment = currentPayments?.relatedPayments.find(
+    const matchRangePayment = currentPayments?.relatedPayments.find(
       (c) => c.to.toLowerCase() === address.toLowerCase()
     );
 

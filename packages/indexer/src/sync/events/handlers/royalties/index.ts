@@ -184,8 +184,7 @@ export const assignRoyaltiesToFillEvents = async (
               );
             }
           }
-        } catch (error) {
-          console.log(error);
+        } catch {
           // logger.error(
           //   "assign-royalties-to-fill-events",
           //   JSON.stringify({
