@@ -36,20 +36,12 @@ describe("Royalties Router", () => {
       const matched = testCollectionRoyalties.find((c) => c.collection === contract);
       return matched?.data ?? [];
     });
-
     const feesList = [
       {
-        contract: "0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d",
-        tokenId: "5372",
-        royaltyFeeBps: 0,
-        marketplaceFeeBps: 250,
-        royaltyFeeBreakdown: [],
-        marketplaceFeeBreakdown: [
-          {
-            recipient: "0x0000a26b00c1f0df003000390027140000faa719",
-            bps: 250,
-          },
-        ],
+        contract: "0xa319c382a702682129fcbf55d514e61a16f97f9c",
+        tokenId: "15000054",
+        royaltyFeeBps: 999,
+        marketplaceFeeBps: 50,
       },
     ];
 
@@ -60,6 +52,7 @@ describe("Royalties Router", () => {
       const matchFee = feesList.find(
         (c) => c.contract === fillEvent.contract && c.tokenId === fillEvent.tokenId
       );
+      // console.log("fillEvent", fillEvent)
       if (matchFee) {
         expect(fillEvent.royaltyFeeBps).toEqual(matchFee.royaltyFeeBps);
         expect(fillEvent.marketplaceFeeBps).toEqual(matchFee.marketplaceFeeBps);

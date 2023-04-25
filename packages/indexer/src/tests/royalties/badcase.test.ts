@@ -806,7 +806,7 @@ describe("Royalties", () => {
         (c) => c.contract === fillEvent.contract && c.tokenId === fillEvent.tokenId
       );
 
-      // console.log('fillEvent', matchFee)
+      // console.log("fillEvent", fillEvent);
       if (matchFee) {
         expect(fillEvent.royaltyFeeBps).toEqual(matchFee.royaltyFeeBps);
         expect(fillEvent.marketplaceFeeBps).toEqual(matchFee.marketplaceFeeBps);

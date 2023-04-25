@@ -129,8 +129,16 @@ export async function extractRoyalties(
 
   // The (sub)call where the current fill occured
   let subcallToAnalyze = txTrace.calls;
-  let hasMultiplteCalls = false;
   const globalState = getStateChange(txTrace.calls);
+
+  const routerCall = searchForCall(
+    txTrace.calls,
+    {
+      // Reservoir Router
+      sigHashes: ["0x760f2a0b"],
+    },
+    0
+  );
 
   const exchangeAddress = supportedExchanges.get(fillEvent.orderKind);
   if (exchangeAddress) {
@@ -154,7 +162,6 @@ export async function extractRoyalties(
       // to further analyze
       subcallToAnalyze = exchangeCalls[0];
     } else {
-      hasMultiplteCalls = true;
       // If there are multiple calls to the exchange in the current
       // transaction then we try to look for the (sub)call where we
       // find the current fill event's token
@@ -313,7 +320,7 @@ export async function extractRoyalties(
 
     try {
       // Fees on the top, make sure it's a single-sale transaction
-      if (!hasMultiplteCalls && globalChange) {
+      if (fillEvents.length === 1 && routerCall && globalChange) {
         const { tokenBalanceState } = globalChange;
         const globalBalanceChange =
           currency === ETH
@@ -360,7 +367,7 @@ export async function extractRoyalties(
 
         // Calculate by matched payment amount in split payments
         if (matchRangePayment && isReliable && hasMultiple) {
-          royalty.bps = bn(matchRangePayment.amount).mul(10000).div(fillEvent.price).toNumber();
+          // royalty.bps = bn(matchRangePayment.amount).mul(10000).div(fillEvent.price).toNumber();
         }
 
         marketplaceFeeBreakdown.push(royalty);
