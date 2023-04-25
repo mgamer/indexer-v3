@@ -11,8 +11,11 @@ import * as utils from "@/events-sync/utils";
 import { getUSDAndNativePrices } from "@/utils/prices";
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export const handleEvents = async (events: EnhancedEvent[], _onChainData: OnChainData) => {
+export const handleEvents = async (_events: EnhancedEvent[], onChainData: OnChainData) => {
   const nftTransferEvents: es.nftTransfers.Event[] = [];
+
+  // re-sort
+  const events = _events.sort((a, b) => a.baseEventParams.logIndex - b.baseEventParams.logIndex);
 
   // Keep track of all events within the currently processing transaction
   let currentTx: string | undefined;
@@ -121,6 +124,7 @@ export const handleEvents = async (events: EnhancedEvent[], _onChainData: OnChai
           currencyPrice,
           baseEventParams.timestamp
         );
+
         if (!priceData.nativePrice) {
           // We must always have the native price
           break;
@@ -132,69 +136,69 @@ export const handleEvents = async (events: EnhancedEvent[], _onChainData: OnChai
         }
 
         if (buyOrderId !== HashZero) {
-          // onChainData.fillEvents.push({
-          //   orderKind,
-          //   orderId: buyOrderId,
-          //   orderSide: "buy",
-          //   maker,
-          //   taker,
-          //   price: priceData.nativePrice,
-          //   currency,
-          //   currencyPrice,
-          //   usdPrice: priceData.usdPrice,
-          //   contract: associatedNftTransferEvent.baseEventParams.address,
-          //   tokenId: associatedNftTransferEvent.tokenId,
-          //   amount: associatedNftTransferEvent.amount,
-          //   orderSourceId: attributionData.orderSource?.id,
-          //   aggregatorSourceId: attributionData.aggregatorSource?.id,
-          //   fillSourceId: attributionData.fillSource?.id,
-          //   baseEventParams,
-          // });
-          // onChainData.fillInfos.push({
-          //   context: `${buyOrderId}-${baseEventParams.txHash}`,
-          //   orderId: buyOrderId,
-          //   orderSide: "buy",
-          //   contract: associatedNftTransferEvent.baseEventParams.address,
-          //   tokenId: associatedNftTransferEvent.tokenId,
-          //   amount: associatedNftTransferEvent.amount,
-          //   price: priceData.nativePrice,
-          //   timestamp: baseEventParams.timestamp,
-          //   maker,
-          //   taker,
-          // });
+          onChainData.fillEvents.push({
+            orderKind,
+            orderId: buyOrderId,
+            orderSide: "buy",
+            maker,
+            taker,
+            price: priceData.nativePrice,
+            currency,
+            currencyPrice,
+            usdPrice: priceData.usdPrice,
+            contract: associatedNftTransferEvent.baseEventParams.address,
+            tokenId: associatedNftTransferEvent.tokenId,
+            amount: associatedNftTransferEvent.amount,
+            orderSourceId: attributionData.orderSource?.id,
+            aggregatorSourceId: attributionData.aggregatorSource?.id,
+            fillSourceId: attributionData.fillSource?.id,
+            baseEventParams,
+          });
+          onChainData.fillInfos.push({
+            context: `${buyOrderId}-${baseEventParams.txHash}`,
+            orderId: buyOrderId,
+            orderSide: "buy",
+            contract: associatedNftTransferEvent.baseEventParams.address,
+            tokenId: associatedNftTransferEvent.tokenId,
+            amount: associatedNftTransferEvent.amount,
+            price: priceData.nativePrice,
+            timestamp: baseEventParams.timestamp,
+            maker,
+            taker,
+          });
         }
 
         if (sellOrderId !== HashZero) {
-          // onChainData.fillEvents.push({
-          //   orderKind,
-          //   orderId: sellOrderId,
-          //   orderSide: "sell",
-          //   maker,
-          //   taker,
-          //   price: priceData.nativePrice,
-          //   currency,
-          //   currencyPrice,
-          //   usdPrice: priceData.usdPrice,
-          //   contract: associatedNftTransferEvent.baseEventParams.address,
-          //   tokenId: associatedNftTransferEvent.tokenId,
-          //   amount: associatedNftTransferEvent.amount,
-          //   orderSourceId: attributionData.orderSource?.id,
-          //   aggregatorSourceId: attributionData.aggregatorSource?.id,
-          //   fillSourceId: attributionData.fillSource?.id,
-          //   baseEventParams,
-          // });
-          // onChainData.fillInfos.push({
-          //   context: `${sellOrderId}-${baseEventParams.txHash}`,
-          //   orderId: sellOrderId,
-          //   orderSide: "sell",
-          //   contract: associatedNftTransferEvent.baseEventParams.address,
-          //   tokenId: associatedNftTransferEvent.tokenId,
-          //   amount: associatedNftTransferEvent.amount,
-          //   price: priceData.nativePrice,
-          //   timestamp: baseEventParams.timestamp,
-          //   maker,
-          //   taker,
-          // });
+          onChainData.fillEvents.push({
+            orderKind,
+            orderId: sellOrderId,
+            orderSide: "sell",
+            maker,
+            taker,
+            price: priceData.nativePrice,
+            currency,
+            currencyPrice,
+            usdPrice: priceData.usdPrice,
+            contract: associatedNftTransferEvent.baseEventParams.address,
+            tokenId: associatedNftTransferEvent.tokenId,
+            amount: associatedNftTransferEvent.amount,
+            orderSourceId: attributionData.orderSource?.id,
+            aggregatorSourceId: attributionData.aggregatorSource?.id,
+            fillSourceId: attributionData.fillSource?.id,
+            baseEventParams,
+          });
+          onChainData.fillInfos.push({
+            context: `${sellOrderId}-${baseEventParams.txHash}`,
+            orderId: sellOrderId,
+            orderSide: "sell",
+            contract: associatedNftTransferEvent.baseEventParams.address,
+            tokenId: associatedNftTransferEvent.tokenId,
+            amount: associatedNftTransferEvent.amount,
+            price: priceData.nativePrice,
+            timestamp: baseEventParams.timestamp,
+            maker,
+            taker,
+          });
         }
 
         break;
