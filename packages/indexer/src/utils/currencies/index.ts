@@ -115,13 +115,6 @@ export const getCurrency = async (currencyAddress: string): Promise<Currency> =>
     }
   }
 
-  // CURRENCY_MEMORY_CACHE.set("0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", {
-  //   contract: currencyAddress,
-  //   name: "USDC",
-  //   symbol: "USDC",
-  //   decimals: 6,
-  // });
-
   return CURRENCY_MEMORY_CACHE.get(currencyAddress)!;
 };
 
