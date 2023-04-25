@@ -32,7 +32,7 @@ describe("NFTx - Indexer Integration Test", () => {
   });
 
   afterEach(async () => {
-    await reset();
+    // await reset();
   });
 
   const testCase = async ({
@@ -42,17 +42,37 @@ describe("NFTx - Indexer Integration Test", () => {
     executeByRouterAPI = false,
     subsetCancel = false,
   }) => {
-    // const buyer = alice;
-    // const seller = bob;
 
-    // const price = parseEther("1");
-    // const boughtTokenId = Math.floor(Math.random() * 100000);
-    // const weth = new Common.Helpers.Weth(ethers.provider, chainId);
-
+    const currency = Common.Addresses.Weth[chainId];
     const result = await indexerHelper.doEventParsing("0x123505c7b5e92e9816535c0fa474992108a5dbfdd5eb5d94f524e56fd35aede4", false)
-    for (let index = 0; index < result.onChainData[0].orders.length; index++) {
-      // const order = result.onChainData[0].orders[index];
+    if (result.error) {
+        console.log(result.error)
+    } else {
+        for (let index = 0; index < result.onChainData[0].orders.length; index++) {
+            const order = result.onChainData[0].orders[index];
+            console.log("order", order)
+
+             // Call the Indexer to save the order
+            const saveResult = await indexerHelper.doOrderSaving({
+                contract: "0x5af0d9827e0c53e4799bb226655a1de152a425a5",
+                kind: "erc721",
+                currency: currency,
+                makers: [],
+                nfts: [],
+                orders: [
+                    // Order Info
+                    {
+                        // export name from the @/orderbook/index
+                        kind: "nftx",
+                        data: order.info.orderParams,
+                    },
+                ],
+            });
+            
+            console.log("saveResult", saveResult)
+        }
     }
+   
     // // Mint weth to buyer
     // await weth.deposit(buyer, price);
     // await weth.deposit(seller, price);
@@ -123,30 +143,7 @@ describe("NFTx - Indexer Integration Test", () => {
 
     // console.log(green("\t Perform Order Saving:"));
 
-    // // Call the Indexer to save the order
-    // const saveResult = await indexerHelper.doOrderSaving({
-    //   contract: erc721.address,
-    //   kind: "erc721",
-    //   currency: order.params.currency,
-    //   // Refresh balance incase the local indexer doesn't have the state
-    //   makers: [order.params.signer],
-    //   nfts: [
-    //     {
-    //       collection: erc721.address,
-    //       tokenId: boughtTokenId.toString(),
-    //       owner: seller.address,
-    //     },
-    //   ],
-    //   orders: [
-    //     // Order Info
-    //     {
-    //       // export name from the @/orderbook/index
-    //       kind: "looksRareV2",
-    //       data: order.params,
-    //     },
-    //   ],
-    // });
-
+   
     // const orderInfo = saveResult[0];
 
     // console.log(`\t\t - Status: ${orderInfo.status}`);

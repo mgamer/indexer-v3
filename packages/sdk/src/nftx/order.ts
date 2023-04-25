@@ -17,7 +17,7 @@ export class Order {
     }
   }
 
-  isZeroEx() {
+  routeVia0x() {
     return this.params.path.length === 0;
   }
 

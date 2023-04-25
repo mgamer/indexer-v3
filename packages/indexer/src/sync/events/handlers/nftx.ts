@@ -444,7 +444,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
       }
 
       case "nftx-swap": {
-        const ftPool = await nftxUtils.getFtPoolDetails(baseEventParams.address, true);
+        const ftPool = await nftxUtils.getFtPoolDetails(baseEventParams.address, true, "sushiswap");
 
         if (ftPool) {
           const token0NftPool = await nftxUtils.getNftPoolDetails(ftPool.token0, true);
@@ -489,7 +489,11 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
 
       case "nftx-swap-v3": {
         const skipCheck = false;
-        const ftPool = await nftxUtils.getFtPoolDetails(baseEventParams.address, true);
+        const ftPool = await nftxUtils.getFtPoolDetails(
+          baseEventParams.address,
+          true,
+          "uniswap-v3"
+        );
         if (ftPool) {
           const token0NftPool = await nftxUtils.getNftPoolDetails(ftPool.token0, skipCheck);
           if (token0NftPool) {

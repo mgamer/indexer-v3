@@ -286,7 +286,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
           if (order.kind === "nftx") {
             const rawData = order.rawData as Sdk.Nftx.Types.OrderParams;
             const sdkOrder = new Sdk.Nftx.Order(config.chainId, rawData);
-            if (sdkOrder.isZeroEx()) {
+            if (sdkOrder.routeVia0x()) {
               const orderCount = poolPrices[poolId].length;
               const slippage = 0;
               const { swapCallData, price } = await sdkOrder.getQuote(

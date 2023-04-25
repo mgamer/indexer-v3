@@ -1580,7 +1580,7 @@ export class Router {
         order.params.price = order.params.extra.prices[perPoolOrders[order.params.pool].length - 1];
 
         // Attach the ZeroEx calldata
-        if (order.isZeroEx()) {
+        if (order.routeVia0x()) {
           const orderCount = perPoolOrders[order.params.pool].length;
           const slippage = 0;
           const { swapCallData, price } = await order.getQuote(orderCount, slippage, this.provider);
@@ -3205,6 +3205,15 @@ export class Router {
           const order = detail.order as Sdk.Nftx.Order;
           const module = this.contracts.nftxModule;
 
+          // Attach the ZeroEx calldata
+          if (order.routeVia0x()) {
+            const slippage = 0;
+            const { swapCallData, price } = await order.getQuote(1, slippage, this.provider);
+            // Override
+            order.params.swapCallData = swapCallData;
+            order.params.price = price.toString();
+          }
+
           const tokenId = detail.tokenId;
           order.params.specificIds = [tokenId];
 
@@ -3226,7 +3235,6 @@ export class Router {
           });
 
           success[detail.orderId] = true;
-
           break;
         }
 

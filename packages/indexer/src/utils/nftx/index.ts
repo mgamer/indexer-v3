@@ -68,7 +68,11 @@ export const getNftPoolDetails = async (address: string, skipOnChainCheck = fals
     }
   });
 
-export const getFtPoolDetails = async (address: string, skipOnChainCheck = false) =>
+export const getFtPoolDetails = async (
+  address: string,
+  skipOnChainCheck = false,
+  kind: "sushiswap" | "uniswap-v3"
+) =>
   getNftxFtPool(address).catch(async () => {
     if (!skipOnChainCheck && Sdk.Nftx.Addresses.VaultFactory[config.chainId]) {
       const iface = new Interface([
@@ -86,6 +90,7 @@ export const getFtPoolDetails = async (address: string, skipOnChainCheck = false
           address,
           token0,
           token1,
+          kind,
         });
       } catch {
         // Skip any errors
@@ -124,7 +129,7 @@ export const isSwap = (log: Log) => {
 
 export const tryParseSwap = async (log: Log) => {
   if (log.topics[0] === ifaceUniV3.getEventTopic("Swap")) {
-    const ftPool = await getFtPoolDetails(log.address.toLowerCase());
+    const ftPool = await getFtPoolDetails(log.address.toLowerCase(), false, "uniswap-v3");
     if (ftPool) {
       const parsedLog = ifaceUniV3.parseLog(log);
       const rawAmount0 = parsedLog.args["amount0"].toString();
@@ -145,7 +150,7 @@ export const tryParseSwap = async (log: Log) => {
   }
 
   if (log.topics[0] === ifaceUniV2.getEventTopic("Swap")) {
-    const ftPool = await getFtPoolDetails(log.address.toLowerCase());
+    const ftPool = await getFtPoolDetails(log.address.toLowerCase(), false, "sushiswap");
     if (ftPool) {
       const parsedLog = ifaceUniV2.parseLog(log);
       return {
