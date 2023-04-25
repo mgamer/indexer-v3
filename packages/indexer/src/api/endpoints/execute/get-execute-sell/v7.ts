@@ -144,7 +144,6 @@ export const getExecuteSellV7Options: RouteOptions = {
               Joi.object({
                 status: Joi.string().valid("complete", "incomplete").required(),
                 tip: Joi.string(),
-                extraData: Joi.object(),
                 data: Joi.object(),
               })
             )
@@ -684,7 +683,6 @@ export const getExecuteSellV7Options: RouteOptions = {
         items: {
           status: string;
           tip?: string;
-          extraData?: object;
           data?: object;
         }[];
       }[] = [
@@ -799,7 +797,6 @@ export const getExecuteSellV7Options: RouteOptions = {
 
         steps[0].items.push({
           status: "complete",
-          extraData: { blurAuth },
         });
 
         if (missingApprovals.length) {

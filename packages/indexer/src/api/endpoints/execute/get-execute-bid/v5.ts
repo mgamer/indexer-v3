@@ -196,7 +196,6 @@ export const getExecuteBidV5Options: RouteOptions = {
               Joi.object({
                 status: Joi.string().valid("complete", "incomplete").required(),
                 tip: Joi.string(),
-                extraData: Joi.object(),
                 data: Joi.object(),
                 orderIndexes: Joi.array().items(Joi.number()),
               })
@@ -254,7 +253,6 @@ export const getExecuteBidV5Options: RouteOptions = {
         items: {
           status: string;
           tip?: string;
-          extraData?: any;
           data?: any;
           orderIndexes?: number[];
         }[];
@@ -384,7 +382,6 @@ export const getExecuteBidV5Options: RouteOptions = {
         } else {
           steps[0].items.push({
             status: "complete",
-            extraData: { blurAuth },
           });
         }
       }
