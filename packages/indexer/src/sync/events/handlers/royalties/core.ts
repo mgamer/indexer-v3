@@ -294,11 +294,7 @@ export async function extractRoyalties(
   });
 
   // Try to split the fill events and their associated payments
-  const {
-    chunkedPayments: chunkedFillEvents,
-    isReliable,
-    hasMultiple,
-  } = splitPayments(fillEvents, payments);
+  const { chunkedFillEvents, isReliable, hasMultiple } = splitPayments(fillEvents, payments);
 
   const currentFillEvent = chunkedFillEvents.find((c) => c.fillEvent.orderId === fillEvent.orderId);
 

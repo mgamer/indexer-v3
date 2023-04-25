@@ -17,10 +17,10 @@ export function splitPayments(fillEvents: PartialFillEvent[], payments: Payment[
   }
 
   // Split payments by sale transfer
-  const tempPosArr: number[] = [];
+  const tmpIndexes: number[] = [];
 
-  const chunkedPayments = fillEvents.map((item, index, all) => {
-    const lastIndex = index == 0 ? 0 : tempPosArr[index - 1];
+  const chunkedFillEvents = fillEvents.map((item, index, all) => {
+    const lastIndex = index == 0 ? 0 : tmpIndexes[index - 1];
 
     // split by token transfer
     if (["wyvern-v2", "wyvern-v2.3"].includes(fillEvent.orderKind)) {
@@ -28,7 +28,7 @@ export function splitPayments(fillEvents: PartialFillEvent[], payments: Payment[
         return paymentMatches(c, item) && index >= lastIndex;
       });
       const relatedPayments = matchIndex == -1 ? [] : payments.slice(lastIndex, matchIndex);
-      tempPosArr.push(matchIndex);
+      tmpIndexes.push(matchIndex);
       return {
         fillEvent: item,
         lastIndex,
@@ -53,7 +53,7 @@ export function splitPayments(fillEvents: PartialFillEvent[], payments: Payment[
             (c.token.includes("erc721") || c.token.includes("erc1155")) && index >= lastIndex
         );
     const relatedPayments = matchIndex == -1 ? [] : payments.slice(lastIndex, matchIndex);
-    tempPosArr.push(matchIndex);
+    tmpIndexes.push(matchIndex);
     return {
       fillEvent: item,
       lastIndex,
@@ -65,6 +65,6 @@ export function splitPayments(fillEvents: PartialFillEvent[], payments: Payment[
   return {
     isReliable,
     hasMultiple,
-    chunkedPayments,
+    chunkedFillEvents,
   };
 }
