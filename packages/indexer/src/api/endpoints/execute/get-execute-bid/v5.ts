@@ -129,6 +129,7 @@ export const getExecuteBidV5Options: RouteOptions = {
             .description("Exchange protocol used to create order. Example: `seaport-v1.4`"),
           options: Joi.object({
             "seaport-v1.4": Joi.object({
+              conduitKey: Joi.string().pattern(regex.bytes32),
               useOffChainCancellation: Joi.boolean().required(),
               replaceOrderId: Joi.string().when("useOffChainCancellation", {
                 is: true,
@@ -194,6 +195,7 @@ export const getExecuteBidV5Options: RouteOptions = {
             .items(
               Joi.object({
                 status: Joi.string().valid("complete", "incomplete").required(),
+                tip: Joi.string(),
                 data: Joi.object(),
                 orderIndexes: Joi.array().items(Joi.number()),
               })
@@ -250,6 +252,7 @@ export const getExecuteBidV5Options: RouteOptions = {
         kind: string;
         items: {
           status: string;
+          tip?: string;
           data?: any;
           orderIndexes?: number[];
         }[];
@@ -371,6 +374,7 @@ export const getExecuteBidV5Options: RouteOptions = {
           // Force the client to poll
           steps[1].items.push({
             status: "incomplete",
+            tip: "This step is dependent on a previous step. Once you've completed it, re-call the API to get the data for this step.",
           });
 
           // Return an early since any next steps are dependent on the Blur auth
@@ -466,9 +470,7 @@ export const getExecuteBidV5Options: RouteOptions = {
                   steps[1].items.push({
                     status: "incomplete",
                     data:
-                      params.currency === BETH
-                        ? { ...wrapTx, to: Sdk.Blur.Addresses.Beth[config.chainId] }
-                        : wrapTx,
+                      params.currency === BETH ? { ...wrapTx, to: BETH } : { ...wrapTx, to: WETH },
                     orderIndexes: [i],
                   });
                 }
@@ -496,6 +498,12 @@ export const getExecuteBidV5Options: RouteOptions = {
                 if (!["blur"].includes(params.orderbook)) {
                   return errors.push({ message: "Unsupported orderbook", orderIndex: i });
                 }
+                if (params.fees?.length) {
+                  return errors.push({
+                    message: "Custom fees not supported",
+                    orderIndex: i,
+                  });
+                }
 
                 if (!collection) {
                   return errors.push({
@@ -506,49 +514,60 @@ export const getExecuteBidV5Options: RouteOptions = {
 
                 // TODO: Return an error if the collection is not supported by Blur
 
-                const { signData, marketplaceData } = await blurBuyCollection.build({
-                  ...params,
-                  maker,
-                  contract: collection,
-                  authToken: blurAuth!,
-                });
+                const needsBethWrapping = steps[1].items.find(
+                  (i) => i.status === "incomplete" && i.data?.to === BETH
+                );
+                if (needsBethWrapping) {
+                  // Force the client to poll
+                  // (since Blur won't release the calldata unless you have enough BETH in your wallet)
+                  steps[3].items.push({
+                    status: "incomplete",
+                  });
+                } else {
+                  const { signData, marketplaceData } = await blurBuyCollection.build({
+                    ...params,
+                    maker,
+                    contract: collection,
+                    authToken: blurAuth!,
+                  });
 
-                steps[3].items.push({
-                  status: "incomplete",
-                  data: {
-                    sign: {
-                      signatureKind: "eip712",
-                      domain: signData.domain,
-                      types: signData.types,
-                      value: signData.value,
-                      primaryType: _TypedDataEncoder.getPrimaryType(signData.types),
-                    },
-                    post: {
-                      endpoint: "/order/v4",
-                      method: "POST",
-                      body: {
-                        items: [
-                          {
-                            order: {
-                              kind: "blur",
-                              data: {
-                                maker,
-                                marketplaceData,
-                                authToken: blurAuth!,
-                                isCollectionBid: true,
+                  steps[3].items.push({
+                    status: "incomplete",
+                    data: {
+                      sign: {
+                        signatureKind: "eip712",
+                        domain: signData.domain,
+                        types: signData.types,
+                        value: signData.value,
+                        primaryType: _TypedDataEncoder.getPrimaryType(signData.types),
+                      },
+                      post: {
+                        endpoint: "/order/v4",
+                        method: "POST",
+                        body: {
+                          items: [
+                            {
+                              order: {
+                                kind: "blur",
+                                data: {
+                                  maker,
+                                  marketplaceData,
+                                  authToken: blurAuth!,
+                                  isCollectionBid: true,
+                                },
                               },
+                              collection,
+                              orderbook: params.orderbook,
+                              orderbookApiKey: params.orderbookApiKey,
                             },
-                            collection,
-                            orderbook: params.orderbook,
-                            orderbookApiKey: params.orderbookApiKey,
-                          },
-                        ],
-                        source,
+                          ],
+                          source,
+                        },
                       },
                     },
-                  },
-                  orderIndexes: [i],
-                });
+                    orderIndexes: [i],
+                  });
+                }
 
                 break;
               }
@@ -670,6 +689,7 @@ export const getExecuteBidV5Options: RouteOptions = {
 
                 const options = params.options?.[params.orderKind] as
                   | {
+                      conduitKey?: string;
                       useOffChainCancellation?: boolean;
                       replaceOrderId?: string;
                     }

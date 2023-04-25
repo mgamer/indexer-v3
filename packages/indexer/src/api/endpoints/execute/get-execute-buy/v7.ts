@@ -12,6 +12,7 @@ import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { bn, formatPrice, fromBuffer, now, regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
+import { ApiKeyManager } from "@/models/api-keys";
 import { Sources } from "@/models/sources";
 import { OrderKind, generateListingDetailsV6, routerOnRecoverableError } from "@/orderbook/orders";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
@@ -101,7 +102,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
         .default(false)
         .description("If true, only the path will be returned."),
       forceRouter: Joi.boolean().description(
-        "If true, all fills will be executed through the router."
+        "If true, all fills will be executed through the router (where possible)"
       ),
       currency: Joi.string()
         .valid(Sdk.Common.Addresses.Eth[config.chainId])
@@ -130,7 +131,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
       excludeEOA: Joi.boolean()
         .default(false)
         .description(
-          "Exclude orders that can only be filled by EOAs, to support filling with smart contracts."
+          "Exclude orders that can only be filled by EOAs, to support filling with smart contracts. If marked `true`, blur will be excluded."
         ),
       maxFeePerGas: Joi.string().pattern(regex.number).description("Optional custom gas settings."),
       maxPriorityFeePerGas: Joi.string()
@@ -138,7 +139,9 @@ export const getExecuteBuyV7Options: RouteOptions = {
         .description("Optional custom gas settings."),
       // Various authorization keys
       x2y2ApiKey: Joi.string().description("Optional X2Y2 API key used for filling."),
-      openseaApiKey: Joi.string().description("Optional OpenSea API key used for filling."),
+      openseaApiKey: Joi.string().description(
+        "Optional OpenSea API key used for filling. You don't need to pass your own key, but if you don't, you are more likely to be rate-limited."
+      ),
       blurAuth: Joi.string().description("Optional Blur auth used for filling"),
     }),
   },
@@ -154,6 +157,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
             .items(
               Joi.object({
                 status: Joi.string().valid("complete", "incomplete").required(),
+                tip: Joi.string(),
                 orderIds: Joi.array().items(Joi.string()),
                 data: Joi.object(),
               })
@@ -642,6 +646,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
         kind: string;
         items: {
           status: string;
+          tip?: string;
           orderIds?: string[];
           data?: object;
         }[];
@@ -716,6 +721,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
             // Force the client to poll
             steps[1].items.push({
               status: "incomplete",
+              tip: "This step is dependent on a previous step. Once you've completed it, re-call the API to get the data for this step.",
             });
 
             // Return an early since any next steps are dependent on the Blur auth
@@ -736,6 +742,9 @@ export const getExecuteBuyV7Options: RouteOptions = {
         openseaApiKey: payload.openseaApiKey,
         cbApiKey: config.cbApiKey,
         orderFetcherBaseUrl: config.orderFetcherBaseUrl,
+        orderFetcherMetadata: {
+          apiKey: await ApiKeyManager.getApiKey(request.headers["x-api-key"]),
+        },
       });
 
       const errors: { orderId: string; message: string }[] = [];
@@ -748,10 +757,6 @@ export const getExecuteBuyV7Options: RouteOptions = {
           forceRouter: payload.forceRouter,
           relayer: payload.relayer,
           globalFees: feesOnTop,
-          // TODO: Move this defaulting to the core SDK
-          directFillingData: {
-            conduitKey: Sdk.SeaportBase.Addresses.OpenseaConduitKey[config.chainId],
-          },
           blurAuth,
           onRecoverableError: async (kind, error, data) => {
             errors.push({

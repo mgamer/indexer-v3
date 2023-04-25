@@ -136,11 +136,6 @@ export type GenericOrderInfo =
       validateBidValue?: boolean;
     }
   | {
-      kind: "forward";
-      info: orders.forward.OrderInfo;
-      validateBidValue?: boolean;
-    }
-  | {
       kind: "flow";
       info: orders.flow.OrderInfo;
       validateBidValue?: boolean;
@@ -199,11 +194,6 @@ export const jobProcessor = async (job: Job) => {
 
       case "foundation": {
         result = await orders.foundation.save([info]);
-        break;
-      }
-
-      case "forward": {
-        result = await orders.forward.save([info]);
         break;
       }
 
@@ -287,17 +277,14 @@ export const jobProcessor = async (job: Job) => {
     throw error;
   }
 
-  if (result.length && result[0].status === "delayed") {
-    await addToQueue([job.data], false, result[0].delay);
-  } else {
-    logger.debug(job.queueName, `[${kind}] Order save result: ${JSON.stringify(result)}`);
-  }
+  logger.debug(job.queueName, `[${kind}] Order save result: ${JSON.stringify(result)}`);
 };
 
 export const addToQueue = async (
   orderInfos: GenericOrderInfo[],
   prioritized = false,
-  delay = 0
+  delay = 0,
+  jobId?: string
 ) => {
   await queue.addBulk(
     orderInfos.map((orderInfo) => ({
@@ -306,6 +293,7 @@ export const addToQueue = async (
       opts: {
         priority: prioritized ? 1 : undefined,
         delay: delay ? delay * 1000 : undefined,
+        jobId,
       },
     }))
   );

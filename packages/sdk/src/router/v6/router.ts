@@ -55,6 +55,7 @@ type SetupOptions = {
   openseaApiKey?: string;
   cbApiKey?: string;
   orderFetcherBaseUrl?: string;
+  orderFetcherMetadata?: object;
 };
 
 export class Router {
@@ -164,9 +165,6 @@ export class Router {
       forceRouter?: boolean;
       // Skip any errors (either off-chain or on-chain)
       partial?: boolean;
-      // Any extra data relevant when filling natively
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      directFillingData?: any;
       // Wallet used for relaying the fill transaction
       relayer?: string;
       // Needed for filling Blur orders
@@ -304,23 +302,6 @@ export class Router {
         const order = detail.order as Sdk.Flow.Order;
         const exchange = new Sdk.Flow.Exchange(this.chainId);
 
-        if (options?.directFillingData) {
-          return {
-            txs: [
-              {
-                approvals: approval ? [approval] : [],
-                txData: exchange.takeOrdersTx(taker, [
-                  {
-                    order,
-                    tokens: options.directFillingData,
-                  },
-                ]),
-                orderIds: [detail.orderId],
-              },
-            ],
-            success: { [detail.orderId]: true },
-          };
-        }
         return {
           txs: [
             {
@@ -412,8 +393,6 @@ export class Router {
 
     // Generate calldata for the above Blur-compatible listings
     if (blurCompatibleListings.length) {
-      const url = `${this.options?.orderFetcherBaseUrl}/api/blur-listing`;
-
       try {
         // We'll have one transaction per contract
         const result: {
@@ -426,7 +405,7 @@ export class Router {
             errors: { tokenId: string; reason: string }[];
           };
         } = await axios
-          .post(url, {
+          .post(`${this.options?.orderFetcherBaseUrl}/api/blur-listing`, {
             taker,
             tokens: blurCompatibleListings.map((d) => ({
               contract: d.contract,
@@ -435,6 +414,7 @@ export class Router {
               isFlagged: d.isFlagged,
             })),
             authToken: options?.blurAuth?.accessToken,
+            metadata: this.options?.orderFetcherMetadata,
           })
           .then((response) => response.data.calldata);
 
@@ -458,7 +438,7 @@ export class Router {
               if (listing) {
                 await options.onRecoverableError("order-fetcher-blur-listings", new Error(reason), {
                   orderId: listing.orderId,
-                  additionalInfo: { detail: listing, taker, url },
+                  additionalInfo: { detail: listing, taker },
                 });
               }
             }
@@ -491,7 +471,7 @@ export class Router {
             if (detail.source === "blur.io" && !success[detail.orderId]) {
               await options.onRecoverableError("order-fetcher-blur-listings", error, {
                 orderId: detail.orderId,
-                additionalInfo: { detail, taker, url },
+                additionalInfo: { detail, taker },
               });
             }
           }
@@ -524,28 +504,35 @@ export class Router {
 
     await Promise.all(
       details.map(async (detail, i) => {
-        if (detail.kind === "seaport-v1.4-partial") {
+        if (["seaport-partial", "seaport-v1.4-partial"].includes(detail.kind)) {
+          const protocolVersion = detail.kind === "seaport-partial" ? "v1.1" : "v1.4";
           const order = detail.order as Sdk.SeaportBase.Types.PartialOrder;
 
-          let url = `${this.options?.orderFetcherBaseUrl}/api/listing`;
-          url += `?contract=${detail.contract}`;
-          url += `&tokenId=${detail.tokenId}`;
-          url += order.unitPrice ? `&unitPrice=${order.unitPrice}` : "";
-          url += `&orderHash=${order.id}`;
-          url += `&taker=${taker}`;
-          url += `&chainId=${this.chainId}`;
-          url += "&protocolVersion=v1.4";
-          url += this.options?.openseaApiKey ? `&openseaApiKey=${this.options.openseaApiKey}` : "";
-
           try {
-            const result = await axios.get(url);
+            const result = await axios.post(`${this.options?.orderFetcherBaseUrl}/api/listing`, {
+              contract: detail.contract,
+              tokenId: detail.tokenId,
+              unitPrice: order.unitPrice,
+              orderHash: order.id,
+              taker,
+              chainId: this.chainId,
+              protocolVersion,
+              openseaApiKey: this.options?.openseaApiKey,
+              metadata: this.options?.orderFetcherMetadata,
+            });
 
             // Override the details
-            const fullOrder = new Sdk.SeaportV14.Order(this.chainId, result.data.order);
             details[i] = {
               ...detail,
-              kind: "seaport-v1.4",
-              order: fullOrder,
+              ...(protocolVersion === "v1.1"
+                ? {
+                    kind: "seaport",
+                    order: new Sdk.SeaportV11.Order(this.chainId, result.data.order),
+                  }
+                : {
+                    kind: "seaport-v1.4",
+                    order: new Sdk.SeaportV14.Order(this.chainId, result.data.order),
+                  }),
             };
           } catch (error) {
             if (options?.onRecoverableError) {
@@ -554,7 +541,6 @@ export class Router {
                 additionalInfo: {
                   detail,
                   taker,
-                  url,
                 },
               });
             }
@@ -577,8 +563,9 @@ export class Router {
         ({ kind, fees, currency, order }) =>
           kind === "seaport-v1.4" &&
           buyInCurrency === currency &&
-          // All orders must have the same currency and conduit
+          // All orders must have the same currency
           currency === details[0].currency &&
+          // All orders must have the same conduit
           (order as Sdk.SeaportV14.Order).params.conduitKey ===
             (details[0].order as Sdk.SeaportV14.Order).params.conduitKey &&
           !fees?.length
@@ -589,9 +576,8 @@ export class Router {
     ) {
       const exchange = new Sdk.SeaportV14.Exchange(this.chainId);
 
-      const conduit = exchange.deriveConduit(
-        (details[0].order as Sdk.SeaportV14.Order).params.conduitKey
-      );
+      const conduitKey = (details[0].order as Sdk.SeaportV14.Order).params.conduitKey;
+      const conduit = exchange.deriveConduit(conduitKey);
 
       let approval: FTApproval | undefined;
       if (!isETH(this.chainId, details[0].currency)) {
@@ -616,7 +602,7 @@ export class Router {
                 order.buildMatching({ amount: details[0].amount }),
                 {
                   ...options,
-                  ...options?.directFillingData,
+                  conduitKey,
                 }
               ),
               orderIds: [details[0].orderId],
@@ -636,7 +622,7 @@ export class Router {
                 orders.map((order, i) => order.buildMatching({ amount: details[i].amount })),
                 {
                   ...options,
-                  ...options?.directFillingData,
+                  conduitKey,
                 }
               ),
               orderIds: details.map((d) => d.orderId),
@@ -652,8 +638,9 @@ export class Router {
         ({ kind, fees, currency, order }) =>
           kind === "alienswap" &&
           buyInCurrency === currency &&
-          // All orders must have the same currency and conduit
+          // All orders must have the same currency
           currency === details[0].currency &&
+          // All orders must have the same conduit
           (order as Sdk.Alienswap.Order).params.conduitKey ===
             (details[0].order as Sdk.Alienswap.Order).params.conduitKey &&
           !fees?.length
@@ -664,9 +651,8 @@ export class Router {
     ) {
       const exchange = new Sdk.Alienswap.Exchange(this.chainId);
 
-      const conduit = exchange.deriveConduit(
-        (details[0].order as Sdk.Alienswap.Order).params.conduitKey
-      );
+      const conduitKey = (details[0].order as Sdk.Alienswap.Order).params.conduitKey;
+      const conduit = exchange.deriveConduit(conduitKey);
 
       let approval: FTApproval | undefined;
       if (!isETH(this.chainId, details[0].currency)) {
@@ -691,7 +677,7 @@ export class Router {
                 order.buildMatching({ amount: details[0].amount }),
                 {
                   ...options,
-                  ...options?.directFillingData,
+                  conduitKey,
                 }
               ),
               orderIds: [details[0].orderId],
@@ -711,7 +697,7 @@ export class Router {
                 orders.map((order, i) => order.buildMatching({ amount: details[i].amount })),
                 {
                   ...options,
-                  ...options?.directFillingData,
+                  conduitKey,
                 }
               ),
               orderIds: details.map((d) => d.orderId),
@@ -1278,6 +1264,125 @@ export class Router {
         const price = orders
           .map((order, i) =>
             // Seaport orders can be partially-fillable
+            bn(order.getMatchingPrice())
+              .mul(currencyDetails[i].amount ?? 1)
+              .div(order.getInfo()!.amount)
+          )
+          .reduce((a, b) => a.add(b), bn(0));
+        const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
+        const totalPrice = price.add(feeAmount);
+
+        const currencyIsETH = isETH(this.chainId, currency);
+        const buyInCurrencyIsETH = isETH(this.chainId, buyInCurrency);
+
+        executions.push({
+          module: module.address,
+          data:
+            orders.length === 1
+              ? module.interface.encodeFunctionData(
+                  `accept${currencyIsETH ? "ETH" : "ERC20"}Listing`,
+                  [
+                    {
+                      parameters: {
+                        ...orders[0].params,
+                        totalOriginalConsiderationItems: orders[0].params.consideration.length,
+                      },
+                      numerator: currencyDetails[0].amount ?? 1,
+                      denominator: orders[0].getInfo()!.amount,
+                      signature: orders[0].params.signature,
+                      extraData: await exchange.getExtraData(orders[0], {
+                        amount: currencyDetails[0].amount ?? 1,
+                      }),
+                    },
+                    {
+                      fillTo: taker,
+                      refundTo: relayer,
+                      revertIfIncomplete: Boolean(!options?.partial),
+                      amount: price,
+                      // Only needed for ERC20 listings
+                      token: currency,
+                    },
+                    fees,
+                  ]
+                )
+              : module.interface.encodeFunctionData(
+                  `accept${currencyIsETH ? "ETH" : "ERC20"}Listings`,
+                  [
+                    await Promise.all(
+                      orders.map(async (order, i) => {
+                        const totalAmount = order.getInfo()!.amount;
+                        const filledAmount = currencyDetails[i].amount ?? 1;
+
+                        const orderData = {
+                          parameters: {
+                            ...order.params,
+                            totalOriginalConsiderationItems: order.params.consideration.length,
+                          },
+                          numerator: filledAmount,
+                          denominator: totalAmount,
+                          signature: order.params.signature,
+                          extraData: await exchange.getExtraData(orders[0], {
+                            amount: filledAmount,
+                          }),
+                        };
+
+                        if (currencyIsETH) {
+                          return {
+                            order: orderData,
+                            price: bn(orders[i].getMatchingPrice())
+                              .mul(filledAmount)
+                              .div(totalAmount),
+                          };
+                        } else {
+                          return orderData;
+                        }
+                      })
+                    ),
+                    {
+                      fillTo: taker,
+                      refundTo: relayer,
+                      revertIfIncomplete: Boolean(!options?.partial),
+                      amount: price,
+                      // Only needed for ERC20 listings
+                      token: currency,
+                    },
+                    fees,
+                  ]
+                ),
+          value: buyInCurrencyIsETH && currencyIsETH ? totalPrice : 0,
+        });
+
+        // Track any possibly required swap
+        swapDetails.push({
+          tokenIn: buyInCurrency,
+          tokenOut: currency,
+          tokenOutAmount: totalPrice,
+          recipient: module.address,
+          refundTo: relayer,
+          details: currencyDetails,
+          executionIndex: executions.length - 1,
+        });
+
+        // Mark the listings as successfully handled
+        for (const { orderId } of currencyDetails) {
+          success[orderId] = true;
+          orderIds.push(orderId);
+        }
+      }
+    }
+
+    // Handle Alienswap listings
+    if (Object.keys(alienswapDetails).length) {
+      const exchange = new Sdk.Alienswap.Exchange(this.chainId);
+      for (const currency of Object.keys(alienswapDetails)) {
+        const currencyDetails = alienswapDetails[currency];
+
+        const orders = currencyDetails.map((d) => d.order as Sdk.Alienswap.Order);
+        const module = this.contracts.alienswapModule;
+
+        const fees = getFees(currencyDetails);
+        const price = orders
+          .map((order, i) =>
             bn(order.getMatchingPrice())
               .mul(currencyDetails[i].amount ?? 1)
               .div(order.getInfo()!.amount)
@@ -2331,48 +2436,6 @@ export class Router {
       }
     }
 
-    // TODO: Add Forward router module
-    if (details.some(({ kind }) => kind === "forward")) {
-      if (details.length > 1) {
-        throw new Error("Forward multi-selling is not supported");
-      } else {
-        const detail = details[0];
-
-        // Approve Forward's Exchange contract
-        const approval = {
-          contract: detail.contract,
-          owner: taker,
-          operator: Sdk.Forward.Addresses.Exchange[this.chainId],
-          txData: generateNFTApprovalTxData(
-            detail.contract,
-            taker,
-            Sdk.Forward.Addresses.Exchange[this.chainId]
-          ),
-        };
-
-        const order = detail.order as Sdk.Forward.Order;
-        const matchParams = order.buildMatching({
-          tokenId: detail.tokenId,
-          amount: detail.amount ?? 1,
-          ...(detail.extraArgs ?? {}),
-        });
-
-        const exchange = new Sdk.Forward.Exchange(this.chainId);
-        return {
-          txs: [
-            {
-              approvals: [approval],
-              txData: exchange.fillOrderTx(taker, order, matchParams, {
-                source: options?.source,
-              }),
-              orderIds: [detail.orderId],
-            },
-          ],
-          success: { [detail.orderId]: true },
-        };
-      }
-    }
-
     const txs: {
       approvals: NFTApproval[];
       txData: TxData;
@@ -2385,8 +2448,6 @@ export class Router {
 
     const blurDetails = details.filter((d) => d.source === "blur.io");
     if (blurDetails.length) {
-      const url = `${this.options?.orderFetcherBaseUrl}/api/blur-offer`;
-
       try {
         // We'll have one transaction per contract
         const result: {
@@ -2399,7 +2460,7 @@ export class Router {
             errors: { tokenId: string; reason: string }[];
           };
         } = await axios
-          .post(url, {
+          .post(`${this.options?.orderFetcherBaseUrl}/api/blur-offer`, {
             taker,
             tokens: blurDetails.map((d) => ({
               contract: d.contract,
@@ -2430,7 +2491,7 @@ export class Router {
               if (detail) {
                 await options.onRecoverableError("order-fetcher-blur-offers", new Error(reason), {
                   orderId: detail.orderId,
-                  additionalInfo: { detail, taker, url },
+                  additionalInfo: { detail, taker },
                 });
               }
             }
@@ -2463,7 +2524,7 @@ export class Router {
             if (!success[detail.orderId]) {
               await options.onRecoverableError("order-fetcher-blur-offers", error, {
                 orderId: detail.orderId,
-                additionalInfo: { detail, taker, url },
+                additionalInfo: { detail, taker },
               });
             }
           }
@@ -2732,19 +2793,19 @@ export class Router {
           const order = detail.order as Sdk.SeaportBase.Types.PartialOrder;
           const module = this.contracts.seaportV14Module;
 
-          let url = `${this.options?.orderFetcherBaseUrl}/api/offer`;
-          url += `?orderHash=${order.id}`;
-          url += `&contract=${order.contract}`;
-          url += `&tokenId=${order.tokenId}`;
-          url += `&taker=${detail.isProtected ? taker : detail.owner ?? taker}`;
-          url += `&chainId=${this.chainId}`;
-          url += "&protocolVersion=v1.4";
-          url += order.unitPrice ? `&unitPrice=${order.unitPrice}` : "";
-          url += detail.isProtected ? "&isProtected=true" : "";
-          url += this.options?.openseaApiKey ? `&openseaApiKey=${this.options.openseaApiKey}` : "";
-
           try {
-            const result = await axios.get(url);
+            const result = await axios.post(`${this.options?.orderFetcherBaseUrl}/api/offer`, {
+              orderHash: order.id,
+              contract: order.contract,
+              tokenId: order.tokenId,
+              taker: detail.isProtected ? taker : detail.owner ?? taker,
+              chainId: this.chainId,
+              protocolVersion: "1.4",
+              unitPrice: order.unitPrice,
+              isProtected: detail.isProtected,
+              openseaApiKey: this.options?.openseaApiKey,
+              metadata: this.options?.orderFetcherMetadata,
+            });
 
             if (result.data.calldata) {
               const contract = detail.contract;
@@ -2816,7 +2877,6 @@ export class Router {
                 additionalInfo: {
                   detail,
                   taker,
-                  url,
                 },
               });
             }

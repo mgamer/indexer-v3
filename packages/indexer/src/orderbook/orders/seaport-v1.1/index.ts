@@ -142,15 +142,6 @@ export const save = async (
         });
       }
 
-      // Delay the validation of the order if it's start time is very soon in the future
-      if (startTime > currentTime) {
-        return results.push({
-          id,
-          status: "delayed",
-          delay: startTime - currentTime + 5,
-        });
-      }
-
       // Check: order is not expired
       const endTime = order.params.endTime;
       if (currentTime >= endTime) {
@@ -862,7 +853,19 @@ const getCollectionFloorAskValue = async (
     if (collectionFloorAskValue) {
       return Number(collectionFloorAskValue);
     } else {
-      const collection = await Collections.getByContractAndTokenId(contract, tokenId);
+      const query = `
+        SELECT floorSellValue
+        FROM collections
+        WHERE collections.contract = $/contract/
+          AND collections.token_id_range @> $/tokenId/::NUMERIC(78, 0)
+        LIMIT 1
+      `;
+
+      const collection = await redb.oneOrNone(query, {
+        contract: toBuffer(contract),
+        tokenId,
+      });
+
       const collectionFloorAskValue = collection?.floorSellValue || 0;
 
       await redis.set(`collection-floor-ask:${contract}`, collectionFloorAskValue, "EX", 3600);
