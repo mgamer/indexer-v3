@@ -370,7 +370,7 @@ export async function extractRoyalties(
 
         // Calculate by matched payment amount in split payments
         if (matchRangePayment && isReliable && hasMultiple) {
-          // royalty.bps = bn(matchRangePayment.amount).mul(10000).div(fillEvent.price).toNumber();
+          royalty.bps = bn(matchRangePayment.amount).mul(10000).div(fillEvent.price).toNumber();
         }
 
         marketplaceFeeBreakdown.push(royalty);
