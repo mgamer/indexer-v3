@@ -550,7 +550,7 @@ export const getExecuteBidV5Options: RouteOptions = {
                                 data: {
                                   maker,
                                   marketplaceData,
-                                  authToken: blurAuth!,
+                                  authToken: blurAuth!.accessToken,
                                   isCollectionBid: true,
                                 },
                               },
