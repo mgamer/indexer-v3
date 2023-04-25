@@ -8,6 +8,7 @@ import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
 import { config } from "@/config/index";
 import { TriggerKind } from "@/jobs/order-updates/types";
+import { Sources } from "@/models/sources";
 
 import * as buyOrderQueue from "@/jobs/order-updates/order-updates-buy-order-queue";
 import * as sellOrderQueue from "@/jobs/order-updates/order-updates-sell-order-queue";
@@ -96,7 +97,8 @@ if (config.doBackgroundWork) {
 
         if (side && tokenSetId) {
           job.data = { ...job.data, tokenSetId, side, order };
-          if (side === "buy") {
+
+          if (side === "buy" && !tokenSetId.startsWith("token")) {
             await buyOrderQueue.addToQueue([job.data]);
           }
 
@@ -112,14 +114,14 @@ if (config.doBackgroundWork) {
               new Date(JSON.parse(order.validBetween)[0]).getTime() / 1000
             );
             const currentTime = Math.floor(Date.now() / 1000);
-            // const source = (await Sources.getInstance()).get(order.sourceIdInt);
+            const source = (await Sources.getInstance()).get(order.sourceIdInt);
 
             if (orderStart <= currentTime) {
               logger.info(
                 "order-latency",
                 JSON.stringify({
                   latency: currentTime - orderStart,
-                  // source: source?.getTitle(),
+                  source: source?.getTitle(),
                 })
               );
             }
