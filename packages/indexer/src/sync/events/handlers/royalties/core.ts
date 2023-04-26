@@ -47,7 +47,9 @@ export async function extractRoyalties(
   const royaltyFeeOnTop: Royalty[] = [];
 
   const { txHash } = fillEvent.baseEventParams;
-  const { tokenId, contract, currency, currencyPrice } = fillEvent;
+  const { tokenId, contract, currency, price } = fillEvent;
+
+  const currencyPrice = fillEvent.currencyPrice ?? price;
 
   // Fetch the current transaction's trace
   let txTrace: TransactionTrace | undefined;
