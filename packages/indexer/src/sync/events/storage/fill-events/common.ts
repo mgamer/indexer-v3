@@ -154,7 +154,7 @@ export const addEvents = async (events: Event[]) => {
       for (const event of fillValues) {
         const latency = currentTimestamp - event.timestamp;
         // Ignore latency > 2 weeks
-        if (latency < 1209600) {
+        if (latency < 60 * 60 * 24 * 14) {
           logger.info(
             "sales-latency",
             JSON.stringify({
