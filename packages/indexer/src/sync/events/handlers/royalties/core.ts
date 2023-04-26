@@ -210,7 +210,7 @@ export async function extractRoyalties(
   });
   // Compute total price for all above same-contract fills
   const sameContractTotalPrice = sameContractFills.reduce(
-    (total, item) => total.add(bn(item.currencyPrice!).mul(bn(item.amount))),
+    (total, item) => total.add(bn(item.currencyPrice ?? item.price).mul(bn(item.amount))),
     bn(0)
   );
 
@@ -231,7 +231,8 @@ export async function extractRoyalties(
     .sort((a, b) => a.index - b.index);
   // Compute total price for all above same-protocol fills
   const sameProtocolTotalPrice = sameProtocolFills.reduce(
-    (total, item) => total.add(bn(item.event.currencyPrice!).mul(bn(item.event.amount))),
+    (total, item) =>
+      total.add(bn(item.event.currencyPrice ?? item.event.price).mul(bn(item.event.amount))),
     bn(0)
   );
 
@@ -337,7 +338,7 @@ export async function extractRoyalties(
           const balanceChangeAmount =
             balanceChange && !balanceChange.startsWith("-") ? bn(balanceChange) : bn(0);
           const paidOnTop = bn(globalBalanceChange).sub(balanceChangeAmount);
-          const topFeeBps = paidOnTop.gt(0) ? paidOnTop.mul(10000).div(bn(currencyPrice!)) : bn(0);
+          const topFeeBps = paidOnTop.gt(0) ? paidOnTop.mul(10000).div(bn(currencyPrice)) : bn(0);
           if (topFeeBps.gt(0)) {
             royaltyFeeOnTop.push({
               recipient: address,
@@ -357,7 +358,7 @@ export async function extractRoyalties(
 
     // If the balance change is positive that means a payment was received
     if (balanceChange && !balanceChange.startsWith("-")) {
-      const bpsOfPrice = bn(balanceChange).mul(10000).div(bn(currencyPrice!));
+      const bpsOfPrice = bn(balanceChange).mul(10000).div(bn(currencyPrice));
 
       // Start with the assumption that this is a royalty/platform fee payment
       const royalty = {
@@ -374,7 +375,7 @@ export async function extractRoyalties(
         if (matchRangePayment && isReliable && hasMultiple) {
           royalty.bps = bn(matchRangePayment.amount)
             .mul(10000)
-            .div(fillEvent.currencyPrice!)
+            .div(fillEvent.currencyPrice ?? fillEvent.price)
             .toNumber();
         }
 
