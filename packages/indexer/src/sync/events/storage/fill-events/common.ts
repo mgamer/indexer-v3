@@ -150,11 +150,14 @@ export const addEvents = async (events: Event[]) => {
 
     try {
       // Log fill events ingestion latency
+      const currentTimestamp = Math.floor(Date.now() / 1000);
       for (const event of fillValues) {
         logger.info(
           "sales-latency",
           JSON.stringify({
-            latency: Math.floor(Date.now() / 1000) - event.timestamp,
+            latency: currentTimestamp - event.timestamp,
+            currentTimestamp,
+            eventTimestamp: event.timestamp,
           })
         );
       }
