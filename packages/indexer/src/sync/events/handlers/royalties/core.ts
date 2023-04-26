@@ -193,7 +193,9 @@ export async function extractRoyalties(
             _.baseEventParams.logIndex === fillEvent.baseEventParams.logIndex
         );
 
-        subcallToAnalyze = matchExchangeCalls[eventIndex];
+        if (matchExchangeCalls[eventIndex]) {
+          subcallToAnalyze = matchExchangeCalls[eventIndex];
+        }
       }
     }
   }
