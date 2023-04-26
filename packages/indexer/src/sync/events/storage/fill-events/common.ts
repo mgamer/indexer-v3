@@ -152,14 +152,16 @@ export const addEvents = async (events: Event[]) => {
       // Log fill events ingestion latency
       const currentTimestamp = Math.floor(Date.now() / 1000);
       for (const event of fillValues) {
-        logger.info(
-          "sales-latency",
-          JSON.stringify({
-            latency: currentTimestamp - event.timestamp,
-            currentTimestamp,
-            eventTimestamp: event.timestamp,
-          })
-        );
+        const latency = currentTimestamp - event.timestamp;
+        // Ignore latency > 2 weeks
+        if (latency < 1209600) {
+          logger.info(
+            "sales-latency",
+            JSON.stringify({
+              latency,
+            })
+          );
+        }
       }
     } catch (error) {
       logger.error("sales-latency", `Failed to log sales latency ${error}`);
