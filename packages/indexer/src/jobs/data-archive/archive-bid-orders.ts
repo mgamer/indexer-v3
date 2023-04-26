@@ -7,23 +7,25 @@ import fs from "fs";
 import { EOL } from "os";
 import { ArchiveInterface } from "@/jobs/data-archive/archive-interface";
 
-export class ArchiveBidEvents implements ArchiveInterface {
-  static tableName = "bid_events";
-  static maxAgeDay = 30;
+export class ArchiveBidOrders implements ArchiveInterface {
+  static tableName = "orders";
+  static maxAgeDay = 7;
 
   async getNextBatchStartTime() {
-    // Get the first event from which the archive will start
+    // Get the first order from which the archive will start
     const firstEventQuery = `
-        SELECT created_at
-        FROM ${ArchiveBidEvents.tableName}
-        WHERE created_at < current_date - INTERVAL '${ArchiveBidEvents.maxAgeDay} days'
-        ORDER BY created_at ASC
+        SELECT updated_at
+        FROM ${ArchiveBidOrders.tableName}
+        WHERE updated_at < current_date - INTERVAL '${ArchiveBidOrders.maxAgeDay} days'
+        AND side = 'buy'
+        AND fillability_status = 'expired'
+        ORDER BY updated_at ASC
         LIMIT 1
       `;
 
     const dbResult = await idb.oneOrNone(firstEventQuery);
-    if (dbResult && dbResult.created_at) {
-      return dbResult.created_at;
+    if (dbResult && dbResult.updated_at) {
+      return dbResult.updated_at;
     }
 
     return null;
@@ -35,14 +37,14 @@ export class ArchiveBidEvents implements ArchiveInterface {
   }
 
   getTableName() {
-    return ArchiveBidEvents.tableName;
+    return ArchiveBidOrders.tableName;
   }
 
   getMaxAgeDay() {
-    return ArchiveBidEvents.maxAgeDay;
+    return ArchiveBidOrders.maxAgeDay;
   }
 
-  async generateJsonFile(filename: string, startTime: string, endTime: string): Promise<number> {
+  async generateJsonFile(filename: string, startTime: string, endTime: string) {
     const limit = 5000;
     let continuation = "";
     let count = 0;
@@ -55,12 +57,14 @@ export class ArchiveBidEvents implements ArchiveInterface {
     do {
       const query = `
             SELECT *
-            FROM ${ArchiveBidEvents.tableName}
-            WHERE created_at < current_date - INTERVAL '${ArchiveBidEvents.maxAgeDay} days'
-            AND created_at >= '${startTime}'
-            AND created_at < '${endTime}'
+            FROM ${ArchiveBidOrders.tableName}
+            WHERE updated_at < current_date - INTERVAL '${ArchiveBidOrders.maxAgeDay} days'
+            AND updated_at >= '${startTime}'
+            AND updated_at < '${endTime}'
+            AND side = 'buy'
+            AND fillability_status = 'expired'
             ${continuation}
-            ORDER BY created_at ASC, id ASC
+            ORDER BY updated_at ASC, id ASC
             LIMIT ${limit}
           `;
 
@@ -69,10 +73,15 @@ export class ArchiveBidEvents implements ArchiveInterface {
       records = records.map((r) => {
         return {
           ...r,
-          contract: fromBuffer(r.contract),
-          maker: fromBuffer(r.maker),
-          tx_hash: r.tx_hash ? fromBuffer(r.tx_hash) : r.tx_hash,
-          order_currency: r.order_currency ? fromBuffer(r.order_currency) : r.order_currency,
+          token_set_schema_hash: r.token_set_schema_hash
+            ? fromBuffer(r.token_set_schema_hash)
+            : r.token_set_schema_hash,
+          maker: r.maker ? fromBuffer(r.maker) : r.maker,
+          taker: r.taker ? fromBuffer(r.taker) : r.taker,
+          contract: r.contract ? fromBuffer(r.contract) : r.contract,
+          conduit: r.conduit ? fromBuffer(r.conduit) : r.conduit,
+          currency: r.currency ? fromBuffer(r.currency) : r.currency,
+          updated_at: new Date(r.updated_at).toISOString(),
           created_at: new Date(r.created_at).toISOString(),
         };
       });
@@ -84,9 +93,9 @@ export class ArchiveBidEvents implements ArchiveInterface {
 
       count += _.size(records);
 
-      continuation = `AND created_at > '${_.last(records)?.created_at}' AND id > ${
+      continuation = `AND updated_at > '${_.last(records)?.updated_at}' AND id > '${
         _.last(records)?.id
-      }`;
+      }'`;
     } while (limit === _.size(records));
 
     // Close Stream
@@ -108,13 +117,15 @@ export class ArchiveBidEvents implements ArchiveInterface {
 
     do {
       const deleteQuery = `
-            DELETE FROM ${ArchiveBidEvents.tableName}
+            DELETE FROM ${ArchiveBidOrders.tableName}
             WHERE id IN (
               SELECT id
-              FROM ${ArchiveBidEvents.tableName}
-              WHERE created_at < current_date - INTERVAL '${ArchiveBidEvents.maxAgeDay} days'
-              AND created_at >= '${startTime}'
-              AND created_at < '${endTime}'
+              FROM ${ArchiveBidOrders.tableName}
+              WHERE updated_at < current_date - INTERVAL '${ArchiveBidOrders.maxAgeDay} days'
+              AND updated_at >= '${startTime}'
+              AND updated_at < '${endTime}'
+              AND side = 'buy'
+              AND fillability_status = 'expired'
               LIMIT ${limit}
             )
           `;
