@@ -19,6 +19,7 @@ import { CollectionSets } from "@/models/collection-sets";
 import { Sources } from "@/models/sources";
 import { Orders } from "@/utils/orders";
 import { TokenSets } from "@/models/token-sets";
+import { ContractSets } from "@/models/contract-sets";
 
 const version = "v4";
 
@@ -60,6 +61,7 @@ export const getOrdersAsksV4Options: RouteOptions = {
       collectionsSetId: Joi.string()
         .lowercase()
         .description("Filter to a particular collection set."),
+      contractsSetId: Joi.string().lowercase().description("Filter to a particular contracts set."),
       contracts: Joi.alternatives()
         .try(
           Joi.array().max(80).items(Joi.string().lowercase().pattern(regex.address)),
@@ -130,6 +132,13 @@ export const getOrdersAsksV4Options: RouteOptions = {
         .description(
           "Order the items are returned in the response, Sorting by price allowed only when filtering by token"
         ),
+      sortDirection: Joi.string()
+        .lowercase()
+        .when("sortBy", {
+          is: Joi.valid("updatedAt"),
+          then: Joi.valid("asc", "desc").default("desc"),
+          otherwise: Joi.valid("desc").default("desc"),
+        }),
       continuation: Joi.string()
         .pattern(regex.base64)
         .description("Use continuation token to request next offset of items."),
@@ -145,6 +154,7 @@ export const getOrdersAsksV4Options: RouteOptions = {
         .description("Return result in given currency"),
     })
       .oxor("token", "tokenSetId")
+      .oxor("contracts", "contractsSetId")
       .with("community", "maker")
       .with("collectionsSetId", "maker"),
   },
@@ -343,6 +353,13 @@ export const getOrdersAsksV4Options: RouteOptions = {
         }
       }
 
+      if (query.contractsSetId) {
+        query.contracts = await ContractSets.getContracts(query.contractsSetId);
+        if (_.isEmpty(query.contracts)) {
+          throw Boom.badRequest(`No contracts for contracts set ${query.contractsSetId}`);
+        }
+      }
+
       if (query.contracts) {
         if (!_.isArray(query.contracts)) {
           query.contracts = [query.contracts];
@@ -459,7 +476,11 @@ export const getOrdersAsksV4Options: RouteOptions = {
           baseQuery += ` ORDER BY orders.price, orders.id`;
         }
       } else if (query.sortBy === "updatedAt") {
-        baseQuery += ` ORDER BY orders.updated_at DESC, orders.id DESC`;
+        if (query.sortDirection === "asc") {
+          baseQuery += ` ORDER BY orders.updated_at ASC, orders.id ASC`;
+        } else {
+          baseQuery += ` ORDER BY orders.updated_at DESC, orders.id DESC`;
+        }
       } else {
         baseQuery += ` ORDER BY orders.created_at DESC, orders.id DESC`;
       }

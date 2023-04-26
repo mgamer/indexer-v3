@@ -184,7 +184,7 @@ export const assignRoyaltiesToFillEvents = async (
               fillEvent.paidFullRoyalty = result.paidFullRoyalty;
 
               fillEvent.netAmount = subFeeWithBps(
-                fillEvent.price,
+                fillEvent.currencyPrice ?? fillEvent.price,
                 result.royaltyFeeBps + result.marketplaceFeeBps
               );
             }

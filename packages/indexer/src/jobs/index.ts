@@ -43,6 +43,8 @@ import * as backfillMints from "@/jobs/backfill/backfill-mints";
 import * as backfillSaleRoyalties from "@/jobs/backfill/backfill-sale-royalties";
 import * as backfillUpdateMissingMetadata from "@/jobs/backfill/backfill-update-missing-metadata";
 import * as backfillNftBalancesLastTokenAppraisalValue from "@/jobs/backfill/backfill-nft-balances-last-token-appraisal-value";
+import * as backfillCancelEventsCreatedAt from "@/jobs/backfill/backfill-cancel-events-created-at";
+import * as backfillNftTransferEventsCreatedAt from "@/jobs/backfill/backfill-nft-transfer-events-created-at";
 
 import * as topBidUpdate from "@/jobs/bid-updates/top-bid-update-queue";
 
@@ -100,6 +102,8 @@ import * as orderFixes from "@/jobs/order-fixes/fixes";
 import * as orderRevalidations from "@/jobs/order-fixes/revalidations";
 
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
+import * as orderUpdatesBuyOrder from "@/jobs/order-updates/order-updates-buy-order-queue";
+import * as orderUpdatesSellOrder from "@/jobs/order-updates/order-updates-sell-order-queue";
 import * as orderUpdatesByMaker from "@/jobs/order-updates/by-maker-queue";
 import * as bundleOrderUpdatesByMaker from "@/jobs/order-updates/by-maker-bundle-queue";
 import * as dynamicOrdersCron from "@/jobs/order-updates/cron/dynamic-orders-queue";
@@ -142,6 +146,8 @@ import * as openseaOrdersFetchQueue from "@/jobs/opensea-orders/fetch-queue";
 
 export const gracefulShutdownJobWorkers = [
   orderUpdatesById.worker,
+  orderUpdatesBuyOrder.worker,
+  orderUpdatesSellOrder.worker,
   orderUpdatesByMaker.worker,
   bundleOrderUpdatesByMaker.worker,
   dynamicOrdersCron.worker,
@@ -167,6 +173,8 @@ export const allJobQueues = [
   backfillSaleRoyalties.queue,
   backfillUpdateMissingMetadata.queue,
   backfillNftBalancesLastTokenAppraisalValue.queue,
+  backfillCancelEventsCreatedAt.queue,
+  backfillNftTransferEventsCreatedAt.queue,
 
   currencies.queue,
 
@@ -226,6 +234,8 @@ export const allJobQueues = [
   orderRevalidations.queue,
 
   orderUpdatesById.queue,
+  orderUpdatesBuyOrder.queue,
+  orderUpdatesSellOrder.queue,
   orderUpdatesByMaker.queue,
   bundleOrderUpdatesByMaker.queue,
   dynamicOrdersCron.queue,

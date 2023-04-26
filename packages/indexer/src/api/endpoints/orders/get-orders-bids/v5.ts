@@ -1,17 +1,23 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { AddressZero, HashZero } from "@ethersproject/constants";
+import { parseEther } from "@ethersproject/units";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Boom from "@hapi/boom";
+import * as Sdk from "@reservoir0x/sdk";
+import axios from "axios";
 import Joi from "joi";
 import _ from "lodash";
 
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { JoiOrder, getJoiOrderObject } from "@/common/joi";
-import { buildContinuation, regex, splitContinuation, toBuffer } from "@/common/utils";
+import { buildContinuation, now, regex, splitContinuation, toBuffer } from "@/common/utils";
+import { config } from "@/config/index";
 import { Attributes } from "@/models/attributes";
 import { CollectionSets } from "@/models/collection-sets";
 import { Sources } from "@/models/sources";
+import { ContractSets } from "@/models/contract-sets";
 import { Orders } from "@/utils/orders";
 
 const version = "v5";
@@ -54,6 +60,7 @@ export const getOrdersBidsV5Options: RouteOptions = {
       collectionsSetId: Joi.string()
         .lowercase()
         .description("Filter to a particular collection set."),
+      contractsSetId: Joi.string().lowercase().description("Filter to a particular contracts set."),
       collection: Joi.string()
         .lowercase()
         .description(
@@ -137,7 +144,15 @@ export const getOrdersBidsV5Options: RouteOptions = {
         .pattern(regex.address)
         .description("Return result in given currency"),
     })
-      .oxor("token", "tokenSetId", "contracts", "ids", "collection", "collectionsSetId")
+      .oxor(
+        "token",
+        "tokenSetId",
+        "contracts",
+        "ids",
+        "collection",
+        "collectionsSetId",
+        "contractsSetId"
+      )
       .with("community", "maker")
       .with("collectionsSetId", "maker")
       .with("attribute", "collection"),
@@ -156,6 +171,73 @@ export const getOrdersBidsV5Options: RouteOptions = {
     const query = request.query as any;
 
     try {
+      // Since we treat Blur bids as a generic pool we cannot use the `orders`
+      // table to fetch all the bids of a particular maker. However, filtering
+      // by `maker` and `source=blur.io` will result in making a call to Blur,
+      // which will return the requested bids.
+      if (query.source === "blur.io" && query.maker) {
+        if (config.chainId !== 1) {
+          return {
+            orders: [],
+            continuation: null,
+          };
+        }
+
+        if (query.status && query.status !== "active") {
+          throw Boom.notImplemented("Only active orders are supported when requesting Blur orders");
+        }
+
+        const sources = await Sources.getInstance();
+        const source = sources.getByDomain(query.source);
+
+        const result: { contract: string; price: string; quantity: number }[] = await axios
+          .get(`${config.orderFetcherBaseUrl}/api/blur-user-collection-bids?user=${query.maker}`)
+          .then((response) => response.data.bids);
+        return {
+          orders: await Promise.all(
+            result.map((r) =>
+              getJoiOrderObject({
+                id: `blur-collection-bid:${query.maker}:${r.contract}:${r.price}`,
+                kind: "blur",
+                side: "buy",
+                status: "active",
+                tokenSetId: `contract:${r.contract}`,
+                tokenSetSchemaHash: toBuffer(HashZero),
+                contract: toBuffer(r.contract),
+                maker: toBuffer(query.maker),
+                taker: toBuffer(AddressZero),
+                prices: {
+                  gross: {
+                    amount: parseEther(r.price).toString(),
+                    nativeAmount: parseEther(r.price).toString(),
+                  },
+                  currency: toBuffer(Sdk.Blur.Addresses.Beth[config.chainId]),
+                },
+                validFrom: now().toString(),
+                validUntil: "0",
+                quantityFilled: "0",
+                quantityRemaining: r.quantity.toString(),
+                criteria: null,
+                sourceIdInt: source!.id,
+                feeBps: 0,
+                feeBreakdown: [],
+                expiration: "0",
+                isReservoir: false,
+                createdAt: now(),
+                updatedAt: now(),
+                includeRawData: false,
+                rawData: {} as any,
+                normalizeRoyalties: false,
+                missingRoyalties: [],
+                includeDepth: false,
+                displayCurrency: query.displayCurrency,
+              })
+            )
+          ),
+          continuation: null,
+        };
+      }
+
       const criteriaBuildQuery = Orders.buildCriteriaQuery(
         "orders",
         "token_set_id",
@@ -293,6 +375,13 @@ export const getOrdersBidsV5Options: RouteOptions = {
 
         baseQuery += ` JOIN token_sets ON token_sets.id = orders.token_set_id AND token_sets.schema_hash = orders.token_set_schema_hash`;
         conditions.push(`token_sets.attribute_id IN ($/attributeIds:csv/)`);
+      }
+
+      if (query.contractsSetId) {
+        query.contracts = await ContractSets.getContracts(query.contractsSetId);
+        if (_.isEmpty(query.contracts)) {
+          throw Boom.badRequest(`No contracts for contracts set ${query.contractsSetId}`);
+        }
       }
 
       if (query.contracts) {
