@@ -4,8 +4,8 @@ import { randomUUID } from "crypto";
 import { logger } from "@/common/logger";
 import { acquireLock, redis, releaseLock } from "@/common/redis";
 import { config } from "@/config/index";
-import { ArchiveBidEvents } from "@/jobs/data-archive/archive-bid-events";
-import { ArchiveBidOrders } from "@/jobs/data-archive/archive-bid-orders";
+import { ArchiveBidEvents } from "@/jobs/data-archive/archive-classes/archive-bid-events";
+import { ArchiveBidOrders } from "@/jobs/data-archive/archive-classes/archive-bid-orders";
 import { ArchiveManager } from "@/jobs/data-archive/archive-manager";
 const QUEUE_NAME = "process-archive-data-queue";
 

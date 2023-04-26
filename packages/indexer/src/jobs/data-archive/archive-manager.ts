@@ -9,7 +9,7 @@ import fs, { createReadStream, createWriteStream } from "fs";
 import { createGzip } from "zlib";
 import AWS from "aws-sdk";
 import { logger } from "@/common/logger";
-import { ArchiveInterface } from "@/jobs/data-archive/archive-interface";
+import { ArchiveInterface } from "@/jobs/data-archive/archive-classes/archive-interface";
 
 export class ArchiveManager {
   static async fileExists(bucket: string, key: string) {

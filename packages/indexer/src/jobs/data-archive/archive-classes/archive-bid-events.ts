@@ -5,7 +5,7 @@ import { fromBuffer } from "@/common/utils";
 import _ from "lodash";
 import fs from "fs";
 import { EOL } from "os";
-import { ArchiveInterface } from "@/jobs/data-archive/archive-interface";
+import { ArchiveInterface } from "@/jobs/data-archive/archive-classes/archive-interface";
 
 export class ArchiveBidEvents implements ArchiveInterface {
   static tableName = "bid_events";
