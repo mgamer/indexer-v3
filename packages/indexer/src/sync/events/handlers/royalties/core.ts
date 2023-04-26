@@ -1,7 +1,6 @@
 import { getStateChange, getPayments, searchForCall } from "@georgeroman/evm-tx-simulator";
 import { Payment } from "@georgeroman/evm-tx-simulator/dist/types";
 import * as Sdk from "@reservoir0x/sdk";
-
 import { redis } from "@/common/redis";
 import { bn } from "@/common/utils";
 import { config } from "@/config/index";
@@ -430,7 +429,7 @@ export async function extractRoyalties(
 
         // Match with the order's fee breakdown
         if (!isInRange) {
-          isInRange = Boolean(orderInfo?.feeBreakdown.find((c) => c.recipient === address));
+          isInRange = Boolean((orderInfo?.feeBreakdown ?? []).find((c) => c.recipient === address));
         }
 
         // For now we exclude AMMs which don't pay royalties

@@ -55,5 +55,7 @@ supportedExchanges.set("seaport-v1.4", Sdk.SeaportV14.Addresses.Exchange[config.
 supportedExchanges.set("alienswap", Sdk.Alienswap.Addresses.Exchange[config.chainId]);
 supportedExchanges.set("x2y2", Sdk.X2Y2.Addresses.Exchange[config.chainId]);
 supportedExchanges.set("looks-rare", Sdk.LooksRare.Addresses.Exchange[config.chainId]);
-supportedExchanges.set("wyvern-v2", Sdk.WyvernV2.Addresses.Exchange[config.chainId]);
-supportedExchanges.set("wyvern-v2.3", Sdk.WyvernV23.Addresses.Exchange[config.chainId]);
+
+// Temporary disabled
+// supportedExchanges.set("wyvern-v2", Sdk.WyvernV2.Addresses.Exchange[config.chainId]);
+// supportedExchanges.set("wyvern-v2.3", Sdk.WyvernV23.Addresses.Exchange[config.chainId]);
