@@ -98,7 +98,7 @@ if (config.doBackgroundWork) {
         if (side && tokenSetId) {
           job.data = { ...job.data, tokenSetId, side, order };
 
-          if (side === "buy" && !tokenSetId.startsWith("token")) {
+          if (side === "buy") {
             await buyOrderQueue.addToQueue([job.data]);
           }
 
