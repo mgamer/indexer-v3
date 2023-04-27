@@ -13,7 +13,7 @@ const kafka = new Kafka({
   logLevel: logLevel.ERROR,
 });
 
-// Define event handler interface
+// Define topic handler interface
 export interface KafkaTopicHandler {
   topicName: string;
   handle(payload: any): Promise<void>;
