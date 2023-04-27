@@ -40,19 +40,21 @@ if (config.doBackgroundWork) {
           await redis.del(getCacheKey(collection));
 
           const pricePoints = result.map((r) => JSON.parse(r));
-          await orderbook.addToQueue([
-            {
-              kind: "blur-bid",
-              info: {
-                orderParams: {
-                  collection,
-                  pricePoints,
+          if (pricePoints.length) {
+            await orderbook.addToQueue([
+              {
+                kind: "blur-bid",
+                info: {
+                  orderParams: {
+                    collection,
+                    pricePoints,
+                  },
+                  metadata: {},
                 },
-                metadata: {},
               },
-            },
-          ]);
-          await blurBidsRefresh.addToQueue(collection);
+            ]);
+            await blurBidsRefresh.addToQueue(collection);
+          }
         }
       } catch (error) {
         logger.error(
