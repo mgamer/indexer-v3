@@ -73,7 +73,8 @@ export type EventKind =
   | "zeroex-v3"
   | "zeroex-v4"
   | "zora"
-  | "looks-rare-v2";
+  | "looks-rare-v2"
+  | "opensea-zeroex-v3";
 
 // Event sub-kind in each of the above protocol/standard
 export type EventSubKind =
@@ -195,7 +196,8 @@ export type EventSubKind =
   | "looks-rare-v2-order-nonces-cancelled"
   | "looks-rare-v2-subset-nonces-cancelled"
   | "looks-rare-v2-taker-ask"
-  | "looks-rare-v2-taker-bid";
+  | "looks-rare-v2-taker-bid"
+  | "opensea-zeroex-v3-fill";
 
 export type EventData = {
   kind: EventKind;

@@ -38,6 +38,7 @@ import * as zeroExV2 from "@/events-sync/handlers/zeroex-v2";
 import * as zeroExV3 from "@/events-sync/handlers/zeroex-v3";
 import * as treasure from "@/events-sync/handlers/treasure";
 import * as looksRareV2 from "@/events-sync/handlers/looks-rare-v2";
+import * as openseaZeroExV3 from "@/events-sync/handlers/opensea-zeroex-v3";
 
 // A list of events having the same high-level kind
 export type EventsByKind = {
@@ -87,6 +88,7 @@ export const eventKindToHandler = new Map<
   ["zeroex-v2", (e, d) => zeroExV2.handleEvents(e, d)],
   ["zeroex-v3", (e, d) => zeroExV3.handleEvents(e, d)],
   ["treasure", (e, d) => treasure.handleEvents(e, d)],
+  ["opensea-zeroex-v3", (e, d) => openseaZeroExV3.handleEvents(e, d)],
   ["looks-rare-v2", (e, d) => looksRareV2.handleEvents(e, d)],
 ]);
 
