@@ -22,7 +22,8 @@ const version = "v6";
 
 export const getUserActivityV6Options: RouteOptions = {
   description: "Users activity",
-  notes: "This API can be used to build a feed for a user including sales, asks, transfers, mints, bids, canceled bids, and cancel asks types.",
+  notes:
+    "This API can be used to build a feed for a user including sales, asks, transfers, mints, bids, canceled bids, and cancel asks types.",
   tags: ["api", "Activity"],
   plugins: {
     "hapi-swagger": {

@@ -30,8 +30,7 @@ export const getCollectionsV5Options: RouteOptions = {
     expiresIn: 10000,
   },
   description: "Collections",
-  notes:
-    "Use this API to explore a collection’s metadata and statistics (sales, volume, etc).",
+  notes: "Use this API to explore a collection’s metadata and statistics (sales, volume, etc).",
   tags: ["api", "Collections"],
   plugins: {
     "hapi-swagger": {
@@ -59,7 +58,9 @@ export const getCollectionsV5Options: RouteOptions = {
           Joi.array().items(Joi.string().lowercase().pattern(regex.address)).max(20),
           Joi.string().lowercase().pattern(regex.address)
         )
-        .description("Array of contracts. Max amount is 20. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"),
+        .description(
+          "Array of contracts. Max amount is 20. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
+        ),
       name: Joi.string()
         .lowercase()
         .description("Search for collections that match a string. Example: `bored`"),
@@ -127,7 +128,9 @@ export const getCollectionsV5Options: RouteOptions = {
           "floorAskPrice"
         )
         .default("allTimeVolume")
-        .description("Order the items are returned in the response. Options are `#DayVolume`, `createdAt`, or `floorAskPrice`"),
+        .description(
+          "Order the items are returned in the response. Options are `#DayVolume`, `createdAt`, or `floorAskPrice`"
+        ),
       limit: Joi.number()
         .integer()
         .min(1)

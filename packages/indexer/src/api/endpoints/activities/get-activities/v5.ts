@@ -18,7 +18,8 @@ const version = "v5";
 
 export const getActivityV5Options: RouteOptions = {
   description: "All activity",
-  notes: "This API can be used to return all activity including sales, asks, transfers, mints, bids, canceled bids, and cancel asks.",
+  notes:
+    "This API can be used to return all activity including sales, asks, transfers, mints, bids, canceled bids, and cancel asks.",
   tags: ["api", "Activity"],
   plugins: {
     "hapi-swagger": {
@@ -30,8 +31,14 @@ export const getActivityV5Options: RouteOptions = {
       includeMetadata: Joi.boolean()
         .default(false)
         .description("If true, metadata is included in the response. If true, max limit is 50."),
-      limit: Joi.number().integer().min(1).max(1000).default(20)
-        .description("Amount of items returned. Default is 20. Max is 1000 when `includeMetadata=false`"),
+      limit: Joi.number()
+        .integer()
+        .min(1)
+        .max(1000)
+        .default(20)
+        .description(
+          "Amount of items returned. Default is 20. Max is 1000 when `includeMetadata=false`"
+        ),
       continuation: Joi.string().pattern(regex.base64),
       displayCurrency: Joi.string()
         .lowercase()

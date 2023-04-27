@@ -20,7 +20,8 @@ const version = "v6";
 
 export const getCollectionActivityV6Options: RouteOptions = {
   description: "Collection activity",
-  notes: "This API can be used to build a feed for a collection including sales, asks, transfers, mints, bids, canceled bids, and cancel asks types.",
+  notes:
+    "This API can be used to build a feed for a collection including sales, asks, transfers, mints, bids, canceled bids, and cancel asks types.",
   tags: ["api", "Activity"],
   timeout: {
     server: 20 * 1000,
