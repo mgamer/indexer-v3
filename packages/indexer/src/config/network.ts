@@ -398,7 +398,7 @@ export const getNetworkSettings = (): NetworkSettings => {
               symbol: "GXB",
               decimals: 18,
             },
-          ]
+          ],
         ]),
         coingecko: {
           networkId: "polygon-pos",

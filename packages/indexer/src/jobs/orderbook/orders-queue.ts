@@ -261,12 +261,12 @@ export const jobProcessor = async (job: Job) => {
       }
 
       case "blur": {
-        result = await orders.blur.saveListings([info]);
+        result = await orders.blur.saveListings([info], ingestMethod ?? "rest");
         break;
       }
 
       case "blur-bid": {
-        result = await orders.blur.saveBids([info]);
+        result = await orders.blur.saveBids([info], ingestMethod ?? "rest");
         break;
       }
 
