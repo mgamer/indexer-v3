@@ -2,7 +2,7 @@
 //   getEnhancedEventsFromTx,
 //   extractOnChainData,
 // } from "@/events-sync/handlers/royalties/utils";
-import { jest, describe, it, expect } from "@jest/globals";
+import { jest, describe, it } from "@jest/globals";
 
 jest.setTimeout(1000 * 1000);
 
