@@ -39,6 +39,7 @@ import * as ZeroExV3 from "./zeroex-v3";
 import * as ZeroExV4 from "./zeroex-v4";
 import * as Zora from "./zora";
 import * as LooksRareV2 from "./looks-rare-v2";
+import * as OpenSeaZeroExV3 from "./opensea-zeroex-v3";
 
 export {
   // Common
@@ -83,4 +84,5 @@ export {
   ZeroExV4,
   Zora,
   LooksRareV2,
+  OpenSeaZeroExV3,
 };

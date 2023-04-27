@@ -12,7 +12,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
   for (const { subKind, baseEventParams, log } of events) {
     const eventData = getEventData([subKind])[0];
     switch (subKind) {
-      case "zeroex-v3-fill": {
+      case "opensea-zeroex-v3-fill": {
         const { args } = eventData.abi.parseLog(log);
         const maker = args["makerAddress"].toLowerCase();
         const taker = args["takerAddress"].toLowerCase();
@@ -83,44 +83,60 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           currencyPrice.toString(),
           baseEventParams.timestamp
         );
+        priceData.nativePrice = currencyPrice.toString();
         if (!priceData.nativePrice) {
           // We must always have the native price
           break;
         }
-
         const orderKind = "zeroex-v3";
         const attributionData = await utils.extractAttributionData(
           baseEventParams.txHash,
           orderKind
         );
 
-        onChainData.fillEvents.push({
-          orderKind,
-          currency,
-          orderSide,
-          maker,
-          taker,
-          price: priceData.nativePrice,
-          currencyPrice: currencyPrice.toString(),
-          usdPrice: priceData.usdPrice,
-          contract,
-          tokenId: tokenId.toString(),
-          amount: amount.toString(),
-          orderSourceId: attributionData.orderSource?.id,
-          aggregatorSourceId: attributionData.aggregatorSource?.id,
-          fillSourceId: attributionData.fillSource?.id,
-          baseEventParams,
+        // Find last fill event based on logIndex
+        const lastFillEventIndex = onChainData.fillEvents.findIndex((c) => {
+          return (
+            c.contract === contract &&
+            tokenId === c.tokenId &&
+            c.baseEventParams.logIndex === baseEventParams.logIndex - 1
+          );
         });
 
-        onChainData.fillInfos.push({
-          context: `zeroex-v3-${contract}-${tokenId}-${baseEventParams.txHash}`,
-          orderSide,
-          contract,
-          tokenId: tokenId.toString(),
-          amount: amount.toString(),
-          price: priceData.nativePrice,
-          timestamp: baseEventParams.timestamp,
-        });
+        if (lastFillEventIndex === -1) {
+          // temporary insert the fill event
+          onChainData.fillEvents.push({
+            orderKind,
+            currency,
+            orderSide,
+            maker,
+            taker,
+            price: priceData.nativePrice,
+            currencyPrice: currencyPrice.toString(),
+            usdPrice: priceData.usdPrice,
+            contract,
+            tokenId: tokenId.toString(),
+            amount: amount.toString(),
+            orderSourceId: attributionData.orderSource?.id,
+            aggregatorSourceId: attributionData.aggregatorSource?.id,
+            fillSourceId: attributionData.fillSource?.id,
+            baseEventParams,
+          });
+        } else {
+          // merge with the last fill event
+          const lastFillEvent = onChainData.fillEvents[lastFillEventIndex];
+          lastFillEvent.taker = maker;
+
+          onChainData.fillInfos.push({
+            context: `zeroex-v3-${contract}-${tokenId}-${baseEventParams.txHash}`,
+            orderSide,
+            contract,
+            tokenId: tokenId.toString(),
+            amount: amount.toString(),
+            price: priceData.nativePrice,
+            timestamp: baseEventParams.timestamp,
+          });
+        }
 
         break;
       }

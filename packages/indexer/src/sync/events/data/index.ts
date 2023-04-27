@@ -35,6 +35,7 @@ import * as zeroExV3 from "@/events-sync/data/zeroex-v3";
 import * as zeroExV4 from "@/events-sync/data/zeroex-v4";
 import * as zora from "@/events-sync/data/zora";
 import * as looksRareV2 from "@/events-sync/data/looks-rare-v2";
+import * as openseaZeroExV3 from "@/events-sync/data/opensea-zeroex-v3";
 
 // All events we're syncing should have an associated `EventData`
 // entry which dictates the way the event will be parsed and then
@@ -327,6 +328,7 @@ const allEventData = [
   zeroExV2.fill,
   zeroExV3.fill,
   treasure.itemSold,
+  openseaZeroExV3.fill,
 ];
 
 export const getEventData = (events?: string[]) => {
