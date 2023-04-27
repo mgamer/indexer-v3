@@ -66,7 +66,8 @@ type SaveResult = {
 
 export const save = async (
   orderInfos: OrderInfo[],
-  validateBidValue?: boolean
+  validateBidValue?: boolean,
+  ingestMethod?: "websocket" | "rest"
 ): Promise<SaveResult[]> => {
   const results: SaveResult[] = [];
   const orderValues: DbOrder[] = [];
@@ -856,6 +857,7 @@ export const save = async (
               trigger: {
                 kind: "new-order",
               },
+              ingestMethod,
             } as ordersUpdateById.OrderInfo)
         )
     );
