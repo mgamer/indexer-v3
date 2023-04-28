@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { logger } from "@/common/logger";
+import { redisWebsocketPublisher } from "@/common/redis";
 import { KafkaTopicHandler } from "kafka";
 
 // Create a class implementing KafkaEventHandler for each event type
@@ -39,9 +40,30 @@ export class IndexerOrderEventsHandler implements KafkaTopicHandler {
     if (payload.after.kind === "new-order") {
       // trigger ask.created event
 
+      await redisWebsocketPublisher.publish(
+        "events",
+        JSON.stringify({
+          event: "ask.created.v2",
+          tags: {
+            contract: payload.after.contract,
+          },
+          data: payload.after,
+        })
+      );
+
       return;
     }
 
+    await redisWebsocketPublisher.publish(
+      "events",
+      JSON.stringify({
+        event: "ask.updated.v2",
+        tags: {
+          contract: payload.after.contract,
+        },
+        data: payload.after,
+      })
+    );
     // all other cases, trigger ask.updated event
   }
 
