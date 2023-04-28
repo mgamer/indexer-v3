@@ -1,11 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-// kafkaService.ts
 import { Kafka, logLevel } from "kafkajs";
 import { getServiceName } from "../config/network";
 import { logger } from "@/common/logger";
-import { IndexerOrderEventsHandler } from "./topics/debeezium/indexer-order-events";
-import { KafkaTopics } from "./topics";
+import { KafkaTopics, TopicHandlers } from "./topics";
 // Create a Kafka client
 const kafka = new Kafka({
   clientId: "indexer",
@@ -21,9 +19,6 @@ export interface KafkaTopicHandler {
   handleUpdate(payload: any): Promise<void>;
   handleDelete(payload: any): Promise<void>;
 }
-
-// Register topic handlers
-const topicHandlers: KafkaTopicHandler[] = [new IndexerOrderEventsHandler()];
 
 // Function to start the Kafka consumer
 export async function startKafkaConsumer(): Promise<void> {
@@ -42,7 +37,7 @@ export async function startKafkaConsumer(): Promise<void> {
       const event = JSON.parse(message.value!.toString());
 
       // Find the corresponding topic handler and call the handle method
-      for (const handler of topicHandlers) {
+      for (const handler of TopicHandlers) {
         if (handler.topicName === topic) {
           try {
             await handler.handle(event.payload);
