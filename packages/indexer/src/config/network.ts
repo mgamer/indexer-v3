@@ -386,17 +386,6 @@ export const getNetworkSettings = (): NetworkSettings => {
         lastBlockLatency: 5,
         headBlockDelay: 10,
         subDomain: "api-bsc",
-        whitelistedCurrencies: new Map([
-          [
-            "0x0000000000000000000000000000000000000000",
-            {
-              contract: "0x0000000000000000000000000000000000000000",
-              name: "Binance Coin",
-              symbol: "BNB",
-              decimals: 18,
-            },
-          ],
-        ]),
         coingecko: {
           networkId: "binance-smart-chain",
         },
@@ -412,11 +401,11 @@ export const getNetworkSettings = (): NetworkSettings => {
                   decimals,
                   metadata
                 ) VALUES (
-                  '\\xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c',
-                  'Wrapped BNB',
-                  'WBNB',
+                  '\\x0000000000000000000000000000000000000000',
+                  'Binance Coin',
+                  'BNB',
                   18,
-                  '{"coingeckoCurrencyId": "wbnb", "image": "https://assets.coingecko.com/coins/images/12591/large/binance-coin-logo.png"}'
+                  '{"coingeckoCurrencyId": "binancecoin", "image": "https://assets.coingecko.com/coins/images/12591/large/binance-coin-logo.png"}'
                 ) ON CONFLICT DO NOTHING
               `
             ),
