@@ -49,12 +49,45 @@ if (config.doBackgroundWork) {
       const columns = new pgp.helpers.ColumnSet(["number", "timestamp"], {
         table: "blocks",
       });
+
+      const blockAndTimestamps: any[] = [];
       for (const { number, timestamp } of results) {
         if (!timestamp) {
           const block = await baseProvider.getBlock(number);
           values.push({ number, timestamp: block.timestamp });
+          blockAndTimestamps.push({
+            number,
+            timestamp: block.timestamp,
+          });
+        } else {
+          blockAndTimestamps.push({
+            number,
+            timestamp,
+          });
         }
       }
+
+      // Update related wrong timestamp data
+      await Promise.all([
+        idb.none(`
+          UPDATE nft_transfer_events SET
+            timestamp = x.timestamp::INT
+          FROM (
+            VALUES ${pgp.helpers.values(values, columns)}
+          ) AS x(number, timestamp)
+          WHERE nft_transfer_events.block = x.number
+          AND nft_transfer_events.timestamp != x.timestamp
+        `),
+        idb.none(`
+          UPDATE fill_events_2 SET
+            timestamp = x.timestamp::INT
+          FROM (
+            VALUES ${pgp.helpers.values(values, columns)}
+          ) AS x(number, timestamp)
+          WHERE fill_events_2.block = x.number
+          AND fill_events_2.timestamp != x.timestamp
+        `),
+      ]);
 
       if (values.length) {
         await idb.none(
