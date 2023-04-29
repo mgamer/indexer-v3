@@ -307,26 +307,11 @@ export const generateListingDetailsV6 = (
     }
 
     case "seaport": {
-      if (order.rawData && !order.rawData.partial) {
-        return {
-          kind: "seaport",
-          ...common,
-          order: new Sdk.SeaportV11.Order(config.chainId, order.rawData),
-        };
-      } else {
-        // Sorry for all the below `any` types
-        return {
-          // eslint-disable-next-line
-          kind: "seaport-partial" as any,
-          ...common,
-          order: {
-            contract: token.contract,
-            tokenId: token.tokenId,
-            id: order.id,
-            // eslint-disable-next-line
-          } as any,
-        };
-      }
+      return {
+        kind: "seaport",
+        ...common,
+        order: new Sdk.SeaportV11.Order(config.chainId, order.rawData),
+      };
     }
 
     case "seaport-v1.4": {
