@@ -157,7 +157,7 @@ export const save = async (
         await orderbook.addToQueue(
           [
             {
-              kind: "seaport-v1.4",
+              kind: "seaport-v1.5",
               info: { orderParams, metadata, isReservoir, isOpenSea, openSeaOrderParams },
               validateBidValue,
             },
@@ -419,7 +419,7 @@ export const save = async (
               ]);
 
               logger.info(
-                "orders-seaport-v1.4-save",
+                "orders-seaport-v1.5-save",
                 `TokenList. orderId=${id}, tokenSetId=${tokenSetId}, schemaHash=${schemaHash}, metadata=${JSON.stringify(
                   metadata
                 )}, ts=${JSON.stringify(ts)}`
@@ -675,7 +675,7 @@ export const save = async (
           }
         } catch (error) {
           logger.warn(
-            "orders-seaport-v1.4-save",
+            "orders-seaport-v1.5-save",
             `Bid value validation - error. orderId=${id}, contract=${info.contract}, tokenId=${tokenId}, error=${error}`
           );
         }
@@ -713,7 +713,7 @@ export const save = async (
             {
               newOrders: [order.params],
               replacedOrders: [replacedOrderResult.raw_data],
-              orderKind: "seaport-v1.4",
+              orderKind: "seaport-v1.5",
             }
           );
         }
@@ -725,7 +725,7 @@ export const save = async (
         : "'infinity'";
       orderValues.push({
         id,
-        kind: "seaport-v1.4",
+        kind: "seaport-v1.5",
         side: info.side,
         fillability_status: fillabilityStatus,
         approval_status: approvalStatus,
@@ -774,7 +774,7 @@ export const save = async (
       });
     } catch (error) {
       logger.warn(
-        "orders-seaport-v1.4-save",
+        "orders-seaport-v1.5-save",
         `Failed to handle order (will retry). orderParams=${JSON.stringify(
           orderParams
         )}, metadata=${JSON.stringify(
@@ -923,7 +923,7 @@ const getCollection = async (
       );
 
       logger.info(
-        "orders-seaport-v1.4-save-partial",
+        "orders-seaport-v1.5-save-partial",
         `Unknown Collection. orderId=${orderParams.hash}, contract=${orderParams.contract}, collectionSlug=${orderParams.collectionSlug}, lockAcquired=${lockAcquired}`
       );
 

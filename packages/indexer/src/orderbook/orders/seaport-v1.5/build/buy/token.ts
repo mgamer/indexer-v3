@@ -1,6 +1,6 @@
 import * as Sdk from "@reservoir0x/sdk";
 
-import { getBuildInfo } from "@/orderbook/orders/seaport-v1.4/build/utils";
+import { getBuildInfo } from "@/orderbook/orders/seaport-v1.5/build/utils";
 import {
   BuyTokenBuilderBase,
   BuildOrderOptions,
