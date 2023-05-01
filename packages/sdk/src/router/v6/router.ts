@@ -381,10 +381,6 @@ export class Router {
 
       for (let i = 0; i < details.length; i++) {
         const detail = details[i];
-        if (detail.fees?.length || options?.globalFees?.length) {
-          throw new Error("Fees not supported when filling Blur orders");
-        }
-
         if (
           detail.contractKind === "erc721" &&
           ["blur.io", "opensea.io", "looksrare.org", "x2y2.io"].includes(detail.source!)
@@ -2653,10 +2649,6 @@ export class Router {
 
     const blurDetails = details.filter((d) => d.source === "blur.io");
     if (blurDetails.length) {
-      if (blurDetails.some((d) => d.fees?.length) || options?.globalFees?.length) {
-        throw new Error("Fees not supported for Blur orders");
-      }
-
       try {
         // We'll have one transaction per contract
         const result: {
