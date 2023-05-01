@@ -105,7 +105,7 @@ export const getTokensV6Options: RouteOptions = {
           "Filter to a particular attribute. Attributes are case sensitive. Note: Our docs do not support this parameter correctly. To test, you can use the following URL in your browser. Example: `https://api.reservoir.tools/tokens/v6?collection=0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63&attributes[Type]=Original` or `https://api.reservoir.tools/tokens/v6?collection=0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63&attributes[Type]=Original&attributes[Type]=Sibling`"
         ),
       source: Joi.string().description(
-        "Domain of the order source. Example `opensea.io` (Only actively listed tokens are returned when filtering by source)"
+        "Domain of the order source. Example `opensea.io` (Only listed tokens are returned when filtering by source)"
       ),
       nativeSource: Joi.string().description(
         "Domain of the order source. Example `www.apecoinmarketplace.com`. For a native marketplace, return all tokens listed on this marketplace, even if better prices are available on other marketplaces."
