@@ -58,7 +58,7 @@ export const getOrdersAsksV4Options: RouteOptions = {
         .description("Filter to a particular community. Example: `artblocks`"),
       collectionsSetId: Joi.string()
         .lowercase()
-        .description("Filter to a particular collection set."),
+        .description("Filter to a particular collection set. Example: `8daa732ebe5db23f267e58d52f1c9b1879279bcdf4f78b8fb563390e6946ea65`"),
       contractsSetId: Joi.string().lowercase().description("Filter to a particular contracts set."),
       contracts: Joi.alternatives()
         .try(
