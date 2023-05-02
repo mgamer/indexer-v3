@@ -332,22 +332,12 @@ export const syncEvents = async (
   }
 
   const enhancedEvents: EnhancedEvent[] = [];
-  const startTime = now();
+  const startTimeFetchingLogs = now();
   await baseProvider.getLogs(eventFilter).then(async (logs) => {
-    logger.info(
-      "sync-events-get-logs-timing",
-      JSON.stringify({
-        message: `Events get logs block range [${fromBlock}, ${toBlock}]`,
-        toBlock,
-        fromBlock,
-        totalBlocks: toBlock - fromBlock,
-        syncTime: (now() - startTime) / 1000,
-      })
-    );
-
+    const endTimeFetchingLogs = now();
+    const startTimeProcessingEvents = now();
     const availableEventData = getEventData();
 
-    const startTimeFetchingLogs = now();
     for (const log of logs) {
       try {
         const baseEventParams = await parseEvent(log, blocksCache);
@@ -394,10 +384,7 @@ export const syncEvents = async (
       }
     }
 
-    const endTimeFetchingLogs = now();
     // Process the retrieved events asynchronously
-
-    const startTimeProcessingEvents = now();
     const eventsBatches = await extractEventsBatches(enhancedEvents, backfill);
 
     if (backfill) {
@@ -465,7 +452,6 @@ export const syncEvents = async (
         },
         events: {
           count: enhancedEvents.length,
-
           time: endTimeProcessingEvents - startTimeProcessingEvents,
         },
       })
