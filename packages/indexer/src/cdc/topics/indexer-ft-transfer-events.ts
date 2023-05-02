@@ -2,11 +2,11 @@
 
 import { logger } from "@/common/logger";
 import { redisWebsocketPublisher } from "@/common/redis";
-import { KafkaTopicHandler } from "kafka";
+import { KafkaTopicHandler } from "cdc";
 
 // Create a class implementing KafkaEventHandler for each event type
-export class IndexerBidEventsHandler implements KafkaTopicHandler {
-  topicName = "indexer.public.bid_events";
+export class IndexerTransferEventsHandler implements KafkaTopicHandler {
+  topicName = "indexer.public.ft_transfer_events";
 
   async handle(payload: any): Promise<void> {
     // eslint-disable-next-line no-console
@@ -37,36 +37,18 @@ export class IndexerBidEventsHandler implements KafkaTopicHandler {
       return;
     }
 
-    if (payload.after.kind === "new-order") {
-      // trigger ask.created event
-
-      await redisWebsocketPublisher.publish(
-        "events",
-        JSON.stringify({
-          event: "bid.created.v2",
-          tags: {
-            contract: payload.after.contract,
-          },
-          data: payload.after,
-        })
-      );
-
-      return;
-    }
-
     await redisWebsocketPublisher.publish(
       "events",
       JSON.stringify({
-        event: "bid.updated.v2",
-        tags: {
-          contract: payload.after.contract,
-        },
+        event: "transfer.created.v2",
+        tags: {},
         data: payload.after,
       })
     );
   }
 
   async handleUpdate(payload: any): Promise<void> {
+    // probably do nothing here
     if (!payload.after) {
       return;
     }
@@ -74,7 +56,7 @@ export class IndexerBidEventsHandler implements KafkaTopicHandler {
     await redisWebsocketPublisher.publish(
       "events",
       JSON.stringify({
-        event: "bid.updated.v2",
+        event: "transfer.updated.v2",
         tags: {},
         data: payload.after,
       })

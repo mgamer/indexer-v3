@@ -3,7 +3,7 @@
 import { Kafka, logLevel } from "kafkajs";
 import { getServiceName } from "../config/network";
 import { logger } from "@/common/logger";
-import { KafkaTopics, TopicHandlers } from "./topics";
+import { TopicHandlers } from "./topics";
 // Create a Kafka client
 const kafka = new Kafka({
   clientId: "indexer",
@@ -27,8 +27,8 @@ export async function startKafkaConsumer(): Promise<void> {
 
   // Subscribe to the topics
   await Promise.all(
-    KafkaTopics.map((topic) => {
-      return consumer.subscribe({ topic });
+    TopicHandlers.map((topicHandler) => {
+      return consumer.subscribe({ topic: topicHandler.topicName });
     })
   );
 

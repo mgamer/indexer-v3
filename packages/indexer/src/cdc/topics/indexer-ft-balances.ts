@@ -2,11 +2,11 @@
 
 import { logger } from "@/common/logger";
 import { redisWebsocketPublisher } from "@/common/redis";
-import { KafkaTopicHandler } from "kafka";
+import { KafkaTopicHandler } from "cdc";
 
 // Create a class implementing KafkaEventHandler for each event type
-export class IndexerApprovalEventsHandler implements KafkaTopicHandler {
-  topicName = "indexer.public.ft_approvals";
+export class IndexerBalanceEventsHandler implements KafkaTopicHandler {
+  topicName = "indexer.public.ft_balances";
 
   async handle(payload: any): Promise<void> {
     // eslint-disable-next-line no-console
@@ -40,7 +40,7 @@ export class IndexerApprovalEventsHandler implements KafkaTopicHandler {
     await redisWebsocketPublisher.publish(
       "events",
       JSON.stringify({
-        event: "approval.created.v2",
+        event: "balance.created.v2",
         tags: {},
         data: payload.after,
       })
@@ -48,6 +48,7 @@ export class IndexerApprovalEventsHandler implements KafkaTopicHandler {
   }
 
   async handleUpdate(payload: any): Promise<void> {
+    // probably do nothing here
     if (!payload.after) {
       return;
     }
@@ -55,7 +56,7 @@ export class IndexerApprovalEventsHandler implements KafkaTopicHandler {
     await redisWebsocketPublisher.publish(
       "events",
       JSON.stringify({
-        event: "approval.updated.v2",
+        event: "balance.updated.v2",
         tags: {},
         data: payload.after,
       })
