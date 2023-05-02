@@ -474,7 +474,6 @@ export const saveBids = async (
         // Remove any empty price points
         currentBid.pricePoints = currentBid.pricePoints.filter((pp) => pp.executableSize > 0);
 
-        const isFiltered = await checkMarketplaceIsFiltered(orderParams.collection, "blur");
         if (!currentBid.pricePoints.length) {
           await idb.none(
             `

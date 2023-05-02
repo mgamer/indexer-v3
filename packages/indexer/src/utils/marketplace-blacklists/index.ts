@@ -77,7 +77,7 @@ export const checkMarketplaceIsFiltered = async (contract: string, marketplace: 
   }
 
   const operatorsList = allOperatorsList.filter((c) => c.marketplace === marketplace);
-  return operatorsList.some((c) => result?.includes(c.address));
+  return operatorsList.some((c) => result!.includes(c.address));
 };
 
 export const getMarketplaceBlacklist = async (contract: string): Promise<string[]> => {
