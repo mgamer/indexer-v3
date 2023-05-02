@@ -5,6 +5,9 @@ import { KafkaEventHandler } from ".";
 // Create a class implementing KafkaEventHandler for each event type
 export class IndexerBidEventsHandler extends KafkaEventHandler {
   topicName = "indexer.public.bid_events";
+  queueName = "indexer-bid-events";
+  queue = null;
+  worker = null;
 
   protected async handleInsert(payload: any): Promise<void> {
     if (!payload.after) {
