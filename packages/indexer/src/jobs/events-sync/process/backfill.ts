@@ -26,7 +26,10 @@ export const queue = new Queue(QUEUE_NAME, {
 new QueueScheduler(QUEUE_NAME, { connection: redis.duplicate(), maxStalledCount: 10 });
 
 // BACKGROUND WORKER ONLY
-if (config.doBackgroundWork && (config.chainId === 137 ? config.doProcessBackfilling : true)) {
+if (
+  config.doBackgroundWork &&
+  (_.includes([137, 56], config.chainId) ? config.doProcessBackfilling : true)
+) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job) => {
