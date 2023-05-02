@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { IndexerOrderEventsHandler } from "./indexer-order-events";
 import { IndexerBidEventsHandler } from "./indexer-bid-events";
 import { IndexerFillEventsHandler } from "./indexer-fill-events";
@@ -26,7 +28,6 @@ export abstract class KafkaEventHandler {
     timeout: 60000,
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async handle(payload: any): Promise<void> {
     switch (payload.op) {
       case "c":
@@ -44,12 +45,8 @@ export abstract class KafkaEventHandler {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   protected abstract handleInsert(payload: any): Promise<void>;
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   protected abstract handleUpdate(payload: any): Promise<void>;
-
   protected abstract handleDelete(): Promise<void>;
 
   async createQueue(): Promise<void> {
@@ -78,7 +75,6 @@ export abstract class KafkaEventHandler {
     });
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async addToQueue(payload: any): Promise<void> {
     if (!this.queue) {
       logger.error(this.queueName, "Queue not initialized");

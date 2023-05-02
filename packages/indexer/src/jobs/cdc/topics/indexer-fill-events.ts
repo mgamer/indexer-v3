@@ -3,7 +3,6 @@
 import { redisWebsocketPublisher } from "@/common/redis";
 import { KafkaEventHandler } from ".";
 
-// Create a class implementing KafkaEventHandler for each event type
 export class IndexerFillEventsHandler extends KafkaEventHandler {
   topicName = "indexer.public.fill_events_2";
   queueName = "indexer-fill-events";
