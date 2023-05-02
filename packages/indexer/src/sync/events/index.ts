@@ -1,5 +1,5 @@
 import { Filter } from "@ethersproject/abstract-provider";
-import _ from "lodash";
+import _, { now } from "lodash";
 import pLimit from "p-limit";
 
 import { idb } from "@/common/db";
@@ -276,6 +276,7 @@ export const syncEvents = async (
   // related to every of those blocks a priori for efficiency. Otherwise, it can be
   // too inefficient to do it and in this case we just proceed (and let any further
   // processes fetch those blocks as needed / if needed).
+  const startTimeFetchingBlocks = now();
   if (!backfill && toBlock - fromBlock + 1 <= 32) {
     const existingBlocks = await idb.manyOrNone(
       `
@@ -299,6 +300,7 @@ export const syncEvents = async (
       blocksToFetch.map((block) => limit(() => syncEventsUtils.fetchBlock(block, true)))
     );
   }
+  const endTimeFetchingBlocks = now();
 
   // Generate the events filter with one of the following options:
   // - fetch all events
@@ -306,6 +308,7 @@ export const syncEvents = async (
   // - fetch all events from a particular address
 
   // By default, we want to get all events
+
   let eventFilter: Filter = {
     topics: [[...new Set(getEventData().map(({ topic }) => topic))]],
     fromBlock,
@@ -332,6 +335,7 @@ export const syncEvents = async (
   await baseProvider.getLogs(eventFilter).then(async (logs) => {
     const availableEventData = getEventData();
 
+    const startTimeFetchingLogs = now();
     for (const log of logs) {
       try {
         const baseEventParams = await parseEvent(log, blocksCache);
@@ -378,7 +382,10 @@ export const syncEvents = async (
       }
     }
 
+    const endTimeFetchingLogs = now();
     // Process the retrieved events asynchronously
+
+    const startTimeProcessingEvents = now();
     const eventsBatches = await extractEventsBatches(enhancedEvents, backfill);
 
     if (backfill) {
@@ -429,6 +436,28 @@ export const syncEvents = async (
 
       await blockCheck.addBulk(blocksToCheck);
     }
+
+    const endTimeProcessingEvents = now();
+
+    logger.info(
+      "sync-events-timing-2",
+      JSON.stringify({
+        message: `Events realtime syncing block range [${fromBlock}, ${toBlock}]`,
+        blocks: {
+          count: blocksSet.size,
+          time: endTimeFetchingBlocks - startTimeFetchingBlocks,
+        },
+        logs: {
+          count: logs.length,
+          time: endTimeFetchingLogs - startTimeFetchingLogs,
+        },
+        events: {
+          count: enhancedEvents.length,
+
+          time: endTimeProcessingEvents - startTimeProcessingEvents,
+        },
+      })
+    );
   });
 };
 
