@@ -1,38 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-
-import { logger } from "@/common/logger";
 import { redisWebsocketPublisher } from "@/common/redis";
-import { KafkaTopicHandler } from "cdc";
+import { KafkaEventHandler } from ".";
 
 // Create a class implementing KafkaEventHandler for each event type
-export class IndexerOrderEventsHandler implements KafkaTopicHandler {
+export class IndexerOrderEventsHandler extends KafkaEventHandler {
   topicName = "indexer.public.order_events";
 
-  async handle(payload: any): Promise<void> {
-    // eslint-disable-next-line no-console
-    console.log(`Handling ${this.topicName} event with payload:`, payload);
-    // Implement logic here
-
-    switch (payload.op) {
-      case "c":
-        // insert
-        this.handleInsert(payload);
-        break;
-      case "u":
-        // update
-        this.handleUpdate(payload);
-        break;
-      case "d":
-        // delete
-        this.handleDelete();
-        break;
-      default:
-        logger.error(this.topicName, `Unknown operation type: ${payload.op}`);
-        break;
-    }
-  }
-
-  async handleInsert(payload: any): Promise<void> {
+  protected async handleInsert(payload: any): Promise<void> {
     if (!payload.after) {
       return;
     }
@@ -67,7 +41,7 @@ export class IndexerOrderEventsHandler implements KafkaTopicHandler {
     // all other cases, trigger ask.updated event
   }
 
-  async handleUpdate(payload: any): Promise<void> {
+  protected async handleUpdate(payload: any): Promise<void> {
     await redisWebsocketPublisher.publish(
       "events",
       JSON.stringify({
@@ -80,7 +54,12 @@ export class IndexerOrderEventsHandler implements KafkaTopicHandler {
     );
   }
 
-  async handleDelete(): Promise<void> {
+  protected async handleDelete(): Promise<void> {
     // probably do nothing here
+  }
+
+  async enrichData(data: any): Promise<any> {
+    // get data from postgresql and do the parsing / event enrichment here and return the enriched data
+    return data;
   }
 }

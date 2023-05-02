@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { Kafka, logLevel } from "kafkajs";
-import { getServiceName } from "../config/network";
+import { getServiceName } from "../../config/network";
 import { logger } from "@/common/logger";
 import { TopicHandlers } from "./topics";
 // Create a Kafka client
@@ -10,15 +10,6 @@ const kafka = new Kafka({
   brokers: ["127.0.0.1:9092"],
   logLevel: logLevel.ERROR,
 });
-
-// Define topic handler interface
-export interface KafkaTopicHandler {
-  topicName: string;
-  handle(payload: any): Promise<void>;
-  handleInsert(payload: any): Promise<void>;
-  handleUpdate(payload: any): Promise<void>;
-  handleDelete(payload: any): Promise<void>;
-}
 
 // Function to start the Kafka consumer
 export async function startKafkaConsumer(): Promise<void> {
