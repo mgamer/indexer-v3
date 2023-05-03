@@ -4,9 +4,6 @@ import { KafkaEventHandler } from ".";
 
 export class IndexerApprovalEventsHandler extends KafkaEventHandler {
   topicName = "indexer.public.ft_approvals";
-  queueName = "indexer-ft-approvals";
-  queue = null;
-  worker = null;
 
   protected async handleInsert(payload: any): Promise<void> {
     if (!payload.after) {

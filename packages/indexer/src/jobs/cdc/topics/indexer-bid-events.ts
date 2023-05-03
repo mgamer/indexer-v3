@@ -1,45 +1,24 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { redisWebsocketPublisher } from "@/common/redis";
 import { KafkaEventHandler } from ".";
+import {
+  WebsocketEventKind,
+  WebsocketEventRouter,
+} from "@/jobs/websocket-events/websocket-event-router";
 
 export class IndexerBidEventsHandler extends KafkaEventHandler {
   topicName = "indexer.public.bid_events";
-  queueName = "indexer-bid-events";
-  queue = null;
-  worker = null;
 
   protected async handleInsert(payload: any): Promise<void> {
     if (!payload.after) {
       return;
     }
-
-    if (payload.after.kind === "new-order") {
-      // trigger ask.created event
-
-      await redisWebsocketPublisher.publish(
-        "events",
-        JSON.stringify({
-          event: "bid.created.v2",
-          tags: {
-            contract: payload.after.contract,
-          },
-          data: payload.after,
-        })
-      );
-
-      return;
-    }
-
-    await redisWebsocketPublisher.publish(
-      "events",
-      JSON.stringify({
-        event: "bid.updated.v2",
-        tags: {
-          contract: payload.after.contract,
-        },
-        data: payload.after,
-      })
-    );
+    await WebsocketEventRouter({
+      eventInfo: {
+        kind: payload.after.kind,
+        orderId: payload.after.order_id,
+      },
+      eventKind: WebsocketEventKind.BuyOrder,
+    });
   }
 
   protected async handleUpdate(payload: any): Promise<void> {
@@ -47,14 +26,13 @@ export class IndexerBidEventsHandler extends KafkaEventHandler {
       return;
     }
 
-    await redisWebsocketPublisher.publish(
-      "events",
-      JSON.stringify({
-        event: "bid.updated.v2",
-        tags: {},
-        data: payload.after,
-      })
-    );
+    await WebsocketEventRouter({
+      eventInfo: {
+        kind: payload.after.kind,
+        orderId: payload.after.order_id,
+      },
+      eventKind: WebsocketEventKind.BuyOrder,
+    });
   }
 
   protected async handleDelete(): Promise<void> {

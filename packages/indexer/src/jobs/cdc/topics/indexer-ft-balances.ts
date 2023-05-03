@@ -5,9 +5,6 @@ import { KafkaEventHandler } from ".";
 
 export class IndexerBalanceEventsHandler extends KafkaEventHandler {
   topicName = "indexer.public.ft_balances";
-  queueName = "indexer-ft-balances";
-  queue = null;
-  worker = null;
 
   protected async handleInsert(payload: any): Promise<void> {
     if (!payload.after) {
