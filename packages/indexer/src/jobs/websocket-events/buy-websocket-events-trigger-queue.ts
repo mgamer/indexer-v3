@@ -121,8 +121,8 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
         });
 
         let eventType = "";
-        if (data.trigger === "insert") eventType = "sale.created";
-        else if (data.trigger === "update") eventType = "sale.updated";
+        if (data.trigger === "insert") eventType = "buy.created";
+        else if (data.trigger === "update") eventType = "buy.updated";
 
         await redisWebsocketPublisher.publish(
           "events",
