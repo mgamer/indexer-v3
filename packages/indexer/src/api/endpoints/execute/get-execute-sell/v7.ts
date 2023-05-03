@@ -1085,7 +1085,8 @@ export const getExecuteSellV7Options: RouteOptions = {
           `get-execute-sell-${version}-handler`,
           `Handler failure: ${error} (path = ${JSON.stringify({})}, request = ${JSON.stringify(
             payload
-          )})`
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          )}, trace=${(error as any).stack})`
         );
       }
       throw error;
