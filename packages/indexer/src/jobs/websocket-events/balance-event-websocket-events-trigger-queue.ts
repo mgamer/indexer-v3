@@ -7,9 +7,7 @@ import { config } from "@/config/index";
 import { randomUUID } from "crypto";
 import _ from "lodash";
 
-import { idb } from "@/common/db";
-
-import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
+import { formatEth } from "@/common/utils";
 
 import { redisWebsocketPublisher } from "@/common/redis";
 
@@ -38,44 +36,22 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
       const { data } = job.data as EventInfo;
 
       try {
-        const r = await idb.oneOrNone(
-          `
-          SELECT 
-            nft_balances.contract,
-            nft_balances.token_id,
-            nft_balances.owner,
-            nft_balances.amount,
-            nft_balances.acquired_at,
-            nft_balances.floor_sell_id,
-            nft_balances.floor_sell_value,
-            nft_balances.top_buy_id,
-            nft_balances.top_buy_value,
-            nft_balances.top_buy_maker,
-            nft_balances.last_token_appraisal_value,
-          FROM nft_balances
-          WHERE 
-            contract = $/contract/ AND
-            token_id = $/tokenId/ AND
-            owner = $/owner/
-        `,
-          { contract: toBuffer(data.contract), tokenId: data.tokenId, owner: toBuffer(data.owner) }
-        );
-
+        const { eventData } = data;
         const result = {
-          contract: fromBuffer(r.contract),
-          tokenId: r.token_id,
-          owner: fromBuffer(r.owner),
-          amount: r.amount,
-          acquiredAt: r.acquired_at,
+          contract: eventData.contract,
+          tokenId: eventData.token_id,
+          owner: eventData.owner,
+          amount: eventData.amount,
+          acquiredAt: eventData.acquired_at,
           floorSell: {
-            id: r.floor_sell_id,
-            value: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
+            id: eventData.floor_sell_id,
+            value: eventData.floor_sell_value ? formatEth(eventData.floor_sell_value) : null,
           },
-          topBid: r.top_buy_id
+          topBid: eventData.top_buy_id
             ? {
-                id: r.top_buy_id,
-                value: r.top_buy_value ? formatEth(r.top_buy_value) : null,
-                maker: r.top_buy_maker ? fromBuffer(r.top_buy_maker) : null,
+                id: eventData.top_buy_id,
+                value: eventData.top_buy_value ? formatEth(eventData.top_buy_value) : null,
+                maker: eventData.top_buy_maker ? eventData.top_buy_maker : null,
               }
             : null,
         };
@@ -89,7 +65,7 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
           JSON.stringify({
             event: eventType,
             tags: {
-              contract: fromBuffer(r.contract),
+              contract: eventData.contract,
             },
             data: result,
           })
@@ -130,8 +106,19 @@ export const addToQueue = async (events: EventInfo[]) => {
 };
 
 export type BalanceWebsocketEventInfo = {
-  contract: string;
-  tokenId: string;
-  owner: string;
+  eventData: {
+    contract: string;
+    token_id: string;
+    owner: string;
+    amount: string;
+    acquired_at: string;
+    floor_sell_id: string;
+    floor_sell_value: string;
+    top_buy_id: string;
+    top_buy_value: string;
+    top_buy_maker: string;
+    last_token_appraisal_value: string;
+  };
+
   trigger: "insert" | "update" | "delete";
 };
