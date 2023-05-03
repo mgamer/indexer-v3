@@ -783,7 +783,7 @@ export const getExecuteSellV6Options: RouteOptions = {
           `get-execute-sell-${version}-handler`,
           `Handler failure: ${error} (path = ${JSON.stringify(path)}, request = ${JSON.stringify(
             payload
-          )})`
+          )}, trace=${(error as any).stack})`
         );
       }
       throw error;
