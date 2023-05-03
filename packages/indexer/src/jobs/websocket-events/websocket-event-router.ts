@@ -40,6 +40,7 @@ export enum WebsocketEventKind {
   NewTopBid = "new-top-bid",
   SellOrder = "sell-order",
   BuyOrder = "buy-order",
+  ApprovalEvent = "approval-event",
 }
 
 export type EventInfo =
