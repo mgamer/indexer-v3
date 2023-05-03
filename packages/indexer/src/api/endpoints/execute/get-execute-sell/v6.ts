@@ -17,7 +17,8 @@ import { bn, formatPrice, fromBuffer, now, regex, toBuffer } from "@/common/util
 import { config } from "@/config/index";
 import { ApiKeyManager } from "@/models/api-keys";
 import { Sources } from "@/models/sources";
-import { generateBidDetailsV6, routerOnErrorCallback } from "@/orderbook/orders";
+import { generateBidDetailsV6 } from "@/orderbook/orders";
+import { fillErrorCallback } from "@/orderbook/orders/errors";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import * as b from "@/utils/auth/blur";
 import { getCurrency } from "@/utils/currencies";
@@ -608,7 +609,7 @@ export const getExecuteSellV6Options: RouteOptions = {
               orderId: data.orderId,
               message: error.response?.data ?? error.message,
             });
-            await routerOnErrorCallback(kind, error, data);
+            await fillErrorCallback(kind, error, data);
           },
           blurAuth,
         });
