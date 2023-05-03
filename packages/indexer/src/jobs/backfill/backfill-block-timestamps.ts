@@ -50,25 +50,12 @@ if (config.doBackgroundWork) {
         table: "blocks",
       });
 
-      const blocks: {
-        number: number;
-        timestamp: number;
-      }[] = [];
-      for (const { number, timestamp } of results) {
-        if (!timestamp) {
-          const block = await baseProvider.getBlock(number);
+      await Promise.all(
+        results.map(async (r) => {
+          const block = await baseProvider.getBlock(r.number);
           values.push({ number, timestamp: block.timestamp });
-          blocks.push({
-            number,
-            timestamp: block.timestamp,
-          });
-        } else {
-          blocks.push({
-            number,
-            timestamp,
-          });
-        }
-      }
+        })
+      );
 
       // Update related wrong timestamp data
       if (values.length) {
@@ -118,9 +105,9 @@ if (config.doBackgroundWork) {
 
   if (config.chainId === 1) {
     redlock
-      .acquire([`${QUEUE_NAME}-lock-2`], 60 * 60 * 24 * 30 * 1000)
+      .acquire([`${QUEUE_NAME}-lock-3`], 60 * 60 * 24 * 30 * 1000)
       .then(async () => {
-        await addToQueue(13150000);
+        await addToQueue(13200000);
       })
       .catch(() => {
         // Skip on any errors
