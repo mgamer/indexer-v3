@@ -34,6 +34,16 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
       const { data } = job.data as EventInfo;
 
       try {
+        const { eventData } = data;
+        const result = {
+          address: eventData.address,
+          block: eventData.block,
+          timestamp: new Date(eventData.timestamp).toISOString(),
+          owner: eventData.owner,
+          operator: eventData.operator,
+          approved: eventData.approved,
+        };
+
         let eventType = "";
         if (data.trigger === "insert") eventType = "approval.created";
         else if (data.trigger === "update") eventType = "approval.updated";
@@ -42,8 +52,12 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
           "events",
           JSON.stringify({
             event: eventType,
-            tags: {},
-            data: data,
+            tags: {
+              address: result.address,
+              owner: result.owner,
+              approved: result.approved,
+            },
+            data: result,
           })
         );
       } catch (error) {
@@ -82,7 +96,13 @@ export const addToQueue = async (events: EventInfo[]) => {
 };
 
 export type ApprovalWebsocketEventInfo = {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  data: any;
+  eventData: {
+    address: string;
+    block: string;
+    timestamp: string;
+    owner: string;
+    operator: string;
+    approved: string;
+  };
   trigger: "insert" | "update" | "delete";
 };
