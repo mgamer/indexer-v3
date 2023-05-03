@@ -140,6 +140,8 @@ import * as updateAttributeCounts from "@/jobs/update-attribute/update-attribute
 
 import * as askWebsocketEventsTriggerQueue from "@/jobs/websocket-events/ask-websocket-events-trigger-queue";
 import * as bidWebsocketEventsTriggerQueue from "@/jobs/websocket-events/bid-websocket-events-trigger-queue";
+import * as approvalWebsocketEventsTriggerQueue from "@/jobs/websocket-events/approval-websocket-events-trigger-queue";
+
 import * as newTopBidTriggerQueue from "@/jobs/websocket-events/new-top-bid-trigger-queue";
 import * as countApiUsage from "@/jobs/metrics/count-api-usage";
 
@@ -274,6 +276,7 @@ export const allJobQueues = [
 
   askWebsocketEventsTriggerQueue.queue,
   bidWebsocketEventsTriggerQueue.queue,
+  approvalWebsocketEventsTriggerQueue.queue,
   newTopBidTriggerQueue.queue,
 
   countApiUsage.queue,
