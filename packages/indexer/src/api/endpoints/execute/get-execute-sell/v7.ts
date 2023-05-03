@@ -66,6 +66,7 @@ export const getExecuteSellV7Options: RouteOptions = {
                   "zeroex-v4",
                   "seaport",
                   "seaport-v1.4",
+                  "seaport-v1.5",
                   "x2y2",
                   "universe",
                   "rarible",
@@ -489,7 +490,7 @@ export const getExecuteSellV7Options: RouteOptions = {
 
           // Partial Seaport orders require knowing the owner
           let owner: string | undefined;
-          if (["seaport-partial", "seaport-v1.4-partial"].includes(result.kind)) {
+          if (["seaport-v1.4-partial", "seaport-v1.5-partial"].includes(result.kind)) {
             const ownerResult = await idb.oneOrNone(
               `
                 SELECT
@@ -513,9 +514,13 @@ export const getExecuteSellV7Options: RouteOptions = {
 
           // Do not fill X2Y2 and Seaport orders with flagged tokens
           if (
-            ["x2y2", "seaport", "seaport-v1.4", "seaport-partial", "seaport-v1.4-partial"].includes(
-              result.kind
-            )
+            [
+              "x2y2",
+              "seaport-v1.4",
+              "seaport-v1.5",
+              "seaport-v1.4-partial",
+              "seaport-v1.5-partial",
+            ].includes(result.kind)
           ) {
             if (
               (tokenToSuspicious.has(item.token) && tokenToSuspicious.get(item.token)) ||
@@ -602,7 +607,7 @@ export const getExecuteSellV7Options: RouteOptions = {
           for (const result of orderResults) {
             // Partial Seaport orders require knowing the owner
             let owner: string | undefined;
-            if (["seaport-partial", "seaport-v1.4-partial"].includes(result.kind)) {
+            if (["seaport-v1.4-partial", "seaport-v1.5-partial"].includes(result.kind)) {
               const ownerResult = await idb.oneOrNone(
                 `
                   SELECT
@@ -628,10 +633,10 @@ export const getExecuteSellV7Options: RouteOptions = {
             if (
               [
                 "x2y2",
-                "seaport",
                 "seaport-v1.4",
-                "seaport-partial",
+                "seaport-v1.5",
                 "seaport-v1.4-partial",
+                "seaport-v1.5-partial",
               ].includes(result.kind)
             ) {
               if (
