@@ -173,7 +173,7 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
             "y"."address",
             "y"."token_id",
             "y"."owner",
-            SUM("y"."amount_delta"),
+            GREATEST(SUM("y"."amount_delta"), 0),
             MIN("y"."timestamp")
           FROM (
             SELECT
