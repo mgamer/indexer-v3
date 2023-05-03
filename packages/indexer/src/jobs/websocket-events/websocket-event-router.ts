@@ -1,4 +1,8 @@
+import * as saleWebsocketEventsTriggerQueue from "@/jobs/websocket-events/sale-websocket-events-trigger-queue";
+import * as buyWebsocketEventsTriggerQueue from "@/jobs/websocket-events/buy-websocket-events-trigger-queue";
+
 import * as bidWebsocketEventsTriggerQueue from "@/jobs/websocket-events/bid-websocket-events-trigger-queue";
+
 import * as newTopBidTriggerQueue from "@/jobs/websocket-events/new-top-bid-trigger-queue";
 
 import * as askWebsocketEventsTriggerQueue from "@/jobs/websocket-events/ask-websocket-events-trigger-queue";
@@ -26,6 +30,20 @@ export const WebsocketEventRouter = async ({
         },
       ]);
       break;
+    case WebsocketEventKind.SaleEvent:
+      await saleWebsocketEventsTriggerQueue.addToQueue([
+        {
+          data: eventInfo as saleWebsocketEventsTriggerQueue.SaleWebsocketEventInfo,
+        },
+      ]);
+      break;
+    case WebsocketEventKind.BuyEvent:
+      await buyWebsocketEventsTriggerQueue.addToQueue([
+        {
+          data: eventInfo as buyWebsocketEventsTriggerQueue.BuyWebsocketEventInfo,
+        },
+      ]);
+      break;
     case WebsocketEventKind.NewTopBid:
       await newTopBidTriggerQueue.addToQueue([
         {
@@ -40,9 +58,13 @@ export enum WebsocketEventKind {
   NewTopBid = "new-top-bid",
   SellOrder = "sell-order",
   BuyOrder = "buy-order",
+  SaleEvent = "sale-event",
+  BuyEvent = "buy-event",
 }
 
 export type EventInfo =
   | NewTopBidWebsocketEventInfo
   | askWebsocketEventsTriggerQueue.AskWebsocketEventInfo
-  | bidWebsocketEventsTriggerQueue.BidWebsocketEventInfo;
+  | bidWebsocketEventsTriggerQueue.BidWebsocketEventInfo
+  | saleWebsocketEventsTriggerQueue.SaleWebsocketEventInfo
+  | buyWebsocketEventsTriggerQueue.BuyWebsocketEventInfo;
