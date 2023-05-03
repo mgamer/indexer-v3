@@ -50,6 +50,7 @@ export const getExecuteBuyV6Options: RouteOptions = {
               "zeroex-v4",
               "seaport",
               "seaport-v1.4",
+              "seaport-v1.5",
               "x2y2",
               "universe",
               "rarible",
