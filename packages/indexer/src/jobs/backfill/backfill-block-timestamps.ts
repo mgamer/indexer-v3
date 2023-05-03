@@ -50,7 +50,10 @@ if (config.doBackgroundWork) {
         table: "blocks",
       });
 
-      const blockAndTimestamps: any[] = [];
+      const blockAndTimestamps: {
+        number: number;
+        timestamp: number;
+      }[] = [];
       for (const { number, timestamp } of results) {
         if (!timestamp) {
           const block = await baseProvider.getBlock(number);
@@ -71,7 +74,8 @@ if (config.doBackgroundWork) {
       await Promise.all([
         idb.none(`
           UPDATE nft_transfer_events SET
-            timestamp = x.timestamp::INT
+            timestamp = x.timestamp::INT,
+            updated_at = now()
           FROM (
             VALUES ${pgp.helpers.values(values, columns)}
           ) AS x(number, timestamp)
@@ -80,7 +84,8 @@ if (config.doBackgroundWork) {
         `),
         idb.none(`
           UPDATE fill_events_2 SET
-            timestamp = x.timestamp::INT
+            timestamp = x.timestamp::INT,
+            updated_at = now()
           FROM (
             VALUES ${pgp.helpers.values(values, columns)}
           ) AS x(number, timestamp)
