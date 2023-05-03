@@ -189,7 +189,7 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
         )
         ON CONFLICT ("contract", "token_id", "owner") DO
         UPDATE SET 
-          "amount" = "nft_balances"."amount" + "excluded"."amount", 
+          "amount" = GREATEST("nft_balances"."amount" + "excluded"."amount", 0),  
           "acquired_at" = COALESCE(GREATEST("excluded"."acquired_at", "nft_balances"."acquired_at"), "nft_balances"."acquired_at")
       `);
 
