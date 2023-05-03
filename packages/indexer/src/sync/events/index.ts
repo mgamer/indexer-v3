@@ -387,11 +387,13 @@ export const syncEvents = async (
     // Process the retrieved events asynchronously
     const eventsBatches = await extractEventsBatches(enhancedEvents, backfill);
 
+    const startTimeAddToProcessQueue = now();
     if (backfill) {
       await eventsSyncBackfillProcess.addToQueue(eventsBatches);
     } else {
       await eventsSyncRealtimeProcess.addToQueue(eventsBatches, true);
     }
+    const endTimeAddToProcessQueue = now();
 
     // Make sure to recheck the ingested blocks with a delay in order to undo any reorgs
     const ns = getNetworkSettings();
@@ -453,6 +455,9 @@ export const syncEvents = async (
         events: {
           count: enhancedEvents.length,
           time: endTimeProcessingEvents - startTimeProcessingEvents,
+        },
+        queue: {
+          time: endTimeAddToProcessQueue - startTimeAddToProcessQueue,
         },
       })
     );
