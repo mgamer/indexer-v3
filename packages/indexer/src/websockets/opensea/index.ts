@@ -29,7 +29,6 @@ import { GenericOrderInfo } from "@/jobs/orderbook/orders-queue";
 if (config.doWebsocketWork && config.openSeaApiKey) {
   const network = config.chainId === 5 ? Network.TESTNET : Network.MAINNET;
   const maxEventsSize = 200;
-  let itemListedEvents: GenericOrderInfo[] = [];
   let bidsEvents: GenericOrderInfo[] = [];
 
   const client = new OpenSeaStreamClient({
@@ -91,14 +90,14 @@ if (config.doWebsocketWork && config.openSeaApiKey) {
             } as GenericOrderInfo;
 
             if (eventType === EventType.ITEM_LISTED) {
-              itemListedEvents.push(orderInfo);
-              if (itemListedEvents.length >= maxEventsSize) {
-                await orderbookOpenseaListings.addToQueue(itemListedEvents);
-                itemListedEvents = [];
-              }
+              await orderbookOpenseaListings.addToQueue([orderInfo]);
             } else {
               bidsEvents.push(orderInfo);
               if (bidsEvents.length >= maxEventsSize) {
+                logger.info(
+                  "opensea-websocket",
+                  `Flushed ${bidsEvents.length} to orders book queue`
+                );
                 await orderbookOrders.addToQueue(bidsEvents);
                 bidsEvents = [];
               }
