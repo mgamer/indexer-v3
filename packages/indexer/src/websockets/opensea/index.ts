@@ -29,7 +29,7 @@ import { GenericOrderInfo } from "@/jobs/orderbook/orders-queue";
 if (config.doWebsocketWork && config.openSeaApiKey) {
   const network = config.chainId === 5 ? Network.TESTNET : Network.MAINNET;
   const maxEventsSize = 200;
-  let bidsEvents: GenericOrderInfo[] = [];
+  const bidsEvents: GenericOrderInfo[] = [];
 
   const client = new OpenSeaStreamClient({
     token: config.openSeaApiKey,
@@ -94,11 +94,11 @@ if (config.doWebsocketWork && config.openSeaApiKey) {
             } else {
               bidsEvents.push(orderInfo);
               if (bidsEvents.length >= maxEventsSize) {
-                await orderbookOrders.addToQueue(bidsEvents);
-                bidsEvents = [];
+                await orderbookOrders.addToQueue(bidsEvents.splice(0, maxEventsSize));
+
                 logger.info(
                   "opensea-websocket",
-                  `Flushed ${bidsEvents.length} to orders book queue`
+                  `Flushed ${maxEventsSize} left in the array ${bidsEvents.length} to orders book queue`
                 );
               }
             }
