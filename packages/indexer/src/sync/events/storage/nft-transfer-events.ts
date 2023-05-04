@@ -159,7 +159,10 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
             "address",
             "token_id",
             ARRAY["from", "to"] AS "owners",
-            ARRAY[-"amount", "amount"] AS "amount_deltas",
+            CASE
+              WHEN "from" = '\\x0000000000000000000000000000000000000000' THEN ARRAY[0, "amount"]
+              ELSE ARRAY[-"amount", "amount"]
+            END AS "amount_deltas", 
             ARRAY[NULL, to_timestamp("timestamp")] AS "timestamps"
         )
         INSERT INTO "nft_balances" (
