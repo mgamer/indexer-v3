@@ -483,27 +483,18 @@ export const addToQueue = async (
 
 const logMetric = (crossPostingOrder: any) => {
   try {
-    const createdAt = Math.floor(new Date(crossPostingOrder.created_at).getTime() / 1000);
-    const updatedAt = Math.floor(new Date(crossPostingOrder.updated_at).getTime() / 1000);
-
     logger.info(
       "cross-posting-latency-metric",
       JSON.stringify({
-        latency: updatedAt - createdAt,
+        latency:
+          Math.floor(new Date(crossPostingOrder.updated_at).getTime() / 1000) -
+          Math.floor(new Date(crossPostingOrder.created_at).getTime() / 1000),
         orderbook: crossPostingOrder.orderbook,
         crossPostingOrderId: crossPostingOrder.id,
         crossPostingOrderStatus: crossPostingOrder.status,
-        crossPostingOrderCreatedAt: new Date(crossPostingOrder.created_at).toISOString(),
-        crossPostingOrderUpdatedAt: new Date(crossPostingOrder.updated_at).toISOString(),
       })
     );
-  } catch (error) {
-    logger.error(
-      "cross-posting-latency-metric",
-      JSON.stringify({
-        crossPostingOrder: JSON.stringify(crossPostingOrder),
-        error: JSON.stringify(error),
-      })
-    );
+  } catch {
+    // Ignore errors
   }
 };
