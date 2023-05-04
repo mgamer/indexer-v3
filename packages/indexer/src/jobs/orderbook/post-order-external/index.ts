@@ -101,10 +101,12 @@ if (config.doBackgroundWork) {
           );
 
           if (crossPostingOrderId) {
-            await crossPostingOrdersModel.updateOrderStatus(
+            const crossPostingOrder = await crossPostingOrdersModel.updateOrderStatus(
               crossPostingOrderId,
               CrossPostingOrderStatus.posted
             );
+
+            await logMetric(crossPostingOrder);
           }
         } catch (error) {
           if (error instanceof RequestWasThrottledError) {
@@ -241,11 +243,13 @@ if (config.doBackgroundWork) {
             );
 
             if (crossPostingOrderId) {
-              await crossPostingOrdersModel.updateOrderStatus(
+              const crossPostingOrder = await crossPostingOrdersModel.updateOrderStatus(
                 crossPostingOrderId,
                 CrossPostingOrderStatus.failed,
                 (error as any).message
               );
+
+              await logMetric(crossPostingOrder);
             }
           }
         }
@@ -475,4 +479,24 @@ export const addToQueue = async (
     delay,
     priority: prioritized ? 1 : undefined,
   });
+};
+
+const logMetric = (crossPostingOrder: any) => {
+  if (!crossPostingOrder) return;
+
+  try {
+    logger.info(
+      "cross-posting-latency-metric",
+      JSON.stringify({
+        latency:
+          Math.floor(new Date(crossPostingOrder.updated_at).getTime() / 1000) -
+          Math.floor(new Date(crossPostingOrder.created_at).getTime() / 1000),
+        orderbook: crossPostingOrder.orderbook,
+        crossPostingOrderId: crossPostingOrder.id,
+        crossPostingOrderStatus: crossPostingOrder.status,
+      })
+    );
+  } catch {
+    // Ignore errors
+  }
 };
