@@ -94,12 +94,12 @@ if (config.doWebsocketWork && config.openSeaApiKey) {
             } else {
               bidsEvents.push(orderInfo);
               if (bidsEvents.length >= maxEventsSize) {
+                await orderbookOrders.addToQueue(bidsEvents);
+                bidsEvents = [];
                 logger.info(
                   "opensea-websocket",
                   `Flushed ${bidsEvents.length} to orders book queue`
                 );
-                await orderbookOrders.addToQueue(bidsEvents);
-                bidsEvents = [];
               }
             }
           }
