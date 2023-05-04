@@ -28,7 +28,7 @@ import { GenericOrderInfo } from "@/jobs/orderbook/orders-queue";
 
 if (config.doWebsocketWork && config.openSeaApiKey) {
   const network = config.chainId === 5 ? Network.TESTNET : Network.MAINNET;
-  const maxEventsSize = 200;
+  const maxEventsSize = config.chainId === 1 ? 200 : 5;
   const bidsEvents: GenericOrderInfo[] = [];
 
   const client = new OpenSeaStreamClient({
