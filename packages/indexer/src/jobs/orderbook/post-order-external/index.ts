@@ -482,6 +482,8 @@ export const addToQueue = async (
 };
 
 const logMetric = (crossPostingOrder: any) => {
+  if (!crossPostingOrder) return;
+
   try {
     logger.info(
       "cross-posting-latency-metric",
