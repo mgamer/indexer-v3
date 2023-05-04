@@ -84,8 +84,6 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           baseEventParams.timestamp
         );
 
-        priceData.nativePrice = currencyPrice;
-
         if (!priceData.nativePrice) {
           // We must always have the native price
           break;
@@ -97,7 +95,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           orderKind
         );
 
-        // Find last fill event based on logIndex
+        // Check the previous event if is fillEvent based on logIndex
         const lastFillEventIndex = onChainData.fillEvents.findIndex((c) => {
           return (
             c.contract === contract &&
@@ -126,7 +124,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
             baseEventParams,
           });
         } else {
-          // merge with the last fill event
+          // Merge with the last fill event
           const lastFillEvent = onChainData.fillEvents[lastFillEventIndex];
           lastFillEvent.taker = maker;
 
