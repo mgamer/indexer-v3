@@ -42,10 +42,7 @@ export const getExecuteError = (
     statusCode: prettyMainError.status,
   });
   if (subErrors.length) {
-    boomError.output.payload.errors = subErrors.map(({ orderId, message }) => ({
-      orderId,
-      message: prettifyError(message).message,
-    }));
+    boomError.output.payload.errors = subErrors;
   }
 
   return boomError;
@@ -56,9 +53,6 @@ enum StatusCode {
   NOT_FOUND = 404,
   GONE = 410,
   FAILED_DEPENDENCY = 424,
-  UNEXPECTED_ERROR = 500,
-  UNAVAILABLE = 503,
-  TIMEOUT = 504,
 }
 
 type PrettyErrorDetails = { message: string; status: number };
@@ -80,7 +74,7 @@ const prettifyError = (msg: string): PrettyErrorDetails => {
     case matches("request was throttled"):
       return {
         message: "Unable to fetch the order due to rate limiting. Please try again soon.",
-        status: StatusCode.UNAVAILABLE,
+        status: StatusCode.FAILED_DEPENDENCY,
       };
 
     case matches("no available orders"):
@@ -103,10 +97,11 @@ const prettifyError = (msg: string): PrettyErrorDetails => {
     case matches("<!doctype html>"):
     case matches("matched with those values"):
     case matches("invalid graphql request"):
-    case matches("read econnreset"):
+    case matches("econnreset"):
+    case matches("econnrefused"):
       return {
         message: "Unable to generate fulfillment for the order",
-        status: StatusCode.UNAVAILABLE,
+        status: StatusCode.FAILED_DEPENDENCY,
       };
 
     default:
