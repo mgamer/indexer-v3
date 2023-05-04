@@ -7,7 +7,7 @@ import {
   OpenSeaStreamClient,
   TraitOfferEventPayload,
 } from "@opensea/stream-js";
-import { ItemListedEventPayload } from "@opensea/stream-js/dist/types";
+import { ItemListedEventPayload, ItemMetadataUpdatePayload } from "@opensea/stream-js/dist/types";
 import * as Sdk from "@reservoir0x/sdk";
 import { WebSocket } from "ws";
 import { logger } from "@/common/logger";
@@ -15,15 +15,15 @@ import { redis } from "@/common/redis";
 import { now } from "@/common/utils";
 import { config } from "@/config/index";
 import { OpenseaOrderParams } from "@/orderbook/orders/seaport-v1.1";
-import { generateHash } from "@/websockets/opensea/utils";
+import { generateHash, getSupportedChainName } from "@/websockets/opensea/utils";
 import * as orderbookOrders from "@/jobs/orderbook/orders-queue";
 import * as orderbookOpenseaListings from "@/jobs/orderbook/opensea-listings-queue";
 import { handleEvent as handleItemListedEvent } from "@/websockets/opensea/handlers/item_listed";
 import { handleEvent as handleItemReceivedBidEvent } from "@/websockets/opensea/handlers/item_received_bid";
 import { handleEvent as handleCollectionOfferEvent } from "@/websockets/opensea/handlers/collection_offer";
 import { handleEvent as handleTraitOfferEvent } from "@/websockets/opensea/handlers/trait_offer";
-// import MetadataApi from "@/utils/metadata-api";
-// import * as metadataIndexWrite from "@/jobs/metadata-index/write-queue";
+import MetadataApi from "@/utils/metadata-api";
+import * as metadataIndexWrite from "@/jobs/metadata-index/write-queue";
 
 if (config.doWebsocketWork && config.openSeaApiKey) {
   const network = config.chainId === 5 ? Network.TESTNET : Network.MAINNET;
@@ -103,75 +103,75 @@ if (config.doWebsocketWork && config.openSeaApiKey) {
     }
   );
 
-  // client.onItemMetadataUpdated("*", async (event) => {
-  //   try {
-  //     if (getSupportedChainName() != event.payload.item.chain.name) {
-  //       return;
-  //     }
-  //
-  //     if (await isDuplicateEvent(event)) {
-  //       return;
-  //     }
-  //
-  //     const [, contract, tokenId] = event.payload.item.nft_id.split("/");
-  //
-  //     // const token = await ridb.oneOrNone(
-  //     //   `SELECT metadata_indexed
-  //     //         FROM tokens
-  //     //         WHERE contract = $/contract/
-  //     //         AND token_id = $/tokenId/`,
-  //     //   {
-  //     //     contract: toBuffer(contract),
-  //     //     tokenId,
-  //     //   }
-  //     // );
-  //     //
-  //     // logger.debug(
-  //     //   "opensea-websocket-item-metadata-update-event",
-  //     //   `Metadata received. contract=${contract}, tokenId=${tokenId}, event=${JSON.stringify(
-  //     //     event
-  //     //   )}, token=${JSON.stringify(token)}`
-  //     // );
-  //     //
-  //     // if (!token || token.metadata_indexed) {
-  //     //   return;
-  //     // }
-  //
-  //     const metadata = {
-  //       asset_contract: {
-  //         address: contract,
-  //       },
-  //       collection: {
-  //         slug: event.payload.collection.slug,
-  //       },
-  //       token_id: tokenId,
-  //       name: event.payload.item.metadata.name ?? undefined,
-  //       description:
-  //         (event.payload.item.metadata as ItemMetadataUpdatePayload).description ?? undefined,
-  //       image_url: event.payload.item.metadata.image_url ?? undefined,
-  //       animation_url: event.payload.item.metadata.animation_url ?? undefined,
-  //       traits: (event.payload.item.metadata as ItemMetadataUpdatePayload).traits,
-  //     };
-  //
-  //     const parsedMetadata = await MetadataApi.parseTokenMetadata(metadata, "opensea");
-  //
-  //     logger.info(
-  //       "opensea-websocket-item-metadata-update-event",
-  //       `Metadata parsed. contract=${contract}, tokenId=${tokenId}, event=${JSON.stringify(
-  //         event
-  //       )}, metadata=${JSON.stringify(metadata)}, parsedMetadata=${JSON.stringify(parsedMetadata)}`
-  //     );
-  //
-  //     if (parsedMetadata) {
-  //       await metadataIndexWrite.addToQueue([parsedMetadata]);
-  //     }
-  //   } catch (error) {
-  //     logger.error(
-  //       "opensea-websocket-item-metadata-update-event",
-  //       `Error. network=${network}, event=${JSON.stringify(event)}, error=${error}`
-  //     );
-  //   }
-  // });
+  client.onItemMetadataUpdated("*", async (event) => {
+    try {
+      if (getSupportedChainName() != event.payload.item.chain.name) {
+        return;
+      }
+
+      if (await isDuplicateEvent(event)) {
+        return;
+      }
+
+      const [, contract, tokenId] = event.payload.item.nft_id.split("/");
+
+      // const token = await ridb.oneOrNone(
+      //   `SELECT metadata_indexed
+      //         FROM tokens
+      //         WHERE contract = $/contract/
+      //         AND token_id = $/tokenId/`,
+      //   {
+      //     contract: toBuffer(contract),
+      //     tokenId,
+      //   }
+      // );
+      //
+      // logger.debug(
+      //   "opensea-websocket-item-metadata-update-event",
+      //   `Metadata received. contract=${contract}, tokenId=${tokenId}, event=${JSON.stringify(
+      //     event
+      //   )}, token=${JSON.stringify(token)}`
+      // );
+      //
+      // if (!token || token.metadata_indexed) {
+      //   return;
+      // }
+
+      const metadata = {
+        asset_contract: {
+          address: contract,
+        },
+        collection: {
+          slug: event.payload.collection.slug,
+        },
+        token_id: tokenId,
+        name: event.payload.item.metadata.name ?? undefined,
+        description:
+          (event.payload.item.metadata as ItemMetadataUpdatePayload).description ?? undefined,
+        image_url: event.payload.item.metadata.image_url ?? undefined,
+        animation_url: event.payload.item.metadata.animation_url ?? undefined,
+        traits: (event.payload.item.metadata as ItemMetadataUpdatePayload).traits,
+      };
+
+      const parsedMetadata = await MetadataApi.parseTokenMetadata(metadata, "opensea");
+
+      logger.info(
+        "opensea-websocket-item-metadata-update-event",
+        `Metadata parsed. contract=${contract}, tokenId=${tokenId}, event=${JSON.stringify(
+          event
+        )}, metadata=${JSON.stringify(metadata)}, parsedMetadata=${JSON.stringify(parsedMetadata)}`
+      );
+
+      if (parsedMetadata) {
+        await metadataIndexWrite.addToQueue([parsedMetadata]);
+      }
+    } catch (error) {
+      logger.error(
+        "opensea-websocket-item-metadata-update-event",
+        `Error. network=${network}, event=${JSON.stringify(event)}, error=${error}`
+      );
+    }
+  });
 }
 
 // const saveEvent = async (event: BaseStreamMessage<unknown>) => {
