@@ -16,12 +16,14 @@ import { bn, formatPrice, fromBuffer, now, regex, toBuffer } from "@/common/util
 import { config } from "@/config/index";
 import { ApiKeyManager } from "@/models/api-keys";
 import { Sources } from "@/models/sources";
-import { OrderKind, generateListingDetailsV6, routerOnRecoverableError } from "@/orderbook/orders";
+import { OrderKind, generateListingDetailsV6 } from "@/orderbook/orders";
+import { fillErrorCallback } from "@/orderbook/orders/errors";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import * as sudoswap from "@/orderbook/orders/sudoswap";
 import * as nftx from "@/orderbook/orders/nftx";
 import * as b from "@/utils/auth/blur";
 import { getCurrency } from "@/utils/currencies";
+import { ExecutionsBuffer } from "@/utils/executions";
 
 const version = "v6";
 
@@ -49,6 +51,7 @@ export const getExecuteBuyV6Options: RouteOptions = {
               "zeroex-v4",
               "seaport",
               "seaport-v1.4",
+              "seaport-v1.5",
               "x2y2",
               "universe",
               "rarible",
@@ -809,12 +812,12 @@ export const getExecuteBuyV6Options: RouteOptions = {
           forceRouter: payload.forceRouter,
           relayer: payload.relayer,
           blurAuth,
-          onRecoverableError: async (kind, error, data) => {
+          onError: async (kind, error, data) => {
             errors.push({
               orderId: data.orderId,
               message: error.response?.data ?? error.message,
             });
-            await routerOnRecoverableError(kind, error, data);
+            await fillErrorCallback(kind, error, data);
           },
         });
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -916,11 +919,26 @@ export const getExecuteBuyV6Options: RouteOptions = {
         steps = steps.slice(1);
       }
 
+      // Remove any unsuccessfully handled listings from the path
+      const successfullPath = path.filter((p) => success[p.orderId]);
+
+      const executionsBuffer = new ExecutionsBuffer();
+      for (const item of successfullPath) {
+        executionsBuffer.addFromRequest(request, {
+          side: "buy",
+          action: "fill",
+          user: payload.taker,
+          orderId: item.orderId,
+          quantity: item.quantity,
+          calldata: txs.find((tx) => tx.orderIds.includes(item.orderId))?.txData.data,
+        });
+      }
+      await executionsBuffer.flush();
+
       return {
         steps: blurAuth ? [steps[0], ...steps.slice(1).filter((s) => s.items.length)] : steps,
         errors,
-        // Remove any unsuccessfully handled listings from the path
-        path: path.filter((p) => success[p.orderId]),
+        path: successfullPath,
       };
     } catch (error) {
       if (!(error instanceof Boom.Boom)) {

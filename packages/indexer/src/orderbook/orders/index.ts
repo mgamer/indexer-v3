@@ -7,6 +7,7 @@ export * as element from "@/orderbook/orders/element";
 export * as foundation from "@/orderbook/orders/foundation";
 export * as seaport from "@/orderbook/orders/seaport-v1.1";
 export * as seaportV14 from "@/orderbook/orders/seaport-v1.4";
+export * as seaportV15 from "@/orderbook/orders/seaport-v1.5";
 export * as alienswap from "@/orderbook/orders/alienswap";
 export * as sudoswap from "@/orderbook/orders/sudoswap";
 export * as x2y2 from "@/orderbook/orders/x2y2";
@@ -22,17 +23,15 @@ export * as superrare from "@/orderbook/orders/superrare";
 export * as looksRareV2 from "@/orderbook/orders/looks-rare-v2";
 
 // Imports
+
 import * as Sdk from "@reservoir0x/sdk";
 import * as SdkTypesV5 from "@reservoir0x/sdk/dist/router/v5/types";
 import * as SdkTypesV6 from "@reservoir0x/sdk/dist/router/v6/types";
 
 import { idb } from "@/common/db";
-import { logger } from "@/common/logger";
 import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
 import { SourcesEntity } from "@/models/sources/sources-entity";
-
-import * as orderRevalidations from "@/jobs/order-fixes/revalidations";
 
 // Whenever a new order kind is added, make sure to also include an
 // entry/implementation in the below types/methods in order to have
@@ -48,6 +47,7 @@ export type OrderKind =
   | "x2y2"
   | "seaport"
   | "seaport-v1.4"
+  | "seaport-v1.5"
   | "alienswap"
   | "rarible"
   | "element-erc721"
@@ -131,6 +131,7 @@ export const getOrderSourceByOrderKind = async (
         return sources.getOrInsert("looksrare.org");
       case "seaport":
       case "seaport-v1.4":
+      case "seaport-v1.5":
       case "wyvern-v2":
       case "wyvern-v2.3":
         return sources.getOrInsert("opensea.io");
@@ -187,30 +188,6 @@ export const getOrderSourceByOrderKind = async (
   // In case nothing matched, return `undefined` by default
 };
 
-export const routerOnRecoverableError = async (
-  kind: string,
-  error: any,
-  data: {
-    orderId: string;
-    additionalInfo: any;
-  }
-) => {
-  if (error.response?.status === 404) {
-    // Invalidate the order
-    await orderRevalidations.addToQueue([{ id: data.orderId, status: "inactive" }]);
-  }
-
-  logger.warn(
-    "router-on-recoverable-error",
-    JSON.stringify({
-      kind,
-      status: error.response?.status,
-      error: error.response?.data?.error,
-      data,
-    })
-  );
-};
-
 // Support for filling listings
 export const generateListingDetailsV6 = (
   order: {
@@ -219,7 +196,6 @@ export const generateListingDetailsV6 = (
     currency: string;
     price: string;
     source?: string;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     rawData: any;
     fees?: Sdk.RouterV6.Types.Fee[];
   },
@@ -304,26 +280,11 @@ export const generateListingDetailsV6 = (
     }
 
     case "seaport": {
-      if (order.rawData && !order.rawData.partial) {
-        return {
-          kind: "seaport",
-          ...common,
-          order: new Sdk.SeaportV11.Order(config.chainId, order.rawData),
-        };
-      } else {
-        // Sorry for all the below `any` types
-        return {
-          // eslint-disable-next-line
-          kind: "seaport-partial" as any,
-          ...common,
-          order: {
-            contract: token.contract,
-            tokenId: token.tokenId,
-            id: order.id,
-            // eslint-disable-next-line
-          } as any,
-        };
-      }
+      return {
+        kind: "seaport",
+        ...common,
+        order: new Sdk.SeaportV11.Order(config.chainId, order.rawData),
+      };
     }
 
     case "seaport-v1.4": {
@@ -336,14 +297,33 @@ export const generateListingDetailsV6 = (
       } else {
         // Sorry for all the below `any` types
         return {
-          // eslint-disable-next-line
           kind: "seaport-v1.4-partial" as any,
           ...common,
           order: {
             contract: token.contract,
             tokenId: token.tokenId,
             id: order.id,
-            // eslint-disable-next-line
+          } as any,
+        };
+      }
+    }
+
+    case "seaport-v1.5": {
+      if (order.rawData && !order.rawData.partial) {
+        return {
+          kind: "seaport-v1.5",
+          ...common,
+          order: new Sdk.SeaportV15.Order(config.chainId, order.rawData),
+        };
+      } else {
+        // Sorry for all the below `any` types
+        return {
+          kind: "seaport-v1.5-partial" as any,
+          ...common,
+          order: {
+            contract: token.contract,
+            tokenId: token.tokenId,
+            id: order.id,
           } as any,
         };
       }
@@ -442,7 +422,6 @@ export const generateBidDetailsV6 = async (
     id: string;
     kind: OrderKind;
     unitPrice: string;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     rawData: any;
     source?: string;
     fees?: Sdk.RouterV6.Types.Fee[];
@@ -471,7 +450,6 @@ export const generateBidDetailsV6 = async (
 
   switch (order.kind) {
     case "seaport": {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const extraArgs: any = {};
 
       const sdkOrder = new Sdk.SeaportV11.Order(config.chainId, order.rawData);
@@ -506,7 +484,6 @@ export const generateBidDetailsV6 = async (
 
     case "seaport-v1.4": {
       if (order.rawData && !order.rawData.partial) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const extraArgs: any = {};
 
         const sdkOrder = new Sdk.SeaportV14.Order(config.chainId, order.rawData);
@@ -540,7 +517,6 @@ export const generateBidDetailsV6 = async (
       } else {
         // Sorry for all the below `any` types
         return {
-          // eslint-disable-next-line
           kind: "seaport-v1.4-partial" as any,
           ...common,
           order: {
@@ -548,7 +524,53 @@ export const generateBidDetailsV6 = async (
             tokenId: token.tokenId,
             id: order.id,
             unitPrice: order.unitPrice,
-            // eslint-disable-next-line
+          } as any,
+        };
+      }
+    }
+
+    case "seaport-v1.5": {
+      if (order.rawData && !order.rawData.partial) {
+        const extraArgs: any = {};
+
+        const sdkOrder = new Sdk.SeaportV15.Order(config.chainId, order.rawData);
+        if (sdkOrder.params.kind?.includes("token-list")) {
+          // When filling a "token-list" order, we also need to pass in the
+          // full list of tokens the order was made on (in order to be able
+          // to generate a valid merkle proof)
+          const tokens = await idb.manyOrNone(
+            `
+              SELECT
+                token_sets_tokens.token_id
+              FROM token_sets_tokens
+              WHERE token_sets_tokens.token_set_id = (
+                SELECT
+                  orders.token_set_id
+                FROM orders
+                WHERE orders.id = $/id/
+              )
+            `,
+            { id: sdkOrder.hash() }
+          );
+          extraArgs.tokenIds = tokens.map(({ token_id }) => token_id);
+        }
+
+        return {
+          kind: "seaport-v1.5",
+          ...common,
+          extraArgs,
+          order: sdkOrder,
+        };
+      } else {
+        // Sorry for all the below `any` types
+        return {
+          kind: "seaport-v1.5-partial" as any,
+          ...common,
+          order: {
+            contract: token.contract,
+            tokenId: token.tokenId,
+            id: order.id,
+            unitPrice: order.unitPrice,
           } as any,
         };
       }
@@ -699,7 +721,6 @@ export const generateListingDetailsV5 = (
     id: string;
     kind: OrderKind;
     currency: string;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     rawData: any;
   },
   token: {
@@ -761,14 +782,12 @@ export const generateListingDetailsV5 = (
       } else {
         // Sorry for all the below `any` types
         return {
-          // eslint-disable-next-line
           kind: "seaport-partial" as any,
           ...common,
           order: {
             contract: token.contract,
             tokenId: token.tokenId,
             id: order.id,
-            // eslint-disable-next-line
           } as any,
         };
       }
@@ -809,7 +828,6 @@ export const generateBidDetailsV5 = async (
   order: {
     id: string;
     kind: OrderKind;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     rawData: any;
   },
   token: {
@@ -828,52 +846,36 @@ export const generateBidDetailsV5 = async (
 
   switch (order.kind) {
     case "seaport": {
-      if (order.rawData) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const extraArgs: any = {};
+      const extraArgs: any = {};
 
-        const sdkOrder = new Sdk.SeaportV11.Order(config.chainId, order.rawData);
-        if (sdkOrder.params.kind?.includes("token-list")) {
-          // When filling a "token-list" order, we also need to pass in the
-          // full list of tokens the order was made on (in order to be able
-          // to generate a valid merkle proof)
-          const tokens = await idb.manyOrNone(
-            `
+      const sdkOrder = new Sdk.SeaportV11.Order(config.chainId, order.rawData);
+      if (sdkOrder.params.kind?.includes("token-list")) {
+        // When filling a "token-list" order, we also need to pass in the
+        // full list of tokens the order was made on (in order to be able
+        // to generate a valid merkle proof)
+        const tokens = await idb.manyOrNone(
+          `
+            SELECT
+              token_sets_tokens.token_id
+            FROM token_sets_tokens
+            WHERE token_sets_tokens.token_set_id = (
               SELECT
-                token_sets_tokens.token_id
-              FROM token_sets_tokens
-              WHERE token_sets_tokens.token_set_id = (
-                SELECT
-                  orders.token_set_id
-                FROM orders
-                WHERE orders.id = $/id/
-              )
-            `,
-            { id: sdkOrder.hash() }
-          );
-          extraArgs.tokenIds = tokens.map(({ token_id }) => token_id);
-        }
-
-        return {
-          kind: "seaport",
-          ...common,
-          extraArgs,
-          order: sdkOrder,
-        };
-      } else {
-        // Sorry for all the below `any` types
-        return {
-          // eslint-disable-next-line
-          kind: "seaport-partial" as any,
-          ...common,
-          order: {
-            contract: token.contract,
-            tokenId: token.tokenId,
-            id: order.id,
-            // eslint-disable-next-line
-          } as any,
-        };
+                orders.token_set_id
+              FROM orders
+              WHERE orders.id = $/id/
+            )
+          `,
+          { id: sdkOrder.hash() }
+        );
+        extraArgs.tokenIds = tokens.map(({ token_id }) => token_id);
       }
+
+      return {
+        kind: "seaport",
+        ...common,
+        extraArgs,
+        order: sdkOrder,
+      };
     }
 
     case "zeroex-v4-erc721":

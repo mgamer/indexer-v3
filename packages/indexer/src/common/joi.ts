@@ -520,7 +520,7 @@ export const getJoiOrderObject = async (order: {
       nativeAmount?: string;
       usdAmount?: string;
     };
-    net: {
+    net?: {
       amount: string;
       nativeAmount?: string;
       usdAmount?: string;
@@ -531,7 +531,7 @@ export const getJoiOrderObject = async (order: {
   validUntil: string;
   quantityFilled: string;
   quantityRemaining: string;
-  criteria: string;
+  criteria: string | null;
   sourceIdInt: number;
   feeBps: number;
   feeBreakdown: any;
@@ -609,10 +609,12 @@ export const getJoiOrderObject = async (order: {
           amount: order.prices.gross.amount,
           nativeAmount: order.prices.gross.nativeAmount,
         },
-        net: {
-          amount: order.prices.net.amount,
-          nativeAmount: order.prices.net.nativeAmount,
-        },
+        net: order.prices.net
+          ? {
+              amount: order.prices.net.amount,
+              nativeAmount: order.prices.net.nativeAmount,
+            }
+          : undefined,
       },
       currency,
       order.displayCurrency
@@ -917,3 +919,13 @@ export const getJoiSaleObject = async (sale: {
     updatedAt: sale.updatedAt,
   };
 };
+
+// --- Fees ---
+
+export const JoiExecuteFee = Joi.object({
+  kind: Joi.string(),
+  recipient: Joi.string().pattern(regex.address),
+  bps: Joi.number().unsafe(),
+  amount: Joi.number().unsafe(),
+  rawAmount: Joi.string().pattern(regex.number),
+});

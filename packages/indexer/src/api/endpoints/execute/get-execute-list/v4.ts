@@ -12,6 +12,7 @@ import { baseProvider } from "@/common/provider";
 import { regex } from "@/common/utils";
 import { config } from "@/config/index";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
+import { ExecutionsBuffer } from "@/utils/executions";
 
 // LooksRare
 import * as looksRareV2SellToken from "@/orderbook/orders/looks-rare-v2/build/sell/token";
@@ -162,6 +163,16 @@ export const getExecuteListV4Options: RouteOptions = {
   handler: async (request: Request) => {
     const payload = request.payload as any;
 
+    const executionsBuffer = new ExecutionsBuffer();
+    const addExecution = (orderId: string, quantity?: number) =>
+      executionsBuffer.addFromRequest(request, {
+        side: "sell",
+        action: "create",
+        user: payload.maker,
+        orderId,
+        quantity: quantity ?? 1,
+      });
+
     try {
       const maker = payload.maker;
       const source = payload.source;
@@ -300,6 +311,8 @@ export const getExecuteListV4Options: RouteOptions = {
               orderIndex: i,
             });
 
+            addExecution(order.hash(), params.quantity);
+
             // Go on with the next listing
             continue;
           }
@@ -372,6 +385,8 @@ export const getExecuteListV4Options: RouteOptions = {
               orderIndex: i,
             });
 
+            addExecution(order.hash(), params.quantity);
+
             // Go on with the next listing
             continue;
           }
@@ -398,7 +413,9 @@ export const getExecuteListV4Options: RouteOptions = {
             // Check the order's fillability
             const exchange = new Sdk.SeaportV11.Exchange(config.chainId);
             try {
-              await seaportCheck.offChainCheck(order, exchange, { onChainApprovalRecheck: true });
+              await seaportCheck.offChainCheck(order, "seaport", exchange, {
+                onChainApprovalRecheck: true,
+              });
             } catch (error: any) {
               switch (error.message) {
                 case "no-balance-no-approval":
@@ -450,6 +467,8 @@ export const getExecuteListV4Options: RouteOptions = {
               },
               orderIndex: i,
             });
+
+            addExecution(order.hash(), params.quantity);
 
             // Go on with the next listing
             continue;
@@ -486,7 +505,9 @@ export const getExecuteListV4Options: RouteOptions = {
             // Check the order's fillability
             const exchange = new Sdk.SeaportV14.Exchange(config.chainId);
             try {
-              await seaportCheck.offChainCheck(order, exchange, { onChainApprovalRecheck: true });
+              await seaportCheck.offChainCheck(order, "seaport-v1.4", exchange, {
+                onChainApprovalRecheck: true,
+              });
             } catch (error: any) {
               switch (error.message) {
                 case "no-balance-no-approval":
@@ -538,6 +559,8 @@ export const getExecuteListV4Options: RouteOptions = {
               },
               orderIndex: i,
             });
+
+            addExecution(order.hash(), params.quantity);
 
             // Go on with the next listing
             continue;
@@ -639,6 +662,8 @@ export const getExecuteListV4Options: RouteOptions = {
               orderIndex: i,
             });
 
+            addExecution(order.hash(), params.quantity);
+
             // Go on with the next listing
             continue;
           }
@@ -726,6 +751,8 @@ export const getExecuteListV4Options: RouteOptions = {
               orderIndex: i,
             });
 
+            addExecution(new Sdk.X2Y2.Exchange(config.chainId, "").hash(order), params.quantity);
+
             // Go on with the next listing
             continue;
           }
@@ -806,6 +833,9 @@ export const getExecuteListV4Options: RouteOptions = {
               },
               orderIndex: i,
             });
+
+            addExecution(order.hashOrderKey(), params.quantity);
+
             // Go on with the next listing
             continue;
           }
@@ -824,6 +854,8 @@ export const getExecuteListV4Options: RouteOptions = {
           }));
         }
       }
+
+      await executionsBuffer.flush();
 
       return { steps };
     } catch (error) {

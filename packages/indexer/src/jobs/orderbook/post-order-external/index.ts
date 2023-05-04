@@ -26,7 +26,7 @@ import * as crossPostingOrdersModel from "@/models/cross-posting-orders";
 import { CrossPostingOrderStatus } from "@/models/cross-posting-orders";
 import { TSTAttribute, TSTCollection, TSTCollectionNonFlagged } from "@/orderbook/token-sets/utils";
 import * as collectionUpdatesMetadata from "@/jobs/collection-updates/metadata-queue";
-import { toBuffer } from "@/common/utils";
+import { fromBuffer, toBuffer } from "@/common/utils";
 
 const QUEUE_NAME = "orderbook-post-order-external-queue";
 const MAX_RETRIES = 5;
@@ -153,24 +153,46 @@ if (config.doBackgroundWork) {
                 config.chainId,
                 orderData as Sdk.SeaportBase.Types.OrderComponents
               );
+
               const orderInfo = order.getInfo();
 
               logger.info(
                 QUEUE_NAME,
-                `Post Order Failed - Invalid Fees Debug. orderbook=${orderbook}, crossPostingOrderId=${crossPostingOrderId}, contract=${
-                  orderInfo?.contract
-                }, tokenId=${orderInfo?.tokenId}, orderId=${orderId}, orderData=${JSON.stringify(
-                  orderData
-                )}, retry: ${retry}`
+                `Post Order Failed - Invalid Fees Debug. orderbook=${orderbook}, crossPostingOrderId=${crossPostingOrderId}, orderKind=${
+                  order.params.kind
+                }, contract=${orderInfo?.contract}, tokenId=${
+                  orderInfo?.tokenId
+                }, orderId=${orderId}, orderData=${JSON.stringify(orderData)}, retry: ${retry}`
               );
 
-              if (orderInfo?.contract && orderInfo.tokenId) {
-                const rawResult = await redb.oneOrNone(
+              let rawResult;
+
+              if (order.params.kind !== "single-token") {
+                rawResult = await redb.oneOrNone(
                   `
                 SELECT
                   tokens.contract,
                   tokens.token_id,
-                  collections.id AS "collection_id",
+                  collections.royalties,
+                  collections.new_royalties,
+                  collections.community
+                FROM collections
+                JOIN tokens ON tokens.collection_id = collections.id
+                WHERE collections = $/collectionId/
+                LIMIT 1
+            `,
+                  {
+                    collectionId: orderSchema!.data.collection,
+                  }
+                );
+              } else if (orderInfo?.tokenId) {
+                rawResult = await redb.oneOrNone(
+                  `
+                SELECT
+                  tokens.contract,
+                  tokens.token_id,
+                  collections.royalties,
+                  collections.new_royalties,
                   collections.community
                 FROM tokens
                 JOIN collections ON collections.id = tokens.collection_id
@@ -179,21 +201,23 @@ if (config.doBackgroundWork) {
               `,
                   { contract: toBuffer(orderInfo.contract), tokenId: orderInfo.tokenId }
                 );
+              }
 
-                if (rawResult) {
-                  logger.info(
-                    QUEUE_NAME,
-                    `Post Order Failed - Invalid Fees. orderbook=${orderbook}, crossPostingOrderId=${crossPostingOrderId}, orderId=${orderId}, orderData=${JSON.stringify(
-                      orderData
-                    )}, retry: ${retry}`
-                  );
+              if (rawResult) {
+                logger.info(
+                  QUEUE_NAME,
+                  `Post Order Failed - Invalid Fees - Refreshing. orderbook=${orderbook}, crossPostingOrderId=${crossPostingOrderId}, orderbookApiKey=${orderbookApiKey}, orderKind=${
+                    order.params.kind
+                  }, orderId=${orderId}, orderData=${JSON.stringify(
+                    orderData
+                  )}, rawResult=${JSON.stringify(rawResult)}, retry: ${retry}`
+                );
 
-                  await collectionUpdatesMetadata.addToQueue(
-                    rawResult.contract,
-                    rawResult.token_id,
-                    rawResult.community
-                  );
-                }
+                await collectionUpdatesMetadata.addToQueue(
+                  fromBuffer(rawResult.contract),
+                  rawResult.token_id,
+                  rawResult.community
+                );
               }
             }
           } else if (retry < MAX_RETRIES) {
@@ -243,7 +267,7 @@ const getOrderbookDefaultApiKey = (orderbook: string) => {
     case "blur":
       return config.orderFetcherApiKey;
     case "opensea":
-      return config.openSeaCrossPostingApiKey;
+      return config.openSeaApiKey;
     case "looks-rare":
       return config.looksRareApiKey;
     case "x2y2":
@@ -264,36 +288,42 @@ const getRateLimiter = (orderbook: string) => {
         storeClient: rateLimitRedis,
         points: BlurApi.RATE_LIMIT_REQUEST_COUNT,
         duration: BlurApi.RATE_LIMIT_INTERVAL,
+        keyPrefix: `${config.chainId}`,
       });
     case "looks-rare":
       return new RateLimiterRedis({
         storeClient: rateLimitRedis,
         points: LooksrareApi.RATE_LIMIT_REQUEST_COUNT,
         duration: LooksrareApi.RATE_LIMIT_INTERVAL,
+        keyPrefix: `${config.chainId}`,
       });
     case "opensea":
       return new RateLimiterRedis({
         storeClient: rateLimitRedis,
         points: OpenSeaApi.RATE_LIMIT_REQUEST_COUNT,
         duration: OpenSeaApi.RATE_LIMIT_INTERVAL,
+        keyPrefix: `${config.chainId}`,
       });
     case "x2y2":
       return new RateLimiterRedis({
         storeClient: rateLimitRedis,
         points: X2Y2Api.RATE_LIMIT_REQUEST_COUNT,
         duration: X2Y2Api.RATE_LIMIT_INTERVAL,
+        keyPrefix: `${config.chainId}`,
       });
     case "universe":
       return new RateLimiterRedis({
         storeClient: rateLimitRedis,
         points: UniverseApi.RATE_LIMIT_REQUEST_COUNT,
         duration: UniverseApi.RATE_LIMIT_INTERVAL,
+        keyPrefix: `${config.chainId}`,
       });
     case "flow":
       return new RateLimiterRedis({
         storeClient: rateLimitRedis,
         points: FlowApi.RATE_LIMIT_REQUEST_COUNT,
         duration: FlowApi.RATE_LIMIT_INTERVAL,
+        keyPrefix: `${config.chainId}`,
       });
   }
 

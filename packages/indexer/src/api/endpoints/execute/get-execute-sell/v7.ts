@@ -12,18 +12,21 @@ import Joi from "joi";
 import { inject } from "@/api/index";
 import { idb } from "@/common/db";
 import { logger } from "@/common/logger";
+import { JoiExecuteFee } from "@/common/joi";
 import { baseProvider } from "@/common/provider";
 import { bn, formatPrice, fromBuffer, now, regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { getNetworkSettings } from "@/config/network";
 import { ApiKeyManager } from "@/models/api-keys";
 import { Sources } from "@/models/sources";
-import { OrderKind, generateBidDetailsV6, routerOnRecoverableError } from "@/orderbook/orders";
+import { OrderKind, generateBidDetailsV6 } from "@/orderbook/orders";
+import { fillErrorCallback } from "@/orderbook/orders/errors";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import * as nftx from "@/orderbook/orders/nftx";
 import * as sudoswap from "@/orderbook/orders/sudoswap";
 import * as b from "@/utils/auth/blur";
 import { getCurrency } from "@/utils/currencies";
+import { ExecutionsBuffer } from "@/utils/executions";
 import { tryGetTokensSuspiciousStatus } from "@/utils/opensea";
 
 const version = "v7";
@@ -64,6 +67,7 @@ export const getExecuteSellV7Options: RouteOptions = {
                   "zeroex-v4",
                   "seaport",
                   "seaport-v1.4",
+                  "seaport-v1.5",
                   "x2y2",
                   "universe",
                   "rarible",
@@ -166,6 +170,8 @@ export const getExecuteSellV7Options: RouteOptions = {
           currency: Joi.string().lowercase().pattern(regex.address),
           quote: Joi.number().unsafe(),
           rawQuote: Joi.string().pattern(regex.number),
+          builtInFees: Joi.array().items(JoiExecuteFee),
+          feesOnTop: Joi.array().items(JoiExecuteFee),
         })
       ),
     }).label(`getExecuteSell${version.toUpperCase()}Response`),
@@ -181,6 +187,14 @@ export const getExecuteSellV7Options: RouteOptions = {
     const perfTime1 = performance.now();
 
     try {
+      type ExecuteFee = {
+        kind?: string;
+        recipient: string;
+        bps: number;
+        amount: number;
+        rawAmount: string;
+      };
+
       // Keep track of the bids and path to fill
       const bidDetails: BidDetails[] = [];
       let path: {
@@ -192,6 +206,8 @@ export const getExecuteSellV7Options: RouteOptions = {
         currency: string;
         quote: number;
         rawQuote: string;
+        builtInFees: ExecuteFee[];
+        feesOnTop: ExecuteFee[];
       }[] = [];
 
       // Keep track of dynamically-priced orders (eg. from pools like Sudoswap and NFTX)
@@ -213,8 +229,8 @@ export const getExecuteSellV7Options: RouteOptions = {
           sourceId: number | null;
           currency: string;
           rawData: object;
-          builtInFeeBps: number;
-          fees?: Sdk.RouterV6.Types.Fee[];
+          builtInFees: { kind: string; recipient: string; bps: number }[];
+          additionalFees?: Sdk.RouterV6.Types.Fee[];
         },
         token: {
           kind: "erc721" | "erc1155";
@@ -224,9 +240,6 @@ export const getExecuteSellV7Options: RouteOptions = {
           owner?: string;
         }
       ) => {
-        const fees = payload.normalizeRoyalties ? order.fees ?? [] : [];
-        const totalFee = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
-
         // Handle dynamically-priced orders
         if (["blur", "sudoswap", "nftx"].includes(order.kind)) {
           // TODO: Handle the case when the next best-priced order in the database
@@ -274,16 +287,27 @@ export const getExecuteSellV7Options: RouteOptions = {
         quantityFilled[order.id] += quantity;
 
         // Decrement the maker's available FT balance
-        const price = bn(order.price).mul(quantity);
+        const quantityAdjustedPrice = bn(order.price).mul(quantity);
         const key = getMakerBalancesKey(order.maker, order.currency);
         if (!makerBalances[key]) {
           makerBalances[key] = await commonHelpers.getFtBalance(order.currency, order.maker);
         }
-        makerBalances[key] = makerBalances[key].sub(price);
+        makerBalances[key] = makerBalances[key].sub(quantityAdjustedPrice);
 
+        const unitPrice = bn(order.price);
         const source = order.sourceId !== null ? sources.get(order.sourceId)?.domain ?? null : null;
+        const additionalFees = payload.normalizeRoyalties ? order.additionalFees ?? [] : [];
+        const builtInFees = order.builtInFees ?? [];
 
-        const netPrice = price.sub(price.mul(order.builtInFeeBps).div(10000)).sub(totalFee);
+        // Sum the built-in fees and any additional fees
+        const totalFee = bn(
+          builtInFees
+            .map(({ bps }) => unitPrice.mul(bps).div(10000))
+            .reduce((a, b) => a.add(b), bn(0))
+        ).add(additionalFees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0)));
+
+        const netPrice = unitPrice.sub(totalFee);
+        const currency = await getCurrency(order.currency);
         path.push({
           orderId: order.id,
           contract: token.contract,
@@ -291,8 +315,28 @@ export const getExecuteSellV7Options: RouteOptions = {
           quantity,
           source,
           currency: order.currency,
-          quote: formatPrice(netPrice, (await getCurrency(order.currency)).decimals, true),
+          quote: formatPrice(netPrice, currency.decimals, true),
           rawQuote: netPrice.toString(),
+          builtInFees: builtInFees.map((f) => {
+            const rawAmount = unitPrice.mul(f.bps).div(10000).toString();
+            const amount = formatPrice(rawAmount, currency.decimals);
+
+            return {
+              ...f,
+              amount,
+              rawAmount,
+            };
+          }),
+          feesOnTop: [
+            // For now, the only additional fees are the normalized royalties
+            ...additionalFees.map((f) => ({
+              kind: "royalty",
+              recipient: f.recipient,
+              bps: bn(f.amount).mul(10000).div(unitPrice).toNumber(),
+              amount: formatPrice(f.amount, currency.decimals, true),
+              rawAmount: bn(f.amount).toString(),
+            })),
+          ],
         });
 
         bidDetails.push(
@@ -303,7 +347,7 @@ export const getExecuteSellV7Options: RouteOptions = {
               unitPrice: order.price,
               rawData: order.rawData,
               source: source || undefined,
-              fees,
+              fees: additionalFees,
               isProtected:
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 (order.rawData as any).zone ===
@@ -408,7 +452,7 @@ export const getExecuteSellV7Options: RouteOptions = {
                 orders.missing_royalties,
                 orders.maker,
                 orders.token_set_id,
-                orders.fee_bps
+                orders.fee_breakdown
               FROM orders
               JOIN contracts
                 ON orders.contract = contracts.address
@@ -447,7 +491,7 @@ export const getExecuteSellV7Options: RouteOptions = {
 
           // Partial Seaport orders require knowing the owner
           let owner: string | undefined;
-          if (["seaport-partial", "seaport-v1.4-partial"].includes(result.kind)) {
+          if (["seaport-v1.4-partial", "seaport-v1.5-partial"].includes(result.kind)) {
             const ownerResult = await idb.oneOrNone(
               `
                 SELECT
@@ -471,9 +515,13 @@ export const getExecuteSellV7Options: RouteOptions = {
 
           // Do not fill X2Y2 and Seaport orders with flagged tokens
           if (
-            ["x2y2", "seaport", "seaport-v1.4", "seaport-partial", "seaport-v1.4-partial"].includes(
-              result.kind
-            )
+            [
+              "x2y2",
+              "seaport-v1.4",
+              "seaport-v1.5",
+              "seaport-v1.4-partial",
+              "seaport-v1.5-partial",
+            ].includes(result.kind)
           ) {
             if (
               (tokenToSuspicious.has(item.token) && tokenToSuspicious.get(item.token)) ||
@@ -496,8 +544,8 @@ export const getExecuteSellV7Options: RouteOptions = {
               sourceId: result.source_id_int,
               currency: fromBuffer(result.currency),
               rawData: result.raw_data,
-              builtInFeeBps: result.fee_bps,
-              fees: result.missing_royalties,
+              builtInFees: result.fee_breakdown,
+              additionalFees: result.missing_royalties,
             },
             {
               kind: result.token_kind,
@@ -525,7 +573,7 @@ export const getExecuteSellV7Options: RouteOptions = {
                 orders.missing_royalties,
                 orders.maker,
                 orders.quantity_remaining,
-                orders.fee_bps
+                orders.fee_breakdown
               FROM orders
               JOIN contracts
                 ON orders.contract = contracts.address
@@ -560,7 +608,7 @@ export const getExecuteSellV7Options: RouteOptions = {
           for (const result of orderResults) {
             // Partial Seaport orders require knowing the owner
             let owner: string | undefined;
-            if (["seaport-partial", "seaport-v1.4-partial"].includes(result.kind)) {
+            if (["seaport-v1.4-partial", "seaport-v1.5-partial"].includes(result.kind)) {
               const ownerResult = await idb.oneOrNone(
                 `
                   SELECT
@@ -586,10 +634,10 @@ export const getExecuteSellV7Options: RouteOptions = {
             if (
               [
                 "x2y2",
-                "seaport",
                 "seaport-v1.4",
-                "seaport-partial",
+                "seaport-v1.5",
                 "seaport-v1.4-partial",
+                "seaport-v1.5-partial",
               ].includes(result.kind)
             ) {
               if (
@@ -638,8 +686,8 @@ export const getExecuteSellV7Options: RouteOptions = {
                 sourceId: result.source_id_int,
                 currency,
                 rawData: result.raw_data,
-                builtInFeeBps: result.fee_bps,
-                fees: result.missing_royalties,
+                builtInFees: result.fee_breakdown,
+                additionalFees: result.missing_royalties,
               },
               {
                 kind: result.token_kind,
@@ -668,6 +716,47 @@ export const getExecuteSellV7Options: RouteOptions = {
 
       if (!path.length) {
         throw Boom.badRequest("No available orders");
+      }
+
+      // Include the global fees in the path
+
+      const globalFees = (payload.feesOnTop ?? []).map((fee: string) => {
+        const [recipient, amount] = fee.split(":");
+        return { recipient, amount };
+      });
+
+      const ordersEligibleForGlobalFees = bidDetails
+        .filter((b) => !b.isProtected && b.source !== "blur.io")
+        .map((b) => b.orderId);
+
+      const addGlobalFee = async (item: (typeof path)[0], fee: Sdk.RouterV6.Types.Fee) => {
+        // Global fees get split across all eligible orders
+        fee.amount = bn(fee.amount).div(ordersEligibleForGlobalFees.length).toString();
+
+        const itemGrossPrice = bn(item.rawQuote)
+          .add(item.builtInFees.map((f) => bn(f.rawAmount)).reduce((a, b) => a.add(b), bn(0)))
+          .add(item.feesOnTop.map((f) => bn(f.rawAmount)).reduce((a, b) => a.add(b), bn(0)));
+
+        const amount = formatPrice(fee.amount, (await getCurrency(item.currency)).decimals, true);
+        const rawAmount = bn(fee.amount).toString();
+
+        item.feesOnTop.push({
+          recipient: fee.recipient,
+          bps: bn(rawAmount).mul(10000).div(itemGrossPrice).toNumber(),
+          amount,
+          rawAmount,
+        });
+
+        // item.quote -= amount;
+        // item.rawQuote = bn(item.rawQuote).sub(rawAmount).toString();
+      };
+
+      for (const item of path) {
+        if (ordersEligibleForGlobalFees.includes(item.orderId)) {
+          for (const f of globalFees) {
+            await addGlobalFee(item, f);
+          }
+        }
       }
 
       if (payload.onlyPath) {
@@ -879,17 +968,14 @@ export const getExecuteSellV7Options: RouteOptions = {
         result = await router.fillBidsTx(bidDetails, payload.taker, {
           source: payload.source,
           partial: payload.partial,
-          globalFees: payload.feesOnTop?.map((fee: string) => {
-            const [recipient, amount] = fee.split(":");
-            return { recipient, amount };
-          }),
+          globalFees,
           forceApprovalProxy,
-          onRecoverableError: async (kind, error, data) => {
+          onError: async (kind, error, data) => {
             errors.push({
               orderId: data.orderId,
               message: error.response?.data ? JSON.stringify(error.response.data) : error.message,
             });
-            await routerOnRecoverableError(kind, error, data);
+            await fillErrorCallback(kind, error, data);
           },
           blurAuth,
         });
@@ -950,6 +1036,38 @@ export const getExecuteSellV7Options: RouteOptions = {
         steps = steps.slice(1);
       }
 
+      const executionsBuffer = new ExecutionsBuffer();
+      for (const item of path) {
+        const calldata = txs.find((tx) => tx.orderIds.includes(item.orderId))?.txData.data;
+
+        let orderId = item.orderId;
+        if (calldata && item.source === "blur.io") {
+          // Blur bids don't have the correct order id so we have to override it
+          const orders = await new Sdk.Blur.Exchange(config.chainId).getMatchedOrdersFromCalldata(
+            baseProvider,
+            calldata
+          );
+
+          const index = orders.findIndex(
+            ({ sell }) =>
+              sell.params.collection === item.contract && sell.params.tokenId === item.tokenId
+          );
+          if (index !== -1) {
+            orderId = orders[index].buy.hash();
+          }
+        }
+
+        executionsBuffer.addFromRequest(request, {
+          side: "sell",
+          action: "fill",
+          user: payload.taker,
+          orderId,
+          quantity: item.quantity,
+          calldata,
+        });
+      }
+      await executionsBuffer.flush();
+
       const perfTime2 = performance.now();
 
       logger.info(
@@ -973,7 +1091,8 @@ export const getExecuteSellV7Options: RouteOptions = {
           `get-execute-sell-${version}-handler`,
           `Handler failure: ${error} (path = ${JSON.stringify({})}, request = ${JSON.stringify(
             payload
-          )})`
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          )}, trace=${(error as any).stack})`
         );
       }
       throw error;

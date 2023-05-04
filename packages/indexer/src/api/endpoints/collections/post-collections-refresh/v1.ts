@@ -8,6 +8,7 @@ import _ from "lodash";
 
 import { edb } from "@/common/db";
 import { logger } from "@/common/logger";
+import { regex } from "@/common/utils";
 import { ApiKeyManager } from "@/models/api-keys";
 import { Collections } from "@/models/collections";
 import { Tokens } from "@/models/tokens";
@@ -96,12 +97,7 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
 
       if (payload.metadataOnly) {
         // Refresh the collection metadata
-        let tokenId;
-        if (collection.tokenIdRange?.length) {
-          tokenId = `${collection.tokenIdRange[0]}`;
-        } else {
-          tokenId = await Tokens.getSingleToken(payload.collection);
-        }
+        const tokenId = await Tokens.getSingleToken(payload.collection);
 
         await collectionUpdatesMetadata.addToQueue(
           collection.contract,
@@ -174,12 +170,7 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
         );
 
         // Refresh the collection metadata
-        let tokenId;
-        if (collection.tokenIdRange?.length) {
-          tokenId = `${collection.tokenIdRange[0]}`;
-        } else {
-          tokenId = await Tokens.getSingleToken(payload.collection);
-        }
+        const tokenId = await Tokens.getSingleToken(payload.collection);
 
         await collectionUpdatesMetadata.addToQueue(
           collection.contract,
@@ -210,7 +201,9 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
         await orderFixes.addToQueue([{ by: "contract", data: { contract: collection.contract } }]);
 
         // Refresh Blur bids
-        await blurBidsRefresh.addToQueue(collection.id, true);
+        if (collection.id.match(regex.address)) {
+          await blurBidsRefresh.addToQueue(collection.id, true);
+        }
 
         // Refresh listings
         await OpenseaIndexerApi.fastContractSync(collection.contract);

@@ -1,7 +1,6 @@
 import { getStateChange, getPayments, searchForCall } from "@georgeroman/evm-tx-simulator";
 import { Payment } from "@georgeroman/evm-tx-simulator/dist/types";
 import * as Sdk from "@reservoir0x/sdk";
-
 import { redis } from "@/common/redis";
 import { bn } from "@/common/utils";
 import { config } from "@/config/index";
@@ -47,7 +46,9 @@ export async function extractRoyalties(
   const royaltyFeeOnTop: Royalty[] = [];
 
   const { txHash } = fillEvent.baseEventParams;
-  const { tokenId, contract, price, currency } = fillEvent;
+  const { tokenId, contract, currency, price } = fillEvent;
+
+  const currencyPrice = fillEvent.currencyPrice ?? price;
 
   // Fetch the current transaction's trace
   let txTrace: TransactionTrace | undefined;
@@ -192,7 +193,9 @@ export async function extractRoyalties(
             _.baseEventParams.logIndex === fillEvent.baseEventParams.logIndex
         );
 
-        subcallToAnalyze = matchExchangeCalls[eventIndex];
+        if (matchExchangeCalls[eventIndex]) {
+          subcallToAnalyze = matchExchangeCalls[eventIndex];
+        }
       }
     }
   }
@@ -208,7 +211,7 @@ export async function extractRoyalties(
   });
   // Compute total price for all above same-contract fills
   const sameContractTotalPrice = sameContractFills.reduce(
-    (total, item) => total.add(bn(item.price).mul(bn(item.amount))),
+    (total, item) => total.add(bn(item.currencyPrice ?? item.price).mul(bn(item.amount))),
     bn(0)
   );
 
@@ -229,7 +232,8 @@ export async function extractRoyalties(
     .sort((a, b) => a.index - b.index);
   // Compute total price for all above same-protocol fills
   const sameProtocolTotalPrice = sameProtocolFills.reduce(
-    (total, item) => total.add(bn(item.event.price).mul(bn(item.event.amount))),
+    (total, item) =>
+      total.add(bn(item.event.currencyPrice ?? item.event.price).mul(bn(item.event.amount))),
     bn(0)
   );
 
@@ -308,12 +312,42 @@ export async function extractRoyalties(
   // Iterate through all of the state changes of the (sub)call associated to the current fill event
   const state = getStateChange(subcallToAnalyze);
 
+  const ETH = Sdk.Common.Addresses.Eth[config.chainId];
+  const BETH = Sdk.Blur.Addresses.Beth[config.chainId];
+
+  // Check Paid on top
+  for (const address in globalState) {
+    const globalChange = globalState[address];
+    const exchangeChange = state[address];
+    try {
+      if (routerCall && globalChange && fillEvents.length === 1) {
+        const { tokenBalanceState } = globalChange;
+        const globalBalanceChange =
+          currency === ETH
+            ? // The fill event will map any BETH fills to ETH so we need to cover that here
+              tokenBalanceState[`native:${ETH}`] || tokenBalanceState[`erc20:${BETH}`]
+            : tokenBalanceState[`erc20:${currency}`];
+
+        if (globalBalanceChange && !globalBalanceChange.startsWith("-") && !exchangeChange) {
+          const paidOnTop = bn(globalBalanceChange);
+          const topFeeBps = paidOnTop.gt(0) ? paidOnTop.mul(10000).div(bn(currencyPrice)) : bn(0);
+
+          if (topFeeBps.gt(0)) {
+            royaltyFeeOnTop.push({
+              recipient: address,
+              bps: topFeeBps.toNumber(),
+            });
+          }
+        }
+      }
+    } catch {
+      // Skip errors
+    }
+  }
+
   for (const address in state) {
     const { tokenBalanceState } = state[address];
     const globalChange = globalState[address];
-
-    const ETH = Sdk.Common.Addresses.Eth[config.chainId];
-    const BETH = Sdk.Blur.Addresses.Beth[config.chainId];
 
     const balanceChange =
       currency === ETH
@@ -323,7 +357,7 @@ export async function extractRoyalties(
 
     try {
       // Fees on the top, make sure it's a single-sale transaction
-      if (fillEvents.length === 1 && routerCall && globalChange) {
+      if (routerCall && globalChange && fillEvents.length === 1) {
         const { tokenBalanceState } = globalChange;
         const globalBalanceChange =
           currency === ETH
@@ -335,7 +369,8 @@ export async function extractRoyalties(
           const balanceChangeAmount =
             balanceChange && !balanceChange.startsWith("-") ? bn(balanceChange) : bn(0);
           const paidOnTop = bn(globalBalanceChange).sub(balanceChangeAmount);
-          const topFeeBps = paidOnTop.gt(0) ? paidOnTop.mul(10000).div(bn(price)) : bn(0);
+          const topFeeBps = paidOnTop.gt(0) ? paidOnTop.mul(10000).div(bn(currencyPrice)) : bn(0);
+
           if (topFeeBps.gt(0)) {
             royaltyFeeOnTop.push({
               recipient: address,
@@ -355,7 +390,7 @@ export async function extractRoyalties(
 
     // If the balance change is positive that means a payment was received
     if (balanceChange && !balanceChange.startsWith("-")) {
-      const bpsOfPrice = bn(balanceChange).mul(10000).div(bn(price));
+      const bpsOfPrice = bn(balanceChange).mul(10000).div(bn(currencyPrice));
 
       // Start with the assumption that this is a royalty/platform fee payment
       const royalty = {
@@ -370,7 +405,10 @@ export async function extractRoyalties(
 
         // Calculate by matched payment amount in split payments
         if (matchRangePayment && isReliable && hasMultiple) {
-          royalty.bps = bn(matchRangePayment.amount).mul(10000).div(fillEvent.price).toNumber();
+          royalty.bps = bn(matchRangePayment.amount)
+            .mul(10000)
+            .div(fillEvent.currencyPrice ?? fillEvent.price)
+            .toNumber();
         }
 
         marketplaceFeeBreakdown.push(royalty);
@@ -424,7 +462,7 @@ export async function extractRoyalties(
 
         // Match with the order's fee breakdown
         if (!isInRange) {
-          isInRange = orderInfo?.feeBreakdown.find((c) => c.recipient === address) != null;
+          isInRange = Boolean((orderInfo?.feeBreakdown ?? []).find((c) => c.recipient === address));
         }
 
         // For now we exclude AMMs which don't pay royalties
@@ -442,7 +480,15 @@ export async function extractRoyalties(
     royalties.map(({ bps }) => bps).reduce((a, b) => a + b, 0);
 
   if (royaltyFeeOnTop.length) {
-    royaltyFeeOnTop.forEach((c) => royaltyFeeBreakdown.push(c));
+    royaltyFeeOnTop.forEach((c) => {
+      const existRoyalty = royaltyFeeBreakdown.find((_) => _.recipient === c.recipient);
+      if (!existRoyalty) {
+        royaltyFeeBreakdown.push(c);
+      } else {
+        // sum by same recipient
+        existRoyalty.bps = existRoyalty.bps + c.bps;
+      }
+    });
   }
 
   const creatorRoyaltyFeeBps = getTotalRoyaltyBps(creatorRoyaltyFeeBreakdown);
