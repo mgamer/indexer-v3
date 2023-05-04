@@ -24,9 +24,12 @@ import { handleEvent as handleCollectionOfferEvent } from "@/websockets/opensea/
 import { handleEvent as handleTraitOfferEvent } from "@/websockets/opensea/handlers/trait_offer";
 import MetadataApi from "@/utils/metadata-api";
 import * as metadataIndexWrite from "@/jobs/metadata-index/write-queue";
+import { GenericOrderInfo } from "@/jobs/orderbook/orders-queue";
 
 if (config.doWebsocketWork && config.openSeaApiKey) {
   const network = config.chainId === 5 ? Network.TESTNET : Network.MAINNET;
+  const maxEventsSize = 200;
+  let bidsEvents: GenericOrderInfo[] = [];
 
   const client = new OpenSeaStreamClient({
     token: config.openSeaApiKey,
@@ -84,13 +87,20 @@ if (config.doWebsocketWork && config.openSeaApiKey) {
               },
               validateBidValue: true,
               ingestMethod: "websocket",
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            } as any;
+            } as GenericOrderInfo;
 
             if (eventType === EventType.ITEM_LISTED) {
               await orderbookOpenseaListings.addToQueue([orderInfo]);
             } else {
-              await orderbookOrders.addToQueue([orderInfo]);
+              bidsEvents.push(orderInfo);
+              if (bidsEvents.length >= maxEventsSize) {
+                await orderbookOrders.addToQueue(bidsEvents);
+                bidsEvents = [];
+                logger.info(
+                  "opensea-websocket",
+                  `Flushed ${bidsEvents.length} to orders book queue`
+                );
+              }
             }
           }
         }
