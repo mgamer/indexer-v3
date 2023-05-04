@@ -59,32 +59,28 @@ export type NftxFtPool = {
 };
 
 export const saveNftxFtPool = async (nftxFtPool: NftxFtPool) => {
-  try {
-    await idb.none(
-      `
-        INSERT INTO nftx_ft_pools (
-          address,
-          token0,
-          token1,
-          pool_kind
-        ) VALUES (
-          $/address/,
-          $/token0/,
-          $/token1/,
-          $/kind/
-        )
-        ON CONFLICT DO NOTHING
-      `,
-      {
-        address: toBuffer(nftxFtPool.address),
-        token0: toBuffer(nftxFtPool.token0),
-        token1: toBuffer(nftxFtPool.token1),
-        kind: nftxFtPool.kind,
-      }
-    );
-  } catch {
-    // Skip error
-  }
+  await idb.none(
+    `
+      INSERT INTO nftx_ft_pools (
+        address,
+        token0,
+        token1,
+        pool_kind
+      ) VALUES (
+        $/address/,
+        $/token0/,
+        $/token1/,
+        $/kind/
+      )
+      ON CONFLICT DO NOTHING
+    `,
+    {
+      address: toBuffer(nftxFtPool.address),
+      token0: toBuffer(nftxFtPool.token0),
+      token1: toBuffer(nftxFtPool.token1),
+      kind: nftxFtPool.kind,
+    }
+  );
   return nftxFtPool;
 };
 
