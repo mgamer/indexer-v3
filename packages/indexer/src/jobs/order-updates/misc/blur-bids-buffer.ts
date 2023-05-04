@@ -6,7 +6,6 @@ import { redis } from "@/common/redis";
 import { config } from "@/config/index";
 import * as orderbook from "@/jobs/orderbook/orders-queue";
 import * as blurBidsRefresh from "@/jobs/order-updates/misc/blur-bids-refresh";
-import { now } from "@/common/utils";
 
 const QUEUE_NAME = "blur-bids-buffer";
 
@@ -35,10 +34,6 @@ if (config.doBackgroundWork) {
       const { collection } = job.data as { collection: string };
 
       try {
-        if (now() < 1683225215) {
-          return;
-        }
-
         // This is not 100% atomic or consistent but it covers most scenarios
         const result = await redis.hvals(getCacheKey(collection));
         if (result.length) {
