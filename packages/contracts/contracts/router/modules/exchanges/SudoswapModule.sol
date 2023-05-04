@@ -11,12 +11,17 @@ import {ISudoswapPair, ISudoswapRouter} from "../../../interfaces/ISudoswap.sol"
 contract SudoswapModule is BaseExchangeModule {
   // --- Fields ---
 
-  ISudoswapRouter public constant SUDOSWAP_ROUTER =
-    ISudoswapRouter(0x2B2e8cDA09bBA9660dCA5cB6233787738Ad68329);
+  ISudoswapRouter public immutable SUDOSWAP_ROUTER;
 
   // --- Constructor ---
 
-  constructor(address owner, address router) BaseModule(owner) BaseExchangeModule(router) {}
+  constructor(
+    address owner,
+    address router,
+    address sudoswapRouter
+  ) BaseModule(owner) BaseExchangeModule(router) {
+    SUDOSWAP_ROUTER = ISudoswapRouter(sudoswapRouter);
+  }
 
   // --- Fallback ---
 

@@ -19,10 +19,10 @@ import { getNetworkName } from "@/config/network";
 import { allJobQueues, gracefulShutdownJobWorkers } from "@/jobs/index";
 import { ApiKeyManager } from "@/models/api-keys";
 import { RateLimitRules } from "@/models/rate-limit-rules";
+import { BlockedRouteError } from "@/models/rate-limit-rules/errors";
+import * as countApiUsage from "@/jobs/metrics/count-api-usage";
 
 let server: Hapi.Server;
-
-export const inject = (options: Hapi.ServerInjectOptions) => server.inject(options);
 
 export const start = async (): Promise<void> => {
   server = Hapi.server({
@@ -149,29 +149,53 @@ export const start = async (): Promise<void> => {
   ]);
 
   server.ext("onPostAuth", async (request, reply) => {
-    /* eslint-disable @typescript-eslint/no-explicit-any */
-    if ((request as any).isInjected || request.route.path === "/livez") {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const isInjected = (request as any).isInjected;
+    if (isInjected) {
+      request.headers["x-api-key"] = config.adminApiKey;
+    }
+
+    if (isInjected || request.route.path === "/livez") {
       return reply.continue;
     }
 
     const key = request.headers["x-api-key"];
     const apiKey = await ApiKeyManager.getApiKey(key);
     const tier = apiKey?.tier || 0;
+    let rateLimitRule;
 
     // Get the rule for the incoming request
     const rateLimitRules = await RateLimitRules.getInstance();
-    const rateLimitRule = rateLimitRules.getRateLimitObject(
-      request.route.path,
-      request.route.method,
-      tier,
-      apiKey?.key,
-      new Map(Object.entries(_.merge(request.payload, request.query)))
-    );
+
+    try {
+      rateLimitRule = rateLimitRules.getRateLimitObject(
+        request.route.path,
+        request.route.method,
+        tier,
+        apiKey?.key,
+        new Map(Object.entries(_.merge(request.payload, request.query, request.params)))
+      );
+    } catch (error) {
+      if (error instanceof BlockedRouteError) {
+        const blockedRouteResponse = {
+          statusCode: 429,
+          error: "Route is suspended",
+          message: `Request to ${request.route.path} is currently suspended`,
+        };
+
+        return reply
+          .response(blockedRouteResponse)
+          .type("application/json")
+          .code(429)
+          .header("tier", `${tier}`)
+          .takeover();
+      }
+    }
 
     // If matching rule was found
     if (rateLimitRule) {
       // If the requested path has no limit
-      if (rateLimitRule.points == 0) {
+      if (rateLimitRule.rule.points == 0) {
         return reply.continue;
       }
 
@@ -183,11 +207,20 @@ export const start = async (): Promise<void> => {
         _.isUndefined(key) || _.isEmpty(key) || _.isNull(apiKey) ? remoteAddress : key; // If no api key or the api key is invalid use IP
 
       try {
-        const rateLimiterRes = await rateLimitRule.consume(rateLimitKey, 1);
+        if (key && tier) {
+          request.pre.metrics = {
+            apiKey: key,
+            route: request.route.path,
+            points: 1,
+            timestamp: _.now(),
+          };
+        }
+
+        const rateLimiterRes = await rateLimitRule.rule.consume(rateLimitKey, 1);
 
         if (rateLimiterRes) {
           // Generate the rate limiting header and add them to the request object to be added to the response in the onPreResponse event
-          request.headers["X-RateLimit-Limit"] = `${rateLimitRule.points}`;
+          request.headers["X-RateLimit-Limit"] = `${rateLimitRule.rule.points}`;
           request.headers["X-RateLimit-Remaining"] = `${rateLimiterRes.remainingPoints}`;
           request.headers["X-RateLimit-Reset"] = `${new Date(
             Date.now() + rateLimiterRes.msBeforeNext
@@ -197,17 +230,17 @@ export const start = async (): Promise<void> => {
         if (error instanceof RateLimiterRes) {
           if (
             error.consumedPoints &&
-            (error.consumedPoints == Number(rateLimitRule.points) + 1 ||
+            (error.consumedPoints == Number(rateLimitRule.rule.points) + 1 ||
               error.consumedPoints % 50 == 0)
           ) {
             const log = {
               message: `${rateLimitKey} ${apiKey?.appName || ""} reached allowed rate limit ${
-                rateLimitRule.points
-              } requests in ${rateLimitRule.duration}s by calling ${
+                rateLimitRule.rule.points
+              } requests in ${rateLimitRule.rule.duration}s by calling ${
                 error.consumedPoints
               } times on route ${request.route.path}${
                 request.info.referrer ? ` from referrer ${request.info.referrer} ` : ""
-              }`,
+              } x-api-key ${key}`,
               route: request.route.path,
               appName: apiKey?.appName || "",
               key: rateLimitKey,
@@ -217,16 +250,25 @@ export const start = async (): Promise<void> => {
             logger.warn("rate-limiter", JSON.stringify(log));
           }
 
+          const message = `Max ${rateLimitRule.rule.points} requests in ${
+            rateLimitRule.rule.duration
+          }s reached, Detected tier ${tier}, Blocked by rule ID ${rateLimitRule.ruleParams.id}${
+            !_.isEmpty(rateLimitRule.ruleParams.payload)
+              ? ` Payload ${JSON.stringify(rateLimitRule.ruleParams.payload)}`
+              : ``
+          }. Please register for an API key by creating a free account at https://dashboard.reservoir.tools to increase your rate limit.`;
+
           const tooManyRequestsResponse = {
             statusCode: 429,
             error: "Too Many Requests",
-            message: `Max ${rateLimitRule.points} requests in ${rateLimitRule.duration}s reached`,
+            message,
           };
 
           return reply
             .response(tooManyRequestsResponse)
             .type("application/json")
             .code(429)
+            .header("tier", `${tier}`)
             .takeover();
         } else {
           logger.warn("rate-limiter", `Rate limit error ${error}`);
@@ -237,8 +279,8 @@ export const start = async (): Promise<void> => {
     return reply.continue;
   });
 
-  server.ext("onPreHandler", (request, h) => {
-    ApiKeyManager.logRequest(request);
+  server.ext("onPreHandler", async (request, h) => {
+    ApiKeyManager.logRequest(request).catch();
     return h.continue;
   });
 
@@ -247,6 +289,10 @@ export const start = async (): Promise<void> => {
 
     // Set custom response in case of timeout
     if ("isBoom" in response && "output" in response) {
+      if (response["output"]["statusCode"] >= 500) {
+        ApiKeyManager.logUnexpectedErrorResponse(request, response);
+      }
+
       if (response["output"]["statusCode"] == 503) {
         const timeoutResponse = {
           statusCode: 504,
@@ -256,17 +302,30 @@ export const start = async (): Promise<void> => {
 
         return reply.response(timeoutResponse).type("application/json").code(504);
       }
+    }
 
-      if (response["output"]["statusCode"] == 500) {
-        ApiKeyManager.logUnexpectedErrorResponse(request, response);
-      }
+    const typedResponse = response as Hapi.ResponseObject;
+    let statusCode = typedResponse.statusCode;
+
+    // Indicate it's an error response
+    if ("output" in response) {
+      statusCode = _.toInteger(response["output"]["statusCode"]);
+    }
+
+    // Count the API usage, to prevent any latency on the request no need to wait and ignore errors
+    if (request.pre.metrics && statusCode >= 100 && statusCode < 500) {
+      request.pre.metrics.statusCode = statusCode;
+      countApiUsage.addToQueue(request.pre.metrics).catch();
     }
 
     if (!(response instanceof Boom)) {
-      const typedResponse = response as Hapi.ResponseObject;
       typedResponse.header("X-RateLimit-Limit", request.headers["X-RateLimit-Limit"]);
       typedResponse.header("X-RateLimit-Remaining", request.headers["X-RateLimit-Remaining"]);
       typedResponse.header("X-RateLimit-Reset", request.headers["X-RateLimit-Reset"]);
+
+      if (request.route.settings.tags && request.route.settings.tags.includes("x-deprecated")) {
+        typedResponse.header("Deprecation", "true");
+      }
     }
 
     return reply.continue;
@@ -279,3 +338,5 @@ export const start = async (): Promise<void> => {
   await server.start();
   logger.info("process", `Started on port ${config.port}`);
 };
+
+export const inject = (options: Hapi.ServerInjectOptions) => server.inject(options);

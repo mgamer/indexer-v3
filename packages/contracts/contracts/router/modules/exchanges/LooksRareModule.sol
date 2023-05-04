@@ -9,7 +9,7 @@ import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 
 import {BaseExchangeModule} from "./BaseExchangeModule.sol";
 import {BaseModule} from "../BaseModule.sol";
-import {ILooksRare} from "../../../interfaces/ILooksRare.sol";
+import {ILooksRare, ILooksRareTransferSelectorNFT} from "../../../interfaces/ILooksRare.sol";
 
 // Notes:
 // - supports filling listings (both ERC721/ERC1155 but only ETH-denominated)
@@ -20,17 +20,27 @@ contract LooksRareModule is BaseExchangeModule {
 
   // --- Fields ---
 
-  ILooksRare public constant EXCHANGE = ILooksRare(0x59728544B08AB483533076417FbBB2fD0B17CE3a);
+  ILooksRare public immutable EXCHANGE;
 
-  address public constant ERC721_TRANSFER_MANAGER = 0xf42aa99F011A1fA7CDA90E5E98b277E306BcA83e;
-  address public constant ERC1155_TRANSFER_MANAGER = 0xFED24eC7E22f573c2e08AEF55aA6797Ca2b3A051;
+  address public immutable ERC721_TRANSFER_MANAGER;
+  address public immutable ERC1155_TRANSFER_MANAGER;
 
   bytes4 public constant ERC721_INTERFACE = 0x80ac58cd;
   bytes4 public constant ERC1155_INTERFACE = 0xd9b67a26;
 
   // --- Constructor ---
 
-  constructor(address owner, address router) BaseModule(owner) BaseExchangeModule(router) {}
+  constructor(
+    address owner,
+    address router,
+    address exchange
+  ) BaseModule(owner) BaseExchangeModule(router) {
+    EXCHANGE = ILooksRare(exchange);
+
+    ILooksRareTransferSelectorNFT transferSelector = EXCHANGE.transferSelectorNFT();
+    ERC721_TRANSFER_MANAGER = transferSelector.TRANSFER_MANAGER_ERC721();
+    ERC1155_TRANSFER_MANAGER = transferSelector.TRANSFER_MANAGER_ERC1155();
+  }
 
   // --- Fallback ---
 

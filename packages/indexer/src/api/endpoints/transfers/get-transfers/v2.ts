@@ -20,7 +20,7 @@ const version = "v2";
 export const getTransfersV2Options: RouteOptions = {
   description: "Historical token transfers",
   notes: "Get recent transfers for a contract or token.",
-  tags: ["api", "Transfers"],
+  tags: ["api", "x-deprecated"],
   plugins: {
     "hapi-swagger": {
       order: 10,
@@ -47,7 +47,9 @@ export const getTransfersV2Options: RouteOptions = {
         ),
       attributes: Joi.object()
         .unknown()
-        .description("Filter to a particular attribute, e.g. `attributes[Type]=Original`"),
+        .description(
+          "Filter to a particular attribute. Note: Our docs do not support this parameter correctly. To test, you can use the following URL in your browser. Example: `https://api.reservoir.tools/transfers/v2?collection=0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63&attributes[Type]=Original` or `https://api.reservoir.tools/transfers/v2?collection=0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63&attributes[Type]=Original&attributes[Type]=Sibling`"
+        ),
       txHash: Joi.string()
         .lowercase()
         .pattern(regex.bytes32)
@@ -124,7 +126,7 @@ export const getTransfersV2Options: RouteOptions = {
               AND fill_events_2.log_index = nft_transfer_events.log_index + (
                 CASE
                   WHEN fill_events_2.order_kind = 'x2y2' THEN 2
-                  WHEN fill_events_2.order_kind = 'seaport' THEN -2
+                  WHEN fill_events_2.order_kind::text LIKE 'seaport%' THEN -2
                   ELSE 1
                 END
               )

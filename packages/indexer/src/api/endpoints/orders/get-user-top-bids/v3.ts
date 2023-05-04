@@ -9,6 +9,7 @@ import {
   buildContinuation,
   formatEth,
   fromBuffer,
+  regex,
   splitContinuation,
   toBuffer,
 } from "@/common/utils";
@@ -27,7 +28,7 @@ const version = "v3";
 export const getUserTopBidsV3Options: RouteOptions = {
   description: "User Top Bids",
   notes: "Return the top bids for the given user tokens",
-  tags: ["api", "Orders"],
+  tags: ["api", "x-deprecated"],
   plugins: {
     "hapi-swagger": {
       order: 7,
@@ -90,6 +91,10 @@ export const getUserTopBidsV3Options: RouteOptions = {
         .max(100000)
         .default(10000)
         .description("Amount of tokens considered."),
+      displayCurrency: Joi.string()
+        .lowercase()
+        .pattern(regex.address)
+        .description("Return result in given currency"),
     }).oxor("collection", "collectionsSetId"),
   },
   response: {
@@ -251,6 +256,7 @@ export const getUserTopBidsV3Options: RouteOptions = {
             AND o.fillability_status = 'fillable'
             AND o.approval_status = 'approved'
             AND o.maker != $/user/
+            ${query.normalizeRoyalties ? " AND o.normalized_value IS NOT NULL" : ""}
             ORDER BY o.value DESC
             LIMIT 1
         ) y ON TRUE
@@ -335,7 +341,8 @@ export const getUserTopBidsV3Options: RouteOptions = {
                   nativeAmount: r.top_bid_price,
                 },
               },
-              fromBuffer(r.top_bid_currency)
+              fromBuffer(r.top_bid_currency),
+              query.displayCurrency
             ),
             maker: fromBuffer(r.top_bid_maker),
             createdAt: new Date(r.order_created_at).toISOString(),

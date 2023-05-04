@@ -3,9 +3,6 @@ import { BigNumberish } from "@ethersproject/bignumber";
 import * as Sdk from "../../index";
 import { TxData } from "../../utils";
 
-import * as UniswapPermit from "./permits/permit2";
-import * as SeaportPermit from "./permits/seaport";
-
 // Approvals and permits
 
 // NFTs
@@ -24,29 +21,14 @@ export type NFTApproval = {
   txData: TxData;
 };
 
-export type NFTPermit = {
-  tokens: NFTToken[];
-  details: {
-    kind: "seaport";
-    data: SeaportPermit.Data;
-  };
-};
-
 // FTs
 
 export type FTApproval = {
   currency: string;
+  amount: BigNumberish;
   owner: string;
   operator: string;
   txData: TxData;
-};
-
-export type FTPermit = {
-  currencies: string[];
-  details: {
-    kind: "permit2";
-    data: UniswapPermit.Data;
-  };
 };
 
 // Misc
@@ -83,11 +65,7 @@ export type GenericOrder =
     }
   | {
       kind: "seaport";
-      order: Sdk.Seaport.Order;
-    }
-  | {
-      kind: "seaport-partial";
-      order: Sdk.Seaport.Types.PartialOrder;
+      order: Sdk.SeaportV11.Order;
     }
   | {
       kind: "seaport-v1.4";
@@ -95,7 +73,19 @@ export type GenericOrder =
     }
   | {
       kind: "seaport-v1.4-partial";
-      order: Sdk.SeaportV14.Types.PartialOrder;
+      order: Sdk.SeaportBase.Types.PartialOrder;
+    }
+  | {
+      kind: "seaport-v1.5";
+      order: Sdk.SeaportV15.Order;
+    }
+  | {
+      kind: "seaport-v1.5-partial";
+      order: Sdk.SeaportBase.Types.PartialOrder;
+    }
+  | {
+      kind: "alienswap";
+      order: Sdk.Alienswap.Order;
     }
   | {
       kind: "cryptopunks";
@@ -122,16 +112,12 @@ export type GenericOrder =
       order: Sdk.Rarible.Order;
     }
   | {
-      kind: "infinity";
-      order: Sdk.Infinity.Order;
-    }
-  | {
-      kind: "forward";
-      order: Sdk.Forward.Order;
-    }
-  | {
       kind: "blur";
       order: Sdk.Blur.Order;
+    }
+  | {
+      kind: "blur-bid";
+      order: Sdk.Blur.Types.BlurBidPool;
     }
   | {
       kind: "manifold";
@@ -144,39 +130,58 @@ export type GenericOrder =
   | {
       kind: "flow";
       order: Sdk.Flow.Order;
+    }
+  | {
+      kind: "superrare";
+      order: Sdk.SuperRare.Order;
+    }
+  | {
+      kind: "looks-rare-v2";
+      order: Sdk.LooksRareV2.Order;
     };
 
 // Listings
 
 // Basic details for filling listings
 export type ListingFillDetails = {
+  orderId: string;
   contractKind: "erc721" | "erc1155";
   contract: string;
   tokenId: string;
   currency: string;
+  price: string;
+  source?: string;
+  isFlagged?: boolean;
   // Relevant for partially-fillable orders
   amount?: number | string;
   fees?: Fee[];
 };
 export type ListingDetails = GenericOrder & ListingFillDetails;
 
-// For keeping track of each listing's position in the original array
-export type ListingDetailsExtracted = {
-  originalIndex: number;
-} & ListingDetails;
-
 // For supporting filling listings having different underlying currencies
-export type PerCurrencyListingDetailsExtracted = {
-  [currency: string]: ListingDetailsExtracted[];
+export type PerCurrencyListingDetails = {
+  [currency: string]: ListingDetails[];
+};
+
+export type FillListingsResult = {
+  txs: {
+    approvals: FTApproval[];
+    txData: TxData;
+    orderIds: string[];
+  }[];
+  success: { [orderId: string]: boolean };
 };
 
 // Bids
 
 // Basic details for filling bids
 export type BidFillDetails = {
+  orderId: string;
   contractKind: "erc721" | "erc1155";
   contract: string;
   tokenId: string;
+  price: string;
+  source?: string;
   // Relevant for partially-fillable orders
   amount?: number | string;
   // Relevant for merkle orders
@@ -184,9 +189,19 @@ export type BidFillDetails = {
   extraArgs?: any;
   // Relevant for partial Seaport orders
   owner?: string;
+  isProtected?: boolean;
   fees?: Fee[];
 };
 export type BidDetails = GenericOrder & BidFillDetails;
+
+export type FillBidsResult = {
+  txs: {
+    approvals: NFTApproval[];
+    txData: TxData;
+    orderIds: string[];
+  }[];
+  success: { [orderId: string]: boolean };
+};
 
 // Swaps
 
@@ -200,6 +215,6 @@ export type SwapDetail = {
   tokenOutAmount: BigNumberish;
   recipient: string;
   refundTo: string;
-  details: ListingDetailsExtracted[];
+  details: ListingDetails[];
   executionIndex: number;
 };

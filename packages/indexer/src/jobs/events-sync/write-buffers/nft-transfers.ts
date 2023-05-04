@@ -48,7 +48,7 @@ if (config.doBackgroundWork && (config.chainId === 137 ? config.doNftTransfersWr
     },
     {
       connection: redis.duplicate(),
-      concurrency: 20,
+      concurrency: config.chainId === 56 ? 20 : 10,
     }
   );
 

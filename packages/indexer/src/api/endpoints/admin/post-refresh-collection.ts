@@ -11,11 +11,12 @@ import { config } from "@/config/index";
 import * as collectionsRefreshCache from "@/jobs/collections-refresh/collections-refresh-cache";
 import * as collectionUpdatesMetadata from "@/jobs/collection-updates/metadata-queue";
 import * as metadataIndexFetch from "@/jobs/metadata-index/fetch-queue";
-import * as orderFixes from "@/jobs/order-fixes/queue";
+import * as orderFixes from "@/jobs/order-fixes/fixes";
 import { Collections } from "@/models/collections";
 import { OpenseaIndexerApi } from "@/utils/opensea-indexer-api";
 import { Tokens } from "@/models/tokens";
 import { MetadataIndexInfo } from "@/jobs/metadata-index/fetch-queue";
+import * as openseaOrdersProcessQueue from "@/jobs/opensea-orders/process-queue";
 
 export const postRefreshCollectionOptions: RouteOptions = {
   description: "Refresh a collection's orders and metadata",
@@ -31,6 +32,9 @@ export const postRefreshCollectionOptions: RouteOptions = {
           "Refresh the given collection. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
         )
         .required(),
+      refreshKind: Joi.string()
+        .valid("full-collection", "full-collection-by-slug")
+        .default("full-collection"),
       cacheOnly: Joi.boolean()
         .default(false)
         .description("If true, will only refresh the collection cache."),
@@ -81,18 +85,27 @@ export const postRefreshCollectionOptions: RouteOptions = {
         );
 
         // Refresh the collection metadata
-        let tokenId;
-        if (collection.tokenIdRange?.length) {
-          tokenId = `${collection.tokenIdRange[0]}`;
-        } else {
-          tokenId = await Tokens.getSingleToken(payload.collection);
-        }
+        const tokenId = await Tokens.getSingleToken(payload.collection);
 
         await collectionUpdatesMetadata.addToQueue(
           collection.contract,
           tokenId,
           collection.community
         );
+
+        if (collection.slug) {
+          // Refresh opensea collection offers
+          await openseaOrdersProcessQueue.addToQueue([
+            {
+              kind: "collection-offers",
+              data: {
+                contract: collection.contract,
+                collectionId: collection.id,
+                collectionSlug: collection.slug,
+              },
+            },
+          ]);
+        }
 
         // Refresh the contract floor sell and top bid
         await collectionsRefreshCache.addToQueue(collection.id);
@@ -108,10 +121,11 @@ export const postRefreshCollectionOptions: RouteOptions = {
             collection: collection.id,
           },
         };
+
         if (method === "opensea") {
           // Refresh contract orders from OpenSea
           await OpenseaIndexerApi.fastContractSync(collection.contract);
-          if (collection.slug) {
+          if (collection.slug && payload.refreshKind === "full-collection-by-slug") {
             metadataIndexInfo = {
               kind: "full-collection-by-slug",
               data: {

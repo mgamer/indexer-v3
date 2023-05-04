@@ -38,6 +38,8 @@ if (config.doBackgroundWork) {
       await idb.none(query, {
         collection,
       });
+
+      logger.info(QUEUE_NAME, `Updated token count for collection ${collection}`);
     },
     { connection: redis.duplicate(), concurrency: 1 }
   );
@@ -47,6 +49,6 @@ if (config.doBackgroundWork) {
   });
 }
 
-export const addToQueue = async (collection: string, delay = 60 * 1000) => {
-  await queue.add(collection, { collection }, { delay, jobId: collection });
+export const addToQueue = async (collection: string, force = false, delay = 60 * 1000) => {
+  await queue.add(collection, { collection }, { delay, jobId: force ? undefined : collection });
 };

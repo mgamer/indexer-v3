@@ -1,4 +1,3 @@
-import { joinSignature } from "@ethersproject/bytes";
 import * as Sdk from "@reservoir0x/sdk";
 import axios from "axios";
 
@@ -10,35 +9,29 @@ import {
   InvalidRequestError,
 } from "@/jobs/orderbook/post-order-external/api/errors";
 
+import * as orderbook from "@/jobs/orderbook/orders-queue";
+
 // Looks Rare default rate limit - 120 requests per minute
 export const RATE_LIMIT_REQUEST_COUNT = 120;
 export const RATE_LIMIT_INTERVAL = 60;
 
-export const postOrder = async (order: Sdk.LooksRare.Order, apiKey: string) => {
+export const postOrder = async (order: Sdk.LooksRareV2.Order, apiKey: string) => {
   const lrOrder = {
     ...order.params,
-    signature: joinSignature({
-      v: order.params.v!,
-      r: order.params.r!,
-      s: order.params.s!,
-    }),
-    tokenId: order.params.kind === "single-token" ? order.params.tokenId : null,
-    // For now, no order kinds have any additional params
-    params: [],
   };
 
   // Skip posting orders that already expired
   if (lrOrder.endTime <= now()) {
-    return;
+    throw new InvalidRequestError("Order is expired");
   }
   // Skip posting orders with the listing time far in the past
   if (lrOrder.startTime <= now() - 5 * 60) {
-    return;
+    throw new InvalidRequestError("Order has listing time more than 5 minutes in the past");
   }
 
   await axios
     .post(
-      `https://${config.chainId === 5 ? "api-goerli." : "api."}looksrare.org/api/v1/orders`,
+      `https://${config.chainId === 5 ? "api-goerli." : "api."}looksrare.org/api/v2/orders`,
       JSON.stringify(lrOrder),
       {
         headers:
@@ -55,10 +48,12 @@ export const postOrder = async (order: Sdk.LooksRare.Order, apiKey: string) => {
     .catch((error) => {
       if (error.response) {
         logger.error(
-          "looksrare_orderbook_api",
-          `Failed to post order to LooksRare. order=${JSON.stringify(lrOrder)}, status: ${
-            error.response.status
-          }, data:${JSON.stringify(error.response.data)}`
+          "looksrare-orderbook-api",
+          `Failed to post order to LooksRare. order=${JSON.stringify(
+            lrOrder
+          )}, apiKey=${apiKey}, status=${error.response.status}, data=${JSON.stringify(
+            error.response.data
+          )}`
         );
 
         switch (error.response.status) {
@@ -70,10 +65,25 @@ export const postOrder = async (order: Sdk.LooksRare.Order, apiKey: string) => {
           }
           case 400:
           case 401:
-            throw new InvalidRequestError("Request was rejected by LooksRare");
+            throw new InvalidRequestError(
+              `Request was rejected by LooksRare. error=${JSON.stringify(
+                error.response.data.errors ?? error.response.data.message
+              )}`
+            );
         }
       }
 
       throw new Error(`Failed to post order to LooksRare`);
     });
+
+  // If the cross-posting was successful, save the order directly
+  await orderbook.addToQueue([
+    {
+      kind: "looks-rare-v2",
+      info: {
+        orderParams: order.params,
+        metadata: {},
+      },
+    },
+  ]);
 };

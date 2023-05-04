@@ -3,6 +3,10 @@
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
+import { FillBidsResult } from "@reservoir0x/sdk/src/router/v6/types";
+import { TxData } from "@reservoir0x/sdk/src/utils";
+import axios from "axios";
+import _ from "lodash";
 import Joi from "joi";
 
 import { inject } from "@/api/index";
@@ -11,23 +15,27 @@ import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { bn, formatPrice, fromBuffer, now, regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
+import { ApiKeyManager } from "@/models/api-keys";
 import { Sources } from "@/models/sources";
 import { generateBidDetailsV6 } from "@/orderbook/orders";
-import { getNftApproval } from "@/orderbook/orders/common/helpers";
+import { fillErrorCallback } from "@/orderbook/orders/errors";
+import * as commonHelpers from "@/orderbook/orders/common/helpers";
+import * as b from "@/utils/auth/blur";
 import { getCurrency } from "@/utils/currencies";
+import { ExecutionsBuffer } from "@/utils/executions";
 import { tryGetTokensSuspiciousStatus } from "@/utils/opensea";
 
 const version = "v6";
 
 export const getExecuteSellV6Options: RouteOptions = {
   description: "Sell tokens (accept bids)",
-  tags: ["api", "Router"],
+  tags: ["api", "x-deprecated"],
   timeout: {
     server: 20 * 1000,
   },
   plugins: {
     "hapi-swagger": {
-      order: 10,
+      deprecated: true,
     },
   },
   validate: {
@@ -41,12 +49,10 @@ export const getExecuteSellV6Options: RouteOptions = {
             "looks-rare",
             "zeroex-v4",
             "seaport",
-            "seaport-partial",
             "seaport-v1.4",
-            "seaport-v1.4-partial",
+            "seaport-v1.5",
             "x2y2",
             "universe",
-            "infinity",
             "flow"
           )
           .required(),
@@ -90,6 +96,11 @@ export const getExecuteSellV6Options: RouteOptions = {
         .description(
           "If true, do not filter out inactive orders (only relevant for order id filtering)."
         ),
+      excludeEOA: Joi.boolean()
+        .default(false)
+        .description(
+          "Exclude orders that can only be filled by EOAs, to support filling with smart contracts."
+        ),
       maxFeePerGas: Joi.string()
         .pattern(regex.number)
         .description("Optional. Set custom gas price."),
@@ -106,7 +117,7 @@ export const getExecuteSellV6Options: RouteOptions = {
           id: Joi.string().required(),
           action: Joi.string().required(),
           description: Joi.string().required(),
-          kind: Joi.string().valid("transaction").required(),
+          kind: Joi.string().valid("signature", "transaction").required(),
           items: Joi.array()
             .items(
               Joi.object({
@@ -115,6 +126,12 @@ export const getExecuteSellV6Options: RouteOptions = {
               })
             )
             .required(),
+        })
+      ),
+      errors: Joi.array().items(
+        Joi.object({
+          message: Joi.string(),
+          orderId: Joi.number(),
         })
       ),
       path: Joi.array().items(
@@ -138,7 +155,7 @@ export const getExecuteSellV6Options: RouteOptions = {
   handler: async (request: Request) => {
     const payload = request.payload as any;
 
-    let path: any;
+    let path: any[] = [];
     try {
       let orderResult: any;
 
@@ -260,6 +277,8 @@ export const getExecuteSellV6Options: RouteOptions = {
                 AND orders.approval_status = 'approved'
                 AND orders.quantity_remaining >= $/quantity/
                 AND (orders.taker = '\\x0000000000000000000000000000000000000000' OR orders.taker IS NULL)
+                ${payload.normalizeRoyalties ? " AND orders.normalized_value IS NOT NULL" : ""}
+                ${payload.excludeEOA ? " AND orders.kind != 'blur'" : ""}
                 ${isFlagged ? "AND orders.kind NOT IN ('x2y2', 'seaport')" : ""}
               ORDER BY orders.value DESC
             `,
@@ -287,6 +306,7 @@ export const getExecuteSellV6Options: RouteOptions = {
 
       const sources = await Sources.getInstance();
       const sourceId = orderResult.source_id_int;
+      const source = sourceId ? sources.get(sourceId)?.domain ?? null : null;
 
       // Handle fees on top
       const feesOnTop: Sdk.RouterV6.Types.Fee[] = [];
@@ -312,7 +332,7 @@ export const getExecuteSellV6Options: RouteOptions = {
           contract,
           tokenId,
           quantity: payload.quantity ?? 1,
-          source: sourceId ? sources.get(sourceId)?.domain ?? null : null,
+          source,
           currency: fromBuffer(orderResult.currency),
           quote: formatPrice(
             totalPrice,
@@ -324,7 +344,7 @@ export const getExecuteSellV6Options: RouteOptions = {
 
       // Partial Seaport orders require knowing the owner
       let owner: string | undefined;
-      if (["seaport", "seaport-v1.4"].includes(orderResult.kind)) {
+      if (["seaport-v1.4-partial", "seaport-v1.5-partial"].includes(orderResult.kind)) {
         const ownerResult = await idb.oneOrNone(
           `
             SELECT
@@ -352,7 +372,12 @@ export const getExecuteSellV6Options: RouteOptions = {
           kind: orderResult.kind,
           unitPrice: orderResult.price,
           rawData: orderResult.raw_data,
+          source: source || undefined,
           fees,
+          isProtected:
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (orderResult.raw_data as any).zone ===
+            Sdk.SeaportV14.Addresses.OpenSeaProtectedOffersZone[config.chainId],
         },
         {
           kind: orderResult.token_kind,
@@ -364,9 +389,13 @@ export const getExecuteSellV6Options: RouteOptions = {
       );
 
       if (
-        ["x2y2", "seaport", "seaport-v1.4", "seaport-partial", "seaport-v1.4-partial"].includes(
-          bidDetails!.kind
-        )
+        [
+          "x2y2",
+          "seaport-v1.4",
+          "seaport-v1.5",
+          "seaport-v1.4-partial",
+          "seaport-v1.5-partial",
+        ].includes(bidDetails!.kind)
       ) {
         const tokenToSuspicious = await tryGetTokensSuspiciousStatus(
           tokenResult.last_flag_update < now() - 3600 ? [payload.token] : []
@@ -384,16 +413,8 @@ export const getExecuteSellV6Options: RouteOptions = {
         return { path };
       }
 
-      const router = new Sdk.RouterV6.Router(config.chainId, baseProvider, {
-        x2y2ApiKey: payload.x2y2ApiKey ?? config.x2y2ApiKey,
-        cbApiKey: config.cbApiKey,
-      });
-      const { txData } = await router.fillBidsTx([bidDetails!], payload.taker, {
-        source: payload.source,
-      });
-
       // Set up generic filling steps
-      const steps: {
+      let steps: {
         id: string;
         action: string;
         description: string;
@@ -403,6 +424,13 @@ export const getExecuteSellV6Options: RouteOptions = {
           data?: any;
         }[];
       }[] = [
+        {
+          id: "auth",
+          action: "Sign in to Blur",
+          description: "Some marketplaces require signing an auth message before filling",
+          kind: "signature",
+          items: [],
+        },
         {
           id: "nft-approval",
           action: "Approve NFT contract",
@@ -420,29 +448,199 @@ export const getExecuteSellV6Options: RouteOptions = {
         },
       ];
 
-      // Forward / Rarible bids are to be filled directly (because we have no modules for them yet)
-      if (bidDetails.kind === "forward") {
-        const isApproved = await getNftApproval(
+      // Custom gas settings
+      const maxFeePerGas = payload.maxFeePerGas
+        ? bn(payload.maxFeePerGas).toHexString()
+        : undefined;
+      const maxPriorityFeePerGas = payload.maxPriorityFeePerGas
+        ? bn(payload.maxPriorityFeePerGas).toHexString()
+        : undefined;
+
+      // Handle Blur authentication
+      let blurAuth: b.Auth | undefined;
+      if (path.some((p) => p.source === "blur.io")) {
+        const missingApprovals: TxData[] = [];
+
+        const contracts = _.uniqBy(path, (p) => p.contract).map((p) => p.contract);
+        for (const contract of contracts) {
+          const operator = Sdk.Blur.Addresses.ExecutionDelegate[config.chainId];
+          const isApproved = await commonHelpers.getNftApproval(contract, payload.taker, operator);
+          if (!isApproved) {
+            missingApprovals.push({
+              maxFeePerGas,
+              maxPriorityFeePerGas,
+              ...new Sdk.Common.Helpers.Erc721(baseProvider, contract).approveTransaction(
+                payload.taker,
+                operator
+              ),
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            } as any);
+          }
+        }
+
+        if (payload.blurAuth) {
+          blurAuth = { accessToken: payload.blurAuth };
+        } else {
+          const blurAuthId = b.getAuthId(payload.taker);
+
+          blurAuth = await b.getAuth(blurAuthId);
+          if (!blurAuth) {
+            const blurAuthChallengeId = b.getAuthChallengeId(payload.taker);
+
+            let blurAuthChallenge = await b.getAuthChallenge(blurAuthChallengeId);
+            if (!blurAuthChallenge) {
+              blurAuthChallenge = (await axios
+                .get(`${config.orderFetcherBaseUrl}/api/blur-auth-challenge?taker=${payload.taker}`)
+                .then((response) => response.data.authChallenge)) as b.AuthChallenge;
+
+              await b.saveAuthChallenge(
+                blurAuthChallengeId,
+                blurAuthChallenge,
+                // Give a 1 minute buffer for the auth challenge to expire
+                Math.floor(new Date(blurAuthChallenge?.expiresOn).getTime() / 1000) - now() - 60
+              );
+            }
+
+            steps[0].items.push({
+              status: "incomplete",
+              data: {
+                sign: {
+                  signatureKind: "eip191",
+                  message: blurAuthChallenge.message,
+                },
+                post: {
+                  endpoint: "/execute/auth-signature/v1",
+                  method: "POST",
+                  body: {
+                    kind: "blur",
+                    id: blurAuthChallengeId,
+                  },
+                },
+              },
+            });
+
+            // Force the client to poll
+            steps[1].items.push({
+              status: "incomplete",
+            });
+
+            // Return an early since any next steps are dependent on the Blur auth
+            return {
+              steps,
+              path,
+            };
+          }
+        }
+
+        steps[0].items.push({
+          status: "complete",
+        });
+
+        if (missingApprovals.length) {
+          for (const approval of missingApprovals) {
+            steps[1].items.push({
+              status: "incomplete",
+              data: {
+                ...approval,
+                maxFeePerGas,
+                maxPriorityFeePerGas,
+              },
+            });
+          }
+
+          // Force the client to poll
+          steps[2].items.push({
+            status: "incomplete",
+          });
+
+          // Return an early since any next steps are dependent on the approvals
+          return {
+            steps,
+            path,
+          };
+        }
+      }
+
+      if (
+        orderResult?.raw_data?.zone ===
+        Sdk.SeaportV14.Addresses.OpenSeaProtectedOffersZone[config.chainId]
+      ) {
+        // Ensure the taker owns the NFTs to get sold
+        const takerIsOwner = await idb.oneOrNone(
+          `
+            SELECT
+              1
+            FROM nft_balances
+            WHERE nft_balances.contract = $/contract/
+              AND nft_balances.token_id = $/tokenId/
+              AND nft_balances.amount >= $/quantity/
+              AND nft_balances.owner = $/owner/
+            LIMIT 1
+          `,
+          {
+            contract: toBuffer(contract),
+            tokenId,
+            quantity: payload.quantity ?? 1,
+            owner: toBuffer(payload.taker),
+          }
+        );
+        if (!takerIsOwner) {
+          throw Boom.badRequest("Taker is not the owner of the token to sell");
+        }
+      }
+
+      const router = new Sdk.RouterV6.Router(config.chainId, baseProvider, {
+        x2y2ApiKey: payload.x2y2ApiKey ?? config.x2y2ApiKey,
+        cbApiKey: config.cbApiKey,
+        orderFetcherBaseUrl: config.orderFetcherBaseUrl,
+        orderFetcherMetadata: {
+          apiKey: await ApiKeyManager.getApiKey(request.headers["x-api-key"]),
+        },
+      });
+
+      const errors: { orderId: string; message: string }[] = [];
+
+      let result: FillBidsResult;
+      try {
+        result = await router.fillBidsTx([bidDetails!], payload.taker, {
+          source: payload.source,
+          onError: async (kind, error, data) => {
+            errors.push({
+              orderId: data.orderId,
+              message: error.response?.data ?? error.message,
+            });
+            await fillErrorCallback(kind, error, data);
+          },
+          blurAuth,
+        });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } catch (error: any) {
+        const boomError = Boom.badRequest(error.message);
+        boomError.output.payload.errors = errors;
+        throw boomError;
+      }
+
+      const { txs } = result;
+
+      const txData = txs[0].txData;
+      const approvals = txs[0].approvals;
+
+      // Direct filling on OpenSea might require an approval
+      if (txData.to === Sdk.SeaportV14.Addresses.Exchange[config.chainId]) {
+        const conduit = new Sdk.SeaportV14.Exchange(config.chainId).deriveConduit(
+          Sdk.SeaportBase.Addresses.OpenseaConduitKey[config.chainId]
+        );
+        const isApproved = await commonHelpers.getNftApproval(
           bidDetails.contract,
           payload.taker,
-          Sdk.Forward.Addresses.Exchange[config.chainId]
+          conduit
         );
-        if (!isApproved) {
-          const approveTx =
-            bidDetails.contractKind === "erc721"
-              ? new Sdk.Common.Helpers.Erc721(baseProvider, bidDetails.contract).approveTransaction(
-                  payload.taker,
-                  Sdk.Forward.Addresses.Exchange[config.chainId]
-                )
-              : new Sdk.Common.Helpers.Erc1155(
-                  baseProvider,
-                  bidDetails.contract
-                ).approveTransaction(payload.taker, Sdk.Forward.Addresses.Exchange[config.chainId]);
 
-          steps[0].items.push({
+        if (!isApproved) {
+          steps[1].items.push({
             status: "incomplete",
             data: {
-              ...approveTx,
+              ...approvals[0].txData,
               maxFeePerGas: payload.maxFeePerGas
                 ? bn(payload.maxFeePerGas).toHexString()
                 : undefined,
@@ -454,45 +652,9 @@ export const getExecuteSellV6Options: RouteOptions = {
         }
       }
 
-      if (bidDetails.kind === "infinity") {
-        const isApproved = await getNftApproval(
-          bidDetails.contract,
-          payload.taker,
-          Sdk.Infinity.Addresses.Exchange[config.chainId]
-        );
-
-        if (!isApproved) {
-          const approveTx =
-            bidDetails.contractKind === "erc721"
-              ? new Sdk.Common.Helpers.Erc721(baseProvider, bidDetails.contract).approveTransaction(
-                  payload.taker,
-                  Sdk.Infinity.Addresses.Exchange[config.chainId]
-                )
-              : new Sdk.Common.Helpers.Erc1155(
-                  baseProvider,
-                  bidDetails.contract
-                ).approveTransaction(
-                  payload.taker,
-                  Sdk.Infinity.Addresses.Exchange[config.chainId]
-                );
-
-          steps[0].items.push({
-            status: "incomplete",
-            data: {
-              ...approveTx,
-              maxFeePerGas: payload.maxFeePerGas
-                ? bn(payload.maxFeePerGas).toHexString()
-                : undefined,
-              maxPriorityFeePerGas: payload.maxPriorityFeePerGas
-                ? bn(payload.maxPriorityFeePerGas).toHexString()
-                : undefined,
-            },
-          });
-        }
-      }
-
+      // Flow / Rarible bids are to be filled directly (because we have no modules for them yet)
       if (bidDetails.kind === "flow") {
-        const isApproved = await getNftApproval(
+        const isApproved = await commonHelpers.getNftApproval(
           bidDetails.contract,
           payload.taker,
           Sdk.Flow.Addresses.Exchange[config.chainId]
@@ -510,7 +672,7 @@ export const getExecuteSellV6Options: RouteOptions = {
                   bidDetails.contract
                 ).approveTransaction(payload.taker, Sdk.Flow.Addresses.Exchange[config.chainId]);
 
-          steps[0].items.push({
+          steps[1].items.push({
             status: "incomplete",
             data: {
               ...approveTx,
@@ -524,9 +686,8 @@ export const getExecuteSellV6Options: RouteOptions = {
           });
         }
       }
-
       if (bidDetails.kind === "rarible") {
-        const isApproved = await getNftApproval(
+        const isApproved = await commonHelpers.getNftApproval(
           bidDetails.contract,
           payload.taker,
           Sdk.Rarible.Addresses.NFTTransferProxy[config.chainId]
@@ -546,7 +707,7 @@ export const getExecuteSellV6Options: RouteOptions = {
                   Sdk.Rarible.Addresses.NFTTransferProxy[config.chainId]
                 );
 
-          steps[0].items.push({
+          steps[1].items.push({
             status: "incomplete",
             data: {
               ...approveTx,
@@ -561,7 +722,7 @@ export const getExecuteSellV6Options: RouteOptions = {
         }
       }
 
-      steps[1].items.push({
+      steps[2].items.push({
         status: "incomplete",
         data: {
           ...txData,
@@ -572,17 +733,63 @@ export const getExecuteSellV6Options: RouteOptions = {
         },
       });
 
+      // Warning! When filtering the steps, we should ensure that it
+      // won't affect the client, which might be polling the API and
+      // expect to get the steps returned in the same order / at the
+      // same index.
+      if (!blurAuth) {
+        // If we reached this point and the Blur auth is missing then we
+        // can be sure that no Blur orders were requested and it is safe
+        // to remove the auth step
+        steps = steps.slice(1);
+      }
+
+      const executionsBuffer = new ExecutionsBuffer();
+      for (const item of path) {
+        const calldata = txs.find((tx) => tx.orderIds.includes(item.orderId))?.txData.data;
+
+        let orderId = item.orderId;
+        if (calldata && item.source === "blur.io") {
+          // Blur bids don't have the correct order id so we have to override it
+          const orders = await new Sdk.Blur.Exchange(config.chainId).getMatchedOrdersFromCalldata(
+            baseProvider,
+            calldata
+          );
+
+          const index = orders.findIndex(
+            ({ sell }) =>
+              sell.params.collection === item.contract && sell.params.tokenId === item.tokenId
+          );
+          if (index !== -1) {
+            orderId = orders[index].buy.hash();
+          }
+        }
+
+        executionsBuffer.addFromRequest(request, {
+          side: "sell",
+          action: "fill",
+          user: payload.taker,
+          orderId,
+          quantity: item.quantity,
+          calldata,
+        });
+      }
+      await executionsBuffer.flush();
+
       return {
         steps,
+        errors,
         path,
       };
     } catch (error) {
-      logger.error(
-        `get-execute-sell-${version}-handler`,
-        `Handler failure: ${error} (path = ${JSON.stringify(path)}, request = ${JSON.stringify(
-          payload
-        )})`
-      );
+      if (!(error instanceof Boom.Boom)) {
+        logger.error(
+          `get-execute-sell-${version}-handler`,
+          `Handler failure: ${error} (path = ${JSON.stringify(path)}, request = ${JSON.stringify(
+            payload
+          )}, trace=${(error as any).stack})`
+        );
+      }
       throw error;
     }
   },

@@ -1,12 +1,12 @@
+import { Result } from "@ethersproject/abi";
+import { Provider } from "@ethersproject/abstract-provider";
 import { Signer } from "@ethersproject/abstract-signer";
 import { BigNumber } from "@ethersproject/bignumber";
 import { Contract, ContractTransaction } from "@ethersproject/contracts";
-import { Provider } from "@ethersproject/abstract-provider";
 
 import * as Addresses from "./addresses";
 import { Order } from "./order";
-import * as Types from "./types";
-import { TxData, bn, generateSourceBytes } from "../utils";
+import { TxData } from "../utils";
 
 import ExchangeAbi from "./abis/Exchange.json";
 
@@ -19,48 +19,6 @@ export class Exchange {
     this.contract = new Contract(Addresses.Exchange[this.chainId], ExchangeAbi);
   }
 
-  // --- Fill order ---
-
-  public async fillOrder(
-    taker: Signer,
-    order: Order,
-    matchParams: Types.OrderInput,
-    options?: {
-      noDirectTransfer?: boolean;
-      referrer?: string;
-    }
-  ): Promise<ContractTransaction> {
-    const tx = this.fillOrderTx(await taker.getAddress(), order, matchParams, options);
-    return taker.sendTransaction(tx);
-  }
-
-  public fillOrderTx(
-    taker: string,
-    order: Order,
-    matchOrder: Types.OrderInput,
-    options?: {
-      noDirectTransfer?: boolean;
-      referrer?: string;
-    }
-  ): TxData {
-    const to = this.contract.address;
-    let value: BigNumber | undefined;
-
-    const isBuy = order.params.side === Types.TradeDirection.BUY;
-    const executeArgs = isBuy ? [matchOrder, order.getRaw()] : [order.getRaw(), matchOrder];
-
-    const data = this.contract.interface.encodeFunctionData("execute", executeArgs);
-
-    if (!isBuy) value = bn(order.params.price);
-
-    return {
-      from: taker,
-      to,
-      data: data + generateSourceBytes(options?.referrer),
-      value: value && bn(value).toHexString(),
-    };
-  }
-
   // --- Cancel order ---
 
   public async cancelOrder(maker: Signer, order: Order): Promise<ContractTransaction> {
@@ -69,9 +27,7 @@ export class Exchange {
   }
 
   public cancelOrderTx(maker: string, order: Order): TxData {
-    const data: string = this.contract.interface.encodeFunctionData("cancelOrder", [
-      order.getRaw().order,
-    ]);
+    const data: string = this.contract.interface.encodeFunctionData("cancelOrder", [order.params]);
     return {
       from: maker,
       to: this.contract.address,
@@ -79,7 +35,8 @@ export class Exchange {
     };
   }
 
-  // --- Get hashNonce ---
+  // --- Get nonce ---
+
   public async getNonce(provider: Provider, user: string): Promise<BigNumber> {
     return this.contract.connect(provider).nonces(user);
   }
@@ -98,5 +55,76 @@ export class Exchange {
       to: this.contract.address,
       data,
     };
+  }
+
+  // --- Get bids from calldata ---
+
+  private nonceCache: { [user: string]: string } = {};
+  public async getMatchedOrdersFromCalldata(
+    provider: Provider,
+    calldata: string
+  ): Promise<{ buy: Order; sell: Order }[]> {
+    const getNonce = async (user: string) => {
+      if (!this.nonceCache[user]) {
+        this.nonceCache[user] = (await this.getNonce(provider, user)).toString();
+      }
+      return this.nonceCache[user];
+    };
+
+    const buildOrder = async (values: Result, retrieveNonce = false) =>
+      new Order(this.chainId, {
+        // Force the kind since it's irrelevant
+        kind: "erc721-single-token",
+        trader: values.order.trader,
+        side: values.order.side,
+        matchingPolicy: values.order.matchingPolicy,
+        collection: values.order.collection,
+        tokenId: values.order.tokenId,
+        amount: values.order.amount,
+        paymentToken: values.order.paymentToken,
+        price: values.order.price,
+        listingTime: values.order.listingTime,
+        expirationTime: values.order.expirationTime,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        fees: values.order.fees.map((f: any) => ({
+          rate: f.rate,
+          recipient: f.recipient,
+        })),
+        salt: values.order.salt,
+        nonce: retrieveNonce ? await getNonce(values.order.trader) : "0",
+        extraParams: values.order.extraParams,
+        extraSignature: values.extraSignature,
+        signatureVersion: values.signatureVersion,
+      });
+
+    const bytes4 = calldata.slice(0, 10);
+    switch (bytes4) {
+      // `execute`
+      case "0x9a1fc3a7": {
+        const result = this.contract.interface.decodeFunctionData("execute", calldata);
+        return [
+          {
+            buy: await buildOrder(result.buy, true),
+            sell: await buildOrder(result.sell),
+          },
+        ];
+      }
+
+      // `bulkExecute`
+      case "0xb3be57f8": {
+        const result = this.contract.interface.decodeFunctionData("bulkExecute", calldata);
+        return Promise.all(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          result.executions.map(async (e: any) => ({
+            buy: await buildOrder(e.buy, true),
+            sell: await buildOrder(e.sell),
+          }))
+        );
+      }
+
+      default: {
+        return [];
+      }
+    }
   }
 }

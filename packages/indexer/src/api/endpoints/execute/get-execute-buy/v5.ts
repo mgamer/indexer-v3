@@ -12,9 +12,9 @@ import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { bn, formatPrice, fromBuffer, regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
+import { ApiKeyManager } from "@/models/api-keys";
 import { Sources } from "@/models/sources";
-import { OrderKind } from "@/orderbook/orders";
-import { generateListingDetailsV6 } from "@/orderbook/orders";
+import { OrderKind, generateListingDetailsV6 } from "@/orderbook/orders";
 import { getCurrency } from "@/utils/currencies";
 
 const version = "v5";
@@ -206,6 +206,8 @@ export const getExecuteBuyV5Options: RouteOptions = {
               id: order.id,
               kind: order.kind,
               currency: order.currency,
+              price: order.price,
+              source: path[path.length - 1].source ?? undefined,
               rawData: order.rawData,
               fees: payload.normalizeRoyalties ? order.fees : [],
             },
@@ -524,8 +526,12 @@ export const getExecuteBuyV5Options: RouteOptions = {
       const router = new Sdk.RouterV6.Router(config.chainId, baseProvider, {
         x2y2ApiKey: payload.x2y2ApiKey ?? config.x2y2ApiKey,
         cbApiKey: config.cbApiKey,
+        orderFetcherBaseUrl: config.orderFetcherBaseUrl,
+        orderFetcherMetadata: {
+          apiKey: await ApiKeyManager.getApiKey(request.headers["x-api-key"]),
+        },
       });
-      const { txData, success } = await router.fillListingsTx(
+      const { txs, success } = await router.fillListingsTx(
         listingDetails,
         payload.taker,
         payload.currency,
@@ -534,12 +540,6 @@ export const getExecuteBuyV5Options: RouteOptions = {
           globalFees: feesOnTop,
           partial: payload.partial,
           forceRouter: payload.forceRouter,
-          directFillingData: {
-            conduitKey:
-              config.chainId === 1
-                ? "0x0000007b02230091a7ed01230072f7006a004d60a8d4e71d599b8104250f0000"
-                : undefined,
-          },
         }
       );
 
@@ -567,70 +567,78 @@ export const getExecuteBuyV5Options: RouteOptions = {
         },
       ];
 
-      // Check that the taker has enough funds to fill all requested tokens
-      const totalPrice = path.map(({ rawQuote }) => bn(rawQuote)).reduce((a, b) => a.add(b));
-      if (payload.currency === Sdk.Common.Addresses.Eth[config.chainId]) {
-        const balance = await baseProvider.getBalance(payload.taker);
-        if (!payload.skipBalanceCheck && bn(balance).lt(totalPrice)) {
-          throw Boom.badData("Balance too low to proceed with transaction");
-        }
-      } else {
-        const erc20 = new Sdk.Common.Helpers.Erc20(baseProvider, payload.currency);
+      for (const tx of txs) {
+        const subPath = path.filter((p) => tx.orderIds.includes(p.orderId));
+        const listings = listingDetails.filter((d) => tx.orderIds.includes(d.orderId));
 
-        const balance = await erc20.getBalance(payload.taker);
-        if (!payload.skipBalanceCheck && bn(balance).lt(totalPrice)) {
-          throw Boom.badData("Balance too low to proceed with transaction");
-        }
-
-        let conduit: string;
-        if (listingDetails.every((d) => d.kind === "seaport")) {
-          // TODO: Have a default conduit for each exchange per chain
-          conduit =
-            config.chainId === 1
-              ? // Use OpenSea's conduit for sharing approvals
-                "0x1e0049783f008a0085193e00003d00cd54003c71"
-              : Sdk.Seaport.Addresses.Exchange[config.chainId];
-        } else if (listingDetails.every((d) => d.kind === "universe")) {
-          conduit = Sdk.Universe.Addresses.Exchange[config.chainId];
+        // Check that the taker has enough funds to fill all requested tokens
+        const totalPrice = subPath.map(({ rawQuote }) => bn(rawQuote)).reduce((a, b) => a.add(b));
+        if (payload.currency === Sdk.Common.Addresses.Eth[config.chainId]) {
+          const balance = await baseProvider.getBalance(payload.taker);
+          if (!payload.skipBalanceCheck && bn(balance).lt(totalPrice)) {
+            throw Boom.badData("Balance too low to proceed with transaction");
+          }
         } else {
-          throw new Error("Only Seaport and Universe ERC20 listings are supported");
+          const erc20 = new Sdk.Common.Helpers.Erc20(baseProvider, payload.currency);
+
+          const balance = await erc20.getBalance(payload.taker);
+          if (!payload.skipBalanceCheck && bn(balance).lt(totalPrice)) {
+            throw Boom.badData("Balance too low to proceed with transaction");
+          }
+
+          let conduit: string;
+          if (
+            listings.every((d) => d.kind === "seaport") ||
+            listings.every((d) => d.kind === "seaport-v1.4")
+          ) {
+            // TODO: Have a default conduit for each exchange per chain
+            conduit =
+              config.chainId === 1
+                ? // Use OpenSea's conduit for sharing approvals
+                  "0x1e0049783f008a0085193e00003d00cd54003c71"
+                : Sdk.SeaportV11.Addresses.Exchange[config.chainId];
+          } else if (listings.every((d) => d.kind === "universe")) {
+            conduit = Sdk.Universe.Addresses.Exchange[config.chainId];
+          } else {
+            throw new Error("Only Seaport and Universe ERC20 listings are supported");
+          }
+
+          const allowance = await erc20.getAllowance(payload.taker, conduit);
+          if (bn(allowance).lt(totalPrice)) {
+            const tx = erc20.approveTransaction(payload.taker, conduit);
+            steps[0].items.push({
+              status: "incomplete",
+              data: {
+                ...tx,
+                from: payload.relayer ? payload.relayer : tx.from,
+                maxFeePerGas: payload.maxFeePerGas
+                  ? bn(payload.maxFeePerGas).toHexString()
+                  : undefined,
+                maxPriorityFeePerGas: payload.maxPriorityFeePerGas
+                  ? bn(payload.maxPriorityFeePerGas).toHexString()
+                  : undefined,
+              },
+            });
+          }
         }
 
-        const allowance = await erc20.getAllowance(payload.taker, conduit);
-        if (bn(allowance).lt(totalPrice)) {
-          const tx = erc20.approveTransaction(payload.taker, conduit);
-          steps[0].items.push({
-            status: "incomplete",
-            data: {
-              ...tx,
-              from: payload.relayer ? payload.relayer : tx.from,
-              maxFeePerGas: payload.maxFeePerGas
-                ? bn(payload.maxFeePerGas).toHexString()
-                : undefined,
-              maxPriorityFeePerGas: payload.maxPriorityFeePerGas
-                ? bn(payload.maxPriorityFeePerGas).toHexString()
-                : undefined,
-            },
-          });
-        }
+        steps[1].items.push({
+          status: "incomplete",
+          data: {
+            ...tx.txData,
+            from: payload.relayer ? payload.relayer : tx.txData.from,
+            maxFeePerGas: payload.maxFeePerGas ? bn(payload.maxFeePerGas).toHexString() : undefined,
+            maxPriorityFeePerGas: payload.maxPriorityFeePerGas
+              ? bn(payload.maxPriorityFeePerGas).toHexString()
+              : undefined,
+          },
+        });
       }
-
-      steps[1].items.push({
-        status: "incomplete",
-        data: {
-          ...txData,
-          from: payload.relayer ? payload.relayer : txData.from,
-          maxFeePerGas: payload.maxFeePerGas ? bn(payload.maxFeePerGas).toHexString() : undefined,
-          maxPriorityFeePerGas: payload.maxPriorityFeePerGas
-            ? bn(payload.maxPriorityFeePerGas).toHexString()
-            : undefined,
-        },
-      });
 
       return {
         steps,
         // Remove any unsuccessfully handled listings from the path
-        path: path.filter((_, i) => success[i]),
+        path: path.filter((p) => success[p.orderId]),
       };
     } catch (error) {
       logger.error(`get-execute-buy-${version}-handler`, `Handler failure: ${error}`);

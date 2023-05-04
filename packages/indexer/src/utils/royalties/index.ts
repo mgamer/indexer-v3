@@ -2,7 +2,7 @@ import { AddressZero } from "@ethersproject/constants";
 import _ from "lodash";
 
 import { idb } from "@/common/db";
-import { toBuffer } from "@/common/utils";
+import { regex, toBuffer } from "@/common/utils";
 import * as registry from "@/utils/royalties/registry";
 
 export type Royalty = {
@@ -13,7 +13,8 @@ export type Royalty = {
 export const getRoyalties = async (
   contract: string,
   tokenId?: string,
-  spec = "default"
+  spec = "default",
+  returnAll = false
 ): Promise<Royalty[]> => {
   const royaltiesResult = await idb.oneOrNone(
     `
@@ -38,6 +39,10 @@ export const getRoyalties = async (
 
   if (spec === "default") {
     return royaltiesResult.royalties ?? [];
+  } else if (returnAll) {
+    const royalties: Royalty[] = [];
+    _.each(royaltiesResult.new_royalties ?? {}, (r) => royalties.push(...r));
+    return _.uniqBy(royalties, "recipient"); // Return only uniq address
   } else {
     return (royaltiesResult.new_royalties ?? {})[spec] ?? [];
   }
@@ -45,7 +50,8 @@ export const getRoyalties = async (
 
 export const getRoyaltiesByTokenSet = async (
   tokenSetId: string,
-  spec = "default"
+  spec = "default",
+  returnAll = false
 ): Promise<Royalty[]> => {
   let royaltiesResult;
   const tokenSetIdComponents = tokenSetId.split(":");
@@ -127,6 +133,10 @@ export const getRoyaltiesByTokenSet = async (
 
   if (spec === "default") {
     return royaltiesResult.royalties ?? [];
+  } else if (returnAll) {
+    const royalties: Royalty[] = [];
+    _.each(royaltiesResult.new_royalties ?? {}, (r) => royalties.push(...r));
+    return _.uniqBy(royalties, "recipient"); // Return only uniq address
   } else {
     return (royaltiesResult.new_royalties ?? {})[spec] ?? [];
   }
@@ -139,7 +149,9 @@ export const updateRoyaltySpec = async (
 ) => {
   // For safety, skip any zero bps or recipients
   royalties = royalties
-    ? royalties.filter(({ bps, recipient }) => bps && recipient !== AddressZero)
+    ? royalties.filter(
+        ({ bps, recipient }) => bps && recipient !== AddressZero && recipient.match(regex.address)
+      )
     : undefined;
 
   // Fetch the current royalties

@@ -12,9 +12,8 @@ import Joi from "joi";
 
 import { edb, redb } from "@/common/db";
 import { logger } from "@/common/logger";
-import { baseProvider } from "@/common/provider";
 import { Signers, addressToSigner } from "@/common/signers";
-import { bn, formatPrice, regex, toBuffer } from "@/common/utils";
+import { bn, formatPrice, regex, safeOracleTimestamp, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 
 const version = "v5";
@@ -22,7 +21,7 @@ const version = "v5";
 export const getCollectionFloorAskOracleV5Options: RouteOptions = {
   description: "Collection floor",
   notes:
-    "Get a signed message of any collection's floor price (spot or twap). The oracle's address is 0xAeB1D03929bF87F69888f381e73FBf75753d75AF.",
+    "Get a signed message of any collection's floor price (spot or twap). The oracle's address is 0xAeB1D03929bF87F69888f381e73FBf75753d75AF. The address is the same for all chains.",
   tags: ["api", "Oracle"],
   plugins: {
     "hapi-swagger": {
@@ -284,9 +283,6 @@ export const getCollectionFloorAskOracleV5Options: RouteOptions = {
         throw Boom.badRequest("Unsupported currency");
       }
 
-      // Use the timestamp of the latest available block as the message timestamp
-      const timestamp = await baseProvider.getBlock("latest").then((b) => b.timestamp);
-
       const message: {
         id: string;
         payload: string;
@@ -295,7 +291,7 @@ export const getCollectionFloorAskOracleV5Options: RouteOptions = {
       } = {
         id,
         payload: defaultAbiCoder.encode(["address", "uint256"], [query.currency, price]),
-        timestamp,
+        timestamp: await safeOracleTimestamp(),
       };
 
       if (config.oraclePrivateKey) {

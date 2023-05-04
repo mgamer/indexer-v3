@@ -1,66 +1,90 @@
 import * as Sdk from "@reservoir0x/sdk";
-import axios from "axios";
+import axios, { AxiosRequestConfig } from "axios";
 
 import { logger } from "@/common/logger";
-import { now } from "@/common/utils";
+import { bn, now } from "@/common/utils";
 import { config } from "@/config/index";
+import { getOpenseaBaseUrl, getOpenseaNetworkName } from "@/config/network";
 import {
   RequestWasThrottledError,
   InvalidRequestError,
+  InvalidRequestErrorKind,
 } from "@/jobs/orderbook/post-order-external/api/errors";
-import { getOpenseaNetworkName, getOpenseaSubDomain } from "@/config/network";
+
+import * as orderbook from "@/jobs/orderbook/orders-queue";
 
 // Open Sea default rate limit - 2 requests per second for post apis
 export const RATE_LIMIT_REQUEST_COUNT = 2;
 export const RATE_LIMIT_INTERVAL = 1;
 
-export const postOrder = async (order: Sdk.Seaport.Order, apiKey: string) => {
-  const url = `https://${getOpenseaSubDomain()}.opensea.io/v2/orders/${getOpenseaNetworkName()}/seaport/${
+export const postOrder = async (order: Sdk.SeaportV14.Order, apiKey: string) => {
+  // Skip posting orders that already expired
+  if (order.params.endTime <= now()) {
+    throw new InvalidRequestError("Order is expired");
+  }
+
+  // Make sure to convert any hex values to decimal
+  for (const item of order.params.consideration) {
+    item.identifierOrCriteria = bn(item.identifierOrCriteria).toString();
+  }
+  for (const item of order.params.offer) {
+    item.identifierOrCriteria = bn(item.identifierOrCriteria).toString();
+  }
+
+  const url = `${getOpenseaBaseUrl()}/v2/orders/${getOpenseaNetworkName()}/seaport/${
     order.getInfo()?.side === "sell" ? "listings" : "offers"
   }`;
 
-  // Skip posting orders that already expired
-  if (order.params.endTime <= now()) {
-    return;
-  }
+  const options: AxiosRequestConfig = {
+    method: "POST",
+    url: config.openSeaApiUrl || url,
+    headers:
+      config.chainId !== 5
+        ? {
+            url,
+            "Content-Type": "application/json",
+            "X-Api-Key": apiKey || config.openSeaApiKey,
+          }
+        : {
+            "Content-Type": "application/json",
+          },
+    data: {
+      parameters: {
+        ...order.params,
+        totalOriginalConsiderationItems: order.params.consideration.length,
+      },
+      signature: order.params.signature!,
+      protocol_address: Sdk.SeaportV14.Addresses.Exchange[config.chainId],
+    },
+  };
 
-  await axios
-    .post(
-      url,
-      JSON.stringify({
-        parameters: {
-          ...order.params,
-          totalOriginalConsiderationItems: order.params.consideration.length,
-        },
-        signature: order.params.signature!,
-      }),
-      {
-        headers:
-          config.chainId === 1
-            ? {
-                "Content-Type": "application/json",
-                "X-Api-Key": apiKey || config.openSeaApiKey,
-              }
-            : {
-                "Content-Type": "application/json",
-                // The request will fail if passing the API key on Rinkeby
-              },
-      }
-    )
-    .catch((error) => {
-      if (error.response) {
-        logger.error(
-          "opensea_orderbook_api",
-          `Failed to post order to OpenSea. order=${JSON.stringify(order)}, status: ${
-            error.response.status
-          }, data:${JSON.stringify(error.response.data)}`
-        );
+  await axios.request(options).catch((error) => {
+    if (error.response) {
+      handleErrorResponse(error.response);
+    }
 
-        handleErrorResponse(error.response);
-      }
+    logger.error(
+      "opensea-orderbook-api",
+      `Post OpenSea order error. options=${JSON.stringify(
+        options
+      )}, error=${error}, responseStatus=${error.response?.status}, responseData=${JSON.stringify(
+        error.response?.data
+      )}`
+    );
 
-      throw new Error(`Failed to post order to OpenSea`);
-    });
+    throw new Error(`Failed to post order to OpenSea`);
+  });
+
+  // If the cross-posting was successful, save the order directly
+  await orderbook.addToQueue([
+    {
+      kind: "seaport-v1.4",
+      info: {
+        orderParams: order.params,
+        metadata: {},
+      },
+    },
+  ]);
 };
 
 export const buildCollectionOffer = async (
@@ -69,120 +93,247 @@ export const buildCollectionOffer = async (
   collectionSlug: string,
   apiKey = ""
 ) => {
-  const url = `https://${getOpenseaSubDomain()}.opensea.io/v2/offers/build`;
+  const url = `${getOpenseaBaseUrl()}/v2/offers/build`;
+
+  const options: AxiosRequestConfig = {
+    method: "post",
+    url: config.openSeaApiUrl || url,
+    headers:
+      config.chainId !== 5
+        ? {
+            url,
+            "Content-Type": "application/json",
+            "X-Api-Key": apiKey || config.openSeaApiKey,
+          }
+        : {
+            "Content-Type": "application/json",
+          },
+    data: {
+      offerer,
+      quantity,
+      criteria: {
+        collection: {
+          slug: collectionSlug,
+        },
+      },
+    },
+  };
 
   return (
     axios
-      .post(
-        url,
-        JSON.stringify({
-          offerer,
-          quantity,
-          criteria: {
-            collection: {
-              slug: collectionSlug,
-            },
-          },
-        }),
-        {
-          headers:
-            config.chainId === 1
-              ? {
-                  "Content-Type": "application/json",
-                  "X-Api-Key": apiKey || config.openSeaApiKey,
-                }
-              : {
-                  "Content-Type": "application/json",
-                  // The request will fail if passing the API key on Rinkeby
-                },
-        }
-      )
+      .request(options)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .then((response) => response.data as any)
       .catch((error) => {
-        logger.error(
-          "opensea_orderbook_api",
-          `Build OpenSea collection offer error. offerer=${offerer}, quantity=${quantity}, collectionSlug=${collectionSlug}, error=${error}`
-        );
-
         if (error.response) {
-          logger.error(
-            "opensea_orderbook_api",
-            `Failed to build OpenSea collection offer. offerer=${offerer}, quantity=${quantity}, collectionSlug=${collectionSlug}, status: ${
-              error.response.status
-            }, data:${JSON.stringify(error.response.data)}`
-          );
-
           handleErrorResponse(error.response);
         }
+
+        logger.error(
+          "opensea-orderbook-api",
+          `Build OpenSea collection offer error. options=${JSON.stringify(
+            options
+          )}, error=${error}, responseStatus=${
+            error.response?.status
+          }, responseData=${JSON.stringify(error.response?.data)}`
+        );
 
         throw new Error(`Failed to build OpenSea collection offer`);
       })
   );
 };
 
+export const buildTraitOffer = async (
+  offerer: string,
+  quantity: number,
+  collectionSlug: string,
+  traitType: string,
+  traitValue: string,
+  apiKey = ""
+) => {
+  const url = `${getOpenseaBaseUrl()}/v2/offers/build`;
+
+  const options: AxiosRequestConfig = {
+    method: "post",
+    url: config.openSeaApiUrl || url,
+    headers:
+      config.chainId !== 5
+        ? {
+            url,
+            "Content-Type": "application/json",
+            "X-Api-Key": apiKey || config.openSeaApiKey,
+          }
+        : {
+            "Content-Type": "application/json",
+          },
+    data: {
+      offerer,
+      quantity,
+      criteria: {
+        collection: {
+          slug: collectionSlug,
+        },
+        trait: {
+          type: traitType,
+          value: traitValue,
+        },
+      },
+    },
+  };
+
+  return (
+    axios
+      .request(options)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .then((response) => response.data as any)
+      .catch((error) => {
+        if (error.response) {
+          handleErrorResponse(error.response);
+        }
+
+        logger.error(
+          "opensea_orderbook_api",
+          `Build OpenSea trait offer error. options=${JSON.stringify(
+            options
+          )}, error=${error}, responseStatus=${
+            error.response?.status
+          }, responseData=${JSON.stringify(error.response?.data)}`
+        );
+
+        throw new Error(`Failed to build OpenSea trait offer`);
+      })
+  );
+};
+
 export const postCollectionOffer = async (
-  order: Sdk.Seaport.Order,
+  order: Sdk.SeaportV14.Order,
   collectionSlug: string,
   apiKey: string
 ) => {
-  const url = `https://${getOpenseaSubDomain()}.opensea.io/v2/offers`;
-  const data = JSON.stringify({
-    criteria: {
-      collection: {
-        slug: collectionSlug,
+  // Skip posting orders that already expired
+  if (order.params.endTime <= now()) {
+    throw new InvalidRequestError("Order is expired");
+  }
+
+  const url = `${getOpenseaBaseUrl()}/v2/offers`;
+
+  const options: AxiosRequestConfig = {
+    method: "post",
+    url: config.openSeaApiUrl || url,
+    headers:
+      config.chainId !== 5
+        ? {
+            url,
+            "Content-Type": "application/json",
+            "X-Api-Key": apiKey || config.openSeaApiKey,
+          }
+        : {
+            "Content-Type": "application/json",
+          },
+    data: {
+      criteria: {
+        collection: {
+          slug: collectionSlug,
+        },
+      },
+      protocol_data: {
+        parameters: {
+          ...order.params,
+          totalOriginalConsiderationItems: order.params.consideration.length,
+        },
+        signature: order.params.signature!,
+        protocol_address: Sdk.SeaportV14.Addresses.Exchange[config.chainId],
       },
     },
-    protocol_data: {
-      parameters: {
-        ...order.params,
-        totalOriginalConsiderationItems: order.params.consideration.length,
-      },
-      signature: order.params.signature!,
-    },
+  };
+
+  await axios.request(options).catch((error) => {
+    if (error.response) {
+      handleErrorResponse(error.response);
+    }
+
+    logger.error(
+      "opensea-orderbook-api",
+      `Post OpenSea collection offer error. options=${JSON.stringify(
+        options
+      )}, error=${error}, responseStatus=${error.response?.status}, responseData=${JSON.stringify(
+        error.response?.data
+      )}`
+    );
+
+    throw new Error(`Failed to post offer to OpenSea`);
   });
+};
 
-  await axios
-    .post(url, data, {
-      headers:
-        config.chainId === 1
-          ? {
-              "Content-Type": "application/json",
-              "X-Api-Key": apiKey || config.openSeaApiKey,
-            }
-          : {
-              "Content-Type": "application/json",
-              // The request will fail if passing the API key on Rinkeby
-            },
-    })
-    .catch((error) => {
-      logger.error(
-        "opensea_orderbook_api",
-        `Post OpenSea collection offer error. order=${JSON.stringify(
-          order
-        )}, collectionSlug=${collectionSlug}, url=${url}, data=${data}, error=${error}`
-      );
+export const postTraitOffer = async (
+  order: Sdk.SeaportV14.Order,
+  collectionSlug: string,
+  attribute: { key: string; value: string },
+  apiKey: string
+) => {
+  // Skip posting orders that already expired
+  if (order.params.endTime <= now()) {
+    throw new InvalidRequestError("Order is expired");
+  }
 
-      if (error.response) {
-        logger.error(
-          "opensea_orderbook_api",
-          `Failed to post offer to OpenSea. order=${JSON.stringify(
-            order
-          )}, collectionSlug=${collectionSlug}, url=${url}, data=${data}, status: ${
-            error.response.status
-          }, data:${JSON.stringify(error.response.data)}`
-        );
+  const url = `${getOpenseaBaseUrl()}/v2/offers`;
 
-        handleErrorResponse(error.response);
-      }
+  const options: AxiosRequestConfig = {
+    method: "post",
+    url: config.openSeaApiUrl || url,
+    headers:
+      config.chainId !== 5
+        ? {
+            url,
+            "Content-Type": "application/json",
+            "X-Api-Key": apiKey || config.openSeaApiKey,
+          }
+        : {
+            "Content-Type": "application/json",
+          },
+    data: {
+      criteria: {
+        collection: {
+          slug: collectionSlug,
+        },
+        trait: {
+          type: attribute.key,
+          value: attribute.value,
+        },
+      },
+      protocol_data: {
+        parameters: {
+          ...order.params,
+          totalOriginalConsiderationItems: order.params.consideration.length,
+        },
+        signature: order.params.signature!,
+        protocol_address: Sdk.SeaportV14.Addresses.Exchange[config.chainId],
+      },
+    },
+  };
 
-      throw new Error(`Failed to post offer to OpenSea`);
-    });
+  await axios.request(options).catch((error) => {
+    if (error.response) {
+      handleErrorResponse(error.response);
+    }
+
+    logger.error(
+      "opensea-orderbook-api",
+      `Post OpenSea trait offer error. order=${JSON.stringify(order)}, options=${JSON.stringify(
+        options
+      )}, error=${error}, responseStatus=${error.response?.status}, responseData=${JSON.stringify(
+        error.response?.data
+      )}`
+    );
+
+    throw new Error(`Failed to post offer to OpenSea`);
+  });
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const handleErrorResponse = (response: any) => {
   switch (response.status) {
+    case 503:
     case 429: {
       let delay = RATE_LIMIT_INTERVAL;
 
@@ -196,9 +347,23 @@ const handleErrorResponse = (response: any) => {
 
       throw new RequestWasThrottledError("Request was throttled by OpenSea", delay);
     }
-    case 400:
-      throw new InvalidRequestError(
-        `Request was rejected by OpenSea. errors=${JSON.stringify(response.data.errors)}`
-      );
+    case 400: {
+      const error = response.data.errors?.toString();
+      const message = `Request was rejected by OpenSea. error=${error}`;
+
+      const invalidFeeErrors = [
+        "You have provided a fee",
+        "You have not provided all required creator fees",
+        "You have provided fees that we cannot attribute to OpenSea or the collection",
+      ];
+
+      for (const invalidFeeError of invalidFeeErrors) {
+        if (error.startsWith(invalidFeeError)) {
+          throw new InvalidRequestError(message, InvalidRequestErrorKind.InvalidFees);
+        }
+      }
+
+      throw new InvalidRequestError(message);
+    }
   }
 };

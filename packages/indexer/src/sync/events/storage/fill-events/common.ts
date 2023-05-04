@@ -1,4 +1,5 @@
 import { idb, pgp } from "@/common/db";
+import { logger } from "@/common/logger";
 import { toBuffer } from "@/common/utils";
 import { DbEvent, Event } from "@/events-sync/storage/fill-events";
 
@@ -146,18 +147,38 @@ export const addEvents = async (events: Event[]) => {
     // No need to buffer through the write queue since there
     // are no chances of database deadlocks in this scenario
     await idb.none(pgp.helpers.concat(queries));
+
+    try {
+      // Log fill events ingestion latency
+      const currentTimestamp = Math.floor(Date.now() / 1000);
+      for (const event of fillValues) {
+        const latency = currentTimestamp - event.timestamp;
+        // Ignore latency > 2 weeks
+        if (latency < 60 * 60 * 24 * 14) {
+          logger.info(
+            "sales-latency",
+            JSON.stringify({
+              latency,
+            })
+          );
+        }
+      }
+    } catch (error) {
+      logger.error("sales-latency", `Failed to log sales latency ${error}`);
+    }
   }
 };
 
 export const removeEvents = async (block: number, blockHash: string) => {
-  // Delete the fill events but skip reverting order status updates
+  // Mark fill events as deleted but skip reverting order status updates
   // since it is not possible to know what to revert to and even if
   // we knew, it might mess up other higher-level order processes.
   await idb.any(
     `
-      DELETE FROM fill_events_2
+      UPDATE fill_events_2
+      SET is_deleted = 1
       WHERE block = $/block/
-        AND block_hash = $/blockHash/
+      AND block_hash = $/blockHash/
     `,
     {
       block,

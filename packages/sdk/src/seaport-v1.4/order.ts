@@ -2,37 +2,40 @@ import { Interface } from "@ethersproject/abi";
 import { Provider } from "@ethersproject/abstract-provider";
 import { TypedDataSigner } from "@ethersproject/abstract-signer";
 import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
-import { HashZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import { _TypedDataEncoder } from "@ethersproject/hash";
 import { keccak256 as solidityKeccak256 } from "@ethersproject/solidity";
 import { recoverAddress } from "@ethersproject/transactions";
 import { verifyTypedData } from "@ethersproject/wallet";
 
-import * as Addresses from "./addresses";
-import { Builders } from "./builders";
-import { BaseBuilder, BaseOrderInfo } from "./builders/base";
-import * as Types from "./types";
 import * as Common from "../common";
-import { bn, generateRandomSalt, getCurrentTimestamp, lc, n, s } from "../utils";
+import { Exchange } from "./exchange";
+import { Builders } from "../seaport-base/builders";
+import { BaseBuilder, BaseOrderInfo } from "../seaport-base/builders/base";
+import { IOrder, ORDER_EIP712_TYPES } from "../seaport-base/order";
+import * as Types from "../seaport-base/types";
+import { bn, getCurrentTimestamp, lc, n, s } from "../utils";
+import {
+  isPrivateOrder,
+  constructPrivateListingCounterOrder,
+  getPrivateListingFulfillments,
+} from "../seaport-base/helpers";
 
-import ConduitControllerAbi from "./abis/ConduitController.json";
-import ExchangeAbi from "./abis/Exchange.json";
-
-export class Order {
+export class Order implements IOrder {
   public chainId: number;
   public params: Types.OrderComponents;
 
   constructor(chainId: number, params: Types.OrderComponents) {
     this.chainId = chainId;
 
+    // Normalize
     try {
       this.params = normalize(params);
     } catch {
       throw new Error("Invalid params");
     }
 
-    // Detect kind
+    // Detect kind (if missing)
     if (!params.kind) {
       this.params.kind = this.detectKind();
     }
@@ -41,13 +44,19 @@ export class Order {
     this.fixSignature();
   }
 
+  // Public methods
+
+  public exchange() {
+    return new Exchange(this.chainId);
+  }
+
   public hash() {
     return _TypedDataEncoder.hashStruct("OrderComponents", ORDER_EIP712_TYPES, this.params);
   }
 
   public async sign(signer: TypedDataSigner) {
     const signature = await signer._signTypedData(
-      EIP712_DOMAIN(this.chainId),
+      this.exchange().eip712Domain(),
       ORDER_EIP712_TYPES,
       this.params
     );
@@ -61,9 +70,10 @@ export class Order {
   public getSignatureData() {
     return {
       signatureKind: "eip712",
-      domain: EIP712_DOMAIN(this.chainId),
+      domain: this.exchange().eip712Domain(),
       types: ORDER_EIP712_TYPES,
       value: this.params,
+      primaryType: _TypedDataEncoder.getPrimaryType(ORDER_EIP712_TYPES),
     };
   }
 
@@ -121,7 +131,7 @@ export class Order {
           ["bytes"],
           [
             "0x1901" +
-              _TypedDataEncoder.hashDomain(EIP712_DOMAIN(this.chainId)).slice(2) +
+              _TypedDataEncoder.hashDomain(this.exchange().eip712Domain()).slice(2) +
               bulkOrderHash.slice(2),
           ]
         );
@@ -132,7 +142,7 @@ export class Order {
         }
       } else {
         const signer = verifyTypedData(
-          EIP712_DOMAIN(this.chainId),
+          this.exchange().eip712Domain(),
           ORDER_EIP712_TYPES,
           this.params,
           signature
@@ -148,7 +158,7 @@ export class Order {
       }
 
       const eip712Hash = _TypedDataEncoder.hash(
-        EIP712_DOMAIN(this.chainId),
+        this.exchange().eip712Domain(),
         ORDER_EIP712_TYPES,
         this.params
       );
@@ -177,7 +187,7 @@ export class Order {
       throw new Error("Price not evenly divisible to the amount");
     }
 
-    if (!this.getBuilder().isValid(this)) {
+    if (!this.getBuilder().isValid(this, Order)) {
       throw new Error("Invalid order");
     }
   }
@@ -225,6 +235,18 @@ export class Order {
     }
   }
 
+  public getPrivateListingFulfillments(): Types.MatchOrdersFulfillment[] {
+    return getPrivateListingFulfillments(this.params);
+  }
+
+  public isPrivateOrder() {
+    return isPrivateOrder(this.params);
+  }
+
+  public constructPrivateListingCounterOrder(privateSaleRecipient: string): Types.OrderWithCounter {
+    return constructPrivateListingCounterOrder(privateSaleRecipient, this.params);
+  }
+
   public getFeeAmount(): BigNumber {
     const { fees } = this.getBuilder()!.getInfo(this)!;
 
@@ -240,14 +262,7 @@ export class Order {
   }
 
   public async checkFillability(provider: Provider) {
-    const conduitController = new Contract(
-      Addresses.ConduitController[this.chainId],
-      ConduitControllerAbi,
-      provider
-    );
-    const exchange = new Contract(Addresses.Exchange[this.chainId], ExchangeAbi, provider);
-
-    const status = await exchange.getOrderStatus(this.hash());
+    const status = await this.exchange().contract.connect(provider).getOrderStatus(this.hash());
     if (status.isCancelled) {
       throw new Error("not-fillable");
     }
@@ -255,18 +270,7 @@ export class Order {
       throw new Error("not-fillable");
     }
 
-    const makerConduit =
-      this.params.conduitKey === HashZero
-        ? Addresses.Exchange[this.chainId]
-        : await conduitController
-            .getConduit(this.params.conduitKey)
-            .then((result: { exists: boolean; conduit: string }) => {
-              if (!result.exists) {
-                throw new Error("invalid-conduit");
-              } else {
-                return result.conduit;
-              }
-            });
+    const makerConduit = this.exchange().deriveConduit(this.params.conduitKey);
 
     const info = this.getInfo()! as BaseOrderInfo;
     if (info.side === "buy") {
@@ -316,6 +320,8 @@ export class Order {
     }
   }
 
+  // Private methods
+
   private getBuilder(): BaseBuilder {
     switch (this.params.kind) {
       case "contract-wide": {
@@ -340,7 +346,7 @@ export class Order {
     // contract-wide
     {
       const builder = new Builders.ContractWide(this.chainId);
-      if (builder.isValid(this)) {
+      if (builder.isValid(this, Order)) {
         return "contract-wide";
       }
     }
@@ -348,7 +354,7 @@ export class Order {
     // single-token
     {
       const builder = new Builders.SingleToken(this.chainId);
-      if (builder.isValid(this)) {
+      if (builder.isValid(this, Order)) {
         return "single-token";
       }
     }
@@ -356,7 +362,7 @@ export class Order {
     // token-list
     {
       const builder = new Builders.TokenList(this.chainId);
-      if (builder.isValid(this)) {
+      if (builder.isValid(this, Order)) {
         return "token-list";
       }
     }
@@ -364,149 +370,36 @@ export class Order {
     throw new Error("Could not detect order kind (order might have unsupported params/calldata)");
   }
 
-  public getPrivateListingFulfillments(): Types.MatchOrdersFulfillment[] {
-    const nftRelatedFulfillments: Types.MatchOrdersFulfillment[] = [];
-    const privateListingOrder = this.params;
+  private extractSignature() {
+    if (this.params.signature) {
+      let signature = this.params.signature;
 
-    // For the original order, we need to match everything offered with every consideration item
-    // on the original order that's set to go to the private listing recipient
-    privateListingOrder.offer.forEach((offerItem, offerIndex) => {
-      const considerationIndex = privateListingOrder.consideration.findIndex(
-        (considerationItem) =>
-          considerationItem.itemType === offerItem.itemType &&
-          considerationItem.token === offerItem.token &&
-          considerationItem.identifierOrCriteria === offerItem.identifierOrCriteria
-      );
-      if (considerationIndex === -1) {
-        throw new Error(
-          "Could not find matching offer item in the consideration for private listing"
-        );
+      // Remove the `0x` prefix and count bytes not characters
+      const actualSignatureLength = (signature.length - 2) / 2;
+
+      // https://github.com/ProjectOpenSea/seaport/blob/4f2210b59aefa119769a154a12e55d9b77ca64eb/reference/lib/ReferenceVerifiers.sol#L126-L133
+      const isBulkSignature =
+        actualSignatureLength < 837 &&
+        actualSignatureLength > 98 &&
+        (actualSignatureLength - 67) % 32 < 2;
+      if (isBulkSignature) {
+        // https://github.com/ProjectOpenSea/seaport/blob/4f2210b59aefa119769a154a12e55d9b77ca64eb/reference/lib/ReferenceVerifiers.sol#L146-L220
+        const proofAndSignature = this.params.signature!;
+
+        const signatureLength = actualSignatureLength % 2 === 0 ? 130 : 128;
+        signature = proofAndSignature.slice(0, signatureLength + 2);
       }
-      nftRelatedFulfillments.push({
-        offerComponents: [
-          {
-            orderIndex: 0,
-            itemIndex: offerIndex,
-          },
-        ],
-        considerationComponents: [
-          {
-            orderIndex: 0,
-            itemIndex: considerationIndex,
-          },
-        ],
-      });
-    });
 
-    const currencyRelatedFulfillments: Types.MatchOrdersFulfillment[] = [];
-
-    // For the original order, we need to match everything offered with every consideration item
-    // on the original order that's set to go to the private listing recipient
-    privateListingOrder.consideration.forEach((considerationItem, considerationIndex) => {
-      if (!isCurrencyItem(considerationItem)) {
-        return;
-      }
-      // We always match the offer item (index 0) of the counter order (index 1)
-      // with all of the payment items on the private listing
-      currencyRelatedFulfillments.push({
-        offerComponents: [
-          {
-            orderIndex: 1,
-            itemIndex: 0,
-          },
-        ],
-        considerationComponents: [
-          {
-            orderIndex: 0,
-            itemIndex: considerationIndex,
-          },
-        ],
-      });
-    });
-
-    return [...nftRelatedFulfillments, ...currencyRelatedFulfillments];
-  }
-
-  public isPrivateOrder() {
-    let isPrivate = false;
-    const { offerer, offer, consideration } = this.params;
-    const nftListings = offer.filter((_) => !isCurrencyItem(_));
-
-    const isListing = nftListings.length >= 1;
-    if (isListing) {
-      const hasPrivateConsideration = nftListings.every((item) => {
-        const matchConsideration = consideration.find(
-          (c) =>
-            c.token == item.token &&
-            c.identifierOrCriteria == item.identifierOrCriteria &&
-            lc(c.recipient) != lc(offerer)
-        );
-        return matchConsideration;
-      });
-      if (hasPrivateConsideration) {
-        isPrivate = true;
-      }
-    } else {
-      // Private Bid?
+      return signature;
     }
-    return isPrivate;
-  }
-
-  public constructPrivateListingCounterOrder(privateSaleRecipient: string): Types.OrderWithCounter {
-    // Counter order offers up all the items in the private listing consideration
-    // besides the items that are going to the private listing recipient
-    const paymentItems = this.params.consideration.filter(
-      (item) => item.recipient.toLowerCase() !== privateSaleRecipient.toLowerCase()
-    );
-
-    if (!paymentItems.every((item) => isCurrencyItem(item))) {
-      throw new Error(
-        "The consideration for the private listing did not contain only currency items"
-      );
-    }
-    if (!paymentItems.every((item) => item.itemType === paymentItems[0].itemType)) {
-      throw new Error("Not all currency items were the same for private order");
-    }
-
-    const { aggregatedStartAmount, aggregatedEndAmount } = paymentItems.reduce(
-      ({ aggregatedStartAmount, aggregatedEndAmount }, item) => ({
-        aggregatedStartAmount: aggregatedStartAmount.add(item.startAmount),
-        aggregatedEndAmount: aggregatedEndAmount.add(item.endAmount),
-      }),
-      {
-        aggregatedStartAmount: BigNumber.from(0),
-        aggregatedEndAmount: BigNumber.from(0),
-      }
-    );
-
-    const counterOrder: Types.OrderWithCounter = {
-      parameters: {
-        ...this.params,
-        offerer: privateSaleRecipient,
-        offer: [
-          {
-            itemType: paymentItems[0].itemType,
-            token: paymentItems[0].token,
-            identifierOrCriteria: paymentItems[0].identifierOrCriteria,
-            startAmount: aggregatedStartAmount.toString(),
-            endAmount: aggregatedEndAmount.toString(),
-          },
-        ],
-        // The consideration here is empty as the original private listing order supplies
-        // the taker address to receive the desired items.
-        consideration: [],
-        salt: generateRandomSalt(),
-        totalOriginalConsiderationItems: 0,
-      },
-      signature: "0x",
-    };
-    return counterOrder;
   }
 
   private fixSignature() {
-    // Ensure `v` is always 27 or 28 (Seaport will revert otherwise)
-    if (this.params.signature?.length === 132) {
-      let lastByte = parseInt(this.params.signature.slice(-2), 16);
+    let signature = this.extractSignature();
+
+    // For non-compact signatures, ensure `v` is always 27 or 28 (Seaport will revert otherwise)
+    if (signature?.length === 132) {
+      let lastByte = parseInt(signature.slice(-2), 16);
       if (lastByte < 27) {
         if (lastByte === 0 || lastByte === 1) {
           lastByte += 27;
@@ -514,49 +407,12 @@ export class Order {
           throw new Error("Invalid `v` byte");
         }
 
-        this.params.signature = this.params.signature.slice(0, -2) + lastByte.toString(16);
+        signature = signature.slice(0, -2) + lastByte.toString(16);
+        this.params.signature = signature + this.params.signature!.slice(signature.length);
       }
     }
   }
 }
-
-export const EIP712_DOMAIN = (chainId: number) => ({
-  name: "Seaport",
-  version: "1.4",
-  chainId,
-  verifyingContract: Addresses.Exchange[chainId],
-});
-
-export const ORDER_EIP712_TYPES = {
-  OrderComponents: [
-    { name: "offerer", type: "address" },
-    { name: "zone", type: "address" },
-    { name: "offer", type: "OfferItem[]" },
-    { name: "consideration", type: "ConsiderationItem[]" },
-    { name: "orderType", type: "uint8" },
-    { name: "startTime", type: "uint256" },
-    { name: "endTime", type: "uint256" },
-    { name: "zoneHash", type: "bytes32" },
-    { name: "salt", type: "uint256" },
-    { name: "conduitKey", type: "bytes32" },
-    { name: "counter", type: "uint256" },
-  ],
-  OfferItem: [
-    { name: "itemType", type: "uint8" },
-    { name: "token", type: "address" },
-    { name: "identifierOrCriteria", type: "uint256" },
-    { name: "startAmount", type: "uint256" },
-    { name: "endAmount", type: "uint256" },
-  ],
-  ConsiderationItem: [
-    { name: "itemType", type: "uint8" },
-    { name: "token", type: "address" },
-    { name: "identifierOrCriteria", type: "uint256" },
-    { name: "startAmount", type: "uint256" },
-    { name: "endAmount", type: "uint256" },
-    { name: "recipient", type: "address" },
-  ],
-};
 
 export const isCurrencyItem = ({ itemType }: { itemType: Types.ItemType }) =>
   [Types.ItemType.NATIVE, Types.ItemType.ERC20].includes(itemType);

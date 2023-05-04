@@ -18,7 +18,8 @@ export const getAttributesExploreV4Options: RouteOptions = {
     expiresIn: 10000,
   },
   description: "Explore attributes",
-  notes: "Get detailed aggregate about attributes in a collection, attribute floors",
+  notes:
+    "Use this API to see stats on a specific attribute within a collection. This endpoint will return `tokenCount`, `onSaleCount`, `sampleImages`, and `floorAsk` by default. ",
   tags: ["api", "Attributes"],
   plugins: {
     "hapi-swagger": {
@@ -34,6 +35,7 @@ export const getAttributesExploreV4Options: RouteOptions = {
         ),
     }),
     query: Joi.object({
+      tokenId: Joi.string().description("Filter to a particular token-id. Example: `1`"),
       includeTopBid: Joi.boolean()
         .default(false)
         .description("If true, top bid will be returned in the response."),
@@ -66,7 +68,9 @@ export const getAttributesExploreV4Options: RouteOptions = {
         .min(1)
         .max(5000)
         .default(20)
-        .description("Amount of items returned in response."),
+        .description(
+          "Amount of items returned in response. Default limit is 20. Max limit is 5000."
+        ),
     }),
   },
   response: {
@@ -118,9 +122,14 @@ export const getAttributesExploreV4Options: RouteOptions = {
     const params = request.params as any;
     const conditions: string[] = [];
     let selectQuery =
-      "SELECT attributes.id, kind, floor_sell_value, token_count, on_sale_count, key, value, sample_images, recent_floor_values_info.*";
+      "SELECT attributes.id, kind, floor_sell_value, token_count, on_sale_count, attributes.key, attributes.value, sample_images, recent_floor_values_info.*";
 
     conditions.push(`attributes.collection_id = $/collection/`);
+
+    let tokenFilterQuery = "";
+    if (query.tokenId) {
+      tokenFilterQuery = `INNER JOIN token_attributes ta ON attributes.id = ta.attribute_id AND ta.token_id = $/tokenId/`;
+    }
 
     if (query.attributeKey) {
       conditions.push(`attributes.key = $/attributeKey/`);
@@ -187,7 +196,7 @@ export const getAttributesExploreV4Options: RouteOptions = {
                   date_part('epoch', lower(orders.valid_between)) AS "top_buy_valid_from",
                   coalesce(nullif(date_part('epoch', upper(orders.valid_between)), 'Infinity'), 0) AS "top_buy_valid_until"
           FROM token_sets
-          LEFT JOIN orders ON token_sets.top_buy_id = orders.id
+          JOIN orders ON token_sets.top_buy_id = orders.id
           WHERE token_sets.attribute_id = attributes.id
           ORDER BY token_sets.top_buy_value DESC NULLS LAST
           LIMIT 1
@@ -198,6 +207,7 @@ export const getAttributesExploreV4Options: RouteOptions = {
       let attributesQuery = `
             ${selectQuery}
             FROM attributes
+            ${tokenFilterQuery}
              ${topBidQuery}
             JOIN LATERAL (
                 ${tokensInfoQuery}

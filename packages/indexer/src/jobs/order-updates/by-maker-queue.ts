@@ -9,6 +9,7 @@ import { config } from "@/config/index";
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 import * as bundleOrderUpdatesByMaker from "@/jobs/order-updates/by-maker-bundle-queue";
 import { TriggerKind } from "@/jobs/order-updates/types";
+import { Sources } from "@/models/sources";
 import { OrderKind } from "@/orderbook/orders";
 import { fetchAndUpdateFtApproval } from "@/utils/on-chain-data";
 
@@ -52,6 +53,8 @@ if (config.doBackgroundWork) {
         // can potentially be more prone to not being able to handle all the
         // affected orders in a single batch).
 
+        const sources = await Sources.getInstance();
+
         switch (data.kind) {
           // Handle changes in ERC20 balances (relevant for 'buy' orders)
           case "buy-balance": {
@@ -59,8 +62,8 @@ if (config.doBackgroundWork) {
             const fillabilityStatuses = await idb.manyOrNone(
               `
                 SELECT
-                  orders.kind,
                   orders.id,
+                  orders.source_id_int,
                   orders.fillability_status AS old_status,
                   (CASE
                     WHEN ft_balances.amount >= (orders.currency_price * orders.quantity_remaining) THEN 'fillable'
@@ -88,11 +91,10 @@ if (config.doBackgroundWork) {
             // Filter any orders that didn't change status
             const values = fillabilityStatuses
               .filter(({ old_status, new_status }) => old_status !== new_status)
-              // We mark X2Y2 orders as cancelled if the balance ever gets underwater
-              // in order to be consistent with the way they handle things (see below
-              // description on handling X2Y2 "sell-balance" changes)
+              // Some orders should never get revalidated
               .map((data) =>
-                data.kind === "x2y2" && data.new_status === "no-balance"
+                data.new_status === "no-balance" &&
+                ["opensea.io", "x2y2.io"].includes(sources.get(data.source_id_int)?.domain ?? "")
                   ? { ...data, new_status: "cancelled" }
                   : data
               )
@@ -210,10 +212,10 @@ if (config.doBackgroundWork) {
                         END
                       )::order_approval_status_t
                     RETURNING
-                      orders.kind,
+                      orders.id,
+                      orders.source_id_int,
                       orders.approval_status,
-                      orders.expiration,
-                      orders.id
+                      orders.expiration
                   `,
                   {
                     token: toBuffer(data.contract),
@@ -225,12 +227,10 @@ if (config.doBackgroundWork) {
 
                 const cancelledValues = result
                   .filter(
-                    // When an approval gets revoked, X2Y2 will off-chain cancel all the
-                    // orders from the same owner, so that if they ever re-approve, none
-                    // of these orders will get reactivated (they are able to do that by
-                    // having their backend refuse to sign on such orders).
-                    ({ kind, approval_status }) =>
-                      kind === "x2y2" && approval_status === "no-approval"
+                    // Some orders should never get revalidated
+                    ({ source_id_int, approval_status }) =>
+                      approval_status === "no-approval" &&
+                      ["x2y2.io"].includes(sources.get(source_id_int)?.domain ?? "")
                   )
                   .map(({ id, expiration }) => ({
                     id,
@@ -320,15 +320,17 @@ if (config.doBackgroundWork) {
             const fillabilityStatuses = await idb.manyOrNone(
               `
                 SELECT
-                  orders.kind,
                   orders.id,
+                  orders.source_id_int,
                   orders.fillability_status AS old_status,
+                  orders.quantity_remaining,
+                  LEAST(nft_balances.amount, orders.quantity_remaining) AS quantity_fillable,
                   (CASE
-                    WHEN nft_balances.amount >= orders.quantity_remaining THEN 'fillable'
+                    WHEN LEAST(nft_balances.amount, orders.quantity_remaining) > 0 THEN 'fillable'
                     ELSE 'no-balance'
                   END)::order_fillability_status_t AS new_status,
                   (CASE
-                    WHEN nft_balances.amount >= orders.quantity_remaining THEN nullif(upper(orders.valid_between), 'infinity')
+                    WHEN LEAST(nft_balances.amount, orders.quantity_remaining) > 0 THEN nullif(upper(orders.valid_between), 'infinity')
                     ELSE to_timestamp($/timestamp/)
                   END)::TIMESTAMPTZ AS expiration
                 FROM orders
@@ -354,28 +356,33 @@ if (config.doBackgroundWork) {
 
             // Filter any orders that didn't change status
             const values = fillabilityStatuses
-              .filter(({ old_status, new_status }) => old_status !== new_status)
+              .filter(
+                ({ old_status, new_status, quantity_remaining, quantity_fillable }) =>
+                  old_status !== new_status || quantity_remaining !== quantity_fillable
+              )
+              // TODO: Is the below filtering needed anymore?
               // Exclude escrowed orders
               .filter(({ kind }) => kind !== "foundation" && kind !== "cryptopunks")
-              // When a token gets transferred, X2Y2 will off-chain cancel all the
-              // orders from the initial owner, so that if they ever get the token
-              // back in their wallet no order will get reactivated (they are able
-              // to do that by having their backend refuse to sign on such orders).
+              // Some orders should never get revalidated
               .map((data) =>
-                data.kind === "x2y2" && data.new_status === "no-balance"
+                data.new_status === "no-balance" &&
+                ["blur.io", "x2y2.io", "opensea.io"].includes(
+                  sources.get(data.source_id_int)?.domain ?? ""
+                )
                   ? { ...data, new_status: "cancelled" }
                   : data
               )
-              .map(({ id, new_status, expiration }) => ({
+              .map(({ id, new_status, quantity_fillable, expiration }) => ({
                 id,
                 fillability_status: new_status,
+                quantity_remaining: quantity_fillable,
                 expiration: expiration || "infinity",
               }));
 
             // Update any orders that did change status
             if (values.length) {
               const columns = new pgp.helpers.ColumnSet(
-                ["id", "fillability_status", "expiration"],
+                ["id", "fillability_status", "quantity_remaining", "expiration"],
                 { table: "orders" }
               );
 
@@ -383,12 +390,13 @@ if (config.doBackgroundWork) {
                 `
                   UPDATE orders SET
                     fillability_status = x.fillability_status::order_fillability_status_t,
+                    quantity_remaining = x.quantity_remaining::NUMERIC(78, 0),
                     expiration = x.expiration::TIMESTAMPTZ,
                     updated_at = now()
                   FROM (VALUES ${pgp.helpers.values(
                     values,
                     columns
-                  )}) AS x(id, fillability_status, expiration)
+                  )}) AS x(id, fillability_status, quantity_remaining, expiration)
                   WHERE orders.id = x.id::TEXT
                 `
               );
@@ -415,7 +423,7 @@ if (config.doBackgroundWork) {
               `
                 SELECT
                   orders.id,
-                  orders.kind,
+                  orders.source_id_int,
                   orders.approval_status AS old_status,
                   x.new_status,
                   x.expiration
@@ -454,6 +462,7 @@ if (config.doBackgroundWork) {
             // Filter any orders that didn't change status
             const values = approvalStatuses
               .filter(({ old_status, new_status }) => old_status !== new_status)
+              // TODO: Is the below filtering needed anymore?
               // Exclude escrowed orders
               .filter(({ kind }) => kind !== "foundation" && kind !== "cryptopunks")
               .map(({ id, new_status, expiration }) => ({
@@ -485,11 +494,10 @@ if (config.doBackgroundWork) {
 
             const cancelledValues = approvalStatuses
               .filter(
-                // When an approval gets revoked, X2Y2 will off-chain cancel all the
-                // orders from the same owner, so that if they ever re-approve, none
-                // of these orders will get reactivated (they are able to do that by
-                // having their backend refuse to sign on such orders).
-                ({ kind, new_status }) => kind === "x2y2" && new_status === "no-approval"
+                // Some orders should never get revalidated
+                ({ source_id_int, new_status }) =>
+                  new_status === "no-approval" &&
+                  ["blur.io", "x2y2.io"].includes(sources.get(source_id_int)?.domain ?? "")
               )
               .map(({ id, expiration }) => ({
                 id,

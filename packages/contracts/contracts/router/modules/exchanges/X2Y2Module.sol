@@ -19,15 +19,24 @@ contract X2Y2Module is BaseExchangeModule {
 
   // --- Fields ---
 
-  IX2Y2 public constant EXCHANGE = IX2Y2(0x74312363e45DCaBA76c59ec49a7Aa8A65a67EeD3);
+  IX2Y2 public immutable EXCHANGE;
 
-  address public constant ERC721_DELEGATE = 0xF849de01B080aDC3A814FaBE1E2087475cF2E354;
-
-  address public constant ERC1155_DELEGATE = 0x024aC22ACdB367a3ae52A3D94aC6649fdc1f0779;
+  address public immutable ERC721_DELEGATE;
+  address public immutable ERC1155_DELEGATE;
 
   // --- Constructor ---
 
-  constructor(address owner, address router) BaseModule(owner) BaseExchangeModule(router) {}
+  constructor(
+    address owner,
+    address router,
+    address exchange,
+    address erc721Delegate,
+    address erc1155Delegate
+  ) BaseModule(owner) BaseExchangeModule(router) {
+    EXCHANGE = IX2Y2(exchange);
+    ERC721_DELEGATE = erc721Delegate;
+    ERC1155_DELEGATE = erc1155Delegate;
+  }
 
   // --- Fallback ---
 

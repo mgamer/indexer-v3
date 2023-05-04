@@ -11,7 +11,7 @@ import Joi from "joi";
 import { edb, redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { Signers, addressToSigner } from "@/common/signers";
-import { bn, formatPrice, now, regex, toBuffer } from "@/common/utils";
+import { bn, formatPrice, safeOracleTimestamp, regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 
 const version = "v1";
@@ -84,6 +84,28 @@ export const getCollectionTopBidOracleV1Options: RouteOptions = {
     }
 
     try {
+      const collectionHasTopBid = await redb.oneOrNone(
+        `
+          SELECT
+            1
+          FROM orders
+          JOIN token_sets
+            ON orders.token_set_id = token_sets.id
+          WHERE orders.side = 'buy'
+            AND orders.fillability_status = 'fillable'
+            AND orders.approval_status = 'approved'
+            AND token_sets.collection_id = $/collection/
+            AND token_sets.attribute_id IS NULL
+          LIMIT 1
+        `,
+        {
+          collection: query.collection,
+        }
+      );
+      if (!collectionHasTopBid) {
+        throw Boom.badRequest("Collection has no top bid");
+      }
+
       const spotQuery = `
         SELECT
           e.price
@@ -273,7 +295,7 @@ export const getCollectionTopBidOracleV1Options: RouteOptions = {
       } = {
         id,
         payload: defaultAbiCoder.encode(["address", "uint256"], [query.currency, price]),
-        timestamp: now(),
+        timestamp: await safeOracleTimestamp(),
       };
 
       if (config.oraclePrivateKey) {

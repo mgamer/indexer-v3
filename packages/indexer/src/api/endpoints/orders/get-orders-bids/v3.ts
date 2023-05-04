@@ -36,11 +36,9 @@ export const getOrdersBidsV3Options: RouteOptions = {
         .description(
           "Filter to a particular token. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
         ),
-      tokenSetId: Joi.string()
-        .lowercase()
-        .description(
-          "Filter to a particular set. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
-        ),
+      tokenSetId: Joi.string().description(
+        "Filter to a particular set. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
+      ),
       maker: Joi.string()
         .lowercase()
         .pattern(regex.address)
@@ -100,6 +98,10 @@ export const getOrdersBidsV3Options: RouteOptions = {
         .max(1000)
         .default(50)
         .description("Amount of items returned in response."),
+      displayCurrency: Joi.string()
+        .lowercase()
+        .pattern(regex.address)
+        .description("Return result in given currency"),
     }).oxor("token", "tokenSetId", "contracts", "ids", "source", "native"),
   },
   response: {
@@ -298,7 +300,7 @@ export const getOrdersBidsV3Options: RouteOptions = {
           ) AS expiration,
           orders.is_reservoir,
           extract(epoch from orders.created_at) AS created_at,
-          orders.updated_at
+          extract(epoch from orders.updated_at) AS updated_at
           ${query.includeRawData ? ", orders.raw_data" : ""}
           ${query.includeMetadata ? `, ${metadataBuildQuery}` : ""}
         FROM orders
@@ -459,7 +461,8 @@ export const getOrdersBidsV3Options: RouteOptions = {
               ? fromBuffer(r.currency)
               : r.side === "sell"
               ? Sdk.Common.Addresses.Eth[config.chainId]
-              : Sdk.Common.Addresses.Weth[config.chainId]
+              : Sdk.Common.Addresses.Weth[config.chainId],
+            query.displayCurrency
           ),
           validFrom: Number(r.valid_from),
           validUntil: Number(r.valid_until),

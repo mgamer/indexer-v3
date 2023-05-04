@@ -10,7 +10,7 @@ import { logger } from "@/common/logger";
 import { regex } from "@/common/utils";
 import { config } from "@/config/index";
 import * as metadataIndexFetch from "@/jobs/metadata-index/fetch-queue";
-import * as orderFixes from "@/jobs/order-fixes/queue";
+import * as orderFixes from "@/jobs/order-fixes/fixes";
 import * as resyncAttributeCache from "@/jobs/update-attribute/resync-attribute-cache";
 import * as tokenRefreshCacheQueue from "@/jobs/token-updates/token-refresh-cache";
 import { ApiKeyManager } from "@/models/api-keys";
@@ -22,7 +22,9 @@ const version = "v1";
 
 export const postTokensRefreshV1Options: RouteOptions = {
   description: "Refresh Token",
-  tags: ["api", "Management"],
+  notes:
+    "Token metadata is never automatically refreshed, but may be manually refreshed with this API.\n\nCaution: This API should be used in moderation, like only when missing data is discovered. Calling it in bulk or programmatically will result in your API key getting rate limited.",
+  tags: ["api", "Tokens"],
   plugins: {
     "hapi-swagger": {
       order: 13,
@@ -99,7 +101,7 @@ export const postTokensRefreshV1Options: RouteOptions = {
       const currentUtcTime = new Date().toISOString();
       await Tokens.update(contract, tokenId, { lastMetadataSync: currentUtcTime });
 
-      if (config.metadataIndexingMethod === "opensea") {
+      if (_.indexOf([1, 5, 10, 56, 137, 42161], config.chainId) !== -1) {
         // Refresh orders from OpenSea
         await OpenseaIndexerApi.fastTokenSync(payload.token);
       }
@@ -114,16 +116,7 @@ export const postTokensRefreshV1Options: RouteOptions = {
         );
       }
 
-      let method = metadataIndexFetch.getIndexingMethod(collection?.community || null);
-
-      if (contract === "0x11708dc8a3ea69020f520c81250abb191b190110") {
-        method = "simplehash";
-
-        logger.info(
-          `post-tokens-refresh-${version}-handler`,
-          `Forced rtfkt. contract=${contract}, tokenId=${tokenId}, method=${method}`
-        );
-      }
+      const method = metadataIndexFetch.getIndexingMethod(collection?.community || null);
 
       await metadataIndexFetch.addToQueue(
         [
@@ -147,7 +140,7 @@ export const postTokensRefreshV1Options: RouteOptions = {
       await resyncAttributeCache.addToQueue(contract, tokenId, 0, overrideCoolDown);
 
       // Refresh the token floor sell and top bid
-      await tokenRefreshCacheQueue.addToQueue(contract, tokenId);
+      await tokenRefreshCacheQueue.addToQueue(contract, tokenId, true);
 
       logger.info(
         `post-tokens-refresh-${version}-handler`,

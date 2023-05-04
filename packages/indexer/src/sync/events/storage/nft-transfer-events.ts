@@ -1,10 +1,12 @@
 import _ from "lodash";
 
 import { idb, pgp } from "@/common/db";
-import { toBuffer } from "@/common/utils";
+import { fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { BaseEventParams } from "@/events-sync/parser";
 import * as nftTransfersWriteBuffer from "@/jobs/events-sync/write-buffers/nft-transfers";
+import { AddressZero } from "@ethersproject/constants";
+import * as tokenRecalcSupply from "@/jobs/token-updates/token-reclac-supply";
 
 export type Event = {
   kind: ContractKind;
@@ -32,42 +34,39 @@ type DbEvent = {
   amount: string;
 };
 
+type erc721Token = {
+  collection_id: string;
+  contract: Buffer;
+  token_id: string;
+  minted_timestamp: number;
+  supply?: number;
+  remaining_supply?: number;
+};
+
+type erc1155Token = {
+  collection_id: string;
+  contract: Buffer;
+  token_id: string;
+  minted_timestamp: number;
+};
+
 export const addEvents = async (events: Event[], backfill: boolean) => {
   // Keep track of all unique contracts and tokens
-  const uniqueContracts = new Set<string>();
+  const uniqueContracts = new Map<string, string>();
   const uniqueTokens = new Set<string>();
-  const uniqueOwners = new Set<string>();
 
-  let transferValues: DbEvent[] = [];
-  const uniqueOwnersTransferValues = [];
+  const transferValues: DbEvent[] = [];
 
   const contractValues: {
     address: Buffer;
     kind: ContractKind;
   }[] = [];
 
-  const tokenValues: {
-    collection_id: string;
-    contract: Buffer;
-    token_id: string;
-    minted_timestamp: number;
-  }[] = [];
+  const tokenValuesErc721: erc721Token[] = [];
+  const tokenValuesErc1155: erc1155Token[] = [];
 
   for (const event of events) {
     const contractId = event.baseEventParams.address.toString();
-
-    const ownerFrom = `${event.from}:${contractId}:${event.tokenId}`;
-    const ownerTo = `${event.to}:${contractId}:${event.tokenId}`;
-
-    // Once we already update an owner create new array in order to split the update queries later
-    if (_.size(transferValues) >= 50 || uniqueOwners.has(ownerFrom) || uniqueOwners.has(ownerTo)) {
-      uniqueOwnersTransferValues.push(transferValues);
-      transferValues = [];
-      uniqueOwners.clear();
-    }
-
-    uniqueOwners.add(ownerFrom);
-    uniqueOwners.add(ownerTo);
 
     transferValues.push({
       address: toBuffer(event.baseEventParams.address),
@@ -85,7 +84,7 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
     });
 
     if (!uniqueContracts.has(contractId)) {
-      uniqueContracts.add(contractId);
+      uniqueContracts.set(contractId, event.kind);
 
       contractValues.push({
         address: toBuffer(event.baseEventParams.address),
@@ -97,21 +96,28 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
     if (!uniqueTokens.has(tokenId)) {
       uniqueTokens.add(tokenId);
 
-      tokenValues.push({
-        collection_id: event.baseEventParams.address,
-        contract: toBuffer(event.baseEventParams.address),
-        token_id: event.tokenId,
-        minted_timestamp: event.baseEventParams.timestamp,
-      });
+      if (uniqueContracts.get(contractId) === "erc721") {
+        tokenValuesErc721.push({
+          collection_id: event.baseEventParams.address,
+          contract: toBuffer(event.baseEventParams.address),
+          token_id: event.tokenId,
+          minted_timestamp: event.baseEventParams.timestamp,
+          supply: 1,
+          remaining_supply: event.to === AddressZero ? 0 : 1,
+        });
+      } else {
+        tokenValuesErc1155.push({
+          collection_id: event.baseEventParams.address,
+          contract: toBuffer(event.baseEventParams.address),
+          token_id: event.tokenId,
+          minted_timestamp: event.baseEventParams.timestamp,
+        });
+      }
     }
   }
 
   if (transferValues.length) {
-    uniqueOwnersTransferValues.push(transferValues); // Add the last batch of transfer values
-  }
-
-  if (uniqueOwnersTransferValues.length) {
-    for (const transferEvents of uniqueOwnersTransferValues) {
+    for (const event of transferValues) {
       const nftTransferQueries: string[] = [];
       const columns = new pgp.helpers.ColumnSet(
         [
@@ -147,7 +153,7 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
             "to",
             "token_id",
             "amount"
-          ) VALUES ${pgp.helpers.values(transferEvents, columns)}
+          ) VALUES ${pgp.helpers.values(event, columns)}
           ON CONFLICT DO NOTHING
           RETURNING
             "address",
@@ -209,56 +215,59 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
     await insertQueries(queries, backfill);
   }
 
-  if (tokenValues.length) {
-    for (const tokenValuesChunk of _.chunk(tokenValues, 1000)) {
-      const queries: string[] = [];
+  if (tokenValuesErc721.length) {
+    for (const tokenValuesChunk of _.chunk(tokenValuesErc721, 1000)) {
+      const query = buildTokenValuesQueries(tokenValuesChunk, "erc721");
+      await insertQueries([query], backfill);
+    }
+  }
 
-      if (!config.liquidityOnly) {
-        const columns = new pgp.helpers.ColumnSet(["contract", "token_id", "minted_timestamp"], {
-          table: "tokens",
-        });
+  if (tokenValuesErc1155.length) {
+    for (const tokenValuesChunk of _.chunk(tokenValuesErc1155, 1000)) {
+      const query = buildTokenValuesQueries(tokenValuesChunk, "erc1155");
+      await insertQueries([query], backfill);
 
-        queries.push(`
-          INSERT INTO "tokens" (
-            "contract",
-            "token_id",
-            "minted_timestamp"
-          ) VALUES ${pgp.helpers.values(
-            _.sortBy(tokenValuesChunk, ["collection_id", "token_id"]),
-            columns
-          )}
-          ON CONFLICT (contract, token_id) DO UPDATE 
-          SET minted_timestamp = EXCLUDED.minted_timestamp
-          WHERE EXCLUDED.minted_timestamp < tokens.minted_timestamp
-        `);
-      } else {
-        const columns = new pgp.helpers.ColumnSet(
-          ["collection_id", "contract", "token_id", "minted_timestamp"],
-          {
-            table: "tokens",
-          }
-        );
-
-        queries.push(`
-          INSERT INTO "tokens" (
-            "collection_id",
-            "contract",
-            "token_id",
-            "minted_timestamp"
-          ) VALUES ${pgp.helpers.values(
-            _.sortBy(tokenValuesChunk, ["collection_id", "token_id"]),
-            columns
-          )}
-          ON CONFLICT (contract, token_id) DO UPDATE
-          SET minted_timestamp = EXCLUDED.minted_timestamp
-          WHERE EXCLUDED.minted_timestamp < tokens.minted_timestamp
-        `);
-      }
-
-      await insertQueries(queries, backfill);
+      // Recalc supply
+      await tokenRecalcSupply.addToQueue(
+        tokenValuesChunk.map((t) => ({ contract: fromBuffer(t.contract), tokenId: t.token_id }))
+      );
     }
   }
 };
+
+function buildTokenValuesQueries(tokenValuesChunk: erc721Token[] | erc1155Token[], kind: string) {
+  const columns = ["contract", "token_id", "minted_timestamp"];
+
+  if (!config.liquidityOnly) {
+    columns.push("collection_id");
+  }
+
+  if (kind === "erc721") {
+    columns.push("supply");
+    columns.push("remaining_supply");
+  }
+
+  const columnSet = new pgp.helpers.ColumnSet(columns, {
+    table: "tokens",
+  });
+
+  return `
+    INSERT INTO "tokens" (
+      "contract",
+      "token_id",
+      "minted_timestamp"
+      ${!config.liquidityOnly ? `, "collection_id"` : ""}
+      ${kind === "erc721" ? `, "supply"` : ""}
+      ${kind === "erc721" ? `, "remaining_supply"` : ""}
+    ) VALUES ${pgp.helpers.values(
+      _.sortBy(tokenValuesChunk, ["collection_id", "token_id"]),
+      columnSet
+    )}
+    ON CONFLICT (contract, token_id) DO UPDATE
+    SET minted_timestamp = EXCLUDED.minted_timestamp
+    WHERE EXCLUDED.minted_timestamp < tokens.minted_timestamp
+  `;
+}
 
 async function insertQueries(queries: string[], backfill: boolean) {
   if (backfill) {

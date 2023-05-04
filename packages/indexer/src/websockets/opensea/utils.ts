@@ -1,5 +1,6 @@
-import { config } from "@/config/index";
 import crypto from "crypto";
+
+import { config } from "@/config/index";
 
 export const getSupportedChainName = () => {
   switch (config.chainId) {
@@ -9,6 +10,12 @@ export const getSupportedChainName = () => {
       return "goerli";
     case 137:
       return "matic";
+    case 10:
+      return "optimism";
+    case 42161:
+      return "arbitrum";
+    case 534353:
+      return "scroll-alpha";
     default:
       return "unknown";
   }

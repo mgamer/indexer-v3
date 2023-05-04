@@ -1,62 +1,69 @@
 import { Interface } from "@ethersproject/abi";
 import { AddressZero } from "@ethersproject/constants";
+import { JsonRpcProvider } from "@ethersproject/providers";
 import { getTxTraces } from "@georgeroman/evm-tx-simulator";
 import { getSourceV1 } from "@reservoir0x/sdk/dist/utils";
 import _ from "lodash";
 
 import { baseProvider } from "@/common/provider";
 import { bn } from "@/common/utils";
+import { extractNestedTx } from "@/events-sync/handlers/attribution";
 import { getBlocks, saveBlock } from "@/models/blocks";
 import { Sources } from "@/models/sources";
 import { SourcesEntity } from "@/models/sources/sources-entity";
-import { getTransaction, saveTransaction, saveTransactions } from "@/models/transactions";
+import {
+  Transaction,
+  getTransaction,
+  saveTransaction,
+  saveTransactions,
+} from "@/models/transactions";
 import { getTransactionLogs, saveTransactionLogs } from "@/models/transaction-logs";
 import { getTransactionTraces, saveTransactionTraces } from "@/models/transaction-traces";
 import { OrderKind, getOrderSourceByOrderId, getOrderSourceByOrderKind } from "@/orderbook/orders";
 import { getRouters } from "@/utils/routers";
 
-export const fetchBlock = async (blockNumber: number, force = false) =>
-  getBlocks(blockNumber)
-    // Only fetch a single block (multiple ones might be available due to reorgs)
-    .then(async (blocks) => {
-      if (blocks.length && !force) {
-        return blocks[0];
-      } else {
-        const block = await baseProvider.getBlockWithTransactions(blockNumber);
+export const fetchBlock = async (blockNumber: number, force = false) => {
+  if (!force) {
+    const blocks = await getBlocks(blockNumber);
+    if (blocks.length) {
+      return blocks[0];
+    }
+  }
 
-        // Create transactions array to store
-        const transactions = block.transactions.map((tx) => {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const rawTx = tx.raw as any;
+  const block = await baseProvider.getBlockWithTransactions(blockNumber);
 
-          const gasPrice = tx.gasPrice?.toString();
-          const gasUsed = rawTx?.gas ? bn(rawTx.gas).toString() : undefined;
-          const gasFee = gasPrice && gasUsed ? bn(gasPrice).mul(gasUsed).toString() : undefined;
+  // Create transactions array to store
+  const transactions = block.transactions.map((tx) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const rawTx = tx.raw as any;
 
-          return {
-            hash: tx.hash.toLowerCase(),
-            from: tx.from.toLowerCase(),
-            to: (tx.to || AddressZero).toLowerCase(),
-            value: tx.value.toString(),
-            data: tx.data.toLowerCase(),
-            blockNumber: block.number,
-            blockTimestamp: block.timestamp,
-            gasPrice,
-            gasUsed,
-            gasFee,
-          };
-        });
+    const gasPrice = tx.gasPrice?.toString();
+    const gasUsed = rawTx?.gas ? bn(rawTx.gas).toString() : undefined;
+    const gasFee = gasPrice && gasUsed ? bn(gasPrice).mul(gasUsed).toString() : undefined;
 
-        // Save all transactions within the block
-        await saveTransactions(transactions);
+    return {
+      hash: tx.hash.toLowerCase(),
+      from: tx.from.toLowerCase(),
+      to: (tx.to || AddressZero).toLowerCase(),
+      value: tx.value.toString(),
+      data: tx.data.toLowerCase(),
+      blockNumber: block.number,
+      blockTimestamp: block.timestamp,
+      gasPrice,
+      gasUsed,
+      gasFee,
+    };
+  });
 
-        return saveBlock({
-          number: block.number,
-          hash: block.hash,
-          timestamp: block.timestamp,
-        });
-      }
-    });
+  // Save all transactions within the block
+  await saveTransactions(transactions);
+
+  return saveBlock({
+    number: block.number,
+    hash: block.hash,
+    timestamp: block.timestamp,
+  });
+};
 
 export const fetchTransaction = async (txHash: string) =>
   getTransaction(txHash).catch(async () => {
@@ -96,7 +103,7 @@ export const fetchTransaction = async (txHash: string) =>
     });
   });
 
-export const fetchTransactionTraces = async (txHashes: string[]) => {
+export const fetchTransactionTraces = async (txHashes: string[], provider?: JsonRpcProvider) => {
   // Some traces might already exist
   const existingTraces = await getTransactionTraces(txHashes);
   const existingTxHashes = Object.fromEntries(existingTraces.map(({ hash }) => [hash, true]));
@@ -112,7 +119,7 @@ export const fetchTransactionTraces = async (txHashes: string[]) => {
           const missingTraces = Object.entries(
             await getTxTraces(
               batch.map((hash) => ({ hash })),
-              baseProvider
+              provider ?? baseProvider
             )
           ).map(([hash, calls]) => ({ hash, calls }));
 
@@ -176,10 +183,20 @@ export const extractAttributionData = async (
     orderSource = await getOrderSourceByOrderKind(orderKind, options?.address);
   }
 
-  const routers = await getRouters();
+  // Handle internal transactions
+  let tx: Pick<Transaction, "hash" | "from" | "to" | "data"> = await fetchTransaction(txHash);
+  try {
+    const nestedTx = await extractNestedTx(tx, true);
+    if (nestedTx) {
+      tx = nestedTx;
+    }
+  } catch {
+    // Skip errors
+  }
 
   // Properly set the taker when filling through router contracts
-  const tx = await fetchTransaction(txHash);
+  const routers = await getRouters();
+
   let router = routers.get(tx.to);
   if (!router) {
     // Handle cases where we transfer directly to the router when filling bids

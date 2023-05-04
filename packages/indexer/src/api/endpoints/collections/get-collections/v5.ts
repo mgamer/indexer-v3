@@ -30,8 +30,7 @@ export const getCollectionsV5Options: RouteOptions = {
     expiresIn: 10000,
   },
   description: "Collections",
-  notes:
-    "Useful for getting multiple collections to show in a marketplace, or search for particular collections.",
+  notes: "Use this API to explore a collection’s metadata and statistics (sales, volume, etc).",
   tags: ["api", "Collections"],
   plugins: {
     "hapi-swagger": {
@@ -50,7 +49,9 @@ export const getCollectionsV5Options: RouteOptions = {
         .description("Filter to a particular collection slug. Example: `boredapeyachtclub`"),
       collectionsSetId: Joi.string()
         .lowercase()
-        .description("Filter to a particular collection set."),
+        .description(
+          "Filter to a particular collection set. Example: `8daa732ebe5db23f267e58d52f1c9b1879279bcdf4f78b8fb563390e6946ea65`"
+        ),
       community: Joi.string()
         .lowercase()
         .description("Filter to a particular community. Example: `artblocks`"),
@@ -59,7 +60,9 @@ export const getCollectionsV5Options: RouteOptions = {
           Joi.array().items(Joi.string().lowercase().pattern(regex.address)).max(20),
           Joi.string().lowercase().pattern(regex.address)
         )
-        .description("Array of contracts. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"),
+        .description(
+          "Array of contracts. Max amount is 20. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
+        ),
       name: Joi.string()
         .lowercase()
         .description("Search for collections that match a string. Example: `bored`"),
@@ -77,7 +80,7 @@ export const getCollectionsV5Options: RouteOptions = {
           }),
         })
         .description(
-          "If true, attributes will be included in the response. (supported only when filtering to a particular collection using `id` or `slug`)"
+          "If true, attributes will be included in the response. Must filter by `id` or `slug` to a particular collection."
         ),
       includeOwnerCount: Joi.boolean()
         .when("id", {
@@ -90,7 +93,7 @@ export const getCollectionsV5Options: RouteOptions = {
           }),
         })
         .description(
-          "If true, owner count will be included in the response. (supported only when filtering to a particular collection using `id` or `slug`)"
+          "If true, owner count will be included in the response. Must filter by `id` or `slug` to a particular collection and the collection has less than 50k tokens."
         ),
       includeSalesCount: Joi.boolean()
         .when("id", {
@@ -103,7 +106,7 @@ export const getCollectionsV5Options: RouteOptions = {
           }),
         })
         .description(
-          "If true, sales count (1 day, 7 day, 30 day, all time) will be included in the response. (supported only when filtering to a particular collection using `id` or `slug`)"
+          "If true, sales count (1 day, 7 day, 30 day, all time) will be included in the response. Must filter by `id` or `slug` to a particular collection."
         ),
       normalizeRoyalties: Joi.boolean()
         .default(false)
@@ -115,7 +118,7 @@ export const getCollectionsV5Options: RouteOptions = {
         })
         .default(false)
         .description(
-          "If true, return the non flagged floor ask. (only supported when `normalizeRoyalties` is false)"
+          "If true, return the non flagged floor ask. Supported only when `normalizeRoyalties` is false."
         ),
       sortBy: Joi.string()
         .valid(
@@ -127,16 +130,22 @@ export const getCollectionsV5Options: RouteOptions = {
           "floorAskPrice"
         )
         .default("allTimeVolume")
-        .description("Order the items are returned in the response."),
+        .description(
+          "Order the items are returned in the response. Options are `#DayVolume`, `createdAt`, or `floorAskPrice`"
+        ),
       limit: Joi.number()
         .integer()
         .min(1)
         .max(20)
         .default(20)
-        .description("Amount of items returned in response."),
+        .description("Amount of items returned in response. Default and max limit is 20."),
       continuation: Joi.string().description(
         "Use continuation token to request next offset of items."
       ),
+      displayCurrency: Joi.string()
+        .lowercase()
+        .pattern(regex.address)
+        .description("Input any ERC20 address to return result in given currency"),
     }).oxor("id", "slug", "name", "collectionsSetId", "community", "contract"),
   },
   response: {
@@ -241,6 +250,8 @@ export const getCollectionsV5Options: RouteOptions = {
               })
             )
             .optional(),
+          contractKind: Joi.string().allow("", null),
+          mintedTimestamp: Joi.number().allow(null),
         })
       ),
     }).label(`getCollections${version.toUpperCase()}Response`),
@@ -278,8 +289,7 @@ export const getCollectionsV5Options: RouteOptions = {
             orders.normalized_value AS top_buy_normalized_value,
             orders.currency_normalized_value AS top_buy_currency_normalized_value
           FROM token_sets
-          LEFT JOIN orders
-            ON token_sets.top_buy_id = orders.id
+          JOIN orders ON token_sets.top_buy_id = orders.id
           WHERE token_sets.collection_id = x.id
           ORDER BY token_sets.top_buy_value DESC NULLS LAST
           LIMIT 1
@@ -312,18 +322,40 @@ export const getCollectionsV5Options: RouteOptions = {
       // Include owner count
       let ownerCountSelectQuery = "";
       let ownerCountJoinQuery = "";
+      let includeOwnerCount = false;
+
+      // TODO: Cache owners count on collection instead of not allowing for big collections.
       if (query.includeOwnerCount) {
-        ownerCountSelectQuery = ", z.*";
-        ownerCountJoinQuery = `
-          LEFT JOIN LATERAL (
-            SELECT
-              COUNT(DISTINCT(owner)) AS owner_count
-            FROM nft_balances
-            WHERE nft_balances.contract = x.contract
-              AND nft_balances.token_id <@ x.token_id_range
-            AND amount > 0
-          ) z ON TRUE
-        `;
+        const collectionResult = await redb.oneOrNone(
+          `
+              SELECT
+                collections.token_count
+              FROM collections
+              WHERE ${query.id ? "collections.id = $/id/" : "collections.slug = $/slug/"}
+              ORDER BY created_at DESC  
+              LIMIT 1  
+            `,
+          { slug: query.slug, id: query.id }
+        );
+
+        if (collectionResult) {
+          const isLargeCollection = collectionResult.token_count > 50000;
+
+          if (!isLargeCollection) {
+            includeOwnerCount = true;
+            ownerCountSelectQuery = ", z.*";
+            ownerCountJoinQuery = `
+                  LEFT JOIN LATERAL (
+                    SELECT
+                      COUNT(DISTINCT(owner)) AS owner_count
+                    FROM nft_balances
+                    WHERE nft_balances.contract = x.contract
+                      AND nft_balances.token_id <@ x.token_id_range
+                    AND amount > 0
+                  ) z ON TRUE
+                `;
+          }
+        }
       }
 
       let saleCountSelectQuery = "";
@@ -351,6 +383,7 @@ export const getCollectionsV5Options: RouteOptions = {
             COUNT(*) AS total_sale_count
           FROM fill_events_2 fe
           WHERE fe.contract = x.contract
+          AND fe.is_deleted = 0
         ) s ON TRUE
       `;
       }
@@ -420,6 +453,7 @@ export const getCollectionsV5Options: RouteOptions = {
           ${floorAskSelectQuery}
           collections.token_count,
           collections.created_at,
+          collections.minted_timestamp,
           (
             SELECT
               COUNT(*)
@@ -433,13 +467,18 @@ export const getCollectionsV5Options: RouteOptions = {
             FROM tokens
             WHERE tokens.collection_id = collections.id
             LIMIT 4
-          ) AS sample_images
+          ) AS sample_images,
+          (
+            SELECT kind FROM contracts WHERE contracts.address = collections.contract
+          )  as contract_kind
         FROM collections
       `;
 
       // Filtering
 
       const conditions: string[] = [];
+
+      conditions.push("collections.token_count > 0");
 
       if (query.id) {
         conditions.push("collections.id = $/id/");
@@ -654,7 +693,8 @@ export const getCollectionsV5Options: RouteOptions = {
                         nativeAmount: r.floor_sell_value,
                       },
                     },
-                    floorAskCurrency
+                    floorAskCurrency,
+                    query.displayCurrency
                   )
                 : null,
               maker: r.floor_sell_maker ? fromBuffer(r.floor_sell_maker) : null,
@@ -672,7 +712,7 @@ export const getCollectionsV5Options: RouteOptions = {
             topBid: query.includeTopBid
               ? {
                   id: r.top_buy_id,
-                  sourceDomain: sources.get(r.top_buy_source_id_int)?.domain,
+                  sourceDomain: r.top_buy_id ? sources.get(r.top_buy_source_id_int)?.domain : null,
                   price: r.top_buy_id
                     ? await getJoiPriceObject(
                         {
@@ -689,7 +729,8 @@ export const getCollectionsV5Options: RouteOptions = {
                             nativeAmount: r.top_buy_price,
                           },
                         },
-                        topBidCurrency
+                        topBidCurrency,
+                        query.displayCurrency
                       )
                     : null,
                   maker: r.top_buy_maker ? fromBuffer(r.top_buy_maker) : null,
@@ -739,7 +780,7 @@ export const getCollectionsV5Options: RouteOptions = {
                 }
               : undefined,
             collectionBidSupported: Number(r.token_count) <= config.maxTokenSetSize,
-            ownerCount: query.includeOwnerCount ? Number(r.owner_count) : undefined,
+            ownerCount: includeOwnerCount ? Number(r.owner_count) : undefined,
             attributes: query.includeAttributes
               ? _.map(_.sortBy(r.attributes, ["rank", "key"]), (attribute) => ({
                   key: attribute.key,
@@ -747,6 +788,8 @@ export const getCollectionsV5Options: RouteOptions = {
                   count: Number(attribute.count),
                 }))
               : undefined,
+            contractKind: r.contract_kind,
+            mintedTimestamp: r.minted_timestamp,
           };
         })
       );

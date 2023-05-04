@@ -3,7 +3,8 @@ dotEnvConfig();
 
 import { assignRoyaltiesToFillEvents } from "@/events-sync/handlers/royalties";
 import { getRoyalties } from "@/utils/royalties";
-import { getFillEventsFromTx } from "@/events-sync/handlers/royalties";
+import { getFillEventsFromTx } from "@/events-sync/handlers/royalties/utils";
+import { jest, describe, it, expect } from "@jest/globals";
 
 jest.setTimeout(1000 * 1000);
 
@@ -24,7 +25,7 @@ describe("Royalties - Seaport", () => {
         : [];
     });
     const { fillEvents } = await getFillEventsFromTx(txHash);
-    await assignRoyaltiesToFillEvents(fillEvents);
+    await assignRoyaltiesToFillEvents(fillEvents, false, true);
 
     for (let index = 0; index < fillEvents.length; index++) {
       const fillEvent = fillEvents[index];
@@ -40,7 +41,7 @@ describe("Royalties - Seaport", () => {
   const txIds = [
     ["single sale", "0x93de26bea65832e10c253f6cd0bf963619d7aef63695b485d9df118dd6bd4ae4"],
     [
-      "multiple sales with different protocols(x2y2+seaport)",
+      "multiple-sales-with-different-protocols-x2y2-seaport",
       "0xa451be1bd9edef5cab318e3cb0fbff6a6f9955dfd49e484caa37dbaa6982a1ed",
     ],
     [

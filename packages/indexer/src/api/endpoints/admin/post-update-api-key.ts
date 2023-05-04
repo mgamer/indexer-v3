@@ -17,7 +17,7 @@ export const postUpdateApiKeyOptions: RouteOptions = {
     }).options({ allowUnknown: true }),
     payload: Joi.object({
       apiKey: Joi.string().description("The api key to update"),
-      tier: Joi.number().valid(0, 1, 2, 3, 4).optional(),
+      tier: Joi.number().optional(),
       active: Joi.boolean().optional(),
     }),
   },

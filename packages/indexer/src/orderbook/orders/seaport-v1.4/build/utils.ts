@@ -1,46 +1,17 @@
-import { AddressZero, HashZero } from "@ethersproject/constants";
+import { AddressZero } from "@ethersproject/constants";
 import * as Sdk from "@reservoir0x/sdk";
-import { BaseBuildParams } from "@reservoir0x/sdk/dist/seaport-v1.4/builders/base";
-import { generateSourceBytes, getRandomBytes } from "@reservoir0x/sdk/dist/utils";
+import { getRandomBytes } from "@reservoir0x/sdk/dist/utils";
 
 import { redb } from "@/common/db";
 import { baseProvider } from "@/common/provider";
 import { bn, fromBuffer, now } from "@/common/utils";
 import { config } from "@/config/index";
-import { getCollectionOpenseaFees } from "@/orderbook/orders/seaport/build/utils";
-
-export interface BaseOrderBuildOptions {
-  maker: string;
-  contract?: string;
-  weiPrice: string;
-  orderbook: "opensea" | "reservoir";
-  useOffChainCancellation?: boolean;
-  replaceOrderId?: string;
-  orderType?: Sdk.SeaportV14.Types.OrderType;
-  currency?: string;
-  quantity?: number;
-  nonce?: string;
-  fee?: number[];
-  feeRecipient?: string[];
-  listingTime?: number;
-  expirationTime?: number;
-  salt?: string;
-  automatedRoyalties?: boolean;
-  royaltyBps?: number;
-  excludeFlaggedTokens?: boolean;
-  source?: string;
-}
-
-type OrderBuildInfo = {
-  params: BaseBuildParams;
-  kind: "erc721" | "erc1155";
-};
-
-export const padSourceToSalt = (source: string, salt: string) => {
-  const sourceHash = generateSourceBytes(source);
-  const saltHex = bn(salt)._hex.slice(6);
-  return bn(`0x${sourceHash}${saltHex}`).toString();
-};
+import * as marketplaceFees from "@/utils/marketplace-fees";
+import {
+  BaseOrderBuildOptions,
+  OrderBuildInfo,
+  padSourceToSalt,
+} from "@/orderbook/orders/seaport-base/build/utils";
 
 export const getBuildInfo = async (
   options: BaseOrderBuildOptions,
@@ -52,7 +23,9 @@ export const getBuildInfo = async (
       SELECT
         contracts.kind,
         collections.royalties,
-        collections.new_royalties
+        collections.new_royalties,
+        collections.marketplace_fees,
+        collections.contract
       FROM collections
       JOIN contracts
         ON collections.contract = contracts.address
@@ -68,23 +41,26 @@ export const getBuildInfo = async (
   const exchange = new Sdk.SeaportV14.Exchange(config.chainId);
 
   // Use OpenSea's conduit for sharing approvals (where available)
-  const conduitKey = Sdk.SeaportV14.Addresses.OpenseaConduitKey[config.chainId] ?? HashZero;
+  const conduitKey =
+    options.conduitKey ?? Sdk.SeaportBase.Addresses.OpenseaConduitKey[config.chainId];
+
+  // Generate the salt
+  let salt = padSourceToSalt(options.salt ?? getRandomBytes(16).toString(), options.source);
 
   // No zone by default
   let zone = AddressZero;
   if (options.useOffChainCancellation) {
+    if (options.orderbook === "opensea") {
+      throw new Error("Off-chain cancellation not supported when cross-posting to OpenSea");
+    }
+
     zone = Sdk.SeaportV14.Addresses.CancellationZone[config.chainId];
+    if (options.replaceOrderId) {
+      salt = options.replaceOrderId;
+    }
   }
 
-  // Generate the salt
-  let salt = options.source
-    ? padSourceToSalt(options.source, options.salt ?? getRandomBytes(16).toString())
-    : undefined;
-  if (options.replaceOrderId) {
-    salt = options.replaceOrderId;
-  }
-
-  const buildParams: BaseBuildParams = {
+  const buildParams: Sdk.SeaportBase.BaseBuildParams = {
     offerer: options.maker,
     side,
     tokenKind: collectionResult.kind,
@@ -111,7 +87,6 @@ export const getBuildInfo = async (
   let totalFees = bn(0);
 
   // Include royalties
-  let totalBps = 0;
   if (options.automatedRoyalties) {
     const royalties: { bps: number; recipient: string }[] =
       (options.orderbook === "opensea"
@@ -129,15 +104,16 @@ export const getBuildInfo = async (
         const bps = Math.min(royaltyBpsToPay, r.bps);
         if (bps > 0) {
           royaltyBpsToPay -= bps;
-          totalBps += bps;
 
-          const fee = bn(bps).mul(options.weiPrice).div(10000).toString();
-          buildParams.fees!.push({
-            recipient: r.recipient,
-            amount: fee,
-          });
+          const fee = bn(bps).mul(options.weiPrice).div(10000);
+          if (fee.gt(0)) {
+            buildParams.fees!.push({
+              recipient: r.recipient,
+              amount: fee.toString(),
+            });
 
-          totalFees = totalFees.add(fee);
+            totalFees = totalFees.add(fee);
+          }
         }
       }
     }
@@ -149,27 +125,34 @@ export const getBuildInfo = async (
       options.feeRecipient = [];
     }
 
-    const openseaFees = await getCollectionOpenseaFees(
-      collection,
-      fromBuffer(collectionResult.contract),
-      totalBps
-    );
+    // Get opensea marketplace fees
+    let openseaMarketplaceFees: { bps: number; recipient: string }[] =
+      collectionResult.marketplace_fees?.opensea;
 
-    for (const [feeRecipient, feeBps] of Object.entries(openseaFees)) {
-      options.fee.push(feeBps);
-      options.feeRecipient.push(feeRecipient);
+    if (collectionResult.marketplace_fees?.opensea == null) {
+      openseaMarketplaceFees = await marketplaceFees.getCollectionOpenseaFees(
+        collection,
+        fromBuffer(collectionResult.contract)
+      );
+    }
+
+    for (const openseaMarketplaceFee of openseaMarketplaceFees) {
+      options.fee.push(openseaMarketplaceFee.bps);
+      options.feeRecipient.push(openseaMarketplaceFee.recipient);
     }
   }
 
   if (options.fee && options.feeRecipient) {
     for (let i = 0; i < options.fee.length; i++) {
       if (Number(options.fee[i]) > 0) {
-        const fee = bn(options.fee[i]).mul(options.weiPrice).div(10000).toString();
-        buildParams.fees!.push({
-          recipient: options.feeRecipient[i],
-          amount: fee,
-        });
-        totalFees = totalFees.add(fee);
+        const fee = bn(options.fee[i]).mul(options.weiPrice).div(10000);
+        if (fee.gt(0)) {
+          buildParams.fees!.push({
+            recipient: options.feeRecipient[i],
+            amount: fee.toString(),
+          });
+          totalFees = totalFees.add(fee);
+        }
       }
     }
   }

@@ -178,6 +178,7 @@ export const getExecuteSellV3Options: RouteOptions = {
 
       const router = new Sdk.RouterV5.Router(config.chainId, baseProvider, {
         x2y2ApiKey: config.x2y2ApiKey,
+        orderFetcherBaseUrl: config.orderFetcherBaseUrl,
       });
       const tx = await router.fillBidTx(bidDetails, query.taker, {
         source: query.source,

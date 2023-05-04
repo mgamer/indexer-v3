@@ -11,8 +11,7 @@ import Joi from "joi";
 import { edb, redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { Signers, addressToSigner } from "@/common/signers";
-import { baseProvider } from "@/common/provider";
-import { bn, formatPrice, regex, toBuffer } from "@/common/utils";
+import { bn, formatPrice, regex, safeOracleTimestamp, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 
 const version = "v2";
@@ -20,7 +19,7 @@ const version = "v2";
 export const getCollectionTopBidOracleV2Options: RouteOptions = {
   description: "Collection top bid oracle",
   notes:
-    "Get a signed message of any collection's top bid price (spot or twap). The oracle's address is 0xAeB1D03929bF87F69888f381e73FBf75753d75AF.",
+    "Get a signed message of any collection's top bid price (spot or twap). The oracle's address is 0xAeB1D03929bF87F69888f381e73FBf75753d75AF. The address is the same for all chains.",
   tags: ["api", "Oracle"],
   plugins: {
     "hapi-swagger": {
@@ -86,6 +85,28 @@ export const getCollectionTopBidOracleV2Options: RouteOptions = {
     }
 
     try {
+      const collectionHasTopBid = await redb.oneOrNone(
+        `
+          SELECT
+            1
+          FROM orders
+          JOIN token_sets
+            ON orders.token_set_id = token_sets.id
+          WHERE orders.side = 'buy'
+            AND orders.fillability_status = 'fillable'
+            AND orders.approval_status = 'approved'
+            AND token_sets.collection_id = $/collection/
+            AND token_sets.attribute_id IS NULL
+          LIMIT 1
+        `,
+        {
+          collection: query.collection,
+        }
+      );
+      if (!collectionHasTopBid) {
+        throw Boom.badRequest("Collection has no top bid");
+      }
+
       const spotQuery = `
         SELECT
           e.price
@@ -267,9 +288,6 @@ export const getCollectionTopBidOracleV2Options: RouteOptions = {
         throw Boom.badRequest("Unsupported currency");
       }
 
-      // Use the timestamp of the latest available block as the message timestamp
-      const timestamp = await baseProvider.getBlock("latest").then((b) => b.timestamp);
-
       const message: {
         id: string;
         payload: string;
@@ -278,7 +296,7 @@ export const getCollectionTopBidOracleV2Options: RouteOptions = {
       } = {
         id,
         payload: defaultAbiCoder.encode(["address", "uint256"], [query.currency, price]),
-        timestamp,
+        timestamp: await safeOracleTimestamp(),
       };
 
       if (config.oraclePrivateKey) {

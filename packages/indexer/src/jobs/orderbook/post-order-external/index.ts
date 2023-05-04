@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import * as Sdk from "@reservoir0x/sdk";
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import * as crypto from "crypto";
@@ -6,19 +8,25 @@ import { logger } from "@/common/logger";
 import { rateLimitRedis, redis } from "@/common/redis";
 import { config } from "@/config/index";
 
+import * as BlurApi from "@/jobs/orderbook/post-order-external/api/blur";
 import * as OpenSeaApi from "@/jobs/orderbook/post-order-external/api/opensea";
 import * as LooksrareApi from "@/jobs/orderbook/post-order-external/api/looksrare";
 import * as X2Y2Api from "@/jobs/orderbook/post-order-external/api/x2y2";
 import * as UniverseApi from "@/jobs/orderbook/post-order-external/api/universe";
-import * as InfinityApi from "@/jobs/orderbook/post-order-external/api/infinity";
 import * as FlowApi from "@/jobs/orderbook/post-order-external/api/flow";
 
 import {
-  RequestWasThrottledError,
   InvalidRequestError,
+  InvalidRequestErrorKind,
+  RequestWasThrottledError,
 } from "@/jobs/orderbook/post-order-external/api/errors";
 import { redb } from "@/common/db";
 import { RateLimiterRedis, RateLimiterRes } from "rate-limiter-flexible";
+import * as crossPostingOrdersModel from "@/models/cross-posting-orders";
+import { CrossPostingOrderStatus } from "@/models/cross-posting-orders";
+import { TSTAttribute, TSTCollection, TSTCollectionNonFlagged } from "@/orderbook/token-sets/utils";
+import * as collectionUpdatesMetadata from "@/jobs/collection-updates/metadata-queue";
+import { fromBuffer, toBuffer } from "@/common/utils";
 
 const QUEUE_NAME = "orderbook-post-order-external-queue";
 const MAX_RETRIES = 5;
@@ -27,7 +35,7 @@ export const queue = new Queue(QUEUE_NAME, {
   connection: redis.duplicate(),
   defaultJobOptions: {
     removeOnComplete: 1000,
-    removeOnFail: 10000,
+    removeOnFail: 1000,
     timeout: 60000,
   },
 });
@@ -38,18 +46,23 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      const { orderId, orderData, orderbook, retry } = job.data as PostOrderExternalParams;
-      let orderbookApiKey = job.data.orderbookApiKey;
+      const { crossPostingOrderId, orderId, orderData, orderSchema, orderbook } =
+        job.data as PostOrderExternalParams;
 
-      if (![1, 4, 5].includes(config.chainId)) {
-        throw new Error("Unsupported network");
-      }
+      if (!["blur", "opensea", "looks-rare", "x2y2", "universe", "flow"].includes(orderbook)) {
+        if (crossPostingOrderId) {
+          await crossPostingOrdersModel.updateOrderStatus(
+            crossPostingOrderId,
+            CrossPostingOrderStatus.failed,
+            "Unsupported orderbook"
+          );
+        }
 
-      if (!["opensea", "looks-rare", "x2y2", "universe", "infinity", "flow"].includes(orderbook)) {
         throw new Error("Unsupported orderbook");
       }
 
-      orderbookApiKey = orderbookApiKey || getOrderbookDefaultApiKey(orderbook);
+      const orderbookApiKey = job.data.orderbookApiKey ?? getOrderbookDefaultApiKey(orderbook);
+      const retry = job.data.retry ?? 0;
 
       let isRateLimited = false;
       let rateLimitExpiration = 0;
@@ -68,101 +81,179 @@ if (config.doBackgroundWork) {
 
       if (isRateLimited) {
         // If limit reached, reschedule job based on the limit expiration.
-
-        logger.info(
+        logger.debug(
           QUEUE_NAME,
-          `Post Order Rate Limited. orderbook: ${orderbook}, orderId=${orderId}, orderData=${JSON.stringify(
+          `Post Order Rate Limited. orderbook=${orderbook}, crossPostingOrderId=${crossPostingOrderId}, orderId=${orderId}, orderData=${JSON.stringify(
             orderData
-          )}, rateLimitExpiration: ${rateLimitExpiration}, retry: ${retry}`
+          )}, rateLimitExpiration=${rateLimitExpiration}, retry=${retry}`
         );
 
-        await addToQueue(
-          orderId,
-          orderData,
-          orderbook,
-          orderbookApiKey,
-          retry,
-          rateLimitExpiration,
-          true
-        );
+        await addToQueue(job.data, rateLimitExpiration, true);
       } else {
         try {
-          await postOrder(orderbook, orderId, orderData, orderbookApiKey);
+          await postOrder(orderbook, orderId, orderData, orderbookApiKey, orderSchema);
 
-          logger.info(
-            QUEUE_NAME,
-            `Post Order Success. orderbook: ${orderbook}, orderId=${orderId}, orderData=${JSON.stringify(
-              orderData
-            )}, retry: ${retry}`
-          );
+          if (crossPostingOrderId) {
+            await crossPostingOrdersModel.updateOrderStatus(
+              crossPostingOrderId,
+              CrossPostingOrderStatus.posted
+            );
+          }
+
+          if (crossPostingOrderId) {
+            await crossPostingOrdersModel.updateOrderStatus(
+              crossPostingOrderId,
+              CrossPostingOrderStatus.posted
+            );
+          }
         } catch (error) {
           if (error instanceof RequestWasThrottledError) {
             // If we got throttled by the api, reschedule job based on the provided delay.
-            const delay = error.delay;
+            const delay = Math.max(error.delay, 5);
 
             try {
               await rateLimiter.block(rateLimiterKey, Math.floor(delay / 1000));
             } catch (error) {
               logger.error(
                 QUEUE_NAME,
-                `Unable to set expiration. orderbook: ${orderbook}, orderId=${orderId}, orderData=${JSON.stringify(
+                `Unable to set expiration. orderbook=${orderbook}, crossPostingOrderId=${crossPostingOrderId}, orderId=${orderId}, orderData=${JSON.stringify(
                   orderData
-                )}, retry: ${retry}, delay=${delay}, error: ${error}`
+                )}, retry=${retry}, delay=${delay}, error=${error}`
               );
             }
 
-            await addToQueue(orderId, orderData, orderbook, orderbookApiKey, retry, delay, true);
+            await addToQueue(job.data, delay, true);
 
-            logger.info(
+            logger.warn(
               QUEUE_NAME,
-              `Post Order Throttled. orderbook: ${orderbook}, orderId=${orderId}, orderData=${JSON.stringify(
+              `Post Order Throttled. orderbook=${orderbook}, orderbookApiKey=${orderbookApiKey}, crossPostingOrderId=${crossPostingOrderId}, orderId=${orderId}, orderData=${JSON.stringify(
                 orderData
-              )}, delay: ${delay}, retry: ${retry}`
+              )}, delay=${delay}, retry=${retry}`
             );
           } else if (error instanceof InvalidRequestError) {
             // If the order is invalid, fail the job.
-            logger.error(
+            logger.info(
               QUEUE_NAME,
-              `Post Order Failed - Invalid Order. orderbook: ${orderbook}, orderId=${orderId}, orderData=${JSON.stringify(
+              `Post Order Failed - Invalid Order. orderbook=${orderbook}, crossPostingOrderId=${crossPostingOrderId}, orderId=${orderId}, orderData=${JSON.stringify(
                 orderData
-              )}, retry: ${retry}, error: ${error}`
+              )}, retry=${retry}, error=${error}, errorKind=${error.kind}`
             );
 
-            throw new Error("Post Order Failed - Invalid Order");
+            if (crossPostingOrderId) {
+              await crossPostingOrdersModel.updateOrderStatus(
+                crossPostingOrderId,
+                CrossPostingOrderStatus.failed,
+                error.message
+              );
+            }
+
+            if (error.kind === InvalidRequestErrorKind.InvalidFees) {
+              // If fees are invalid, refresh the collection metadata to refresh the fees
+              const order = new Sdk.SeaportV14.Order(
+                config.chainId,
+                orderData as Sdk.SeaportBase.Types.OrderComponents
+              );
+
+              const orderInfo = order.getInfo();
+
+              logger.info(
+                QUEUE_NAME,
+                `Post Order Failed - Invalid Fees Debug. orderbook=${orderbook}, crossPostingOrderId=${crossPostingOrderId}, orderKind=${
+                  order.params.kind
+                }, contract=${orderInfo?.contract}, tokenId=${
+                  orderInfo?.tokenId
+                }, orderId=${orderId}, orderData=${JSON.stringify(orderData)}, retry: ${retry}`
+              );
+
+              let rawResult;
+
+              if (order.params.kind !== "single-token") {
+                rawResult = await redb.oneOrNone(
+                  `
+                SELECT
+                  tokens.contract,
+                  tokens.token_id,
+                  collections.royalties,
+                  collections.new_royalties,
+                  collections.community
+                FROM collections
+                JOIN tokens ON tokens.collection_id = collections.id
+                WHERE collections = $/collectionId/
+                LIMIT 1
+            `,
+                  {
+                    collectionId: orderSchema!.data.collection,
+                  }
+                );
+              } else if (orderInfo?.tokenId) {
+                rawResult = await redb.oneOrNone(
+                  `
+                SELECT
+                  tokens.contract,
+                  tokens.token_id,
+                  collections.royalties,
+                  collections.new_royalties,
+                  collections.community
+                FROM tokens
+                JOIN collections ON collections.id = tokens.collection_id
+                WHERE tokens.contract = $/contract/ AND tokens.token_id = $/tokenId/
+                LIMIT 1
+              `,
+                  { contract: toBuffer(orderInfo.contract), tokenId: orderInfo.tokenId }
+                );
+              }
+
+              if (rawResult) {
+                logger.info(
+                  QUEUE_NAME,
+                  `Post Order Failed - Invalid Fees - Refreshing. orderbook=${orderbook}, crossPostingOrderId=${crossPostingOrderId}, orderbookApiKey=${orderbookApiKey}, orderKind=${
+                    order.params.kind
+                  }, orderId=${orderId}, orderData=${JSON.stringify(
+                    orderData
+                  )}, rawResult=${JSON.stringify(rawResult)}, retry: ${retry}`
+                );
+
+                await collectionUpdatesMetadata.addToQueue(
+                  fromBuffer(rawResult.contract),
+                  rawResult.token_id,
+                  rawResult.community
+                );
+              }
+            }
           } else if (retry < MAX_RETRIES) {
             // If we got an unknown error from the api, reschedule job based on fixed delay.
             logger.info(
               QUEUE_NAME,
-              `Post Order Failed - Retrying. orderbook: ${orderbook}, orderId=${orderId}, orderData=${JSON.stringify(
+              `Post Order Failed - Retrying. orderbook=${orderbook}, crossPostingOrderId=${crossPostingOrderId}, orderId=${orderId}, orderData=${JSON.stringify(
                 orderData
               )}, retry: ${retry}`
             );
 
-            await addToQueue(
-              orderId,
-              orderData,
-              orderbook,
-              orderbookApiKey,
-              ++job.data.retry,
-              1000,
-              true
-            );
+            job.data.retry = retry + 1;
+
+            await addToQueue(job.data, 1000, true);
           } else {
-            logger.error(
+            logger.info(
               QUEUE_NAME,
-              `Post Order Failed - Max Retries Reached. orderbook: ${orderbook}, orderId=${orderId}, orderData=${JSON.stringify(
+              `Post Order Failed - Max Retries Reached. orderbook${orderbook}, crossPostingOrderId=${crossPostingOrderId}, orderId=${orderId}, orderData=${JSON.stringify(
                 orderData
-              )}, retry: ${retry}, error: ${error}`
+              )}, retry=${retry}, error=${error}`
             );
 
-            throw new Error("Post Order Failed - Max Retries Reached");
+            if (crossPostingOrderId) {
+              await crossPostingOrdersModel.updateOrderStatus(
+                crossPostingOrderId,
+                CrossPostingOrderStatus.failed,
+                (error as any).message
+              );
+            }
           }
         }
       }
     },
     {
       connection: redis.duplicate(),
-      concurrency: 10,
+      concurrency: 3,
     }
   );
 
@@ -173,6 +264,8 @@ if (config.doBackgroundWork) {
 
 const getOrderbookDefaultApiKey = (orderbook: string) => {
   switch (orderbook) {
+    case "blur":
+      return config.orderFetcherApiKey;
     case "opensea":
       return config.openSeaApiKey;
     case "looks-rare":
@@ -181,8 +274,6 @@ const getOrderbookDefaultApiKey = (orderbook: string) => {
       return config.x2y2ApiKey;
     case "universe":
       return "";
-    case "infinity":
-      return config.infinityApiKey;
     case "flow":
       return config.flowApiKey;
   }
@@ -192,41 +283,47 @@ const getOrderbookDefaultApiKey = (orderbook: string) => {
 
 const getRateLimiter = (orderbook: string) => {
   switch (orderbook) {
+    case "blur":
+      return new RateLimiterRedis({
+        storeClient: rateLimitRedis,
+        points: BlurApi.RATE_LIMIT_REQUEST_COUNT,
+        duration: BlurApi.RATE_LIMIT_INTERVAL,
+        keyPrefix: `${config.chainId}`,
+      });
     case "looks-rare":
       return new RateLimiterRedis({
         storeClient: rateLimitRedis,
         points: LooksrareApi.RATE_LIMIT_REQUEST_COUNT,
         duration: LooksrareApi.RATE_LIMIT_INTERVAL,
+        keyPrefix: `${config.chainId}`,
       });
     case "opensea":
       return new RateLimiterRedis({
         storeClient: rateLimitRedis,
         points: OpenSeaApi.RATE_LIMIT_REQUEST_COUNT,
         duration: OpenSeaApi.RATE_LIMIT_INTERVAL,
+        keyPrefix: `${config.chainId}`,
       });
     case "x2y2":
       return new RateLimiterRedis({
         storeClient: rateLimitRedis,
         points: X2Y2Api.RATE_LIMIT_REQUEST_COUNT,
         duration: X2Y2Api.RATE_LIMIT_INTERVAL,
+        keyPrefix: `${config.chainId}`,
       });
     case "universe":
       return new RateLimiterRedis({
         storeClient: rateLimitRedis,
         points: UniverseApi.RATE_LIMIT_REQUEST_COUNT,
         duration: UniverseApi.RATE_LIMIT_INTERVAL,
-      });
-    case "infinity":
-      return new RateLimiterRedis({
-        storeClient: rateLimitRedis,
-        points: InfinityApi.RATE_LIMIT_REQUEST_COUNT,
-        duration: InfinityApi.RATE_LIMIT_INTERVAL,
+        keyPrefix: `${config.chainId}`,
       });
     case "flow":
       return new RateLimiterRedis({
         storeClient: rateLimitRedis,
         points: FlowApi.RATE_LIMIT_REQUEST_COUNT,
         duration: FlowApi.RATE_LIMIT_INTERVAL,
+        keyPrefix: `${config.chainId}`,
       });
   }
 
@@ -235,43 +332,32 @@ const getRateLimiter = (orderbook: string) => {
 
 const postOrder = async (
   orderbook: string,
-  orderId: string,
+  orderId: string | null,
   orderData: PostOrderExternalParams["orderData"],
-  orderbookApiKey: string
+  orderbookApiKey: string,
+  orderSchema?: TSTCollection | TSTCollectionNonFlagged | TSTAttribute
 ) => {
   switch (orderbook) {
     case "opensea": {
-      const order = new Sdk.Seaport.Order(
+      const order = new Sdk.SeaportV14.Order(
         config.chainId,
-        orderData as Sdk.Seaport.Types.OrderComponents
-      );
-
-      logger.info(
-        QUEUE_NAME,
-        `Post Order Seaport. orderbook: ${orderbook}, orderId=${orderId}, orderData=${JSON.stringify(
-          orderData
-        )}, side=${order.getInfo()?.side}, kind=${order.params.kind}`
+        orderData as Sdk.SeaportBase.Types.OrderComponents
       );
 
       if (
         order.getInfo()?.side === "buy" &&
-        ["contract-wide", "token-list"].includes(order.params.kind!)
+        orderSchema &&
+        ["collection", "collection-non-flagged", "attribute"].includes(orderSchema.kind)
       ) {
         const { collectionSlug } = await redb.oneOrNone(
           `
                 SELECT c.slug AS "collectionSlug"
-                FROM orders o
-                JOIN token_sets ts
-                  ON o.token_set_id = ts.id
-                JOIN collections c   
-                  ON c.id = ts.collection_id  
-                WHERE o.id = $/orderId/
-                AND ts.collection_id IS NOT NULL
-                AND ts.attribute_id IS NULL
+                FROM collections c
+                WHERE c.id = $/collectionId/
                 LIMIT 1
             `,
           {
-            orderId: orderId,
+            collectionId: orderSchema!.data.collection,
           }
         );
 
@@ -279,16 +365,25 @@ const postOrder = async (
           throw new Error("Invalid collection offer.");
         }
 
-        return OpenSeaApi.postCollectionOffer(order, collectionSlug, orderbookApiKey);
+        if (orderSchema.kind === "attribute") {
+          return OpenSeaApi.postTraitOffer(
+            order,
+            collectionSlug,
+            orderSchema.data.attributes[0],
+            orderbookApiKey
+          );
+        } else {
+          return OpenSeaApi.postCollectionOffer(order, collectionSlug, orderbookApiKey);
+        }
       }
 
       return OpenSeaApi.postOrder(order, orderbookApiKey);
     }
 
     case "looks-rare": {
-      const order = new Sdk.LooksRare.Order(
+      const order = new Sdk.LooksRareV2.Order(
         config.chainId,
-        orderData as Sdk.LooksRare.Types.MakerOrderParams
+        orderData as Sdk.LooksRareV2.Types.MakerOrderParams
       );
       return LooksrareApi.postOrder(order, orderbookApiKey);
     }
@@ -302,17 +397,13 @@ const postOrder = async (
       return X2Y2Api.postOrder(orderData as Sdk.X2Y2.Types.LocalOrder, orderbookApiKey);
     }
 
-    case "infinity": {
-      const order = new Sdk.Infinity.Order(
-        config.chainId,
-        orderData as Sdk.Infinity.Types.OrderInput
-      );
-      return InfinityApi.postOrders(order, orderbookApiKey);
-    }
-
     case "flow": {
       const order = new Sdk.Flow.Order(config.chainId, orderData as Sdk.Flow.Types.OrderInput);
       return FlowApi.postOrders(order, orderbookApiKey);
+    }
+
+    case "blur": {
+      return BlurApi.postOrder(orderData as BlurApi.BlurData);
     }
   }
 
@@ -321,66 +412,67 @@ const postOrder = async (
 
 export type PostOrderExternalParams =
   | {
+      crossPostingOrderId?: number;
       orderId: string;
-      orderData: Sdk.Seaport.Types.OrderComponents;
+      orderData: Sdk.SeaportBase.Types.OrderComponents;
+      orderSchema?: TSTCollection | TSTCollectionNonFlagged | TSTAttribute;
       orderbook: "opensea";
-      orderbookApiKey: string;
-      retry: number;
+      orderbookApiKey?: string | null;
+      retry?: number;
     }
   | {
+      crossPostingOrderId: number;
       orderId: string;
-      orderData: Sdk.LooksRare.Types.MakerOrderParams;
+      orderData: Sdk.LooksRareV2.Types.MakerOrderParams;
+      orderSchema?: TSTCollection | TSTCollectionNonFlagged | TSTAttribute;
       orderbook: "looks-rare";
-      orderbookApiKey: string;
-      retry: number;
+      orderbookApiKey?: string | null;
+      retry?: number;
     }
   | {
-      orderId: string;
+      crossPostingOrderId: number;
+      orderId: string | null;
       orderData: Sdk.X2Y2.Types.LocalOrder;
+      orderSchema?: TSTCollection | TSTCollectionNonFlagged | TSTAttribute;
       orderbook: "x2y2";
-      orderbookApiKey: string;
-      retry: number;
+      orderbookApiKey?: string | null;
+      retry?: number;
     }
   | {
+      crossPostingOrderId: number;
       orderId: string;
       orderData: Sdk.Universe.Types.Order;
+      orderSchema?: TSTCollection | TSTCollectionNonFlagged | TSTAttribute;
       orderbook: "universe";
-      retry: number;
+      orderbookApiKey?: string | null;
+      retry?: number;
     }
   | {
-      orderId: string;
-      orderData: Sdk.Infinity.Types.OrderInput;
-      orderbook: "infinity";
-      retry: number;
-    }
-  | {
+      crossPostingOrderId: number;
       orderId: string;
       orderData: Sdk.Flow.Types.OrderInput;
+      orderSchema?: TSTCollection | TSTCollectionNonFlagged | TSTAttribute;
       orderbook: "flow";
-      retry: number;
+      orderbookApiKey?: string | null;
+      retry?: number;
+    }
+  | {
+      crossPostingOrderId: number;
+      orderId: string;
+      orderData: BlurApi.BlurData;
+      orderSchema?: TSTCollection | TSTCollectionNonFlagged | TSTAttribute;
+      orderbook: "blur";
+      orderbookApiKey?: string | null;
+      retry?: number;
     };
 
 export const addToQueue = async (
-  orderId: string | null,
-  orderData: PostOrderExternalParams["orderData"],
-  orderbook: string,
-  orderbookApiKey: string | null,
-  retry = 0,
+  postOrderExternalParams: PostOrderExternalParams,
   delay = 0,
   prioritized = false
 ) => {
-  await queue.add(
-    crypto.randomUUID(),
-    {
-      orderId,
-      orderData,
-      orderbook,
-      orderbookApiKey,
-      retry,
-    },
-    {
-      delay,
-      priority: prioritized ? 1 : undefined,
-    }
-  );
+  await queue.add(crypto.randomUUID(), postOrderExternalParams, {
+    delay,
+    priority: prioritized ? 1 : undefined,
+  });
 };

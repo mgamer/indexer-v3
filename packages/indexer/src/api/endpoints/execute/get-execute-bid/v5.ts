@@ -1,30 +1,43 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { BigNumber } from "@ethersproject/bignumber";
+import { _TypedDataEncoder } from "@ethersproject/hash";
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
 import { TxData } from "@reservoir0x/sdk/dist/utils";
+import axios from "axios";
 import Joi from "joi";
 import _ from "lodash";
 
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
-import { bn, regex } from "@/common/utils";
+import { bn, now, regex } from "@/common/utils";
 import { config } from "@/config/index";
+import * as b from "@/utils/auth/blur";
+import { ExecutionsBuffer } from "@/utils/executions";
+
+// Blur
+import * as blurBuyCollection from "@/orderbook/orders/blur/build/buy/collection";
 
 // LooksRare
-import * as looksRareBuyToken from "@/orderbook/orders/looks-rare/build/buy/token";
-import * as looksRareBuyCollection from "@/orderbook/orders/looks-rare/build/buy/collection";
+import * as looksRareV2BuyToken from "@/orderbook/orders/looks-rare-v2/build/buy/token";
+import * as looksRareV2BuyCollection from "@/orderbook/orders/looks-rare-v2/build/buy/collection";
 
 // Seaport
-import * as seaportBuyAttribute from "@/orderbook/orders/seaport/build/buy/attribute";
-import * as seaportBuyToken from "@/orderbook/orders/seaport/build/buy/token";
-import * as seaportBuyCollection from "@/orderbook/orders/seaport/build/buy/collection";
+import * as seaportBuyAttribute from "@/orderbook/orders/seaport-v1.1/build/buy/attribute";
+import * as seaportBuyToken from "@/orderbook/orders/seaport-v1.1/build/buy/token";
+import * as seaportBuyCollection from "@/orderbook/orders/seaport-v1.1/build/buy/collection";
 
 // Seaport v1.4
 import * as seaportV14BuyAttribute from "@/orderbook/orders/seaport-v1.4/build/buy/attribute";
 import * as seaportV14BuyToken from "@/orderbook/orders/seaport-v1.4/build/buy/token";
 import * as seaportV14BuyCollection from "@/orderbook/orders/seaport-v1.4/build/buy/collection";
+
+// Alienswap
+import * as alienswapBuyAttribute from "@/orderbook/orders/alienswap/build/buy/attribute";
+import * as alienswapBuyToken from "@/orderbook/orders/alienswap/build/buy/token";
+import * as alienswapBuyCollection from "@/orderbook/orders/alienswap/build/buy/collection";
 
 // X2Y2
 import * as x2y2BuyCollection from "@/orderbook/orders/x2y2/build/buy/collection";
@@ -38,10 +51,6 @@ import * as zeroExV4BuyCollection from "@/orderbook/orders/zeroex-v4/build/buy/c
 // Universe
 import * as universeBuyToken from "@/orderbook/orders/universe/build/buy/token";
 
-// Infinity
-import * as infinityBuyToken from "@/orderbook/orders/infinity/build/buy/token";
-import * as infinityBuyCollection from "@/orderbook/orders/infinity/build/buy/collection";
-
 // Flow
 import * as flowBuyToken from "@/orderbook/orders/flow/build/buy/token";
 import * as flowBuyCollection from "@/orderbook/orders/flow/build/buy/collection";
@@ -50,9 +59,10 @@ const version = "v5";
 
 export const getExecuteBidV5Options: RouteOptions = {
   description: "Create bids (offers)",
-  notes: "Generate bids and submit them to multiple marketplaces",
+  notes:
+    "Generate bids and submit them to multiple marketplaces. Please use the `/cross-posting-orders/v1` to check the status on cross posted bids.\n We recommend using Reservoir SDK as it abstracts the process of iterating through steps, and returning callbacks that can be used to update your UI.",
   timeout: { server: 60000 },
-  tags: ["api", "x-experimental"],
+  tags: ["api", "Create Orders (list & bid)"],
   plugins: {
     "hapi-swagger": {
       order: 11,
@@ -81,17 +91,19 @@ export const getExecuteBidV5Options: RouteOptions = {
             .description(
               "Bid on a particular token. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
             ),
-          tokenSetId: Joi.string().lowercase().description("Bid on a particular token set."),
+          tokenSetId: Joi.string().description(
+            "Bid on a particular token set. Example: `token:CONTRACT:TOKEN_ID` representing a single token within contract, `contract:CONTRACT` representing a whole contract, `range:CONTRACT:START_TOKEN_ID:END_TOKEN_ID` representing a continuous token id range within a contract and `list:CONTRACT:TOKEN_IDS_HASH` representing a list of token ids within a contract."
+          ),
           collection: Joi.string()
             .lowercase()
             .description(
               "Bid on a particular collection with collection-id. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
             ),
           attributeKey: Joi.string().description(
-            "Bid on a particular attribute key. Example: `Composition`"
+            "Bid on a particular attribute key. This is case sensitive. Example: `Composition`"
           ),
           attributeValue: Joi.string().description(
-            "Bid on a particular attribute value. Example: `Teddy (#33)`"
+            "Bid on a particular attribute value. This is case sensitive. Example: `Teddy (#33)`"
           ),
           quantity: Joi.number().description(
             "Quantity of tokens user is buying. Only compatible with ERC1155 tokens. Example: `5`"
@@ -102,19 +114,22 @@ export const getExecuteBidV5Options: RouteOptions = {
             .required(),
           orderKind: Joi.string()
             .valid(
+              "blur",
               "zeroex-v4",
               "seaport",
               "seaport-v1.4",
               "looks-rare",
+              "looks-rare-v2",
               "x2y2",
               "universe",
-              "infinity",
-              "flow"
+              "flow",
+              "alienswap"
             )
             .default("seaport-v1.4")
-            .description("Exchange protocol used to create order. Example: `seaport`"),
+            .description("Exchange protocol used to create order. Example: `seaport-v1.4`"),
           options: Joi.object({
             "seaport-v1.4": Joi.object({
+              conduitKey: Joi.string().pattern(regex.bytes32),
               useOffChainCancellation: Joi.boolean().required(),
               replaceOrderId: Joi.string().when("useOffChainCancellation", {
                 is: true,
@@ -124,20 +139,20 @@ export const getExecuteBidV5Options: RouteOptions = {
             }),
           }).description("Additional options."),
           orderbook: Joi.string()
-            .valid("reservoir", "opensea", "looks-rare", "x2y2", "universe", "infinity", "flow")
+            .valid("blur", "reservoir", "opensea", "looks-rare", "x2y2", "universe", "flow")
             .default("reservoir")
             .description("Orderbook where order is placed. Example: `Reservoir`"),
           orderbookApiKey: Joi.string().description("Optional API key for the target orderbook"),
           automatedRoyalties: Joi.boolean()
             .default(true)
-            .description("If true, royalties will be automatically included."),
+            .description("If true, royalty amounts and recipients will be set automatically."),
           royaltyBps: Joi.number().description(
-            "The royalty percentage to pay. Only relevant when using automated royalties."
+            "Set a maximum amount of royalties to pay, rather than the full amount. Only relevant when using automated royalties. 1 BPS = 0.01% Note: OpenSea does not support values below 50 bps."
           ),
           fees: Joi.array()
             .items(Joi.string().pattern(regex.fee))
             .description(
-              "List of fees (formatted as `feeRecipient:feeBps`) to be bundled within the order. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00:100`"
+              "List of fees (formatted as `feeRecipient:feeBps`) to be bundled within the order. 1 BPS = 0.01% Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00:100`"
             ),
           excludeFlaggedTokens: Joi.boolean()
             .default(false)
@@ -180,6 +195,7 @@ export const getExecuteBidV5Options: RouteOptions = {
             .items(
               Joi.object({
                 status: Joi.string().valid("complete", "incomplete").required(),
+                tip: Joi.string(),
                 data: Joi.object(),
                 orderIndexes: Joi.array().items(Joi.number()),
               })
@@ -201,6 +217,16 @@ export const getExecuteBidV5Options: RouteOptions = {
   },
   handler: async (request: Request) => {
     const payload = request.payload as any;
+
+    const executionsBuffer = new ExecutionsBuffer();
+    const addExecution = (orderId: string, quantity?: number) =>
+      executionsBuffer.addFromRequest(request, {
+        side: "buy",
+        action: "create",
+        user: payload.maker,
+        orderId,
+        quantity: quantity ?? 1,
+      });
 
     try {
       const maker = payload.maker as string;
@@ -228,38 +254,36 @@ export const getExecuteBidV5Options: RouteOptions = {
         nonce?: string;
       }[];
 
-      // TODO: This shouldn't be here
-      let currency = "ETH";
-      let wrappedCurrency = "WETH";
-      switch (config.chainId) {
-        case 137:
-          currency = "MATIC";
-          wrappedCurrency = "WMATIC";
-          break;
-      }
-
       // Set up generic bid steps
-      const steps: {
+      let steps: {
         id: string;
         action: string;
         description: string;
         kind: string;
         items: {
           status: string;
+          tip?: string;
           data?: any;
           orderIndexes?: number[];
         }[];
       }[] = [
         {
+          id: "auth",
+          action: "Sign auth challenge",
+          description: "Before being able to list, it might be needed to sign an auth challenge",
+          kind: "signature",
+          items: [],
+        },
+        {
           id: "currency-wrapping",
-          action: `Wrapping ${currency}`,
-          description: `We'll ask your approval for converting ${currency} to ${wrappedCurrency}. Gas fee required.`,
+          action: `Wrapping currency`,
+          description: `We'll ask your approval to wrap the currency for bidding. Gas fee required.`,
           kind: "transaction",
           items: [],
         },
         {
           id: "currency-approval",
-          action: `Approve ${wrappedCurrency} contract`,
+          action: "Approve currency",
           description:
             "We'll ask your approval for the exchange to access your token. This is a one-time only operation per exchange.",
           kind: "transaction",
@@ -279,7 +303,25 @@ export const getExecuteBidV5Options: RouteOptions = {
         "seaport-v1.4": [] as {
           order: {
             kind: "seaport-v1.4";
-            data: Sdk.SeaportV14.Types.OrderComponents;
+            data: Sdk.SeaportBase.Types.OrderComponents;
+          };
+          tokenSetId?: string;
+          attribute?: {
+            collection: string;
+            key: string;
+            value: string;
+          };
+          collection?: string;
+          isNonFlagged?: boolean;
+          orderbook: string;
+          orderbookApiKey?: string;
+          source?: string;
+          orderIndex: number;
+        }[],
+        alienswap: [] as {
+          order: {
+            kind: "alienswap";
+            data: Sdk.SeaportBase.Types.OrderComponents;
           };
           tokenSetId?: string;
           attribute?: {
@@ -296,6 +338,64 @@ export const getExecuteBidV5Options: RouteOptions = {
         }[],
       };
 
+      // Handle Blur authentication
+      let blurAuth: b.Auth | undefined;
+      if (params.some((p) => p.orderKind === "blur")) {
+        const blurAuthId = b.getAuthId(maker);
+
+        blurAuth = await b.getAuth(blurAuthId);
+        if (!blurAuth) {
+          const blurAuthChallengeId = b.getAuthChallengeId(maker);
+
+          let blurAuthChallenge = await b.getAuthChallenge(blurAuthChallengeId);
+          if (!blurAuthChallenge) {
+            blurAuthChallenge = (await axios
+              .get(`${config.orderFetcherBaseUrl}/api/blur-auth-challenge?taker=${maker}`)
+              .then((response) => response.data.authChallenge)) as b.AuthChallenge;
+
+            await b.saveAuthChallenge(
+              blurAuthChallengeId,
+              blurAuthChallenge,
+              // Give a 1 minute buffer for the auth challenge to expire
+              Math.floor(new Date(blurAuthChallenge?.expiresOn).getTime() / 1000) - now() - 60
+            );
+          }
+
+          steps[0].items.push({
+            status: "incomplete",
+            data: {
+              sign: {
+                signatureKind: "eip191",
+                message: blurAuthChallenge.message,
+              },
+              post: {
+                endpoint: "/execute/auth-signature/v1",
+                method: "POST",
+                body: {
+                  kind: "blur",
+                  id: blurAuthChallengeId,
+                },
+              },
+            },
+          });
+
+          // Force the client to poll
+          steps[1].items.push({
+            status: "incomplete",
+            tip: "This step is dependent on a previous step. Once you've completed it, re-call the API to get the data for this step.",
+          });
+
+          // Return an early since any next steps are dependent on the Blur auth
+          return {
+            steps,
+          };
+        } else {
+          steps[0].items.push({
+            status: "complete",
+          });
+        }
+      }
+
       const errors: { message: string; orderIndex: number }[] = [];
       await Promise.all(
         params.map(async (params, i) => {
@@ -304,6 +404,15 @@ export const getExecuteBidV5Options: RouteOptions = {
           const tokenSetId = params.tokenSetId;
           const attributeKey = params.attributeKey;
           const attributeValue = params.attributeValue;
+
+          // Force usage of seaport-v1.4
+          if (params.orderKind === "seaport") {
+            params.orderKind = "seaport-v1.4";
+          }
+          // Force usage of looks-rare-v2
+          if (params.orderKind === "looks-rare") {
+            params.orderKind = "looks-rare-v2";
+          }
 
           // Only single-contract token sets are biddable
           if (tokenSetId && tokenSetId.startsWith("list") && tokenSetId.split(":").length !== 3) {
@@ -314,7 +423,7 @@ export const getExecuteBidV5Options: RouteOptions = {
           }
 
           // TODO: Fix cross-posting collection bids to LooksRare and X2Y2
-          if (!token && !["reservoir", "opensea"].includes(params.orderbook)) {
+          if (!token && !["blur", "reservoir", "opensea"].includes(params.orderbook)) {
             return errors.push({
               message: `Only single-token bids are supported on orderbook ${params.orderbook}`,
               orderIndex: i,
@@ -333,27 +442,43 @@ export const getExecuteBidV5Options: RouteOptions = {
           }
 
           try {
+            const WETH = Sdk.Common.Addresses.Weth[config.chainId];
+            const BETH = Sdk.Blur.Addresses.Beth[config.chainId];
+
+            // Default currency for Blur is BETH
+            if (params.orderKind === "blur" && params.currency === WETH) {
+              params.currency = BETH;
+            }
+
+            // Check currency
+            if (params.orderKind === "blur" && params.currency !== BETH) {
+              return errors.push({ message: "Unsupported currency", orderIndex: i });
+            } else if (params.orderKind !== "blur" && params.currency === BETH) {
+              return errors.push({ message: "Unsupported currency", orderIndex: i });
+            }
+
+            const totalPrice = bn(params.weiPrice).mul(params.quantity ?? 1);
+
             // Check the maker's balance
+
             const currency = new Sdk.Common.Helpers.Erc20(baseProvider, params.currency);
             const currencyBalance = await currency.getBalance(maker);
-            if (bn(currencyBalance).lt(params.weiPrice)) {
-              if (params.currency === Sdk.Common.Addresses.Weth[config.chainId]) {
+            if (bn(currencyBalance).lt(totalPrice)) {
+              if ([WETH, BETH].includes(params.currency)) {
                 const ethBalance = await baseProvider.getBalance(maker);
-                if (bn(currencyBalance).add(ethBalance).lt(params.weiPrice)) {
+                if (bn(currencyBalance).add(ethBalance).lt(totalPrice)) {
                   return errors.push({
                     message: "Maker does not have sufficient balance",
                     orderIndex: i,
                   });
                 } else {
                   const weth = new Sdk.Common.Helpers.Weth(baseProvider, config.chainId);
-                  const wrapTx = weth.depositTransaction(
-                    maker,
-                    bn(params.weiPrice).sub(currencyBalance)
-                  );
+                  const wrapTx = weth.depositTransaction(maker, totalPrice.sub(currencyBalance));
 
-                  steps[0].items.push({
+                  steps[1].items.push({
                     status: "incomplete",
-                    data: wrapTx,
+                    data:
+                      params.currency === BETH ? { ...wrapTx, to: BETH } : { ...wrapTx, to: WETH },
                     orderIndexes: [i],
                   });
                 }
@@ -377,15 +502,98 @@ export const getExecuteBidV5Options: RouteOptions = {
               collectionId && !attributeKey && !attributeValue ? collectionId : undefined;
 
             switch (params.orderKind) {
+              case "blur": {
+                if (!["blur"].includes(params.orderbook)) {
+                  return errors.push({ message: "Unsupported orderbook", orderIndex: i });
+                }
+                if (params.fees?.length) {
+                  return errors.push({
+                    message: "Custom fees not supported",
+                    orderIndex: i,
+                  });
+                }
+
+                if (!collection) {
+                  return errors.push({
+                    message: "Only collection bids are supported",
+                    orderIndex: i,
+                  });
+                }
+
+                // TODO: Return an error if the collection is not supported by Blur
+
+                const needsBethWrapping = steps[1].items.find(
+                  (i) => i.status === "incomplete" && i.data?.to === BETH
+                );
+                if (needsBethWrapping) {
+                  // Force the client to poll
+                  // (since Blur won't release the calldata unless you have enough BETH in your wallet)
+                  steps[3].items.push({
+                    status: "incomplete",
+                  });
+                } else {
+                  const { signData, marketplaceData } = await blurBuyCollection.build({
+                    ...params,
+                    maker,
+                    contract: collection,
+                    authToken: blurAuth!.accessToken,
+                  });
+
+                  steps[3].items.push({
+                    status: "incomplete",
+                    data: {
+                      sign: {
+                        signatureKind: "eip712",
+                        domain: signData.domain,
+                        types: signData.types,
+                        value: signData.value,
+                        primaryType: _TypedDataEncoder.getPrimaryType(signData.types),
+                      },
+                      post: {
+                        endpoint: "/order/v4",
+                        method: "POST",
+                        body: {
+                          items: [
+                            {
+                              order: {
+                                kind: "blur",
+                                data: {
+                                  maker,
+                                  marketplaceData,
+                                  authToken: blurAuth!.accessToken,
+                                  isCollectionBid: true,
+                                },
+                              },
+                              collection,
+                              orderbook: params.orderbook,
+                              orderbookApiKey: params.orderbookApiKey,
+                            },
+                          ],
+                          source,
+                        },
+                      },
+                    },
+                    orderIndexes: [i],
+                  });
+
+                  addExecution(
+                    new Sdk.Blur.Order(config.chainId, signData.value).hash(),
+                    params.quantity
+                  );
+                }
+
+                break;
+              }
+
               case "seaport": {
-                if (!["reservoir", "opensea"].includes(params.orderbook)) {
+                if (!["reservoir"].includes(params.orderbook)) {
                   return errors.push({
                     message: "Unsupported orderbook",
                     orderIndex: i,
                   });
                 }
 
-                let order: Sdk.Seaport.Order;
+                let order: Sdk.SeaportV11.Order;
                 if (token) {
                   const [contract, tokenId] = token.split(":");
                   order = await seaportBuyToken.build({
@@ -428,7 +636,7 @@ export const getExecuteBidV5Options: RouteOptions = {
                   });
                 }
 
-                const exchange = new Sdk.Seaport.Exchange(config.chainId);
+                const exchange = new Sdk.SeaportV11.Exchange(config.chainId);
                 const conduit = exchange.deriveConduit(order.params.conduitKey);
 
                 // Check the maker's approval
@@ -438,12 +646,12 @@ export const getExecuteBidV5Options: RouteOptions = {
                   approvalTx = currency.approveTransaction(maker, conduit);
                 }
 
-                steps[1].items.push({
+                steps[2].items.push({
                   status: !approvalTx ? "complete" : "incomplete",
                   data: approvalTx,
                   orderIndexes: [i],
                 });
-                steps[2].items.push({
+                steps[3].items.push({
                   status: "incomplete",
                   data: {
                     sign: order.getSignatureData(),
@@ -470,6 +678,8 @@ export const getExecuteBidV5Options: RouteOptions = {
                   orderIndexes: [i],
                 });
 
+                addExecution(order.hash(), params.quantity);
+
                 break;
               }
 
@@ -481,8 +691,20 @@ export const getExecuteBidV5Options: RouteOptions = {
                   });
                 }
 
+                // OpenSea expects a royalty of at least 0.5%
+                if (
+                  params.orderbook === "opensea" &&
+                  params.royaltyBps !== undefined &&
+                  Number(params.royaltyBps) < 50
+                ) {
+                  throw Boom.badRequest(
+                    "Royalties should be at least 0.5% when posting to OpenSea"
+                  );
+                }
+
                 const options = params.options?.[params.orderKind] as
                   | {
+                      conduitKey?: string;
                       useOffChainCancellation?: boolean;
                       replaceOrderId?: string;
                     }
@@ -545,7 +767,7 @@ export const getExecuteBidV5Options: RouteOptions = {
                   approvalTx = currency.approveTransaction(maker, conduit);
                 }
 
-                steps[1].items.push({
+                steps[2].items.push({
                   status: !approvalTx ? "complete" : "incomplete",
                   data: approvalTx,
                   orderIndexes: [i],
@@ -567,6 +789,108 @@ export const getExecuteBidV5Options: RouteOptions = {
                   source,
                   orderIndex: i,
                 });
+
+                addExecution(order.hash(), params.quantity);
+
+                break;
+              }
+
+              case "alienswap": {
+                if (!["reservoir"].includes(params.orderbook)) {
+                  return errors.push({
+                    message: "Unsupported orderbook",
+                    orderIndex: i,
+                  });
+                }
+
+                const options = params.options?.[params.orderKind] as
+                  | {
+                      useOffChainCancellation?: boolean;
+                      replaceOrderId?: string;
+                    }
+                  | undefined;
+
+                let order: Sdk.Alienswap.Order;
+                if (token) {
+                  const [contract, tokenId] = token.split(":");
+                  order = await alienswapBuyToken.build({
+                    ...params,
+                    ...options,
+                    orderbook: params.orderbook as "reservoir",
+                    maker,
+                    contract,
+                    tokenId,
+                    source,
+                  });
+                } else if (tokenSetId) {
+                  order = await alienswapBuyAttribute.build({
+                    ...params,
+                    ...options,
+                    orderbook: params.orderbook as "reservoir",
+                    maker,
+                    source,
+                  });
+                } else if (attribute) {
+                  order = await alienswapBuyAttribute.build({
+                    ...params,
+                    ...options,
+                    orderbook: params.orderbook as "reservoir",
+                    maker,
+                    collection: attribute.collection,
+                    attributes: [attribute],
+                    source,
+                  });
+                } else if (collection) {
+                  order = await alienswapBuyCollection.build({
+                    ...params,
+                    ...options,
+                    orderbook: params.orderbook as "reservoir",
+                    maker,
+                    collection,
+                    source,
+                  });
+                } else {
+                  return errors.push({
+                    message:
+                      "Only token, token-set-id, attribute and collection bids are supported",
+                    orderIndex: i,
+                  });
+                }
+
+                const exchange = new Sdk.Alienswap.Exchange(config.chainId);
+                const conduit = exchange.deriveConduit(order.params.conduitKey);
+
+                // Check the maker's approval
+                let approvalTx: TxData | undefined;
+                const currencyApproval = await currency.getAllowance(maker, conduit);
+                if (bn(currencyApproval).lt(order.getMatchingPrice())) {
+                  approvalTx = currency.approveTransaction(maker, conduit);
+                }
+
+                steps[2].items.push({
+                  status: !approvalTx ? "complete" : "incomplete",
+                  data: approvalTx,
+                  orderIndexes: [i],
+                });
+
+                bulkOrders["alienswap"].push({
+                  order: {
+                    kind: params.orderKind,
+                    data: {
+                      ...order.params,
+                    },
+                  },
+                  tokenSetId,
+                  attribute,
+                  collection,
+                  isNonFlagged: params.excludeFlaggedTokens,
+                  orderbook: params.orderbook,
+                  orderbookApiKey: params.orderbookApiKey,
+                  source,
+                  orderIndex: i,
+                });
+
+                addExecution(order.hash(), params.quantity);
 
                 break;
               }
@@ -633,12 +957,12 @@ export const getExecuteBidV5Options: RouteOptions = {
                   );
                 }
 
-                steps[1].items.push({
+                steps[2].items.push({
                   status: !approvalTx ? "complete" : "incomplete",
                   data: approvalTx,
                   orderIndexes: [i],
                 });
-                steps[2].items.push({
+                steps[3].items.push({
                   status: "incomplete",
                   data: {
                     sign: order.getSignatureData(),
@@ -665,10 +989,12 @@ export const getExecuteBidV5Options: RouteOptions = {
                   orderIndexes: [i],
                 });
 
+                addExecution(order.hash(), params.quantity);
+
                 break;
               }
 
-              case "looks-rare": {
+              case "looks-rare-v2": {
                 if (!["reservoir", "looks-rare"].includes(params.orderbook)) {
                   return errors.push({
                     message: "Unsupported orderbook",
@@ -688,17 +1014,17 @@ export const getExecuteBidV5Options: RouteOptions = {
                   });
                 }
 
-                let order: Sdk.LooksRare.Order;
+                let order: Sdk.LooksRareV2.Order;
                 if (token) {
                   const [contract, tokenId] = token.split(":");
-                  order = await looksRareBuyToken.build({
+                  order = await looksRareV2BuyToken.build({
                     ...params,
                     maker,
                     contract,
                     tokenId,
                   });
                 } else if (collection) {
-                  order = await looksRareBuyCollection.build({
+                  order = await looksRareV2BuyCollection.build({
                     ...params,
                     maker,
                     collection,
@@ -714,21 +1040,21 @@ export const getExecuteBidV5Options: RouteOptions = {
                 let approvalTx: TxData | undefined;
                 const wethApproval = await currency.getAllowance(
                   maker,
-                  Sdk.LooksRare.Addresses.Exchange[config.chainId]
+                  Sdk.LooksRareV2.Addresses.Exchange[config.chainId]
                 );
                 if (bn(wethApproval).lt(bn(order.params.price))) {
                   approvalTx = currency.approveTransaction(
                     maker,
-                    Sdk.LooksRare.Addresses.Exchange[config.chainId]
+                    Sdk.LooksRareV2.Addresses.Exchange[config.chainId]
                   );
                 }
 
-                steps[1].items.push({
+                steps[2].items.push({
                   status: !approvalTx ? "complete" : "incomplete",
                   data: approvalTx,
                   orderIndexes: [i],
                 });
-                steps[2].items.push({
+                steps[3].items.push({
                   status: "incomplete",
                   data: {
                     sign: order.getSignatureData(),
@@ -737,7 +1063,7 @@ export const getExecuteBidV5Options: RouteOptions = {
                       method: "POST",
                       body: {
                         order: {
-                          kind: "looks-rare",
+                          kind: "looks-rare-v2",
                           data: {
                             ...order.params,
                           },
@@ -753,104 +1079,13 @@ export const getExecuteBidV5Options: RouteOptions = {
                   orderIndexes: [i],
                 });
 
-                break;
-              }
-
-              case "infinity": {
-                if (!["infinity"].includes(params.orderbook)) {
-                  return errors.push({
-                    message: "Unsupported orderbook",
-                    orderIndex: i,
-                  });
-                }
-
-                if (params.fees?.length) {
-                  return errors.push({
-                    message: "Custom fees not supported",
-                    orderIndex: i,
-                  });
-                }
-                if (params.excludeFlaggedTokens) {
-                  return errors.push({
-                    message: "Flagged tokens exclusion not supported",
-                    orderIndex: i,
-                  });
-                }
-
-                let order: Sdk.Infinity.Order;
-                if (token) {
-                  const [contract, tokenId] = token.split(":");
-                  order = await infinityBuyToken.build({
-                    ...params,
-                    orderbook: "infinity",
-                    maker,
-                    contract,
-                    tokenId,
-                  });
-                } else if (collection) {
-                  order = await infinityBuyCollection.build({
-                    ...params,
-                    orderbook: "infinity",
-                    maker,
-                    contract: collection,
-                  });
-                } else {
-                  return errors.push({
-                    message: "Only token and collection bids are supported",
-                    orderIndex: i,
-                  });
-                }
-
-                let approvalTx: TxData | undefined;
-                const wethApproval = await currency.getAllowance(
-                  maker,
-                  Sdk.Infinity.Addresses.Exchange[config.chainId]
-                );
-
-                if (
-                  bn(wethApproval).lt(bn(order.params.startPrice)) ||
-                  bn(wethApproval).lt(bn(order.params.endPrice))
-                ) {
-                  approvalTx = currency.approveTransaction(
-                    maker,
-                    Sdk.Infinity.Addresses.Exchange[config.chainId]
-                  );
-                }
-
-                steps[1].items.push({
-                  status: !approvalTx ? "complete" : "incomplete",
-                  data: approvalTx,
-                  orderIndexes: [i],
-                });
-                steps[2].items.push({
-                  status: "incomplete",
-                  data: {
-                    sign: order.getSignatureData(),
-                    post: {
-                      endpoint: "/order/v3",
-                      method: "POST",
-                      body: {
-                        order: {
-                          kind: "infinity",
-                          data: {
-                            ...order.params,
-                          },
-                        },
-                        tokenSetId,
-                        collection,
-                        orderbook: params.orderbook,
-                        source,
-                      },
-                    },
-                  },
-                  orderIndexes: [i],
-                });
+                addExecution(order.hash(), params.quantity);
 
                 break;
               }
 
               case "flow": {
-                if (!["infinity"].includes(params.orderbook)) {
+                if (!["flow"].includes(params.orderbook)) {
                   return errors.push({
                     message: "Unsupported orderbook",
                     orderIndex: i,
@@ -910,12 +1145,12 @@ export const getExecuteBidV5Options: RouteOptions = {
                   );
                 }
 
-                steps[1].items.push({
+                steps[2].items.push({
                   status: !approvalTx ? "complete" : "incomplete",
                   data: approvalTx,
                   orderIndexes: [i],
                 });
-                steps[2].items.push({
+                steps[3].items.push({
                   status: "incomplete",
                   data: {
                     sign: order.getSignatureData(),
@@ -938,6 +1173,8 @@ export const getExecuteBidV5Options: RouteOptions = {
                   },
                   orderIndexes: [i],
                 });
+
+                addExecution(order.hash(), params.quantity);
 
                 break;
               }
@@ -996,12 +1233,12 @@ export const getExecuteBidV5Options: RouteOptions = {
                   );
                 }
 
-                steps[1].items.push({
+                steps[2].items.push({
                   status: !approvalTx ? "complete" : "incomplete",
                   data: approvalTx,
                   orderIndexes: [i],
                 });
-                steps[2].items.push({
+                steps[3].items.push({
                   status: "incomplete",
                   data: {
                     sign: new Sdk.X2Y2.Exchange(
@@ -1028,6 +1265,11 @@ export const getExecuteBidV5Options: RouteOptions = {
                   },
                   orderIndexes: [i],
                 });
+
+                addExecution(
+                  new Sdk.X2Y2.Exchange(config.chainId, "").hash(order),
+                  params.quantity
+                );
 
                 break;
               }
@@ -1069,12 +1311,12 @@ export const getExecuteBidV5Options: RouteOptions = {
                   );
                 }
 
-                steps[1].items.push({
+                steps[2].items.push({
                   status: !approvalTx ? "complete" : "incomplete",
                   data: approvalTx,
                   orderIndexes: [i],
                 });
-                steps[2].items.push({
+                steps[3].items.push({
                   status: "incomplete",
                   data: {
                     sign: order.getSignatureData(),
@@ -1097,26 +1339,58 @@ export const getExecuteBidV5Options: RouteOptions = {
                   orderIndexes: [i],
                 });
 
+                addExecution(order.hashOrderKey(), params.quantity);
+
                 break;
               }
             }
           } catch (error: any) {
-            return errors.push({ message: error.message ?? "Internal error", orderIndex: i });
+            return errors.push({
+              message: error.response?.data ? JSON.stringify(error.response.data) : error.message,
+              orderIndex: i,
+            });
           }
         })
       );
 
-      // Post any bulk orders together
+      // Post any seaport-v1.4 bulk orders together
       {
-        const exchange = new Sdk.SeaportV14.Exchange(config.chainId);
-
         const orders = bulkOrders["seaport-v1.4"];
-        if (orders.length) {
+        if (orders.length === 1) {
+          const order = new Sdk.SeaportV14.Order(config.chainId, orders[0].order.data);
+          steps[3].items.push({
+            status: "incomplete",
+            data: {
+              sign: order.getSignatureData(),
+              post: {
+                endpoint: "/order/v3",
+                method: "POST",
+                body: {
+                  order: {
+                    kind: "seaport-v1.4",
+                    data: {
+                      ...order.params,
+                    },
+                  },
+                  tokenSetId: orders[0].tokenSetId,
+                  attribute: orders[0].attribute,
+                  collection: orders[0].collection,
+                  isNonFlagged: orders[0].isNonFlagged,
+                  orderbook: orders[0].orderbook,
+                  orderbookApiKey: orders[0].orderbookApiKey,
+                  source,
+                },
+              },
+            },
+            orderIndexes: [orders[0].orderIndex],
+          });
+        } else if (orders.length > 1) {
+          const exchange = new Sdk.SeaportV14.Exchange(config.chainId);
           const { signatureData, proofs } = exchange.getBulkSignatureDataWithProofs(
             orders.map((o) => new Sdk.SeaportV14.Order(config.chainId, o.order.data))
           );
 
-          steps[2].items.push({
+          steps[3].items.push({
             status: "incomplete",
             data: {
               sign: signatureData,
@@ -1149,32 +1423,107 @@ export const getExecuteBidV5Options: RouteOptions = {
         }
       }
 
-      // We should only have a single wrapping transaction
-      if (steps[0].items.length > 1) {
-        let amount = bn(0);
-        for (let i = 0; i < steps[0].items.length; i++) {
-          const itemAmount = bn(steps[0].items[i].data?.value || 0);
-          if (itemAmount.gt(amount)) {
-            amount = itemAmount;
-          }
-        }
-
-        if (amount.gt(0)) {
-          const weth = new Sdk.Common.Helpers.Weth(baseProvider, config.chainId);
-          const wrapTx = weth.depositTransaction(maker, amount);
-
-          steps[0].items = [
-            {
-              status: "incomplete",
-              data: wrapTx,
+      // Post any alienswap bulk orders together
+      {
+        const orders = bulkOrders["alienswap"];
+        if (orders.length === 1) {
+          const order = new Sdk.Alienswap.Order(config.chainId, orders[0].order.data);
+          steps[3].items.push({
+            status: "incomplete",
+            data: {
+              sign: order.getSignatureData(),
+              post: {
+                endpoint: "/order/v3",
+                method: "POST",
+                body: {
+                  order: {
+                    kind: "alienswap",
+                    data: {
+                      ...order.params,
+                    },
+                  },
+                  tokenSetId: orders[0].tokenSetId,
+                  attribute: orders[0].attribute,
+                  collection: orders[0].collection,
+                  isNonFlagged: orders[0].isNonFlagged,
+                  orderbook: orders[0].orderbook,
+                  orderbookApiKey: orders[0].orderbookApiKey,
+                  source,
+                },
+              },
             },
-          ];
-        } else {
-          steps[0].items = [];
+            orderIndexes: [orders[0].orderIndex],
+          });
+        } else if (orders.length > 1) {
+          const exchange = new Sdk.Alienswap.Exchange(config.chainId);
+          const { signatureData, proofs } = exchange.getBulkSignatureDataWithProofs(
+            orders.map((o) => new Sdk.Alienswap.Order(config.chainId, o.order.data))
+          );
+
+          steps[3].items.push({
+            status: "incomplete",
+            data: {
+              sign: signatureData,
+              post: {
+                endpoint: "/order/v4",
+                method: "POST",
+                body: {
+                  items: orders.map((o, i) => ({
+                    order: o.order,
+                    tokenSetId: o.tokenSetId,
+                    attribute: o.attribute,
+                    collection: o.collection,
+                    isNonFlagged: o.isNonFlagged,
+                    orderbook: o.orderbook,
+                    orderbookApiKey: o.orderbookApiKey,
+                    bulkData: {
+                      kind: "alienswap",
+                      data: {
+                        orderIndex: i,
+                        merkleProof: proofs[i],
+                      },
+                    },
+                  })),
+                  source,
+                },
+              },
+            },
+            orderIndexes: orders.map(({ orderIndex }) => orderIndex),
+          });
         }
       }
 
-      if (!steps[2].items.length) {
+      // We should only have a single wrapping transaction per currency
+      if (steps[1].items.length > 1) {
+        const amounts: { [to: string]: BigNumber } = {};
+        for (let i = 0; i < steps[1].items.length; i++) {
+          const data = steps[1].items[i].data;
+          if (data) {
+            const itemAmount = bn(data.value || 0);
+            if (!amounts[data.to] || itemAmount.gt(amounts[data.to])) {
+              amounts[data.to] = itemAmount;
+            }
+          }
+        }
+
+        steps[1].items = [];
+        for (const [to, amount] of Object.entries(amounts)) {
+          if (amount.gt(0)) {
+            const weth = new Sdk.Common.Helpers.Weth(baseProvider, config.chainId);
+            const wrapTx = weth.depositTransaction(maker, amount);
+
+            steps[1].items.push({
+              status: "incomplete",
+              data: {
+                ...wrapTx,
+                to,
+              },
+            });
+          }
+        }
+      }
+
+      if (!steps[3].items.length) {
         const error = Boom.badRequest("No bids can be created");
         error.output.payload.errors = errors;
         throw error;
@@ -1201,6 +1550,19 @@ export const getExecuteBidV5Options: RouteOptions = {
           }));
         }
       }
+
+      // Warning! When filtering the steps, we should ensure that it
+      // won't affect the client, which might be polling the API and
+      // expect to get the steps returned in the same order / at the
+      // same index.
+      if (!blurAuth) {
+        // If we reached this point and the Blur auth is missing then we
+        // can be sure that no Blur orders were requested and it is safe
+        // to remove the auth step
+        steps = steps.slice(1);
+      }
+
+      await executionsBuffer.flush();
 
       return { steps, errors };
     } catch (error) {

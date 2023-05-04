@@ -1,6 +1,5 @@
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import { randomUUID } from "crypto";
-import _ from "lodash";
 
 import { logger } from "@/common/logger";
 import { acquireLock, redis, releaseLock } from "@/common/redis";
@@ -46,42 +45,18 @@ if (config.doBackgroundWork) {
           }
         );
 
-        logger.info(
-          QUEUE_NAME,
-          `Collections Refresh. contract=${contract}, contractCollections=${contractCollections.length}`
-        );
-
         if (contractCollections.length) {
           const infos: CollectionMetadataInfo[] = [];
 
           for (const contractCollection of contractCollections) {
-            let tokenId;
-
-            if (
-              _.isNull(contractCollection.token_id_range) ||
-              contractCollection.token_id_range === "(,)"
-            ) {
-              tokenId = await Tokens.getSingleToken(contractCollection.id);
-            } else {
-              tokenId = `${JSON.parse(contractCollection.token_id_range)[0]}`;
-            }
+            const tokenId = await Tokens.getSingleToken(contractCollection.id);
 
             infos.push({
               contract,
               tokenId,
               community: contractCollection.community,
             });
-
-            logger.info(
-              QUEUE_NAME,
-              `Collection Refresh. contract=${contract}, collectionId=${contractCollection.id}, tokenId=${tokenId}`
-            );
           }
-
-          logger.info(
-            QUEUE_NAME,
-            `Collections Refresh. contract=${contract}, contractCollections=${contractCollections.length}, infos=${infos.length}`
-          );
 
           await collectionUpdatesMetadata.addToQueueBulk(infos);
         } else {
@@ -96,11 +71,6 @@ if (config.doBackgroundWork) {
             {
               contract: toBuffer(contract),
             }
-          );
-
-          logger.info(
-            QUEUE_NAME,
-            `Token Refresh. contract=${contract}, tokenId=${contractToken?.token_id}`
           );
 
           if (contractToken) {

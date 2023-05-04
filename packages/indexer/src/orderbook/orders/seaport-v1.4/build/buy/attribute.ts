@@ -1,12 +1,14 @@
 import * as Sdk from "@reservoir0x/sdk";
-import { BaseBuilder } from "@reservoir0x/sdk/dist/seaport-v1.4/builders/base";
+import { BigNumberish } from "@ethersproject/bignumber";
 
 import { redb } from "@/common/db";
 import { fromBuffer } from "@/common/utils";
 import { config } from "@/config/index";
-import * as utils from "@/orderbook/orders/seaport-v1.4/build/utils";
+import { getBuildInfo } from "@/orderbook/orders/seaport-v1.4/build/utils";
+import { BaseOrderBuildOptions } from "@/orderbook/orders/seaport-base/build/utils";
+import * as OpenSeaApi from "@/jobs/orderbook/post-order-external/api/opensea";
 
-interface BuildOrderOptions extends utils.BaseOrderBuildOptions {
+interface BuildOrderOptions extends BaseOrderBuildOptions {
   // TODO: refactor
   // The following combinations are possible:
   // - collection + attributes
@@ -17,9 +19,11 @@ interface BuildOrderOptions extends utils.BaseOrderBuildOptions {
 }
 
 export const build = async (options: BuildOrderOptions) => {
-  const builder: BaseBuilder = new Sdk.SeaportV14.Builders.TokenList(config.chainId);
+  const builder = new Sdk.SeaportBase.Builders.TokenList(config.chainId);
 
   if (options.collection && options.attributes) {
+    let merkleRoot;
+    let tokenIds: BigNumberish[] = [];
     if (options.attributes.length !== 1) {
       throw new Error("Attribute bids must be on a single attribute");
     }
@@ -28,6 +32,7 @@ export const build = async (options: BuildOrderOptions) => {
       `
         SELECT
           collections.contract,
+          collections.slug AS "collectionSlug",
           attributes.token_count
         FROM attributes
         JOIN attribute_keys
@@ -52,7 +57,7 @@ export const build = async (options: BuildOrderOptions) => {
       throw new Error("Attribute has too many items");
     }
 
-    const buildInfo = await utils.getBuildInfo(
+    const buildInfo = await getBuildInfo(
       {
         ...options,
         contract: fromBuffer(attributeResult.contract),
@@ -61,13 +66,31 @@ export const build = async (options: BuildOrderOptions) => {
       "buy"
     );
 
-    const excludeFlaggedTokens = options.excludeFlaggedTokens
-      ? "AND (tokens.is_flagged = 0 OR tokens.is_flagged IS NULL)"
-      : "";
+    if (options.orderbook === "opensea") {
+      const buildCollectionOfferParams = await OpenSeaApi.buildTraitOffer(
+        options.maker,
+        options.quantity || 1,
+        attributeResult.collectionSlug,
+        options.attributes[0].key,
+        options.attributes[0].value
+      );
 
-    // Fetch all tokens matching the attributes
-    const tokens = await redb.manyOrNone(
-      `
+      // Use the zone returned from OpenSea's API
+      buildInfo.params.zone = buildCollectionOfferParams.partialParameters.zone;
+
+      // When cross-posting to OpenSea, if the result from their API is not
+      // a contract-wide order, then switch to using a token-list builder
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      merkleRoot =
+        buildCollectionOfferParams.partialParameters.consideration[0].identifierOrCriteria;
+    } else {
+      const excludeFlaggedTokens = options.excludeFlaggedTokens
+        ? "AND (tokens.is_flagged = 0 OR tokens.is_flagged IS NULL)"
+        : "";
+
+      // Fetch all tokens matching the attributes
+      const tokens = await redb.manyOrNone(
+        `
         SELECT
           token_attributes.token_id
         FROM token_attributes
@@ -84,17 +107,17 @@ export const build = async (options: BuildOrderOptions) => {
           ${excludeFlaggedTokens}
         ORDER BY token_attributes.token_id
       `,
-      {
-        collection: options.collection,
-        key: options.attributes[0].key,
-        value: options.attributes[0].value,
-      }
-    );
+        {
+          collection: options.collection,
+          key: options.attributes[0].key,
+          value: options.attributes[0].value,
+        }
+      );
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (buildInfo.params as any).tokenIds = tokens.map(({ token_id }) => token_id);
+      tokenIds = tokens.map(({ token_id }) => token_id);
+    }
 
-    return builder?.build(buildInfo.params);
+    return builder?.build({ ...buildInfo.params, tokenIds, merkleRoot }, Sdk.SeaportV14.Order);
   } else {
     // Fetch all tokens matching the token set
     const tokens = await redb.manyOrNone(
@@ -110,7 +133,7 @@ export const build = async (options: BuildOrderOptions) => {
       }
     );
 
-    const buildInfo = await utils.getBuildInfo(
+    const buildInfo = await getBuildInfo(
       {
         ...options,
         contract: fromBuffer(tokens[0].contract),
@@ -119,9 +142,8 @@ export const build = async (options: BuildOrderOptions) => {
       "buy"
     );
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (buildInfo.params as any).tokenIds = tokens.map(({ token_id }) => token_id);
+    const tokenIds = tokens.map(({ token_id }) => token_id);
 
-    return builder?.build(buildInfo.params);
+    return builder?.build({ ...buildInfo.params, tokenIds }, Sdk.SeaportV14.Order);
   }
 };
