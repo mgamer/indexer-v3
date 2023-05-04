@@ -48,10 +48,7 @@ export abstract class SeaportBaseExchange {
     }
   ): Promise<TransactionResponse> {
     const tx = await this.fillOrderTx(await taker.getAddress(), order, matchParams, options);
-    return taker.sendTransaction({
-      ...tx,
-      gasLimit: 10000000,
-    });
+    return taker.sendTransaction(tx);
   }
 
   public async fillOrderTx(
