@@ -104,7 +104,7 @@ if (config.doWebsocketWork && config.openSeaApiKey) {
                   JSON.stringify({
                     message: `Flushed ${orderInfoBatch.length} left in the array ${
                       bidsEvents.length
-                    } to orders book queue ${now() - startTime}ms`,
+                    } add to queue ${now() - startTime}ms`,
                     addToQueueTime: now() - startTime,
                   })
                 );
