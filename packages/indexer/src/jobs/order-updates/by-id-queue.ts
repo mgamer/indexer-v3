@@ -405,7 +405,7 @@ if (config.doBackgroundWork) {
                   orderCreatedAt: new Date(order.createdAt).toISOString(),
                   orderValidFrom: new Date(JSON.parse(order.validBetween)[0]).toISOString(),
                   orderOriginatedAt: order.originatedAt
-                    ? new Date(order.createdAt).toISOString()
+                    ? new Date(order.originatedAt).toISOString()
                     : null,
                   ingestMethod: ingestMethod ?? "rest",
                 })
