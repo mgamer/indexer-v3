@@ -93,8 +93,19 @@ if (config.doWebsocketWork && config.openSeaApiKey) {
               await orderbookOpenseaListings.addToQueue([orderInfo]);
             } else {
               bidsEvents.push(orderInfo);
+
+              const startTime = now();
               if (bidsEvents.length >= maxEventsSize) {
-                await orderbookOrders.addToQueue(bidsEvents.splice(0, bidsEvents.length));
+                const orderInfoBatch = bidsEvents.splice(0, bidsEvents.length);
+                await orderbookOrders.addToQueue(orderInfoBatch);
+
+                logger.info(
+                  "opensea-websocket",
+                  JSON.stringify({
+                    message: `Flushed ${orderInfoBatch.length} left in the array ${bidsEvents.length} to orders book queue`,
+                    addToQueueTime: now() - startTime,
+                  })
+                );
               }
             }
           }
