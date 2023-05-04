@@ -35,7 +35,7 @@ if (config.doBackgroundWork) {
       const { collection } = job.data as { collection: string };
 
       try {
-        if (now() < 1683214215) {
+        if (now() < 1683225215) {
           return;
         }
 
