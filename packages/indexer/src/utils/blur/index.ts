@@ -6,12 +6,16 @@ import { redis } from "@/common/redis";
 import { config } from "@/config/index";
 import { logger } from "@/common/logger";
 
-export const updateBlurRoyalties = async (collection: string) => {
+export const updateBlurRoyalties = async (collection: string, skipCache = false) => {
   // Blur is only available on mainnet
   if (config.chainId === 1) {
     try {
       const { minimumRoyaltyBps, maximumRoyaltyBps } = await axios
-        .get(`${config.orderFetcherBaseUrl}/api/blur-collection-fees?collection=${collection}`)
+        .get(
+          `${config.orderFetcherBaseUrl}/api/blur-collection-fees?collection=${collection}${
+            skipCache ? "&skipCache=1" : ""
+          }`
+        )
         .then(
           (response) => response.data as { minimumRoyaltyBps: number; maximumRoyaltyBps: number }
         );
