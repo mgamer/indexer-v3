@@ -12,7 +12,7 @@ import * as Sdk from "@reservoir0x/sdk";
 import { WebSocket } from "ws";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
-import { now } from "@/common/utils";
+import { now } from "lodash";
 import { config } from "@/config/index";
 import { OpenseaOrderParams } from "@/orderbook/orders/seaport-v1.1";
 import { generateHash, getSupportedChainName } from "@/websockets/opensea/utils";
@@ -102,7 +102,9 @@ if (config.doWebsocketWork && config.openSeaApiKey) {
                 logger.info(
                   "opensea-websocket",
                   JSON.stringify({
-                    message: `Flushed ${orderInfoBatch.length} left in the array ${bidsEvents.length} to orders book queue`,
+                    message: `Flushed ${orderInfoBatch.length} left in the array ${
+                      bidsEvents.length
+                    } add to queue ${now() - startTime}ms`,
                     addToQueueTime: now() - startTime,
                   })
                 );
