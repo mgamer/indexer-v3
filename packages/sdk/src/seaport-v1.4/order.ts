@@ -414,9 +414,6 @@ export class Order implements IOrder {
   }
 }
 
-export const isCurrencyItem = ({ itemType }: { itemType: Types.ItemType }) =>
-  [Types.ItemType.NATIVE, Types.ItemType.ERC20].includes(itemType);
-
 const normalize = (order: Types.OrderComponents): Types.OrderComponents => {
   // Perform some normalization operations on the order:
   // - convert bignumbers to strings where needed

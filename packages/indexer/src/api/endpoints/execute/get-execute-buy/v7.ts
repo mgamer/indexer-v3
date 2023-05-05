@@ -462,7 +462,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
                 }
             `,
             {
-              taker: payload.taker,
+              taker: toBuffer(payload.taker),
               id: item.orderId,
               quantity: item.quantity,
             }
