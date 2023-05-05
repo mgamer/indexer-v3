@@ -89,7 +89,8 @@ export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
             collections.royalties,
             collections.new_royalties,
             collections.marketplace_fees,
-            collections.contract
+            collections.contract,
+            collections.slug
           FROM collections
           JOIN contracts
             ON collections.contract = contracts.address
@@ -201,7 +202,7 @@ export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
 
       // Handle Blur
       if (Sdk.Blur.Addresses.Beth[config.chainId]) {
-        const royalties = await getOrUpdateBlurRoyalties(params.collection);
+        const royalties = await getOrUpdateBlurRoyalties(collectionResult.slug);
         if (royalties) {
           marketplaces.push({
             name: "Blur",

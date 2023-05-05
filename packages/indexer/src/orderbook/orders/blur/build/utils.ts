@@ -20,7 +20,7 @@ export const getBuildInfo = async (options: BaseOrderBuildOptions): Promise<Orde
   const collectionResult = await redb.oneOrNone(
     `
       SELECT
-        1
+        collections.slug
       FROM collections
       WHERE collections.id = $/collection/
       LIMIT 1
@@ -37,7 +37,7 @@ export const getBuildInfo = async (options: BaseOrderBuildOptions): Promise<Orde
 
   // Include royalties
   let feeRate = 0;
-  const royalties = await getOrUpdateBlurRoyalties(options.contract);
+  const royalties = await getOrUpdateBlurRoyalties(collectionResult.slug);
   if (royalties) {
     feeRate = royalties.maximumRoyaltyBps;
     if (options.royaltyBps !== undefined) {
