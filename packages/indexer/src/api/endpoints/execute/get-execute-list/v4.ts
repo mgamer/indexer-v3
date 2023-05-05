@@ -677,8 +677,8 @@ export const getExecuteListV4Options: RouteOptions = {
           }
 
           case "universe": {
-            if (!["universe"].includes(params.orderbook)) {
-              throw Boom.badRequest("Only `universe` is supported as orderbook");
+            if (!["reservoir"].includes(params.orderbook)) {
+              throw Boom.badRequest("Only `reservoir` is supported as orderbook");
             }
 
             const order = await universeSellToken.build({
