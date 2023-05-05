@@ -204,6 +204,7 @@ export type GenericOrderInfo =
       info: orders.collection.OrderInfo;
       relayToArweave?: boolean;
       validateBidValue?: boolean;
+      ingestMethod?: "websocket" | "rest";
     };
 
 export const jobProcessor = async (job: Job) => {
