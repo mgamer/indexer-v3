@@ -181,6 +181,8 @@ export const getExecuteBuyV7Options: RouteOptions = {
           quantity: Joi.number().unsafe(),
           source: Joi.string().allow("", null),
           currency: Joi.string().lowercase().pattern(regex.address),
+          currencySymbol: Joi.string().optional(),
+          currencyDecimals: Joi.number().optional(),
           quote: Joi.number().unsafe(),
           rawQuote: Joi.string().pattern(regex.number),
           buyInQuote: Joi.number().unsafe(),
@@ -219,6 +221,8 @@ export const getExecuteBuyV7Options: RouteOptions = {
         quantity: number;
         source: string | null;
         currency: string;
+        currencySymbol?: string;
+        currencyDecimals?: number;
         quote: number;
         rawQuote: string;
         buyInQuote?: number;
@@ -319,6 +323,8 @@ export const getExecuteBuyV7Options: RouteOptions = {
           quantity,
           source: order.sourceId !== null ? sources.get(order.sourceId)?.domain ?? null : null,
           currency: order.currency,
+          currencySymbol: currency.symbol,
+          currencyDecimals: currency.decimals,
           quote: formatPrice(totalPrice, currency.decimals, true),
           rawQuote: totalPrice.toString(),
           builtInFees: builtInFees.map((f) => {
@@ -453,7 +459,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
                 ON orders.token_set_id = token_sets_tokens.token_set_id
               WHERE orders.id = $/id/
                 AND orders.side = 'sell'
-                AND (orders.taker = '\\x0000000000000000000000000000000000000000' OR orders.taker IS NULL)
+                AND (orders.taker = '\\x0000000000000000000000000000000000000000' OR orders.taker IS NULL OR orders.taker = $/taker/)
                 AND orders.quantity_remaining >= $/quantity/
                 ${
                   payload.allowInactiveOrderIds
@@ -462,6 +468,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
                 }
             `,
             {
+              taker: toBuffer(payload.taker),
               id: item.orderId,
               quantity: item.quantity,
             }
