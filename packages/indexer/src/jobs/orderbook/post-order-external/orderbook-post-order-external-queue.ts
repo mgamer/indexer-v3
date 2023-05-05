@@ -269,7 +269,7 @@ const getOrderbookDefaultApiKey = (orderbook: string) => {
     case "blur":
       return config.orderFetcherApiKey;
     case "opensea":
-      return config.openSeaApiKey;
+      return config.openSeaCrossPostingApiKey;
     case "looks-rare":
       return config.looksRareApiKey;
     case "x2y2":
@@ -341,7 +341,7 @@ const postOrder = async (
 ) => {
   switch (orderbook) {
     case "opensea": {
-      const order = new Sdk.SeaportV14.Order(
+      const order = new Sdk.SeaportV15.Order(
         config.chainId,
         orderData as Sdk.SeaportBase.Types.OrderComponents
       );
