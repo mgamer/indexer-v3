@@ -2,6 +2,7 @@ import * as Sdk from "@reservoir0x/sdk";
 import axios from "axios";
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 
+import { edb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
 import { config } from "@/config/index";
@@ -56,7 +57,18 @@ if (config.doBackgroundWork) {
         const lock = await redis.get(lockKey);
         if (!lock) {
           await redis.set(lockKey, "locked", "EX", 3600 - 5);
-          await updateBlurRoyalties(collection);
+
+          const collectionResult = await edb.oneOrNone(
+            `
+              SELECT
+                collections.slug
+              FROM collections
+              WHERE collections.id = $/collection/
+            `,
+            { collection }
+          );
+
+          await updateBlurRoyalties(collectionResult.slug);
         }
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
