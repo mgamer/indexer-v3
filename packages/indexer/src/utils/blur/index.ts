@@ -4,6 +4,7 @@ import axios from "axios";
 import { redb } from "@/common/db";
 import { redis } from "@/common/redis";
 import { config } from "@/config/index";
+import { logger } from "@/common/logger";
 
 export const updateBlurRoyalties = async (collection: string) => {
   // Blur is only available on mainnet
@@ -14,6 +15,11 @@ export const updateBlurRoyalties = async (collection: string) => {
         .then(
           (response) => response.data as { minimumRoyaltyBps: number; maximumRoyaltyBps: number }
         );
+
+      logger.info(
+        "blur-royalties",
+        `Updating blur royalties for collection ${collection} to minBps=${minimumRoyaltyBps} maxBps=${maximumRoyaltyBps}`
+      );
 
       const result = await redb.oneOrNone(
         `
@@ -35,8 +41,11 @@ export const updateBlurRoyalties = async (collection: string) => {
       );
 
       return getBlurRoyalties(collection);
-    } catch {
-      // Skip errors
+    } catch (error) {
+      logger.error(
+        "blur-royalties",
+        `Failed to update blur royalties for collection ${collection}. Error: ${error}`
+      );
     }
   }
 };
