@@ -40,27 +40,31 @@ export class NewTopBidWebsocketEvent {
                 c.normalized_floor_sell_id AS normalized_floor_sell_id,
                 c.normalized_floor_sell_value AS normalized_floor_sell_value,
                 c.normalized_floor_sell_source_id_int AS normalized_floor_sell_source_id_int,
-                normalized_floor_order.currency as normalized_floor_order_currency,
-                normalized_floor_order.currency_value as normalized_floor_order_currency_value,
+                c.normalized_floor_order_currency,
+                c.normalized_floor_order_currency_value,
                 c.floor_sell_id AS floor_sell_id,
                 c.floor_sell_value AS floor_sell_value,
                 c.floor_sell_source_id_int AS floor_sell_source_id_int,
-                floor_order.currency as floor_order_currency,
-                floor_order.currency_value as floor_order_currency_value,
+                c.floor_order_currency,
+                c.floor_order_currency_value,
                 COALESCE(((orders.value / (c.floor_sell_value * (1-((COALESCE(c.royalties_bps, 0)::float + 250) / 10000)))::numeric(78, 0) ) - 1) * 100, 0) AS floor_difference_percentage
               FROM orders
               JOIN LATERAL (
-                SELECT c.*
+                SELECT c.*,
+                normalized_floor_order.currency as normalized_floor_order_currency,
+                normalized_floor_order.currency_value as normalized_floor_order_currency_value,
+                floor_order.currency as floor_order_currency,
+                floor_order.currency_value as floor_order_currency_value
                 FROM token_sets_tokens
               	JOIN tokens
                   ON token_sets_tokens.contract = tokens.contract
                   AND token_sets_tokens.token_id = tokens.token_id
               	JOIN collections c on c.id = tokens.collection_id
+              	LEFT JOIN orders normalized_floor_order ON c.normalized_floor_sell_id = normalized_floor_order.id
+                LEFT JOIN orders floor_order ON c.floor_sell_id = floor_order.id
               	WHERE orders.token_set_id = token_sets_tokens.token_set_id
               	LIMIT 1
               ) c ON TRUE
-              LEFT JOIN orders normalized_floor_order ON c.normalized_floor_sell_id = normalized_floor_order.id
-              LEFT JOIN orders floor_order ON c.floor_sell_id = floor_order.id
               WHERE orders.id = $/orderId/
               LIMIT 1
             `,
