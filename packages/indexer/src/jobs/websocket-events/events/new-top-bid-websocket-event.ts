@@ -47,10 +47,22 @@ export class NewTopBidWebsocketEvent {
                 c.floor_sell_source_id_int AS floor_sell_source_id_int,
                 c.floor_order_currency,
                 c.floor_order_currency_value,
+                c.non_flagged_floor_sell_value AS non_flagged_floor_sell_value,
+                  
                 COALESCE(((orders.value / (c.floor_sell_value * (1-((COALESCE(c.royalties_bps, 0)::float + 250) / 10000)))::numeric(78, 0) ) - 1) * 100, 0) AS floor_difference_percentage
               FROM orders
               JOIN LATERAL (
-                SELECT c.*,
+                SELECT c.id,
+                c.slug,
+                c.name,
+                c.normalized_floor_sell_id,
+                c.normalized_floor_sell_value,
+                c.normalized_floor_sell_source_id_int,
+                c.floor_sell_id,
+                c.floor_sell_value,
+                c.floor_sell_source_id_int,
+                c.non_flagged_floor_sell_value,
+                c.royalties_bps,
                 normalized_floor_order.currency as normalized_floor_order_currency,
                 normalized_floor_order.currency_value as normalized_floor_order_currency_value,
                 floor_order.currency as floor_order_currency,
@@ -142,6 +154,9 @@ export class NewTopBidWebsocketEvent {
           floorAskPrice: order.floor_sell_value ? formatEth(order.floor_sell_value) : null,
           floorAskPriceNormalized: order.normalized_floor_sell_value
             ? formatEth(order.normalized_floor_sell_value)
+            : null,
+          floorAskPriceNonFlagged: order.non_flagged_floor_sell_value
+            ? formatEth(order.non_flagged_floor_sell_value)
             : null,
           floorDifferencePercentage: _.round(order.floor_difference_percentage || 0, 2),
         },
