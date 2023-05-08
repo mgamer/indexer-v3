@@ -11,9 +11,15 @@ const kafka = new Kafka({
   logLevel: logLevel.ERROR,
 });
 
+export const producer = kafka.producer();
+export const consumer = kafka.consumer({ groupId: "indexer-consumer" });
+// Function to start the Kafka producer
+export async function startKafkaProducer(): Promise<void> {
+  await producer.connect();
+}
+
 // Function to start the Kafka consumer
 export async function startKafkaConsumer(): Promise<void> {
-  const consumer = kafka.consumer({ groupId: "indexer-consumer" });
   await consumer.connect();
 
   // Subscribe to the topics
@@ -31,6 +37,10 @@ export async function startKafkaConsumer(): Promise<void> {
       for (const handler of TopicHandlers) {
         if (handler.getTopics().includes(topic)) {
           try {
+            if (!event.retryCount) {
+              event.retryCount = 0;
+            }
+
             await handler.handle(event.payload);
           } catch (error) {
             logger.error(

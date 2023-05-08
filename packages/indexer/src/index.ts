@@ -12,7 +12,7 @@ import { config } from "@/config/index";
 import { logger } from "@/common/logger";
 import { getNetworkSettings } from "@/config/network";
 import { Sources } from "@/models/sources";
-import { startKafkaConsumer } from "./jobs/cdc";
+import { startKafkaConsumer, startKafkaProducer } from "./jobs/cdc";
 
 process.on("unhandledRejection", (error) => {
   logger.error("process", `Unhandled rejection: ${error}`);
@@ -33,6 +33,7 @@ const setup = async () => {
 
   if (config.doKafkaWork) {
     await startKafkaConsumer();
+    await startKafkaProducer();
   }
 
   if (config) await Sources.getInstance();
