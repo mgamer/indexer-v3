@@ -48,6 +48,7 @@ export const config = {
   master: Boolean(Number(process.env.MASTER)),
   catchup: Boolean(Number(process.env.CATCHUP)),
   doBackgroundWork: Boolean(Number(process.env.DO_BACKGROUND_WORK)),
+  doKafkaWork: Boolean(Number(process.env.DO_KAFKA_WORK)),
   doWebsocketWork: Boolean(Number(process.env.DO_WEBSOCKET_WORK)),
   doWebsocketServerWork: Boolean(Number(process.env.DO_WEBSOCKET_SERVER_WORK)),
   doEventsSyncBackfill: Boolean(Number(process.env.DO_EVENTS_SYNC_BACKFILL)),
