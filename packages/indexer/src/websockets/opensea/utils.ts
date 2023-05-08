@@ -16,6 +16,8 @@ export const getSupportedChainName = () => {
       return "arbitrum";
     case 534353:
       return "scroll-alpha";
+    case 5001:
+      return "mantle-testnet";
     default:
       return "unknown";
   }
