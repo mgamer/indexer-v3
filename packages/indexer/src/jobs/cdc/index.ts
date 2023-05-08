@@ -37,7 +37,13 @@ export async function startKafkaConsumer(): Promise<void> {
     eachMessage: async ({ message, topic }) => {
       const event = JSON.parse(message.value!.toString());
 
-      // Find the corresponding topic handler and call the handle method
+      // Find the corresponding topic handler and call the handle method on it, if the topic is not a dead letter topic
+
+      if (topic.endsWith("-dead-letter")) {
+        // if topic is dead letter, no need to process it
+        return;
+      }
+
       for (const handler of TopicHandlers) {
         if (handler.getTopics().includes(topic)) {
           try {
