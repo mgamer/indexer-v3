@@ -59,8 +59,8 @@ export class NewTopBidWebsocketEvent {
               	WHERE orders.token_set_id = token_sets_tokens.token_set_id
               	LIMIT 1
               ) c ON TRUE
-              INNER JOIN orders normalized_floor_order ON c.normalized_floor_sell_id = normalized_floor_order.id
-              INNER JOIN orders floor_order ON c.floor_sell_id = floor_order.id
+              LEFT JOIN orders normalized_floor_order ON c.normalized_floor_sell_id = normalized_floor_order.id
+              LEFT JOIN orders floor_order ON c.floor_sell_id = floor_order.id
               WHERE orders.id = $/orderId/
               LIMIT 1
             `,
