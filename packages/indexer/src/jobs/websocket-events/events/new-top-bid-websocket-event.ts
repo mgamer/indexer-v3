@@ -49,17 +49,18 @@ export class NewTopBidWebsocketEvent {
                 floor_order.currency_value as floor_order_currency_value,
                 COALESCE(((orders.value / (c.floor_sell_value * (1-((COALESCE(c.royalties_bps, 0)::float + 250) / 10000)))::numeric(78, 0) ) - 1) * 100, 0) AS floor_difference_percentage
               FROM orders
-              CROSS JOIN LATERAL (
-                    SELECT *
-                    FROM token_sets_tokens
-                    JOIN tokens ON token_sets_tokens.contract = tokens.contract AND token_sets_tokens.token_id = tokens.token_id
-                    WHERE orders.token_set_id = token_sets_tokens.token_set_id
-                    LIMIT 1
-                ) ts_tk
-                JOIN collections c ON c.id = ts_tk.collection_id
-              LEFT JOIN orders normalized_floor_order ON c.normalized_floor_sell_id = normalized_floor_order.id
-              LEFT JOIN orders non_flagged_floor_order ON c.non_flagged_floor_sell_id = non_flagged_floor_order.id
-              LEFT JOIN orders floor_order ON c.floor_sell_id = floor_order.id
+              JOIN LATERAL (
+                SELECT c.*
+                FROM token_sets_tokens
+              	JOIN tokens
+                  ON token_sets_tokens.contract = tokens.contract
+                  AND token_sets_tokens.token_id = tokens.token_id
+              	JOIN collections c on c.id = tokens.collection_id
+              	WHERE orders.token_set_id = token_sets_tokens.token_set_id
+              	LIMIT 1
+              ) c ON TRUE
+              INNER JOIN orders normalized_floor_order ON c.normalized_floor_sell_id = normalized_floor_order.id
+              INNER JOIN orders floor_order ON c.floor_sell_id = floor_order.id
               WHERE orders.id = $/orderId/
               LIMIT 1
             `,
