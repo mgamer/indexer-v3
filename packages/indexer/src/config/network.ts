@@ -314,6 +314,7 @@ export const getNetworkSettings = (): NetworkSettings => {
         ],
         supportedBidCurrencies: {
           ...defaultNetworkSettings.supportedBidCurrencies,
+          [Sdk.Common.Addresses.Usdc[config.chainId]]: true,
         },
         onStartup: async () => {
           // Insert the native currency
