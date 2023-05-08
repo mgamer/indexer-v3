@@ -37,16 +37,8 @@ export class NewTopBidWebsocketEvent {
                 c.id as collection_id,
                 c.slug as collection_slug,
                 c.name as collection_name,
-                c.normalized_floor_sell_id AS normalized_floor_sell_id,
                 c.normalized_floor_sell_value AS normalized_floor_sell_value,
-                c.normalized_floor_sell_source_id_int AS normalized_floor_sell_source_id_int,
-                c.normalized_floor_order_currency,
-                c.normalized_floor_order_currency_value,
-                c.floor_sell_id AS floor_sell_id,
                 c.floor_sell_value AS floor_sell_value,
-                c.floor_sell_source_id_int AS floor_sell_source_id_int,
-                c.floor_order_currency,
-                c.floor_order_currency_value,
                 c.non_flagged_floor_sell_value AS non_flagged_floor_sell_value,
                   
                 COALESCE(((orders.value / (c.floor_sell_value * (1-((COALESCE(c.royalties_bps, 0)::float + 250) / 10000)))::numeric(78, 0) ) - 1) * 100, 0) AS floor_difference_percentage
@@ -55,18 +47,10 @@ export class NewTopBidWebsocketEvent {
                 SELECT c.id,
                 c.slug,
                 c.name,
-                c.normalized_floor_sell_id,
                 c.normalized_floor_sell_value,
-                c.normalized_floor_sell_source_id_int,
-                c.floor_sell_id,
                 c.floor_sell_value,
-                c.floor_sell_source_id_int,
                 c.non_flagged_floor_sell_value,
-                c.royalties_bps,
-                normalized_floor_order.currency as normalized_floor_order_currency,
-                normalized_floor_order.currency_value as normalized_floor_order_currency_value,
-                floor_order.currency as floor_order_currency,
-                floor_order.currency_value as floor_order_currency_value
+                c.royalties_bps
                 FROM token_sets_tokens
               	JOIN tokens
                   ON token_sets_tokens.contract = tokens.contract
