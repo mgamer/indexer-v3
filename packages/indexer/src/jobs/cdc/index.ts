@@ -4,15 +4,18 @@ import { Kafka, logLevel } from "kafkajs";
 import { getServiceName } from "../../config/network";
 import { logger } from "@/common/logger";
 import { TopicHandlers } from "./topics";
+import { config } from "@/config/index";
 // Create a Kafka client
 const kafka = new Kafka({
-  clientId: "indexer",
-  brokers: ["127.0.0.1:9092"],
+  clientId: config.kafkaClientId,
+  brokers: config.kafkaBrokers,
   logLevel: logLevel.ERROR,
 });
 
 export const producer = kafka.producer();
-export const consumer = kafka.consumer({ groupId: "indexer-consumer" });
+export const consumer = kafka.consumer({
+  groupId: config.kafkaConsumerGroupId,
+});
 // Function to start the Kafka producer
 export async function startKafkaProducer(): Promise<void> {
   await producer.connect();
@@ -30,6 +33,7 @@ export async function startKafkaConsumer(): Promise<void> {
   );
 
   await consumer.run({
+    partitionsConsumedConcurrently: config.kafkaPartitionsConsumedConcurrently,
     eachMessage: async ({ message, topic }) => {
       const event = JSON.parse(message.value!.toString());
 
