@@ -37,8 +37,9 @@ export async function startKafkaConsumer(): Promise<void> {
       for (const handler of TopicHandlers) {
         if (handler.getTopics().includes(topic)) {
           try {
-            if (!event.retryCount) {
-              event.retryCount = 0;
+            // If the event has not been retried before, set the retryCount to 0
+            if (!event.payload.retryCount) {
+              event.payload.retryCount = 0;
             }
 
             await handler.handle(event.payload);
