@@ -33,7 +33,7 @@ export async function startKafkaConsumer(): Promise<void> {
   );
 
   await consumer.run({
-    partitionsConsumedConcurrently: config.kafkaPartitionsConsumedConcurrently,
+    partitionsConsumedConcurrently: config.kafkaPartitionsConsumedConcurrently || 1,
     eachMessage: async ({ message, topic }) => {
       const event = JSON.parse(message.value!.toString());
 
