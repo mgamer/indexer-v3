@@ -56,8 +56,6 @@ export class NewTopBidWebsocketEvent {
                   ON token_sets_tokens.contract = tokens.contract
                   AND token_sets_tokens.token_id = tokens.token_id
               	JOIN collections c on c.id = tokens.collection_id
-              	LEFT JOIN orders normalized_floor_order ON c.normalized_floor_sell_id = normalized_floor_order.id
-                LEFT JOIN orders floor_order ON c.floor_sell_id = floor_order.id
               	WHERE orders.token_set_id = token_sets_tokens.token_set_id
               	LIMIT 1
               ) c ON TRUE
