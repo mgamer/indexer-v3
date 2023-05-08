@@ -30,23 +30,19 @@ export abstract class KafkaEventHandler {
           break;
       }
     } catch (error) {
-      // if the topic is an error topic, don't send it to the error topic again and cause an infinite loop
-      // send it to the dead letter topic instead
-
-      let topicToSendTo = `${this.topicName}-error`;
-      if (this.topicName.includes("error")) {
-        topicToSendTo = `${this.topicName}-dead-letter`;
-      }
-
       payload.retryCount += 1;
+      let topicToSendTo = `${this.topicName}-error`;
+
+      // If the event has already been retried maxRetries times, send it to the dead letter queue
       if (payload.retryCount > this.maxRetries) {
-        // send to dead letter topic
         topicToSendTo = `${this.topicName}-dead-letter`;
       }
 
       logger.error(
         this.topicName,
-        `Error handling event: ${error}, topicToSendTo=${topicToSendTo}`
+        `Error handling event: ${error}, topicToSendTo=${topicToSendTo}, payload=${JSON.stringify(
+          payload
+        )}, retryCount=${payload.retryCount}`
       );
 
       producer.send({
