@@ -19,7 +19,7 @@ export async function startKafkaConsumer(): Promise<void> {
   // Subscribe to the topics
   await Promise.all(
     TopicHandlers.map((topicHandler) => {
-      return consumer.subscribe({ topic: topicHandler.topicName });
+      return consumer.subscribe({ topics: topicHandler.getTopics() });
     })
   );
 
@@ -29,7 +29,7 @@ export async function startKafkaConsumer(): Promise<void> {
 
       // Find the corresponding topic handler and call the handle method
       for (const handler of TopicHandlers) {
-        if (handler.topicName === topic) {
+        if (handler.getTopics().includes(topic)) {
           try {
             await handler.handle(event.payload);
           } catch (error) {

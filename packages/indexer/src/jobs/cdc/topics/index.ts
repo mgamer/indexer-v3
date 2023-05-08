@@ -28,6 +28,11 @@ export abstract class KafkaEventHandler {
     }
   }
 
+  getTopics(): string[] {
+    // return this topic name, as well as an error topic name and a dead letter topic name
+    return [this.topicName, `${this.topicName}-error`, `${this.topicName}-dead-letter`];
+  }
+
   protected abstract handleInsert(payload: any): Promise<void>;
   protected abstract handleUpdate(payload: any): Promise<void>;
   protected abstract handleDelete(): Promise<void>;
