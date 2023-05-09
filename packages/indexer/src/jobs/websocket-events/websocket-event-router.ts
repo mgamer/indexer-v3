@@ -1,7 +1,7 @@
 import * as bidWebsocketEventsTriggerQueue from "@/jobs/websocket-events/bid-websocket-events-trigger-queue";
 
 import * as newTopBidTriggerQueue from "@/jobs/websocket-events/new-top-bid-trigger-queue";
-import * as balanceEventWebsocketEventsTriggerQueue from "@/jobs/websocket-events/balance-event-websocket-events-trigger-queue";
+import * as balanceEventWebsocketEventsTriggerQueue from "@/jobs/websocket-events/nft-balance-event-websocket-events-trigger-queue";
 import * as askWebsocketEventsTriggerQueue from "@/jobs/websocket-events/ask-websocket-events-trigger-queue";
 import { NewTopBidWebsocketEventInfo } from "./events/new-top-bid-websocket-event";
 

@@ -11,7 +11,7 @@ import { formatEth } from "@/common/utils";
 
 import { redisWebsocketPublisher } from "@/common/redis";
 
-const QUEUE_NAME = "balance-websocket-events-trigger-queue";
+const QUEUE_NAME = "nft-balance-websocket-events-trigger-queue";
 
 export const queue = new Queue(QUEUE_NAME, {
   connection: redis.duplicate(),
@@ -57,8 +57,8 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
         };
 
         let eventType = "";
-        if (data.trigger === "insert") eventType = "balance.created";
-        else if (data.trigger === "update") eventType = "balance.updated";
+        if (data.trigger === "insert") eventType = "nft-balance.created";
+        else if (data.trigger === "update") eventType = "nft-balance.updated";
 
         await redisWebsocketPublisher.publish(
           "events",
