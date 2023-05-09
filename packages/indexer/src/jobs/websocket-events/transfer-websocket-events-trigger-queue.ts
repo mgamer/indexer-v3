@@ -38,15 +38,15 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
         const result = {
           address: eventData.address,
           block: eventData.block,
-          tx_hash: eventData.tx_hash,
-          tx_index: eventData.tx_index,
-          log_index: eventData.log_index,
+          txHash: eventData.tx_hash,
+          txIndex: eventData.tx_index,
+          logIndex: eventData.log_index,
           timestamp: new Date(eventData.timestamp).toISOString(),
           from: eventData.from,
           to: eventData.to,
-          token_id: eventData.token_id,
+          tokenId: eventData.token_id,
           amount: eventData.amount,
-          created_at: new Date(eventData.created_at).toISOString(),
+          createdAt: new Date(eventData.created_at).toISOString(),
         };
 
         let eventType = "";
