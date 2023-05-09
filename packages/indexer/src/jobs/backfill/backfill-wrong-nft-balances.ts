@@ -23,7 +23,7 @@ export const queue = new Queue(QUEUE_NAME, {
 });
 new QueueScheduler(QUEUE_NAME, { connection: redis.duplicate() });
 
-const RUN_NUMBER = 7;
+const RUN_NUMBER = 8;
 
 // BACKGROUND WORKER ONLY
 if (config.doBackgroundWork) {
@@ -166,33 +166,31 @@ if (config.doBackgroundWork) {
     logger.error(QUEUE_NAME, `Worker errored: ${error}`);
   });
 
-  if (config.chainId !== 56) {
-    redlock
-      .acquire([`${QUEUE_NAME}-lock-${RUN_NUMBER}`], 60 * 60 * 24 * 30 * 1000)
-      .then(async () => {
-        const getClosestBlock = async (timestamp: number) =>
-          idb
-            .oneOrNone(
-              `
-                SELECT
-                  nft_transfer_events.block
-                FROM nft_transfer_events
-                WHERE nft_transfer_events.timestamp <= $/timestamp/
-                ORDER BY nft_transfer_events.timestamp DESC
-                LIMIT 1
-              `,
-              { timestamp }
-            )
-            .then((r) => r.block);
+  redlock
+    .acquire([`${QUEUE_NAME}-lock-${RUN_NUMBER}`], 60 * 60 * 24 * 30 * 1000)
+    .then(async () => {
+      const getClosestBlock = async (timestamp: number) =>
+        idb
+          .oneOrNone(
+            `
+              SELECT
+                nft_transfer_events.block
+              FROM nft_transfer_events
+              WHERE nft_transfer_events.timestamp <= $/timestamp/
+              ORDER BY nft_transfer_events.timestamp DESC
+              LIMIT 1
+            `,
+            { timestamp }
+          )
+          .then((r) => r.block);
 
-        const fromTimestamp = 1683561600;
-        const toTimestamp = 1683611652;
-        await addToQueue(await getClosestBlock(fromTimestamp), await getClosestBlock(toTimestamp));
-      })
-      .catch(() => {
-        // Skip on any errors
-      });
-  }
+      const fromTimestamp = 1683561600;
+      const toTimestamp = 1683611652;
+      await addToQueue(await getClosestBlock(fromTimestamp), await getClosestBlock(toTimestamp));
+    })
+    .catch(() => {
+      // Skip on any errors
+    });
 }
 
 export const addToQueue = async (fromBlock: number, toBlock: number) => {
