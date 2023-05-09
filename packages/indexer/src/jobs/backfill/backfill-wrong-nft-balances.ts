@@ -22,7 +22,7 @@ export const queue = new Queue(QUEUE_NAME, {
 });
 new QueueScheduler(QUEUE_NAME, { connection: redis.duplicate() });
 
-const RUN_NUMBER = 1;
+const RUN_NUMBER = 2;
 
 // BACKGROUND WORKER ONLY
 if (config.doBackgroundWork) {
