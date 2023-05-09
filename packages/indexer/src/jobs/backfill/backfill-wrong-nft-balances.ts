@@ -113,7 +113,7 @@ if (config.doBackgroundWork) {
                   if (balances[owner].toString() !== amount) {
                     logger.warn(
                       QUEUE_NAME,
-                      `Different balance: ${contract}:${tokenId} (current = ${amount}) (computed = ${balances[
+                      `Different balance: ${contract}:${tokenId} (owner = ${owner}) (current = ${amount}) (computed = ${balances[
                         owner
                       ].toString()})`
                     );
