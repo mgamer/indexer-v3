@@ -22,7 +22,7 @@ export const queue = new Queue(QUEUE_NAME, {
 });
 new QueueScheduler(QUEUE_NAME, { connection: redis.duplicate() });
 
-const RUN_NUMBER = 2;
+const RUN_NUMBER = 3;
 
 // BACKGROUND WORKER ONLY
 if (config.doBackgroundWork) {
@@ -110,6 +110,11 @@ if (config.doBackgroundWork) {
                 for (const c of currentBalances) {
                   const owner = fromBuffer(c.owner);
                   const amount = c.amount;
+
+                  if (!balances[owner]) {
+                    balances[owner] = BigNumber.from(0);
+                  }
+
                   if (balances[owner].toString() !== amount) {
                     logger.warn(
                       QUEUE_NAME,
