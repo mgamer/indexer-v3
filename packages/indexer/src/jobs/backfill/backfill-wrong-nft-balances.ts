@@ -167,7 +167,7 @@ if (config.doBackgroundWork) {
   });
 
   redlock
-    .acquire([`${QUEUE_NAME}-lock-${RUN_NUMBER}`], 60 * 60 * 24 * 30 * 1000)
+    .acquire([`${QUEUE_NAME}-lock-${RUN_NUMBER}-2`], 60 * 60 * 24 * 30 * 1000)
     .then(async () => {
       const getClosestBlock = async (timestamp: number) =>
         idb
@@ -184,9 +184,15 @@ if (config.doBackgroundWork) {
           )
           .then((r) => r.block);
 
-      const fromTimestamp = 1683561600;
-      const toTimestamp = 1683611652;
-      await addToQueue(await getClosestBlock(fromTimestamp), await getClosestBlock(toTimestamp));
+      const intervals = [
+        [1683561600, 1683571600],
+        [1683571600, 1683581600],
+        [1683581600, 1683591600],
+        [1683591600, 1683601200],
+      ];
+      for (const [from, to] of intervals) {
+        await addToQueue(await getClosestBlock(from), await getClosestBlock(to));
+      }
     })
     .catch(() => {
       // Skip on any errors
@@ -194,6 +200,6 @@ if (config.doBackgroundWork) {
 }
 
 export const addToQueue = async (fromBlock: number, toBlock: number) => {
-  const id = `${fromBlock}-${toBlock}-${RUN_NUMBER}`;
+  const id = `${toBlock}-${RUN_NUMBER}`;
   await queue.add(id, { fromBlock, toBlock }, { jobId: id, delay: 1000 });
 };
