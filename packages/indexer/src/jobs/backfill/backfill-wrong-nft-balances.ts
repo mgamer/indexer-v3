@@ -167,34 +167,36 @@ if (config.doBackgroundWork) {
     logger.error(QUEUE_NAME, `Worker errored: ${error}`);
   });
 
-  redlock
-    .acquire([`${QUEUE_NAME}-lock-${RUN_NUMBER}`], 60 * 60 * 24 * 30 * 1000)
-    .then(async () => {
-      const getClosestBlock = async (timestamp: number) =>
-        idb
-          .oneOrNone(
-            `
-              SELECT
-                nft_transfer_events.block
-              FROM nft_transfer_events
-              WHERE nft_transfer_events.timestamp <= $/timestamp/
-              ORDER BY nft_transfer_events.timestamp DESC
-              LIMIT 1
-            `,
-            { timestamp }
-          )
-          .then((r) => r.block);
+  if (config.chainId !== 56) {
+    redlock
+      .acquire([`${QUEUE_NAME}-lock-${RUN_NUMBER}`], 60 * 60 * 24 * 30 * 1000)
+      .then(async () => {
+        const getClosestBlock = async (timestamp: number) =>
+          idb
+            .oneOrNone(
+              `
+                SELECT
+                  nft_transfer_events.block
+                FROM nft_transfer_events
+                WHERE nft_transfer_events.timestamp <= $/timestamp/
+                ORDER BY nft_transfer_events.timestamp DESC
+                LIMIT 1
+              `,
+              { timestamp }
+            )
+            .then((r) => r.block);
 
-      const fromTimestamp = 1683561600;
-      const toTimestamp = 1683611652;
-      await addToQueue(await getClosestBlock(fromTimestamp), await getClosestBlock(toTimestamp));
-    })
-    .catch(() => {
-      // Skip on any errors
-    });
+        const fromTimestamp = 1683561600;
+        const toTimestamp = 1683611652;
+        await addToQueue(await getClosestBlock(fromTimestamp), await getClosestBlock(toTimestamp));
+      })
+      .catch(() => {
+        // Skip on any errors
+      });
+  }
 }
 
 export const addToQueue = async (fromBlock: number, toBlock: number) => {
-  const id = `${fromBlock}-${toBlock}`;
+  const id = `${fromBlock}-${toBlock}-${RUN_NUMBER}`;
   await queue.add(id, { fromBlock, toBlock }, { jobId: id, delay: 1000 });
 };
