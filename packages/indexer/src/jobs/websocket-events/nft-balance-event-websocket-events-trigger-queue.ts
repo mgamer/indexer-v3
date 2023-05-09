@@ -38,8 +38,10 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
       try {
         const { eventData } = data;
         const result = {
-          contract: eventData.contract,
-          tokenId: eventData.token_id,
+          token: {
+            contract: eventData.contract,
+            tokenId: eventData.token_id,
+          },
           owner: eventData.owner,
           amount: eventData.amount,
           acquiredAt: eventData.acquired_at,
