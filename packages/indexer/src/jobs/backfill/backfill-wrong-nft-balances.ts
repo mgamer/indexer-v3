@@ -1,14 +1,15 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { BigNumber } from "@ethersproject/bignumber";
-// import { AddressZero } from "@ethersproject/constants";
+import { AddressZero } from "@ethersproject/constants";
 import { Queue, QueueScheduler, Worker } from "bullmq";
 
-import { idb } from "@/common/db";
+import { idb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
 import { redis, redlock } from "@/common/redis";
 import { fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
+import * as orderUpdatesByMaker from "@/jobs/order-updates/by-maker-queue";
 
 const QUEUE_NAME = "backfill-wrong-nft-balances";
 
@@ -22,7 +23,7 @@ export const queue = new Queue(QUEUE_NAME, {
 });
 new QueueScheduler(QUEUE_NAME, { connection: redis.duplicate() });
 
-const RUN_NUMBER = 3;
+const RUN_NUMBER = 4;
 
 // BACKGROUND WORKER ONLY
 if (config.doBackgroundWork) {
@@ -49,7 +50,7 @@ if (config.doBackgroundWork) {
         );
 
         if (results.length) {
-          // const values: any[] = [];
+          const values: any[] = [];
           await Promise.all(
             results.map(async (r) => {
               const contract = fromBuffer(r.address);
@@ -65,7 +66,9 @@ if (config.doBackgroundWork) {
                     SELECT
                       nft_transfer_events.amount,
                       nft_transfer_events.from,
-                      nft_transfer_events.to
+                      nft_transfer_events.to,
+                      nft_transfer_events.timestamp,
+                      nft_transfer_events.tx_hash
                     FROM nft_transfer_events
                     WHERE nft_transfer_events.address = $/contract/
                       AND nft_transfer_events.token_id = $/tokenId/
@@ -75,6 +78,9 @@ if (config.doBackgroundWork) {
                     tokenId,
                   }
                 );
+
+                let txTimestamp: number | undefined;
+                let txHash: string | undefined;
 
                 const balances: { [address: string]: BigNumber } = {};
                 for (const t of transfers) {
@@ -91,71 +97,63 @@ if (config.doBackgroundWork) {
                     balances[to] = BigNumber.from(0);
                   }
                   balances[to] = balances[to].add(amount);
+
+                  txTimestamp = t.timestamp;
+                  txHash = fromBuffer(t.tx_hash);
                 }
 
-                const currentBalances = await idb.manyOrNone(
-                  `
-                    SELECT
-                      nft_balances.owner,
-                      nft_balances.amount
-                    FROM nft_balances
-                    WHERE nft_balances.contract = $/contract/
-                      AND nft_balances.token_id = $/tokenId/
-                  `,
-                  {
-                    contract: toBuffer(contract),
-                    tokenId,
-                  }
-                );
-                for (const c of currentBalances) {
-                  const owner = fromBuffer(c.owner);
-                  const amount = c.amount;
-
-                  if (!balances[owner]) {
-                    balances[owner] = BigNumber.from(0);
-                  }
-
-                  if (balances[owner].toString() !== amount) {
-                    logger.warn(
-                      QUEUE_NAME,
-                      `Different balance: ${contract}:${tokenId} (owner = ${owner}) (current = ${amount}) (computed = ${balances[
-                        owner
-                      ].toString()})`
-                    );
+                for (const [address, balance] of Object.entries(balances)) {
+                  if (address !== AddressZero && txTimestamp && txHash) {
+                    values.push({
+                      contract: toBuffer(contract),
+                      tokenId,
+                      owner: toBuffer(address),
+                      amount: balance.toString(),
+                      txTimestamp,
+                      txHash,
+                    });
                   }
                 }
-
-                // for (const [address, balance] of Object.entries(balances)) {
-                //   if (address !== AddressZero) {
-                //     values.push({
-                //       contract: toBuffer(contract),
-                //       tokenId,
-                //       owner: toBuffer(address),
-                //       amount: balance.toString(),
-                //     });
-                //   }
-                // }
               }
             })
           );
 
-          //   const columns = new pgp.helpers.ColumnSet(["contract", "token_id", "owner", "amount"], {
-          //     table: "nft_balances",
-          //   });
-          //   if (values.length) {
-          //     await idb.none(
-          //       `
-          //         UPDATE nft_balances SET
-          //           amount = x.amount::NUMERIC(78, 0)
-          //         FROM (
-          //           VALUES ${pgp.helpers.values(values, columns)}
-          //         ) AS x(contract, token_id, owner, amount)
-          //         WHERE nft_balances.contract = x.contract::BYTEA
-          //           AND nft_balances.token_id = x.token_id::NUMERIC(78, 0)
-          //           AND nft_balances.owner = x.owner::BYTEA
-          //       `
-          //     );
-          //   }
+          const columns = new pgp.helpers.ColumnSet(["contract", "token_id", "owner", "amount"], {
+            table: "nft_balances",
+          });
+          if (values.length) {
+            await idb.none(
+              `
+                UPDATE nft_balances SET
+                  amount = x.amount::NUMERIC(78, 0)
+                FROM (
+                  VALUES ${pgp.helpers.values(values, columns)}
+                ) AS x(contract, token_id, owner, amount)
+                WHERE nft_balances.contract = x.contract::BYTEA
+                  AND nft_balances.token_id = x.token_id::NUMERIC(78, 0)
+                  AND nft_balances.owner = x.owner::BYTEA
+              `
+            );
+
+            await orderUpdatesByMaker.addToQueue(
+              values.map((v) => ({
+                context: `revalidation-${fromBuffer(v.contract)}-${v.token_id}-${fromBuffer(
+                  v.owner
+                )}`,
+                maker: fromBuffer(v.owner),
+                trigger: {
+                  kind: "revalidation",
+                  txHash: v.txHash,
+                  txTimestamp: v.txTimestamp,
+                },
+                data: {
+                  kind: "sell-balance",
+                  contract: fromBuffer(v.contract),
+                  tokenId: v.token_id,
+                },
+              }))
+            );
+          }
         }
 
         if (toBlock > fromBlock) {
