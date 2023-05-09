@@ -47,13 +47,6 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
             id: eventData.floor_sell_id,
             value: eventData.floor_sell_value ? formatEth(eventData.floor_sell_value) : null,
           },
-          topBid: eventData.top_buy_id
-            ? {
-                id: eventData.top_buy_id,
-                value: eventData.top_buy_value ? formatEth(eventData.top_buy_value) : null,
-                maker: eventData.top_buy_maker ? eventData.top_buy_maker : null,
-              }
-            : null,
         };
 
         let eventType = "";
