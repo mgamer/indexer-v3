@@ -23,7 +23,7 @@ export const queue = new Queue(QUEUE_NAME, {
 });
 new QueueScheduler(QUEUE_NAME, { connection: redis.duplicate() });
 
-const RUN_NUMBER = 4;
+const RUN_NUMBER = 5;
 
 // BACKGROUND WORKER ONLY
 if (config.doBackgroundWork) {
@@ -106,11 +106,11 @@ if (config.doBackgroundWork) {
                   if (address !== AddressZero && txTimestamp && txHash) {
                     values.push({
                       contract: toBuffer(contract),
-                      tokenId,
+                      token_id: tokenId,
                       owner: toBuffer(address),
                       amount: balance.toString(),
-                      txTimestamp,
-                      txHash,
+                      tx_timestamp: txTimestamp,
+                      tx_hash: txHash,
                     });
                   }
                 }
@@ -143,8 +143,8 @@ if (config.doBackgroundWork) {
                 maker: fromBuffer(v.owner),
                 trigger: {
                   kind: "revalidation",
-                  txHash: v.txHash,
-                  txTimestamp: v.txTimestamp,
+                  txHash: v.tx_hash,
+                  txTimestamp: v.tx_timestamp,
                 },
                 data: {
                   kind: "sell-balance",
