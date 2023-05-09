@@ -323,6 +323,7 @@ export const start = async (): Promise<void> => {
     }
 
     if (!(response instanceof Boom)) {
+      typedResponse.header("tier", request.headers["tier"]);
       typedResponse.header("X-RateLimit-Limit", request.headers["X-RateLimit-Limit"]);
       typedResponse.header("X-RateLimit-Remaining", request.headers["X-RateLimit-Remaining"]);
       typedResponse.header("X-RateLimit-Reset", request.headers["X-RateLimit-Reset"]);
