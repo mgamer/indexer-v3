@@ -20,6 +20,7 @@ if (config.doBackgroundWork) {
 
             if (counts) {
               await ApiUsage.recordCounts(counts);
+              await new Promise((resolve) => setTimeout(resolve, 2000));
             }
           } while (counts.length === count);
         })
