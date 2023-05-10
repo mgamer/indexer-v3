@@ -17,19 +17,6 @@ const getNetworkConfig = (chainId?: number) => {
   let url = process.env.RPC_URL;
   if (!url) {
     switch (chainId) {
-      // Testnets
-      case 5:
-        url = `https://eth-goerli.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`;
-        break;
-      case 5001:
-        url = "https://rpc.testnet.mantle.xyz";
-        break;
-      case 534353:
-        url = "https://alpha-rpc.scroll.io/l2";
-        break;
-      case 11155111:
-        url = `https://eth-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`;
-        break;
       // Mainnets
       case 1:
         url = `https://eth-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`;
@@ -42,6 +29,22 @@ const getNetworkConfig = (chainId?: number) => {
         break;
       case 42161:
         url = `https://arb-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`;
+        break;
+      // Testnets
+      case 5:
+        url = `https://eth-goerli.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`;
+        break;
+      case 999:
+        url = "https://testnet.rpc.zora.co";
+        break;
+      case 5001:
+        url = "https://rpc.testnet.mantle.xyz";
+        break;
+      case 534353:
+        url = "https://alpha-rpc.scroll.io/l2";
+        break;
+      case 11155111:
+        url = `https://eth-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`;
         break;
       default:
         throw new Error("Unsupported chain id");
@@ -72,7 +75,7 @@ const config: HardhatUserConfig = {
     ],
   },
   networks: {
-    // Development
+    // Devnets
     hardhat: {
       chainId: networkConfig.chainId,
       forking: {
@@ -88,16 +91,17 @@ const config: HardhatUserConfig = {
     localhost: {
       url: "http://127.0.0.1:8545",
     },
-    // Testnets
-    goerli: getNetworkConfig(5),
-    "mantle-testnet": getNetworkConfig(5001),
-    "scroll-alpha": getNetworkConfig(534353),
-    sepolia: getNetworkConfig(11155111),
     // Mainnets
     mainnet: getNetworkConfig(1),
     optimism: getNetworkConfig(10),
     polygon: getNetworkConfig(137),
     arbitrum: getNetworkConfig(42161),
+    // Testnets
+    goerli: getNetworkConfig(5),
+    "zora-testnet": getNetworkConfig(999),
+    "mantle-testnet": getNetworkConfig(5001),
+    "scroll-alpha": getNetworkConfig(534353),
+    sepolia: getNetworkConfig(11155111),
   },
   etherscan: {
     apiKey: process.env.ETHERSCAN_API_KEY,
