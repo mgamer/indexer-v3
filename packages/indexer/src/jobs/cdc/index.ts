@@ -1,28 +1,37 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+// eslint-disable-next-line
 import { Kafka, logLevel } from "kafkajs";
-import { getServiceName } from "../../config/network";
-import { logger } from "@/common/logger";
-import { TopicHandlers } from "./topics";
+// import { getServiceName } from "../../config/network";
+// import { logger } from "@/common/logger";
+// import { TopicHandlers } from "./topics";
 import { config } from "@/config/index";
-// Create a Kafka client
+import { TopicHandlers } from "@/jobs/cdc/topics";
+
+// // Create a Kafka client
 const kafka = new Kafka({
-  clientId: config.kafkaClientId,
-  brokers: config.kafkaBrokers,
-  logLevel: logLevel.ERROR,
+  brokers: [
+    "main-kafka-0.main-kafka-brokers.kafka.svc",
+    "main-kafka-1.main-kafka-brokers.kafka.svc",
+    "main-kafka-2.main-kafka-brokers.kafka.svc",
+  ],
+  logLevel: logLevel.DEBUG,
 });
 
 export const producer = kafka.producer();
 export const consumer = kafka.consumer({
-  groupId: config.kafkaConsumerGroupId,
+  groupId: "indexer-consumer",
 });
 // Function to start the Kafka producer
 export async function startKafkaProducer(): Promise<void> {
   await producer.connect();
 }
 
-// Function to start the Kafka consumer
+// // Function to start the Kafka consumer
 export async function startKafkaConsumer(): Promise<void> {
+  // eslint-disable-next-line no-console
+  console.log("startKafkaConsumer");
+
   await consumer.connect();
 
   // Subscribe to the topics
@@ -33,9 +42,12 @@ export async function startKafkaConsumer(): Promise<void> {
   );
 
   await consumer.run({
-    partitionsConsumedConcurrently: config.kafkaPartitionsConsumedConcurrently || 1,
+    partitionsConsumedConcurrently: 1,
+
     eachMessage: async ({ message, topic }) => {
       const event = JSON.parse(message.value!.toString());
+      // eslint-disable-next-line no-console
+      console.log("event", event);
 
       // Find the corresponding topic handler and call the handle method on it, if the topic is not a dead letter topic
 
@@ -54,10 +66,10 @@ export async function startKafkaConsumer(): Promise<void> {
 
             await handler.handle(event.payload);
           } catch (error) {
-            logger.error(
-              `${getServiceName()}-kafka-consumer`,
-              `Error handling eventName=${event.name}, ${error}`
-            );
+            // logger.error(
+            //   `${getServiceName()}-kafka-consumer`,
+            //   `Error handling eventName=${event.name}, ${error}`
+            // );
           }
           break;
         }
@@ -65,3 +77,6 @@ export async function startKafkaConsumer(): Promise<void> {
     },
   });
 }
+
+// eslint-disable-next-line no-console
+console.log("config.doKafkaWork", config);

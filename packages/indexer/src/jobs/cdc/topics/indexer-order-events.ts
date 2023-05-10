@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { KafkaEventHandler } from ".";
+import { KafkaEventHandler } from "./KafkaEventHandler";
 import {
   WebsocketEventKind,
   WebsocketEventRouter,
