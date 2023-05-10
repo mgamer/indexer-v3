@@ -24,9 +24,7 @@ export class ApiUsage {
 
   public static async recordCounts(counts: ApiUsageCount[]) {
     await ApiUsage.recordHourlyCounts(counts);
-    await new Promise((resolve) => setTimeout(resolve, 2000));
     await ApiUsage.recordDailyCounts(counts);
-    await new Promise((resolve) => setTimeout(resolve, 2000));
     await ApiUsage.recordMonthlyCounts(counts);
   }
 
