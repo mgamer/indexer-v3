@@ -13,7 +13,6 @@
     "rootDir": "src",
     "outDir": "dist",
     "baseUrl": "src",
-    "incremental": true,
     "paths": {
       "@/api/*": ["api/*"],
       "@/arweave-sync/*": ["sync/arweave/*"],
