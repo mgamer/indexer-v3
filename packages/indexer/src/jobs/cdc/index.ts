@@ -11,9 +11,9 @@ import { TopicHandlers } from "@/jobs/cdc/topics";
 // // Create a Kafka client
 const kafka = new Kafka({
   brokers: [
-    "main-kafka-0.main-kafka-brokers.kafka.svc",
-    "main-kafka-1.main-kafka-brokers.kafka.svc",
-    "main-kafka-2.main-kafka-brokers.kafka.svc",
+    "main-kafka-0.main-kafka-brokers.kafka.svc:9092",
+    "main-kafka-1.main-kafka-brokers.kafka.svc:9092",
+    "main-kafka-2.main-kafka-brokers.kafka.svc:9092",
   ],
   logLevel: logLevel.DEBUG,
 });
