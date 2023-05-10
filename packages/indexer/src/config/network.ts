@@ -564,7 +564,7 @@ export const getNetworkSettings = (): NetworkSettings => {
         realtimeSyncFrequencySeconds: 5,
         lastBlockLatency: 5,
         headBlockDelay: 10,
-        subDomain: "api-scroll-alpha",
+        subDomain: "api-mantle-testnet",
         onStartup: async () => {
           // Insert the native currency
           await Promise.all([
