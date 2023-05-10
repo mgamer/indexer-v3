@@ -8,15 +8,12 @@ contract Create3Factory {
     bytes32 salt,
     bytes memory creationCode
   ) external payable returns (address deployed) {
-    salt = keccak256(abi.encodePacked(salt, creationCode));
+    salt = keccak256(abi.encodePacked(msg.sender, salt));
     return CREATE3.deploy(salt, creationCode, msg.value);
   }
 
-  function getDeployed(
-    bytes32 salt,
-    bytes calldata creationCode
-  ) external view returns (address deployed) {
-    salt = keccak256(abi.encodePacked(salt, creationCode));
+  function getDeployed(address deployer, bytes32 salt) external view returns (address deployed) {
+    salt = keccak256(abi.encodePacked(deployer, salt));
     return CREATE3.getDeployed(salt);
   }
 }
