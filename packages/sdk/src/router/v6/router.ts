@@ -826,7 +826,7 @@ export class Router {
           break;
         }
 
-        case "collection":
+        case "collectionxyz":
           detailsRef = collectionDetails;
           break;
 
@@ -2888,7 +2888,7 @@ export class Router {
           break;
         }
 
-        case "collection": {
+        case "collectionxyz": {
           module = this.contracts.collectionModule;
           break;
         }
@@ -3429,7 +3429,7 @@ export class Router {
           break;
         }
 
-        case "collection": {
+        case "collectionxyz": {
           const order = detail.order as Sdk.CollectionXyz.Order;
           const module = this.contracts.collectionModule;
 
