@@ -1,8 +1,7 @@
 /* eslint-disable no-console */
 
 import { parseEther } from "@ethersproject/units";
-import { JsonRpcProvider } from "@ethersproject/providers";
-import { Wallet } from "@ethersproject/wallet";
+import { ethers } from "hardhat";
 
 const KEYLESS_CREATE2_DEPLOYER = "0x4c8D290a1B368ac4728d83a9e8321fC3af2b39b1";
 const KEYLESS_CREATE2 = "0x7A0D94F55792C434d74a40883C6ed8545E406D12";
@@ -18,19 +17,18 @@ const CREATE3_FACTORY = "0xB21E35AF19df43434d0f487766E2b16bA40449dE";
 // - Seaport
 // - Create3Factory
 export const setup = async () => {
-  const provider = new JsonRpcProvider(process.env.RPC_URL!);
-  const deployer = new Wallet(process.env.DEPLOYER_PK!).connect(provider);
+  const [deployer] = await ethers.getSigners();
 
   // Follow Seaport's deployment instructions for deploying to deterministic addresses:
   // https://github.com/ProjectOpenSea/seaport/blob/main/docs/Deployment.md
 
   {
     console.log("1. Sending 0.01 ETH to KeylessCreate2Deployer");
-    const code = await provider.getCode(KEYLESS_CREATE2);
+    const code = await ethers.provider.getCode(KEYLESS_CREATE2);
     if (code.length > 2) {
       console.log("- step already executed");
     } else {
-      const balance = await provider.getBalance(deployer.address);
+      const balance = await ethers.provider.getBalance(deployer.address);
       if (balance.gt(parseEther("0.01"))) {
         console.log("- already enough balance to proceed");
       } else {
@@ -49,7 +47,7 @@ export const setup = async () => {
       console.log("- contract already deployed");
     } else {
       console.log("- relaying and waiting for transaction");
-      await provider
+      await ethers.provider
         .sendTransaction(
           "0xf87e8085174876e800830186a08080ad601f80600e600039806000f350fe60003681823780368234f58015156014578182fd5b80825250506014600cf31ba02222222222222222222222222222222222222222222222222222222222222222a02222222222222222222222222222222222222222222222222222222222222222"
         )
@@ -59,7 +57,7 @@ export const setup = async () => {
 
   {
     console.log("3. Deploying InefficientImmutableCreate2Factory via KeylessCreate2");
-    const code = await provider.getCode(INEFFICIENT_IMMUTABLE_CREATE2_FACTORY);
+    const code = await ethers.provider.getCode(INEFFICIENT_IMMUTABLE_CREATE2_FACTORY);
     if (code.length > 2) {
       console.log("- contract already deployed");
     } else {
@@ -75,7 +73,7 @@ export const setup = async () => {
 
   {
     console.log("4. Deploying ImmutableCreate2Factory via InefficientImmutableCreate2Factory");
-    const code = await provider.getCode(IMMUTABLE_CREATE2_FACTORY);
+    const code = await ethers.provider.getCode(IMMUTABLE_CREATE2_FACTORY);
     if (code.length > 2) {
       console.log("- contract already deployed");
     } else {
@@ -91,7 +89,7 @@ export const setup = async () => {
 
   {
     console.log("5. Deploying ConduitControler");
-    const code = await provider.getCode(CONDUIT_CONTROLLER);
+    const code = await ethers.provider.getCode(CONDUIT_CONTROLLER);
     if (code.length > 2) {
       console.log("- contract already deployed");
     } else {
@@ -107,7 +105,7 @@ export const setup = async () => {
 
   {
     console.log("6. Deploying Seaport v1.5");
-    const code = await provider.getCode(SEAPORT_V15);
+    const code = await ethers.provider.getCode(SEAPORT_V15);
     if (code.length > 2) {
       console.log("- contract already deployed");
     } else {
@@ -123,7 +121,7 @@ export const setup = async () => {
 
   {
     console.log("7. Deploying Create3Factory");
-    const code = await provider.getCode(CREATE3_FACTORY);
+    const code = await ethers.provider.getCode(CREATE3_FACTORY);
     if (code.length > 2) {
       console.log("- contract already deployed");
     } else {

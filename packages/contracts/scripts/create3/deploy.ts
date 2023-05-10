@@ -190,6 +190,6 @@ export const triggerByModule = {
   ReservoirErc721: async () =>
     dv("ReservoirErc721", "v1", [OWNER, "https://reservoir.tools/", "https://reservoir.tools/"]),
   ReservoirErc1155: async () =>
-    dv("ReservoirErc721", "v1", [OWNER, "https://reservoir.tools/", "https://reservoir.tools/"]),
+    dv("ReservoirErc1155", "v1", [OWNER, "https://reservoir.tools/", "https://reservoir.tools/"]),
   LiteRoyaltyEngine: async () => dv("LiteRoyaltyEngine", "v1", []),
 };
