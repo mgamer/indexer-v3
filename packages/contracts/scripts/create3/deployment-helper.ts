@@ -75,7 +75,6 @@ export class DeploymentHelper {
       await hre.run("verify:verify", {
         address: contractAddress,
         constructorArguments: args,
-        chainId: this.chainId,
       });
     }
   }

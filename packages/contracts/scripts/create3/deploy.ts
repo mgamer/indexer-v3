@@ -72,8 +72,10 @@ const verify = async (contractName: string, version: string, args: any[]) => {
 
 const dv = async (contractName: string, version: string, args: any[]) => {
   try {
-    await deploy(contractName, version, args);
-    await new Promise((resolve) => setTimeout(resolve, 30000));
+    if (!process.env.VERIFY_ONLY) {
+      await deploy(contractName, version, args);
+      await new Promise((resolve) => setTimeout(resolve, 30000));
+    }
     await verify(contractName, version, args);
   } catch (error) {
     console.log(`Failed to deploy ${contractName}: ${error}`);

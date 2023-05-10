@@ -7,9 +7,10 @@ import { triggerByModule } from "./deploy";
 const main = async () => {
   const chainId = await ethers.provider.getNetwork().then((n) => n.chainId);
 
-  for (const deploy of Object.values(triggerByModule)) {
-    await deploy(chainId);
-  }
+  chainId;
+  triggerByModule;
+
+  await triggerByModule.ReservoirV6_0_1();
 };
 
 main()
