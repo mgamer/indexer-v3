@@ -148,6 +148,7 @@ export const getExecuteSellV7Options: RouteOptions = {
               Joi.object({
                 status: Joi.string().valid("complete", "incomplete").required(),
                 tip: Joi.string(),
+                orderIds: Joi.array().items(Joi.string()),
                 data: Joi.object(),
               })
             )
@@ -1032,9 +1033,10 @@ export const getExecuteSellV7Options: RouteOptions = {
         }
       }
 
-      for (const { txData } of txs) {
+      for (const { txData, orderIds } of txs) {
         steps[2].items.push({
           status: "incomplete",
+          orderIds,
           data: {
             ...txData,
             maxFeePerGas,
