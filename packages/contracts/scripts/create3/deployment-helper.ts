@@ -55,12 +55,6 @@ export class DeploymentHelper {
             bytes32 salt
           ) view returns (address)
         `,
-        `
-          function getDeployed(
-            bytes32 salt,
-            bytes memory creationCode
-          ) view returns (address)
-        `,
       ]),
       this.deployer
     );
@@ -72,11 +66,10 @@ export class DeploymentHelper {
 
     await create3Factory.deploy(salt, creationCode);
 
-    // For backwards-compatibility reasons we support two types of CREATE3 factories
-    const deploymentAddress: string = await create3Factory["getDeployed(address,bytes32)"](
+    const deploymentAddress: string = await create3Factory.getDeployed(
       await this.deployer.getAddress(),
       salt
-    ).catch(async () => create3Factory["getDeployed(bytes32,bytes)"](salt, creationCode));
+    );
     return deploymentAddress;
   }
 

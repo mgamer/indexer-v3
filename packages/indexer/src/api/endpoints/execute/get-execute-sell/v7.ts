@@ -792,6 +792,7 @@ export const getExecuteSellV7Options: RouteOptions = {
         kind: string;
         items: {
           status: string;
+          orderIds?: string[];
           tip?: string;
           data?: object;
         }[];
