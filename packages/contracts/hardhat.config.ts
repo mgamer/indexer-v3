@@ -35,6 +35,9 @@ const getNetworkConfig = (chainId?: number) => {
       case 534353:
         url = "https://alpha-rpc.scroll.io/l2";
         break;
+      case 11155111:
+        url = `https://eth-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`;
+        break;
       default:
         throw new Error("Unsupported chain id");
     }
@@ -88,6 +91,7 @@ const config: HardhatUserConfig = {
     polygon: getNetworkConfig(137),
     arbitrum: getNetworkConfig(42161),
     "scroll-alpha": getNetworkConfig(534353),
+    sepolia: getNetworkConfig(11155111),
   },
   etherscan: {
     apiKey: process.env.ETHERSCAN_API_KEY,
