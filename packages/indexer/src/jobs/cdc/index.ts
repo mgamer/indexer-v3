@@ -1,10 +1,5 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
-// eslint-disable-next-line
 import { Kafka, logLevel } from "kafkajs";
-// import { getServiceName } from "../../config/network";
-// import { logger } from "@/common/logger";
-// import { TopicHandlers } from "./topics";
+
 import { config } from "@/config/index";
 import { TopicHandlers } from "@/jobs/cdc/topics";
 
@@ -20,7 +15,7 @@ const kafka = new Kafka({
 
 export const producer = kafka.producer();
 export const consumer = kafka.consumer({
-  groupId: "indexer-consumer",
+  groupId: config.kafkaConsumerGroupId,
 });
 // Function to start the Kafka producer
 export async function startKafkaProducer(): Promise<void> {
@@ -29,9 +24,6 @@ export async function startKafkaProducer(): Promise<void> {
 
 // // Function to start the Kafka consumer
 export async function startKafkaConsumer(): Promise<void> {
-  // eslint-disable-next-line no-console
-  console.log("startKafkaConsumer");
-
   await consumer.connect();
 
   // Subscribe to the topics
@@ -77,6 +69,3 @@ export async function startKafkaConsumer(): Promise<void> {
     },
   });
 }
-
-// eslint-disable-next-line no-console
-console.log("config.doKafkaWork", config);
