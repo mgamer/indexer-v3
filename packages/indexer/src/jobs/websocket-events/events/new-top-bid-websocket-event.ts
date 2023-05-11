@@ -153,7 +153,7 @@ export class NewTopBidWebsocketEvent {
             event: "top-bid.changed",
             tags: {
               contract: fromBuffer(order.contract),
-              source: payload?.order?.source.name ?? "unknown",
+              source: payload?.order?.source.domain || "unknown",
             },
             data: payload,
           })
