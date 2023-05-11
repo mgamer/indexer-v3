@@ -35,18 +35,20 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
 
       try {
         const { eventData } = data;
+
         const result = {
-          address: eventData.address,
-          block: eventData.block,
-          txHash: eventData.tx_hash,
-          txIndex: eventData.tx_index,
-          logIndex: eventData.log_index,
-          timestamp: new Date(eventData.timestamp).toISOString(),
+          token: {
+            contract: eventData.address,
+            tokenId: eventData.token_id,
+          },
           from: eventData.from,
           to: eventData.to,
-          tokenId: eventData.token_id,
           amount: eventData.amount,
-          createdAt: new Date(eventData.created_at).toISOString(),
+          block: eventData.block,
+          txHash: eventData.tx_hash,
+          logIndex: eventData.log_index,
+          batchIndex: eventData.batch_index,
+          timestamp: eventData.timestamp,
         };
 
         let eventType = "";
@@ -58,9 +60,9 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
           JSON.stringify({
             event: eventType,
             tags: {
-              address: result.address,
-              owner: result.from,
-              approved: result.to,
+              address: result.token.contract,
+              from: result.from,
+              to: result.to,
             },
             data: result,
           })
@@ -107,6 +109,7 @@ export type TransferWebsocketEventInfo = {
     tx_hash: string;
     tx_index: string;
     log_index: string;
+    batch_index: string;
     timestamp: string;
     from: string;
     to: string;
