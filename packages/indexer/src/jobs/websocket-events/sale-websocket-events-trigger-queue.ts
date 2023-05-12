@@ -122,7 +122,11 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
 
         let eventType = "";
         if (data.trigger === "insert") eventType = "sale.created";
-        else if (data.trigger === "update") eventType = "sale.updated";
+        else if (data.trigger === "update") {
+          // if isDeleted is true, then it's a delete event
+          if (result.isDeleted) eventType = "sale.deleted";
+          else eventType = "sale.updated";
+        }
 
         await redisWebsocketPublisher.publish(
           "events",
