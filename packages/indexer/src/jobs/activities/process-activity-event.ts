@@ -74,7 +74,7 @@ if (config.doBackgroundWork) {
       } else {
         // Get the next batch of activities
         const activitiesList = new ActivitiesList();
-        const activitiesToProcess = await activitiesList.get();
+        const activitiesToProcess = await activitiesList.get(250);
 
         const aggregatedActivities = {
           [EventKind.fillEvent]: [] as FillEventData[],
@@ -220,10 +220,10 @@ export const addToQueue = async () => {
 
 if (config.doBackgroundWork) {
   cron.schedule(
-    "*/10 * * * * *",
+    "*/5 * * * * *",
     async () =>
       await redlock
-        .acquire(["save-activities"], (10 - 5) * 1000)
+        .acquire(["save-activities"], (5 - 2) * 1000)
         .then(async () => addToQueue())
         .catch(() => {
           // Skip on any errors
