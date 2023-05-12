@@ -99,8 +99,9 @@ if (config.doBackgroundWork) {
         ++i;
       }
 
-      await idb.none(
-        `
+      if (!_.isEmpty(values)) {
+        await idb.none(
+          `
           INSERT INTO bid_events (
             kind,
             status,
@@ -125,8 +126,9 @@ if (config.doBackgroundWork) {
           )
           VALUES ${_.join(values, ",")}
         `,
-        replacements
-      );
+          replacements
+        );
+      }
     },
     { connection: redis.duplicate(), concurrency: 1 }
   );
