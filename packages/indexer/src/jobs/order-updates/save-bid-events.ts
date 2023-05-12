@@ -33,7 +33,7 @@ if (config.doBackgroundWork) {
     QUEUE_NAME,
     async () => {
       const bidEventsList = new BidEventsList();
-      const events = await bidEventsList.get();
+      const events = await bidEventsList.get(750);
       const values = [];
       let replacements = {};
 
