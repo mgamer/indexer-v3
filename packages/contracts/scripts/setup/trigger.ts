@@ -13,7 +13,7 @@ import { DeploymentHelper } from "./deployment-helper";
 export const DEPLOYER = "0xf3d63166F0Ca56C3c1A3508FcE03Ff0Cf3Fb691e";
 const DEPLOYMENTS_FILE = "deployments.json";
 
-const readDeployment = async (
+export const readDeployment = async (
   contractName: string,
   version: string,
   chainId: number
@@ -77,11 +77,9 @@ const verify = async (contractName: string, version: string, args: any[]) => {
 
 const dv = async (contractName: string, version: string, args: any[]) => {
   try {
-    const address = await deploy(contractName, version, args);
+    await deploy(contractName, version, args);
     await new Promise((resolve) => setTimeout(resolve, 30000));
     await verify(contractName, version, args);
-
-    return address;
   } catch (error) {
     console.log(`Failed to deploy ${contractName}: ${error}`);
   }
@@ -100,37 +98,41 @@ export const trigger = {
       const contractName = "SeaportConduit";
       const version = "v1";
 
-      if (await readDeployment(contractName, version, chainId)) {
-        throw new Error(
-          `Version ${version} of ${contractName} already deployed on chain ${chainId}`
+      try {
+        if (await readDeployment(contractName, version, chainId)) {
+          throw new Error(
+            `Version ${version} of ${contractName} already deployed on chain ${chainId}`
+          );
+        }
+
+        const [deployer] = await ethers.getSigners();
+
+        const conduitController = new Contract(
+          Sdk.SeaportBase.Addresses.ConduitController[chainId],
+          new Interface([
+            "function getConduit(bytes32 conduitKey) view returns (address conduit, bool exists)",
+            "function updateChannel(address conduit, address channel, bool isOpen)",
+            "function createConduit(bytes32 conduitKey, address initialOwner)",
+          ]),
+          deployer
         );
+
+        const conduitKey = `${DEPLOYER}000000000000000000000000`;
+
+        const result = await conduitController.getConduit(conduitKey);
+        if (!result.exists) {
+          await conduitController.createConduit(conduitKey, DEPLOYER);
+          await conduitController.updateChannel(
+            result.conduit,
+            Sdk.RouterV6.Addresses.ApprovalProxy[chainId],
+            true
+          );
+        }
+
+        await writeDeployment(result.conduit, contractName, version, chainId);
+      } catch (error) {
+        console.log(`Failed to deploy ${contractName}: ${error}`);
       }
-
-      const [deployer] = await ethers.getSigners();
-
-      const conduitController = new Contract(
-        Sdk.SeaportBase.Addresses.ConduitController[chainId],
-        new Interface([
-          "function getConduit(bytes32 conduitKey) view returns (address conduit, bool exists)",
-          "function updateChannel(address conduit, address channel, bool isOpen)",
-          "function createConduit(bytes32 conduitKey, address initialOwner)",
-        ]),
-        deployer
-      );
-
-      const conduitKey = `${DEPLOYER}000000000000000000000000`;
-
-      const result = await conduitController.getConduit(conduitKey);
-      if (!result.exists) {
-        await conduitController.createConduit(conduitKey, DEPLOYER);
-        await conduitController.updateChannel(
-          result.conduit,
-          Sdk.RouterV6.Addresses.ApprovalProxy[chainId],
-          true
-        );
-      }
-
-      await writeDeployment(result.conduit, contractName, version, chainId);
     },
   },
   // Modules

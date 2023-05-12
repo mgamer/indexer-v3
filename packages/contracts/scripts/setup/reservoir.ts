@@ -3,7 +3,7 @@
 import * as Sdk from "@reservoir0x/sdk/src";
 import { ethers } from "hardhat";
 
-import { DEPLOYER, trigger } from "./trigger";
+import { DEPLOYER, readDeployment, trigger } from "./trigger";
 
 const main = async () => {
   const chainId = await ethers.provider.getNetwork().then((n) => n.chainId);
@@ -20,13 +20,17 @@ const main = async () => {
   }
 
   // 1. Deploy the router
-  const router = await trigger.Router.V6_0_1();
+  const router = await trigger.Router.V6_0_1().then(() =>
+    readDeployment("ReservoirV6_0_1", "v3", chainId)
+  );
   if (router) {
     Sdk.RouterV6.Addresses.Router[chainId] = router;
   }
 
   // 2. Deploy the approval proxy
-  const approvalProxy = await trigger.Router.ApprovalProxy(chainId);
+  const approvalProxy = await trigger.Router.ApprovalProxy(chainId).then(() =>
+    readDeployment("ReservoirApprovalProxy", "v1", chainId)
+  );
   if (approvalProxy) {
     Sdk.RouterV6.Addresses.ApprovalProxy[chainId] = approvalProxy;
   }

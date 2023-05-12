@@ -29,7 +29,7 @@ Before triggering the script, make sure to update the `hardhat.config.ts` file w
 npx hardhat run --network NETWORK_NAME ./scripts/setup/reservoir.ts
 ```
 
-As in the previous step, once the script is finalized, make sure to update the corresponding entries in the `sdk` package:
+As in the previous step, once the script is finalized, make sure to update the corresponding entries in the `sdk` package (check the `deployments.json` file for any newly deployed contracts):
 
 - `Sdk.RouterV6.Addresses.Router`
 - `Sdk.RouterV6.Addresses.ApprovalProxy`

@@ -90,7 +90,7 @@ export const setup = async () => {
   }
 
   {
-    console.log("5. Deploying ConduitControler");
+    console.log(`5. Deploying ConduitControler to ${CONDUIT_CONTROLLER.toLowerCase()}`);
     const code = await provider.getCode(CONDUIT_CONTROLLER);
     if (code.length > 2) {
       console.log("- contract already deployed");
@@ -106,7 +106,7 @@ export const setup = async () => {
   }
 
   {
-    console.log("6. Deploying Seaport v1.5");
+    console.log(`6. Deploying Seaport v1.5 to ${SEAPORT_V15.toLowerCase()}`);
     const code = await provider.getCode(SEAPORT_V15);
     if (code.length > 2) {
       console.log("- contract already deployed");
@@ -122,7 +122,7 @@ export const setup = async () => {
   }
 
   {
-    console.log("7. Deploying Create3Factory");
+    console.log(`7. Deploying Create3Factory to ${CREATE3_FACTORY.toLowerCase()}`);
     const code = await provider.getCode(CREATE3_FACTORY);
     if (code.length > 2) {
       console.log("- contract already deployed");
