@@ -136,6 +136,10 @@ if (config.doBackgroundWork) {
   worker.on("error", (error) => {
     logger.error(QUEUE_NAME, `Worker errored: ${error}`);
   });
+
+  worker.on("completed", async () => {
+    await addToQueue();
+  });
 }
 
 export const addToQueue = async () => {
@@ -144,10 +148,10 @@ export const addToQueue = async () => {
 
 if (config.doBackgroundWork) {
   cron.schedule(
-    "*/3 * * * * *",
+    "0 * * * * *",
     async () =>
       await redlock
-        .acquire(["save-bid-events"], (3 - 1) * 1000)
+        .acquire(["save-bid-events"], (60 - 5) * 1000)
         .then(async () => addToQueue())
         .catch(() => {
           // Skip on any errors
