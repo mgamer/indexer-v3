@@ -31,7 +31,7 @@ new QueueScheduler(QUEUE_NAME, { connection: redis.duplicate() });
 if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
-    async () => {
+    async (job) => {
       const bidEventsList = new BidEventsList();
       const events = await bidEventsList.get(750);
       const values = [];
@@ -128,6 +128,8 @@ if (config.doBackgroundWork) {
         `,
           replacements
         );
+
+        job.data.checkForMore = true;
       }
     },
     { connection: redis.duplicate(), concurrency: 1 }
@@ -137,8 +139,10 @@ if (config.doBackgroundWork) {
     logger.error(QUEUE_NAME, `Worker errored: ${error}`);
   });
 
-  worker.on("completed", async () => {
-    await addToQueue();
+  worker.on("completed", async (job) => {
+    if (job.data.checkForMore) {
+      await addToQueue();
+    }
   });
 }
 
@@ -148,10 +152,10 @@ export const addToQueue = async () => {
 
 if (config.doBackgroundWork) {
   cron.schedule(
-    "0 * * * * *",
+    "*/10 * * * * *",
     async () =>
       await redlock
-        .acquire(["save-bid-events"], (60 - 5) * 1000)
+        .acquire(["save-bid-events"], (10 - 5) * 1000)
         .then(async () => addToQueue())
         .catch(() => {
           // Skip on any errors
