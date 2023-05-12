@@ -53,7 +53,7 @@ export const RoyaltyEngine: ChainIdToAddress = {
   [Network.Optimism]: "0xef770dfb6d5620977213f55f99bfd781d04bbe15",
   [Network.Polygon]: "0x28edfcf0be7e86b07493466e7631a213bde8eef2",
   [Network.Arbitrum]: "0xef770dfb6d5620977213f55f99bfd781d04bbe15",
-  [Network.ZoraTestnet]: "0x2afe76dd7e8511ae24e23d1b5bb61697bdb18efc",
+  [Network.MiscTestnet]: "0x2afe76dd7e8511ae24e23d1b5bb61697bdb18efc",
 };
 
 export const SwapRouter: ChainIdToAddress = {
@@ -66,5 +66,5 @@ export const SwapRouter: ChainIdToAddress = {
 
 export const Create3Factory: ChainIdToAddress = {
   [Network.EthereumSepolia]: "0xb21e35af19df43434d0f487766e2b16ba40449de",
-  [Network.ZoraTestnet]: "0xb21e35af19df43434d0f487766e2b16ba40449de",
+  [Network.MiscTestnet]: "0xb21e35af19df43434d0f487766e2b16ba40449de",
 };

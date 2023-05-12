@@ -47,7 +47,7 @@ export const ConduitController: ChainIdToAddress = {
   [Network.EthereumGoerli]: "0x00000000f9490004c11cef243f5400493c00ad63",
   [Network.MantleTestnet]: "0x9c390efb05e09982e23993ebfa3b32c190e25f4b",
   [Network.EthereumSepolia]: "0x00000000f9490004c11cef243f5400493c00ad63",
-  [Network.ZoraTestnet]: "0x00000000f9490004c11cef243f5400493c00ad63",
+  [Network.MiscTestnet]: "0x00000000f9490004c11cef243f5400493c00ad63",
   [Network.LineaTestnet]: "0xc04dd964ed36c0e4796f53a7168393ed4fc38ff6",
 };
 
@@ -64,7 +64,7 @@ export const ConduitControllerCodeHash: ChainIdToAddress = {
   [Network.Avalanche]: "0x023d904f2503c37127200ca07b976c3a53cc562623f67023115bf311f5805059",
   [Network.ScrollAlpha]: "0xfde822a5f8cca372c4a13e06a9a2baea0f8a45e42347603e34607fab3aacea4c",
   [Network.MantleTestnet]: "0xfde822a5f8cca372c4a13e06a9a2baea0f8a45e42347603e34607fab3aacea4c",
-  [Network.ZoraTestnet]: "0x023d904f2503c37127200ca07b976c3a53cc562623f67023115bf311f5805059",
+  [Network.MiscTestnet]: "0x023d904f2503c37127200ca07b976c3a53cc562623f67023115bf311f5805059",
   [Network.LineaTestnet]: "0xfde822a5f8cca372c4a13e06a9a2baea0f8a45e42347603e34607fab3aacea4c",
 };
 
