@@ -124,32 +124,39 @@ if (config.doBackgroundWork) {
           }
         }
 
-        for (const [kind, activities] of Object.entries(aggregatedActivities)) {
-          switch (kind) {
-            case EventKind.fillEvent:
-              await SaleActivity.handleEvents(activities as FillEventData[]);
-              break;
+        try {
+          for (const [kind, activities] of Object.entries(aggregatedActivities)) {
+            if (!_.isEmpty(activities)) {
+              switch (kind) {
+                case EventKind.fillEvent:
+                  await SaleActivity.handleEvents(activities as FillEventData[]);
+                  break;
 
-            case EventKind.nftTransferEvent:
-              await TransferActivity.handleEvents(activities as NftTransferEventData[]);
-              break;
+                case EventKind.nftTransferEvent:
+                  await TransferActivity.handleEvents(activities as NftTransferEventData[]);
+                  break;
 
-            case EventKind.newSellOrder:
-              await AskActivity.handleEvents(activities as NewSellOrderEventData[]);
-              break;
+                case EventKind.newSellOrder:
+                  await AskActivity.handleEvents(activities as NewSellOrderEventData[]);
+                  break;
 
-            case EventKind.newBuyOrder:
-              await BidActivity.handleEvents(activities as NewBuyOrderEventData[]);
-              break;
+                case EventKind.newBuyOrder:
+                  await BidActivity.handleEvents(activities as NewBuyOrderEventData[]);
+                  break;
 
-            case EventKind.buyOrderCancelled:
-              await BidCancelActivity.handleEvents(activities as BuyOrderCancelledEventData[]);
-              break;
+                case EventKind.buyOrderCancelled:
+                  await BidCancelActivity.handleEvents(activities as BuyOrderCancelledEventData[]);
+                  break;
 
-            case EventKind.sellOrderCancelled:
-              await AskCancelActivity.handleEvents(activities as SellOrderCancelledEventData[]);
-              break;
+                case EventKind.sellOrderCancelled:
+                  await AskCancelActivity.handleEvents(activities as SellOrderCancelledEventData[]);
+                  break;
+              }
+            }
           }
+        } catch (error) {
+          logger.error(QUEUE_NAME, `failed to insert into activities ${error}`);
+          await activitiesList.add(activitiesToProcess);
         }
       }
     },
