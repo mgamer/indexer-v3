@@ -144,10 +144,10 @@ export const addToQueue = async () => {
 
 if (config.doBackgroundWork) {
   cron.schedule(
-    "*/10 * * * * *",
+    "*/3 * * * * *",
     async () =>
       await redlock
-        .acquire(["save-bid-events"], (10 - 5) * 1000)
+        .acquire(["save-bid-events"], (3 - 1) * 1000)
         .then(async () => addToQueue())
         .catch(() => {
           // Skip on any errors
