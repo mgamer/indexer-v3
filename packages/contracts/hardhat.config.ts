@@ -46,6 +46,9 @@ const getNetworkConfig = (chainId?: number) => {
       case 11155111:
         url = `https://eth-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`;
         break;
+      case 59140:
+        url = "https://rpc.goerli.linea.build/";
+        break;
       default:
         throw new Error("Unsupported chain id");
     }
@@ -100,6 +103,7 @@ const config: HardhatUserConfig = {
     goerli: getNetworkConfig(5),
     "zora-testnet": getNetworkConfig(999),
     "mantle-testnet": getNetworkConfig(5001),
+    "linea-testnet": getNetworkConfig(59140),
     "scroll-alpha": getNetworkConfig(534353),
     sepolia: getNetworkConfig(11155111),
   },
@@ -112,6 +116,14 @@ const config: HardhatUserConfig = {
         urls: {
           apiURL: "https://explorer.testnet.mantle.xyz/api",
           browserURL: "https://explorer.testnet.mantle.xyz",
+        },
+      },
+      {
+        network: "linea-testnet",
+        chainId: 59140,
+        urls: {
+          apiURL: "https://explorer.goerli.linea.build/api",
+          browserURL: "https://explorer.goerli.linea.build",
         },
       },
       {

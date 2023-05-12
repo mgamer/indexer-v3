@@ -13,6 +13,7 @@ export const Router: ChainIdToAddress = {
   [Network.ScrollAlpha]: "0xd17f3e7ab95ca115a7e89610cde1f0b01248fe9a",
   [Network.MantleTestnet]: "0xd08d4d2046c234d32f4abf889e9cb93bcb756dc5",
   [Network.ZoraTestnet]: "0xaeb73925daf2b7d71e4dc933ed9385829dbe20b6",
+  [Network.LineaTestnet]: "0x1f330b0d2bf5ca4b380aa9b60ee089eda9963eff",
 };
 
 // Approval proxy
@@ -27,6 +28,7 @@ export const ApprovalProxy: ChainIdToAddress = {
   [Network.ScrollAlpha]: "0xae4acac642fc0330e37c4ef20434934ee9636bc9",
   [Network.MantleTestnet]: "0xe33d3d26d5c75bffb0170d1f06a2c442e643f65e",
   [Network.ZoraTestnet]: "0x6acdf0775248c322eeef3f0e755d9891af96b05c",
+  [Network.LineaTestnet]: "0xbcfac90e4686ca855684e28b3752866acda79e27",
 };
 
 // Utility modules
@@ -83,7 +85,9 @@ export const SeaportV15Module: ChainIdToAddress = {
 export const AlienswapModule: ChainIdToAddress = {
   [Network.Ethereum]: "0xb56fa88072f5e299331cbb810d25075f6caa889c",
   [Network.EthereumGoerli]: "0xb56fa88072f5e299331cbb810d25075f6caa889c",
-  [Network.ScrollAlpha]: "0x60275b726b9aB1FdC6c2d3d8072F234FAb5DdaeB",
+  [Network.ScrollAlpha]: "0x60275b726b9ab1fdc6c2d3d8072f234fab5ddaeb",
+  [Network.MantleTestnet]: "0xf94d47c742c97f37424db1c27817a0697d49f461",
+  [Network.LineaTestnet]: "0xeb09b04d38d809c2dd5f33dda7208d0b299eda5a",
 };
 
 export const SudoswapModule: ChainIdToAddress = {
