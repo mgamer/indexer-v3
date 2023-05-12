@@ -349,7 +349,7 @@ const handleErrorResponse = (response: any) => {
     }
     case 400: {
       const error = response.data.errors?.toString();
-      const message = `Request was rejected by OpenSea. error=${error}`;
+      const message = `Request was rejected by OpenSea. error=${JSON.stringify(error)}`;
 
       const invalidFeeErrors = [
         "You have provided a fee",
