@@ -210,10 +210,8 @@ export type EventInfo =
     };
 
 export const addActivitiesToList = async (events: EventInfo[]) => {
-  if (!_.isEmpty(events)) {
-    const activitiesList = new ActivitiesList();
-    await activitiesList.add(events);
-  }
+  const activitiesList = new ActivitiesList();
+  await activitiesList.add(events);
 };
 
 export const addToQueue = async () => {
