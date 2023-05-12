@@ -192,6 +192,13 @@ export class Router {
   ): Promise<FillListingsResult> {
     // Assume the listing details are consistent with the underlying order object
 
+    const txs: {
+      approvals: FTApproval[];
+      txData: TxData;
+      orderIds: string[];
+    }[] = [];
+    const success: { [orderId: string]: boolean } = {};
+
     // When filling a single order in partial mode, propagate any errors back directly
     if (options?.partial && details.length === 1) {
       options.partial = false;
@@ -202,15 +209,10 @@ export class Router {
       if (options?.relayer) {
         throw new Error("Relayer not supported for Universe orders");
       }
-
-      if (details.length > 1) {
-        throw new Error("Universe sweeping is not supported");
-      } else {
-        const detail = details[0];
+      for (const detail of details) {
         if (detail.fees?.length || options?.globalFees?.length) {
           throw new Error("Fees not supported for Universe orders");
         }
-
         let approval: FTApproval | undefined;
         if (!isETH(this.chainId, detail.currency)) {
           approval = {
@@ -225,23 +227,22 @@ export class Router {
             ),
           };
         }
-
         const order = detail.order as Sdk.Universe.Order;
         const exchange = new Sdk.Universe.Exchange(this.chainId);
-        return {
-          txs: [
-            {
-              approvals: approval ? [approval] : [],
-              txData: await exchange.fillOrderTx(taker, order, {
-                amount: Number(detail.amount),
-                source: options?.source,
-              }),
-              orderIds: [detail.orderId],
-            },
-          ],
-          success: { [detail.orderId]: true },
-        };
+        txs.push({
+          approvals: approval ? [approval] : [],
+          txData: await exchange.fillOrderTx(taker, order, {
+            amount: Number(detail.amount),
+            source: options?.source,
+          }),
+          orderIds: [detail.orderId],
+        });
+        success[detail.orderId] = true;
       }
+      return {
+        txs,
+        success,
+      };
     }
 
     // TODO: Add Cryptopunks router module
@@ -250,27 +251,23 @@ export class Router {
         throw new Error("Relayer not supported for Cryptopunks orders");
       }
 
-      if (details.length > 1) {
-        throw new Error("Cryptopunks sweeping is not supported");
-      } else {
-        const detail = details[0];
+      for (const detail of details) {
         if (detail.fees?.length || options?.globalFees?.length) {
           throw new Error("Fees not supported for Cryptopunks orders");
         }
-
         const order = detail.order as Sdk.CryptoPunks.Order;
         const exchange = new Sdk.CryptoPunks.Exchange(this.chainId);
-        return {
-          txs: [
-            {
-              approvals: [],
-              txData: exchange.fillListingTx(taker, order, options),
-              orderIds: [detail.orderId],
-            },
-          ],
-          success: { [detail.orderId]: true },
-        };
+        txs.push({
+          approvals: [],
+          txData: exchange.fillListingTx(taker, order, options),
+          orderIds: [detail.orderId],
+        });
+        success[detail.orderId] = true;
       }
+      return {
+        txs,
+        success,
+      };
     }
 
     // TODO: Add Flow router module
@@ -279,14 +276,10 @@ export class Router {
         throw new Error("Relayer not supported for Flow orders");
       }
 
-      if (details.length > 1) {
-        throw new Error("Flow sweeping is not supported");
-      } else {
-        const detail = details[0];
+      for (const detail of details) {
         if (detail.fees?.length || options?.globalFees?.length) {
           throw new Error("Fees not supported for Flow orders");
         }
-
         let approval: FTApproval | undefined;
         if (!isETH(this.chainId, detail.currency)) {
           approval = {
@@ -301,21 +294,19 @@ export class Router {
             ),
           };
         }
-
         const order = detail.order as Sdk.Flow.Order;
         const exchange = new Sdk.Flow.Exchange(this.chainId);
-
-        return {
-          txs: [
-            {
-              approvals: approval ? [approval] : [],
-              txData: exchange.takeMultipleOneOrdersTx(taker, [order]),
-              orderIds: [detail.orderId],
-            },
-          ],
-          success: { [detail.orderId]: true },
-        };
+        txs.push({
+          approvals: approval ? [approval] : [],
+          txData: exchange.takeMultipleOneOrdersTx(taker, [order]),
+          orderIds: [detail.orderId],
+        });
+        success[detail.orderId] = true;
       }
+      return {
+        txs,
+        success,
+      };
     }
 
     // TODO: Add Manifold router module
@@ -324,10 +315,7 @@ export class Router {
         throw new Error("Relayer not supported for Manifold orders");
       }
 
-      if (details.length > 1) {
-        throw new Error("Manifold sweeping is not supported");
-      } else {
-        const detail = details[0];
+      for (const detail of details) {
         if (detail.fees?.length || options?.globalFees?.length) {
           throw new Error("Fees not supported for Manifold orders");
         }
@@ -338,31 +326,26 @@ export class Router {
         const amountFilled = Number(detail.amount) ?? 1;
         const orderPrice = bn(order.params.details.initialAmount).mul(amountFilled).toString();
 
-        return {
-          txs: [
-            {
-              approvals: [],
-              txData: exchange.fillOrderTx(
-                taker,
-                Number(order.params.id),
-                amountFilled,
-                orderPrice,
-                options
-              ),
-              orderIds: [detail.orderId],
-            },
-          ],
-          success: { [detail.orderId]: true },
-        };
-      }
-    }
+        txs.push({
+          approvals: [],
+          txData: exchange.fillOrderTx(
+            taker,
+            Number(order.params.id),
+            amountFilled,
+            orderPrice,
+            options
+          ),
+          orderIds: [detail.orderId],
+        });
 
-    const txs: {
-      approvals: FTApproval[];
-      txData: TxData;
-      orderIds: string[];
-    }[] = [];
-    const success: { [orderId: string]: boolean } = {};
+        success[detail.orderId] = true;
+      }
+
+      return {
+        txs,
+        success,
+      };
+    }
 
     // Filling Blur listings is extremely tricky since they explicitly designed
     // their contracts so that it is not possible to fill indirectly (eg. via a
@@ -2601,15 +2584,19 @@ export class Router {
       options.partial = false;
     }
 
+    const txs: {
+      approvals: NFTApproval[];
+      txData: TxData;
+      orderIds: string[];
+    }[] = [];
+    const success: { [orderId: string]: boolean } = {};
+
     // CASE 1
     // Handle exchanges which don't have a router module implemented by filling directly
 
     // TODO: Add Universe router module
     if (details.some(({ kind }) => kind === "universe")) {
-      if (details.length > 1) {
-        throw new Error("Universe multi-selling is not supported");
-      } else {
-        const detail = details[0];
+      for (const detail of details) {
         if (detail.fees?.length || options?.globalFees?.length) {
           throw new Error("Fees not supported for Universe orders");
         }
@@ -2628,28 +2615,23 @@ export class Router {
 
         const order = detail.order as Sdk.Universe.Order;
         const exchange = new Sdk.Universe.Exchange(this.chainId);
-        return {
-          txs: [
-            {
-              approvals: [approval],
-              txData: await exchange.fillOrderTx(taker, order, {
-                amount: Number(detail.amount ?? 1),
-                source: options?.source,
-              }),
-              orderIds: [detail.orderId],
-            },
-          ],
-          success: { [detail.orderId]: true },
-        };
-      }
-    }
 
-    const txs: {
-      approvals: NFTApproval[];
-      txData: TxData;
-      orderIds: string[];
-    }[] = [];
-    const success: { [orderId: string]: boolean } = {};
+        txs.push({
+          approvals: [approval],
+          txData: await exchange.fillOrderTx(taker, order, {
+            amount: Number(detail.amount ?? 1),
+            source: options?.source,
+          }),
+          orderIds: [detail.orderId],
+        });
+
+        success[detail.orderId] = true;
+      }
+      return {
+        txs,
+        success,
+      };
+    }
 
     // CASE 2
     // Handle orders which require special handling such as direct filling
