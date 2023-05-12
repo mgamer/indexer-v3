@@ -48,12 +48,10 @@ export const Usdc: ChainIdToAddress = {
 export const RoyaltyEngine: ChainIdToAddress = {
   [Network.Ethereum]: "0x0385603ab55642cb4dd5de3ae9e306809991804f",
   [Network.EthereumGoerli]: "0xe7c9cb6d966f76f3b5142167088927bf34966a1f",
-  [Network.EthereumSepolia]: "0x2afe76dd7e8511ae24e23d1b5bb61697bdb18efc",
   [Network.Bsc]: "0xef770dfb6d5620977213f55f99bfd781d04bbe15",
   [Network.Optimism]: "0xef770dfb6d5620977213f55f99bfd781d04bbe15",
   [Network.Polygon]: "0x28edfcf0be7e86b07493466e7631a213bde8eef2",
   [Network.Arbitrum]: "0xef770dfb6d5620977213f55f99bfd781d04bbe15",
-  [Network.MiscTestnet]: "0x2afe76dd7e8511ae24e23d1b5bb61697bdb18efc",
 };
 
 export const SwapRouter: ChainIdToAddress = {
@@ -64,7 +62,4 @@ export const SwapRouter: ChainIdToAddress = {
   [Network.Arbitrum]: "0x68b3465833fb72a70ecdf485e0e4c7bd8665fc45",
 };
 
-export const Create3Factory: ChainIdToAddress = {
-  [Network.EthereumSepolia]: "0xb21e35af19df43434d0f487766e2b16ba40449de",
-  [Network.MiscTestnet]: "0xb21e35af19df43434d0f487766e2b16ba40449de",
-};
+export const Create3Factory: ChainIdToAddress = {};
