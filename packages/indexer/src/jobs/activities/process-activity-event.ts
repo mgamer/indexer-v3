@@ -73,9 +73,10 @@ if (config.doBackgroundWork) {
         }
       } else {
         // Get the next batch of activities
+        const limit = 75;
         const activitiesList = new ActivitiesList();
-        const activitiesToProcess = await activitiesList.get(75);
-        job.data.checkForMore = true;
+        const activitiesToProcess = await activitiesList.get(limit);
+        job.data.checkForMore = _.size(activitiesToProcess) >= limit;
 
         const aggregatedActivities = {
           [EventKind.fillEvent]: [] as FillEventData[],
@@ -227,10 +228,10 @@ export const addToQueue = async () => {
 
 if (config.doBackgroundWork) {
   cron.schedule(
-    "*/5 * * * * *",
+    "*/30 * * * * *",
     async () =>
       await redlock
-        .acquire(["save-activities"], (5 - 2) * 1000)
+        .acquire(["save-activities"], (30 - 5) * 1000)
         .then(async () => addToQueue())
         .catch(() => {
           // Skip on any errors
