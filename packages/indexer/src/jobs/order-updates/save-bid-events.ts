@@ -10,7 +10,7 @@ import { idb } from "@/common/db";
 import { toBuffer } from "@/common/utils";
 import _ from "lodash";
 
-const QUEUE_NAME = "orderbook-save-opensea-websocket-events-queue";
+const QUEUE_NAME = "save-bid-events-queue";
 
 export const queue = new Queue(QUEUE_NAME, {
   connection: redis.duplicate(),
