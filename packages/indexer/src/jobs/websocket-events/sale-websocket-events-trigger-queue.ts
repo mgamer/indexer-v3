@@ -10,7 +10,7 @@ import _ from "lodash";
 import { getJoiSaleObject } from "@/common/joi";
 
 import { idb } from "@/common/db";
-import { fromBuffer } from "@/common/utils";
+import { fromBuffer, toBuffer } from "@/common/utils";
 import { redisWebsocketPublisher } from "@/common/redis";
 
 const QUEUE_NAME = "sale-websocket-events-trigger-queue";
@@ -77,7 +77,7 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
           WHERE
             fill_events_2.tx_hash = $/tx_hash/ AND fill_events_2.log_index = $/log_index/
         `,
-          { tx_hash: data.tx_hash, log_index: data.log_index }
+          { tx_hash: toBuffer(data.tx_hash), log_index: data.log_index }
         );
 
         const result = await getJoiSaleObject({
