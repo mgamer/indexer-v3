@@ -44,7 +44,7 @@ export async function startKafkaConsumer(): Promise<void> {
       const event = JSON.parse(message.value!.toString());
 
       // eslint-disable-next-line no-console
-      console.log(`${getServiceName()}-kafka-consumer`, `Received event: ${JSON.stringify(event)}`);
+      console.log(`${getServiceName()}-kafka-consumer`, `Received event: ${topic}`);
 
       // Find the corresponding topic handler and call the handle method on it, if the topic is not a dead letter topic
       if (topic.endsWith("-dead-letter")) {
