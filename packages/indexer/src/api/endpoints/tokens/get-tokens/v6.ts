@@ -467,7 +467,6 @@ export const getTokensV6Options: RouteOptions = {
       sourceConditions.push(
         `taker = '\\x0000000000000000000000000000000000000000' OR taker IS NULL`
       );
-
       if (query.currencies) {
         sourceConditions.push(`currency IN ($/currenciesFilter:raw/)`);
       }
