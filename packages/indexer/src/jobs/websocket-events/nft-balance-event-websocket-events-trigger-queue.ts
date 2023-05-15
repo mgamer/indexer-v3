@@ -36,18 +36,17 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
       const { data } = job.data as EventInfo;
 
       try {
-        const { eventData } = data;
         const result = {
           token: {
-            contract: eventData.contract,
-            tokenId: eventData.token_id,
+            contract: data.contract,
+            tokenId: data.token_id,
           },
-          owner: eventData.owner,
-          amount: eventData.amount,
-          acquiredAt: eventData.acquired_at,
+          owner: data.owner,
+          amount: data.amount,
+          acquiredAt: data.acquired_at,
           floorSell: {
-            id: eventData.floor_sell_id,
-            value: eventData.floor_sell_value ? formatEth(eventData.floor_sell_value) : null,
+            id: data.floor_sell_id,
+            value: data.floor_sell_value ? formatEth(data.floor_sell_value) : null,
           },
         };
 
@@ -60,7 +59,7 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
           JSON.stringify({
             event: eventType,
             tags: {
-              contract: eventData.contract,
+              contract: data.contract,
             },
             data: result,
           })
@@ -101,19 +100,17 @@ export const addToQueue = async (events: EventInfo[]) => {
 };
 
 export type BalanceWebsocketEventInfo = {
-  eventData: {
-    contract: string;
-    token_id: string;
-    owner: string;
-    amount: string;
-    acquired_at: string;
-    floor_sell_id: string;
-    floor_sell_value: string;
-    top_buy_id: string;
-    top_buy_value: string;
-    top_buy_maker: string;
-    last_token_appraisal_value: string;
-  };
+  contract: string;
+  token_id: string;
+  owner: string;
+  amount: string;
+  acquired_at: string;
+  floor_sell_id: string;
+  floor_sell_value: string;
+  top_buy_id: string;
+  top_buy_value: string;
+  top_buy_maker: string;
+  last_token_appraisal_value: string;
 
   trigger: "insert" | "update" | "delete";
 };
