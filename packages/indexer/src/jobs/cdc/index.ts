@@ -71,3 +71,9 @@ export async function startKafkaConsumer(): Promise<void> {
     },
   });
 }
+
+// eslint-disable-next-line
+console.log("Starting Kafka producer and consumer", config);
+
+startKafkaProducer();
+startKafkaConsumer();
