@@ -9,6 +9,8 @@ const kafka = new Kafka({
     "main-kafka-0.main-kafka-brokers.kafka.svc:9092",
     "main-kafka-1.main-kafka-brokers.kafka.svc:9092",
     "main-kafka-2.main-kafka-brokers.kafka.svc:9092",
+    "main-kafka-3.main-kafka-brokers.kafka.svc:9092",
+    "main-kafka-4.main-kafka-brokers.kafka.svc:9092",
   ],
   logLevel: logLevel.DEBUG,
 });
