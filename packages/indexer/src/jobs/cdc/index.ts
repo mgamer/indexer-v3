@@ -36,8 +36,12 @@ export async function startKafkaConsumer(): Promise<void> {
     return topicHandler.getTopics();
   }).flat();
 
+  await Promise.all(
+    topicsToSubscribe.map(async (topic) => {
+      await consumer.subscribe({ topic });
+    })
+  );
   // // Subscribe to the topics
-  await consumer.subscribe({ topics: topicsToSubscribe });
 
   await consumer.run({
     partitionsConsumedConcurrently: 1,
