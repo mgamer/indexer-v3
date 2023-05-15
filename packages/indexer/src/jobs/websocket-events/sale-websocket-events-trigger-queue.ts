@@ -3,6 +3,7 @@ import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
 import { config } from "@/config/index";
+import crypto from "crypto";
 
 import { randomUUID } from "crypto";
 import _ from "lodash";
@@ -112,13 +113,18 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
           amount: r.amount,
           fillSourceId: r.fill_source_id,
           block: r.block,
-          txHash: r.tx_hash,
-          logIndex: r.log_index,
-          batchIndex: r.batch_index,
-          isDeleted: Boolean(r.is_deleted),
           createdAt: new Date(r.created_at).toISOString(),
           updatedAt: new Date(r.updated_ts * 1000).toISOString(),
         });
+
+        result.id = crypto
+          .createHash("sha256")
+          .update(
+            `${fromBuffer(r.tx_hash)}${r.maker}${r.taker}${r.contract}${r.token_id}${r.price}`
+          )
+          .digest("hex");
+
+        delete result.saleId;
 
         let eventType = "";
         if (data.trigger === "insert") eventType = "sale.created";
