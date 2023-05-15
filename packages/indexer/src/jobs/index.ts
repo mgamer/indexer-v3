@@ -48,7 +48,7 @@ import * as backfillNftBalancesLastTokenAppraisalValue from "@/jobs/backfill/bac
 import * as backfillCancelEventsCreatedAt from "@/jobs/backfill/backfill-cancel-events-created-at";
 import * as backfillNftTransferEventsCreatedAt from "@/jobs/backfill/backfill-nft-transfer-events-created-at";
 import * as backfillCollectionsRoyalties from "@/jobs/backfill/backfill-collections-royalties";
-
+import * as backfillWrongNftBalances from "@/jobs/backfill/backfill-wrong-nft-balances";
 import * as topBidUpdate from "@/jobs/bid-updates/top-bid-update-queue";
 
 import * as collectionsRefresh from "@/jobs/collections-refresh/collections-refresh";
@@ -68,6 +68,7 @@ import * as updateCollectionUserActivity from "@/jobs/collection-updates/update-
 import * as updateCollectionDailyVolume from "@/jobs/collection-updates/update-collection-daily-volume";
 
 import * as tokenSetUpdatesTopBid from "@/jobs/token-set-updates/top-bid-queue";
+import * as tokenSetUpdatesTopBidSingleToken from "@/jobs/token-set-updates/top-bid-single-token-queue";
 
 import * as currencies from "@/jobs/currencies/index";
 
@@ -119,7 +120,10 @@ import * as blurBidsBufferMisc from "@/jobs/order-updates/misc/blur-bids-buffer"
 import * as blurBidsRefreshMisc from "@/jobs/order-updates/misc/blur-bids-refresh";
 
 import * as orderbookOrders from "@/jobs/orderbook/orders-queue";
-import * as orderbookPostOrderExternal from "@/jobs/orderbook/post-order-external";
+import * as orderbookOrdersV2 from "@/jobs/orderbook/orders-queue-v2";
+import * as orderbookPostOrderExternal from "@/jobs/orderbook/post-order-external/orderbook-post-order-external-queue";
+import * as orderbookPostOrderExternalOpensea from "@/jobs/orderbook/post-order-external/orderbook-post-order-external-opensea-queue";
+
 import * as orderbookTokenSets from "@/jobs/orderbook/token-sets-queue";
 import * as orderbookOpenseaListings from "@/jobs/orderbook/opensea-listings-queue";
 import * as orderbookSaveOpenseaWebsocketEvents from "@/jobs/orderbook/save-opensea-websocket-events-queue";
@@ -145,6 +149,7 @@ import * as updateAttributeCounts from "@/jobs/update-attribute/update-attribute
 import * as askWebsocketEventsTriggerQueue from "@/jobs/websocket-events/ask-websocket-events-trigger-queue";
 import * as bidWebsocketEventsTriggerQueue from "@/jobs/websocket-events/bid-websocket-events-trigger-queue";
 import * as transferWebsocketEventsTriggerQueue from "@/jobs/websocket-events/transfer-websocket-events-trigger-queue";
+import * as saleWebsocketEventsTriggerQueue from "@/jobs/websocket-events/sale-websocket-events-trigger-queue";
 import * as newTopBidTriggerQueue from "@/jobs/websocket-events/new-top-bid-trigger-queue";
 import * as countApiUsage from "@/jobs/metrics/count-api-usage";
 
@@ -184,6 +189,7 @@ export const allJobQueues = [
   backfillCancelEventsCreatedAt.queue,
   backfillNftTransferEventsCreatedAt.queue,
   backfillCollectionsRoyalties.queue,
+  backfillWrongNftBalances.queue,
 
   currencies.queue,
 
@@ -199,6 +205,7 @@ export const allJobQueues = [
   collectionRecalcTokenCount.queue,
 
   tokenSetUpdatesTopBid.queue,
+  tokenSetUpdatesTopBidSingleToken.queue,
 
   collectionUpdatesMetadata.queue,
   rarity.queue,
@@ -257,7 +264,10 @@ export const allJobQueues = [
   blurBidsRefreshMisc.queue,
 
   orderbookOrders.queue,
+  orderbookOrdersV2.queue,
+
   orderbookPostOrderExternal.queue,
+  orderbookPostOrderExternalOpensea.queue,
   orderbookTokenSets.queue,
   orderbookOpenseaListings.queue,
   orderbookSaveOpenseaWebsocketEvents.queue,
@@ -283,6 +293,7 @@ export const allJobQueues = [
   askWebsocketEventsTriggerQueue.queue,
   bidWebsocketEventsTriggerQueue.queue,
   transferWebsocketEventsTriggerQueue.queue,
+  saleWebsocketEventsTriggerQueue.queue,
   newTopBidTriggerQueue.queue,
 
   countApiUsage.queue,

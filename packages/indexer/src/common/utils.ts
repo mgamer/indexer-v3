@@ -123,3 +123,33 @@ export const regex = {
   number: /^[0-9]+$/,
   unixTimestamp: /^[0-9]{10}$/,
 };
+
+// --- base64 ---
+
+export const isBase64 = (base64: string) => {
+  try {
+    if (!base64 || base64.length % 4 !== 0 || typeof base64 !== "string") {
+      return false;
+    }
+    // This is strictly for hex from postgres
+    // if it includes an equal sign, it's probably base64
+    if (base64.includes("=")) {
+      return true;
+    }
+    return regex.base64.test(base64);
+  } catch (error) {
+    return false;
+  }
+};
+
+export const base64ToHex = (base64: string) => {
+  try {
+    if (!isBase64(base64)) {
+      return base64;
+    }
+
+    return "0x" + Buffer.from(base64, "base64").toString("hex");
+  } catch (error) {
+    return base64;
+  }
+};
