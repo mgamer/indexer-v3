@@ -35,7 +35,7 @@ export const WebsocketEventRouter = async ({
         {
           data: eventInfo as transferWebsocketEventsTriggerQueue.TransferWebsocketEventInfo,
         },
-       ]);
+      ]);
       break;
     case WebsocketEventKind.SaleEvent:
       await saleWebsocketEventsTriggerQueue.addToQueue([
@@ -59,7 +59,7 @@ export enum WebsocketEventKind {
   SellOrder = "sell-order",
   BuyOrder = "buy-order",
   TransferEvent = "transfer-event",
-  SaleEvent = "sale-event"
+  SaleEvent = "sale-event",
 }
 
 export type EventInfo =
