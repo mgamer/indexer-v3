@@ -1,9 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { redisWebsocketPublisher } from "@/common/redis";
-import { KafkaEventHandler } from ".";
 
-export class IndexerApprovalEventsHandler extends KafkaEventHandler {
-  topicName = "indexer.public.ft_approvals";
+import { redisWebsocketPublisher } from "@/common/redis";
+import { KafkaEventHandler } from "./KafkaEventHandler";
+
+export class IndexerTransferEventsHandler extends KafkaEventHandler {
+  topicName = "indexer.public.nft_transfer_events";
 
   protected async handleInsert(payload: any): Promise<void> {
     if (!payload.after) {
@@ -13,7 +14,7 @@ export class IndexerApprovalEventsHandler extends KafkaEventHandler {
     await redisWebsocketPublisher.publish(
       "events",
       JSON.stringify({
-        event: "approval.created.v2",
+        event: "transfer.created.v2",
         tags: {},
         data: payload.after,
       })
@@ -21,6 +22,7 @@ export class IndexerApprovalEventsHandler extends KafkaEventHandler {
   }
 
   protected async handleUpdate(payload: any): Promise<void> {
+    // probably do nothing here
     if (!payload.after) {
       return;
     }
@@ -28,7 +30,7 @@ export class IndexerApprovalEventsHandler extends KafkaEventHandler {
     await redisWebsocketPublisher.publish(
       "events",
       JSON.stringify({
-        event: "approval.updated.v2",
+        event: "transfer.updated.v2",
         tags: {},
         data: payload.after,
       })
