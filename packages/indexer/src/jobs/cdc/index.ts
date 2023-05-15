@@ -21,7 +21,6 @@ const kafka = new Kafka({
 export const producer = kafka.producer();
 export const consumer = kafka.consumer({
   groupId: config.kafkaConsumerGroupId,
-  allowAutoTopicCreation: false,
 });
 // Function to start the Kafka producer
 export async function startKafkaProducer(): Promise<void> {
@@ -84,4 +83,10 @@ export async function startKafkaConsumer(): Promise<void> {
       }
     },
   });
+}
+
+// This can be used to restart the Kafka consumer, for example if the consumer is disconnected, or if we need to subscribe to new topics
+export async function restartKafkaConsumer(): Promise<void> {
+  await consumer.disconnect();
+  await startKafkaConsumer();
 }
