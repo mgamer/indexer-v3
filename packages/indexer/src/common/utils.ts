@@ -128,7 +128,7 @@ export const regex = {
 
 export const isBase64 = (base64: string) => {
   try {
-    if (!base64) {
+    if (!base64 || base64.length % 4 !== 0 || typeof base64 !== "string") {
       return false;
     }
     // This is strictly for hex from postgres
