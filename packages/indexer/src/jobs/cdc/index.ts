@@ -9,7 +9,7 @@ import { getServiceName } from "@/config/network";
 const kafka = new Kafka({
   clientId: config.kafkaClientId,
   brokers: config.kafkaBrokers,
-  logLevel: logLevel.DEBUG,
+  logLevel: logLevel.ERROR,
 });
 
 export const producer = kafka.producer();
@@ -42,6 +42,9 @@ export async function startKafkaConsumer(): Promise<void> {
 
     eachMessage: async ({ message, topic }) => {
       const event = JSON.parse(message.value!.toString());
+
+      // eslint-disable-next-line no-console
+      console.log(`${getServiceName()}-kafka-consumer`, `Received event: ${JSON.stringify(event)}`);
 
       // Find the corresponding topic handler and call the handle method on it, if the topic is not a dead letter topic
       if (topic.endsWith("-dead-letter")) {
