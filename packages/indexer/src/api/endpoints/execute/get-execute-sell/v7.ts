@@ -36,7 +36,7 @@ export const getExecuteSellV7Options: RouteOptions = {
   description: "Sell tokens (accept bids)",
   tags: ["api", "Fill Orders (buy & sell)"],
   timeout: {
-    server: 20 * 1000,
+    server: 40 * 1000,
   },
   plugins: {
     "hapi-swagger": {
