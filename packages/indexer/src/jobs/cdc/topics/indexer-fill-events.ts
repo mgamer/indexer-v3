@@ -1,7 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-
-import { redisWebsocketPublisher } from "@/common/redis";
 import { KafkaEventHandler } from "./KafkaEventHandler";
+import {
+  WebsocketEventKind,
+  WebsocketEventRouter,
+} from "@/jobs/websocket-events/websocket-event-router";
 
 export class IndexerFillEventsHandler extends KafkaEventHandler {
   topicName = "indexer.public.fill_events_2";
@@ -11,14 +13,13 @@ export class IndexerFillEventsHandler extends KafkaEventHandler {
       return;
     }
 
-    await redisWebsocketPublisher.publish(
-      "events",
-      JSON.stringify({
-        event: "sell.created.v2",
-        tags: {},
-        data: payload.after,
-      })
-    );
+    await WebsocketEventRouter({
+      eventInfo: {
+        kind: payload.after.kind,
+        orderId: payload.after.order_id,
+      },
+      eventKind: WebsocketEventKind.SaleEvent,
+    });
   }
 
   protected async handleUpdate(payload: any): Promise<void> {
@@ -26,14 +27,13 @@ export class IndexerFillEventsHandler extends KafkaEventHandler {
       return;
     }
 
-    await redisWebsocketPublisher.publish(
-      "events",
-      JSON.stringify({
-        event: "sell.updated.v2",
-        tags: {},
-        data: payload.after,
-      })
-    );
+    await WebsocketEventRouter({
+      eventInfo: {
+        kind: payload.after.kind,
+        orderId: payload.after.order_id,
+      },
+      eventKind: WebsocketEventKind.SaleEvent,
+    });
   }
 
   protected async handleDelete(): Promise<void> {
