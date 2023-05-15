@@ -79,7 +79,7 @@ if (config.doBackgroundWork && config.doWebsocketServerWork && config.doKafkaWor
           WHERE
             fill_events_2.tx_hash = E'${
               "\\" + data.tx_hash.replace("0x", "x")
-            } AND fill_events_2.log_index = $/log_index/
+            }' AND fill_events_2.log_index = $/log_index/
         `,
           { log_index: data.log_index }
         );
