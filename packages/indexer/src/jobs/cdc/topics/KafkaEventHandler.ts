@@ -65,7 +65,7 @@ export abstract class KafkaEventHandler {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   convertPayloadHexToString(payload: any) {
-    const numericKeys = ["amount", "token_id"];
+    const numericKeys = ["amount", "tokenid"];
 
     // go through all the keys in the payload and convert any hex strings to strings
 
@@ -73,7 +73,7 @@ export abstract class KafkaEventHandler {
       if (isBase64(payload.after[key])) {
         payload.after[key] = base64ToHex(payload.after[key]);
         // if the key is a numeric key, convert the value to a number
-        if (numericKeys.includes(key)) {
+        if (numericKeys.includes(key) && typeof payload.after[key] === "string") {
           payload.after[key] = Number(payload.after[key]);
         }
       }
@@ -83,7 +83,7 @@ export abstract class KafkaEventHandler {
       if (isBase64(payload.before[key])) {
         payload.before[key] = base64ToHex(payload.before[key]);
         // if the key is a numeric key, convert the value to a number
-        if (numericKeys.includes(key)) {
+        if (numericKeys.includes(key) && typeof payload.before[key] === "string") {
           payload.before[key] = Number(payload.before[key]);
         }
       }
