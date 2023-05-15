@@ -38,6 +38,8 @@ if (config.doBackgroundWork && config.doWebsocketServerWork && config.doKafkaWor
       const { data } = job.data as EventInfo;
 
       try {
+        // eslint-disable-next-line
+        console.log(QUEUE_NAME, `Processing websocket event. data=${JSON.stringify(data)}`);
         const r = await idb.oneOrNone(
           `
             SELECT
@@ -138,6 +140,9 @@ if (config.doBackgroundWork && config.doWebsocketServerWork && config.doKafkaWor
           if (r.is_deleted) eventType = "sale.deleted";
           else eventType = "sale.updated";
         }
+
+        // eslint-disable-next-line
+        console.log(QUEUE_NAME, `Publishing websocket event. data=${JSON.stringify(result)}`);
 
         await redisWebsocketPublisher.publish(
           "events",
