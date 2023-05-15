@@ -113,6 +113,9 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
           amount: r.amount,
           fillSourceId: r.fill_source_id,
           block: r.block,
+          txHash: r.tx_hash,
+          logIndex: r.log_index,
+          batchIndex: r.batch_index,
           createdAt: new Date(r.created_at).toISOString(),
           updatedAt: new Date(r.updated_ts * 1000).toISOString(),
         });
