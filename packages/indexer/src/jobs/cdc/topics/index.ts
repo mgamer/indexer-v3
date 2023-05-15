@@ -1,20 +1,16 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
-// import { IndexerOrderEventsHandler } from "./indexer-order-events";
-// import { IndexerBidEventsHandler } from "./indexer-bid-events";
-// import { IndexerFillEventsHandler } from "./indexer-fill-events";
-// import { IndexerApprovalEventsHandler } from "./indexer-ft-approvals";
-// import { IndexerBalanceEventsHandler } from "./indexer-ft-balances";
 import { KafkaEventHandler } from "./KafkaEventHandler";
+import { IndexerBidEventsHandler } from "./indexer-bid-events";
+import { IndexerFillEventsHandler } from "./indexer-fill-events";
+import { IndexerApprovalEventsHandler } from "./indexer-nft-approvals";
+import { IndexerBalanceEventsHandler } from "./indexer-nft-balances";
 import { IndexerTransferEventsHandler } from "./indexer-nft-transfer-events";
-// import { logger } from "@/common/logger";
-// import { producer } from "..";
+import { IndexerOrderEventsHandler } from "./indexer-order-events";
 
 export const TopicHandlers: KafkaEventHandler[] = [
-  // new IndexerOrderEventsHandler(),
+  new IndexerOrderEventsHandler(),
   new IndexerTransferEventsHandler(),
-  // new IndexerBalanceEventsHandler(),
-  // new IndexerApprovalEventsHandler(),
-  // new IndexerFillEventsHandler(),
-  // new IndexerBidEventsHandler(),
+  new IndexerBalanceEventsHandler(),
+  new IndexerApprovalEventsHandler(),
+  new IndexerFillEventsHandler(),
+  new IndexerBidEventsHandler(),
 ];

@@ -7,14 +7,8 @@ import { getServiceName } from "@/config/network";
 
 // // Create a Kafka client
 const kafka = new Kafka({
-  clientId: "indexer",
-  brokers: [
-    "main-kafka-0.main-kafka-brokers.kafka.svc:9092",
-    "main-kafka-1.main-kafka-brokers.kafka.svc:9092",
-    "main-kafka-2.main-kafka-brokers.kafka.svc:9092",
-    "main-kafka-3.main-kafka-brokers.kafka.svc:9092",
-    "main-kafka-4.main-kafka-brokers.kafka.svc:9092",
-  ],
+  clientId: config.kafkaClientId,
+  brokers: config.kafkaBrokers,
   logLevel: logLevel.DEBUG,
 });
 
@@ -35,23 +29,21 @@ export async function startKafkaConsumer(): Promise<void> {
     return topicHandler.getTopics();
   }).flat();
 
+  // Do this one at a time, as sometimes the consumer will re-create a topic that already exists if we use the method to subscribe to all topics at once
   await Promise.all(
     topicsToSubscribe.map(async (topic) => {
       await consumer.subscribe({ topic });
     })
   );
-  // // Subscribe to the topics
 
+  // Subscribe to the topics
   await consumer.run({
     partitionsConsumedConcurrently: 1,
 
     eachMessage: async ({ message, topic }) => {
       const event = JSON.parse(message.value!.toString());
-      // eslint-disable-next-line no-console
-      console.log("event", event);
 
       // Find the corresponding topic handler and call the handle method on it, if the topic is not a dead letter topic
-
       if (topic.endsWith("-dead-letter")) {
         // if topic is dead letter, no need to process it
         return;
