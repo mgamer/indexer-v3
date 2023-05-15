@@ -78,7 +78,7 @@ if (config.doBackgroundWork && config.doWebsocketServerWork && config.doKafkaWor
             ON fill_events_2.currency = currencies.contract
           WHERE
             fill_events_2.tx_hash = E'${
-              "\\" + data.tx_hash.replace("0x", "x")
+              "\\\\" + data.tx_hash.replace("0x", "x")
             }' AND fill_events_2.log_index = $/log_index/
         `,
           { log_index: data.log_index }
