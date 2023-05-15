@@ -6,7 +6,7 @@
 // import { IndexerApprovalEventsHandler } from "./indexer-ft-approvals";
 // import { IndexerBalanceEventsHandler } from "./indexer-ft-balances";
 import { KafkaEventHandler } from "./KafkaEventHandler";
-import { IndexerTransferEventsHandler } from "./indexer-ft-transfer-events";
+import { IndexerTransferEventsHandler } from "./indexer-nft-transfer-events";
 // import { logger } from "@/common/logger";
 // import { producer } from "..";
 

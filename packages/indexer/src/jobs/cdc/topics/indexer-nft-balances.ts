@@ -4,7 +4,7 @@ import { redisWebsocketPublisher } from "@/common/redis";
 import { KafkaEventHandler } from "./KafkaEventHandler";
 
 export class IndexerBalanceEventsHandler extends KafkaEventHandler {
-  topicName = "indexer.public.ft_balances";
+  topicName = "indexer.public.nft_balances";
 
   protected async handleInsert(payload: any): Promise<void> {
     if (!payload.after) {

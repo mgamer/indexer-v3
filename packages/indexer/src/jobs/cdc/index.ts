@@ -2,10 +2,12 @@ import { Kafka, logLevel } from "kafkajs";
 
 import { config } from "@/config/index";
 import { TopicHandlers } from "@/jobs/cdc/topics";
+import { logger } from "@/common/logger";
+import { getServiceName } from "@/config/network";
 
 // // Create a Kafka client
 const kafka = new Kafka({
-  clientId: "main-kafka-client",
+  clientId: "indexer",
   brokers: [
     "main-kafka-0.main-kafka-brokers.kafka.svc:9092",
     "main-kafka-1.main-kafka-brokers.kafka.svc:9092",
@@ -29,14 +31,12 @@ export async function startKafkaProducer(): Promise<void> {
 export async function startKafkaConsumer(): Promise<void> {
   await consumer.connect();
 
-  // const topicsToSubscribe = TopicHandlers.map((topicHandler) => {
-  //   return topicHandler.getTopics();
-  // }).flat();
+  const topicsToSubscribe = TopicHandlers.map((topicHandler) => {
+    return topicHandler.topicName;
+  }).flat();
 
   // // Subscribe to the topics
-  // await consumer.subscribe({ topics: topicsToSubscribe });
-
-  await consumer.subscribe({ topic: "indexer.public.fill_events_2" });
+  await consumer.subscribe({ topics: topicsToSubscribe });
 
   await consumer.run({
     partitionsConsumedConcurrently: 1,
@@ -54,7 +54,7 @@ export async function startKafkaConsumer(): Promise<void> {
       }
 
       for (const handler of TopicHandlers) {
-        if (handler.getTopics().includes(topic)) {
+        if (handler.topicName === topic) {
           try {
             // If the event has not been retried before, set the retryCount to 0
             if (!event.payload.retryCount) {
@@ -63,10 +63,16 @@ export async function startKafkaConsumer(): Promise<void> {
 
             await handler.handle(event.payload);
           } catch (error) {
-            // logger.error(
-            //   `${getServiceName()}-kafka-consumer`,
-            //   `Error handling eventName=${event.name}, ${error}`
-            // );
+            // eslint-disable-next-line no-console
+            console.log(
+              `${getServiceName()}-kafka-consumer`,
+              `Error handling eventName=${event.name}, ${error}`
+            );
+
+            logger.error(
+              `${getServiceName()}-kafka-consumer`,
+              `Error handling eventName=${event.name}, ${error}`
+            );
           }
           break;
         }
