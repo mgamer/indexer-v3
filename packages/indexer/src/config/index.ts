@@ -43,6 +43,7 @@ export const config = {
   rateLimitRedisUrl: String(process.env.RATE_LIMIT_REDIS_URL || process.env.REDIS_URL),
   redisWebsocketUrl: String(process.env.REDIS_WEBSOCKET_URL || process.env.REDIS_URL),
   metricsRedisUrl: String(process.env.METRICS_REDIS_URL || process.env.REDIS_URL),
+  orderbookRedisUrl: String(process.env.ORDERSBOOK_REDIS_URL || process.env.REDIS_URL),
   redshiftUrl: String(process.env.REDSHIFT_URL),
 
   master: Boolean(Number(process.env.MASTER)),
@@ -52,6 +53,13 @@ export const config = {
   doWebsocketServerWork: Boolean(Number(process.env.DO_WEBSOCKET_SERVER_WORK)),
   doEventsSyncBackfill: Boolean(Number(process.env.DO_EVENTS_SYNC_BACKFILL)),
   disableOrders: Boolean(Number(process.env.DISABLE_ORDERS)),
+
+  // for kafka
+  doKafkaWork: Boolean(Number(process.env.DO_KAFKA_WORK)),
+  kafkaPartitionsConsumedConcurrently: Number(process.env.KAFKA_PARTITIONS_CONSUMED_CONCURRENTLY),
+  kafkaConsumerGroupId: String(process.env.KAFKA_CONSUMER_GROUP_ID),
+  kafkaBrokers: String(process.env.KAFKA_BROKERS).split(","),
+  kafkaClientId: String(process.env.KAFKA_CLIENT_ID),
 
   maxTokenSetSize: 100000,
 
@@ -84,6 +92,8 @@ export const config = {
   looksRareApiKey: String(process.env.LOOKSRARE_API_KEY),
   openSeaApiKey: String(process.env.OPENSEA_API_KEY),
   openSeaApiUrl: String(process.env.OPENSEA_API_URL || ""),
+
+  openSeaCrossPostingApiKey: String(process.env.OPENSEA_CROSS_POSTING_API_KEY),
 
   x2y2ApiKey: String(process.env.X2Y2_API_KEY),
   cbApiKey: String(process.env.CB_API_KEY),

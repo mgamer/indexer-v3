@@ -13,6 +13,7 @@ import { Sources } from "@/models/sources";
 
 import * as processActivityEvent from "@/jobs/activities/process-activity-event";
 import * as tokenSetUpdatesTopBid from "@/jobs/token-set-updates/top-bid-queue";
+// import * as tokenSetUpdatesTopBidSingleToken from "@/jobs/token-set-updates/top-bid-single-token-queue";
 
 import * as updateNftBalanceFloorAskPriceQueue from "@/jobs/nft-balance-updates/update-floor-ask-price-queue";
 import * as tokenUpdatesFloorAsk from "@/jobs/token-updates/floor-queue";
@@ -77,6 +78,7 @@ if (config.doBackgroundWork) {
                 orders.currency_normalized_value,
                 orders.raw_data,
                 orders.originated_at AS "originatedAt",
+                orders.created_at AS "createdAt",
                 token_sets_tokens.contract,
                 token_sets_tokens.token_id AS "tokenId"
               FROM orders
@@ -94,14 +96,18 @@ if (config.doBackgroundWork) {
 
         if (side && tokenSetId) {
           if (side === "buy") {
-            await tokenSetUpdatesTopBid.addToQueue([
-              {
-                tokenSetId,
-                kind: trigger.kind,
-                txHash: trigger.txHash || null,
-                txTimestamp: trigger.txTimestamp || null,
-              } as tokenSetUpdatesTopBid.TopBidInfo,
-            ]);
+            const topBidInfo = {
+              tokenSetId,
+              kind: trigger.kind,
+              txHash: trigger.txHash || null,
+              txTimestamp: trigger.txTimestamp || null,
+            };
+
+            if (tokenSetId.startsWith("token")) {
+              // await tokenSetUpdatesTopBidSingleToken.addToQueue([topBidInfo]);
+            } else {
+              await tokenSetUpdatesTopBid.addToQueue([topBidInfo]);
+            }
           }
 
           if (side === "sell") {
@@ -378,7 +384,7 @@ if (config.doBackgroundWork) {
             const orderStart = Math.floor(
               new Date(order.originatedAt ?? JSON.parse(order.validBetween)[0]).getTime() / 1000
             );
-            const currentTime = Math.floor(Date.now() / 1000);
+            const orderCreated = Math.floor(new Date(order.createdAt).getTime() / 1000);
             const source = (await Sources.getInstance()).get(order.sourceIdInt);
             const orderType =
               side === "sell"
@@ -389,13 +395,20 @@ if (config.doBackgroundWork) {
                 ? "attribute_offer"
                 : "collection_offer";
 
-            if (orderStart <= currentTime) {
+            if (orderStart <= orderCreated) {
               logger.info(
                 "order-latency",
                 JSON.stringify({
-                  latency: currentTime - orderStart,
+                  latency: orderCreated - orderStart,
                   source: source?.getTitle(),
+                  orderId: order.id,
+                  orderKind: order.kind,
                   orderType,
+                  orderCreatedAt: new Date(order.createdAt).toISOString(),
+                  orderValidFrom: new Date(JSON.parse(order.validBetween)[0]).toISOString(),
+                  orderOriginatedAt: order.originatedAt
+                    ? new Date(order.originatedAt).toISOString()
+                    : null,
                   ingestMethod: ingestMethod ?? "rest",
                 })
               );
@@ -412,7 +425,7 @@ if (config.doBackgroundWork) {
         throw error;
       }
     },
-    { connection: redis.duplicate(), concurrency: 70 }
+    { connection: redis.duplicate(), concurrency: 100 }
   );
   worker.on("error", (error) => {
     logger.error(QUEUE_NAME, `Worker errored: ${error}`);
