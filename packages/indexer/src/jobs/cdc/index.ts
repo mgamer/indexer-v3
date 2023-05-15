@@ -21,6 +21,7 @@ const kafka = new Kafka({
 export const producer = kafka.producer();
 export const consumer = kafka.consumer({
   groupId: config.kafkaConsumerGroupId,
+  allowAutoTopicCreation: false,
 });
 // Function to start the Kafka producer
 export async function startKafkaProducer(): Promise<void> {
@@ -32,7 +33,7 @@ export async function startKafkaConsumer(): Promise<void> {
   await consumer.connect();
 
   const topicsToSubscribe = TopicHandlers.map((topicHandler) => {
-    return topicHandler.topicName;
+    return topicHandler.getTopics();
   }).flat();
 
   // // Subscribe to the topics
@@ -54,7 +55,7 @@ export async function startKafkaConsumer(): Promise<void> {
       }
 
       for (const handler of TopicHandlers) {
-        if (handler.topicName === topic) {
+        if (handler.getTopics().includes(topic)) {
           try {
             // If the event has not been retried before, set the retryCount to 0
             if (!event.payload.retryCount) {
