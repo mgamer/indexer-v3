@@ -65,7 +65,7 @@ export abstract class KafkaEventHandler {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   convertPayloadHexToString(payload: any) {
-    const numericKeys = ["amount", "tokenid"];
+    const numericKeys = ["amount", "token_id"];
 
     // go through all the keys in the payload and convert any hex strings to strings
 
