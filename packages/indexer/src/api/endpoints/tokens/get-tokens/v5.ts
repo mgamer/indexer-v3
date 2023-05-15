@@ -485,7 +485,7 @@ export const getTokensV5Options: RouteOptions = {
         filtered_orders AS (
           SELECT
             DISTINCT ON (token_id, contract)
-            tst.token_id AS token_id,'
+            tst.token_id AS token_id,
             tst.contract AS contract,
             o.id AS floor_sell_id,
             o.maker AS floor_sell_maker,
