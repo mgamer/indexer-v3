@@ -28,12 +28,14 @@ export async function startKafkaProducer(): Promise<void> {
 export async function startKafkaConsumer(): Promise<void> {
   await consumer.connect();
 
-  // Subscribe to the topics
-  await Promise.all(
-    TopicHandlers.map((topicHandler) => {
-      return consumer.subscribe({ topics: topicHandler.getTopics() });
-    })
-  );
+  // const topicsToSubscribe = TopicHandlers.map((topicHandler) => {
+  //   return topicHandler.getTopics();
+  // }).flat();
+
+  // // Subscribe to the topics
+  // await consumer.subscribe({ topics: topicsToSubscribe });
+
+  await consumer.subscribe({ topic: "indexer.public.fill_events_2" });
 
   await consumer.run({
     partitionsConsumedConcurrently: 1,
