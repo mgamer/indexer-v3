@@ -34,21 +34,19 @@ if (config.doBackgroundWork && config.doWebsocketServerWork && config.doKafkaWor
       const { data } = job.data as EventInfo;
 
       try {
-        const { eventData } = data;
-
         const result = {
           token: {
-            contract: eventData.address,
-            tokenId: eventData.token_id,
+            contract: data.address,
+            tokenId: data.token_id,
           },
-          from: eventData.from,
-          to: eventData.to,
-          amount: eventData.amount,
-          block: eventData.block,
-          txHash: eventData.tx_hash,
-          logIndex: eventData.log_index,
-          batchIndex: eventData.batch_index,
-          timestamp: eventData.timestamp,
+          from: data.from,
+          to: data.to,
+          amount: data.amount,
+          block: data.block,
+          txHash: data.tx_hash,
+          logIndex: data.log_index,
+          batchIndex: data.batch_index,
+          timestamp: data.timestamp,
         };
 
         let eventType = "";
@@ -103,19 +101,18 @@ export const addToQueue = async (events: EventInfo[]) => {
 };
 
 export type TransferWebsocketEventInfo = {
-  eventData: {
-    address: string;
-    block: string;
-    tx_hash: string;
-    tx_index: string;
-    log_index: string;
-    batch_index: string;
-    timestamp: string;
-    from: string;
-    to: string;
-    token_id: string;
-    amount: string;
-    created_at: string;
-  };
+  address: string;
+  block: string;
+  tx_hash: string;
+  tx_index: string;
+  log_index: string;
+  batch_index: string;
+  timestamp: string;
+  from: string;
+  to: string;
+  token_id: string;
+  amount: string;
+  created_at: string;
+
   trigger: "insert" | "update" | "delete";
 };
