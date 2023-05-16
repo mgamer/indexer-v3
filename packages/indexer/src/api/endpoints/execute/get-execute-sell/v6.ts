@@ -17,7 +17,8 @@ import { bn, formatPrice, fromBuffer, now, regex, toBuffer } from "@/common/util
 import { config } from "@/config/index";
 import { ApiKeyManager } from "@/models/api-keys";
 import { Sources } from "@/models/sources";
-import { generateBidDetailsV6, routerOnErrorCallback } from "@/orderbook/orders";
+import { generateBidDetailsV6 } from "@/orderbook/orders";
+import { fillErrorCallback, getExecuteError } from "@/orderbook/orders/errors";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import * as b from "@/utils/auth/blur";
 import { getCurrency } from "@/utils/currencies";
@@ -304,6 +305,12 @@ export const getExecuteSellV6Options: RouteOptions = {
       }
 
       const sources = await Sources.getInstance();
+
+      // Save the fill source if it doesn't exist yet
+      if (payload.source) {
+        await sources.getOrInsert(payload.source);
+      }
+
       const sourceId = orderResult.source_id_int;
       const source = sourceId ? sources.get(sourceId)?.domain ?? null : null;
 
@@ -376,7 +383,7 @@ export const getExecuteSellV6Options: RouteOptions = {
           isProtected:
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (orderResult.raw_data as any).zone ===
-            Sdk.SeaportV14.Addresses.OpenSeaProtectedOffersZone[config.chainId],
+            Sdk.SeaportBase.Addresses.OpenSeaProtectedOffersZone[config.chainId],
         },
         {
           kind: orderResult.token_kind,
@@ -562,7 +569,7 @@ export const getExecuteSellV6Options: RouteOptions = {
 
       if (
         orderResult?.raw_data?.zone ===
-        Sdk.SeaportV14.Addresses.OpenSeaProtectedOffersZone[config.chainId]
+        Sdk.SeaportBase.Addresses.OpenSeaProtectedOffersZone[config.chainId]
       ) {
         // Ensure the taker owns the NFTs to get sold
         const takerIsOwner = await idb.oneOrNone(
@@ -608,15 +615,13 @@ export const getExecuteSellV6Options: RouteOptions = {
               orderId: data.orderId,
               message: error.response?.data ?? error.message,
             });
-            await routerOnErrorCallback(kind, error, data);
+            await fillErrorCallback(kind, error, data);
           },
           blurAuth,
         });
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (error: any) {
-        const boomError = Boom.badRequest(error.message);
-        boomError.output.payload.errors = errors;
-        throw boomError;
+        throw getExecuteError(error.message, errors);
       }
 
       const { txs } = result;

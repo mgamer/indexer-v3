@@ -16,7 +16,8 @@ import { bn, formatPrice, fromBuffer, now, regex, toBuffer } from "@/common/util
 import { config } from "@/config/index";
 import { ApiKeyManager } from "@/models/api-keys";
 import { Sources } from "@/models/sources";
-import { OrderKind, generateListingDetailsV6, routerOnErrorCallback } from "@/orderbook/orders";
+import { OrderKind, generateListingDetailsV6 } from "@/orderbook/orders";
+import { fillErrorCallback, getExecuteError } from "@/orderbook/orders/errors";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import * as sudoswap from "@/orderbook/orders/sudoswap";
 import * as nftx from "@/orderbook/orders/nftx";
@@ -193,6 +194,11 @@ export const getExecuteBuyV6Options: RouteOptions = {
 
       // We need each filled order's source for the path
       const sources = await Sources.getInstance();
+
+      // Save the fill source if it doesn't exist yet
+      if (payload.source) {
+        await sources.getOrInsert(payload.source);
+      }
 
       // Keep track of the listings and path to fill
       const listingDetails: ListingDetails[] = [];
@@ -816,14 +822,12 @@ export const getExecuteBuyV6Options: RouteOptions = {
               orderId: data.orderId,
               message: error.response?.data ?? error.message,
             });
-            await routerOnErrorCallback(kind, error, data);
+            await fillErrorCallback(kind, error, data);
           },
         });
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (error: any) {
-        const boomError = Boom.badRequest(error.message);
-        boomError.output.payload.errors = errors;
-        throw boomError;
+        throw getExecuteError(error.message, errors);
       }
 
       const { txs, success } = result;

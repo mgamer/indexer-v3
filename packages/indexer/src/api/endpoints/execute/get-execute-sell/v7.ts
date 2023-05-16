@@ -19,7 +19,8 @@ import { config } from "@/config/index";
 import { getNetworkSettings } from "@/config/network";
 import { ApiKeyManager } from "@/models/api-keys";
 import { Sources } from "@/models/sources";
-import { OrderKind, generateBidDetailsV6, routerOnErrorCallback } from "@/orderbook/orders";
+import { OrderKind, generateBidDetailsV6 } from "@/orderbook/orders";
+import { fillErrorCallback, getExecuteError } from "@/orderbook/orders/errors";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import * as nftx from "@/orderbook/orders/nftx";
 import * as sudoswap from "@/orderbook/orders/sudoswap";
@@ -167,8 +168,14 @@ export const getExecuteSellV7Options: RouteOptions = {
           quantity: Joi.number().unsafe(),
           source: Joi.string().allow("", null),
           currency: Joi.string().lowercase().pattern(regex.address),
+          currencySymbol: Joi.string().optional(),
+          currencyDecimals: Joi.number().optional(),
+          // Net price (without fees on top) = price - builtInFees
           quote: Joi.number().unsafe(),
           rawQuote: Joi.string().pattern(regex.number),
+          // Total price (with fees on top) = price + feesOnTop
+          totalPrice: Joi.number().unsafe(),
+          totalRawPrice: Joi.string().pattern(regex.number),
           builtInFees: Joi.array().items(JoiExecuteFee),
           feesOnTop: Joi.array().items(JoiExecuteFee),
         })
@@ -203,8 +210,12 @@ export const getExecuteSellV7Options: RouteOptions = {
         quantity: number;
         source: string | null;
         currency: string;
+        currencySymbol?: string;
+        currencyDecimals?: number;
         quote: number;
         rawQuote: string;
+        totalPrice: number;
+        totalRawPrice: string;
         builtInFees: ExecuteFee[];
         feesOnTop: ExecuteFee[];
       }[] = [];
@@ -219,6 +230,12 @@ export const getExecuteSellV7Options: RouteOptions = {
       // TODO: Also keep track of the maker's allowance per exchange
 
       const sources = await Sources.getInstance();
+
+      // Save the fill source if it doesn't exist yet
+      if (payload.source) {
+        await sources.getOrInsert(payload.source);
+      }
+
       const addToPath = async (
         order: {
           id: string;
@@ -314,8 +331,12 @@ export const getExecuteSellV7Options: RouteOptions = {
           quantity,
           source,
           currency: order.currency,
+          currencySymbol: currency.symbol,
+          currencyDecimals: currency.decimals,
           quote: formatPrice(netPrice, currency.decimals, true),
           rawQuote: netPrice.toString(),
+          totalPrice: formatPrice(unitPrice, currency.decimals, true),
+          totalRawPrice: unitPrice.toString(),
           builtInFees: builtInFees.map((f) => {
             const rawAmount = unitPrice.mul(f.bps).div(10000).toString();
             const amount = formatPrice(rawAmount, currency.decimals);
@@ -350,7 +371,7 @@ export const getExecuteSellV7Options: RouteOptions = {
               isProtected:
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 (order.rawData as any).zone ===
-                Sdk.SeaportV14.Addresses.OpenSeaProtectedOffersZone[config.chainId],
+                Sdk.SeaportBase.Addresses.OpenSeaProtectedOffersZone[config.chainId],
             },
             {
               kind: token.kind,
@@ -746,12 +767,12 @@ export const getExecuteSellV7Options: RouteOptions = {
           rawAmount,
         });
 
-        item.quote -= amount;
-        item.rawQuote = bn(item.rawQuote).sub(rawAmount).toString();
+        // item.quote -= amount;
+        // item.rawQuote = bn(item.rawQuote).sub(rawAmount).toString();
       };
 
       for (const item of path) {
-        if (ordersEligibleForGlobalFees.includes(item.orderId)) {
+        if (globalFees.length && ordersEligibleForGlobalFees.includes(item.orderId)) {
           for (const f of globalFees) {
             await addGlobalFee(item, f);
           }
@@ -974,15 +995,13 @@ export const getExecuteSellV7Options: RouteOptions = {
               orderId: data.orderId,
               message: error.response?.data ? JSON.stringify(error.response.data) : error.message,
             });
-            await routerOnErrorCallback(kind, error, data);
+            await fillErrorCallback(kind, error, data);
           },
           blurAuth,
         });
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (error: any) {
-        const boomError = Boom.badRequest(error.message);
-        boomError.output.payload.errors = errors;
-        throw boomError;
+        throw getExecuteError(error.message, errors);
       }
 
       const { txs, success } = result;
