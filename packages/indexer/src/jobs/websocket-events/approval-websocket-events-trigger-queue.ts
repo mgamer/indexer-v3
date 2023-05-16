@@ -7,7 +7,7 @@ import { config } from "@/config/index";
 import { randomUUID } from "crypto";
 import _ from "lodash";
 
-import { redisWebsocketPublisher } from "@/common/redis";
+import { publishWebsocketEvent } from "@/common/websocketPublisher";
 
 const QUEUE_NAME = "approval-websocket-events-trigger-queue";
 
@@ -34,32 +34,28 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
       const { data } = job.data as EventInfo;
 
       try {
-        const { eventData } = data;
         const result = {
-          address: eventData.address,
-          block: eventData.block,
-          timestamp: new Date(eventData.timestamp).toISOString(),
-          owner: eventData.owner,
-          operator: eventData.operator,
-          approved: eventData.approved,
+          address: data.address,
+          block: data.block,
+          timestamp: new Date(data.timestamp).toISOString(),
+          owner: data.owner,
+          operator: data.operator,
+          approved: data.approved,
         };
 
         let eventType = "";
         if (data.trigger === "insert") eventType = "approval.created";
         else if (data.trigger === "update") eventType = "approval.updated";
 
-        await redisWebsocketPublisher.publish(
-          "events",
-          JSON.stringify({
-            event: eventType,
-            tags: {
-              address: result.address,
-              owner: result.owner,
-              approved: result.approved,
-            },
-            data: result,
-          })
-        );
+        await publishWebsocketEvent({
+          event: eventType,
+          tags: {
+            address: result.address,
+            owner: result.owner,
+            approved: result.approved,
+          },
+          data: result,
+        });
       } catch (error) {
         logger.error(
           QUEUE_NAME,
@@ -96,13 +92,11 @@ export const addToQueue = async (events: EventInfo[]) => {
 };
 
 export type ApprovalWebsocketEventInfo = {
-  eventData: {
-    address: string;
-    block: string;
-    timestamp: string;
-    owner: string;
-    operator: string;
-    approved: string;
-  };
+  address: string;
+  block: string;
+  timestamp: string;
+  owner: string;
+  operator: string;
+  approved: string;
   trigger: "insert" | "update" | "delete";
 };

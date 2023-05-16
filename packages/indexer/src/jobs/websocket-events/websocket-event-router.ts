@@ -37,7 +37,7 @@ export const WebsocketEventRouter = async ({
         {
           data: eventInfo as approvalWebsocketEventsTriggerQueue.ApprovalWebsocketEventInfo,
         },
-        ]};
+      ]);
       break;
     case WebsocketEventKind.BalanceEvent:
       await balanceEventWebsocketEventsTriggerQueue.addToQueue([
@@ -84,7 +84,7 @@ export type EventInfo =
   | NewTopBidWebsocketEventInfo
   | askWebsocketEventsTriggerQueue.AskWebsocketEventInfo
   | bidWebsocketEventsTriggerQueue.BidWebsocketEventInfo
-  | approvalWebsocketEventsTriggerQueue.ApprovalWebsocketEventInfo;
+  | approvalWebsocketEventsTriggerQueue.ApprovalWebsocketEventInfo
   | balanceEventWebsocketEventsTriggerQueue.BalanceWebsocketEventInfo
   | transferWebsocketEventsTriggerQueue.TransferWebsocketEventInfo
   | saleWebsocketEventsTriggerQueue.SaleWebsocketEventInfo;
