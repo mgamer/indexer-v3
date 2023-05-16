@@ -121,7 +121,7 @@ export abstract class SeaportBaseExchange {
           from: taker,
           to: this.contract.address,
           data:
-            this.contract.interface.encodeFunctionData("fulfillBasicOrder", [
+            this.contract.interface.encodeFunctionData("fulfillBasicOrder_efficient_6GL6yc", [
               {
                 considerationToken: info.paymentToken,
                 considerationIdentifier: "0",
@@ -473,7 +473,10 @@ export abstract class SeaportBaseExchange {
 
           return {
             // To cover the generic `matchOrders` case
-            recipientOverride,
+            recipientOverride:
+              recipientOverride && recipientOverride !== AddressZero
+                ? recipientOverride
+                : undefined,
             contract: nSpentItems[0].token,
             tokenId: nSpentItems[0].identifier,
             amount: nSpentItems[0].amount,

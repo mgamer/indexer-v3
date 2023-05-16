@@ -19,7 +19,7 @@ const version = "v3";
 export const getExecuteCancelV3Options: RouteOptions = {
   description: "Cancel orders",
   notes: "Cancel existing orders on any marketplace",
-  tags: ["api", "Fill Orders (buy & sell)"],
+  tags: ["api", "Create Orders (list & bid)"],
   plugins: {
     "hapi-swagger": {
       order: 11,
@@ -319,7 +319,7 @@ export const getExecuteCancelV3Options: RouteOptions = {
 
       // Handle off-chain cancellations
 
-      const cancellationZone = Sdk.SeaportV14.Addresses.CancellationZone[config.chainId];
+      const cancellationZone = Sdk.SeaportBase.Addresses.ReservoirCancellationZone[config.chainId];
       const areAllSeaportV14OracleCancellable = orderResults.every(
         (o) => o.kind === "seaport-v1.4" && o.raw_data.zone === cancellationZone
       );

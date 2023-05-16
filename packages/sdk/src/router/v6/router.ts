@@ -204,7 +204,6 @@ export class Router {
       options.partial = false;
     }
 
-    // TODO: Add Universe router module
     if (details.some(({ kind }) => kind === "universe")) {
       if (options?.relayer) {
         throw new Error("Relayer not supported for Universe orders");
@@ -245,7 +244,6 @@ export class Router {
       };
     }
 
-    // TODO: Add Cryptopunks router module
     if (details.some(({ kind }) => kind === "cryptopunks")) {
       if (options?.relayer) {
         throw new Error("Relayer not supported for Cryptopunks orders");
@@ -270,7 +268,6 @@ export class Router {
       };
     }
 
-    // TODO: Add Flow router module
     if (details.some(({ kind }) => kind === "flow")) {
       if (options?.relayer) {
         throw new Error("Relayer not supported for Flow orders");
@@ -309,7 +306,6 @@ export class Router {
       };
     }
 
-    // TODO: Add Manifold router module
     if (details.some(({ kind }) => kind === "manifold")) {
       if (options?.relayer) {
         throw new Error("Relayer not supported for Manifold orders");
@@ -2594,7 +2590,6 @@ export class Router {
     // CASE 1
     // Handle exchanges which don't have a router module implemented by filling directly
 
-    // TODO: Add Universe router module
     if (details.some(({ kind }) => kind === "universe")) {
       for (const detail of details) {
         if (detail.fees?.length || options?.globalFees?.length) {
@@ -2602,7 +2597,8 @@ export class Router {
         }
 
         // Approve Universe's Exchange contract
-        const approval = {
+        const approval: NFTApproval = {
+          orderIds: [detail.orderId],
           contract: detail.contract,
           owner: taker,
           operator: Sdk.Universe.Addresses.Exchange[this.chainId],
@@ -2627,6 +2623,44 @@ export class Router {
 
         success[detail.orderId] = true;
       }
+      return {
+        txs,
+        success,
+      };
+    }
+
+    // TODO: Add Flow router module
+    if (details.some(({ kind }) => kind === "flow")) {
+      for (const detail of details) {
+        if (detail.fees?.length || options?.globalFees?.length) {
+          throw new Error("Fees not supported for Universe orders");
+        }
+
+        // Approve Universe's Exchange contract
+        const approval: NFTApproval = {
+          orderIds: [detail.orderId],
+          contract: detail.contract,
+          owner: taker,
+          operator: Sdk.Flow.Addresses.Exchange[this.chainId],
+          txData: generateNFTApprovalTxData(
+            detail.contract,
+            taker,
+            Sdk.Universe.Addresses.Exchange[this.chainId]
+          ),
+        };
+
+        const order = detail.order as Sdk.Flow.Order;
+        const exchange = new Sdk.Flow.Exchange(this.chainId);
+
+        txs.push({
+          approvals: approval ? [approval] : [],
+          txData: exchange.takeMultipleOneOrdersTx(taker, [order]),
+          orderIds: [detail.orderId],
+        });
+
+        success[detail.orderId] = true;
+      }
+
       return {
         txs,
         success,
@@ -2757,6 +2791,7 @@ export class Router {
 
       // Generate approval
       approvals.push({
+        orderIds: [detail.orderId],
         contract,
         owner,
         operator,
@@ -3038,59 +3073,55 @@ export class Router {
               );
 
               // Fill directly
-              return {
-                txs: [
+              txs.push({
+                txData: {
+                  from: taker,
+                  to: Sdk.SeaportV14.Addresses.Exchange[this.chainId],
+                  data: result.data.calldata + generateSourceBytes(options?.source),
+                },
+                approvals: [
                   {
-                    txData: {
-                      from: taker,
-                      to: Sdk.SeaportV14.Addresses.Exchange[this.chainId],
-                      data: result.data.calldata + generateSourceBytes(options?.source),
-                    },
-                    approvals: [
-                      {
-                        contract,
-                        owner,
-                        operator,
-                        txData: generateNFTApprovalTxData(contract, owner, operator),
-                      },
-                    ],
                     orderIds: [detail.orderId],
+                    contract,
+                    owner,
+                    operator,
+                    txData: generateNFTApprovalTxData(contract, owner, operator),
                   },
                 ],
-                success: { [detail.orderId]: true },
-              };
-            }
-
-            const fullOrder = new Sdk.SeaportV14.Order(this.chainId, result.data.order);
-            executionsWithDetails.push({
-              detail,
-              execution: {
-                module: module.address,
-                data: module.interface.encodeFunctionData(
-                  detail.contractKind === "erc721" ? "acceptERC721Offer" : "acceptERC1155Offer",
-                  [
-                    {
-                      parameters: {
-                        ...fullOrder.params,
-                        totalOriginalConsiderationItems: fullOrder.params.consideration.length,
+                orderIds: [detail.orderId],
+              });
+            } else {
+              const fullOrder = new Sdk.SeaportV14.Order(this.chainId, result.data.order);
+              executionsWithDetails.push({
+                detail,
+                execution: {
+                  module: module.address,
+                  data: module.interface.encodeFunctionData(
+                    detail.contractKind === "erc721" ? "acceptERC721Offer" : "acceptERC1155Offer",
+                    [
+                      {
+                        parameters: {
+                          ...fullOrder.params,
+                          totalOriginalConsiderationItems: fullOrder.params.consideration.length,
+                        },
+                        numerator: detail.amount ?? 1,
+                        denominator: fullOrder.getInfo()!.amount,
+                        signature: fullOrder.params.signature,
+                        extraData: result.data.extraData,
                       },
-                      numerator: detail.amount ?? 1,
-                      denominator: fullOrder.getInfo()!.amount,
-                      signature: fullOrder.params.signature,
-                      extraData: result.data.extraData,
-                    },
-                    result.data.criteriaResolvers ?? [],
-                    {
-                      fillTo: taker,
-                      refundTo: taker,
-                      revertIfIncomplete: Boolean(!options?.partial),
-                    },
-                    fees,
-                  ]
-                ),
-                value: 0,
-              },
-            });
+                      result.data.criteriaResolvers ?? [],
+                      {
+                        fillTo: taker,
+                        refundTo: taker,
+                        revertIfIncomplete: Boolean(!options?.partial),
+                      },
+                      fees,
+                    ]
+                  ),
+                  value: 0,
+                },
+              });
+            }
 
             success[detail.orderId] = true;
           } catch (error) {
@@ -3190,59 +3221,55 @@ export class Router {
               );
 
               // Fill directly
-              return {
-                txs: [
+              txs.push({
+                txData: {
+                  from: taker,
+                  to: Sdk.SeaportV15.Addresses.Exchange[this.chainId],
+                  data: result.data.calldata + generateSourceBytes(options?.source),
+                },
+                approvals: [
                   {
-                    txData: {
-                      from: taker,
-                      to: Sdk.SeaportV15.Addresses.Exchange[this.chainId],
-                      data: result.data.calldata + generateSourceBytes(options?.source),
-                    },
-                    approvals: [
-                      {
-                        contract,
-                        owner,
-                        operator,
-                        txData: generateNFTApprovalTxData(contract, owner, operator),
-                      },
-                    ],
                     orderIds: [detail.orderId],
+                    contract,
+                    owner,
+                    operator,
+                    txData: generateNFTApprovalTxData(contract, owner, operator),
                   },
                 ],
-                success: { [detail.orderId]: true },
-              };
-            }
-
-            const fullOrder = new Sdk.SeaportV15.Order(this.chainId, result.data.order);
-            executionsWithDetails.push({
-              detail,
-              execution: {
-                module: module.address,
-                data: module.interface.encodeFunctionData(
-                  detail.contractKind === "erc721" ? "acceptERC721Offer" : "acceptERC1155Offer",
-                  [
-                    {
-                      parameters: {
-                        ...fullOrder.params,
-                        totalOriginalConsiderationItems: fullOrder.params.consideration.length,
+                orderIds: [detail.orderId],
+              });
+            } else {
+              const fullOrder = new Sdk.SeaportV15.Order(this.chainId, result.data.order);
+              executionsWithDetails.push({
+                detail,
+                execution: {
+                  module: module.address,
+                  data: module.interface.encodeFunctionData(
+                    detail.contractKind === "erc721" ? "acceptERC721Offer" : "acceptERC1155Offer",
+                    [
+                      {
+                        parameters: {
+                          ...fullOrder.params,
+                          totalOriginalConsiderationItems: fullOrder.params.consideration.length,
+                        },
+                        numerator: detail.amount ?? 1,
+                        denominator: fullOrder.getInfo()!.amount,
+                        signature: fullOrder.params.signature,
+                        extraData: result.data.extraData,
                       },
-                      numerator: detail.amount ?? 1,
-                      denominator: fullOrder.getInfo()!.amount,
-                      signature: fullOrder.params.signature,
-                      extraData: result.data.extraData,
-                    },
-                    result.data.criteriaResolvers ?? [],
-                    {
-                      fillTo: taker,
-                      refundTo: taker,
-                      revertIfIncomplete: Boolean(!options?.partial),
-                    },
-                    fees,
-                  ]
-                ),
-                value: 0,
-              },
-            });
+                      result.data.criteriaResolvers ?? [],
+                      {
+                        fillTo: taker,
+                        refundTo: taker,
+                        revertIfIncomplete: Boolean(!options?.partial),
+                      },
+                      fees,
+                    ]
+                  ),
+                  value: 0,
+                },
+              });
+            }
 
             success[detail.orderId] = true;
           } catch (error) {

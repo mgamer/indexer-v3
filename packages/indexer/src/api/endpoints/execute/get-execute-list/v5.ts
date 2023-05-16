@@ -53,7 +53,7 @@ const version = "v5";
 export const getExecuteListV5Options: RouteOptions = {
   description: "Create asks (listings)",
   notes:
-    "Generate listings and submit them to multiple marketplaces. Please use the `/cross-posting-orders/v1` to check the status on cross posted bids.\n We recommend using Reservoir SDK as it abstracts the process of iterating through steps, and returning callbacks that can be used to update your UI.",
+    "Generate listings and submit them to multiple marketplaces.\n\n Notes:\n\n- Please use the `/cross-posting-orders/v1` to check the status on cross posted bids.\n\n- We recommend using Reservoir SDK as it abstracts the process of iterating through steps, and returning callbacks that can be used to update your UI.",
   tags: ["api", "Create Orders (list & bid)"],
   plugins: {
     "hapi-swagger": {
@@ -178,14 +178,20 @@ export const getExecuteListV5Options: RouteOptions = {
     schema: Joi.object({
       steps: Joi.array().items(
         Joi.object({
-          id: Joi.string().required(),
-          kind: Joi.string().valid("request", "signature", "transaction").required(),
+          id: Joi.string().required().description("Returns `nft-approval` or `order-signature`"),
+          kind: Joi.string()
+            .valid("request", "signature", "transaction")
+            .required()
+            .description("Returns `request`, `signature`, or `transaction`."),
           action: Joi.string().required(),
           description: Joi.string().required(),
           items: Joi.array()
             .items(
               Joi.object({
-                status: Joi.string().valid("complete", "incomplete").required(),
+                status: Joi.string()
+                  .valid("complete", "incomplete")
+                  .required()
+                  .description("Returns `complete` or `incomplete`."),
                 tip: Joi.string(),
                 data: Joi.object(),
                 orderIndexes: Joi.array().items(Joi.number()),
