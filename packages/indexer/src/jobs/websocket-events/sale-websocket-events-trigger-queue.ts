@@ -31,7 +31,7 @@ export const queue = new Queue(QUEUE_NAME, {
 new QueueScheduler(QUEUE_NAME, { connection: redis.duplicate() });
 
 // BACKGROUND WORKER ONLY
-if (config.doBackgroundWork && config.doWebsocketServerWork && config.doKafkaWork) {
+if (config.doBackgroundWork && config.doWebsocketServerWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
