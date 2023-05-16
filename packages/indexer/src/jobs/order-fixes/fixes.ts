@@ -285,7 +285,7 @@ if (config.doBackgroundWork) {
                 case "sudoswap": {
                   try {
                     const order = new Sdk.Sudoswap.Order(config.chainId, result.raw_data);
-                    const cacheKey = `order-fixes:nftx:${order.params.pair}`;
+                    const cacheKey = `order-fixes:sudoswap:${order.params.pair}`;
                     if (!redis.get(cacheKey)) {
                       await redis.set(cacheKey, "locked", "EX", 3600);
                       await orderbook.addToQueue([
