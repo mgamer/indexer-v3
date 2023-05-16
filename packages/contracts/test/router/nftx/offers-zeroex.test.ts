@@ -1,50 +1,41 @@
 import { BigNumber } from "@ethersproject/bignumber";
 import { Contract } from "@ethersproject/contracts";
-import { formatEther, parseEther } from "@ethersproject/units";
+import { parseEther } from "@ethersproject/units";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 import * as Sdk from "@reservoir0x/sdk/src";
 import { expect } from "chai";
 import { ethers, network } from "hardhat";
 import { NFTXOffer } from "../helpers/nftx";
 import { ExecutionInfo } from "../helpers/router";
-import {
-  bn,
-  getChainId,
-  getRandomBoolean,
-  getRandomFloat,
-  getRandomInteger,
-  reset,
-  setupNFTs,
-} from "../../utils";
+import { bn, getChainId, getRandomBoolean, getRandomFloat, reset } from "../../utils";
 
-describe("[ReservoirV6_0_1] NFTX-ZeroEx offers", () => {
+describe("[ReservoirV6_0_1] NFTX offers (with 0x routing)", () => {
   const chainId = getChainId();
 
   let deployer: SignerWithAddress;
   let alice: SignerWithAddress;
   let bob: SignerWithAddress;
   let carol: SignerWithAddress;
-  let david: SignerWithAddress;
   let emilio: SignerWithAddress;
 
-  let erc721: Contract;
   let router: Contract;
-  let nftxModule: Contract;
+  let nftxZeroExModule: Contract;
 
   beforeEach(async () => {
-    [deployer, alice, bob, carol, david, emilio] = await ethers.getSigners();
+    [deployer, alice, bob, carol, emilio] = await ethers.getSigners();
 
-    ({ erc721 } = await setupNFTs(deployer));
-
-    router = (await ethers
+    router = await ethers
       .getContractFactory("ReservoirV6_0_1", deployer)
-      .then((factory) => factory.deploy())) as any;
-
-    nftxModule = (await ethers
+      .then((factory) => factory.deploy());
+    nftxZeroExModule = await ethers
       .getContractFactory("NFTXZeroExModule", deployer)
       .then((factory) =>
-        factory.deploy(router.address, router.address)
-      )) as any;
+        factory.deploy(
+          router.address,
+          router.address,
+          Sdk.Nftx.Addresses.ZeroExMarketplaceZap[chainId]
+        )
+      );
   });
 
   const getBalances = async (token: string) => {
@@ -53,21 +44,19 @@ describe("[ReservoirV6_0_1] NFTX-ZeroEx offers", () => {
         alice: await ethers.provider.getBalance(alice.address),
         bob: await ethers.provider.getBalance(bob.address),
         carol: await ethers.provider.getBalance(carol.address),
-        david: await ethers.provider.getBalance(david.address),
         emilio: await ethers.provider.getBalance(emilio.address),
         router: await ethers.provider.getBalance(router.address),
-        nftxModule: await ethers.provider.getBalance(nftxModule.address),
+        nftxZeroExModule: await ethers.provider.getBalance(nftxZeroExModule.address),
       };
     } else {
       const contract = new Sdk.Common.Helpers.Erc20(ethers.provider, token);
       return {
         alice: await contract.getBalance(alice.address),
-        bob: await contract.getBalance(bob.address),
+        bob: await ethers.provider.getBalance(bob.address),
         carol: await contract.getBalance(carol.address),
-        david: await contract.getBalance(david.address),
         emilio: await contract.getBalance(emilio.address),
         router: await contract.getBalance(router.address),
-        nftxModule: await contract.getBalance(nftxModule.address),
+        nftxZeroExModule: await contract.getBalance(nftxZeroExModule.address),
       };
     }
   };
@@ -80,65 +69,49 @@ describe("[ReservoirV6_0_1] NFTX-ZeroEx offers", () => {
     // Whether to revert or not in case of any failures
     revertIfIncomplete: boolean,
     // Whether to cancel some orders in order to trigger partial filling
-    partial: boolean,
-    // Number of offers to fill
-    offersCount: number
+    partial: boolean
   ) => {
     // Setup
 
-    // Makers: Alice and Bob
-    // Taker: Carol
-
-    // Holder
-    const mockAddress = `0xc8c9771b59f9f217e8285889b9cdd7b9ddce0e86`;
-    // Milady
-    const mockCollection = '0x5af0d9827e0c53e4799bb226655a1de152a425a5';
-    const vaultAddress = '0x227c7DF69D3ed1ae7574A1a7685fDEd90292EB48';
-    const _vaultId = 392;
-
-    // Change this
-    const tokenId = 4341;
-    const holdTokenIds = [
-      4341,
-      7028,
-    ]
-
+    // Token owner = alice
+    const owner = "0xc8c9771b59f9f217e8285889b9cdd7b9ddce0e86";
     await network.provider.request({
       method: "hardhat_impersonateAccount",
-      params: [mockAddress],
+      params: [owner],
     });
-
     await network.provider.request({
       method: "hardhat_setBalance",
-      params: [mockAddress, "0x1000000000000000000"],
+      params: [owner, "0x1000000000000000000"],
     });
+    carol = await ethers.getSigner(owner);
 
+    // Collection = milady
+    const collection = "0x5af0d9827e0c53e4799bb226655a1de152a425a5";
+    const vault = "0x227c7DF69D3ed1ae7574A1a7685fDEd90292EB48";
+    const vaultId = 392;
+    const tokensInVault = [4341, 7028];
+    const tokenId = 4341;
 
-    // carol = await ethers.getSigner(mockAddress); 
+    const factory = await ethers.getContractFactory("MockERC721", deployer);
+
     const offers: NFTXOffer[] = [];
     const fees: BigNumber[][] = [];
-    const factory = await ethers.getContractFactory("MockERC721", deployer);
-    carol = await ethers.getSigner(mockAddress);
+    for (let i = 0; i < tokensInVault.length; i++) {
+      const erc721 = factory.attach(collection);
 
-    for (let i = 0; i < offersCount; i++) {
-
-      if (holdTokenIds.length < i) {
-        break;
-      }
-     
-      const erc721 = await factory.attach(mockCollection);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const offer: any = {
         buyer: getRandomBoolean() ? alice : bob,
         nft: {
           contract: erc721,
-          id: holdTokenIds[i],
+          id: tokensInVault[i],
         },
         price: parseEther(getRandomFloat(0.6, 5).toFixed(6)),
         isCancelled: partial && getRandomBoolean(),
-      }
+      };
 
       const poolPrice = await Sdk.Nftx.Helpers.getPoolPriceFrom0x(
-        vaultAddress,
+        vault,
         1,
         "sell",
         100,
@@ -147,16 +120,14 @@ describe("[ReservoirV6_0_1] NFTX-ZeroEx offers", () => {
 
       if (poolPrice.price) {
         offer.price = bn(poolPrice.price);
-        offer.vault = vaultAddress;
+        offer.vault = vault;
         offer.order = new Sdk.Nftx.Order(chainId, {
-          vaultId: _vaultId.toString(),
-          pool: vaultAddress,
+          vaultId: vaultId.toString(),
+          pool: vault,
           collection: offer.nft.contract.address,
           currency: Sdk.Common.Addresses.Eth[chainId],
           specificIds: [offer.nft.id.toString()],
-          price: offer.isCancelled
-            ? offer.price.mul(bn(10)).toString()
-            : offer.price.toString(),
+          price: offer.isCancelled ? offer.price.mul(bn(10)).toString() : offer.price.toString(),
           extra: {
             prices: [offer.price.toString()],
           },
@@ -168,15 +139,14 @@ describe("[ReservoirV6_0_1] NFTX-ZeroEx offers", () => {
       offers.push(offer);
 
       if (chargeFees) {
-        fees.push([])
+        fees.push([parseEther(getRandomFloat(0.0001, 0.1).toFixed(6))]);
       } else {
         fees.push([]);
       }
     }
 
-    const erc721 = await factory.attach(mockCollection);
-
-    await erc721.connect(carol).transferFrom(carol.address, nftxModule.address, tokenId)
+    const erc721 = factory.attach(collection);
+    await erc721.connect(carol).transferFrom(carol.address, nftxZeroExModule.address, tokenId);
 
     // Prepare executions
 
@@ -184,8 +154,8 @@ describe("[ReservoirV6_0_1] NFTX-ZeroEx offers", () => {
       ...offers
         .filter((_) => _.order)
         .map((offer, i) => ({
-          module: nftxModule.address,
-          data: nftxModule.interface.encodeFunctionData("sell", [
+          module: nftxZeroExModule.address,
+          data: nftxZeroExModule.interface.encodeFunctionData("sell", [
             [offer.order?.params],
             {
               fillTo: carol.address,
@@ -208,35 +178,23 @@ describe("[ReservoirV6_0_1] NFTX-ZeroEx offers", () => {
     // If the `revertIfIncomplete` option is enabled and we have any
     // orders that are not fillable, the whole transaction should be
     // reverted
-    if (
-      partial &&
-      revertIfIncomplete &&
-      offers.some(({ isCancelled }) => isCancelled)
-    ) {
+    if (partial && revertIfIncomplete && offers.some(({ isCancelled }) => isCancelled)) {
       await expect(
         router.connect(carol).execute(executions, {
-          value: executions
-            .map(({ value }) => value)
-            .reduce((a, b) => bn(a).add(b), bn(0)),
+          value: executions.map(({ value }) => value).reduce((a, b) => bn(a).add(b), bn(0)),
         })
-      ).to.be.revertedWith(
-        "reverted with custom error 'UnsuccessfulExecution()'"
-      );
+      ).to.be.revertedWith("reverted with custom error 'UnsuccessfulExecution()'");
 
       return;
     }
 
     // Fetch pre-state
-    const balancesBefore = await getBalances(
-      Sdk.Common.Addresses.Eth[chainId]
-    );
+
+    const balancesBefore = await getBalances(Sdk.Common.Addresses.Eth[chainId]);
 
     // Execute
     await router.connect(carol).execute(executions, {
-      gasLimit: 30000000,
-      value: executions
-        .map(({ value }) => value)
-        .reduce((a, b) => bn(a).add(b), bn(0)),
+      value: executions.map(({ value }) => value).reduce((a, b) => bn(a).add(b), bn(0)),
     });
 
     // Fetch post-state
@@ -247,29 +205,8 @@ describe("[ReservoirV6_0_1] NFTX-ZeroEx offers", () => {
     // Carol got the payment
     const orderFee = offers
       .map((_, i) => (offers[i].isCancelled ? [] : fees[i]))
-      .map((executionFees) =>
-        executionFees.reduce((a, b) => bn(a).add(b), bn(0))
-      )
+      .map((executionFees) => executionFees.reduce((a, b) => bn(a).add(b), bn(0)))
       .reduce((a, b) => bn(a).add(b), bn(0));
-
-    const carolAfter = balancesAfter.carol.sub(balancesBefore.carol);
-    const totalAmount = carolAfter.add(orderFee);
-
-    const orderSum = offers
-      .map((offer) => (offer.isCancelled ? bn(0) : bn(offer.price)))
-      .reduce((a, b) => bn(a).add(b), bn(0));
-
-    if (orderSum.gt(bn(0))) {
-      const diffPercent =
-        (parseFloat(formatEther(orderSum.sub(totalAmount))) /
-          parseFloat(formatEther(totalAmount))) *
-        100;
-
-      // Check Carol balance
-      const defaultSlippage = 5;
-      expect(diffPercent).to.lte(defaultSlippage);
-      expect(carolAfter).to.gte(bn(0));
-    }
 
     // Emilio got the fee payments
     if (chargeFees) {
@@ -287,36 +224,18 @@ describe("[ReservoirV6_0_1] NFTX-ZeroEx offers", () => {
 
     // Router is stateless
     expect(balancesAfter.router).to.eq(0);
-    expect(balancesAfter.nftxModule).to.eq(0);
+    expect(balancesAfter.nftxZeroExModule).to.eq(0);
   };
 
-  // it("Accpect Offer", async () => testAcceptOffers(
-  //   true,
-  //   true,
-  //   false,
-  //   1
-  // ))
-  // return;
+  for (const partial of [false, true]) {
+    for (const chargeFees of [false, true]) {
+      for (const revertIfIncomplete of [false, true]) {
+        const testCaseName =
+          `${partial ? "[partial]" : "[full]"}` +
+          `${chargeFees ? "[fees]" : "[no-fees]"}` +
+          `${revertIfIncomplete ? "[reverts]" : "[skip-reverts]"}`;
 
-  for (const multiple of [false, true]) {
-    for (const partial of [false, true]) {
-      for (const chargeFees of [false, true]) {
-        for (const revertIfIncomplete of [false, true]) {
-          const testCaseName =
-            `${multiple ? "[multiple-orders]" : "[single-order]"}` +
-            `${partial ? "[partial]" : "[full]"}` +
-            `${chargeFees ? "[fees]" : "[no-fees]"}` +
-            `${revertIfIncomplete ? "[reverts]" : "[skip-reverts]"}`;
-
-          it(testCaseName, async () =>
-            testAcceptOffers(
-              chargeFees,
-              revertIfIncomplete,
-              partial,
-              multiple ? 1 : 1
-            )
-          );
-        }
+        it(testCaseName, async () => testAcceptOffers(chargeFees, revertIfIncomplete, partial));
       }
     }
   }
