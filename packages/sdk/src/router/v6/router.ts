@@ -140,6 +140,11 @@ export class Router {
         NFTXModuleAbi,
         provider
       ),
+      nftxZeroModule: new Contract(
+        Addresses.NFTXZeroExModule[chainId] ?? AddressZero,
+        NFTXModuleAbi,
+        provider
+      ),
       raribleModule: new Contract(
         Addresses.RaribleModule[chainId] ?? AddressZero,
         RaribleModuleAbi,
@@ -828,6 +833,7 @@ export class Router {
     const zeroexV4Erc1155Details: ListingDetails[] = [];
     const zoraDetails: ListingDetails[] = [];
     const nftxDetails: ListingDetails[] = [];
+    const nftxZeroExDetails: ListingDetails[] = [];
     const raribleDetails: ListingDetails[] = [];
     const superRareDetails: ListingDetails[] = [];
 
@@ -904,7 +910,8 @@ export class Router {
           break;
 
         case "nftx": {
-          detailsRef = nftxDetails;
+          const order = detail.order as Sdk.Nftx.Order;
+          detailsRef = order.routeVia0x() ? nftxZeroExDetails : nftxDetails;
           break;
         }
 
@@ -1775,17 +1782,6 @@ export class Router {
 
         // Update the order's price in-place
         order.params.price = order.params.extra.prices[perPoolOrders[order.params.pool].length - 1];
-
-        // Attach the ZeroEx calldata
-        if (order.routeVia0x()) {
-          const orderCount = perPoolOrders[order.params.pool].length;
-          const slippage = 0;
-          const { swapCallData, price } = await order.getQuote(orderCount, slippage, this.provider);
-
-          // Override
-          order.params.swapCallData = swapCallData;
-          order.params.price = price.toString();
-        }
       }
 
       executions.push({
@@ -1826,6 +1822,91 @@ export class Router {
 
       // Mark the listings as successfully handled
       for (const { orderId } of nftxDetails) {
+        success[orderId] = true;
+        orderIds.push(orderId);
+      }
+    }
+
+    // Handle NFTX ZeroEx listings
+    if (nftxZeroExDetails.length) {
+      const orders = nftxZeroExDetails.map((d) => d.order as Sdk.Nftx.Order);
+      const module = this.contracts.nftxZeroModule;
+
+      const fees = getFees(nftxZeroExDetails);
+      const price = orders
+        .map((order) =>
+          bn(
+            order.params.extra.prices[
+              // Handle multiple listings from the same pool
+              orders
+                .filter((o) => o.params.pool === order.params.pool)
+                .findIndex((o) => o.params.specificIds?.[0] === order.params.specificIds?.[0])
+            ]
+          )
+        )
+        .reduce((a, b) => a.add(b), bn(0));
+      const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
+      const totalPrice = price.add(feeAmount);
+
+      // Aggregate same-pool orders
+      const perPoolOrders: { [pool: string]: Sdk.Nftx.Order[] } = {};
+      for (const details of nftxZeroExDetails) {
+        const order = details.order as Sdk.Nftx.Order;
+        if (!perPoolOrders[order.params.pool]) {
+          perPoolOrders[order.params.pool] = [];
+        }
+        perPoolOrders[order.params.pool].push(order);
+
+        // Update the order's price in-place
+        order.params.price = order.params.extra.prices[perPoolOrders[order.params.pool].length - 1];
+
+        const orderCount = perPoolOrders[order.params.pool].length;
+        const slippage = 0;
+        const { swapCallData, price } = await order.getQuote(orderCount, slippage, this.provider);
+        // Override
+        order.params.swapCallData = swapCallData;
+        order.params.price = price.toString();
+      }
+
+      executions.push({
+        module: module.address,
+        data: module.interface.encodeFunctionData("buyWithETH", [
+          Object.keys(perPoolOrders).map((pool) => ({
+            vaultId: perPoolOrders[pool][0].params.vaultId,
+            collection: perPoolOrders[pool][0].params.collection,
+            specificIds: perPoolOrders[pool].map((o) => o.params.specificIds![0]),
+            amount: perPoolOrders[pool].length,
+            path: perPoolOrders[pool][0].params.path,
+            swapCallData: perPoolOrders[pool][0].params.swapCallData,
+            price: perPoolOrders[pool]
+              .map((o) => bn(o.params.price))
+              .reduce((a, b) => a.add(b))
+              .toString(),
+          })),
+          {
+            fillTo: taker,
+            refundTo: relayer,
+            revertIfIncomplete: Boolean(!options?.partial),
+            amount: price,
+          },
+          fees,
+        ]),
+        value: totalPrice,
+      });
+
+      // Track any possibly required swap
+      swapDetails.push({
+        tokenIn: buyInCurrency,
+        tokenOut: Sdk.Common.Addresses.Eth[this.chainId],
+        tokenOutAmount: totalPrice,
+        recipient: module.address,
+        refundTo: relayer,
+        details: nftxZeroExDetails,
+        executionIndex: executions.length - 1,
+      });
+
+      // Mark the listings as successfully handled
+      for (const { orderId } of nftxZeroExDetails) {
         success[orderId] = true;
         orderIds.push(orderId);
       }
@@ -3557,7 +3638,9 @@ export class Router {
 
         case "nftx": {
           const order = detail.order as Sdk.Nftx.Order;
-          const module = this.contracts.nftxModule;
+          const module = order.routeVia0x()
+            ? this.contracts.nftxZeroModule
+            : this.contracts.nftxModule;
 
           // Attach the ZeroEx calldata
           if (order.routeVia0x()) {
