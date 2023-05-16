@@ -38,6 +38,7 @@ import ElementModuleAbi from "./abis/ElementModule.json";
 import FoundationModuleAbi from "./abis/FoundationModule.json";
 import LooksRareV2ModuleAbi from "./abis/LooksRareV2Module.json";
 import NFTXModuleAbi from "./abis/NFTXModule.json";
+import NFTXZeroExModuleAbi from "./abis/NFTXZeroExModule.json";
 import RaribleModuleAbi from "./abis/RaribleModule.json";
 import SeaportModuleAbi from "./abis/SeaportModule.json";
 import SeaportV14ModuleAbi from "./abis/SeaportV14Module.json";
@@ -142,7 +143,7 @@ export class Router {
       ),
       nftxZeroExModule: new Contract(
         Addresses.NFTXZeroExModule[chainId] ?? AddressZero,
-        NFTXModuleAbi,
+        NFTXZeroExModuleAbi,
         provider
       ),
       raribleModule: new Contract(
@@ -1861,8 +1862,8 @@ export class Router {
         order.params.price = order.params.extra.prices[perPoolOrders[order.params.pool].length - 1];
 
         const orderCount = perPoolOrders[order.params.pool].length;
-        const slippage = 0;
-        const { swapCallData, price } = await order.getQuote(orderCount, slippage, this.provider);
+        const { swapCallData, price } = await order.getQuote(orderCount, 0, this.provider);
+
         // Override
         order.params.swapCallData = swapCallData;
         order.params.price = price.toString();
@@ -3644,8 +3645,8 @@ export class Router {
 
           // Attach the ZeroEx calldata
           if (order.routeVia0x()) {
-            const slippage = 0;
-            const { swapCallData, price } = await order.getQuote(1, slippage, this.provider);
+            const { swapCallData, price } = await order.getQuote(1, 0, this.provider);
+
             // Override
             order.params.swapCallData = swapCallData;
             order.params.price = price.toString();

@@ -18,13 +18,13 @@ export class Order {
   }
 
   routeVia0x() {
+    return true;
     return this.params.path.length === 0;
   }
 
   async getQuote(count: number, slippage: number, provider: Provider) {
     const side = this.params.specificIds?.length ? "sell" : "buy";
-    const quote = await getPoolPriceFrom0x(this.params.pool, count, side, slippage, provider);
-    return quote;
+    return getPoolPriceFrom0x(this.params.pool, count, side, slippage, provider);
   }
 }
 
@@ -43,7 +43,7 @@ const normalize = (order: Types.OrderParams): Types.OrderParams => {
     currency: s(order.currency),
     amount: s(order.amount),
     path: order.path ? order.path.map(s) : [],
-    swapCallData: order.swapCallData ?? undefined,
+    swapCallData: order.swapCallData ? lc(order.swapCallData) : undefined,
     price: s(order.price),
     extra: {
       prices: order.extra.prices.map(s),

@@ -105,7 +105,7 @@ export const NFTXModule: ChainIdToAddress = {
 };
 
 export const NFTXZeroExModule: ChainIdToAddress = {
-  [Network.Ethereum]: "0xce159c850eb32ae54a58f6bebc4bcf3c1e7a1ced",
+  [Network.Ethereum]: "0xcd4ebd768ccbe022274506f5e45d14fd90dc5be7",
 };
 
 export const RaribleModule: ChainIdToAddress = {
