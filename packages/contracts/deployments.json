@@ -119,5 +119,10 @@
       "137": "0xf645877ab54e5856f39dc90425ae21748f52b5d4",
       "42161": "0xf645877ab54e5856f39dc90425ae21748f52b5d4"
     }
+  },
+  "NFTXZeroExModule": {
+    "v1": {
+      "1": "0xce159c850eb32ae54a58f6bebc4bcf3c1e7a1ced"
+    }
   }
 }

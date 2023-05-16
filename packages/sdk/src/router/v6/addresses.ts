@@ -104,14 +104,14 @@ export const NFTXModule: ChainIdToAddress = {
   [Network.Ethereum]: "0x716d13135f6a5bdb3fbc6beeb8dea35776d20da7",
 };
 
+export const NFTXZeroExModule: ChainIdToAddress = {
+  [Network.Ethereum]: "0xce159c850eb32ae54a58f6bebc4bcf3c1e7a1ced",
+};
+
 export const RaribleModule: ChainIdToAddress = {
   [Network.Ethereum]: "0x428a6be88fc0d25778e3c3f6e09fcfdc9a526fad",
 };
 
 export const SuperRareModule: ChainIdToAddress = {
   [Network.Ethereum]: "0x512a6a1a74f1f08aac8155605b9da8ace46b3d9c",
-};
-
-export const NFTXZeroExModule: ChainIdToAddress = {
-  [Network.Ethereum]: "",
 };
