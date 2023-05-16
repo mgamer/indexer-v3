@@ -144,7 +144,7 @@ export class TransferActivity {
         } catch (error) {
           logger.error(
             "generate-elastic-activity",
-            `failed to insert into activities error ${error}`
+            `failed to generate elastic activity error ${error}`
           );
         }
       }
