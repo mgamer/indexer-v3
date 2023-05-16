@@ -161,7 +161,9 @@ if (config.doBackgroundWork) {
                   activities
                 )}`
               );
+
               await activitiesList.add(activitiesToProcess);
+              return;
             }
           }
         }
