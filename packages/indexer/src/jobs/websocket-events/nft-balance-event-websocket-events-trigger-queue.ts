@@ -9,7 +9,7 @@ import _ from "lodash";
 
 import { formatEth } from "@/common/utils";
 
-import { redisWebsocketPublisher } from "@/common/redis";
+import { publishWebsocketEvent } from "@/common/websocketPublisher";
 
 const QUEUE_NAME = "nft-balance-websocket-events-trigger-queue";
 
@@ -54,16 +54,13 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
         if (data.trigger === "insert") eventType = "nft-balance.created";
         else if (data.trigger === "update") eventType = "nft-balance.updated";
 
-        await redisWebsocketPublisher.publish(
-          "events",
-          JSON.stringify({
-            event: eventType,
-            tags: {
-              contract: data.contract,
-            },
-            data: result,
-          })
-        );
+        await publishWebsocketEvent({
+          event: eventType,
+          tags: {
+            contract: data.contract,
+          },
+          data: result,
+        });
       } catch (error) {
         logger.error(
           QUEUE_NAME,
