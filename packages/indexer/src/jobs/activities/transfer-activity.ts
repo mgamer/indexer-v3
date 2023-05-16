@@ -144,7 +144,9 @@ export class TransferActivity {
         } catch (error) {
           logger.error(
             "generate-elastic-activity",
-            `failed to generate elastic activity error ${error}`
+            `failed to generate elastic activity error ${error} activity ${JSON.stringify(
+              activity
+            )}`
           );
         }
       }
