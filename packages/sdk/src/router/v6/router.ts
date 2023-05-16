@@ -208,7 +208,7 @@ export class Router {
       if (options?.relayer) {
         throw new Error("Relayer not supported for Universe orders");
       }
-      for (const detail of details) {
+      for (const detail of details.filter(({ kind }) => kind === "universe")) {
         if (detail.fees?.length || options?.globalFees?.length) {
           throw new Error("Fees not supported for Universe orders");
         }
@@ -238,10 +238,6 @@ export class Router {
         });
         success[detail.orderId] = true;
       }
-      return {
-        txs,
-        success,
-      };
     }
 
     if (details.some(({ kind }) => kind === "cryptopunks")) {
@@ -249,7 +245,7 @@ export class Router {
         throw new Error("Relayer not supported for Cryptopunks orders");
       }
 
-      for (const detail of details) {
+      for (const detail of details.filter(({ kind }) => kind === "cryptopunks")) {
         if (detail.fees?.length || options?.globalFees?.length) {
           throw new Error("Fees not supported for Cryptopunks orders");
         }
@@ -262,10 +258,6 @@ export class Router {
         });
         success[detail.orderId] = true;
       }
-      return {
-        txs,
-        success,
-      };
     }
 
     if (details.some(({ kind }) => kind === "flow")) {
@@ -273,7 +265,7 @@ export class Router {
         throw new Error("Relayer not supported for Flow orders");
       }
 
-      for (const detail of details) {
+      for (const detail of details.filter(({ kind }) => kind === "flow")) {
         if (detail.fees?.length || options?.globalFees?.length) {
           throw new Error("Fees not supported for Flow orders");
         }
@@ -300,10 +292,6 @@ export class Router {
         });
         success[detail.orderId] = true;
       }
-      return {
-        txs,
-        success,
-      };
     }
 
     if (details.some(({ kind }) => kind === "manifold")) {
@@ -311,7 +299,7 @@ export class Router {
         throw new Error("Relayer not supported for Manifold orders");
       }
 
-      for (const detail of details) {
+      for (const detail of details.filter(({ kind }) => kind === "manifold")) {
         if (detail.fees?.length || options?.globalFees?.length) {
           throw new Error("Fees not supported for Manifold orders");
         }
@@ -336,11 +324,6 @@ export class Router {
 
         success[detail.orderId] = true;
       }
-
-      return {
-        txs,
-        success,
-      };
     }
 
     // Filling Blur listings is extremely tricky since they explicitly designed
@@ -2591,7 +2574,7 @@ export class Router {
     // Handle exchanges which don't have a router module implemented by filling directly
 
     if (details.some(({ kind }) => kind === "universe")) {
-      for (const detail of details) {
+      for (const detail of details.filter(({ kind }) => kind === "universe")) {
         if (detail.fees?.length || options?.globalFees?.length) {
           throw new Error("Fees not supported for Universe orders");
         }
@@ -2623,15 +2606,11 @@ export class Router {
 
         success[detail.orderId] = true;
       }
-      return {
-        txs,
-        success,
-      };
     }
 
     // TODO: Add Flow router module
     if (details.some(({ kind }) => kind === "flow")) {
-      for (const detail of details) {
+      for (const detail of details.filter(({ kind }) => kind === "flow")) {
         if (detail.fees?.length || options?.globalFees?.length) {
           throw new Error("Fees not supported for Universe orders");
         }
@@ -2660,11 +2639,6 @@ export class Router {
 
         success[detail.orderId] = true;
       }
-
-      return {
-        txs,
-        success,
-      };
     }
 
     // CASE 2
