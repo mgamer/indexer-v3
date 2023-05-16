@@ -140,7 +140,7 @@ export class Router {
         NFTXModuleAbi,
         provider
       ),
-      nftxZeroModule: new Contract(
+      nftxZeroExModule: new Contract(
         Addresses.NFTXZeroExModule[chainId] ?? AddressZero,
         NFTXModuleAbi,
         provider
@@ -1830,7 +1830,7 @@ export class Router {
     // Handle NFTX ZeroEx listings
     if (nftxZeroExDetails.length) {
       const orders = nftxZeroExDetails.map((d) => d.order as Sdk.Nftx.Order);
-      const module = this.contracts.nftxZeroModule;
+      const module = this.contracts.nftxZeroExModule;
 
       const fees = getFees(nftxZeroExDetails);
       const price = orders
@@ -3639,7 +3639,7 @@ export class Router {
         case "nftx": {
           const order = detail.order as Sdk.Nftx.Order;
           const module = order.routeVia0x()
-            ? this.contracts.nftxZeroModule
+            ? this.contracts.nftxZeroExModule
             : this.contracts.nftxModule;
 
           // Attach the ZeroEx calldata
