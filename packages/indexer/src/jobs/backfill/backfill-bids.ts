@@ -30,7 +30,7 @@ if (config.doBackgroundWork) {
       const orderInfoBatch = await MqJobsDataManager.getJobData(id);
       await orderbookOrders.addToQueue(orderInfoBatch);
     },
-    { connection: redis.duplicate(), concurrency: 1 }
+    { connection: redis.duplicate(), concurrency: 10 }
   );
 
   worker.on("completed", async (job) => {
