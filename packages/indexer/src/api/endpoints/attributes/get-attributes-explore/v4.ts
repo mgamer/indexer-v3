@@ -19,7 +19,7 @@ export const getAttributesExploreV4Options: RouteOptions = {
   },
   description: "Explore attributes",
   notes:
-    "Use this API to see stats on a specific attribute within a collection. This endpoint will return `tokenCount`, `onSaleCount`, `sampleImages`, and `floorAsk` by default. ",
+    "Use this API to see stats on a specific attribute within a collection. This endpoint will return `tokenCount`, `onSaleCount`, `sampleImages`, and `floorAskPrices` by default.\n\n- `floorAskPrices` will not be returned on attributes with more than 10k tokens.",
   tags: ["api", "Attributes"],
   plugins: {
     "hapi-swagger": {
@@ -82,7 +82,7 @@ export const getAttributesExploreV4Options: RouteOptions = {
           tokenCount: Joi.number().required(),
           onSaleCount: Joi.number().required(),
           sampleImages: Joi.array().items(Joi.string().allow("", null)),
-          floorAskPrices: Joi.array().items(Joi.number().unsafe()),
+          floorAskPrices: Joi.array().items(Joi.number().unsafe().allow(null)),
           lastBuys: Joi.array().items(
             Joi.object({
               tokenId: Joi.string().required(),
@@ -260,9 +260,11 @@ export const getAttributesExploreV4Options: RouteOptions = {
         onSaleCount: Number(r.on_sale_count),
         sampleImages: Assets.getLocalAssetsLink(r.sample_images) || [],
         floorAskPrices:
-          query.maxFloorAskPrices > 1
-            ? (r.floor_sell_values || []).map(formatEth)
-            : [formatEth(r.floor_sell_value || 0)],
+          Number(r.token_count) <= 10000 // We only calculate attribute floor for attributes with less than 10k tokens
+            ? query.maxFloorAskPrices > 1
+              ? (r.floor_sell_values || []).map(formatEth)
+              : [formatEth(r.floor_sell_value || 0)]
+            : [null],
         lastBuys: query.maxLastSells
           ? (r.last_buys || []).map(({ tokenId, value, timestamp }: any) => ({
               tokenId: `${tokenId}`,
