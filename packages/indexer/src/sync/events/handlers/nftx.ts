@@ -498,53 +498,55 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         break;
       }
 
-      case "nftx-swap-v3": {
-        const skipCheck = false;
-        const ftPool = await nftxUtils.getFtPoolDetails(
-          baseEventParams.address,
-          true,
-          "uniswap-v3"
-        );
-        if (ftPool) {
-          const token0NftPool = await nftxUtils.getNftPoolDetails(ftPool.token0, skipCheck);
-          if (token0NftPool) {
-            // Update pool
-            onChainData.orders.push({
-              kind: "nftx",
-              info: {
-                orderParams: {
-                  pool: ftPool.token0,
-                  txHash: baseEventParams.txHash,
-                  txTimestamp: baseEventParams.timestamp,
-                  txBlock: baseEventParams.block,
-                  logIndex: baseEventParams.logIndex,
-                },
-                metadata: {},
-              },
-            });
-          }
+      // The order's prices doesn't consider Uniswap V3 yet
 
-          const token1NftPool = await nftxUtils.getNftPoolDetails(ftPool.token1, skipCheck);
-          if (token1NftPool) {
-            // Update pool
-            onChainData.orders.push({
-              kind: "nftx",
-              info: {
-                orderParams: {
-                  pool: ftPool.token1,
-                  txHash: baseEventParams.txHash,
-                  txTimestamp: baseEventParams.timestamp,
-                  txBlock: baseEventParams.block,
-                  logIndex: baseEventParams.logIndex,
-                },
-                metadata: {},
-              },
-            });
-          }
-        }
+      // case "nftx-swap-v3": {
+      //   const skipCheck = false;
+      //   const ftPool = await nftxUtils.getFtPoolDetails(
+      //     baseEventParams.address,
+      //     true,
+      //     "uniswap-v3"
+      //   );
+      //   if (ftPool) {
+      //     const token0NftPool = await nftxUtils.getNftPoolDetails(ftPool.token0, skipCheck);
+      //     if (token0NftPool) {
+      //       // Update pool
+      //       onChainData.orders.push({
+      //         kind: "nftx",
+      //         info: {
+      //           orderParams: {
+      //             pool: ftPool.token0,
+      //             txHash: baseEventParams.txHash,
+      //             txTimestamp: baseEventParams.timestamp,
+      //             txBlock: baseEventParams.block,
+      //             logIndex: baseEventParams.logIndex,
+      //           },
+      //           metadata: {},
+      //         },
+      //       });
+      //     }
 
-        break;
-      }
+      //     const token1NftPool = await nftxUtils.getNftPoolDetails(ftPool.token1, skipCheck);
+      //     if (token1NftPool) {
+      //       // Update pool
+      //       onChainData.orders.push({
+      //         kind: "nftx",
+      //         info: {
+      //           orderParams: {
+      //             pool: ftPool.token1,
+      //             txHash: baseEventParams.txHash,
+      //             txTimestamp: baseEventParams.timestamp,
+      //             txBlock: baseEventParams.block,
+      //             logIndex: baseEventParams.logIndex,
+      //           },
+      //           metadata: {},
+      //         },
+      //       });
+      //     }
+      //   }
+
+      //   break;
+      // }
     }
   }
 };
