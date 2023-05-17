@@ -1741,13 +1741,9 @@ export class Router {
         }
         perPoolOrders[order.params.pool].push(order);
 
-        // Update the order's price in-place
-        order.params.price = order.params.extra.prices[perPoolOrders[order.params.pool].length - 1];
-
-        const orderCount = perPoolOrders[order.params.pool].length;
-        const { swapCallData, price } = await order.getQuote(orderCount, 0, this.provider);
-
-        // Override
+        // Attach the ZeroEx calldata
+        const index = perPoolOrders[order.params.pool].length - 1;
+        const { swapCallData, price } = await order.getQuote(index + 1, 0, this.provider);
         order.params.swapCallData = swapCallData;
         order.params.price = price.toString();
       }
@@ -1755,17 +1751,15 @@ export class Router {
       executions.push({
         module: module.address,
         data: module.interface.encodeFunctionData("buyWithETH", [
-          Object.keys(perPoolOrders).map((pool) => ({
+          Object.entries(perPoolOrders).map(([pool, orders]) => ({
             vaultId: perPoolOrders[pool][0].params.vaultId,
             collection: perPoolOrders[pool][0].params.collection,
             specificIds: perPoolOrders[pool].map((o) => o.params.specificIds![0]),
             amount: perPoolOrders[pool].length,
             path: perPoolOrders[pool][0].params.path,
-            swapCallData: perPoolOrders[pool][0].params.swapCallData,
-            price: perPoolOrders[pool]
-              .map((o) => bn(o.params.price))
-              .reduce((a, b) => a.add(b))
-              .toString(),
+            // Need to use the price and swap calldata of the last order
+            swapCallData: perPoolOrders[pool][orders.length - 1].params.swapCallData,
+            price: perPoolOrders[pool][orders.length - 1].params.price,
           })),
           {
             fillTo: taker,
@@ -3544,12 +3538,11 @@ export class Router {
 
         case "nftx": {
           const order = detail.order as Sdk.Nftx.Order;
-          const module = this.contracts.nftxZeroExModule;
 
-          // Attach the ZeroEx calldata
-          const { swapCallData, price } = await order.getQuote(1, 0, this.provider);
-          order.params.swapCallData = swapCallData;
-          order.params.price = price.toString();
+          // Can't use the ZeroEx module here since it only supports single-swaps
+          // and here we potentially need multiple swaps for the same token pair,
+          // considering the price impact the first swaps have on the next ones.
+          const module = this.contracts.nftxModule;
 
           const tokenId = detail.tokenId;
           order.params.specificIds = [tokenId];
@@ -3572,6 +3565,7 @@ export class Router {
           });
 
           success[detail.orderId] = true;
+
           break;
         }
 
