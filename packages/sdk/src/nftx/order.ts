@@ -1,7 +1,8 @@
+import { Provider } from "@ethersproject/abstract-provider";
+
+import { getPoolPriceFrom0x } from "./helpers";
 import * as Types from "./types";
 import { lc, s } from "../utils";
-import { Provider } from "@ethersproject/abstract-provider";
-import { getPoolPriceFrom0x } from "./helpers";
 
 export class Order {
   public chainId: number;
@@ -17,13 +18,8 @@ export class Order {
     }
   }
 
-  routeVia0x() {
-    return true;
-    return this.params.path.length === 0;
-  }
-
   async getQuote(count: number, slippage: number, provider: Provider) {
-    const side = this.params.specificIds?.length ? "sell" : "buy";
+    const side = this.params.specificIds?.length ? "buy" : "sell";
     return getPoolPriceFrom0x(this.params.pool, count, side, slippage, provider);
   }
 }

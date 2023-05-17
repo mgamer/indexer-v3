@@ -127,7 +127,8 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
           const priceList = [];
           for (let index = 0; index < 10; index++) {
             try {
-              const poolPrice = await Sdk.Nftx.Helpers.getPoolPriceFrom0x(
+              // Don't get the price from 0x to avoid being rate-limited
+              const poolPrice = await Sdk.Nftx.Helpers.getPoolPrice(
                 orderParams.pool,
                 index + 1,
                 "sell",
@@ -377,7 +378,8 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         const priceList: { feeBps: BigNumberish; price: BigNumberish }[] = [];
         for (let index = 0; index < 10; index++) {
           try {
-            const poolPrice = await Sdk.Nftx.Helpers.getPoolPriceFrom0x(
+            // Don't get the price from 0x to avoid being rate-limited
+            const poolPrice = await Sdk.Nftx.Helpers.getPoolPrice(
               orderParams.pool,
               index + 1,
               "buy",

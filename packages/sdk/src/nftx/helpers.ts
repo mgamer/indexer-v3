@@ -9,7 +9,9 @@ import * as Addresses from "./addresses";
 import * as Common from "../common";
 import { bn } from "../utils";
 
-const ZEROEX_ENDPOINT = `https://api.0x.org`;
+const ZEROEX_ENDPOINT = "https://api.0x.org";
+// TODO: Pass via an environment variable
+const ZEROEX_API_KEY = "e519f152-3749-49ea-a8f3-2964bb0f90ac";
 
 export const getPoolFeatures = async (address: string, provider: Provider) => {
   const iface = new Interface([
@@ -125,17 +127,15 @@ export const getPoolPriceFrom0x = async (
     };
     const { data } = await axios.get(`${ZEROEX_ENDPOINT}/swap/v1/quote`, {
       params,
+      headers: {
+        "0x-api-key": ZEROEX_API_KEY,
+      },
     });
-
-    let price = data.sellAmount;
-    if (slippage) {
-      price = bn(price).add(bn(price).mul(slippage).div(10000));
-    }
 
     return {
       swapCallData: data.data,
       feeBps: bn(fees.redeemFee).div("100000000000000").toString(),
-      price: price.toString(),
+      price: data.sellAmount.toString(),
     };
   } else {
     const params = {
@@ -146,17 +146,15 @@ export const getPoolPriceFrom0x = async (
     };
     const { data } = await axios.get(`${ZEROEX_ENDPOINT}/swap/v1/quote`, {
       params,
+      headers: {
+        "0x-api-key": ZEROEX_API_KEY,
+      },
     });
-
-    let price = data.buyAmount;
-    if (slippage) {
-      price = bn(price!).sub(bn(price).mul(slippage).div(10000));
-    }
 
     return {
       swapCallData: data.data,
       feeBps: bn(fees.mintFee).div("100000000000000").toString(),
-      price: price.toString(),
+      price: data.buyAmount.toString(),
     };
   }
 };
