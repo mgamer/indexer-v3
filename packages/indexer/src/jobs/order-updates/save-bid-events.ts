@@ -62,6 +62,11 @@ if (config.doBackgroundWork) {
       );
 
       const data = events.map((event) => {
+        if (!event.trigger.kind) {
+          logger.error(QUEUE_NAME, `no trigger kind for ${event}`);
+          continue;
+        }
+
         let status = "active";
 
         switch (event.order.fillabilityStatus) {

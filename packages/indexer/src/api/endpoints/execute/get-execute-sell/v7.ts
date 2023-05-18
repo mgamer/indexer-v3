@@ -36,7 +36,7 @@ export const getExecuteSellV7Options: RouteOptions = {
   description: "Sell tokens (accept bids)",
   tags: ["api", "Fill Orders (buy & sell)"],
   timeout: {
-    server: 20 * 1000,
+    server: 40 * 1000,
   },
   plugins: {
     "hapi-swagger": {
@@ -141,14 +141,20 @@ export const getExecuteSellV7Options: RouteOptions = {
     schema: Joi.object({
       steps: Joi.array().items(
         Joi.object({
-          id: Joi.string().required(),
+          id: Joi.string().required().description("Returns `auth` or `nft-approval`"),
           action: Joi.string().required(),
           description: Joi.string().required(),
-          kind: Joi.string().valid("signature", "transaction").required(),
+          kind: Joi.string()
+            .valid("signature", "transaction")
+            .required()
+            .description("Returns `signature` or `transaction`."),
           items: Joi.array()
             .items(
               Joi.object({
-                status: Joi.string().valid("complete", "incomplete").required(),
+                status: Joi.string()
+                  .valid("complete", "incomplete")
+                  .required()
+                  .description("Returns `complete` or `incomplete`."),
                 tip: Joi.string(),
                 orderIds: Joi.array().items(Joi.string()),
                 data: Joi.object(),
@@ -179,8 +185,10 @@ export const getExecuteSellV7Options: RouteOptions = {
           // Total price (with fees on top) = price + feesOnTop
           totalPrice: Joi.number().unsafe(),
           totalRawPrice: Joi.string().pattern(regex.number),
-          builtInFees: Joi.array().items(JoiExecuteFee),
-          feesOnTop: Joi.array().items(JoiExecuteFee),
+          builtInFees: Joi.array()
+            .items(JoiExecuteFee)
+            .description("Can be marketplace fees or royalties"),
+          feesOnTop: Joi.array().items(JoiExecuteFee).description("Can be referral fees."),
         })
       ),
     }).label(`getExecuteSell${version.toUpperCase()}Response`),
@@ -493,7 +501,11 @@ export const getExecuteSellV7Options: RouteOptions = {
                 orders.missing_royalties,
                 orders.maker,
                 orders.token_set_id,
-                orders.fee_breakdown
+                orders.fee_breakdown,
+                orders.maker,
+                orders.fillability_status,
+                orders.approval_status,
+                orders.quantity_remaining
               FROM orders
               JOIN contracts
                 ON orders.contract = contracts.address
@@ -503,30 +515,65 @@ export const getExecuteSellV7Options: RouteOptions = {
                 AND token_sets_tokens.contract = $/contract/
                 AND token_sets_tokens.token_id = $/tokenId/
                 AND orders.side = 'buy'
-                AND orders.quantity_remaining >= $/quantity/
-                AND orders.maker != $/taker/
                 AND (orders.taker = '\\x0000000000000000000000000000000000000000' OR orders.taker IS NULL)
-                ${
-                  payload.allowInactiveOrderIds
-                    ? ""
-                    : " AND orders.fillability_status = 'fillable' AND orders.approval_status = 'approved'"
-                }
             `,
             {
               id: item.orderId,
               contract: toBuffer(contract),
               tokenId,
-              quantity: item.quantity,
-              taker: toBuffer(payload.taker),
             }
           );
+
+          let error: string | undefined;
           if (!result) {
+            error = "No fillable orders";
+          } else {
+            // Check fillability
+            if (!error && !payload.allowInactiveOrderIds) {
+              if (
+                result.fillability_status === "no-balance" ||
+                result.approval_status === "no-approval"
+              ) {
+                error = "Order is inactive (insufficient balance or approval) and can't be filled";
+              } else if (result.fillability_status === "filled") {
+                error = "Order has been filled";
+              } else if (result.fillability_status === "cancelled") {
+                error = "Order has been cancelled";
+              } else if (result.fillability_status === "expired") {
+                error = "Order has expired";
+              } else if (
+                result.fillability_status !== "fillable" ||
+                result.approval_status !== "approved"
+              ) {
+                error = "No fillable orders";
+              }
+            }
+
+            // Check taker
+            if (!error) {
+              if (fromBuffer(result.maker) === payload.taker) {
+                error = "No fillable orders (taker cannot fill own orders)";
+              }
+            }
+
+            // Check quantity
+            if (!error) {
+              if (bn(result.quantity_remaining).lt(item.quantity)) {
+                if (!payload.partial) {
+                  error = "Unable to fill requested quantity";
+                } else {
+                  // Fill as much as we can from the order
+                  item.quantity = result.quantity_remaining;
+                }
+              }
+            }
+          }
+
+          if (error) {
             if (payload.partial) {
               continue;
             } else {
-              throw Boom.badData(
-                `Order ${item.orderId} not found or not fillable with token ${item.token}`
-              );
+              throw Boom.badData(error);
             }
           }
 
@@ -624,7 +671,6 @@ export const getExecuteSellV7Options: RouteOptions = {
                 AND token_sets_tokens.token_id = $/tokenId/
                 AND orders.side = 'buy'
                 AND orders.fillability_status = 'fillable' AND orders.approval_status = 'approved'
-                AND orders.maker != $/taker/
                 AND (orders.taker = '\\x0000000000000000000000000000000000000000' OR orders.taker IS NULL)
                 ${payload.normalizeRoyalties ? " AND orders.normalized_value IS NOT NULL" : ""}
                 ${payload.excludeEOA ? " AND orders.kind != 'blur'" : ""}
@@ -638,7 +684,6 @@ export const getExecuteSellV7Options: RouteOptions = {
               contract: toBuffer(contract),
               tokenId,
               quantity: item.quantity,
-              taker: toBuffer(payload.taker),
               sourceId: item.exactOrderSource
                 ? sources.getByDomain(item.exactOrderSource)?.id ?? -1
                 : undefined,
@@ -646,7 +691,13 @@ export const getExecuteSellV7Options: RouteOptions = {
           );
 
           let quantityToFill = item.quantity;
+          let makerEqualsTakerQuantity = 0;
           for (const result of orderResults) {
+            if (fromBuffer(result.maker) === payload.taker) {
+              makerEqualsTakerQuantity += Number(result.quantity_remaining);
+              continue;
+            }
+
             // Partial Seaport orders require knowing the owner
             let owner: string | undefined;
             if (["seaport-v1.4-partial", "seaport-v1.5-partial"].includes(result.kind)) {
@@ -747,16 +798,18 @@ export const getExecuteSellV7Options: RouteOptions = {
             if (payload.partial) {
               continue;
             } else {
-              throw Boom.badData(
-                `No available orders for token ${item.token} with quantity ${item.quantity}`
-              );
+              if (makerEqualsTakerQuantity >= quantityToFill) {
+                throw Boom.badData("No fillable orders (taker cannot fill own orders)");
+              } else {
+                throw Boom.badData("Unable to fill requested quantity");
+              }
             }
           }
         }
       }
 
       if (!path.length) {
-        throw Boom.badRequest("No available orders");
+        throw Boom.badRequest("No fillable orders");
       }
 
       // Include the global fees in the path
@@ -967,16 +1020,8 @@ export const getExecuteSellV7Options: RouteOptions = {
         }
       }
 
-      const protectedOffers = bidDetails.filter((d) => d.isProtected);
-      if (protectedOffers.length > 1) {
-        throw Boom.badRequest("Only a single protected offer can be accepted at once");
-      }
-      if (protectedOffers.length === 1 && bidDetails.length > 1) {
-        throw Boom.badRequest("Protected offers cannot be accepted with other offers");
-      }
-
-      if (protectedOffers.length === 1) {
-        // Ensure the taker owns the NFTs to get sold
+      // For some orders (OS protected and Blur), we need to ensure the taker owns the NFTs to get sold
+      for (const d of bidDetails.filter((d) => d.isProtected || d.source === "blur.io")) {
         const takerIsOwner = await idb.oneOrNone(
           `
             SELECT
@@ -989,9 +1034,9 @@ export const getExecuteSellV7Options: RouteOptions = {
             LIMIT 1
           `,
           {
-            contract: toBuffer(bidDetails[0].contract),
-            tokenId: bidDetails[0].tokenId,
-            quantity: bidDetails[0].amount ?? 1,
+            contract: toBuffer(d.contract),
+            tokenId: d.tokenId,
+            quantity: d.amount ?? 1,
             owner: toBuffer(payload.taker),
           }
         );
@@ -1043,7 +1088,7 @@ export const getExecuteSellV7Options: RouteOptions = {
       path = path.filter((p) => success[p.orderId]);
 
       if (!path.length) {
-        throw Boom.badRequest("No available orders");
+        throw Boom.badRequest("No fillable orders");
       }
 
       const approvals = txs.map(({ approvals }) => approvals).flat();
