@@ -39,6 +39,11 @@ if (config.doBackgroundWork) {
 
       let i = 0;
       for (const event of events) {
+        if (!event.order.kind) {
+          logger.error(QUEUE_NAME, `no kind for ${event}`);
+          continue;
+        }
+
         values.push(`(
             $/kind${i}/,
             (
