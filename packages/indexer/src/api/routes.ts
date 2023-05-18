@@ -420,6 +420,12 @@ export const setupRoutes = (server: Server) => {
     options: attributesEndpoints.getAttributesExploreV4Options,
   });
 
+  server.route({
+    method: "GET",
+    path: "/collections/{collection}/attributes/explore/v5",
+    options: attributesEndpoints.getAttributesExploreV5Options,
+  });
+
   // Collections
 
   server.route({
