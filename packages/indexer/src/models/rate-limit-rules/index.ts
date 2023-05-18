@@ -24,6 +24,7 @@ export class RateLimitRules {
   public rules: Map<number, RateLimiterRedis>; // Map of rule ID to rate limit redis object
   public apiRoutesPoints: Map<string, { route: string; points: number }>; // Map of route to points
   public apiRoutesPointsCache: Map<string, number>; // Local cache of points per route to avoid redundant iterations and regex matching
+  public apiRoutesRegexRulesCache: Map<string, RateLimitRuleEntity[]>; // Local cache of matching regex rules per route to avoid redundant iterations and regex matching
 
   // eslint-disable-next-line @typescript-eslint/no-empty-function
   private constructor() {
@@ -31,6 +32,7 @@ export class RateLimitRules {
     this.rules = new Map();
     this.apiRoutesPoints = new Map();
     this.apiRoutesPointsCache = new Map();
+    this.apiRoutesRegexRulesCache = new Map();
   }
 
   private async loadData(forceDbLoad = false) {
@@ -112,6 +114,7 @@ export class RateLimitRules {
     this.rules = rules;
     this.apiRoutesPoints = apiRoutesPoints;
     this.apiRoutesPointsCache = new Map();
+    this.apiRoutesRegexRulesCache = new Map();
   }
 
   public static getCacheKey() {
@@ -251,10 +254,23 @@ export class RateLimitRules {
     apiKey = "",
     payload: Map<string, string> = new Map()
   ) {
-    // If there are any rules for the given route
-    const rules = this.rulesEntities.get(route);
+    // Try to get first specific route rules, if non found try to get regex matching rules
+    let rules = this.rulesEntities.get(route) ?? this.apiRoutesRegexRulesCache.get(route);
 
-    if (rules) {
+    // If no specific route rule match regex rules
+    if (!rules) {
+      rules = [];
+
+      for (const key of this.rulesEntities.keys()) {
+        if (key !== "/" && route.match(key)) {
+          rules = rules.concat(this.rulesEntities.get(key) ?? []);
+        }
+      }
+
+      this.apiRoutesRegexRulesCache.set(route, rules); // Cache the regex rules for the given route
+    }
+
+    if (rules && !_.isEmpty(rules)) {
       for (const rule of rules) {
         // Check what criteria to check for the rule
         const verifyApiKey = rule.apiKey !== "";
@@ -275,7 +291,8 @@ export class RateLimitRules {
             // If the request consists any of the keys in the request and the value match
             if (
               !payload.has(rulePayload.key) ||
-              _.toLower(payload.get(rulePayload.key)) !== _.toLower(rulePayload.value)
+              (rulePayload.value !== "*" &&
+                _.toLower(payload.get(rulePayload.key)) !== _.toLower(rulePayload.value))
             ) {
               payloadMatching = false;
             }
@@ -351,7 +368,7 @@ export class RateLimitRules {
       }
 
       if (rateLimitObject) {
-        rateLimitObject.keyPrefix = `${config.chainId}:${route}`;
+        rateLimitObject.keyPrefix = `${config.chainId}:${route}:${rule.id}`;
 
         return {
           ruleParams: rule,
