@@ -33,7 +33,7 @@ if (config.doBackgroundWork) {
     QUEUE_NAME,
     async (job) => {
       const bidEventsList = new BidEventsList();
-      const events = await bidEventsList.get(750);
+      let events = await bidEventsList.get(750);
 
       const columns = new pgp.helpers.ColumnSet(
         [
@@ -61,12 +61,16 @@ if (config.doBackgroundWork) {
         { table: "bid_events" }
       );
 
-      const data = events.map((event) => {
+      events = events.filter((event) => {
         if (!event.trigger.kind) {
           logger.error(QUEUE_NAME, `no trigger kind for ${event}`);
-          continue;
+          return false;
         }
 
+        return true;
+      });
+
+      const data = events.map((event) => {
         let status = "active";
 
         switch (event.order.fillabilityStatus) {
