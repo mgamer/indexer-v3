@@ -125,8 +125,8 @@ export const getUserCollectionsV3Options: RouteOptions = {
             }.description("The floor sale from X-days ago."),
           }),
           ownership: Joi.object({
-            tokenCount: Joi.string().description("Owned tokens from this collection"),
-            onSaleCount: Joi.string().description("Tokens owned from this collection that are listed"),
+            tokenCount: Joi.string(),
+            onSaleCount: Joi.string(),
             liquidCount: Joi.string().optional(),
           }),
         })
