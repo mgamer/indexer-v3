@@ -63,7 +63,7 @@ if (config.doBackgroundWork) {
 
       events = events.filter((event) => {
         if (!event.trigger.kind) {
-          logger.error(QUEUE_NAME, `no trigger kind for ${event}`);
+          logger.error(QUEUE_NAME, `no trigger kind for ${JSON.stringify(event)}`);
           return false;
         }
 
