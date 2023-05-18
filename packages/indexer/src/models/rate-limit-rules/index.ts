@@ -254,12 +254,9 @@ export class RateLimitRules {
     apiKey = "",
     payload: Map<string, string> = new Map()
   ) {
-    // Try to get first specific route rules, if non found try to get regex matching rules
-    let rules = this.rulesEntities.get(route) ?? this.apiRoutesRegexRulesCache.get(route);
-
-    // If no specific route rule match regex rules
-    if (!rules) {
-      rules = [];
+    // If no cached regex rules
+    if (!this.apiRoutesRegexRulesCache.get(route)) {
+      let rules: RateLimitRuleEntity[] = [];
 
       for (const key of this.rulesEntities.keys()) {
         if (key !== "/" && route.match(key)) {
@@ -270,8 +267,13 @@ export class RateLimitRules {
       this.apiRoutesRegexRulesCache.set(route, rules); // Cache the regex rules for the given route
     }
 
-    if (rules && !_.isEmpty(rules)) {
-      for (const rule of rules) {
+    // Build an array of rules, specific route rules first, regex rules second, so they will be evaluated in that order
+    const rulesToEvaluate = (this.rulesEntities.get(route) ?? []).concat(
+      this.apiRoutesRegexRulesCache.get(route) ?? []
+    );
+
+    if (!_.isEmpty(rulesToEvaluate)) {
+      for (const rule of rulesToEvaluate) {
         // Check what criteria to check for the rule
         const verifyApiKey = rule.apiKey !== "";
         const verifyPayload = !_.isEmpty(rule.payload);
