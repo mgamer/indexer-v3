@@ -20,7 +20,7 @@ export const getMethodSignature = async (
     return undefined;
   }
 
-  const results = await idb.oneOrNone(
+  const results = await idb.manyOrNone(
     `
       SELECT
         method_signatures.name,
@@ -43,8 +43,10 @@ export const getMethodSignature = async (
       if (!match.filtered) {
         // The `match.name` field has the format: `methodName(type0,type1,type2)`
         // Below we will simply separate the `methodName` and `type0,type1,type2`
-        const [name, params] = match.name.split("(", 2);
-        await saveMethodSignature(bytes4, name, params.slice(0, -1));
+        const i = match.name.indexOf("(");
+        const name = match.name.slice(0, i).trim();
+        const params = match.name.slice(i).slice(1, -1).trim();
+        await saveMethodSignature(bytes4, name, params);
 
         results.push({ name, params });
       }
@@ -66,7 +68,7 @@ export const getMethodSignature = async (
 
   // If multiple results are available then we will return the first matching one
   for (const { name, params } of results) {
-    const iface = new Interface([`${name}(${params})`]);
+    const iface = new Interface([`function ${name}(${params})`]);
     try {
       const decodedCalldata = iface.decodeFunctionData(name, calldata);
       return {
@@ -111,7 +113,7 @@ const saveMethodSignature = async (bytes4: string, name: string, params: string)
     `
       INSERT INTO method_signatures (
         signature,
-        names,
+        name,
         params
       ) VALUES (
         $/signature/,
