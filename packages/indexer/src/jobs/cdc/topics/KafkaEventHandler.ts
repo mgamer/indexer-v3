@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { logger } from "@/common/logger";
 import { producer } from "..";
 import { base64ToHex, isBase64 } from "@/common/utils";
@@ -7,7 +9,6 @@ export abstract class KafkaEventHandler {
   abstract topicName: string;
   maxRetries = 5;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async handle(payload: any): Promise<void> {
     try {
       payload = JSON.parse(JSON.stringify(payload));
@@ -26,7 +27,7 @@ export abstract class KafkaEventHandler {
           this.handleDelete();
           break;
         default:
-          // logger.error(this.topicName, `Unknown operation type: ${payload.op}`);
+          logger.error(this.topicName, `Unknown operation type: ${payload.op}`);
           break;
       }
     } catch (error) {
@@ -60,16 +61,14 @@ export abstract class KafkaEventHandler {
   }
 
   getTopics(): string[] {
-    // return this topic name, as well as an error topic name and a dead letter topic name
+    // return this topic name, as well as an error topic name
     return [`${getNetworkName()}.${this.topicName}`, `${getNetworkName()}.${this.topicName}-error`];
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   convertPayloadHexToString(payload: any) {
     const numericKeys = ["amount", "token_id"];
 
     // go through all the keys in the payload and convert any hex strings to strings
-
     for (const key in payload.after) {
       if (isBase64(payload.after[key])) {
         payload.after[key] = base64ToHex(payload.after[key]);
@@ -91,9 +90,7 @@ export abstract class KafkaEventHandler {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   protected abstract handleInsert(payload: any): Promise<void>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   protected abstract handleUpdate(payload: any): Promise<void>;
   protected abstract handleDelete(): Promise<void>;
 }

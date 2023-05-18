@@ -22,8 +22,6 @@ export class IndexerOrdersHandler extends KafkaEventHandler {
       eventKind:
         payload.after.side === "sell" ? WebsocketEventKind.SellOrder : WebsocketEventKind.BuyOrder,
     });
-
-    // all other cases, trigger ask.updated event
   }
 
   protected async handleUpdate(payload: any): Promise<void> {

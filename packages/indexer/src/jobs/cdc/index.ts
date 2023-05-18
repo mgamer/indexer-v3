@@ -5,7 +5,6 @@ import { TopicHandlers } from "@/jobs/cdc/topics";
 import { logger } from "@/common/logger";
 import { getServiceName } from "@/config/network";
 
-// Create a Kafka client
 const kafka = new Kafka({
   clientId: config.kafkaClientId,
   brokers: config.kafkaBrokers,
@@ -16,12 +15,11 @@ export const producer = kafka.producer();
 export const consumer = kafka.consumer({
   groupId: config.kafkaConsumerGroupId,
 });
-// Function to start the Kafka producer
+
 export async function startKafkaProducer(): Promise<void> {
   await producer.connect();
 }
 
-// // Function to start the Kafka consumer
 export async function startKafkaConsumer(): Promise<void> {
   await consumer.connect();
 
@@ -36,9 +34,8 @@ export async function startKafkaConsumer(): Promise<void> {
     })
   );
 
-  // Subscribe to the topics
   await consumer.run({
-    partitionsConsumedConcurrently: 1,
+    partitionsConsumedConcurrently: config.kafkaPartitionsConsumedConcurrently,
 
     eachMessage: async ({ message, topic }) => {
       try {

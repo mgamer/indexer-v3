@@ -23,7 +23,6 @@ process.on("unhandledRejection", (error) => {
 });
 
 const setup = async () => {
-  // eslint-disable-next-line no-console
   if (config.doBackgroundWork) {
     await Sources.syncSources();
 
