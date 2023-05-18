@@ -82,7 +82,7 @@ export const getAttributesExploreV5Options: RouteOptions = {
           tokenCount: Joi.number().required(),
           onSaleCount: Joi.number().required(),
           sampleImages: Joi.array().items(Joi.string().allow("", null)),
-          floorAskPrices: Joi.array().items(Joi.number().unsafe().allow(null)),
+          floorAskPrices: Joi.array().items(Joi.number().unsafe()),
           lastBuys: Joi.array().items(
             Joi.object({
               tokenId: Joi.string().required(),
@@ -264,7 +264,7 @@ export const getAttributesExploreV5Options: RouteOptions = {
             ? query.maxFloorAskPrices > 1
               ? (r.floor_sell_values || []).map(formatEth)
               : [formatEth(r.floor_sell_value || 0)]
-            : [null],
+            : [],
         lastBuys: query.maxLastSells
           ? (r.last_buys || []).map(({ tokenId, value, timestamp }: any) => ({
               tokenId: `${tokenId}`,
