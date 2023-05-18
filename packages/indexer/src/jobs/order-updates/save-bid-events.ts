@@ -39,8 +39,8 @@ if (config.doBackgroundWork) {
 
       let i = 0;
       for (const event of events) {
-        if (!event.order.kind) {
-          logger.error(QUEUE_NAME, `no kind for ${event}`);
+        if (!event.trigger.kind) {
+          logger.error(QUEUE_NAME, `no trigger kind for ${event}`);
           continue;
         }
 
