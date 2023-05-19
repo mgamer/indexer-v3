@@ -138,8 +138,8 @@ export const isBase64 = (base64: string) => {
       return false;
     }
     // This is strictly for hex from postgres
-    // if it includes an equal sign, it's probably base64
-    if (base64.includes("=")) {
+    // if it ends with an equal sign, it's very likely to be base64
+    if (base64.endsWith("=")) {
       return true;
     }
     return regex.base64.test(base64);
