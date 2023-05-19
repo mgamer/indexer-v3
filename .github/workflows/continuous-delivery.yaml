@@ -225,4 +225,3 @@ jobs:
             ./prod/platform/indexer-websocket-polygon.yaml \
             ${{ github.sha }} \
             indexer-websocket-polygon
-            
