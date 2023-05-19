@@ -51,6 +51,9 @@ export const getNetworkName = () => {
     case 42170:
       return "arbitrum-nova";
 
+    case 999:
+      return "misc-testnet";
+
     default:
       return "unknown";
   }
