@@ -366,7 +366,7 @@ if (config.doBackgroundWork) {
               await processActivityEvent.addToQueue([eventInfo as processActivityEvent.EventInfo]);
             }
 
-            if (config.doOrderWebsocketWork) {
+            if (config.doOldOrderWebsocketWork) {
               await WebsocketEventRouter({
                 eventInfo: {
                   kind: trigger.kind,

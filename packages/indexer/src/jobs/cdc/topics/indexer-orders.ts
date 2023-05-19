@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { logger } from "ethers";
 import { KafkaEventHandler } from "./KafkaEventHandler";
 import {
   WebsocketEventKind,
@@ -13,15 +14,26 @@ export class IndexerOrdersHandler extends KafkaEventHandler {
       return;
     }
 
-    await WebsocketEventRouter({
-      eventInfo: {
-        kind: payload.after.kind,
-        orderId: payload.after.id,
-        trigger: "insert",
-      },
-      eventKind:
-        payload.after.side === "sell" ? WebsocketEventKind.SellOrder : WebsocketEventKind.BuyOrder,
-    });
+    if (!config.doOldOrderWebsocketWork) {
+      await WebsocketEventRouter({
+        eventInfo: {
+          kind: payload.after.kind,
+          orderId: payload.after.id,
+          trigger: "insert",
+        },
+        eventKind:
+          payload.after.side === "sell"
+            ? WebsocketEventKind.SellOrder
+            : WebsocketEventKind.BuyOrder,
+      });
+    } else {
+      logger.info(
+        this.topicName,
+        `Old order websocket work is enabled, skipping websocket event router for order=${
+          JSON.stringify(payload.after) || "null"
+        }`
+      );
+    }
   }
 
   protected async handleUpdate(payload: any): Promise<void> {
@@ -29,15 +41,26 @@ export class IndexerOrdersHandler extends KafkaEventHandler {
       return;
     }
 
-    await WebsocketEventRouter({
-      eventInfo: {
-        kind: payload.after.kind,
-        orderId: payload.after.id,
-        trigger: "update",
-      },
-      eventKind:
-        payload.after.side === "sell" ? WebsocketEventKind.SellOrder : WebsocketEventKind.BuyOrder,
-    });
+    if (!config.doOldOrderWebsocketWork) {
+      await WebsocketEventRouter({
+        eventInfo: {
+          kind: payload.after.kind,
+          orderId: payload.after.id,
+          trigger: "update",
+        },
+        eventKind:
+          payload.after.side === "sell"
+            ? WebsocketEventKind.SellOrder
+            : WebsocketEventKind.BuyOrder,
+      });
+    } else {
+      logger.info(
+        this.topicName,
+        `Old order websocket work is enabled, skipping websocket event router for order=${
+          JSON.stringify(payload.after) || "null"
+        }`
+      );
+    }
   }
 
   protected async handleDelete(): Promise<void> {

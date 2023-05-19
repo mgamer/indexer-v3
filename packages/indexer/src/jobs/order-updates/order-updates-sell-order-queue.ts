@@ -214,7 +214,7 @@ if (config.doBackgroundWork) {
             }
           }
 
-          if (config.doOrderWebsocketWork) {
+          if (config.doOldOrderWebsocketWork) {
             await WebsocketEventRouter({
               eventInfo: {
                 kind: trigger.kind,

@@ -62,7 +62,7 @@ export const config = {
   kafkaClientId: String(process.env.KAFKA_CLIENT_ID),
 
   // for testing order websocket triggers
-  doOrderWebsocketWork: Boolean(Number(process.env.DO_ORDER_WEBSOCKET_WORK)),
+  doOldOrderWebsocketWork: Boolean(Number(process.env.DO_OLD_ORDER_WEBSOCKET_WORK)),
 
   maxTokenSetSize: 100000,
 
