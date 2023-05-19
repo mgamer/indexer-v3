@@ -26,7 +26,7 @@ export const parseEvent = (log: Log, timestamp: number, batchIndex = 1): BaseEve
     block,
     blockHash,
     logIndex,
-    timestamp: timestamp,
+    timestamp,
     batchIndex,
   };
 };
