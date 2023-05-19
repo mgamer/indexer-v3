@@ -3,7 +3,10 @@ import { config } from "@/config/index";
 import { logger } from "@/common/logger";
 import { idb } from "@/common/db";
 
-if (config.doBackgroundWork && config.chainId === 56) {
+if (
+  config.doBackgroundWork &&
+  [56, 11155111, 80001, 84531, 42170, 534353].includes(config.chainId)
+) {
   cron.schedule("*/5 * * * *", async () => {
     // Log backfill progress for BSC
     const result = await idb.oneOrNone(
