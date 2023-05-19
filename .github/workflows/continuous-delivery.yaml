@@ -154,6 +154,10 @@ jobs:
             ${{ github.sha }} \
             indexer-api-scroll-alpha
           ./utils/version_update.sh \
+            ./prod/platform/indexer-api-misc-testnet.yaml \
+            ${{ github.sha }} \
+            indexer-api-misc-testnet
+          ./utils/version_update.sh \
             ./prod/platform/indexer-worker.yaml \
             ${{ github.sha }} \
             indexer-worker
@@ -209,6 +213,10 @@ jobs:
             ./prod/platform/indexer-worker-scroll-alpha.yaml \
             ${{ github.sha }} \
             indexer-worker-scroll-alpha
+          ./utils/version_update.sh \
+            ./prod/platform/indexer-worker-misc-testnet.yaml \
+            ${{ github.sha }} \
+            indexer-worker-misc-testnet
           ./utils/version_update.sh \
             ./prod/platform/indexer-websocket-ethereum.yaml \
             ${{ github.sha }} \
