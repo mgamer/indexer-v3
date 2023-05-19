@@ -36,6 +36,7 @@ import * as zeroExV3 from "@/events-sync/data/zeroex-v3";
 import * as zeroExV4 from "@/events-sync/data/zeroex-v4";
 import * as zora from "@/events-sync/data/zora";
 import * as looksRareV2 from "@/events-sync/data/looks-rare-v2";
+import * as blend from "@/events-sync/data/blend";
 
 // All events we're syncing should have an associated `EventData`
 // entry which dictates the way the event will be parsed and then
@@ -74,7 +75,8 @@ export type EventKind =
   | "zeroex-v3"
   | "zeroex-v4"
   | "zora"
-  | "looks-rare-v2";
+  | "looks-rare-v2"
+  | "blend";
 
 // Event sub-kind in each of the above protocol/standard
 export type EventSubKind =
@@ -201,7 +203,11 @@ export type EventSubKind =
   | "looks-rare-v2-order-nonces-cancelled"
   | "looks-rare-v2-subset-nonces-cancelled"
   | "looks-rare-v2-taker-ask"
-  | "looks-rare-v2-taker-bid";
+  | "looks-rare-v2-taker-bid"
+  | "blend-loan-offer-taken"
+  | "blend-repay"
+  | "blend-refinance"
+  | "blend-buy-locked";
 
 export type EventData = {
   kind: EventKind;
@@ -336,6 +342,10 @@ const allEventData = [
   zeroExV2.fill,
   zeroExV3.fill,
   treasure.itemSold,
+  blend.buyLocked,
+  blend.loanOfferTaken,
+  blend.refinance,
+  blend.repay,
 ];
 
 export const getEventData = (events?: string[]) => {
