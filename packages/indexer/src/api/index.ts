@@ -163,7 +163,10 @@ export const start = async (): Promise<void> => {
       return reply.continue;
     }
 
-    if (request.headers["x-admin-api-key"] === config.adminApiKey) {
+    if (
+      request.headers["x-admin-api-key"] &&
+      request.headers["x-admin-api-key"] === config.adminApiKey
+    ) {
       return reply.continue;
     }
 
