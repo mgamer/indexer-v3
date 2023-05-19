@@ -22,6 +22,11 @@ process.on("unhandledRejection", (error) => {
 });
 
 const setup = async () => {
+  if (process.env.LOCAL_TESTING) {
+    return;
+  }
+
+  // eslint-disable-next-line no-console
   if (config.doBackgroundWork) {
     await Sources.syncSources();
 
@@ -29,6 +34,11 @@ const setup = async () => {
     if (networkSettings.onStartup) {
       await networkSettings.onStartup();
     }
+  }
+
+  if (config.doKafkaWork) {
+    startKafkaConsumer();
+    startKafkaProducer();
   }
 
   await Sources.getInstance();
