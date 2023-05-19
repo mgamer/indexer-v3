@@ -366,14 +366,18 @@ if (config.doBackgroundWork) {
               await processActivityEvent.addToQueue([eventInfo as processActivityEvent.EventInfo]);
             }
 
-            await WebsocketEventRouter({
-              eventInfo: {
-                kind: trigger.kind,
-                orderId: order.id,
-              },
-              eventKind:
-                order.side === "sell" ? WebsocketEventKind.SellOrder : WebsocketEventKind.BuyOrder,
-            });
+            if (config.doOrderWebsocketWork) {
+              await WebsocketEventRouter({
+                eventInfo: {
+                  kind: trigger.kind,
+                  orderId: order.id,
+                },
+                eventKind:
+                  order.side === "sell"
+                    ? WebsocketEventKind.SellOrder
+                    : WebsocketEventKind.BuyOrder,
+              });
+            }
           }
         }
 
