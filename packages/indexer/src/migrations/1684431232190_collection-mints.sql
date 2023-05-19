@@ -1,7 +1,18 @@
 -- Up Migration
 
+CREATE TYPE "collection_mint_kind_t" AS ENUM (
+  'public'
+);
+
+CREATE TYPE "collection_mint_status_t" AS ENUM (
+  'open',
+  'closed'
+);
+
 CREATE TABLE "collection_mints" (
   "collection_id" TEXT NOT NULL,
+  "kind" "collection_mint_kind_t",
+  "status" "collection_mint_status_t",
   "max_supply" NUMERIC(78, 0),
   "mint_details" JSONB,
   "currency" BYTEA NOT NULL,
