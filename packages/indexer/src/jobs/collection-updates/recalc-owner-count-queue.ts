@@ -56,7 +56,7 @@ if (config.doBackgroundWork) {
                             ) AS owner_count 
                           FROM  nft_balances 
                             JOIN collections ON nft_balances.contract = collections.contract 
-                            AND nft_balances.token_id < @ collections.token_id_range 
+                            AND nft_balances.token_id <@ collections.token_id_range 
                           WHERE collections.id = $/collectionId/
                             AND nft_balances.amount > 0
                         ) 
@@ -66,7 +66,7 @@ if (config.doBackgroundWork) {
                           updated_at = now() 
                         FROM x 
                         WHERE id = $/collectionId/ 
-                          AND collections.owner_count != x.owner_count;
+                          AND COALESCE(collections.owner_count, 0) != x.owner_count;
 
                   `;
           } else {
@@ -88,7 +88,7 @@ if (config.doBackgroundWork) {
                           "updated_at" = now() 
                         FROM x
                         WHERE id = $/collectionId/
-                          AND collections.owner_count != x.owner_count;
+                          AND COALESCE(collections.owner_count, 0) != x.owner_count;
                   `;
           }
 
@@ -126,6 +126,7 @@ if (config.doBackgroundWork) {
             await addToQueue(
               [
                 {
+                  context: QUEUE_NAME,
                   kind: "collectionId",
                   data: {
                     collectionId: collection.id,
@@ -148,6 +149,7 @@ if (config.doBackgroundWork) {
 
 export type RecalcCollectionOwnerCountInfo =
   | {
+      context?: string;
       kind: "contactAndTokenId";
       data: {
         contract: string;
@@ -155,6 +157,7 @@ export type RecalcCollectionOwnerCountInfo =
       };
     }
   | {
+      context?: string;
       kind: "collectionId";
       data: {
         collectionId: string;
