@@ -6,7 +6,7 @@ import { idb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { bn, fromBuffer, regex } from "@/common/utils";
 import { Sources } from "@/models/sources";
-import { getMintTxData } from "@/utils/mints/collection-mints";
+import { getMintTxData } from "@/utils/mints/calldata/generator";
 
 const version = "v1";
 
