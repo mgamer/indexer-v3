@@ -82,9 +82,13 @@ if (config.doBackgroundWork && config.doElasticsearchWork) {
 
           const lastResult = results[results.length - 1];
 
-          logger.info(
+          logger.debug(
             QUEUE_NAME,
-            `Processed ${results.length} activities. fromTimestamp=${fromTimestamp}, toTimestamp=${toTimestamp}, lastTimestamp=${lastResult.event_timestamp}`
+            `Processed ${results.length} activities. cursor=${JSON.stringify(
+              cursor
+            )}, fromTimestamp=${fromTimestamp}, toTimestamp=${toTimestamp}, lastTimestamp=${
+              lastResult.event_timestamp
+            }`
           );
 
           await addToQueue(
@@ -101,7 +105,7 @@ if (config.doBackgroundWork && config.doElasticsearchWork) {
       } catch (error) {
         logger.error(
           QUEUE_NAME,
-          `Process error.  limit=${limit}, cursor=${JSON.stringify(cursor)}, error=${JSON.stringify(
+          `Process error. limit=${limit}, cursor=${JSON.stringify(cursor)}, error=${JSON.stringify(
             error
           )}`
         );
