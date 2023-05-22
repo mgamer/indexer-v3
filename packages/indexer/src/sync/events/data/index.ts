@@ -167,6 +167,8 @@ export type EventSubKind =
   | "nftx-swapped"
   | "nftx-swap"
   | "nftx-swap-v3"
+  | "nftx-mint"
+  | "nftx-burn"
   | "nftx-vault-init"
   | "nftx-vault-shutdown"
   | "nftx-eligibility-deployed"
@@ -306,7 +308,8 @@ const allEventData = [
   nftx.redeemed,
   nftx.swapped,
   nftx.swap,
-  nftx.swapV3,
+  nftx.mint,
+  nftx.burn,
   nftx.vaultInit,
   nftx.vaultShutdown,
   nftx.eligibilityDeployed,
