@@ -13,6 +13,7 @@ export type OrderParams = {
   }[];
   nonce: string;
   signature?: string;
+  lien?: Lien;
 };
 
 export type Lien = {

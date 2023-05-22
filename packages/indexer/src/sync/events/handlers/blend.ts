@@ -39,11 +39,33 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
 
         const exchange = new Sdk.Blend.Exchange(config.chainId);
         const exchangeAddress = exchange.contract.address;
+        const methods = [
+          {
+            selector: "0xe7efc178",
+            name: "buyLocked",
+          },
+          {
+            selector: "0x8553b234",
+            name: "buyLockedETH",
+          },
+          {
+            selector: "0x2e2fb18b",
+            name: "buyToBorrowLocked",
+          },
+          {
+            selector: "0xb2a0bb86",
+            name: "buyToBorrowLockedETH",
+          },
+        ];
 
         const tradeRank = trades.order.get(`${txHash}-${exchangeAddress}`) ?? 0;
         const executeCallTrace = searchForCall(
           txTrace.calls,
-          { to: exchangeAddress, type: "CALL", sigHashes: ["0xe7efc178"] },
+          {
+            to: exchangeAddress,
+            type: "CALL",
+            sigHashes: methods.map((c) => c.selector),
+          },
           tradeRank
         );
 
@@ -51,17 +73,25 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           break;
         }
 
+        const matchMethod = methods.find((c) => executeCallTrace.input.includes(c.selector));
+        if (!matchMethod) {
+          break;
+        }
+
         const inputData = exchange.contract.interface.decodeFunctionData(
-          "buyLocked",
+          matchMethod.name,
           executeCallTrace.input
         );
 
         // Handle: prices
-        // const currency = Sdk.Blur.Addresses.Beth[config.chainId];
         const currency = Sdk.Common.Addresses.Eth[config.chainId];
-        const currencyPrice = inputData.offer.price.toString();
+        const isBuyToBorrow = matchMethod?.name.includes("buyToBorrowLocked");
 
+        const offer = isBuyToBorrow ? inputData.sellInput.offer : inputData.offer;
         const lien = inputData.lien;
+        const signature = isBuyToBorrow ? inputData.sellInput.signature : inputData.signature;
+
+        const currencyPrice = offer.price.toString();
 
         const priceData = await getUSDAndNativePrices(
           currency,
@@ -74,7 +104,6 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           break;
         }
 
-        const offer = inputData.offer;
         const minNonce = await commonHelpers.getMinNonce("blend", offer.borrower);
         const order = new Sdk.Blend.Order(config.chainId, {
           borrower: offer.borrower,
@@ -85,15 +114,20 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           oracle: offer.oracle,
           fees: offer.fees,
           nonce: minNonce.toString(),
-          signature: inputData.signature,
+          signature: signature,
         });
 
-        let isValidated = true;
+        let isValidated = false;
         const orderId = order.hash();
-        try {
-          order.checkSignature();
-        } catch {
-          isValidated = false;
+        for (let nonce = minNonce.toNumber(); nonce >= 0; nonce--) {
+          order.params.nonce = nonce.toString();
+          try {
+            order.checkSignature();
+            isValidated = true;
+            break;
+          } catch {
+            // skip error
+          }
         }
 
         if (!isValidated) {
@@ -115,7 +149,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           taker = attributionData.taker;
         }
 
-        const maker = inputData.offer.borrower.toLowerCase();
+        const maker = offer.borrower.toLowerCase();
         onChainData.fillEvents.push({
           orderKind: "blend",
           orderId,
