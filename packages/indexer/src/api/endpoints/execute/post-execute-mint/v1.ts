@@ -19,7 +19,7 @@ export const postExecuteMintV1Options: RouteOptions = {
     },
   },
   validate: {
-    params: Joi.object({
+    payload: Joi.object({
       collection: Joi.string().lowercase().required().description("Collection to mint"),
       quantity: Joi.number()
         .integer()
@@ -88,10 +88,10 @@ export const postExecuteMintV1Options: RouteOptions = {
             collections.contract,
             collection_mints.details,
             collection_mints.price
+          FROM collection_mints
           JOIN collections
             ON collection_mints.collection_id = collections.id
-          FROM collection_mints
-          WHERE collection_mints = $/collection/
+          WHERE collection_mints.collection_id = $/collection/
         `,
         { collection }
       );
