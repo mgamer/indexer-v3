@@ -77,9 +77,9 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
           WHERE
             fill_events_2.tx_hash = E'${
               "\\\\" + data.tx_hash.replace("0x", "x")
-            }' AND fill_events_2.log_index = $/log_index/
+            }' AND fill_events_2.log_index = $/log_index/ AND fill_events_2.batch_index = $/batch_index/
         `,
-          { log_index: data.log_index }
+          { log_index: data.log_index, batch_index: data.batch_index }
         );
 
         const result = await getJoiSaleObject({
@@ -184,5 +184,6 @@ export const addToQueue = async (events: EventInfo[]) => {
 export type SaleWebsocketEventInfo = {
   tx_hash: string;
   log_index: number;
+  batch_index: number;
   trigger: "insert" | "update" | "delete";
 };
