@@ -136,7 +136,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         }
 
         // Handle: attribution
-        const orderKind = "blur";
+        const orderKind = "blend";
 
         let taker = executeCallTrace.from;
         const attributionData = await utils.extractAttributionData(

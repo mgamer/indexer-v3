@@ -156,6 +156,7 @@ export const getOrderSourceByOrderKind = async (
       case "nftx":
         return sources.getOrInsert("nftx.io");
       case "blur":
+      case "blend":
         return sources.getOrInsert("blur.io");
       case "flow":
         return sources.getOrInsert("flow.so");
