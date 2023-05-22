@@ -49,6 +49,7 @@ import * as backfillCancelEventsCreatedAt from "@/jobs/backfill/backfill-cancel-
 import * as backfillNftTransferEventsCreatedAt from "@/jobs/backfill/backfill-nft-transfer-events-created-at";
 import * as backfillCollectionsRoyalties from "@/jobs/backfill/backfill-collections-royalties";
 import * as backfillWrongNftBalances from "@/jobs/backfill/backfill-wrong-nft-balances";
+import * as backfillCollectionsOwnerCount from "@/jobs/backfill/backfill-collections-owner-count";
 
 import * as topBidUpdate from "@/jobs/bid-updates/top-bid-update-queue";
 
@@ -60,6 +61,7 @@ import * as collectionUpdatesNormalizedFloorAsk from "@/jobs/collection-updates/
 import * as collectionUpdatesNonFlaggedFloorAsk from "@/jobs/collection-updates/non-flagged-floor-queue";
 import * as collectionSetCommunity from "@/jobs/collection-updates/set-community-queue";
 import * as collectionRecalcTokenCount from "@/jobs/collection-updates/recalc-token-count-queue";
+import * as collectionRecalcOwnerCount from "@/jobs/collection-updates/recalc-owner-count-queue";
 import * as collectionUpdatesMetadata from "@/jobs/collection-updates/metadata-queue";
 import * as rarity from "@/jobs/collection-updates/rarity-queue";
 import * as collectionUpdatesTopBid from "@/jobs/collection-updates/top-bid-queue";
@@ -152,6 +154,9 @@ import * as updateAttributeCounts from "@/jobs/update-attribute/update-attribute
 
 import * as askWebsocketEventsTriggerQueue from "@/jobs/websocket-events/ask-websocket-events-trigger-queue";
 import * as bidWebsocketEventsTriggerQueue from "@/jobs/websocket-events/bid-websocket-events-trigger-queue";
+import * as approvalWebsocketEventsTriggerQueue from "@/jobs/websocket-events/approval-websocket-events-trigger-queue";
+import * as transferWebsocketEventsTriggerQueue from "@/jobs/websocket-events/transfer-websocket-events-trigger-queue";
+import * as saleWebsocketEventsTriggerQueue from "@/jobs/websocket-events/sale-websocket-events-trigger-queue";
 import * as newTopBidTriggerQueue from "@/jobs/websocket-events/new-top-bid-trigger-queue";
 import * as countApiUsage from "@/jobs/metrics/count-api-usage";
 
@@ -197,6 +202,7 @@ export const allJobQueues = [
   backfillCollectionsRoyalties.queue,
   backfillWrongNftBalances.queue,
   backfillInvalidateSeaportV14Orders.queue,
+  backfillCollectionsOwnerCount.queue,
 
   currencies.queue,
 
@@ -210,6 +216,7 @@ export const allJobQueues = [
   collectionUpdatesNonFlaggedFloorAsk.queue,
   collectionSetCommunity.queue,
   collectionRecalcTokenCount.queue,
+  collectionRecalcOwnerCount.queue,
 
   tokenSetUpdatesTopBid.queue,
   tokenSetUpdatesTopBidSingleToken.queue,
@@ -302,6 +309,9 @@ export const allJobQueues = [
 
   askWebsocketEventsTriggerQueue.queue,
   bidWebsocketEventsTriggerQueue.queue,
+  approvalWebsocketEventsTriggerQueue.queue,
+  transferWebsocketEventsTriggerQueue.queue,
+  saleWebsocketEventsTriggerQueue.queue,
   newTopBidTriggerQueue.queue,
 
   countApiUsage.queue,
