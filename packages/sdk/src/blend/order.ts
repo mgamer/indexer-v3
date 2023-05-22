@@ -83,69 +83,11 @@ export class Order {
   }
 
   public async checkFillability(provider: Provider) {
-    // const chainId = await provider.getNetwork().then((n) => n.chainId);
     const exchange = new Contract(Addresses.Blend[this.chainId], ExchangeAbi, provider);
     const amountTaken = await exchange.amountTaken(this.hash());
-
     if (amountTaken.gt(0)) {
       throw new Error("not-fillable");
     }
-
-    // if (this.params.side === Types.TradeDirection.BUY) {
-    //   // Check that maker has enough balance to cover the payment
-    //   // and the approval to the execution delegate is set
-    //   const erc20 = new Common.Helpers.Erc20(provider, this.params.paymentToken);
-    //   const balance = await erc20.getBalance(this.params.trader);
-    //   if (bn(balance).lt(bn(this.params.price))) {
-    //     throw new Error("no-balance");
-    //   }
-
-    //   // Check allowance
-    //   const allowance = await erc20.getAllowance(
-    //     this.params.trader,
-    //     Addresses.ExecutionDelegate[chainId]
-    //   );
-    //   if (bn(allowance).lt(bn(this.params.paymentToken))) {
-    //     throw new Error("no-approval");
-    //   }
-    // } else {
-    //   if (this.params.kind?.startsWith("erc721")) {
-    // const erc721 = new Common.Helpers.Erc721(provider, this.params);
-
-    //     // Check ownership
-    //     const owner = await erc721.getOwner(this.params.tokenId);
-    //     if (lc(owner) !== lc(this.params.trader)) {
-    //       throw new Error("no-balance");
-    //     }
-
-    //     // Check approval
-    //     const isApproved = await erc721.isApproved(
-    //       this.params.trader,
-    //       Addresses.ExecutionDelegate[this.chainId]
-    //     );
-    //     if (!isApproved) {
-    //       throw new Error("no-approval");
-    //     }
-    //   } else {
-    //     const erc1155 = new Common.Helpers.Erc1155(provider, this.params.collection);
-
-    //     // Check balance
-    //     const balance = await erc1155.getBalance(this.params.trader, this.params.tokenId);
-
-    //     if (bn(balance).lt(this.params.amount!)) {
-    //       throw new Error("no-balance");
-    //     }
-
-    //     // Check approval
-    //     const isApproved = await erc1155.isApproved(
-    //       this.params.trader,
-    //       Addresses.ExecutionDelegate[this.chainId]
-    //     );
-    //     if (!isApproved) {
-    //       throw new Error("no-approval");
-    //     }
-    //   }
-    // }
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

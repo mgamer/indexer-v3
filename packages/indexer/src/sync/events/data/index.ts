@@ -207,7 +207,8 @@ export type EventSubKind =
   | "blend-loan-offer-taken"
   | "blend-repay"
   | "blend-refinance"
-  | "blend-buy-locked";
+  | "blend-buy-locked"
+  | "blend-nonce-incremented";
 
 export type EventData = {
   kind: EventKind;
@@ -346,6 +347,7 @@ const allEventData = [
   blend.loanOfferTaken,
   blend.refinance,
   blend.repay,
+  blend.nonceIncremented,
 ];
 
 export const getEventData = (events?: string[]) => {
