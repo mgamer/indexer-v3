@@ -26,7 +26,6 @@ const setup = async () => {
     return;
   }
 
-  // eslint-disable-next-line no-console
   if (config.doBackgroundWork) {
     await Sources.syncSources();
 
