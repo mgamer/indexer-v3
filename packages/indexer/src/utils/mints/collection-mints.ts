@@ -5,7 +5,7 @@ import { CallTrace, Log } from "@georgeroman/evm-tx-simulator/dist/types";
 import { idb } from "@/common/db";
 import { bn, fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
-import { MintDetails, getMintTxData } from "@/utils/mints/calldata/generator";
+import { MintStandardAndDetails, generateMintTxData } from "@/utils/mints/calldata/generator";
 
 import { EventData } from "@/events-sync/data";
 import * as erc721 from "@/events-sync/data/erc721";
@@ -13,11 +13,15 @@ import * as erc1155 from "@/events-sync/data/erc1155";
 
 export type CollectionMint = {
   collection: string;
+  stage: string;
   kind: "public";
   status: "open" | "closed";
-  details: MintDetails;
+  standardAndDetails: MintStandardAndDetails;
   currency: string;
   price: string;
+  maxMintsPerWallet?: number;
+  startTime?: number;
+  endTime?: number;
 };
 
 export const simulateAndSaveCollectionMint = async (collectionMint: CollectionMint) => {
@@ -35,13 +39,20 @@ export const simulateAndSaveCollectionMint = async (collectionMint: CollectionMi
     { collection: collectionMint.collection }
   );
 
-  // Generate the calldata for minting
   const minter = "0x0000000000000000000000000000000000000001";
   const contract = fromBuffer(collectionResult.contract);
   const quantity = 1;
   const price = collectionMint.price;
   const contractKind = collectionResult.kind;
-  const txData = getMintTxData(collectionMint.details, minter, contract, quantity, price);
+
+  // Generate the calldata for minting
+  const txData = generateMintTxData(
+    collectionMint.standardAndDetails,
+    minter,
+    contract,
+    quantity,
+    price
+  );
 
   // Simulate the mint
   // TODO: Binary search for the maximum quantity per wallet
@@ -50,29 +61,57 @@ export const simulateAndSaveCollectionMint = async (collectionMint: CollectionMi
   if (success) {
     await idb.none(
       `
-        INSERT INTO collection_mints (
+        INSERT INTO collection_mint_standards (
           collection_id,
-          kind,
-          status,
-          details,
-          currency,
-          price
+          standard
         ) VALUES (
           $/collection/,
-          $/kind/,
-          $/status/,
-          $/details:json/,
-          $/currency/,
-          $/price/
+          $/standard/
         ) ON CONFLICT DO NOTHING
       `,
       {
         collection: collectionMint.collection,
+        standard: collectionMint.standardAndDetails.standard,
+      }
+    );
+
+    await idb.none(
+      `
+        INSERT INTO collection_mints (
+          collection_id,
+          stage,
+          kind,
+          status,
+          details,
+          currency,
+          price,
+          max_mints_per_wallet,
+          start_time,
+          end_time
+        ) VALUES (
+          $/collection/,
+          $/stage/,
+          $/kind/,
+          $/status/,
+          $/details:json/,
+          $/currency/,
+          $/price/,
+          $/maxMintsPerWallet/,
+          $/startTime/,
+          $/endTime/
+        ) ON CONFLICT DO NOTHING
+      `,
+      {
+        collection: collectionMint.collection,
+        stage: collectionMint.stage,
         kind: collectionMint.kind,
         status: collectionMint.status,
-        details: collectionMint.details,
+        details: collectionMint.standardAndDetails.details,
         currency: toBuffer(collectionMint.currency),
         price: collectionMint.price,
+        maxMintsPerWallet: collectionMint.maxMintsPerWallet ?? null,
+        startTime: collectionMint.startTime ? new Date(collectionMint.startTime * 1000) : null,
+        endTime: collectionMint.endTime ? new Date(collectionMint.endTime * 1000) : null,
       }
     );
   }
