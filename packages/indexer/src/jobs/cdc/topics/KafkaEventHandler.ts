@@ -64,6 +64,8 @@ export abstract class KafkaEventHandler {
   }
 
   convertPayloadHexToString(payload: any, keyPayload: any) {
+    // eslint-disable-next-line
+    console.log(payload, keyPayload);
     // go through all the keys in the payload and convert any hex strings to strings
     // This is necessary because debeezium converts bytea values and other non string values to base64 strings
     for (const key in keyPayload.payload.after) {
