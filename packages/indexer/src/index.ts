@@ -35,11 +35,6 @@ const setup = async () => {
     }
   }
 
-  if (config.doKafkaWork) {
-    startKafkaConsumer();
-    startKafkaProducer();
-  }
-
   await Sources.getInstance();
   await Sources.forceDataReload();
 
