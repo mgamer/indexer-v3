@@ -69,7 +69,7 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
             fill_events_2.marketplace_fee_breakdown,
             fill_events_2.paid_full_royalty,
             fill_events_2.is_deleted,
-            extract(epoch from fill_events_2.updated_at) updated_ts,
+            fill_events_2.updated_at,
             fill_events_2.created_at
           FROM fill_events_2
           LEFT JOIN currencies
@@ -119,7 +119,7 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
           logIndex: r.log_index,
           batchIndex: r.batch_index,
           createdAt: new Date(r.created_at).toISOString(),
-          updatedAt: new Date(r.updated_ts * 1000).toISOString(),
+          updatedAt: new Date(r.updated_at).toISOString(),
         });
 
         result.id = crypto
