@@ -241,6 +241,14 @@ export const syncEvents = async (block: number) => {
       fromBlock: block,
       toBlock: block,
     };
+
+    logger.info(
+      "sync-events-v2",
+      `Events realtime syncing block ${block} - getLogs using filter: ${JSON.stringify(
+        eventFilter
+      )}`
+    );
+
     const availableEventData = getEventData();
 
     const startProcessLogsAndSaveDataTime = Date.now();
