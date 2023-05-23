@@ -281,8 +281,17 @@ export const syncEvents = async (block: number) => {
       }
     });
 
+    logger.info(
+      "sync-events-v2",
+      `Events realtime syncing block ${block} - ${enhancedEvents.length} events`
+    );
     // Process the retrieved events
     const eventsBatches = extractEventsBatches(enhancedEvents);
+
+    logger.info(
+      "sync-events-v2",
+      `Events realtime syncing block ${block} - ${eventsBatches.length} batches`
+    );
 
     const startProcessEventBatchesTime = Date.now();
     await Promise.all(
