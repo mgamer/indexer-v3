@@ -10,6 +10,11 @@ export const updateBlurRoyalties = async (collection: string, skipCache = false)
   // Blur is only available on mainnet
   if (config.chainId === 1) {
     try {
+      const parts = collection.split(":");
+      if (parts.length > 1) {
+        return undefined;
+      }
+
       const { minimumRoyaltyBps, maximumRoyaltyBps } = await axios
         .get(
           `${config.orderFetcherBaseUrl}/api/blur-collection-fees?collection=${collection}${
