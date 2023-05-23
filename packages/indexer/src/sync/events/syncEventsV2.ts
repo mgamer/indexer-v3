@@ -240,8 +240,10 @@ export const syncEvents = async (block: number) => {
 
     const eventFilter: Filter = {
       topics: [[...new Set(getEventData().map(({ topic }) => topic))]],
-      fromBlock: block,
-      toBlock: block + 1,
+
+      // convert block to hexadecimal
+      fromBlock: `0x${block.toString(16)}`,
+      toBlock: `0x${block.toString(16)}`,
     };
     const availableEventData = getEventData();
 
