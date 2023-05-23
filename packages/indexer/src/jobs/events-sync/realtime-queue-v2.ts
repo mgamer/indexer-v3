@@ -14,7 +14,7 @@ export const queue = new Queue(QUEUE_NAME, {
     // In order to be as lean as possible, leave retrying
     // any failed processes to be done by subsequent jobs
 
-    attempts: 10,
+    attempts: 30,
     backoff: {
       type: "fixed",
       delay: 100,
