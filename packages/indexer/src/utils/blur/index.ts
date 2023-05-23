@@ -10,8 +10,7 @@ export const updateBlurRoyalties = async (collection: string, skipCache = false)
   // Blur is only available on mainnet
   if (config.chainId === 1) {
     try {
-      const parts = collection.split(":");
-      if (parts.length > 1) {
+      if (collection.includes(":")) {
         return undefined;
       }
 
