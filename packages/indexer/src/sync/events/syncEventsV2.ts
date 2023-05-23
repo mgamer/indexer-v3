@@ -241,7 +241,6 @@ export const syncEvents = async (block: number) => {
       fromBlock: block,
       toBlock: block + 1,
     };
-    const enhancedEvents: EnhancedEvent[] = [];
     const availableEventData = getEventData();
 
     const startProcessLogsAndSaveDataTime = Date.now();
@@ -257,7 +256,7 @@ export const syncEvents = async (block: number) => {
 
     const endProcessLogsAndSaveDataTime = Date.now();
 
-    logs.map((log) => {
+    let enhancedEvents = logs.map((log) => {
       try {
         const baseEventParams = parseEvent(log, blockData.timestamp);
 
@@ -268,12 +267,12 @@ export const syncEvents = async (block: number) => {
             (addresses ? addresses[log.address.toLowerCase()] : true)
         );
         if (eventData) {
-          enhancedEvents.push({
+          return {
             kind: eventData.kind,
             subKind: eventData.subKind,
             baseEventParams,
             log,
-          });
+          };
         }
       } catch (error) {
         logger.error("sync-events-v2", `Failed to handle events: ${error}`);
@@ -281,8 +280,19 @@ export const syncEvents = async (block: number) => {
       }
     });
 
+    enhancedEvents = enhancedEvents.filter((e) => e) as EnhancedEvent[];
+
+    logger.info(
+      "sync-events-v2",
+      `Events realtime syncing block ${block} - ${enhancedEvents.length} events`
+    );
     // Process the retrieved events
-    const eventsBatches = extractEventsBatches(enhancedEvents);
+    const eventsBatches = extractEventsBatches(enhancedEvents as EnhancedEvent[]);
+
+    logger.info(
+      "sync-events-v2",
+      `Events realtime syncing block ${block} - ${eventsBatches.length} batches`
+    );
 
     const startProcessEventBatchesTime = Date.now();
     await Promise.all(
