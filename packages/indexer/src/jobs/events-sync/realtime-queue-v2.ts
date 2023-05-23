@@ -34,7 +34,7 @@ if (config.doBackgroundWork && config.chainId === 1) {
         const { block } = job.data as { block: number };
         await syncEvents(block);
       } catch (error) {
-        logger.warn(QUEUE_NAME, `Events realtime syncing failed: ${error}`);
+        logger.error(QUEUE_NAME, `Events realtime syncing failed: ${error}`);
         throw error;
       }
     },
