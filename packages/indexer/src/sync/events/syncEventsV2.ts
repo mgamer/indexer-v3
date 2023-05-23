@@ -311,6 +311,7 @@ export const syncEvents = async (block: number) => {
         message: `Events realtime syncing block ${block}`,
         block,
         syncTime: endSyncTime - startSyncTime,
+        blockSyncTime: endProcessLogsAndSaveDataTime - startSyncTime,
         getBlockTime: endGetBlockTime - startGetBlockTime,
         processLogsAndSaveDataTime: endProcessLogsAndSaveDataTime - startProcessLogsAndSaveDataTime,
         processEventBatchesTime: endProcessEventBatchesTime - startProcessEventBatchesTime,
