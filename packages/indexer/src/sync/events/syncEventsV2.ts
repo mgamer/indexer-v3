@@ -231,7 +231,7 @@ export const syncEvents = async (block: number) => {
     const startGetBlockTime = Date.now();
     const blockData = await syncEventsUtils.fetchBlock(block);
     if (!blockData) {
-      logger.error("sync-events-v2", `Block ${block} not found`);
+      logger.warn("sync-events-v2", `Block ${block} not found`);
       throw new Error(`Block ${block} not found`);
     }
     const endGetBlockTime = Date.now();
