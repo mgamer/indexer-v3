@@ -14,10 +14,9 @@ import getUuidByString from "uuid-by-string";
 import * as removeUnsyncedEventsActivities from "@/jobs/activities/remove-unsynced-events-activities";
 
 export const extractEventsBatches = (enhancedEvents: EnhancedEvent[]): EventsBatch[] => {
-  // First, associate each event to its corresponding tx
   const txHashToEvents = new Map<string, EnhancedEvent[]>();
 
-  enhancedEvents.map((event) => () => {
+  enhancedEvents.forEach((event) => {
     const txHash = event.baseEventParams.txHash;
     if (!txHashToEvents.has(txHash)) {
       txHashToEvents.set(txHash, []);
@@ -25,10 +24,9 @@ export const extractEventsBatches = (enhancedEvents: EnhancedEvent[]): EventsBat
     txHashToEvents.get(txHash)!.push(event);
   });
 
-  // Then, for each tx split the events by their kind
   const txHashToEventsBatch = new Map<string, EventsBatch>();
 
-  [...txHashToEvents.entries()].map(([txHash, events]) => () => {
+  [...txHashToEvents.entries()].forEach(([txHash, events]) => {
     const kindToEvents = new Map<EventKind, EnhancedEvent[]>();
     let blockHash = "";
 
