@@ -354,6 +354,8 @@ export const getNetworkSettings = (): NetworkSettings => {
         supportedBidCurrencies: {
           ...defaultNetworkSettings.supportedBidCurrencies,
           [Sdk.Common.Addresses.Usdc[config.chainId]]: true,
+          // OpenSea USDC
+          "0x2f3a40a3db8a7e3d09b0adfefbce4f6f81927557": true,
         },
         onStartup: async () => {
           // Insert the native currency
