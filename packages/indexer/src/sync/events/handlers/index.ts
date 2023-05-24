@@ -123,6 +123,7 @@ export const processEventsBatch = async (batch: EventsBatch, skipProcessing?: bo
 
 export const processEventsBatchV2 = async (batches: EventsBatch[]) => {
   const startTime = Date.now();
+  const onChainData = initOnChainData();
 
   const batchArray = batches.map((batch) => {
     return batch.events.map((events) => {
@@ -137,12 +138,9 @@ export const processEventsBatchV2 = async (batches: EventsBatch[]) => {
   const latencies: {
     eventKind: EventKind;
     latency: number;
-    saveOnChainDataTime: number;
   }[] = [];
   await Promise.all(
     flattenedArray.map(async (events) => {
-      const onChainData = initOnChainData();
-
       const startTime = Date.now();
       if (!events.data.length) {
         return;
@@ -159,26 +157,28 @@ export const processEventsBatchV2 = async (batches: EventsBatch[]) => {
           })
         );
       }
-      const startSaveOnChainDataTime = Date.now();
-      await processOnChainData(onChainData, false);
-      const endSaveOnChainDataTime = Date.now();
 
       const endTime = Date.now();
 
       latencies.push({
         eventKind: events.kind,
         latency: endTime - startTime,
-        saveOnChainDataTime: endSaveOnChainDataTime - startSaveOnChainDataTime,
       });
     })
   );
   const endProcessLogsTime = Date.now();
 
+  const startSaveOnChainDataTime = Date.now();
+  const processOnChainLatencies = await processOnChainData(onChainData, false);
+  const endSaveOnChainDataTime = Date.now();
+
   const endTime = Date.now();
 
   return {
     processLogsTime: endProcessLogsTime - startProcessLogsTime,
+    saveOnChainDataTime: endSaveOnChainDataTime - startSaveOnChainDataTime,
     totalTime: endTime - startTime,
     latencies,
+    processOnChainLatencies,
   };
 };
