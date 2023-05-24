@@ -120,3 +120,64 @@ export const processEventsBatch = async (batch: EventsBatch, skipProcessing?: bo
 
   return onChainData;
 };
+
+export const processEventsBatchV2 = async (batches: EventsBatch[]) => {
+  const startTime = Date.now();
+  const onChainData = initOnChainData();
+
+  const batchArray = batches.map((batch) => {
+    return batch.events.map((events) => {
+      return events;
+    });
+  });
+
+  const flattenedArray = batchArray.flat(2);
+
+  const startProcessLogsTime = Date.now();
+
+  const latencies: {
+    eventKind: EventKind;
+    latency: number;
+  }[] = [];
+  await Promise.all(
+    flattenedArray.map(async (events) => {
+      const startTime = Date.now();
+      if (!events.data.length) {
+        return;
+      }
+      const handler = eventKindToHandler.get(events.kind);
+      if (handler) {
+        await handler(events.data, onChainData, false);
+      } else {
+        logger.error(
+          "process-events-batch",
+          JSON.stringify({
+            error: "missing-handler-for-event-kind",
+            data: `Event kind ${events.kind} is missing a corresponding handler`,
+          })
+        );
+      }
+
+      const endTime = Date.now();
+
+      latencies.push({
+        eventKind: events.kind,
+        latency: endTime - startTime,
+      });
+    })
+  );
+  const endProcessLogsTime = Date.now();
+
+  const startSaveOnChainDataTime = Date.now();
+  await processOnChainData(onChainData, false);
+  const endSaveOnChainDataTime = Date.now();
+
+  const endTime = Date.now();
+
+  return {
+    processLogsTime: endProcessLogsTime - startProcessLogsTime,
+    saveOnChainDataTime: endSaveOnChainDataTime - startSaveOnChainDataTime,
+    totalTime: endTime - startTime,
+    latencies,
+  };
+};
