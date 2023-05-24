@@ -239,7 +239,10 @@ const _saveBlock = async (blockData: Block) => {
   const timerStart = Date.now();
   await blocksModel.saveBlock(blockData);
   const timerEnd = Date.now();
-  return timerEnd - timerStart;
+  return {
+    saveBlocksTime: timerEnd - timerStart,
+    endSaveBlocksTime: timerEnd,
+  };
 };
 
 const _saveBlockTransactions = async (blockData: BlockWithTransactions) => {
@@ -269,7 +272,11 @@ export const syncEvents = async (block: number) => {
     };
     const availableEventData = getEventData();
 
-    const [{ logs, getLogsTime }, saveBlocksTime, saveBlockTransactionsTime] = await Promise.all([
+    const [
+      { logs, getLogsTime },
+      { saveBlocksTime, endSaveBlocksTime },
+      saveBlockTransactionsTime,
+    ] = await Promise.all([
       _getLogs(eventFilter),
       _saveBlock({
         number: block,
@@ -347,7 +354,7 @@ export const syncEvents = async (block: number) => {
         message: `Events realtime syncing block ${block}`,
         block,
         syncTime: endSyncTime - startSyncTime,
-        blockSyncTime: saveBlocksTime - startSyncTime,
+        blockSyncTime: endSaveBlocksTime - startSyncTime,
 
         logs: {
           count: logs.length,
@@ -360,6 +367,7 @@ export const syncEvents = async (block: number) => {
           getBlockTime: endGetBlockTime - startGetBlockTime,
           saveBlocksTime,
           saveBlockTransactionsTime,
+          blockMinedTimestamp: blockData.timestamp,
         },
         transactions: {
           count: blockData.transactions.length,
