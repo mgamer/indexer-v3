@@ -68,12 +68,14 @@ export async function startKafkaConsumer(): Promise<void> {
       } catch (error) {
         logger.error(
           `${getServiceName()}-kafka-consumer`,
-          `Error handling topic=${topic}, ${error}`
+          `Error handling topic=${topic}, error=${error}, payload=${JSON.stringify(
+            message.value!.toString()
+          )}`
         );
 
         const newMessage = {
           error: JSON.stringify(error),
-          ...message,
+          value: message.value,
         };
 
         // If the event has an issue with finding its corresponding topic handler, send it to the dead letter queue
