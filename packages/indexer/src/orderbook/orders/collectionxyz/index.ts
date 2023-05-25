@@ -80,6 +80,8 @@ export type OrderInfo = {
     txTimestamp: number;
     txBlock: number;
     logIndex: number;
+    // Misc options
+    forceRecheck?: boolean;
   };
   metadata: OrderMetadata;
 };
@@ -383,6 +385,11 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       );
 
       const isERC20 = pool.token !== Sdk.Common.Addresses.Eth[config.chainId];
+
+      // Force recheck at most once per hour
+      const recheckCondition = orderParams.forceRecheck
+        ? `AND orders.updated_at < to_timestamp(${orderParams.txTimestamp - 3600})`
+        : `AND (orders.block, orders.log_index) < (${orderParams.txBlock}, ${orderParams.logIndex})`;
 
       // Handle bids
       try {
@@ -721,7 +728,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                     token_set_id = $/tokenSetId/,
                     token_set_schema_hash = $/schemaHash/
                   WHERE orders.id = $/id/
-                    AND lower(orders.valid_between) < to_timestamp(${orderParams.txTimestamp})
+                    ${recheckCondition}
                 `,
                 {
                   id,
@@ -760,7 +767,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                   expiration = to_timestamp(${orderParams.txTimestamp}),
                   updated_at = now()
                 WHERE orders.id = $/id/
-                  AND lower(orders.valid_between) < to_timestamp(${orderParams.txTimestamp})
+                  ${recheckCondition}
               `,
               { id }
             );
@@ -1021,7 +1028,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                           block_number = $/blockNumber/,
                           log_index = $/logIndex/
                         WHERE orders.id = $/id/
-                          AND lower(orders.valid_between) < to_timestamp(${orderParams.txTimestamp})
+                          ${recheckCondition}
                       `,
                       {
                         id,
