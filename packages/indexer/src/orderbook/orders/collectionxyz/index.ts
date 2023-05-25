@@ -389,7 +389,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       // Force recheck at most once per hour
       const recheckCondition = orderParams.forceRecheck
         ? `AND orders.updated_at < to_timestamp(${orderParams.txTimestamp - 3600})`
-        : `AND (orders.block, orders.log_index) < (${orderParams.txBlock}, ${orderParams.logIndex})`;
+        : `AND (orders.block_number, orders.log_index) < (${orderParams.txBlock}, ${orderParams.logIndex})`;
 
       // Handle bids
       try {
@@ -765,11 +765,17 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                 UPDATE orders SET
                   fillability_status = 'no-balance',
                   expiration = to_timestamp(${orderParams.txTimestamp}),
+                  block_number = $/blockNumber/,
+                  log_index = $/logIndex/,
                   updated_at = now()
                 WHERE orders.id = $/id/
                   ${recheckCondition}
               `,
-              { id }
+              {
+                id,
+                blockNumber: orderParams.txBlock,
+                logIndex: orderParams.logIndex,
+              }
             );
 
             results.push({
