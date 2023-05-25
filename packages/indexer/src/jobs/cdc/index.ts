@@ -68,9 +68,7 @@ export async function startKafkaConsumer(): Promise<void> {
       } catch (error) {
         logger.error(
           `${getServiceName()}-kafka-consumer`,
-          `Error handling topic=${topic}, error=${error}, payload=${JSON.stringify(
-            message.value!.toString()
-          )}`
+          `Error handling topic=${topic}, error=${error}, payload=${message.value!.toString()}`
         );
 
         const newMessage = {
