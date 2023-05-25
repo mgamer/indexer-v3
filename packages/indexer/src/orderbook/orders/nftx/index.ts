@@ -81,7 +81,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       // Force recheck at most once per hour
       const recheckCondition = orderParams.forceRecheck
         ? `AND orders.updated_at < to_timestamp(${orderParams.txTimestamp - 3600})`
-        : `AND lower(orders.valid_between) < to_timestamp(${orderParams.txTimestamp})`;
+        : `AND (orders.block, orders.log_index) < (${orderParams.txBlock}, ${orderParams.logIndex})`;
 
       // Handle buy orders
       try {
