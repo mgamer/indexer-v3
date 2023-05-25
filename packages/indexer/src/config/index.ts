@@ -97,7 +97,6 @@ export const config = {
   blurWsUrl: process.env.BLUR_WS_URL,
 
   orderFetcherBaseUrl: String(process.env.ORDER_FETCHER_BASE_URL),
-  railwayStaticUrl: String(process.env.RAILWAY_STATIC_URL || ""),
 
   cipherSecret: String(process.env.CIPHER_SECRET),
 
@@ -125,4 +124,7 @@ export const config = {
   elasticsearchCloudId: String(process.env.ELASTICSEARCH_CLOUD_ID || ""),
   elasticsearchUsername: String(process.env.ELASTICSEARCH_USERNAME),
   elasticsearchPassword: String(process.env.ELASTICSEARCH_PASSWORD),
+
+  // RabbitMq
+  rabbitMqUrl: String(process.env.RABBIT_MQ_URL),
 };

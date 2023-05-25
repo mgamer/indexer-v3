@@ -4,4 +4,6 @@ export enum Channel {
   RouteApiPointsUpdated = "route-api-points-updated",
   RoutersUpdated = "routers-updated",
   SourcesUpdated = "sources-updated",
+  PauseRabbitConsumerQueue = "pause-rabbit-consumer-queue",
+  ResumeRabbitConsumerQueue = "resume-rabbit-consumer-queue",
 }
