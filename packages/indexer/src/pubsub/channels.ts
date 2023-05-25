@@ -7,3 +7,8 @@ export enum Channel {
   PauseRabbitConsumerQueue = "pause-rabbit-consumer-queue",
   ResumeRabbitConsumerQueue = "resume-rabbit-consumer-queue",
 }
+
+export enum AllChainsChannel {
+  ApiKeyCreated = "api-key-created-all-chains",
+  ApiKeyUpdated = "api-key-updated-all-chains",
+}
