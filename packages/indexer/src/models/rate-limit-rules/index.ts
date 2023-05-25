@@ -24,6 +24,7 @@ export class RateLimitRules {
   public rules: Map<number, RateLimiterRedis>; // Map of rule ID to rate limit redis object
   public apiRoutesPoints: Map<string, { route: string; points: number }>; // Map of route to points
   public apiRoutesPointsCache: Map<string, number>; // Local cache of points per route to avoid redundant iterations and regex matching
+  public apiRoutesRegexRulesCache: Map<string, RateLimitRuleEntity[]>; // Local cache of matching regex rules per route to avoid redundant iterations and regex matching
 
   // eslint-disable-next-line @typescript-eslint/no-empty-function
   private constructor() {
@@ -31,6 +32,7 @@ export class RateLimitRules {
     this.rules = new Map();
     this.apiRoutesPoints = new Map();
     this.apiRoutesPointsCache = new Map();
+    this.apiRoutesRegexRulesCache = new Map();
   }
 
   private async loadData(forceDbLoad = false) {
@@ -45,7 +47,7 @@ export class RateLimitRules {
         const rulesQuery = `
           SELECT *
           FROM rate_limit_rules
-          ORDER BY route DESC, api_key DESC, payload DESC, method DESC, tier DESC
+          ORDER BY route DESC, api_key DESC, payload DESC, method DESC, tier DESC NULLS LAST
         `;
 
         rulesRawData = await redb.manyOrNone(rulesQuery);
@@ -112,6 +114,7 @@ export class RateLimitRules {
     this.rules = rules;
     this.apiRoutesPoints = apiRoutesPoints;
     this.apiRoutesPointsCache = new Map();
+    this.apiRoutesRegexRulesCache = new Map();
   }
 
   public static getCacheKey() {
@@ -251,39 +254,39 @@ export class RateLimitRules {
     apiKey = "",
     payload: Map<string, string> = new Map()
   ) {
-    // If there are any rules for the given route
-    const rules = this.rulesEntities.get(route);
+    // If no cached regex rules
+    if (!this.apiRoutesRegexRulesCache.get(route)) {
+      let rules: RateLimitRuleEntity[] = [];
 
-    if (rules) {
-      for (const rule of rules) {
+      for (const key of this.rulesEntities.keys()) {
+        if (key !== "/" && route.match(key)) {
+          rules = rules.concat(this.rulesEntities.get(key) ?? []);
+        }
+      }
+
+      this.apiRoutesRegexRulesCache.set(route, rules); // Cache the regex rules for the given route
+    }
+
+    // Build an array of rules, specific route rules first, regex rules second, so they will be evaluated in that order
+    const rulesToEvaluate = (this.rulesEntities.get(route) ?? []).concat(
+      this.apiRoutesRegexRulesCache.get(route) ?? []
+    );
+
+    if (!_.isEmpty(rulesToEvaluate)) {
+      for (const rule of rulesToEvaluate) {
         // Check what criteria to check for the rule
         const verifyApiKey = rule.apiKey !== "";
         const verifyPayload = !_.isEmpty(rule.payload);
         const verifyMethod = rule.method !== "";
         const verifyTier = !_.isNull(rule.tier);
 
-        // Check the rule criteria if any not matching the rule is not matching
+        // Check the rule criteria, if none are not matching the rule is not matching
         if (verifyApiKey && rule.apiKey !== apiKey) {
           continue;
         }
 
-        if (verifyPayload) {
-          let payloadMatching = true;
-
-          // If rule needs payload verification all params need to match
-          for (const rulePayload of rule.payload) {
-            // If the request consists any of the keys in the request and the value match
-            if (
-              !payload.has(rulePayload.key) ||
-              _.toLower(payload.get(rulePayload.key)) !== _.toLower(rulePayload.value)
-            ) {
-              payloadMatching = false;
-            }
-          }
-
-          if (!payloadMatching) {
-            continue;
-          }
+        if (verifyPayload && !this.isPayloadMatchRulePayload(rule, payload)) {
+          continue;
         }
 
         if (verifyMethod && rule.method !== method) {
@@ -301,6 +304,22 @@ export class RateLimitRules {
 
     // No matching rule found, return default rules
     return this.getTierDefaultRule(tier);
+  }
+
+  public isPayloadMatchRulePayload(rule: RateLimitRuleEntity, payload: Map<string, string>) {
+    // If rule needs payload verification all params need to match
+    for (const rulePayload of rule.payload) {
+      // If the request consists any of the keys in the request and the value match
+      if (
+        !payload.has(rulePayload.key) ||
+        (rulePayload.value !== "*" &&
+          _.toLower(payload.get(rulePayload.key)) !== _.toLower(rulePayload.value))
+      ) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   public getTierDefaultRule(tier: number) {
@@ -351,7 +370,17 @@ export class RateLimitRules {
       }
 
       if (rateLimitObject) {
-        rateLimitObject.keyPrefix = `${config.chainId}:${route}`;
+        rateLimitObject.keyPrefix = `${config.chainId}:${rule.id}:${route}`;
+
+        // If no points defined for the rule take tier default points
+        if (_.isUndefined(rule.options.points)) {
+          rateLimitObject.points = Number(this.getTierDefaultRule(tier)?.options.points);
+        }
+
+        // If no duration defined for the rule take tier default duration
+        if (_.isUndefined(rule.options.duration)) {
+          rateLimitObject.duration = Number(this.getTierDefaultRule(tier)?.options.duration);
+        }
 
         return {
           ruleParams: rule,

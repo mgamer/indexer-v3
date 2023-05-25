@@ -4,7 +4,7 @@ import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import { randomUUID } from "crypto";
 
 import { logger } from "@/common/logger";
-import { redis, redlock } from "@/common/redis";
+import { redis } from "@/common/redis";
 
 import { config } from "@/config/index";
 import { ridb } from "@/common/db";
@@ -87,9 +87,13 @@ if (config.doBackgroundWork && config.doElasticsearchWork) {
 
           const lastResult = results[results.length - 1];
 
-          logger.info(
+          logger.debug(
             QUEUE_NAME,
-            `Processed ${results.length} activities. fromTimestamp=${fromTimestamp}, toTimestamp=${toTimestamp}, lastTimestamp=${lastResult.event_timestamp}`
+            `Processed ${results.length} activities. cursor=${JSON.stringify(
+              cursor
+            )}, fromTimestamp=${fromTimestamp}, toTimestamp=${toTimestamp}, lastTimestamp=${
+              lastResult.event_timestamp
+            }`
           );
 
           await addToQueue(
@@ -106,7 +110,7 @@ if (config.doBackgroundWork && config.doElasticsearchWork) {
       } catch (error) {
         logger.error(
           QUEUE_NAME,
-          `Process error.  limit=${limit}, cursor=${JSON.stringify(cursor)}, error=${JSON.stringify(
+          `Process error. limit=${limit}, cursor=${JSON.stringify(cursor)}, error=${JSON.stringify(
             error
           )}`
         );
@@ -118,18 +122,6 @@ if (config.doBackgroundWork && config.doElasticsearchWork) {
   worker.on("error", (error) => {
     logger.error(QUEUE_NAME, `Worker errored: ${error}`);
   });
-
-  redlock
-    .acquire([`${QUEUE_NAME}-lock-v12`], 60 * 60 * 24 * 30 * 1000)
-    .then(async () => {
-      await addToQueue(undefined, 1577836800, 1609459199);
-      await addToQueue(undefined, 1609459200, 1640995199);
-      await addToQueue(undefined, 1640995200, 1672531199);
-      await addToQueue(undefined, 1672531200);
-    })
-    .catch(() => {
-      // Skip on any errors
-    });
 }
 
 export const addToQueue = async (

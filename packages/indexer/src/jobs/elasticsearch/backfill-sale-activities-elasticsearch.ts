@@ -4,7 +4,7 @@ import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import { randomUUID } from "crypto";
 
 import { logger } from "@/common/logger";
-import { redis, redlock } from "@/common/redis";
+import { redis } from "@/common/redis";
 
 import { config } from "@/config/index";
 import { ridb } from "@/common/db";
@@ -33,6 +33,9 @@ if (config.doBackgroundWork && config.doElasticsearchWork) {
     async (job: Job) => {
       const cursor = job.data.cursor as CursorInfo;
 
+      const fromTimestamp = job.data.fromTimestamp || 0;
+      const toTimestamp = job.data.toTimestamp || 9999999999;
+
       const limit = Number((await redis.get(`${QUEUE_NAME}-limit`)) || 1);
 
       try {
@@ -45,6 +48,7 @@ if (config.doBackgroundWork && config.doElasticsearchWork) {
         const query = `
             ${FillEventCreatedEventHandler.buildBaseQuery()}
             WHERE is_deleted = 0
+            AND (timestamp >= $/fromTimestamp/ AND timestamp < $/toTimestamp/) 
             ${continuationFilter}
             ORDER BY timestamp, tx_hash, log_index, batch_index
             LIMIT $/limit/;  
@@ -55,6 +59,8 @@ if (config.doBackgroundWork && config.doElasticsearchWork) {
           txHash: cursor?.txHash ? toBuffer(cursor.txHash) : null,
           logIndex: cursor?.logIndex,
           batchIndex: cursor?.batchIndex,
+          fromTimestamp,
+          toTimestamp,
           limit,
         });
 
@@ -74,21 +80,32 @@ if (config.doBackgroundWork && config.doElasticsearchWork) {
 
           await ActivitiesIndex.save(activities);
 
-          logger.info(QUEUE_NAME, `Processed ${results.length} activities.`);
-
           const lastResult = results[results.length - 1];
 
-          await addToQueue({
-            timestamp: lastResult.event_timestamp,
-            txHash: fromBuffer(lastResult.event_tx_hash),
-            logIndex: lastResult.event_log_index,
-            batchIndex: lastResult.event_batch_index,
-          });
+          logger.debug(
+            QUEUE_NAME,
+            `Processed ${results.length} activities. cursor=${JSON.stringify(
+              cursor
+            )}, fromTimestamp=${fromTimestamp}, toTimestamp=${toTimestamp}, lastTimestamp=${
+              lastResult.event_timestamp
+            }`
+          );
+
+          await addToQueue(
+            {
+              timestamp: lastResult.event_timestamp,
+              txHash: fromBuffer(lastResult.event_tx_hash),
+              logIndex: lastResult.event_log_index,
+              batchIndex: lastResult.event_batch_index,
+            },
+            fromTimestamp,
+            toTimestamp
+          );
         }
       } catch (error) {
         logger.error(
           QUEUE_NAME,
-          `Process error.  limit=${limit}, cursor=${JSON.stringify(cursor)}, error=${JSON.stringify(
+          `Process error. limit=${limit}, cursor=${JSON.stringify(cursor)}, error=${JSON.stringify(
             error
           )}`
         );
@@ -100,19 +117,14 @@ if (config.doBackgroundWork && config.doElasticsearchWork) {
   worker.on("error", (error) => {
     logger.error(QUEUE_NAME, `Worker errored: ${error}`);
   });
-
-  redlock
-    .acquire([`${QUEUE_NAME}-lock-v10`], 60 * 60 * 24 * 30 * 1000)
-    .then(async () => {
-      await addToQueue();
-    })
-    .catch(() => {
-      // Skip on any errors
-    });
 }
 
-export const addToQueue = async (cursor?: CursorInfo) => {
-  await queue.add(randomUUID(), { cursor });
+export const addToQueue = async (
+  cursor?: CursorInfo,
+  fromTimestamp?: number,
+  toTimestamp?: number
+) => {
+  await queue.add(randomUUID(), { cursor, fromTimestamp, toTimestamp });
 };
 
 export interface CursorInfo {

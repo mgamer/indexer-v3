@@ -4,7 +4,7 @@ import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import { randomUUID } from "crypto";
 
 import { logger } from "@/common/logger";
-import { redis, redlock } from "@/common/redis";
+import { redis } from "@/common/redis";
 
 import { config } from "@/config/index";
 import { ridb } from "@/common/db";
@@ -30,7 +30,11 @@ if (config.doBackgroundWork && config.doElasticsearchWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
+      job.data.addToQueue = false;
+
       const cursor = job.data.cursor as CursorInfo;
+      const fromTimestamp = job.data.fromTimestamp || 0;
+      const toTimestamp = job.data.toTimestamp || 9999999999;
 
       const limit = Number((await redis.get(`${QUEUE_NAME}-limit`)) || 1000);
 
@@ -45,6 +49,7 @@ if (config.doBackgroundWork && config.doElasticsearchWork) {
             ${BidCreatedEventHandler.buildBaseQuery()}
             WHERE side = 'buy'
             AND fillability_status = 'fillable' AND approval_status = 'approved'
+            AND (updated_at >= to_timestamp($/fromTimestamp/) AND updated_at < to_timestamp($/toTimestamp/)) 
             ${continuationFilter}
             ORDER BY updated_at, id
             LIMIT $/limit/;
@@ -53,6 +58,8 @@ if (config.doBackgroundWork && config.doElasticsearchWork) {
         const results = await ridb.manyOrNone(query, {
           id: cursor?.id,
           updatedAt: cursor?.updatedAt,
+          fromTimestamp,
+          toTimestamp,
           limit,
         });
 
@@ -72,19 +79,27 @@ if (config.doBackgroundWork && config.doElasticsearchWork) {
 
           await ActivitiesIndex.save(activities);
 
-          logger.info(QUEUE_NAME, `Processed ${results.length} activities.`);
-
           const lastResult = results[results.length - 1];
 
-          await addToQueue({
+          logger.debug(
+            QUEUE_NAME,
+            `Processed ${results.length} activities. cursor=${JSON.stringify(
+              cursor
+            )}, fromTimestamp=${fromTimestamp}, toTimestamp=${toTimestamp}, lastTimestamp=${
+              lastResult.updated_ts
+            }`
+          );
+
+          job.data.addToQueue = true;
+          job.data.addToQueueCursor = {
             updatedAt: lastResult.updated_ts,
             id: lastResult.order_id,
-          });
+          };
         }
       } catch (error) {
         logger.error(
           QUEUE_NAME,
-          `Process error.  limit=${limit}, cursor=${JSON.stringify(cursor)}, error=${JSON.stringify(
+          `Process error. limit=${limit}, cursor=${JSON.stringify(cursor)}, error=${JSON.stringify(
             error
           )}`
         );
@@ -93,22 +108,23 @@ if (config.doBackgroundWork && config.doElasticsearchWork) {
     { connection: redis.duplicate(), concurrency: 1 }
   );
 
+  worker.on("completed", async (job) => {
+    if (job.data.addToQueue) {
+      await addToQueue(job.data.addToQueueCursor, job.data.fromTimestamp, job.data.toTimestamp);
+    }
+  });
+
   worker.on("error", (error) => {
     logger.error(QUEUE_NAME, `Worker errored: ${error}`);
   });
-
-  redlock
-    .acquire([`${QUEUE_NAME}-lock-v10`], 60 * 60 * 24 * 30 * 1000)
-    .then(async () => {
-      await addToQueue();
-    })
-    .catch(() => {
-      // Skip on any errors
-    });
 }
 
-export const addToQueue = async (cursor?: CursorInfo) => {
-  await queue.add(randomUUID(), { cursor });
+export const addToQueue = async (
+  cursor?: CursorInfo,
+  fromTimestamp?: number,
+  toTimestamp?: number
+) => {
+  await queue.add(randomUUID(), { cursor, fromTimestamp, toTimestamp });
 };
 
 export interface CursorInfo {

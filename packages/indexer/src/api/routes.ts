@@ -178,12 +178,6 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
-    path: "/admin/set-api-route-points",
-    options: adminEndpoints.postSetApiRoutePoints,
-  });
-
-  server.route({
-    method: "POST",
     path: "/admin/api-keys/metrics",
     options: adminEndpoints.postApiKeyMetrics,
   });
@@ -228,6 +222,12 @@ export const setupRoutes = (server: Server) => {
     method: "POST",
     path: "/admin/update-source",
     options: adminEndpoints.postUpdateSourceOptions,
+  });
+
+  server.route({
+    method: "POST",
+    path: "/admin/trigger-job",
+    options: adminEndpoints.postTriggerJobOptions,
   });
 
   server.route({
@@ -430,6 +430,12 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/collections/{collection}/attributes/explore/v4",
     options: attributesEndpoints.getAttributesExploreV4Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/collections/{collection}/attributes/explore/v5",
+    options: attributesEndpoints.getAttributesExploreV5Options,
   });
 
   // Collections
@@ -794,6 +800,12 @@ export const setupRoutes = (server: Server) => {
     method: "POST",
     path: "/execute/cancel-signature/v1",
     options: executeEndpoints.postCancelSignatureV1Options,
+  });
+
+  server.route({
+    method: "POST",
+    path: "/execute/mint/v1",
+    options: executeEndpoints.postExecuteMintV1Options,
   });
 
   // Health

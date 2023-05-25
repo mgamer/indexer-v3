@@ -1,4 +1,4 @@
-import { elasticsearch, elasticsearchCloud } from "@/common/elasticsearch";
+import { elasticsearch } from "@/common/elasticsearch";
 import {
   MappingTypeMapping,
   QueryDslQueryContainer,
@@ -8,8 +8,10 @@ import { SortResults } from "@elastic/elasticsearch/lib/api/typesWithBodyKey";
 import { logger } from "@/common/logger";
 import { CollectionsEntity } from "@/models/collections/collections-entity";
 import { ActivityDocument } from "@/elasticsearch/indexes/activities/base";
+import { getNetworkName } from "@/config/network";
+import { config } from "@/config/index";
 
-const INDEX_NAME = "activities";
+const INDEX_NAME = `${getNetworkName()}.activities`;
 
 const MAPPINGS: MappingTypeMapping = {
   dynamic: "false",
@@ -28,6 +30,7 @@ const MAPPINGS: MappingTypeMapping = {
         id: { type: "keyword" },
         name: { type: "keyword" },
         image: { type: "keyword" },
+        media: { type: "keyword" },
       },
     },
     collection: {
@@ -102,15 +105,6 @@ export const save = async (activities: ActivityDocument[]): Promise<void> => {
         activity,
       ]),
     });
-
-    if (elasticsearchCloud) {
-      await elasticsearchCloud.bulk({
-        body: activities.flatMap((activity) => [
-          { index: { _index: INDEX_NAME, _id: activity.id } },
-          activity,
-        ]),
-      });
-    }
   } catch (error) {
     logger.error(
       "elasticsearch-activities",
@@ -132,6 +126,7 @@ export const search = async (params: {
   sort?: Sort | undefined;
   size?: number | undefined;
   search_after?: SortResults | undefined;
+  track_total_hits?: boolean;
 }): Promise<ActivityDocument[]> => {
   try {
     const esResult = await elasticsearch.search<ActivityDocument>({
@@ -141,31 +136,8 @@ export const search = async (params: {
 
     const latency = esResult.took;
 
-    let latencyCloud;
-
-    if (elasticsearchCloud) {
-      elasticsearchCloud
-        .search<ActivityDocument>({
-          index: INDEX_NAME,
-          ...params,
-        })
-        .then((esResult2) => {
-          latencyCloud = esResult2.took;
-
-          logger.info(
-            "elasticsearch-search-activities",
-            JSON.stringify({
-              params,
-              latency,
-              latencyCloud,
-              paramsJson: JSON.stringify(params),
-            })
-          );
-        });
-    }
-
     logger.info(
-      "elasticsearch-search-activities-v2",
+      "elasticsearch-search-activities",
       JSON.stringify({
         params,
         latency,
@@ -190,7 +162,7 @@ export const search = async (params: {
   }
 };
 
-export const createIndex = async (): Promise<void> => {
+export const initIndex = async (): Promise<void> => {
   try {
     if (await elasticsearch.indices.exists({ index: INDEX_NAME })) {
       const response = await elasticsearch.indices.get({ index: INDEX_NAME });
@@ -203,17 +175,6 @@ export const createIndex = async (): Promise<void> => {
         index: indexName,
         properties: MAPPINGS.properties,
       });
-
-      if (elasticsearchCloud) {
-        const response = await elasticsearchCloud.indices.get({ index: INDEX_NAME });
-
-        const indexName = Object.keys(response)[0];
-
-        await elasticsearchCloud.indices.putMapping({
-          index: indexName,
-          properties: MAPPINGS.properties,
-        });
-      }
     } else {
       logger.info("elasticsearch-activities", "Creating index!");
 
@@ -223,17 +184,14 @@ export const createIndex = async (): Promise<void> => {
         },
         index: `${INDEX_NAME}-${Date.now()}`,
         mappings: MAPPINGS,
-      });
-
-      if (elasticsearchCloud) {
-        await elasticsearchCloud.indices.create({
-          aliases: {
-            [INDEX_NAME]: {},
+        settings: {
+          number_of_shards: config.chainId === 5 ? 4 : 40,
+          sort: {
+            field: ["timestamp", "createdAt"],
+            order: ["desc", "desc"],
           },
-          index: `${INDEX_NAME}-${Date.now()}`,
-          mappings: MAPPINGS,
-        });
-      }
+        },
+      });
     }
   } catch (error) {
     logger.error(
@@ -280,6 +238,7 @@ export const updateActivitiesMissingCollection = async (
 
     await elasticsearch.updateByQuery({
       index: INDEX_NAME,
+      refresh: true,
       // This is needed due to issue with elasticsearch DSL.
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
@@ -328,6 +287,7 @@ export const deleteActivitiesByBlockHash = async (blockHash: string): Promise<vo
 
     await elasticsearch.deleteByQuery({
       index: INDEX_NAME,
+      refresh: true,
       // This is needed due to issue with elasticsearch DSL.
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore

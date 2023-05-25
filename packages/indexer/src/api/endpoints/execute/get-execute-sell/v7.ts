@@ -379,6 +379,7 @@ export const getExecuteSellV7Options: RouteOptions = {
               rawData: order.rawData,
               source: source || undefined,
               fees: additionalFees,
+              builtInFeeBps: builtInFees.map(({ bps }) => bps).reduce((a, b) => a + b, 0),
               isProtected:
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 (order.rawData as any).zone ===
@@ -825,14 +826,18 @@ export const getExecuteSellV7Options: RouteOptions = {
 
       const addGlobalFee = async (item: (typeof path)[0], fee: Sdk.RouterV6.Types.Fee) => {
         // Global fees get split across all eligible orders
-        fee.amount = bn(fee.amount).div(ordersEligibleForGlobalFees.length).toString();
+        const adjustedFeeAmount = bn(fee.amount).div(ordersEligibleForGlobalFees.length).toString();
 
         const itemGrossPrice = bn(item.rawQuote)
           .add(item.builtInFees.map((f) => bn(f.rawAmount)).reduce((a, b) => a.add(b), bn(0)))
           .add(item.feesOnTop.map((f) => bn(f.rawAmount)).reduce((a, b) => a.add(b), bn(0)));
 
-        const amount = formatPrice(fee.amount, (await getCurrency(item.currency)).decimals, true);
-        const rawAmount = bn(fee.amount).toString();
+        const amount = formatPrice(
+          adjustedFeeAmount,
+          (await getCurrency(item.currency)).decimals,
+          true
+        );
+        const rawAmount = bn(adjustedFeeAmount).toString();
 
         item.feesOnTop.push({
           recipient: fee.recipient,

@@ -1,7 +1,7 @@
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import cron from "node-cron";
 
-import { redb } from "@/common/db";
+import { ridb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { redis, redlock } from "@/common/redis";
 import { config } from "@/config/index";
@@ -63,7 +63,7 @@ if (config.doBackgroundWork) {
       await redlock
         .acquire(["pending-expired-orders-check-lock"], (2 * 3600 - 5) * 1000)
         .then(async () => {
-          const result = await redb.oneOrNone(
+          const result = await ridb.oneOrNone(
             `
               SELECT
                 count(*) AS expired_count
@@ -198,6 +198,13 @@ export type GenericOrderInfo =
       info: orders.looksRareV2.OrderInfo;
       validateBidValue?: boolean;
       ingestMethod?: "websocket" | "rest";
+    }
+  | {
+      kind: "collectionxyz";
+      info: orders.collectionxyz.OrderInfo;
+      relayToArweave?: boolean;
+      validateBidValue?: boolean;
+      ingestMethod?: "websocket" | "rest";
     };
 
 export const jobProcessor = async (job: Job) => {
@@ -298,6 +305,11 @@ export const jobProcessor = async (job: Job) => {
 
       case "looks-rare-v2": {
         result = await orders.looksRareV2.save([info]);
+        break;
+      }
+
+      case "collectionxyz": {
+        result = await orders.collectionxyz.save([info]);
         break;
       }
     }

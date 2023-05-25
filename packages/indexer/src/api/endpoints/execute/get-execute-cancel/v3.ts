@@ -30,10 +30,11 @@ export const getExecuteCancelV3Options: RouteOptions = {
       orderIds: Joi.array().items(Joi.string()).min(1),
       maker: Joi.string().pattern(regex.address),
       orderKind: Joi.string().valid(
+        "blur",
         "seaport",
         "seaport-v1.4",
         "seaport-v1.5",
-        "looks-rare",
+        "looks-rare-v2",
         "zeroex-v4-erc721",
         "zeroex-v4-erc1155",
         "universe",
@@ -427,9 +428,9 @@ export const getExecuteCancelV3Options: RouteOptions = {
           break;
         }
 
-        case "looks-rare": {
-          const order = new Sdk.LooksRare.Order(config.chainId, orderResult.raw_data);
-          const exchange = new Sdk.LooksRare.Exchange(config.chainId);
+        case "looks-rare-v2": {
+          const order = new Sdk.LooksRareV2.Order(config.chainId, orderResult.raw_data);
+          const exchange = new Sdk.LooksRareV2.Exchange(config.chainId);
 
           cancelTx = exchange.cancelOrderTx(maker, order);
 
@@ -466,6 +467,14 @@ export const getExecuteCancelV3Options: RouteOptions = {
           const exchange = new Sdk.Flow.Exchange(config.chainId);
           const nonce = order.nonce;
           cancelTx = exchange.cancelMultipleOrdersTx(order.signer, [nonce]);
+
+          break;
+        }
+
+        case "blur": {
+          const order = new Sdk.Blur.Order(config.chainId, orderResult.raw_data);
+          const exchange = new Sdk.Blur.Exchange(config.chainId);
+          cancelTx = exchange.cancelOrderTx(order.params.trader, order);
 
           break;
         }

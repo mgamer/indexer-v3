@@ -1,18 +1,20 @@
 import { config as dotEnvConfig } from "dotenv";
 dotEnvConfig();
 
+import "@/jobs/cdc/index";
 import "@/common/tracer";
 import "@/config/polyfills";
 import "@/jobs/index";
 import "@/pubsub/index";
 import "@/websockets/index";
-import { initIndexes } from "@/elasticsearch/indexes";
 
 import { start } from "@/api/index";
-import { config } from "@/config/index";
 import { logger } from "@/common/logger";
+import { config } from "@/config/index";
 import { getNetworkSettings } from "@/config/network";
+import { initIndexes } from "@/elasticsearch/indexes";
 import { Sources } from "@/models/sources";
+import { startKafkaConsumer, startKafkaProducer } from "@/jobs/cdc/index";
 import { RabbitMq } from "@/common/rabbit-mq";
 import { RabbitMqJobsConsumer } from "@/jobs/index";
 
@@ -24,6 +26,10 @@ process.on("unhandledRejection", (error) => {
 });
 
 const setup = async () => {
+  if (process.env.LOCAL_TESTING) {
+    return;
+  }
+
   await RabbitMq.connect(); // Connect the rabbitmq
   await RabbitMq.assertQueuesAndExchanges(); // Assert queues and exchanges
 
@@ -35,6 +41,11 @@ const setup = async () => {
     if (networkSettings.onStartup) {
       await networkSettings.onStartup();
     }
+  }
+
+  if (config.doKafkaWork) {
+    startKafkaConsumer();
+    startKafkaProducer();
   }
 
   await Sources.getInstance();
