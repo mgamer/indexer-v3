@@ -725,8 +725,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                     fee_breakdown = $/feeBreakdown:json/,
                     block_number = $/blockNumber/,
                     log_index = $/logIndex/,
-                    token_set_id = $/tokenSetId/,
-                    token_set_schema_hash = $/schemaHash/
+                    token_set_id = $/tokenSetId/
                   WHERE orders.id = $/id/
                     ${recheckCondition}
                 `,
@@ -746,7 +745,6 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                   blockNumber: orderParams.txBlock,
                   logIndex: orderParams.logIndex,
                   tokenSetId,
-                  schemaHash: toBuffer(schemaHash),
                 }
               );
 
