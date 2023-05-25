@@ -104,7 +104,8 @@ type SaveResult = {
 const getFeeBpsAndBreakdown = async (
   poolContract: Contract,
   royaltyRecipient: string,
-  orderId: string
+  orderId: string,
+  feesUpdated: boolean
 ): Promise<{
   feeBreakdown: {
     kind: string;
@@ -123,7 +124,7 @@ const getFeeBpsAndBreakdown = async (
     `,
     { orderId }
   );
-  if (orderResult) {
+  if (orderResult && !feesUpdated) {
     // Row exists, return relevant rows
     return {
       feeBreakdown: orderResult.fee_breakdown,
@@ -475,7 +476,8 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
             const { feeBreakdown, totalFeeBps } = await getFeeBpsAndBreakdown(
               poolContract,
               royaltyRecipient,
-              id
+              id,
+              orderParams.feesModified
             );
 
             const currencyValue = currencyPrice.sub(currencyPrice.mul(totalFeeBps).div(10000));
@@ -725,8 +727,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                     fee_breakdown = $/feeBreakdown:json/,
                     block_number = $/blockNumber/,
                     log_index = $/logIndex/,
-                    token_set_id = $/tokenSetId/,
-                    token_set_schema_hash = $/schemaHash/
+                    token_set_id = $/tokenSetId/
                   WHERE orders.id = $/id/
                     ${recheckCondition}
                 `,
@@ -746,7 +747,6 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                   blockNumber: orderParams.txBlock,
                   logIndex: orderParams.logIndex,
                   tokenSetId,
-                  schemaHash: toBuffer(schemaHash),
                 }
               );
 
@@ -861,7 +861,8 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                   const { feeBreakdown, totalFeeBps } = await getFeeBpsAndBreakdown(
                     poolContract,
                     royaltyRecipient,
-                    id
+                    id,
+                    orderParams.feesModified
                   );
                   const { missingRoyaltyAmount, missingRoyalties } = await computeRoyaltyInfo(
                     pool.nft,
