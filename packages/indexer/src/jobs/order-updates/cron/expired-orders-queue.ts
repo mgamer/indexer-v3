@@ -40,7 +40,7 @@ if (config.doBackgroundWork) {
       const lastTimestamp = await redis.get(lastTimestampKey).then((t) => (t ? Number(t) : now()));
 
       // Update the expired orders second by second
-      const currentTime = now();
+      const currentTime = now() - 5;
       if (currentTime > lastTimestamp) {
         await backfillExpiredOrders.addToQueue(
           _.range(0, currentTime - lastTimestamp).map((s) => currentTime - s)

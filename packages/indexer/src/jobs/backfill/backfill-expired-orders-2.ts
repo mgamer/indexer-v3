@@ -81,10 +81,10 @@ if (config.doBackgroundWork) {
   });
 
   redlock
-    .acquire([`${QUEUE_NAME}-lock-6`], 60 * 60 * 24 * 30 * 1000)
+    .acquire([`${QUEUE_NAME}-lock-7`], 60 * 60 * 24 * 30 * 1000)
     .then(async () => {
       if (config.chainId === 1) {
-        await addToQueue([{ from: 1685045797, to: 1685051000 }]);
+        await addToQueue([{ from: 1685052013, to: now() }]);
       }
     })
     .catch(() => {
