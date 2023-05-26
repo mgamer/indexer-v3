@@ -84,7 +84,7 @@ if (config.doBackgroundWork) {
     .acquire([`${QUEUE_NAME}-lock-5`], 60 * 60 * 24 * 30 * 1000)
     .then(async () => {
       if (config.chainId === 1) {
-        await addToQueue([{ from: 1685035510, to: 1685045510 }]);
+        await addToQueue([{ from: 1685045797, to: 1685051000 }]);
       }
     })
     .catch(() => {
