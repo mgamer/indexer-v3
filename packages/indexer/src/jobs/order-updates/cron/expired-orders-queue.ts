@@ -40,14 +40,15 @@ if (config.doBackgroundWork) {
       const lastTimestamp = await redis.get(lastTimestampKey).then((t) => (t ? Number(t) : now()));
 
       // Update the expired orders second by second
-      const currentTime = now() - 5;
+      const currentTime = now();
       if (currentTime > lastTimestamp) {
         await backfillExpiredOrders.addToQueue(
           _.range(0, currentTime - lastTimestamp).map((s) => currentTime - s)
         );
       }
 
-      await redis.set(lastTimestampKey, currentTime);
+      // Make sure to have some redundancy checks
+      await redis.set(lastTimestampKey, currentTime - intervalInSeconds);
     },
     { connection: redis.duplicate(), concurrency: 1 }
   );
