@@ -43,10 +43,9 @@ export const getCurrency = async (currencyAddress: string): Promise<Currency> =>
     if (result) {
       CURRENCY_MEMORY_CACHE.set(currencyAddress, {
         contract: currencyAddress,
-        // Use defaults when data is not available
-        name: result.name ?? "Unknown",
-        symbol: result.symbol ?? "UNKNOWN",
-        decimals: result.decimals ?? 18,
+        name: result.name,
+        symbol: result.symbol,
+        decimals: result.decimals,
         metadata: result.metadata,
       });
     } else {
@@ -108,10 +107,9 @@ export const getCurrency = async (currencyAddress: string): Promise<Currency> =>
       // Update the in-memory cache
       CURRENCY_MEMORY_CACHE.set(currencyAddress, {
         contract: currencyAddress,
-        // Use defaults when data is not available
-        name: name ?? "Unknown",
-        symbol: symbol ?? "UNKNOWN",
-        decimals: decimals ?? 18,
+        name,
+        symbol,
+        decimals,
         metadata,
       });
     }
