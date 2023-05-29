@@ -495,6 +495,7 @@ export const savePartialListings = async (
         results.push({
           id,
           status: "success",
+          triggerKind: "new-order",
         });
       } else {
         // Order already exists
