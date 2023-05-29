@@ -300,7 +300,7 @@ type PartialListingOrderParams = {
   collection: string;
   tokenId: string;
   // If empty then no Blur listing is available anymore
-  amount?: string;
+  price?: string;
   createdAt?: string;
 };
 
@@ -377,7 +377,7 @@ export const savePartialListings = async (
       );
 
     try {
-      const invalidateAll = !orderParams.amount || !orderParams.createdAt;
+      const invalidateAll = !orderParams.price || !orderParams.createdAt;
       if (invalidateAll) {
         // If no `amount` and `createdAt` fields are set then the token has no active Blur listings
         // We invalidate all currently fillable listings associated to the token (from all owners)
@@ -415,7 +415,7 @@ export const savePartialListings = async (
       const currency = Sdk.Common.Addresses.Eth[config.chainId];
 
       // Handle: price
-      const price = parseEther(orderParams.amount!).toString();
+      const price = parseEther(orderParams.price!).toString();
 
       const validFrom = `'${orderParams.createdAt}'`;
       const validTo = `'Infinity'`;
