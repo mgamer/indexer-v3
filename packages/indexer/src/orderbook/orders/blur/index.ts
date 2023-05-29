@@ -321,6 +321,8 @@ export const savePartialListings = async (
   const orderValues: DbOrder[] = [];
 
   const handleOrder = async ({ orderParams }: PartialListingOrderInfo) => {
+    logger.info("blur-debug", JSON.stringify(orderInfos));
+
     // Fetch all wallets that ever owned the current token
     const owners = await idb
       .manyOrNone(
@@ -387,12 +389,14 @@ export const savePartialListings = async (
         );
       }
 
+      const id = getBlurListingId(orderParams.collection, orderParams.tokenId, currentOwner);
       if (invalidateAll) {
         // No order is fillable, so we return early
-        return;
+        return results.push({
+          id,
+          status: "redundant",
+        });
       }
-
-      const id = getBlurListingId(orderParams.collection, orderParams.tokenId, currentOwner);
 
       // Handle: royalties
       let feeBps = 0;
@@ -534,6 +538,8 @@ export const savePartialListings = async (
   // Process all orders concurrently
   const limit = pLimit(20);
   await Promise.all(orderInfos.map((orderInfo) => limit(() => handleOrder(orderInfo))));
+
+  logger.info("blur-debug", JSON.stringify(results));
 
   if (orderValues.length) {
     const columns = new pgp.helpers.ColumnSet(
