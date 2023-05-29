@@ -49,7 +49,7 @@ if (config.doWebsocketWork && config.blurWsUrl && config.blurWsApiKey) {
             unit: string;
             createdAt: string;
             marketplace: string;
-          };
+          } | null;
         }[];
       } = JSON.parse(message);
 
@@ -58,21 +58,19 @@ if (config.doWebsocketWork && config.blurWsUrl && config.blurWsApiKey) {
         logger.info(COMPONENT, message);
 
         await orderbook.addToQueue(
-          parsedMessage.tops
-            .filter((t) => t.topAsk.marketplace === "BLUR" && t.topAsk.unit === "ETH")
-            .map((t) => ({
-              kind: "blur-listing",
-              info: {
-                orderParams: {
-                  collection,
-                  tokenId: t.tokenId,
-                  price: t.topAsk ? t.topAsk.amount : undefined,
-                  createdAt: t.topAsk ? t.topAsk.createdAt : undefined,
-                },
-                metadata: {},
+          parsedMessage.tops.map((t) => ({
+            kind: "blur-listing",
+            info: {
+              orderParams: {
+                collection,
+                tokenId: t.tokenId,
+                price: t.topAsk?.marketplace === "BLUR" ? t.topAsk.amount : undefined,
+                createdAt: t.topAsk?.marketplace === "BLUR" ? t.topAsk.createdAt : undefined,
               },
-              ingestMethod: "websocket",
-            }))
+              metadata: {},
+            },
+            ingestMethod: "websocket",
+          }))
         );
       }
     } catch (error) {
