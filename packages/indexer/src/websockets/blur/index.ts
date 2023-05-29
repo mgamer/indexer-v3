@@ -49,7 +49,7 @@ if (config.doWebsocketWork && config.blurWsUrl && config.blurWsApiKey) {
             unit: string;
             createdAt: string;
             marketplace: string;
-          };
+          } | null;
         }[];
       } = JSON.parse(message);
 
@@ -64,8 +64,8 @@ if (config.doWebsocketWork && config.blurWsUrl && config.blurWsApiKey) {
               orderParams: {
                 collection,
                 tokenId: t.tokenId,
-                price: t.topAsk ? t.topAsk.amount : undefined,
-                createdAt: t.topAsk ? t.topAsk.createdAt : undefined,
+                price: t.topAsk?.marketplace === "BLUR" ? t.topAsk.amount : undefined,
+                createdAt: t.topAsk?.marketplace === "BLUR" ? t.topAsk.createdAt : undefined,
               },
               metadata: {},
             },
