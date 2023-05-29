@@ -55,7 +55,7 @@ if (config.doWebsocketWork && config.blurWsUrl && config.blurWsApiKey) {
 
       const collection = parsedMessage.contractAddress.toLowerCase();
       if (collection === "0xe6d48bf4ee912235398b96e16db6f310c21e82cb") {
-        logger.info(COMPONENT, JSON.stringify(parsedMessage));
+        logger.info(COMPONENT, message);
 
         await orderbook.addToQueue(
           parsedMessage.tops.map((t) => ({
