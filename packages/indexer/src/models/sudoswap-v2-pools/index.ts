@@ -1,22 +1,23 @@
 import { idb } from "@/common/db";
 import { fromBuffer, toBuffer } from "@/common/utils";
 
-export enum SudoswapPoolKind {
-  TOKEN = 0,
-  NFT = 1,
-  TRADE = 2,
+export enum SudoswapV2PoolKind {
+  ERC721_ETH,
+  ERC721_ERC20,
+  ERC1155_ETH,
+  ERC1155_ERC20,
 }
 
-export type SudoswapPool = {
+export type SudoswapV2Pool = {
   address: string;
   nft: string;
   token: string;
   bondingCurve: string;
-  poolKind: SudoswapPoolKind;
+  poolKind: SudoswapV2PoolKind;
   pairKind: number;
 };
 
-export const saveSudoswapV2Pool = async (sudoswapPool: SudoswapPool) => {
+export const saveSudoswapV2Pool = async (sudoswapPool: SudoswapV2Pool) => {
   await idb.none(
     `
       INSERT INTO sudoswap_v2_pools (
@@ -49,7 +50,7 @@ export const saveSudoswapV2Pool = async (sudoswapPool: SudoswapPool) => {
   return sudoswapPool;
 };
 
-export const getSudoswapV2Pool = async (address: string): Promise<SudoswapPool> => {
+export const getSudoswapV2Pool = async (address: string): Promise<SudoswapV2Pool> => {
   const result = await idb.oneOrNone(
     `
       SELECT
