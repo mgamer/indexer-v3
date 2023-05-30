@@ -588,7 +588,7 @@ export const getExecuteCancelV3Options: RouteOptions = {
         },
       });
 
-      if (steps[0].items[0].status === "complete" || orderResult.kind !== "blur") {
+      if (!steps[0].items.length || steps[0].items[0].status === "complete") {
         steps = steps.slice(1);
       }
 
