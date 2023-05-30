@@ -317,7 +317,7 @@ const getBlurListingId = (orderParams: PartialListingOrderParams, owner: string)
       owner,
       orderParams.collection,
       orderParams.tokenId,
-      orderParams.price!,
+      parseEther(orderParams.price!),
       Math.floor(new Date(orderParams.createdAt!).getTime() / 1000),
     ]
   );
