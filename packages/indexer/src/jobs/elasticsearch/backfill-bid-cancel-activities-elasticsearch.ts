@@ -10,9 +10,9 @@ import { config } from "@/config/index";
 import { ridb } from "@/common/db";
 
 import * as ActivitiesIndex from "@/elasticsearch/indexes/activities";
-import { BidCreatedEventHandler } from "@/elasticsearch/indexes/activities/event-handlers/bid-created";
+import { BidCancelledEventHandler } from "@/elasticsearch/indexes/activities/event-handlers/bid-cancelled";
 
-const QUEUE_NAME = "backfill-bid-activities-elasticsearch";
+const QUEUE_NAME = "backfill-bid-cancel-activities-elasticsearch";
 
 export const queue = new Queue(QUEUE_NAME, {
   connection: redis.duplicate(),
@@ -46,8 +46,9 @@ if (config.doBackgroundWork && config.doElasticsearchWork) {
         }
 
         const query = `
-            ${BidCreatedEventHandler.buildBaseQuery()}
-            WHERE side = 'buy'
+            ${BidCancelledEventHandler.buildBaseQuery()}
+            WHERE side = 'buy' AND fillability_status = 'cancelled'
+            AND fillability_status = 'fillable' AND approval_status = 'approved'
             AND (updated_at >= to_timestamp($/fromTimestamp/) AND updated_at < to_timestamp($/toTimestamp/)) 
             ${continuationFilter}
             ORDER BY updated_at, id
@@ -66,12 +67,13 @@ if (config.doBackgroundWork && config.doElasticsearchWork) {
           const activities = [];
 
           for (const result of results) {
-            const eventHandler = new BidCreatedEventHandler(
+            const eventHandler = new BidCancelledEventHandler(
               result.order_id,
               result.event_tx_hash,
               result.event_log_index,
               result.event_batch_index
             );
+
             const activity = eventHandler.buildDocument(result);
 
             activities.push(activity);

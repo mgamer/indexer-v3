@@ -167,6 +167,8 @@ import * as backfillTransferActivitiesElasticsearch from "@/jobs/elasticsearch/b
 import * as backfillSaleActivitiesElasticsearch from "@/jobs/elasticsearch/backfill-sale-activities-elasticsearch";
 import * as backfillAskActivitiesElasticsearch from "@/jobs/elasticsearch/backfill-ask-activities-elasticsearch";
 import * as backfillBidActivitiesElasticsearch from "@/jobs/elasticsearch/backfill-bid-activities-elasticsearch";
+import * as backfillAskCancelActivitiesElasticsearch from "@/jobs/elasticsearch/backfill-ask-cancel-activities-elasticsearch";
+import * as backfillBidCancelActivitiesElasticsearch from "@/jobs/elasticsearch/backfill-bid-cancel-activities-elasticsearch";
 import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handler";
 import { TokenReclacSupplyJob } from "@/jobs/token-updates/token-reclac-supply-job";
 import amqplib, { Channel, Connection } from "amqplib";
@@ -332,6 +334,8 @@ export const allJobQueues = [
   backfillSaleActivitiesElasticsearch.queue,
   backfillAskActivitiesElasticsearch.queue,
   backfillBidActivitiesElasticsearch.queue,
+  backfillAskCancelActivitiesElasticsearch.queue,
+  backfillBidCancelActivitiesElasticsearch.queue,
 ];
 
 export class RabbitMqJobsConsumer {
