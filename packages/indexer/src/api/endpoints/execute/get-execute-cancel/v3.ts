@@ -412,8 +412,9 @@ export const getExecuteCancelV3Options: RouteOptions = {
         {
           id: "cancellation-signature",
           action: "Cancel order",
-          description: "Authorize the cancellation of the order",
-          kind: "signature",
+          description:
+            "To cancel these orders you must confirm the transaction and pay the gas fee",
+          kind: "transaction",
           items: [],
         },
       ];
