@@ -103,15 +103,15 @@ export class RabbitMq {
       // Create working queue
       await this.rabbitMqPublisherChannel.assertQueue(queue.getQueue(), options);
 
-      // Create error queue
-      await this.rabbitMqPublisherChannel.assertQueue(queue.getErrorQueue(), options);
+      // Create retry queue
+      await this.rabbitMqPublisherChannel.assertQueue(queue.getRetryQueue(), options);
 
       // Bind queues to the delayed exchange
       await this.rabbitMqPublisherChannel.bindQueue(queue.getQueue(), "delayed", queue.getQueue());
       await this.rabbitMqPublisherChannel.bindQueue(
-        queue.getErrorQueue(),
+        queue.getRetryQueue(),
         "delayed",
-        queue.getErrorQueue()
+        queue.getRetryQueue()
       );
 
       // Create dead letter queue for all jobs the failed more than the max retries

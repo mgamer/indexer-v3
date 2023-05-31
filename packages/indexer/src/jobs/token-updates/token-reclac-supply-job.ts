@@ -4,8 +4,8 @@ import { Tokens } from "@/models/tokens";
 import { redb } from "@/common/db";
 import { toBuffer } from "@/common/utils";
 import { AddressZero } from "@ethersproject/constants";
-import { RabbitMq } from "@/common/rabbit-mq";
 import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handler";
+import { logger } from "@/common/logger";
 
 export type TokenRecalcSupplyPayload = {
   contract: string;
@@ -54,10 +54,17 @@ export class TokenReclacSupplyJob extends AbstractRabbitMqJobHandler {
   }
 
   public async addToQueue(tokens: TokenRecalcSupplyPayload[], delay = 60 * 5 * 1000) {
-    await RabbitMq.sendBatch(
-      this.getQueue(),
-      tokens.map((t) => ({ payload: t })),
-      delay
-    );
+    await this.sendBatch(tokens, delay);
   }
 }
+
+export const tokenReclacSupplyJob = new TokenReclacSupplyJob();
+
+tokenReclacSupplyJob.on("onCompleted", (message) => {
+  logger.info(
+    tokenReclacSupplyJob.getQueue(),
+    `COMPLETED in ${
+      Number(message.completeTime) - Number(message.publishTime)
+    } message ${JSON.stringify(message)}`
+  );
+});
