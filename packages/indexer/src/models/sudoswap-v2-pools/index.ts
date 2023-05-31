@@ -2,10 +2,9 @@ import { idb } from "@/common/db";
 import { fromBuffer, toBuffer } from "@/common/utils";
 
 export enum SudoswapV2PoolKind {
-  ERC721_ETH,
-  ERC721_ERC20,
-  ERC1155_ETH,
-  ERC1155_ERC20,
+  TOKEN = 0,
+  NFT = 1,
+  TRADE = 2,
 }
 
 export type SudoswapV2Pool = {
