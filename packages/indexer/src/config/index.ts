@@ -135,4 +135,10 @@ export const config = {
   elasticsearchUrl: String(process.env.ELASTICSEARCH_URL || ""),
   doElasticsearchWork: Boolean(Number(process.env.DO_ELASTICSEARCH_WORK)),
   enableElasticsearchRead: Boolean(Number(process.env.ENABLE_ELASTICSEARCH_READ)),
+
+  // realtime v2
+  realtimeV2ChainIds: process.env.REALTIME_V2_CHAIN_IDS
+    ? process.env.REALTIME_V2_CHAIN_IDS.split(",").map((chainId) => Number(chainId))
+    : [],
+  enableRealtimeV2BlockQueue: Boolean(process.env.ENABLE_REALTIME_V2_BLOCK_QUEUE),
 };
