@@ -35,6 +35,7 @@ export const ApprovalProxy: ChainIdToAddress = {
 
 export const SwapModule: ChainIdToAddress = {
   [Network.Ethereum]: "0x5cf0a457d2b6c003232184178e87c91248f73477",
+  [Network.EthereumGoerli]: "0x5cf0a457d2b6c003232184178e87c91248f73477",
   [Network.Polygon]: "0x5cf0a457d2b6c003232184178e87c91248f73477",
   [Network.Optimism]: "0x5cf0a457d2b6c003232184178e87c91248f73477",
   [Network.Arbitrum]: "0x5cf0a457d2b6c003232184178e87c91248f73477",
