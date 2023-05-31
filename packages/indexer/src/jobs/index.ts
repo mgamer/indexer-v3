@@ -186,6 +186,10 @@ import { normalizedFloorQueueJob } from "@/jobs/token-updates/normalized-floor-q
 import { mintQueueJob } from "@/jobs/token-updates/mint-queue-job";
 import { floorQueueJob } from "@/jobs/token-updates/floor-queue-job";
 import { fetchCollectionMetadataJob } from "@/jobs/token-updates/fetch-collection-metadata-job";
+import { handleNewBuyOrderJob } from "@/jobs/update-attribute/handle-new-buy-order-job";
+import { handleNewSellOrderJob } from "@/jobs/update-attribute/handle-new-sell-order-job";
+import { resyncAttributeCacheJob } from "@/jobs/update-attribute/resync-attribute-cache-job";
+import { resyncAttributeCollectionJob } from "@/jobs/update-attribute/resync-attribute-collection-job";
 
 export const gracefulShutdownJobWorkers = [
   orderUpdatesById.worker,
@@ -363,6 +367,10 @@ export class RabbitMqJobsConsumer {
       mintQueueJob,
       floorQueueJob,
       fetchCollectionMetadataJob,
+      handleNewBuyOrderJob,
+      handleNewSellOrderJob,
+      resyncAttributeCacheJob,
+      resyncAttributeCollectionJob,
     ];
   }
 
