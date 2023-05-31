@@ -32,6 +32,8 @@ const version = "v7";
 
 export const getExecuteBuyV7Options: RouteOptions = {
   description: "Buy tokens (fill listings)",
+  notes:
+    "Use this API to fill listings. We recommend using the SDK over this API as the SDK will iterate through the steps and return callbacks. Please mark `excludeEOA` as `true` to exclude Blur orders.",
   tags: ["api", "Fill Orders (buy & sell)"],
   timeout: {
     server: 40 * 1000,
@@ -138,7 +140,11 @@ export const getExecuteBuyV7Options: RouteOptions = {
         .description(
           "Exclude orders that can only be filled by EOAs, to support filling with smart contracts. If marked `true`, blur will be excluded."
         ),
-      maxFeePerGas: Joi.string().pattern(regex.number).description("Optional custom gas settings."),
+      maxFeePerGas: Joi.string()
+        .pattern(regex.number)
+        .description(
+          "Optional custom gas settings. Includes base fee & priority fee in this limit."
+        ),
       maxPriorityFeePerGas: Joi.string()
         .pattern(regex.number)
         .description("Optional custom gas settings."),
@@ -147,7 +153,9 @@ export const getExecuteBuyV7Options: RouteOptions = {
       openseaApiKey: Joi.string().description(
         "Optional OpenSea API key used for filling. You don't need to pass your own key, but if you don't, you are more likely to be rate-limited."
       ),
-      blurAuth: Joi.string().description("Optional Blur auth used for filling"),
+      blurAuth: Joi.string().description(
+        "Advanced use case to pass personal blurAuthToken; the API will generate one if left empty."
+      ),
     }),
   },
   response: {
@@ -503,7 +511,11 @@ export const getExecuteBuyV7Options: RouteOptions = {
                 ON orders.token_set_id = token_sets_tokens.token_set_id
               WHERE orders.id = $/id/
                 AND orders.side = 'sell'
-                AND (orders.taker = '\\x0000000000000000000000000000000000000000' OR orders.taker IS NULL OR orders.taker = $/taker/)
+                AND (
+                  orders.taker IS NULL
+                  OR orders.taker = '\\x0000000000000000000000000000000000000000'
+                  OR orders.taker = $/taker/
+                )
             `,
             {
               taker: toBuffer(payload.taker),
@@ -622,7 +634,11 @@ export const getExecuteBuyV7Options: RouteOptions = {
                 AND orders.side = 'sell'
                 AND orders.fillability_status = 'fillable'
                 AND orders.approval_status = 'approved'
-                AND (orders.taker = '\\x0000000000000000000000000000000000000000' OR orders.taker IS NULL)
+                AND (
+                  orders.taker IS NULL
+                  OR orders.taker = '\\x0000000000000000000000000000000000000000'
+                  OR orders.taker = $/taker/
+                )
                 ${
                   payload.normalizeRoyalties || payload.excludeEOA
                     ? " AND orders.kind != 'blur'"
@@ -647,6 +663,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
               tokenSetId: `token:${item.token}`,
               quantity: item.quantity,
               sourceId: sourceDomain ? sources.getByDomain(sourceDomain)?.id ?? -1 : undefined,
+              taker: toBuffer(payload.taker),
             }
           );
 
