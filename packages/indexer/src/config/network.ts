@@ -130,8 +130,6 @@ type NetworkSettings = {
   };
   onStartup?: () => Promise<void>;
   subDomain: string;
-  enableRealtimeV2BlockQueue: boolean;
-  enableRealtimeProcessing: boolean;
 };
 
 export const getNetworkSettings = (): NetworkSettings => {
@@ -157,8 +155,6 @@ export const getNetworkSettings = (): NetworkSettings => {
     whitelistedCurrencies: new Map<string, Currency>(),
     supportedBidCurrencies: { [Sdk.Common.Addresses.Weth[config.chainId]?.toLowerCase()]: true },
     subDomain: "api",
-    enableRealtimeV2BlockQueue: config.enableRealtimeV2BlockQueue,
-    enableRealtimeProcessing: config.enableRealtimeProcessing,
   };
 
   switch (config.chainId) {
