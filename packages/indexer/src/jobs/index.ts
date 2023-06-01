@@ -190,6 +190,10 @@ import { handleNewBuyOrderJob } from "@/jobs/update-attribute/handle-new-buy-ord
 import { handleNewSellOrderJob } from "@/jobs/update-attribute/handle-new-sell-order-job";
 import { resyncAttributeCacheJob } from "@/jobs/update-attribute/resync-attribute-cache-job";
 import { resyncAttributeCollectionJob } from "@/jobs/update-attribute/resync-attribute-collection-job";
+import { resyncAttributeFloorSellJob } from "@/jobs/update-attribute/resync-attribute-floor-sell-job";
+import { resyncAttributeKeyCountsJob } from "@/jobs/update-attribute/resync-attribute-key-counts-job";
+import { resyncAttributeValueCountsJob } from "@/jobs/update-attribute/resync-attribute-value-counts-job";
+import { resyncAttributeCountsJob } from "@/jobs/update-attribute/update-attribute-counts-job";
 
 export const gracefulShutdownJobWorkers = [
   orderUpdatesById.worker,
@@ -371,6 +375,10 @@ export class RabbitMqJobsConsumer {
       handleNewSellOrderJob,
       resyncAttributeCacheJob,
       resyncAttributeCollectionJob,
+      resyncAttributeFloorSellJob,
+      resyncAttributeKeyCountsJob,
+      resyncAttributeValueCountsJob,
+      resyncAttributeCountsJob,
     ];
   }
 
