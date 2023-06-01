@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { elasticsearch } from "@/common/elasticsearch";
+
 import {
   MappingTypeMapping,
   QueryDslQueryContainer,
@@ -103,12 +104,25 @@ const MAPPINGS: MappingTypeMapping = {
 
 export const save = async (activities: ActivityDocument[]): Promise<void> => {
   try {
-    await elasticsearch.bulk({
+    const response = await elasticsearch.bulk({
       body: activities.flatMap((activity) => [
         { index: { _index: INDEX_NAME, _id: activity.id } },
         activity,
       ]),
     });
+
+    if (response.errors) {
+      logger.warn(
+        "elasticsearch-activities",
+        JSON.stringify({
+          topic: "save-errors",
+          data: {
+            activities: JSON.stringify(activities),
+          },
+          response,
+        })
+      );
+    }
   } catch (error) {
     logger.error(
       "elasticsearch-activities",
@@ -285,6 +299,21 @@ const _search = async (params: {
         error,
       })
     );
+
+    if ((error as any).meta?.body?.error?.caused_by?.type === "node_not_connected_exception") {
+      logger.error(
+        "elasticsearch-activities",
+        JSON.stringify({
+          topic: "node_not_connected_exception",
+          data: {
+            params: JSON.stringify(params),
+          },
+          error,
+        })
+      );
+
+      throw new Error("Could not perform search.");
+    }
 
     throw error;
   }
