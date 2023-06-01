@@ -39,7 +39,7 @@ export class RabbitMq {
 
           // If delay given publish to the delayed exchange
           RabbitMq.rabbitMqPublisherChannel.publish(
-            this.delayedExchangeName,
+            RabbitMq.delayedExchangeName,
             queueName,
             Buffer.from(JSON.stringify(content)),
             {
@@ -93,7 +93,7 @@ export class RabbitMq {
   public static async assertQueuesAndExchanges() {
     // Assert the exchange for delayed messages
     await this.rabbitMqPublisherChannel.assertExchange(
-      this.delayedExchangeName,
+      RabbitMq.delayedExchangeName,
       "x-delayed-message",
       {
         durable: true,
@@ -119,12 +119,12 @@ export class RabbitMq {
       // Bind queues to the delayed exchange
       await this.rabbitMqPublisherChannel.bindQueue(
         queue.getQueue(),
-        this.delayedExchangeName,
+        RabbitMq.delayedExchangeName,
         queue.getQueue()
       );
       await this.rabbitMqPublisherChannel.bindQueue(
         queue.getRetryQueue(),
-        this.delayedExchangeName,
+        RabbitMq.delayedExchangeName,
         queue.getRetryQueue()
       );
 
