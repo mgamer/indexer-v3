@@ -1,4 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { elasticsearch } from "@/common/elasticsearch";
+
 import {
   MappingTypeMapping,
   QueryDslQueryContainer,
@@ -7,9 +10,11 @@ import {
 import { SortResults } from "@elastic/elasticsearch/lib/api/typesWithBodyKey";
 import { logger } from "@/common/logger";
 import { CollectionsEntity } from "@/models/collections/collections-entity";
-import { ActivityDocument } from "@/elasticsearch/indexes/activities/base";
+import { ActivityDocument, ActivityType } from "@/elasticsearch/indexes/activities/base";
 import { getNetworkName } from "@/config/network";
 import { config } from "@/config/index";
+import _ from "lodash";
+import { buildContinuation, splitContinuation } from "@/common/utils";
 
 const INDEX_NAME = `${getNetworkName()}.activities`;
 
@@ -99,12 +104,25 @@ const MAPPINGS: MappingTypeMapping = {
 
 export const save = async (activities: ActivityDocument[]): Promise<void> => {
   try {
-    await elasticsearch.bulk({
+    const response = await elasticsearch.bulk({
       body: activities.flatMap((activity) => [
         { index: { _index: INDEX_NAME, _id: activity.id } },
         activity,
       ]),
     });
+
+    if (response.errors) {
+      logger.warn(
+        "elasticsearch-activities",
+        JSON.stringify({
+          topic: "save-errors",
+          data: {
+            activities: JSON.stringify(activities),
+          },
+          response,
+        })
+      );
+    }
   } catch (error) {
     logger.error(
       "elasticsearch-activities",
@@ -122,6 +140,133 @@ export const save = async (activities: ActivityDocument[]): Promise<void> => {
 };
 
 export const search = async (params: {
+  types?: ActivityType;
+  tokens?: { contract: string; tokenId: string }[];
+  contracts?: string[];
+  collections?: string[];
+  users?: string[];
+  sortBy?: "timestamp" | "createdAt";
+  limit?: number;
+  continuation?: string;
+  continuationAsInt?: boolean;
+}): Promise<{ activities: ActivityDocument[]; continuation: string | null }> => {
+  const esQuery = {};
+
+  (esQuery as any).bool = { filter: [] };
+
+  if (params.types?.length) {
+    (esQuery as any).bool.filter.push({ terms: { type: params.types } });
+  }
+
+  if (params.collections?.length) {
+    (esQuery as any).bool.filter.push({
+      terms: { "collection.id": params.collections },
+    });
+  }
+
+  if (params.contracts?.length) {
+    (esQuery as any).bool.filter.push({
+      terms: { contract: params.contracts },
+    });
+  }
+
+  if (params.tokens?.length) {
+    const tokensFilter = { bool: { should: [] } };
+
+    for (const token of params.tokens) {
+      (tokensFilter as any).bool.should.push({
+        bool: {
+          must: [
+            {
+              term: { contract: token.contract },
+            },
+            {
+              term: { ["token.id"]: token.tokenId },
+            },
+          ],
+        },
+      });
+    }
+
+    (esQuery as any).bool.filter.push(tokensFilter);
+  }
+
+  if (params.users?.length) {
+    const usersFilter = { bool: { should: [] } };
+
+    (usersFilter as any).bool.should.push({
+      terms: { fromAddress: params.users },
+    });
+
+    (usersFilter as any).bool.should.push({
+      terms: { toAddress: params.users },
+    });
+
+    (esQuery as any).bool.filter.push(usersFilter);
+  }
+
+  const esSort: any[] = [];
+
+  if (params.sortBy == "timestamp") {
+    esSort.push({ timestamp: { order: "desc" } });
+  } else {
+    esSort.push({ createdAt: { order: "desc" } });
+  }
+
+  let searchAfter;
+
+  if (params.continuation) {
+    if (params.continuationAsInt) {
+      searchAfter = [params.continuation];
+    } else {
+      searchAfter = [splitContinuation(params.continuation)[0]];
+    }
+  }
+
+  try {
+    const activities = await _search({
+      query: esQuery,
+      sort: esSort as Sort,
+      size: params.limit,
+      search_after: searchAfter,
+    });
+
+    let continuation = null;
+
+    if (activities.length === params.limit) {
+      const lastActivity = _.last(activities);
+
+      if (lastActivity) {
+        if (params.continuationAsInt) {
+          continuation = `${lastActivity.timestamp}`;
+        } else {
+          const continuationValue =
+            params.sortBy == "timestamp"
+              ? lastActivity.timestamp
+              : new Date(lastActivity.createdAt).toISOString();
+          continuation = buildContinuation(`${continuationValue}`);
+        }
+      }
+    }
+
+    return { activities, continuation };
+  } catch (error) {
+    logger.error(
+      "elasticsearch-activities",
+      JSON.stringify({
+        topic: "search",
+        data: {
+          params: params,
+        },
+        error,
+      })
+    );
+
+    throw error;
+  }
+};
+
+const _search = async (params: {
   query?: QueryDslQueryContainer | undefined;
   sort?: Sort | undefined;
   size?: number | undefined;
@@ -134,14 +279,11 @@ export const search = async (params: {
       ...params,
     });
 
-    const latency = esResult.took;
-
     logger.info(
       "elasticsearch-search-activities",
       JSON.stringify({
-        params,
-        latency,
-        paramsJson: JSON.stringify(params),
+        latency: esResult.took,
+        params: JSON.stringify(params),
       })
     );
 
@@ -150,13 +292,28 @@ export const search = async (params: {
     logger.error(
       "elasticsearch-activities",
       JSON.stringify({
-        topic: "search",
+        topic: "_search",
         data: {
           params: JSON.stringify(params),
         },
         error,
       })
     );
+
+    if ((error as any).meta?.body?.error?.caused_by?.type === "node_not_connected_exception") {
+      logger.error(
+        "elasticsearch-activities",
+        JSON.stringify({
+          topic: "node_not_connected_exception",
+          data: {
+            params: JSON.stringify(params),
+          },
+          error,
+        })
+      );
+
+      throw new Error("Could not perform search.");
+    }
 
     throw error;
   }
