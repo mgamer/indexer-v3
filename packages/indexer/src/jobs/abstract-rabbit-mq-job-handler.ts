@@ -1,11 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 // Abstract class needed to be implemented in order to process job from rabbit
-import { config } from "@/config/index";
 import { RabbitMq, RabbitMQMessage } from "@/common/rabbit-mq";
 import { logger } from "@/common/logger";
-import { ConsumeMessage } from "amqplib";
 import _ from "lodash";
+import { getNetworkName } from "@/config/network";
+import EventEmitter from "events";
+import TypedEmitter from "typed-emitter";
 
 export type BackoffStrategy =
   | {
@@ -18,16 +19,22 @@ export type BackoffStrategy =
     }
   | null;
 
-export abstract class AbstractRabbitMqJobHandler {
+export type AbstractRabbitMqJobHandlerEvents = {
+  onCompleted: (message: RabbitMQMessage) => void;
+  onError: (message: RabbitMQMessage, error: any) => void;
+};
+
+export abstract class AbstractRabbitMqJobHandler extends (EventEmitter as new () => TypedEmitter<AbstractRabbitMqJobHandlerEvents>) {
   abstract queueName: string;
   abstract maxRetries: number;
+
+  protected abstract process(payload: any): Promise<void>;
 
   protected concurrency = 1;
   protected maxDeadLetterQueue = 5000;
   protected backoff: BackoffStrategy = null;
 
-  public async consume(payload: ConsumeMessage): Promise<void> {
-    const message = JSON.parse(payload.content.toString()) as RabbitMQMessage;
+  public async consume(message: RabbitMQMessage): Promise<void> {
     message.consumedTime = message.consumedTime ?? _.now();
     message.retryCount = message.retryCount ?? 0;
 
@@ -36,7 +43,8 @@ export abstract class AbstractRabbitMqJobHandler {
       message.completeTime = _.now();
     } catch (error) {
       message.retryCount += 1;
-      let queueName = this.getErrorQueue();
+      this.emit("onError", message, error);
+      let queueName = this.getRetryQueue();
 
       // If the event has already been retried maxRetries times, send it to the dead letter queue
       if (message.retryCount > this.maxRetries) {
@@ -44,7 +52,7 @@ export abstract class AbstractRabbitMqJobHandler {
       }
 
       logger.error(
-        this.getQueue(),
+        this.queueName,
         `Error handling event: ${error}, queueName=${queueName}, payload=${JSON.stringify(
           message
         )}, retryCount=${message.retryCount}`
@@ -75,15 +83,15 @@ export abstract class AbstractRabbitMqJobHandler {
   }
 
   public getQueue(): string {
-    return `${config.chainId}.${this.queueName}`;
+    return `${getNetworkName()}.${this.queueName}`;
   }
 
-  public getErrorQueue(queueName?: string): string {
+  public getRetryQueue(queueName?: string): string {
     if (queueName) {
-      return `${queueName}-error`;
+      return `${queueName}-retry`;
     }
 
-    return `${this.getQueue()}-error`;
+    return `${this.getQueue()}-retry`;
   }
 
   public getDeadLetterQueue(): string {
@@ -102,5 +110,24 @@ export abstract class AbstractRabbitMqJobHandler {
     return this.backoff;
   }
 
-  protected abstract process(payload: any): Promise<void>;
+  public async send(job: { payload?: any; jobId?: string } = {}, delay = 0, priority = 0) {
+    await RabbitMq.send(
+      this.getQueue(),
+      { payload: job.payload, jobId: job.jobId ? `${this.getQueue()}:${job?.jobId}` : undefined },
+      delay,
+      priority
+    );
+  }
+
+  protected async sendBatch(job: { payload: any; jobId?: string }[], delay = 0, priority = 0) {
+    await RabbitMq.sendBatch(
+      this.getQueue(),
+      job.map((j) => ({
+        payload: j.payload,
+        jobId: j.jobId ? `${this.getQueue()}:${j.jobId}` : undefined,
+      })),
+      delay,
+      priority
+    );
+  }
 }

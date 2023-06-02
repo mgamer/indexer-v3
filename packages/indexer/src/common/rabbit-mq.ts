@@ -5,9 +5,12 @@ import { config } from "@/config/index";
 import _ from "lodash";
 import { RabbitMqJobsConsumer } from "@/jobs/index";
 import { logger } from "@/common/logger";
+import { getNetworkName } from "@/config/network";
+import { acquireLock } from "@/common/redis";
 
 export type RabbitMQMessage = {
   payload: any;
+  delay?: number;
   jobId?: string;
   publishTime?: number;
   consumedTime?: number;
@@ -16,6 +19,8 @@ export type RabbitMQMessage = {
 };
 
 export class RabbitMq {
+  public static delayedExchangeName = `${getNetworkName()}.delayed`;
+
   private static rabbitMqPublisherConnection: Connection;
   private static rabbitMqPublisherChannel: ConfirmChannel;
 
@@ -29,11 +34,18 @@ export class RabbitMq {
     content.publishTime = content.publishTime ?? _.now();
 
     try {
+      // For deduplication messages with delay use redis lock
+      if (delay && content.jobId && !(await acquireLock(content.jobId, Number(delay / 1000)))) {
+        return;
+      }
+
       await new Promise<void>((resolve, reject) => {
         if (delay) {
+          content.delay = delay;
+
           // If delay given publish to the delayed exchange
           RabbitMq.rabbitMqPublisherChannel.publish(
-            "delayed",
+            RabbitMq.delayedExchangeName,
             queueName,
             Buffer.from(JSON.stringify(content)),
             {
@@ -86,11 +98,15 @@ export class RabbitMq {
 
   public static async assertQueuesAndExchanges() {
     // Assert the exchange for delayed messages
-    await this.rabbitMqPublisherChannel.assertExchange("delayed", "x-delayed-message", {
-      durable: true,
-      autoDelete: false,
-      arguments: { "x-delayed-type": "direct", "x-message-deduplication": true },
-    });
+    await this.rabbitMqPublisherChannel.assertExchange(
+      RabbitMq.delayedExchangeName,
+      "x-delayed-message",
+      {
+        durable: true,
+        autoDelete: false,
+        arguments: { "x-delayed-type": "direct" },
+      }
+    );
 
     // Assert the consumer queues
     const consumerQueues = RabbitMqJobsConsumer.getQueues();
@@ -103,15 +119,19 @@ export class RabbitMq {
       // Create working queue
       await this.rabbitMqPublisherChannel.assertQueue(queue.getQueue(), options);
 
-      // Create error queue
-      await this.rabbitMqPublisherChannel.assertQueue(queue.getErrorQueue(), options);
+      // Create retry queue
+      await this.rabbitMqPublisherChannel.assertQueue(queue.getRetryQueue(), options);
 
       // Bind queues to the delayed exchange
-      await this.rabbitMqPublisherChannel.bindQueue(queue.getQueue(), "delayed", queue.getQueue());
       await this.rabbitMqPublisherChannel.bindQueue(
-        queue.getErrorQueue(),
-        "delayed",
-        queue.getErrorQueue()
+        queue.getQueue(),
+        RabbitMq.delayedExchangeName,
+        queue.getQueue()
+      );
+      await this.rabbitMqPublisherChannel.bindQueue(
+        queue.getRetryQueue(),
+        RabbitMq.delayedExchangeName,
+        queue.getRetryQueue()
       );
 
       // Create dead letter queue for all jobs the failed more than the max retries

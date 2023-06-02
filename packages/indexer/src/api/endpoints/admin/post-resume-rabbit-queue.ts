@@ -8,6 +8,7 @@ import { config } from "@/config/index";
 import { redis } from "@/common/redis";
 import { Channel } from "@/pubsub/channels";
 import _ from "lodash";
+import { getNetworkName } from "@/config/network";
 
 export const postResumeRabbitQueueOptions: RouteOptions = {
   description: "Resume rabbit queue",
@@ -26,8 +27,8 @@ export const postResumeRabbitQueueOptions: RouteOptions = {
     }
 
     const payload = request.payload as any;
-    if (!_.startsWith(payload.queueName, `${config.chainId}.`)) {
-      payload.queueName = `${config.chainId}.${payload.queueName}`;
+    if (!_.startsWith(payload.queueName, `${getNetworkName()}.`)) {
+      payload.queueName = `${getNetworkName()}.${payload.queueName}`;
     }
 
     await redis.publish(

@@ -4,8 +4,8 @@ import { Tokens } from "@/models/tokens";
 import { redb } from "@/common/db";
 import { toBuffer } from "@/common/utils";
 import { AddressZero } from "@ethersproject/constants";
-import { RabbitMq } from "@/common/rabbit-mq";
 import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handler";
+import { logger } from "@/common/logger";
 
 export type TokenRecalcSupplyPayload = {
   contract: string;
@@ -17,7 +17,7 @@ export class TokenReclacSupplyJob extends AbstractRabbitMqJobHandler {
   maxRetries = 10;
   concurrency = 10;
 
-  protected async process(token: TokenRecalcSupplyPayload) {
+  protected async process(payload: TokenRecalcSupplyPayload) {
     const totalSupplyQuery = `
       SELECT SUM(amount) AS "supply"
       FROM nft_transfer_events
@@ -27,8 +27,8 @@ export class TokenReclacSupplyJob extends AbstractRabbitMqJobHandler {
     `;
 
     const totalSupply = await redb.oneOrNone(totalSupplyQuery, {
-      contract: toBuffer(token.contract),
-      tokenId: token.tokenId,
+      contract: toBuffer(payload.contract),
+      tokenId: payload.tokenId,
       addressZero: toBuffer(AddressZero),
     });
 
@@ -42,22 +42,32 @@ export class TokenReclacSupplyJob extends AbstractRabbitMqJobHandler {
     `;
 
     const totalRemainingSupply = await redb.oneOrNone(totalRemainingSupplyQuery, {
-      contract: toBuffer(token.contract),
-      tokenId: token.tokenId,
+      contract: toBuffer(payload.contract),
+      tokenId: payload.tokenId,
       addressZero: toBuffer(AddressZero),
     });
 
-    await Tokens.update(token.contract, token.tokenId, {
+    await Tokens.update(payload.contract, payload.tokenId, {
       supply: totalSupply.supply,
       remainingSupply: totalRemainingSupply.remainingSupply,
     });
   }
 
   public async addToQueue(tokens: TokenRecalcSupplyPayload[], delay = 60 * 5 * 1000) {
-    await RabbitMq.sendBatch(
-      this.getQueue(),
-      tokens.map((t) => ({ payload: t })),
+    await this.sendBatch(
+      tokens.map((t) => ({ payload: t, jobId: `${t.contract}:${t.tokenId}` })),
       delay
     );
   }
 }
+
+export const tokenReclacSupplyJob = new TokenReclacSupplyJob();
+
+tokenReclacSupplyJob.on("onCompleted", (message) => {
+  logger.info(
+    tokenReclacSupplyJob.queueName,
+    `COMPLETED in ${
+      (Number(message.completeTime) - Number(message.publishTime)) / 1000
+    } message ${JSON.stringify(message)}`
+  );
+});
