@@ -33,24 +33,24 @@ export const queue = new Queue(QUEUE_NAME, {
 });
 new QueueScheduler(QUEUE_NAME, { connection: redis.duplicate() });
 
-const changedMapping = {
-  name: "name",
-  description: "description",
-  image: "image",
-  media: "media",
-  collection_id: "collection.id",
-  floor_sell_id: "market.floorAsk.id",
-  floor_sell_value: "market.floorAsk.price.gross.amount",
-  rarity_score: "token.rarity",
-  rarity_rank: "token.rarityRank",
-  is_flagged: "token.isFlagged",
-  last_flag_update: "token.lastFlagUpdate",
-  last_flag_change: "token.lastFlagChange",
-  normalized_floor_sell_id: "market.floorAskNormalized.id",
-  normalized_floor_sell_value: "market.floorAskNormalized.price.gross.amount",
-  supply: "token.supply",
-  remaining_supply: "token.remainingSupply",
-};
+// const changedMapping = {
+//   name: "name",
+//   description: "description",
+//   image: "image",
+//   media: "media",
+//   collection_id: "collection.id",
+//   floor_sell_id: "market.floorAsk.id",
+//   floor_sell_value: "market.floorAsk.price.gross.amount",
+//   rarity_score: "token.rarity",
+//   rarity_rank: "token.rarityRank",
+//   is_flagged: "token.isFlagged",
+//   last_flag_update: "token.lastFlagUpdate",
+//   last_flag_change: "token.lastFlagChange",
+//   normalized_floor_sell_id: "market.floorAskNormalized.id",
+//   normalized_floor_sell_value: "market.floorAskNormalized.price.gross.amount",
+//   supply: "token.supply",
+//   remaining_supply: "token.remainingSupply",
+// };
 
 // BACKGROUND WORKER ONLY
 if (config.doBackgroundWork && config.doWebsocketServerWork) {
@@ -115,21 +115,12 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
 
         baseQuery += ` LIMIT 1`;
 
-        // eslint-disable-next-line
-        console.log(baseQuery, {
-          contract: data.after.contract ? toBuffer(data.after.contract) : null,
-          tokenId: data.after.token_id,
-        });
-
         const rawResult = await redb.manyOrNone(baseQuery, {
           contract: data.after.contract ? toBuffer(data.after.contract) : null,
           tokenId: data.after.token_id,
         });
 
         const r = rawResult[0];
-
-        // eslint-disable-next-line
-        console.log(r, rawResult);
 
         const contract = fromBuffer(r.contract);
         const tokenId = r.token_id;
@@ -237,25 +228,31 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
         };
 
         let eventType = "";
-        const changed = [];
+        // const changed = [];
         if (data.trigger === "insert") eventType = "token.created";
         else if (data.trigger === "update") {
           eventType = "token.updated";
+          // if (data.before) {
+          //   for (const key in changedMapping) {
+          //     // eslint-disable-next-line
+          //     // @ts-ignore
+          //     if (data.before[key] && data.after[key] && data.before[key] !== data.after[key]) {
+          //       changed.push(key);
+          //     }
+          //   }
+          // }
 
-          // go through before and after to see what changed
-          for (const key in changedMapping) {
-            // eslint-disable-next-line
-            // @ts-ignore
-            if (data.before[key] !== data.after[key]) {
-              changed.push(key);
-            }
-          }
+          // if (!changed.length) {
+          //   return;
+          // }
         }
 
         await publishWebsocketEvent({
           event: eventType,
-          tags: {},
-          changed,
+          tags: {
+            contract: contract,
+          },
+          // changed: [],
           data: result,
         });
       } catch (error) {
