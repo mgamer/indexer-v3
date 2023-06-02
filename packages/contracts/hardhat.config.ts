@@ -30,6 +30,9 @@ const getNetworkConfig = (chainId?: number) => {
       case 42161:
         url = `https://arb-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`;
         break;
+      case 42170:
+        url = "";
+        break;
       // Testnets
       case 5:
         url = `https://eth-goerli.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`;
@@ -105,6 +108,7 @@ const config: HardhatUserConfig = {
     optimism: getNetworkConfig(10),
     polygon: getNetworkConfig(137),
     arbitrum: getNetworkConfig(42161),
+    "arbitrum-nova": getNetworkConfig(42170),
     // Testnets
     goerli: getNetworkConfig(5),
     "zora-testnet": getNetworkConfig(999),
