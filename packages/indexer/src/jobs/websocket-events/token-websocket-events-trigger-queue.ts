@@ -116,7 +116,7 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
         baseQuery += ` LIMIT 1`;
 
         const rawResult = await redb.manyOrNone(baseQuery, {
-          contract: data.after.contract ? toBuffer(data.after.contract) : null,
+          contract: toBuffer(data.after.contract),
           tokenId: data.after.token_id,
         });
 
@@ -291,8 +291,8 @@ export const addToQueue = async (events: EventInfo[]) => {
 };
 
 interface TokenInfo {
-  contract?: string;
-  token_id?: string;
+  contract: string;
+  token_id: string;
   name?: string;
   description?: string;
   image?: string;
