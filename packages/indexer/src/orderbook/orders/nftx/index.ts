@@ -129,22 +129,32 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
             triggerKind: "cancel",
           });
         } else {
-          const priceList = [];
-          for (let index = 0; index < POOL_ORDERS_MAX_PRICE_POINTS_COUNT; index++) {
-            try {
-              // Don't get the price from 0x to avoid being rate-limited
-              const poolPrice = await Sdk.Nftx.Helpers.getPoolPrice(
-                orderParams.pool,
-                index + 1,
-                "sell",
-                slippage,
-                baseProvider
-              );
-              priceList.push(poolPrice);
-            } catch {
-              break;
-            }
+          let tmpPriceList: ({ feeBps: BigNumberish; price: BigNumberish } | undefined)[] =
+            Array.from({ length: POOL_ORDERS_MAX_PRICE_POINTS_COUNT }, () => undefined);
+          await Promise.all(
+            _.range(0, POOL_ORDERS_MAX_PRICE_POINTS_COUNT).map(async (index) => {
+              try {
+                // Don't get the price from 0x to avoid being rate-limited
+                const poolPrice = await Sdk.Nftx.Helpers.getPoolPrice(
+                  orderParams.pool,
+                  index + 1,
+                  "sell",
+                  slippage,
+                  baseProvider
+                );
+                tmpPriceList[index] = poolPrice;
+              } catch {
+                // Ignore errors
+              }
+            })
+          );
+
+          // Stop when the first `undefined` is encountered
+          const firstUndefined = tmpPriceList.findIndex((p) => p === undefined);
+          if (firstUndefined !== -1) {
+            tmpPriceList = tmpPriceList.slice(0, firstUndefined);
           }
+          const priceList = tmpPriceList.map((p) => p!);
 
           if (priceList.length) {
             // Handle: prices
@@ -386,22 +396,32 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
       // Handle sell orders
       try {
-        const priceList: { feeBps: BigNumberish; price: BigNumberish }[] = [];
-        for (let index = 0; index < POOL_ORDERS_MAX_PRICE_POINTS_COUNT; index++) {
-          try {
-            // Don't get the price from 0x to avoid being rate-limited
-            const poolPrice = await Sdk.Nftx.Helpers.getPoolPrice(
-              orderParams.pool,
-              index + 1,
-              "buy",
-              slippage,
-              baseProvider
-            );
-            priceList.push(poolPrice);
-          } catch {
-            break;
-          }
+        let tmpPriceList: ({ feeBps: BigNumberish; price: BigNumberish } | undefined)[] =
+          Array.from({ length: POOL_ORDERS_MAX_PRICE_POINTS_COUNT }, () => undefined);
+        await Promise.all(
+          _.range(0, POOL_ORDERS_MAX_PRICE_POINTS_COUNT).map(async (index) => {
+            try {
+              // Don't get the price from 0x to avoid being rate-limited
+              const poolPrice = await Sdk.Nftx.Helpers.getPoolPrice(
+                orderParams.pool,
+                index + 1,
+                "buy",
+                slippage,
+                baseProvider
+              );
+              tmpPriceList[index] = poolPrice;
+            } catch {
+              // Ignore errors
+            }
+          })
+        );
+
+        // Stop when the first `undefined` is encountered
+        const firstUndefined = tmpPriceList.findIndex((p) => p === undefined);
+        if (firstUndefined !== -1) {
+          tmpPriceList = tmpPriceList.slice(0, firstUndefined);
         }
+        const priceList = tmpPriceList.map((p) => p!);
 
         const prices: string[] = [];
         for (const p of priceList) {
