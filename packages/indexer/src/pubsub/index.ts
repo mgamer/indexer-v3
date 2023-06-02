@@ -14,6 +14,7 @@ import { PauseRabbitConsumerQueueEvent } from "@/pubsub/events/pause-rabbit-cons
 import { ResumeRabbitConsumerQueueEvent } from "@/pubsub/events/resume-rabbit-consumer-queue-event";
 
 import getUuidByString from "uuid-by-string";
+import { RateLimitCreatedEvent } from "@/pubsub/all-chains-events/rate-limit-created-event";
 
 // Subscribe to all channels defined in the `Channel` enum
 redisSubscriber.subscribe(_.values(Channel), (error, count) => {
@@ -32,10 +33,6 @@ redisSubscriber.on("message", async (channel, message) => {
       break;
 
     case Channel.RateLimitRuleUpdated:
-      await RateLimitUpdatedEvent.handleEvent(message);
-      break;
-
-    case Channel.RouteApiPointsUpdated:
       await RateLimitUpdatedEvent.handleEvent(message);
       break;
 
@@ -82,6 +79,14 @@ if (config.chainId !== 1) {
 
         case AllChainsChannel.ApiKeyUpdated:
           await ApiKeyUpdatedAllChainsEvent.handleEvent(message);
+          break;
+
+        case AllChainsChannel.RateLimitRuleCreated:
+          await RateLimitCreatedEvent.handleEvent(message);
+          break;
+
+        case AllChainsChannel.RateLimitRuleUpdated:
+          await RateLimitCreatedEvent.handleEvent(message);
           break;
       }
     }
