@@ -13,4 +13,5 @@ export const Exchange: ChainIdToAddress = {
   [Network.ScrollAlpha]: "0x238285119ad0842051b4a46a9428139d30869b55",
   [Network.ZoraTestnet]: "0x00000000000000adc04c56bf30ac9d3c0aaf14dc",
   [Network.Mumbai]: "0x00000000000000adc04c56bf30ac9d3c0aaf14dc",
+  [Network.BaseGoerli]: "0x00000000000000adc04c56bf30ac9d3c0aaf14dc",
 };

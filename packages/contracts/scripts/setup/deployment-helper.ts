@@ -6,7 +6,7 @@ import { Interface } from "@ethersproject/abi";
 import { Signer } from "@ethersproject/abstract-signer";
 import { Contract } from "@ethersproject/contracts";
 import { keccak256 } from "@ethersproject/solidity";
-import * as Sdk from "@reservoir0x/sdk";
+import * as Sdk from "@reservoir0x/sdk/src";
 import hre, { ethers } from "hardhat";
 
 export class DeploymentHelper {

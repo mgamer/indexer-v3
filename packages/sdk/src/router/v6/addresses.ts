@@ -15,6 +15,7 @@ export const Router: ChainIdToAddress = {
   [Network.LineaTestnet]: "0xc2c862322e9c97d6244a3506655da95f05246fd8",
   [Network.ZoraTestnet]: "0x1aed60a97192157fda7fb26267a439d523d09c5e",
   [Network.Mumbai]: "0xc2c862322e9c97d6244a3506655da95f05246fd8",
+  [Network.BaseGoerli]: "0x1aed60a97192157fda7fb26267a439d523d09c5e",
 };
 
 // Approval proxy
@@ -31,6 +32,7 @@ export const ApprovalProxy: ChainIdToAddress = {
   [Network.LineaTestnet]: "0xbcfac90e4686ca855684e28b3752866acda79e27",
   [Network.ZoraTestnet]: "0x224ecb4eae96d31372d1090c3b0233c8310dbbab",
   [Network.Mumbai]: "0x79ce8f93063f8be4573a58f250b003859ebb7a24",
+  [Network.BaseGoerli]: "0x224ecb4eae96d31372d1090c3b0233c8310dbbab",
 };
 
 // Utility modules
@@ -90,6 +92,7 @@ export const SeaportV15Module: ChainIdToAddress = {
   [Network.ZoraTestnet]: "0x0df8a66ba3010af4f86ca4db6a6da9e367385a03",
   [Network.ScrollAlpha]: "0xf645877ab54e5856f39dc90425ae21748f52b5d4",
   [Network.Mumbai]: "0xf645877ab54e5856f39dc90425ae21748f52b5d4",
+  [Network.BaseGoerli]: "0x0df8a66ba3010af4f86ca4db6a6da9e367385a03",
 };
 
 export const AlienswapModule: ChainIdToAddress = {
