@@ -162,10 +162,10 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
             const value = bn(price).sub(bn(price).mul(bps).div(10000)).toString();
 
             const prices: string[] = [];
-            for (const p of priceList) {
+            for (let i = 0; i < priceList.length; i++) {
               prices.push(
-                bn(p.price)
-                  .sub(prices.length ? priceList[prices.length - 1].price : 0)
+                bn(priceList[i].price)
+                  .sub(i > 0 ? priceList[i - 1].price : 0)
                   .toString()
               );
             }
@@ -424,10 +424,10 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         const priceList = tmpPriceList.map((p) => p!);
 
         const prices: string[] = [];
-        for (const p of priceList) {
+        for (let i = 0; i < priceList.length; i++) {
           prices.push(
-            bn(p.price)
-              .sub(prices.length ? priceList[prices.length - 1].price : 0)
+            bn(priceList[i].price)
+              .sub(i > 0 ? priceList[i - 1].price : 0)
               .toString()
           );
         }

@@ -144,8 +144,8 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
           const priceList = tmpPriceList.map((p) => p!);
 
           const prices: BigNumber[] = [];
-          for (const p of priceList) {
-            prices.push(bn(p).sub(prices.length ? priceList[prices.length - 1] : 0));
+          for (let i = 0; i < priceList.length; i++) {
+            prices.push(bn(priceList[i]).sub(i > 0 ? priceList[i - 1] : 0));
           }
 
           const id = getOrderId(orderParams.pool, "buy");
@@ -389,8 +389,8 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
           const priceList = tmpPriceList.map((p) => p!);
 
           const prices: BigNumber[] = [];
-          for (const p of priceList) {
-            prices.push(bn(p).sub(prices.length ? priceList[prices.length - 1] : 0));
+          for (let i = 0; i < priceList.length; i++) {
+            prices.push(bn(priceList[i]).sub(i > 0 ? priceList[i - 1] : 0));
           }
 
           // Handle: prices

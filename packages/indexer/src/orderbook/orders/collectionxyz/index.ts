@@ -448,8 +448,8 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
               _.range(0, POOL_ORDERS_MAX_PRICE_POINTS_COUNT).map(async (index) => {
                 try {
                   const result = await poolContract.getSellNFTQuote(index + 1);
-                  if (result.error === 0 && result.outputAmount.lte(tokenBalance)) {
-                    tmpPriceList[index] = result.outputAmount;
+                  if (result.totalAmount.lte(tokenBalance)) {
+                    tmpPriceList[index] = result.totalAmount;
                   }
                 } catch {
                   // Ignore errors
@@ -465,8 +465,8 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
             const priceList = tmpPriceList.map((p) => p!);
 
             const prices: BigNumber[] = [];
-            for (const p of priceList) {
-              prices.push(bn(p).sub(prices.length ? priceList[prices.length - 1] : 0));
+            for (let i = 0; i < priceList.length; i++) {
+              prices.push(bn(priceList[i]).sub(i > 0 ? priceList[i - 1] : 0));
             }
 
             // Handle royalties and fees
@@ -830,9 +830,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
             _.range(0, length).map(async (index) => {
               try {
                 const result = await poolContract.getBuyNFTQuote(index + 1);
-                if (result.error === 0) {
-                  tmpPriceList[index] = result.inputAmount;
-                }
+                tmpPriceList[index] = result.totalAmount;
               } catch {
                 // Ignore errors
               }
@@ -847,8 +845,8 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
           const priceList = tmpPriceList.map((p) => p!);
 
           const prices: BigNumber[] = [];
-          for (const p of priceList) {
-            prices.push(bn(p).sub(prices.length ? priceList[prices.length - 1] : 0));
+          for (let i = 0; i < priceList.length; i++) {
+            prices.push(bn(priceList[i]).sub(i > 0 ? priceList[i - 1] : 0));
           }
 
           const limit = pLimit(50);
