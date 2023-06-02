@@ -25,6 +25,7 @@ const normalize = (order: Types.OrderParams): Types.OrderParams => {
   return {
     pair: lc(order.pair),
     tokenId: order.tokenId ? s(order.tokenId) : undefined,
+    amount: order.amount ? s(order.amount) : undefined,
     extra: {
       prices: order.extra.prices.map(s),
     },

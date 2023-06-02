@@ -64,6 +64,8 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         throw new Error("Unsupported currency");
       }
 
+      const isERC1155 = pool.pairKind > 1;
+
       // Force recheck at most once per hour
       const recheckCondition = orderParams.forceRecheck
         ? `AND orders.updated_at < to_timestamp(${orderParams.txTimestamp - 3600})`
@@ -189,6 +191,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
             // Handle: core sdk order
             const sdkOrder: Sdk.SudoswapV2.Order = new Sdk.SudoswapV2.Order(config.chainId, {
               pair: orderParams.pool,
+              amount: isERC1155 ? "1" : undefined,
               extra: {
                 prices: prices.slice(1).map(String),
               },
@@ -430,6 +433,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                   // Handle: core sdk order
                   const sdkOrder: Sdk.SudoswapV2.Order = new Sdk.SudoswapV2.Order(config.chainId, {
                     pair: orderParams.pool,
+                    amount: isERC1155 ? "1" : undefined,
                     tokenId,
                     extra: {
                       prices: prices.slice(1).map(String),

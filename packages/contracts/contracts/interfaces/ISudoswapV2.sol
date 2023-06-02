@@ -12,7 +12,8 @@ interface ISudoswapPairV2 {
     ERC1155_ERC20
   }
 
-  function nft() external returns (IERC721);
+  function nft() external returns (address);
+  function nftId() external returns (uint256 id);
 
   function token() external returns (IERC20);
 

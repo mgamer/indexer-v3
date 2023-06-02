@@ -17,11 +17,11 @@ export const getPoolDetails = async (address: string) =>
         "function poolType() view returns (uint8)",
         "function pairVariant() view returns (uint8)",
         "function isValidPair(address pairAddress) view returns (bool)",
+        "function nftId() view returns (uint256 id)",
       ]);
 
       try {
         const pool = new Contract(address, iface, baseProvider);
-
         const nft = (await pool.nft()).toLowerCase();
         const bondingCurve = (await pool.bondingCurve()).toLowerCase();
         const poolKind = await pool.poolType();
@@ -29,6 +29,8 @@ export const getPoolDetails = async (address: string) =>
         const token =
           pairKind == 1 || pairKind == 3 ? (await pool.token()).toLowerCase() : AddressZero;
 
+        let tokenId: string | null = null;
+        if (pairKind > 1) tokenId = (await pool.nftId()).toString();
         const factory = new Contract(
           Sdk.SudoswapV2.Addresses.PairFactory[config.chainId],
           iface,
@@ -42,6 +44,7 @@ export const getPoolDetails = async (address: string) =>
             bondingCurve,
             poolKind,
             pairKind,
+            tokenId,
           });
         }
       } catch {

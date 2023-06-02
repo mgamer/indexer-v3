@@ -14,6 +14,7 @@ export type SudoswapV2Pool = {
   bondingCurve: string;
   poolKind: SudoswapV2PoolKind;
   pairKind: number;
+  tokenId: string | null;
 };
 
 export const saveSudoswapV2Pool = async (sudoswapPool: SudoswapV2Pool) => {
@@ -25,14 +26,16 @@ export const saveSudoswapV2Pool = async (sudoswapPool: SudoswapV2Pool) => {
         token,
         bonding_curve,
         pool_kind,
-        pair_kind
+        pair_kind,
+        token_id,
       ) VALUES (
         $/address/,
         $/nft/,
         $/token/,
         $/bondingCurve/,
         $/poolKind/,
-        $/pairKind/
+        $/pairKind/,
+        $/tokenId/
       )
       ON CONFLICT DO NOTHING
     `,
@@ -43,6 +46,7 @@ export const saveSudoswapV2Pool = async (sudoswapPool: SudoswapV2Pool) => {
       bondingCurve: toBuffer(sudoswapPool.bondingCurve),
       poolKind: sudoswapPool.poolKind,
       pairKind: sudoswapPool.pairKind,
+      tokenId: sudoswapPool.tokenId,
     }
   );
 
@@ -58,7 +62,8 @@ export const getSudoswapV2Pool = async (address: string): Promise<SudoswapV2Pool
         sudoswap_v2_pools.token,
         sudoswap_v2_pools.bonding_curve,
         sudoswap_v2_pools.pool_kind,
-        sudoswap_v2_pools.pair_kind
+        sudoswap_v2_pools.pair_kind,
+        sudoswap_v2_pools.token_id
       FROM sudoswap_v2_pools
       WHERE sudoswap_v2_pools.address = $/address/
     `,
@@ -72,5 +77,6 @@ export const getSudoswapV2Pool = async (address: string): Promise<SudoswapV2Pool
     bondingCurve: fromBuffer(result.bonding_curve),
     poolKind: result.pool_kind,
     pairKind: result.pair_kind,
+    tokenId: result.token_id,
   };
 };

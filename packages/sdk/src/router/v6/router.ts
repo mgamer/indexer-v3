@@ -1842,7 +1842,7 @@ export class Router {
         module: module.address,
         data: module.interface.encodeFunctionData("buyWithETH", [
           sudoswapV2Details.map((d) => (d.order as Sdk.SudoswapV2.Order).params.pair),
-          sudoswapV2Details.map((d) => d.tokenId),
+          sudoswapV2Details.map((d) => (d.amount ? d.amount : d.tokenId)),
           Math.floor(Date.now() / 1000) + 10 * 60,
           {
             fillTo: taker,
@@ -3539,7 +3539,7 @@ export class Router {
               module: module.address,
               data: module.interface.encodeFunctionData("sell", [
                 order.params.pair,
-                detail.tokenId,
+                order.params.tokenId ? order.params.amount : detail.tokenId,
                 bn(order.params.extra.prices[0]).sub(
                   // Take into account the protocol fee of 0.5%
                   bn(order.params.extra.prices[0]).mul(50).div(10000)

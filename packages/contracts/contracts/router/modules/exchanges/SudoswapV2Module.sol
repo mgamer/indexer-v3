@@ -3,6 +3,7 @@ pragma solidity ^0.8.9;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import {IERC1155} from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 
 import {BaseExchangeModule} from "./BaseExchangeModule.sol";
 import {BaseModule} from "../BaseModule.sol";
@@ -112,7 +113,17 @@ contract SudoswapV2Module is BaseExchangeModule {
     }
   }
 
-  // --- Single ERC721 offer ---
+  function isERC1155Pair(ISudoswapPairV2 pair) private returns(bool) {
+    ISudoswapPairV2.PairVariant vaiant = pair.pairVariant();
+    return ISudoswapPairV2.PairVariant.ERC1155_ERC20 == vaiant || ISudoswapPairV2.PairVariant.ERC1155_ETH == vaiant;
+  }
+
+  function isETHPair(ISudoswapPairV2 pair) private returns(bool) {
+    ISudoswapPairV2.PairVariant vaiant = pair.pairVariant();
+    return ISudoswapPairV2.PairVariant.ERC721_ETH == vaiant || ISudoswapPairV2.PairVariant.ERC1155_ETH == vaiant;
+  }
+
+  // --- Single offer ---
 
   function sell(
     ISudoswapPairV2 pair,
@@ -122,19 +133,20 @@ contract SudoswapV2Module is BaseExchangeModule {
     OfferParams calldata params,
     Fee[] calldata fees
   ) external nonReentrant {
-    IERC721 collection = pair.nft();
-
     // Approve the router if needed
-    _approveERC721IfNeeded(collection, address(pair));
-
+    if (isERC1155Pair(pair)) {
+      _approveERC1155IfNeeded(IERC1155(pair.nft()), address(pair));
+    } else {
+      _approveERC721IfNeeded(IERC721(pair.nft()), address(pair));
+    }
+   
     // Build router data
     uint256[] memory tokenIds = new uint256[](1);
     tokenIds[0] = nftId;
 
     // Execute fill
     try pair.swapNFTsForToken(tokenIds, minOutput, payable(address(this)), false, address(0)) {
-      ISudoswapPairV2.PairVariant variant = pair.pairVariant();
-      bool isETH = variant == ISudoswapPairV2.PairVariant.ERC721_ETH ||  ISudoswapPairV2.PairVariant.ERC721_ETH == variant;
+      bool isETH = isETHPair(pair);
 
       // Pay fees
       uint256 feesLength = fees.length;
@@ -157,21 +169,16 @@ contract SudoswapV2Module is BaseExchangeModule {
       }
     }
 
-    // Refund any ERC721 leftover
-    _sendAllERC721(params.refundTo, collection, nftId);
+    if (!isERC1155Pair(pair)) {
+      // Refund any ERC721 leftover
+      _sendAllERC721(params.refundTo, IERC721(pair.nft()), nftId);
+    } else {
+      // Refund any ERC1155 leftover
+      _sendAllERC1155(params.refundTo, IERC1155(pair.nft()), pair.nftId());
+    }
   }
 
   // --- ERC721 hooks ---
-
-  // Single token offer acceptance can be done approval-less by using the
-  // standard `safeTransferFrom` method together with specifying data for
-  // further contract calls. An example:
-  // `safeTransferFrom(
-  //      0xWALLET,
-  //      0xMODULE,
-  //      TOKEN_ID,
-  //      0xABI_ENCODED_ROUTER_EXECUTION_CALLDATA_FOR_OFFER_ACCEPTANCE
-  // )`
 
   function onERC721Received(
     address, // operator,
@@ -184,5 +191,19 @@ contract SudoswapV2Module is BaseExchangeModule {
     }
 
     return this.onERC721Received.selector;
+  }
+  
+  function onERC1155Received(
+    address, // operator
+    address, // from
+    uint256, // tokenId
+    uint256, // amount
+    bytes calldata data
+  ) external returns (bytes4) {
+    if (data.length > 0) {
+      _makeCall(router, data, 0);
+    }
+
+    return this.onERC1155Received.selector;
   }
 }

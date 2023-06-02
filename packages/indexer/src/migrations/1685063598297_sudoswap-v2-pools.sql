@@ -6,7 +6,8 @@ CREATE TABLE "sudoswap_v2_pools" (
   "token" BYTEA NOT NULL,
   "bonding_curve" BYTEA NOT NULL,
   "pool_kind" SMALLINT NOT NULL,
-  "pair_kind" SMALLINT NOT NULL
+  "pair_kind" SMALLINT NOT NULL,
+  "token_id" NUMERIC(78, 0) DEFAULT NULL
 );
 
 ALTER TABLE "sudoswap_v2_pools"
