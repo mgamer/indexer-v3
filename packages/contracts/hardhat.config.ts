@@ -40,6 +40,9 @@ const getNetworkConfig = (chainId?: number) => {
       case 5001:
         url = "https://rpc.testnet.mantle.xyz";
         break;
+      case 80001:
+        url = `https://polygon-mumbai.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`;
+        break;
       case 534353:
         url = "https://alpha-rpc.scroll.io/l2";
         break;
@@ -103,6 +106,7 @@ const config: HardhatUserConfig = {
     goerli: getNetworkConfig(5),
     "zora-testnet": getNetworkConfig(999),
     "mantle-testnet": getNetworkConfig(5001),
+    mumbai: getNetworkConfig(80001),
     "linea-testnet": getNetworkConfig(59140),
     "scroll-alpha": getNetworkConfig(534353),
     sepolia: getNetworkConfig(11155111),
