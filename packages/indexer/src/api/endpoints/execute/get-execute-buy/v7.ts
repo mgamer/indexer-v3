@@ -642,9 +642,12 @@ export const getExecuteBuyV7Options: RouteOptions = {
                 }
               );
               if (collectionData) {
-                const quantityToMint = mint.maxMintsPerWallet
-                  ? Math.min(item.quantity, mint.maxMintsPerWallet)
-                  : item.quantity;
+                // const quantityToMint = mint.maxMintsPerWallet
+                //   ? Math.min(item.quantity, mint.maxMintsPerWallet)
+                //   : item.quantity;
+
+                // For now at most 1 mint
+                const quantityToMint = 1;
 
                 const orderId = `mint:${item.collection}`;
                 mintTxs.push({
