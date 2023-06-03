@@ -31,7 +31,8 @@ if (config.doBackgroundWork) {
       const results = await idb.manyOrNone(
         `
           SELECT
-            orders.id
+            orders.id,
+            orders.raw_data
           FROM orders
           WHERE orders.kind = 'foundation'
             AND orders.contract IS NOT NULL
@@ -49,7 +50,7 @@ if (config.doBackgroundWork) {
       await Promise.all(
         results.map(async (r) => {
           try {
-            const order_raw_data = r.order_raw_data;
+            const order_raw_data = r.raw_data;
             const onchainState = await contract.getBuyPrice(
               order_raw_data.contract,
               order_raw_data.tokenId
@@ -100,7 +101,7 @@ if (config.doBackgroundWork) {
 
   if (config.chainId === 1) {
     redlock
-      .acquire([`${QUEUE_NAME}-lock-7`], 60 * 60 * 24 * 30 * 1000)
+      .acquire([`${QUEUE_NAME}-lock-8`], 60 * 60 * 24 * 30 * 1000)
       .then(async () => {
         await addToQueue();
       })
