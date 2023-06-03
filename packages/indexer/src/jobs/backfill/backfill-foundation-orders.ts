@@ -9,6 +9,7 @@ import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { redis, redlock } from "@/common/redis";
 import { config } from "@/config/index";
+import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 
 const QUEUE_NAME = "backfill-foundation-orders";
 
@@ -79,6 +80,14 @@ if (config.doBackgroundWork) {
             ) AS x(id, fillability_status)
             WHERE orders.id = x.id::TEXT
           `
+        );
+
+        await orderUpdatesById.addToQueue(
+          values.map(({ id }) => ({
+            context: `fix-foundation-orders-${id}`,
+            id,
+            trigger: { kind: "revalidation" },
+          }))
         );
       }
     },
