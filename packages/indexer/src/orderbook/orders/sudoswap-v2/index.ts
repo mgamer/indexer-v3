@@ -1,4 +1,5 @@
 import { Interface } from "@ethersproject/abi";
+import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import { keccak256 } from "@ethersproject/solidity";
@@ -15,7 +16,12 @@ import * as ordersUpdateById from "@/jobs/order-updates/by-id-queue";
 import { Sources } from "@/models/sources";
 import { SudoswapV2PoolKind } from "@/models/sudoswap-v2-pools";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
-import { DbOrder, OrderMetadata, generateSchemaHash } from "@/orderbook/orders/utils";
+import {
+  POOL_ORDERS_MAX_PRICE_POINTS_COUNT,
+  DbOrder,
+  OrderMetadata,
+  generateSchemaHash,
+} from "@/orderbook/orders/utils";
 import * as tokenSet from "@/orderbook/token-sets";
 import * as royalties from "@/utils/royalties";
 import * as sudoswapV2 from "@/utils/sudoswap-v2";
@@ -65,6 +71,9 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       }
 
       const isERC1155 = pool.pairKind > 1;
+      if (isERC1155) {
+        throw new Error("ERC1155 orders are not yet supported");
+      }
 
       // Force recheck at most once per hour
       const recheckCondition = orderParams.forceRecheck
@@ -122,32 +131,49 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       // Handle buy orders
       try {
         if ([SudoswapV2PoolKind.TOKEN, SudoswapV2PoolKind.TRADE].includes(pool.poolKind)) {
+          if (pool.propertyChecker !== AddressZero) {
+            throw new Error("Property checked pools are not yet supported on the buy-side");
+          }
+
           const tokenBalance = await baseProvider.getBalance(pool.address);
-          // TODO: Simulate bonding curve math for improved efficiency
-          const prices = [bn(0)];
-          let totalPrice = bn(0);
 
-          // For now, we get at most 10 prices (ideally we use off-chain simulation or multicall)
-          let i = 0;
-          while (i < 10) {
-            const result = await poolContract.getSellNFTQuote(0, prices.length);
-            if (result.error !== 0 || result.outputAmount.gt(tokenBalance)) {
-              break;
-            }
-            prices.push(result.outputAmount.sub(totalPrice));
-            totalPrice = totalPrice.add(prices[prices.length - 1]);
+          let tmpPriceList: (BigNumber | undefined)[] = Array.from(
+            { length: POOL_ORDERS_MAX_PRICE_POINTS_COUNT },
+            () => undefined
+          );
+          await Promise.all(
+            _.range(0, POOL_ORDERS_MAX_PRICE_POINTS_COUNT).map(async (index) => {
+              try {
+                const result = await poolContract.getSellNFTQuote(0, index + 1);
+                if (result.error === 0 && result.outputAmount.lte(tokenBalance)) {
+                  tmpPriceList[index] = result.outputAmount;
+                }
+              } catch {
+                // Ignore errors
+              }
+            })
+          );
 
-            i++;
+          // Stop when the first `undefined` is encountered
+          const firstUndefined = tmpPriceList.findIndex((p) => p === undefined);
+          if (firstUndefined !== -1) {
+            tmpPriceList = tmpPriceList.slice(0, firstUndefined);
+          }
+          const priceList = tmpPriceList.map((p) => p!);
+
+          const prices: BigNumber[] = [];
+          for (let i = 0; i < priceList.length; i++) {
+            prices.push(bn(priceList[i]).sub(i > 0 ? priceList[i - 1] : 0));
           }
 
           const id = getOrderId(orderParams.pool, "buy");
-          if (prices.length > 1) {
+          if (prices.length) {
             // Handle: prices
-            const price = prices[1].toString();
-            const value = prices[1]
+            const price = prices[0].toString();
+            const value = prices[0]
               .sub(
                 // Subtract the protocol fee from the price
-                prices[1].mul(feeBps).div(10000)
+                prices[0].mul(feeBps).div(10000)
               )
               .toString();
 
@@ -193,17 +219,17 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
               pair: orderParams.pool,
               amount: isERC1155 ? "1" : undefined,
               extra: {
-                prices: prices.slice(1).map(String),
+                prices: prices.map(String),
               },
             });
 
             let orderResult = await idb.oneOrNone(
               `
-                  SELECT
-                    orders.token_set_id
-                  FROM orders
-                  WHERE orders.id = $/id/
-                `,
+                SELECT
+                  orders.token_set_id
+                FROM orders
+                WHERE orders.id = $/id/
+              `,
               { id }
             );
             if (orderResult && !orderResult.token_set_id) {
@@ -251,7 +277,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                 currency_price: price,
                 currency_value: value,
                 needs_conversion: null,
-                quantity_remaining: (prices.length - 1).toString(),
+                quantity_remaining: prices.length.toString(),
                 valid_between: `tstzrange(${validFrom}, ${validTo}, '[]')`,
                 nonce: null,
                 source_id_int: source?.id,
@@ -280,34 +306,34 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
             } else {
               await idb.none(
                 `
-                    UPDATE orders SET
-                      fillability_status = 'fillable',
-                      approval_status = 'approved',
-                      price = $/price/,
-                      currency_price = $/price/,
-                      value = $/value/,
-                      currency_value = $/value/,
-                      quantity_remaining = $/quantityRemaining/,
-                      valid_between = tstzrange(date_trunc('seconds', to_timestamp(${orderParams.txTimestamp})), 'Infinity', '[]'),
-                      expiration = 'Infinity',
-                      updated_at = now(),
-                      raw_data = $/rawData:json/,
-                      missing_royalties = $/missingRoyalties:json/,
-                      normalized_value = $/normalizedValue/,
-                      currency_normalized_value = $/currencyNormalizedValue/,
-                      fee_bps = $/feeBps/,
-                      fee_breakdown = $/feeBreakdown:json/,
-                      block_number = $/blockNumber/,
-                      log_index = $/logIndex/
-                    WHERE orders.id = $/id/
-                    ${recheckCondition}
-                  `,
+                  UPDATE orders SET
+                    fillability_status = 'fillable',
+                    approval_status = 'approved',
+                    price = $/price/,
+                    currency_price = $/price/,
+                    value = $/value/,
+                    currency_value = $/value/,
+                    quantity_remaining = $/quantityRemaining/,
+                    valid_between = tstzrange(date_trunc('seconds', to_timestamp(${orderParams.txTimestamp})), 'Infinity', '[]'),
+                    expiration = 'Infinity',
+                    updated_at = now(),
+                    raw_data = $/rawData:json/,
+                    missing_royalties = $/missingRoyalties:json/,
+                    normalized_value = $/normalizedValue/,
+                    currency_normalized_value = $/currencyNormalizedValue/,
+                    fee_bps = $/feeBps/,
+                    fee_breakdown = $/feeBreakdown:json/,
+                    block_number = $/blockNumber/,
+                    log_index = $/logIndex/
+                  WHERE orders.id = $/id/
+                  ${recheckCondition}
+                `,
                 {
                   id,
                   price,
                   value,
                   rawData: sdkOrder.params,
-                  quantityRemaining: (prices.length - 1).toString(),
+                  quantityRemaining: prices.length.toString(),
                   missingRoyalties: missingRoyalties,
                   normalizedValue: normalizedValue.toString(),
                   currencyNormalizedValue: normalizedValue.toString(),
@@ -329,13 +355,13 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
           } else {
             await idb.none(
               `
-                  UPDATE orders SET
-                    fillability_status = 'no-balance',
-                    expiration = to_timestamp(${orderParams.txTimestamp}),
-                    updated_at = now()
-                  WHERE orders.id = $/id/
-                  ${recheckCondition}
-                `,
+                UPDATE orders SET
+                  fillability_status = 'no-balance',
+                  expiration = to_timestamp(${orderParams.txTimestamp}),
+                  updated_at = now()
+                WHERE orders.id = $/id/
+                ${recheckCondition}
+              `,
               { id }
             );
 
@@ -358,33 +384,41 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       // Handle sell orders
       try {
         if ([SudoswapV2PoolKind.TOKEN, SudoswapV2PoolKind.TRADE].includes(pool.poolKind)) {
-          // TODO: Simulate bonding curve math for improved efficiency
-          const prices = [bn(0)];
-          let totalPrice = bn(0);
+          let tmpPriceList: (BigNumber | undefined)[] = Array.from(
+            { length: POOL_ORDERS_MAX_PRICE_POINTS_COUNT },
+            () => undefined
+          );
+          await Promise.all(
+            _.range(0, POOL_ORDERS_MAX_PRICE_POINTS_COUNT).map(async (index) => {
+              try {
+                const result = await poolContract.getBuyNFTQuote(0, index + 1);
+                if (result.error === 0) {
+                  tmpPriceList[index] = result.inputAmount;
+                }
+              } catch {
+                // Ignore errors
+              }
+            })
+          );
 
-          // Fetch all token ids owned by the pool
-          const poolOwnedTokenIds = await commonHelpers.getNfts(pool.nft, pool.address);
+          // Stop when the first `undefined` is encountered
+          const firstUndefined = tmpPriceList.findIndex((p) => p === undefined);
+          if (firstUndefined !== -1) {
+            tmpPriceList = tmpPriceList.slice(0, firstUndefined);
+          }
+          const priceList = tmpPriceList.map((p) => p!);
 
-          // For now, we get at most 10 prices (ideally we use off-chain simulation or multicall)
-          let i = 0;
-          while (i < 10) {
-            const result = await poolContract.getBuyNFTQuote(
-              poolOwnedTokenIds.length ? _.sample(poolOwnedTokenIds) : 0,
-              prices.length
-            );
-
-            if (result.error !== 0) {
-              break;
-            }
-            prices.push(result.inputAmount.sub(totalPrice));
-            totalPrice = totalPrice.add(prices[prices.length - 1]);
-
-            i++;
+          const prices: BigNumber[] = [];
+          for (let i = 0; i < priceList.length; i++) {
+            prices.push(bn(priceList[i]).sub(i > 0 ? priceList[i - 1] : 0));
           }
 
           // Handle: prices
-          const price = prices[1].toString();
-          const value = prices[1].toString();
+          const price = prices[0].toString();
+          const value = prices[0].toString();
+
+          // Fetch all token ids owned by the pool
+          const poolOwnedTokenIds = await commonHelpers.getNfts(pool.nft, pool.address);
 
           const limit = pLimit(50);
           await Promise.all(
@@ -436,7 +470,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                     amount: isERC1155 ? "1" : undefined,
                     tokenId,
                     extra: {
-                      prices: prices.slice(1).map(String),
+                      prices: prices.map(String),
                     },
                   });
 

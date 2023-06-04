@@ -17,7 +17,8 @@ export const getPoolDetails = async (address: string) =>
         "function poolType() view returns (uint8)",
         "function pairVariant() view returns (uint8)",
         "function isValidPair(address pairAddress) view returns (bool)",
-        "function nftId() view returns (uint256 id)",
+        "function nftId() view returns (uint256)",
+        "function propertyChecker() view returns (address)",
       ]);
 
       try {
@@ -29,8 +30,19 @@ export const getPoolDetails = async (address: string) =>
         const token =
           pairKind == 1 || pairKind == 3 ? (await pool.token()).toLowerCase() : AddressZero;
 
+        // Only relevant for ERC1155 orders
         let tokenId: string | null = null;
-        if (pairKind > 1) tokenId = (await pool.nftId()).toString();
+        if (pairKind > 1) {
+          tokenId = (await pool.nftId()).toString();
+        }
+
+        let propertyChecker = AddressZero;
+        try {
+          propertyChecker = (await pool.propertyChecker()).toLowerCase();
+        } catch {
+          // Skip errors
+        }
+
         const factory = new Contract(
           Sdk.SudoswapV2.Addresses.PairFactory[config.chainId],
           iface,
@@ -44,6 +56,7 @@ export const getPoolDetails = async (address: string) =>
             bondingCurve,
             poolKind,
             pairKind,
+            propertyChecker,
             tokenId,
           });
         }
