@@ -15,6 +15,7 @@ import { ResumeRabbitConsumerQueueEvent } from "@/pubsub/events/resume-rabbit-co
 
 import getUuidByString from "uuid-by-string";
 import { RateLimitCreatedEvent } from "@/pubsub/all-chains-events/rate-limit-created-event";
+import { RateLimitDeletedEvent } from "@/pubsub/all-chains-events/rate-limit-deleted-event";
 
 // Subscribe to all channels defined in the `Channel` enum
 redisSubscriber.subscribe(_.values(Channel), (error, count) => {
@@ -86,7 +87,11 @@ if (config.chainId !== 1) {
           break;
 
         case AllChainsChannel.RateLimitRuleUpdated:
-          await RateLimitCreatedEvent.handleEvent(message);
+          await RateLimitUpdatedEvent.handleEvent(message);
+          break;
+
+        case AllChainsChannel.RateLimitRuleDeleted:
+          await RateLimitDeletedEvent.handleEvent(message);
           break;
       }
     }

@@ -12,4 +12,5 @@ export enum AllChainsChannel {
   ApiKeyUpdated = "api-key-updated-all-chains",
   RateLimitRuleCreated = "rate-limit-rule-created",
   RateLimitRuleUpdated = "rate-limit-rule-updated",
+  RateLimitRuleDeleted = "rate-limit-rule-deleted",
 }

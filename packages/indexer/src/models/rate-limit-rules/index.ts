@@ -210,7 +210,7 @@ export class RateLimitRules {
     await idb.none(query, replacementValues);
     await redis.publish(Channel.RateLimitRuleUpdated, `Updated rule id ${id}`);
 
-    // Sync to other chains only if created on mainnet
+    // Sync to other chains only if updated on mainnet
     if (config.chainId === 1) {
       const rateLimitRuleEntity = await RateLimitRules.getRuleById(id);
 
@@ -253,17 +253,33 @@ export class RateLimitRules {
     return null;
   }
 
+  public static async deleteByCorrelationId(correlationId: string) {
+    const rateLimitRuleEntity = await RateLimitRules.getRuleByCorrelationId(correlationId);
+    if (rateLimitRuleEntity) {
+      await RateLimitRules.delete(rateLimitRuleEntity.id);
+    }
+  }
+
   public static async delete(id: number) {
     const query = `DELETE FROM rate_limit_rules
-                   WHERE id = $/id/`;
+                   WHERE id = $/id/
+                   RETURNING correlation_id`;
 
     const values = {
       id,
     };
 
-    await idb.none(query, values);
+    const deletedRule = await idb.oneOrNone(query, values);
     await RateLimitRules.forceDataReload(); // reload the cache
     await redis.publish(Channel.RateLimitRuleUpdated, `Deleted rule id ${id}`);
+
+    // Sync to other chains only if deleted on mainnet
+    if (config.chainId === 1) {
+      await allChainsSyncRedis.publish(
+        AllChainsChannel.RateLimitRuleUpdated,
+        JSON.stringify({ correlationId: deletedRule.correlation_id })
+      );
+    }
   }
 
   public static async getApiKeyRateLimits(key: string) {
