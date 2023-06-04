@@ -42,9 +42,7 @@ describe("[ReservoirV6_0_1] SudoswapV2 listings", () => {
       .then((factory) => factory.deploy());
     sudoswapV2Module = await ethers
       .getContractFactory("SudoswapV2Module", deployer)
-      .then((factory) =>
-        factory.deploy(deployer.address, router.address)
-      );
+      .then((factory) => factory.deploy(deployer.address, router.address));
   });
 
   const getBalances = async (token: string) => {
@@ -126,7 +124,6 @@ describe("[ReservoirV6_0_1] SudoswapV2 listings", () => {
         data: sudoswapV2Module.interface.encodeFunctionData("buyWithETH", [
           listings.map((listing) => listing.order!.params.pair),
           listings.map((listing) => listing.nft.id),
-          Math.floor(Date.now() / 1000),
           {
             fillTo: carol.address,
             refundTo: carol.address,

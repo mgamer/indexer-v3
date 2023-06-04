@@ -7,17 +7,12 @@ import {IERC1155} from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 
 import {BaseExchangeModule} from "./BaseExchangeModule.sol";
 import {BaseModule} from "../BaseModule.sol";
-import {ISudoswapPairV2 } from "../../../interfaces/ISudoswapV2.sol";
+import {ISudoswapPairV2} from "../../../interfaces/ISudoswapV2.sol";
 
 contract SudoswapV2Module is BaseExchangeModule {
   // --- Constructor ---
 
-  constructor(
-    address owner,
-    address router
-  ) BaseModule(owner) BaseExchangeModule(router) {
-
-  }
+  constructor(address owner, address router) BaseModule(owner) BaseExchangeModule(router) {}
 
   // --- Fallback ---
 
@@ -28,7 +23,6 @@ contract SudoswapV2Module is BaseExchangeModule {
   function buyWithETH(
     ISudoswapPairV2[] calldata pairs,
     uint256[] calldata nftIds,
-    uint256 deadline,
     ETHListingParams calldata params,
     Fee[] calldata fees
   )
@@ -38,11 +32,12 @@ contract SudoswapV2Module is BaseExchangeModule {
     refundETHLeftover(params.refundTo)
     chargeETHFees(fees, params.amount)
   {
+    uint256[] memory tokenIds = new uint256[](1);
+
     uint256 pairsLength = pairs.length;
     for (uint256 i; i < pairsLength; ) {
-      // Fetch the current price quote
-      (, , , uint256 price, uint256 protocolFee, uint256 royaltyAmount) = pairs[i].getBuyNFTQuote(nftIds[i], 1);
-      uint256[] memory tokenIds = new uint256[](1);
+      // Fetch the current price
+      (, , , uint256 price, , ) = pairs[i].getBuyNFTQuote(nftIds[i], 1);
       tokenIds[0] = nftIds[i];
 
       // Execute fill
@@ -71,7 +66,6 @@ contract SudoswapV2Module is BaseExchangeModule {
   function buyWithERC20(
     ISudoswapPairV2[] calldata pairs,
     uint256[] calldata nftIds,
-    uint256 deadline,
     ERC20ListingParams calldata params,
     Fee[] calldata fees
   )
@@ -81,26 +75,20 @@ contract SudoswapV2Module is BaseExchangeModule {
     refundERC20Leftover(params.refundTo, params.token)
     chargeERC20Fees(fees, params.token, params.amount)
   {
-   
+    uint256[] memory tokenIds = new uint256[](1);
+
     uint256 pairsLength = pairs.length;
     for (uint256 i; i < pairsLength; ) {
-      // Fetch the current price quote
-      (, , , uint256 price, uint256 protocolFee, uint256 royaltyAmount) = pairs[i].getBuyNFTQuote(nftIds[i], 1);
-      uint256[] memory tokenIds = new uint256[](1);
+      // Fetch the current price
+      (, , , uint256 price, , ) = pairs[i].getBuyNFTQuote(nftIds[i], 1);
       tokenIds[0] = nftIds[i];
 
-      // Approve the router if needed
+      // Approve the pair if needed
       _approveERC20IfNeeded(params.token, address(pairs[i]), params.amount);
 
       // Execute fill
       try
-        pairs[i].swapTokenForSpecificNFTs(
-          tokenIds,
-          price,
-          params.fillTo,
-          false,
-          address(0)
-        )
+        pairs[i].swapTokenForSpecificNFTs(tokenIds, price, params.fillTo, false, address(0))
       {} catch {
         if (params.revertIfIncomplete) {
           revert UnsuccessfulFill();
@@ -113,48 +101,38 @@ contract SudoswapV2Module is BaseExchangeModule {
     }
   }
 
-  function isERC1155Pair(ISudoswapPairV2 pair) private returns(bool) {
-    ISudoswapPairV2.PairVariant vaiant = pair.pairVariant();
-    return ISudoswapPairV2.PairVariant.ERC1155_ERC20 == vaiant || ISudoswapPairV2.PairVariant.ERC1155_ETH == vaiant;
-  }
-
-  function isETHPair(ISudoswapPairV2 pair) private returns(bool) {
-    ISudoswapPairV2.PairVariant vaiant = pair.pairVariant();
-    return ISudoswapPairV2.PairVariant.ERC721_ETH == vaiant || ISudoswapPairV2.PairVariant.ERC1155_ETH == vaiant;
-  }
-
   // --- Single offer ---
 
   function sell(
     ISudoswapPairV2 pair,
     uint256 nftId,
     uint256 minOutput,
-    uint256 deadline,
     OfferParams calldata params,
     Fee[] calldata fees
   ) external nonReentrant {
-    // Approve the router if needed
-    if (isERC1155Pair(pair)) {
-      _approveERC1155IfNeeded(IERC1155(pair.nft()), address(pair));
+    ISudoswapPairV2.PairVariant variant = pair.pairVariant();
+    bool isETH = isETHPair(variant);
+    address nft = pair.nft();
+    IERC20 token = isETH ? IERC20(address(0)) : pair.token();
+
+    // Approve the pair if needed
+    if (!isERC1155Pair(variant)) {
+      _approveERC721IfNeeded(IERC721(nft), address(pair));
     } else {
-      _approveERC721IfNeeded(IERC721(pair.nft()), address(pair));
+      _approveERC1155IfNeeded(IERC1155(nft), address(pair));
     }
-   
+
     // Build router data
     uint256[] memory tokenIds = new uint256[](1);
     tokenIds[0] = nftId;
 
     // Execute fill
     try pair.swapNFTsForToken(tokenIds, minOutput, payable(address(this)), false, address(0)) {
-      bool isETH = isETHPair(pair);
-
       // Pay fees
       uint256 feesLength = fees.length;
       for (uint256 i; i < feesLength; ) {
         Fee memory fee = fees[i];
-        isETH
-          ? _sendETH(fee.recipient, fee.amount)
-          : _sendERC20(fee.recipient, fee.amount, pair.token());
+        isETH ? _sendETH(fee.recipient, fee.amount) : _sendERC20(fee.recipient, fee.amount, token);
 
         unchecked {
           ++i;
@@ -162,23 +140,22 @@ contract SudoswapV2Module is BaseExchangeModule {
       }
 
       // Forward any left payment to the specified receiver
-      isETH ? _sendAllETH(params.fillTo) : _sendAllERC20(params.fillTo, pair.token());
+      isETH ? _sendAllETH(params.fillTo) : _sendAllERC20(params.fillTo, token);
     } catch {
       if (params.revertIfIncomplete) {
         revert UnsuccessfulFill();
       }
     }
 
-    if (!isERC1155Pair(pair)) {
-      // Refund any ERC721 leftover
-      _sendAllERC721(params.refundTo, IERC721(pair.nft()), nftId);
+    // Refund any leftovers
+    if (!isERC1155Pair(variant)) {
+      _sendAllERC721(params.refundTo, IERC721(nft), nftId);
     } else {
-      // Refund any ERC1155 leftover
-      _sendAllERC1155(params.refundTo, IERC1155(pair.nft()), pair.nftId());
+      _sendAllERC1155(params.refundTo, IERC1155(nft), nftId);
     }
   }
 
-  // --- ERC721 hooks ---
+  // --- ERC721/1155 hooks ---
 
   function onERC721Received(
     address, // operator,
@@ -192,7 +169,7 @@ contract SudoswapV2Module is BaseExchangeModule {
 
     return this.onERC721Received.selector;
   }
-  
+
   function onERC1155Received(
     address, // operator
     address, // from
@@ -205,5 +182,19 @@ contract SudoswapV2Module is BaseExchangeModule {
     }
 
     return this.onERC1155Received.selector;
+  }
+
+  // --- Internal methods ---
+
+  function isERC1155Pair(ISudoswapPairV2.PairVariant vaiant) internal pure returns (bool) {
+    return
+      ISudoswapPairV2.PairVariant.ERC1155_ERC20 == vaiant ||
+      ISudoswapPairV2.PairVariant.ERC1155_ETH == vaiant;
+  }
+
+  function isETHPair(ISudoswapPairV2.PairVariant vaiant) internal pure returns (bool) {
+    return
+      ISudoswapPairV2.PairVariant.ERC721_ETH == vaiant ||
+      ISudoswapPairV2.PairVariant.ERC1155_ETH == vaiant;
   }
 }

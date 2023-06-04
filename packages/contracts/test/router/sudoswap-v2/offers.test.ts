@@ -42,9 +42,7 @@ describe("[ReservoirV6_0_1] SudoswapV2 offers", () => {
       .then((factory) => factory.deploy());
     sudoswapV2Module = await ethers
       .getContractFactory("SudoswapV2Module", deployer)
-      .then((factory) =>
-        factory.deploy(deployer.address, router.address)
-      );
+      .then((factory) => factory.deploy(deployer.address, router.address));
   });
 
   const getBalances = async (token: string) => {
@@ -127,7 +125,6 @@ describe("[ReservoirV6_0_1] SudoswapV2 offers", () => {
           offer.order!.params.pair,
           offer.nft.id,
           bn(offer.price).sub(bn(offer.price).mul(50).div(10000)),
-          Math.floor(Date.now() / 1000),
           {
             fillTo: carol.address,
             refundTo: carol.address,
@@ -166,7 +163,6 @@ describe("[ReservoirV6_0_1] SudoswapV2 offers", () => {
     // Execute
 
     const tx = await router.connect(carol).execute(executions, {
-      gasLimit: 1000000, 
       value: executions.map(({ value }) => value).reduce((a, b) => bn(a).add(b), bn(0)),
     });
     const txReceipt = await ethers.provider.getTransactionReceipt(tx.hash);

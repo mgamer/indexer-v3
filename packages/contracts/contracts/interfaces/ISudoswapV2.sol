@@ -13,13 +13,17 @@ interface ISudoswapPairV2 {
   }
 
   function nft() external returns (address);
+
   function nftId() external returns (uint256 id);
 
   function token() external returns (IERC20);
 
   function pairVariant() external pure returns (PairVariant);
 
-  function getBuyNFTQuote(uint256 assetId, uint256 numNFTs)
+  function getBuyNFTQuote(
+    uint256 assetId,
+    uint256 numNFTs
+  )
     external
     view
     returns (
@@ -37,7 +41,7 @@ interface ISudoswapPairV2 {
     address nftRecipient,
     bool isRouter,
     address routerCaller
-  ) external payable virtual returns (uint256);
+  ) external payable returns (uint256);
 
   function swapNFTsForToken(
     uint256[] calldata nftIds,
@@ -45,5 +49,5 @@ interface ISudoswapPairV2 {
     address payable tokenRecipient,
     bool isRouter,
     address routerCaller
-  ) external virtual returns (uint256 outputAmount);
+  ) external returns (uint256 outputAmount);
 }

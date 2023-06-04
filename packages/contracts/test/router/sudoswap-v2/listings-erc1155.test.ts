@@ -17,9 +17,8 @@ import {
   reset,
   setupNFTs,
 } from "../../utils";
-import { Interface } from "ethers/lib/utils";
 
-describe("[ReservoirV6_0_1] SudoswapV2 listings", () => {
+describe("[ReservoirV6_0_1] SudoswapV2 ERC1155 listings", () => {
   const chainId = getChainId();
 
   let deployer: SignerWithAddress;
@@ -43,9 +42,7 @@ describe("[ReservoirV6_0_1] SudoswapV2 listings", () => {
       .then((factory) => factory.deploy());
     sudoswapV2Module = await ethers
       .getContractFactory("SudoswapV2Module", deployer)
-      .then((factory) =>
-        factory.deploy(deployer.address, router.address)
-      );
+      .then((factory) => factory.deploy(deployer.address, router.address));
   });
 
   const getBalances = async (token: string) => {
@@ -127,7 +124,6 @@ describe("[ReservoirV6_0_1] SudoswapV2 listings", () => {
         data: sudoswapV2Module.interface.encodeFunctionData("buyWithETH", [
           listings.map((listing) => listing.order!.params.pair),
           listings.map((listing) => listing.order!.params.amount),
-          Math.floor(Date.now() / 1000),
           {
             fillTo: carol.address,
             refundTo: carol.address,
@@ -170,7 +166,6 @@ describe("[ReservoirV6_0_1] SudoswapV2 listings", () => {
     // Execute
 
     await router.connect(carol).execute(executions, {
-      gasLimit: 30000000,
       value: executions.map(({ value }) => value).reduce((a, b) => bn(a).add(b), bn(0)),
     });
 
@@ -188,7 +183,6 @@ describe("[ReservoirV6_0_1] SudoswapV2 listings", () => {
         .reduce((a, b) => bn(a).add(b), bn(0))
     );
 
- 
     // Bob got the payment
     expect(ethBalancesAfter.bob.sub(ethBalancesBefore.bob)).to.eq(
       listings
