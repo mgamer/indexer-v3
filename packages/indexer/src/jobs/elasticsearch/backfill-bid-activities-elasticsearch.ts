@@ -48,7 +48,6 @@ if (config.doBackgroundWork && config.doElasticsearchWork) {
         const query = `
             ${BidCreatedEventHandler.buildBaseQuery()}
             WHERE side = 'buy'
-            AND fillability_status = 'fillable' AND approval_status = 'approved'
             AND (updated_at >= to_timestamp($/fromTimestamp/) AND updated_at < to_timestamp($/toTimestamp/)) 
             ${continuationFilter}
             ORDER BY updated_at, id
@@ -68,6 +67,7 @@ if (config.doBackgroundWork && config.doElasticsearchWork) {
 
           for (const result of results) {
             const eventHandler = new BidCreatedEventHandler(
+              result.order_id,
               result.event_tx_hash,
               result.event_log_index,
               result.event_batch_index
@@ -95,6 +95,13 @@ if (config.doBackgroundWork && config.doElasticsearchWork) {
             updatedAt: lastResult.updated_ts,
             id: lastResult.order_id,
           };
+        } else {
+          logger.info(
+            QUEUE_NAME,
+            `No results. cursor=${JSON.stringify(
+              cursor
+            )}, fromTimestamp=${fromTimestamp}, toTimestamp=${toTimestamp}`
+          );
         }
       } catch (error) {
         logger.error(

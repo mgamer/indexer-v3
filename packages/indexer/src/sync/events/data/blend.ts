@@ -12,15 +12,15 @@ export const loanOfferTaken: EventData = {
   numTopics: 1,
   abi: new Interface([
     `event LoanOfferTaken(
-        bytes32 offerHash,
-        uint256 lienId,
-        address collection,
-        address lender,
-        address borrower,
-        uint256 loanAmount,
-        uint256 rate,
-        uint256 tokenId,
-        uint256 auctionDuration
+      bytes32 offerHash,
+      uint256 lienId,
+      address collection,
+      address lender,
+      address borrower,
+      uint256 loanAmount,
+      uint256 rate,
+      uint256 tokenId,
+      uint256 auctionDuration
     )`,
   ]),
 };
@@ -42,12 +42,12 @@ export const refinance: EventData = {
   numTopics: 1,
   abi: new Interface([
     `event Refinance(
-        uint256 lienId,
-        address collection,
-        address newLender,
-        uint256 newAmount,
-        uint256 newRate,
-        uint256 newAuctionDuration
+      uint256 lienId,
+      address collection,
+      address newLender,
+      uint256 newAmount,
+      uint256 newRate,
+      uint256 newAuctionDuration
     )`,
   ]),
 };
@@ -60,11 +60,11 @@ export const buyLocked: EventData = {
   numTopics: 1,
   abi: new Interface([
     `event BuyLocked(
-        uint256 lienId,
-        address collection,
-        address buyer,
-        address seller,
-        uint256 tokenId
+      uint256 lienId,
+      address collection,
+      address buyer,
+      address seller,
+      uint256 tokenId
     )`,
   ]),
 };
@@ -73,7 +73,7 @@ export const nonceIncremented: EventData = {
   kind: "blend",
   subKind: "blend-nonce-incremented",
   addresses: { [Blend.Addresses.Blend[config.chainId]?.toLowerCase()]: true },
-  topic: "0x7ffb5bd9cdc79a6f9bc6e00c82f43836e0afbb204d47972001f6e853764a8ef1",
-  numTopics: 1,
+  topic: "0xa82a649bbd060c9099cd7b7326e2b0dc9e9af0836480e0f849dc9eaa79710b3b",
+  numTopics: 2,
   abi: new Interface([`event NonceIncremented(address indexed user, uint256 newNonce)`]),
 };

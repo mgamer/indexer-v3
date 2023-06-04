@@ -234,6 +234,7 @@ export class Router {
         if (detail.fees?.length || options?.globalFees?.length) {
           throw new Error("Fees not supported for Universe orders");
         }
+
         let approval: FTApproval | undefined;
         if (!isETH(this.chainId, detail.currency)) {
           approval = {
@@ -271,6 +272,7 @@ export class Router {
         if (detail.fees?.length || options?.globalFees?.length) {
           throw new Error("Fees not supported for Cryptopunks orders");
         }
+
         const order = detail.order as Sdk.CryptoPunks.Order;
         const exchange = new Sdk.CryptoPunks.Exchange(this.chainId);
         txs.push({
@@ -291,6 +293,7 @@ export class Router {
         if (detail.fees?.length || options?.globalFees?.length) {
           throw new Error("Fees not supported for Flow orders");
         }
+
         let approval: FTApproval | undefined;
         if (!isETH(this.chainId, detail.currency)) {
           approval = {
@@ -3796,6 +3799,11 @@ export class Router {
 
           const tokenId = detail.tokenId;
           order.params.specificIds = [tokenId];
+
+          // Cover the case where the path is missing
+          order.params.path = order.params.path.length
+            ? order.params.path
+            : [order.params.pool, Sdk.Common.Addresses.Weth[this.chainId]];
 
           executionsWithDetails.push({
             detail,

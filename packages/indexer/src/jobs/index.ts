@@ -49,6 +49,7 @@ import * as backfillCancelEventsCreatedAt from "@/jobs/backfill/backfill-cancel-
 import * as backfillNftTransferEventsCreatedAt from "@/jobs/backfill/backfill-nft-transfer-events-created-at";
 import * as backfillCollectionsRoyalties from "@/jobs/backfill/backfill-collections-royalties";
 import * as backfillWrongNftBalances from "@/jobs/backfill/backfill-wrong-nft-balances";
+import * as backfillFoundationOrders from "@/jobs/backfill/backfill-foundation-orders";
 
 import * as topBidUpdate from "@/jobs/bid-updates/top-bid-update-queue";
 
@@ -167,6 +168,10 @@ import * as backfillTransferActivitiesElasticsearch from "@/jobs/elasticsearch/b
 import * as backfillSaleActivitiesElasticsearch from "@/jobs/elasticsearch/backfill-sale-activities-elasticsearch";
 import * as backfillAskActivitiesElasticsearch from "@/jobs/elasticsearch/backfill-ask-activities-elasticsearch";
 import * as backfillBidActivitiesElasticsearch from "@/jobs/elasticsearch/backfill-bid-activities-elasticsearch";
+import * as backfillAskCancelActivitiesElasticsearch from "@/jobs/elasticsearch/backfill-ask-cancel-activities-elasticsearch";
+import * as backfillBidCancelActivitiesElasticsearch from "@/jobs/elasticsearch/backfill-bid-cancel-activities-elasticsearch";
+import * as updateActivitiesCollectionJob from "@/jobs/elasticsearch/update-activities-collection";
+import * as backfillActivitiesElasticsearch from "@/jobs/elasticsearch/backfill-activities-elasticsearch";
 
 export const gracefulShutdownJobWorkers = [
   orderUpdatesById.worker,
@@ -193,6 +198,7 @@ export const allJobQueues = [
   backfillExpiredOrders.queue,
   backfillExpiredOrders2.queue,
   backfillFoundationSales.queue,
+  backfillFoundationOrders.queue,
   backfillMints.queue,
   backfillSaleRoyalties.queue,
   backfillUpdateMissingMetadata.queue,
@@ -323,4 +329,8 @@ export const allJobQueues = [
   backfillSaleActivitiesElasticsearch.queue,
   backfillAskActivitiesElasticsearch.queue,
   backfillBidActivitiesElasticsearch.queue,
+  backfillAskCancelActivitiesElasticsearch.queue,
+  backfillBidCancelActivitiesElasticsearch.queue,
+  updateActivitiesCollectionJob.queue,
+  backfillActivitiesElasticsearch.queue,
 ];
