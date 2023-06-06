@@ -116,6 +116,10 @@ export const SudoswapModule: ChainIdToAddress = {
   [Network.Ethereum]: "0xa97727370e2592f83602bc92975c49c4fea4491f",
 };
 
+export const SudoswapV2Module: ChainIdToAddress = {
+  [Network.EthereumGoerli]: "0xf99c9d248fa856b18ce661992b306d4117608909",
+};
+
 export const X2Y2Module: ChainIdToAddress = {
   [Network.Ethereum]: "0x7562e6d5d901ece54a89530f1c8d63e7cfaeebff",
   [Network.EthereumGoerli]: "0x7562e6d5d901ece54a89530f1c8d63e7cfaeebff",
@@ -149,8 +153,4 @@ export const RaribleModule: ChainIdToAddress = {
 
 export const SuperRareModule: ChainIdToAddress = {
   [Network.Ethereum]: "0x512a6a1a74f1f08aac8155605b9da8ace46b3d9c",
-};
-
-export const SudoswapV2Module: ChainIdToAddress = {
-  [Network.Ethereum]: "",
 };
