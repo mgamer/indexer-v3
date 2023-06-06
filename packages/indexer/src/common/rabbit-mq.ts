@@ -9,6 +9,7 @@ import { getNetworkName } from "@/config/network";
 import { acquireLock } from "@/common/redis";
 import axios from "axios";
 import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handler";
+import pLimit from "p-limit";
 
 export type RabbitMQMessage = {
   payload: any;
@@ -122,7 +123,10 @@ export class RabbitMq {
     delay = 0,
     priority = 0
   ) {
-    await Promise.all(content.map((c) => RabbitMq.send(queueName, c, delay, priority)));
+    const limit = pLimit(10);
+    await Promise.all(
+      content.map((c) => limit(() => RabbitMq.send(queueName, c, delay, priority)))
+    );
   }
 
   public static async createOrUpdatePolicy(policy: CreatePolicyPayload) {
