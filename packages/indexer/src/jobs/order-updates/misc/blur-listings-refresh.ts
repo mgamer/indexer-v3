@@ -117,7 +117,7 @@ if (config.doBackgroundWork) {
         logger.error(
           QUEUE_NAME,
           `Failed to refresh Blur listings for collection ${collection}: ${
-            error?.response.data ? JSON.stringify(error.response.data) : error
+            error?.response?.data ? JSON.stringify(error.response.data) : error
           }`
         );
         throw error;
