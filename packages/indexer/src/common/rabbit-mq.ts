@@ -119,13 +119,21 @@ export class RabbitMq {
 
   public static async sendBatch(
     queueName: string,
-    content: RabbitMQMessage[],
-    delay = 0,
-    priority = 0
+    messages: {
+      content: RabbitMQMessage;
+      delay?: number;
+      priority?: number;
+    }[]
   ) {
     const limit = pLimit(20);
     await Promise.all(
-      content.map((c) => limit(() => RabbitMq.send(queueName, c, delay, priority)))
+      messages.map((message) =>
+        limit(() => {
+          message.delay = message.delay ?? 0;
+          message.priority = message.priority ?? 0;
+          return RabbitMq.send(queueName, message.content, message.delay, message.priority);
+        })
+      )
     );
   }
 
