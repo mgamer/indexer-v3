@@ -176,13 +176,11 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       const currency = order.params.currency;
 
       // Handle: fees
-      let feeBreakdown = [
-        {
-          kind: "marketplace",
-          recipient: "0x5924a28caaf1cc016617874a2f0c3710d881f3c1",
-          bps: 50,
-        },
-      ];
+      let feeBreakdown: {
+        kind: string;
+        bps: number;
+        recipient: string;
+      }[] = [];
 
       // Handle: royalties
       let onChainRoyalties: Royalty[];
