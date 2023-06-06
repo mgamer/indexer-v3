@@ -3,6 +3,7 @@ import { HashZero } from "@ethersproject/constants";
 import { searchForCall } from "@georgeroman/evm-tx-simulator";
 import * as Sdk from "@reservoir0x/sdk";
 
+import { logger } from "@/common/logger";
 import { config } from "@/config/index";
 import { getEventData } from "@/events-sync/data";
 import { EnhancedEvent, OnChainData } from "@/events-sync/handlers/utils";
@@ -93,6 +94,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         if (taker === Sdk.Blend.Addresses.Blend[config.chainId]) {
           taker = (await utils.fetchTransaction(baseEventParams.txHash)).from.toLowerCase();
         }
+        logger.info("blur-sales-debug", JSON.stringify({ txHash: baseEventParams.txHash, taker }));
 
         // Handle: attribution
         const orderKind = "blur";
