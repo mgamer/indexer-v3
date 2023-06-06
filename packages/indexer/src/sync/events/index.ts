@@ -273,7 +273,6 @@ export const syncEvents = async (
         };
   }
 ) => {
-  const startTime = now();
   // Cache the blocks for efficiency
   const blocksCache = new Map<number, blocksModel.Block>();
   // Keep track of all handled `${block}-${blockHash}` pairs
@@ -286,7 +285,6 @@ export const syncEvents = async (
   // too inefficient to do it and in this case we just proceed (and let any further
   // processes fetch those blocks as needed / if needed).
   const startTimeFetchingBlocks = now();
-  let blocksToFetchPromises: Promise<blocksModel.Block>[] = [];
   if (!backfill && toBlock - fromBlock + 1 <= 32) {
     const existingBlocks = await idb.manyOrNone(
       `
@@ -305,7 +303,10 @@ export const syncEvents = async (
       );
     }
 
-    blocksToFetchPromises = blocksToFetch.map((block) => syncEventsUtils.fetchBlock(block, true));
+    const limit = pLimit(32);
+    await Promise.all(
+      blocksToFetch.map((block) => limit(() => syncEventsUtils.fetchBlock(block, true)))
+    );
   }
   const endTimeFetchingBlocks = now();
 
@@ -338,18 +339,14 @@ export const syncEvents = async (
     };
   }
 
-  const startTimeFetchingLogs = now();
-
-  const [logs] = await Promise.all([baseProvider.getLogs(eventFilter), ...blocksToFetchPromises]);
-
-  const endTimeFetchingLogs = now();
-  const startTimeProcessingEvents = now();
-  const availableEventData = getEventData();
-
   const enhancedEvents: EnhancedEvent[] = [];
+  const startTimeFetchingLogs = now();
+  await baseProvider.getLogs(eventFilter).then(async (logs) => {
+    const endTimeFetchingLogs = now();
+    const startTimeProcessingEvents = now();
+    const availableEventData = getEventData();
 
-  await Promise.all(
-    logs.map(async (log) => {
+    for (const log of logs) {
       try {
         const baseEventParams = await parseEvent(log, blocksCache);
 
@@ -393,81 +390,86 @@ export const syncEvents = async (
         logger.info("sync-events", `Failed to handle events: ${error}`);
         throw error;
       }
-    })
-  );
+    }
 
-  // Process the retrieved events asynchronously
-  const eventsBatches = await extractEventsBatches(enhancedEvents, backfill);
+    // Process the retrieved events asynchronously
+    const eventsBatches = await extractEventsBatches(enhancedEvents, backfill);
 
-  if (backfill) {
-    await eventsSyncBackfillProcess.addToQueue(eventsBatches);
-  } else {
-    await eventsSyncRealtimeProcess.addToQueue(eventsBatches, true);
-  }
+    const startTimeAddToProcessQueue = now();
+    if (backfill) {
+      await eventsSyncBackfillProcess.addToQueue(eventsBatches);
+    } else {
+      await eventsSyncRealtimeProcess.addToQueue(eventsBatches, true);
+    }
+    const endTimeAddToProcessQueue = now();
 
-  // Make sure to recheck the ingested blocks with a delay in order to undo any reorgs
-  const ns = getNetworkSettings();
-  if (!backfill && ns.enableReorgCheck) {
-    for (const blockData of blocksSet.values()) {
-      const block = Number(blockData.split("-")[0]);
-      const blockHash = blockData.split("-")[1];
+    // Make sure to recheck the ingested blocks with a delay in order to undo any reorgs
+    const ns = getNetworkSettings();
+    if (!backfill && ns.enableReorgCheck) {
+      for (const blockData of blocksSet.values()) {
+        const block = Number(blockData.split("-")[0]);
+        const blockHash = blockData.split("-")[1];
 
-      // Act right away if the current block is a duplicate
-      if ((await blocksModel.getBlocks(block)).length > 1) {
-        await blockCheck.addToQueue(block, blockHash, 10);
-        await blockCheck.addToQueue(block, blockHash, 30);
+        // Act right away if the current block is a duplicate
+        if ((await blocksModel.getBlocks(block)).length > 1) {
+          await blockCheck.addToQueue(block, blockHash, 10);
+          await blockCheck.addToQueue(block, blockHash, 30);
+        }
       }
+
+      const blocksToCheck: BlocksToCheck[] = [];
+      let blockNumbersArray = _.range(fromBlock, toBlock + 1);
+
+      // Put all fetched blocks on a delayed queue
+      [...blocksSet.values()].map(async (blockData) => {
+        const block = Number(blockData.split("-")[0]);
+        const blockHash = blockData.split("-")[1];
+        blockNumbersArray = _.difference(blockNumbersArray, [block]);
+
+        ns.reorgCheckFrequency.map((frequency) =>
+          blocksToCheck.push({
+            block,
+            blockHash,
+            delay: frequency * 60,
+          })
+        );
+      });
+
+      // Log blocks for which no logs were fetched from the RPC provider
+      if (!_.isEmpty(blockNumbersArray)) {
+        logger.warn(
+          "sync-events",
+          `[${fromBlock}, ${toBlock}] No logs fetched for ${JSON.stringify(blockNumbersArray)}`
+        );
+      }
+
+      await blockCheck.addBulk(blocksToCheck);
     }
 
-    const blocksToCheck: BlocksToCheck[] = [];
-    let blockNumbersArray = _.range(fromBlock, toBlock + 1);
+    const endTimeProcessingEvents = now();
 
-    // Put all fetched blocks on a delayed queue
-    [...blocksSet.values()].map(async (blockData) => {
-      const block = Number(blockData.split("-")[0]);
-      const blockHash = blockData.split("-")[1];
-      blockNumbersArray = _.difference(blockNumbersArray, [block]);
-
-      ns.reorgCheckFrequency.map((frequency) =>
-        blocksToCheck.push({
-          block,
-          blockHash,
-          delay: frequency * 60,
-        })
-      );
-    });
-
-    // Log blocks for which no logs were fetched from the RPC provider
-    if (!_.isEmpty(blockNumbersArray)) {
-      logger.warn(
-        "sync-events",
-        `[${fromBlock}, ${toBlock}] No logs fetched for ${JSON.stringify(blockNumbersArray)}`
-      );
-    }
-
-    await blockCheck.addBulk(blocksToCheck);
-  }
-
-  const endTime = now();
-  logger.info(
-    "sync-events-timing-2",
-    JSON.stringify({
-      message: `Events realtime syncing block range [${fromBlock}, ${toBlock}]`,
-      blocks: {
-        count: blocksSet.size,
-        time: endTimeFetchingBlocks - startTimeFetchingBlocks,
-      },
-      logs: {
-        count: logs.length,
-        time: endTimeFetchingLogs - startTimeFetchingLogs,
-      },
-      processing: {
-        time: endTime - startTimeProcessingEvents,
-      },
-
-      total: endTime - startTime,
-    })
-  );
+    logger.info(
+      "sync-events-timing-2",
+      JSON.stringify({
+        message: `Events realtime syncing block range [${fromBlock}, ${toBlock}]`,
+        blocks: {
+          count: blocksSet.size,
+          time: endTimeFetchingBlocks - startTimeFetchingBlocks,
+        },
+        logs: {
+          count: logs.length,
+          time: endTimeFetchingLogs - startTimeFetchingLogs,
+        },
+        events: {
+          count: enhancedEvents.length,
+          time: endTimeProcessingEvents - startTimeProcessingEvents,
+        },
+        queue: {
+          time: endTimeAddToProcessQueue - startTimeAddToProcessQueue,
+        },
+      })
+    );
+  });
 };
 
 export const unsyncEvents = async (block: number, blockHash: string) => {
