@@ -123,7 +123,7 @@ export class RabbitMq {
     delay = 0,
     priority = 0
   ) {
-    const limit = pLimit(10);
+    const limit = pLimit(20);
     await Promise.all(
       content.map((c) => limit(() => RabbitMq.send(queueName, c, delay, priority)))
     );
