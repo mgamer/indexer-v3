@@ -378,20 +378,45 @@ const _search = async (
 export const initIndex = async (): Promise<void> => {
   try {
     if (await elasticsearch.indices.exists({ index: INDEX_NAME })) {
-      const response = await elasticsearch.indices.get({ index: INDEX_NAME });
+      logger.info(
+        "elasticsearch-activities",
+        JSON.stringify({
+          topic: "initIndex",
+          message: "Index already exists.",
+          indexName: INDEX_NAME,
+        })
+      );
 
-      const indexName = Object.keys(response)[0];
+      const getIndexResponse = await elasticsearch.indices.get({ index: INDEX_NAME });
 
-      logger.info("elasticsearch-activities", "Index exists! Updating Mappings.");
+      const indexName = Object.keys(getIndexResponse)[0];
 
-      await elasticsearch.indices.putMapping({
+      const putMappingResponse = await elasticsearch.indices.putMapping({
         index: indexName,
         properties: MAPPINGS.properties,
       });
-    } else {
-      logger.info("elasticsearch-activities", "Creating index!");
 
-      await elasticsearch.indices.create({
+      logger.info(
+        "elasticsearch-activities",
+        JSON.stringify({
+          topic: "initIndex",
+          message: "Updated mappings.",
+          indexName: INDEX_NAME,
+          mappings: MAPPINGS.properties,
+          putMappingResponse,
+        })
+      );
+    } else {
+      logger.info(
+        "elasticsearch-activities",
+        JSON.stringify({
+          topic: "initIndex",
+          message: "Creating Index.",
+          indexName: INDEX_NAME,
+        })
+      );
+
+      const params = {
         aliases: {
           [INDEX_NAME]: {},
         },
@@ -407,7 +432,20 @@ export const initIndex = async (): Promise<void> => {
             order: ["desc", "desc"],
           },
         },
-      });
+      };
+
+      const createIndexResponse = await elasticsearch.indices.create(params);
+
+      logger.info(
+        "elasticsearch-activities",
+        JSON.stringify({
+          topic: "initIndex",
+          message: "Index Created!",
+          indexName: INDEX_NAME,
+          params,
+          createIndexResponse,
+        })
+      );
 
       await backfillActivitiesAddToQueue();
     }
@@ -415,7 +453,9 @@ export const initIndex = async (): Promise<void> => {
     logger.error(
       "elasticsearch-activities",
       JSON.stringify({
-        topic: "createIndex",
+        topic: "initIndex",
+        message: "Error.",
+        indexName: INDEX_NAME,
         error,
       })
     );
