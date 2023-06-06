@@ -94,7 +94,11 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         if (taker === Sdk.Blend.Addresses.Blend[config.chainId]) {
           taker = (await utils.fetchTransaction(baseEventParams.txHash)).from.toLowerCase();
         }
-        logger.info("blur-sales-debug", JSON.stringify({ txHash: baseEventParams.txHash, taker }));
+
+        logger.info(
+          "blur-sales-debug",
+          JSON.stringify({ txHash: baseEventParams.txHash, taker, after: false })
+        );
 
         // Handle: attribution
         const orderKind = "blur";
@@ -107,6 +111,11 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         if (attributionData.taker) {
           taker = attributionData.taker;
         }
+
+        logger.info(
+          "blur-sales-debug",
+          JSON.stringify({ txHash: baseEventParams.txHash, taker, after: true })
+        );
 
         // Handle: prices
         const currency =
