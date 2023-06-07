@@ -215,7 +215,7 @@ export class RabbitMq {
           name: `${queue.getDeadLetterQueue()}-policy`,
           vhost: "/",
           priority: 10,
-          pattern: queue.getDeadLetterQueue(),
+          pattern: `^${queue.getDeadLetterQueue()}$`,
           applyTo: "queues",
           definition: {
             "max-length": queue.getMaxDeadLetterQueue(),
