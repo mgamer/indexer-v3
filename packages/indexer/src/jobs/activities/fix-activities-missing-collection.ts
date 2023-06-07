@@ -27,10 +27,14 @@ export const queue = new Queue(QUEUE_NAME, {
 new QueueScheduler(QUEUE_NAME, { connection: redis.duplicate() });
 
 // BACKGROUND WORKER ONLY
-if (config.doBackgroundWork && !(config.chainId === 5 && config.environment === "prod")) {
+if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
+      // Temporarily disable goerli prod
+      if (config.chainId === 5 && config.environment === "prod") {
+        return;
+      }
       const { contract, tokenId, retry } = job.data;
       const collection = await Collections.getByContractAndTokenId(contract, tokenId);
 
