@@ -509,7 +509,7 @@ describe("SeaportV15 - SingleToken Erc721", () => {
     expect(ownerAfter).to.eq(buyer.address);
   });
 
-  it("Build and fill buy order dynamic price", async () => {
+  it("Build and fill buy order with dynamic price", async () => {
     const buyer = alice;
     const seller = bob;
     const price = parseEther("1");
@@ -571,6 +571,8 @@ describe("SeaportV15 - SingleToken Erc721", () => {
     const fillTime = await getCurrentTimestamp(ethers.provider);
     const fillPrice = buyOrder.getMatchingPrice(fillTime);
 
+    console.log('fillPrice', fillPrice)
+
     // Match orders
     await exchange.fillOrder(seller, buyOrder, matchParams, {
       timestampOverride: fillTime
@@ -580,7 +582,7 @@ describe("SeaportV15 - SingleToken Erc721", () => {
     const ownerAfter = await nft.getOwner(boughtTokenId);
 
     const diff = bn(fillPrice).sub(buyerWethBalanceAfter.sub(buyerWethBalanceBefore));
- 
+    
     expect(diff).to.lt(bn('3669444444444444444'));
     expect(ownerAfter).to.eq(buyer.address);
   });

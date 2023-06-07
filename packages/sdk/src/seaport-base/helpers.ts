@@ -156,34 +156,19 @@ export function computeDynamicPrice(
   let price = bn(0);
   const offerItem = isBuy ? params.offer : params.consideration;
   for (const c of offerItem) {
-    if (isBuy) {
-      price = price.add(
-        // startAmount + (currentTime - startTime) / (endTime - startTime) * (endAmount - startAmount)
-        bn(c.startAmount).add(
-          bn(timestampOverride ?? getCurrentTimestamp(-60))
-            .sub(params.startTime)
-            .mul(bn(c.endAmount).sub(c.startAmount))
-            .div(bn(params.endTime).sub(params.startTime))
-        )
-      );
-      // Ensure we don't return any negative prices
-      if (price.lt(c.startAmount)) {
-        price = bn(c.startAmount);
-      }
-    } else {
-      price = price.add(
-        // startAmount - (currentTime - startTime) / (endTime - startTime) * (startAmount - endAmount)
-        bn(c.startAmount).sub(
-          bn(timestampOverride ?? getCurrentTimestamp(-60))
-            .sub(params.startTime)
-            .mul(bn(c.startAmount).sub(c.endAmount))
-            .div(bn(params.endTime).sub(params.startTime))
-        )
-      );
-      // Ensure we don't return any negative prices
-      if (price.lt(c.endAmount)) {
-        price = bn(c.endAmount);
-      }
+    const decreasing = bn(c.startAmount).gt(c.endAmount);
+    // startAmount + (currentTime - startTime) / (endTime - startTime) * (endAmount - startAmount)
+    const priceChange = bn(timestampOverride ?? getCurrentTimestamp(-60))
+      .sub(params.startTime)
+      .mul(bn(c.endAmount).sub(c.startAmount))
+      .div(bn(params.endTime).sub(params.startTime));
+
+    price = price.add(bn(c.startAmount).add(priceChange));
+
+    // Ensure we don't return any negative prices
+    const limitAmount = decreasing ? c.endAmount : c.startAmount;
+    if (price.lt(limitAmount)) {
+      price = bn(limitAmount);
     }
   }
 
