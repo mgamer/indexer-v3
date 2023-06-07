@@ -5,6 +5,8 @@ import {
   WebsocketEventRouter,
 } from "@/jobs/websocket-events/websocket-event-router";
 
+import { logger } from "@/common/logger";
+
 export class IndexerFillEventsHandler extends KafkaEventHandler {
   topicName = "indexer.public.fill_events_2";
 
@@ -28,6 +30,8 @@ export class IndexerFillEventsHandler extends KafkaEventHandler {
     if (!payload.after) {
       return;
     }
+
+    logger.info("blur-sales-debug", JSON.stringify({ txHash: payload.after.tx_hash, payload }));
 
     await WebsocketEventRouter({
       eventInfo: {
