@@ -13,11 +13,12 @@ import { TriggerKind } from "@/jobs/order-updates/types";
 
 import * as processActivityEvent from "@/jobs/activities/process-activity-event";
 import * as collectionUpdatesTopBid from "@/jobs/collection-updates/top-bid-queue";
+import * as handleNewBuyOrder from "@/jobs/update-attribute/handle-new-buy-order";
 import {
   WebsocketEventKind,
   WebsocketEventRouter,
 } from "../websocket-events/websocket-event-router";
-import { handleNewBuyOrderJob } from "@/jobs/update-attribute/handle-new-buy-order-job";
+// import { handleNewBuyOrderJob } from "@/jobs/update-attribute/handle-new-buy-order-job";
 
 const QUEUE_NAME = "order-updates-buy-order";
 
@@ -140,7 +141,7 @@ if (config.doBackgroundWork) {
 
             for (const result of buyOrderResult) {
               if (!_.isNull(result.attributeId)) {
-                await handleNewBuyOrderJob.addToQueue(result);
+                await handleNewBuyOrder.addToQueue(result);
               }
 
               if (!_.isNull(result.collectionId) && !tokenSetId.startsWith("token")) {

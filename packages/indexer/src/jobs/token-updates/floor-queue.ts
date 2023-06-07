@@ -8,7 +8,8 @@ import { config } from "@/config/index";
 
 import * as collectionUpdatesFloorAsk from "@/jobs/collection-updates/floor-queue";
 import * as collectionUpdatesNonFlaggedFloorAsk from "@/jobs/collection-updates/non-flagged-floor-queue";
-import { handleNewSellOrderJob } from "@/jobs/update-attribute/handle-new-sell-order-job";
+import * as handleNewSellOrder from "@/jobs/update-attribute/handle-new-sell-order";
+// import { handleNewSellOrderJob } from "@/jobs/update-attribute/handle-new-sell-order-job";
 
 const QUEUE_NAME = "token-updates-floor-ask-queue";
 
@@ -175,7 +176,7 @@ if (config.doBackgroundWork) {
         if (sellOrderResult) {
           // Update attributes floor
           sellOrderResult.contract = fromBuffer(sellOrderResult.contract);
-          await handleNewSellOrderJob.addToQueue(sellOrderResult);
+          await handleNewSellOrder.addToQueue(sellOrderResult);
 
           // Update collection floor
           sellOrderResult.txHash = sellOrderResult.txHash

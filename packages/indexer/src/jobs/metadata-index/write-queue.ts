@@ -10,19 +10,23 @@ import { redis } from "@/common/redis";
 import { toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 
+import * as resyncAttributeKeyCounts from "@/jobs/update-attribute/resync-attribute-key-counts";
+import * as resyncAttributeValueCounts from "@/jobs/update-attribute/resync-attribute-value-counts";
 import * as rarityQueue from "@/jobs/collection-updates/rarity-queue";
+import * as fetchCollectionMetadata from "@/jobs/token-updates/fetch-collection-metadata";
 import * as flagStatusUpdate from "@/jobs/flag-status/update";
 import * as updateCollectionActivity from "@/jobs/collection-updates/update-collection-activity";
 import * as updateCollectionUserActivity from "@/jobs/collection-updates/update-collection-user-activity";
 import * as updateCollectionDailyVolume from "@/jobs/collection-updates/update-collection-daily-volume";
+import * as updateAttributeCounts from "@/jobs/update-attribute/update-attribute-counts";
 import * as updateActivitiesCollection from "@/jobs/elasticsearch/update-activities-collection";
 
 import PgPromise from "pg-promise";
 import { updateActivities } from "@/jobs/activities/utils";
-import { fetchCollectionMetadataJob } from "@/jobs/token-updates/fetch-collection-metadata-job";
-import { resyncAttributeKeyCountsJob } from "@/jobs/update-attribute/resync-attribute-key-counts-job";
-import { resyncAttributeValueCountsJob } from "@/jobs/update-attribute/resync-attribute-value-counts-job";
-import { resyncAttributeCountsJob } from "@/jobs/update-attribute/update-attribute-counts-job";
+// import { fetchCollectionMetadataJob } from "@/jobs/token-updates/fetch-collection-metadata-job";
+// import { resyncAttributeKeyCountsJob } from "@/jobs/update-attribute/resync-attribute-key-counts-job";
+// import { resyncAttributeValueCountsJob } from "@/jobs/update-attribute/resync-attribute-value-counts-job";
+// import { resyncAttributeCountsJob } from "@/jobs/update-attribute/update-attribute-counts-job";
 
 const QUEUE_NAME = "metadata-index-write-queue";
 
@@ -131,7 +135,7 @@ if (config.doBackgroundWork) {
           }
 
           // Set the new collection and update the token association
-          await fetchCollectionMetadataJob.addToQueue(
+          await fetchCollectionMetadata.addToQueue(
             [
               {
                 contract,
@@ -409,12 +413,8 @@ if (config.doBackgroundWork) {
 
         // Schedule attribute refresh
         _.forEach(attributesToRefresh, (attribute) => {
-          resyncAttributeKeyCountsJob.addToQueue({ collection, key: attribute.key });
-          resyncAttributeValueCountsJob.addToQueue({
-            collection,
-            key: attribute.key,
-            value: attribute.value,
-          });
+          resyncAttributeKeyCounts.addToQueue(collection, attribute.key);
+          resyncAttributeValueCounts.addToQueue(collection, attribute.key, attribute.value);
         });
 
         // If any attributes changed
@@ -423,7 +423,7 @@ if (config.doBackgroundWork) {
         }
 
         if (!_.isEmpty(tokenAttributeCounter)) {
-          await resyncAttributeCountsJob.addToQueue({ tokenAttributeCounter });
+          await updateAttributeCounts.addToQueue(tokenAttributeCounter);
         }
 
         // Mark the token as having metadata indexed.

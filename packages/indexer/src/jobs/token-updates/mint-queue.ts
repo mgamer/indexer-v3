@@ -9,10 +9,13 @@ import { config } from "@/config/index";
 import { getNetworkSettings } from "@/config/network";
 import * as tokenSets from "@/orderbook/token-sets";
 
+import * as collectionRecalcTokenCount from "@/jobs/collection-updates/recalc-token-count-queue";
 import * as metadataIndexFetch from "@/jobs/metadata-index/fetch-queue";
-import { tokenRefreshCacheJob } from "@/jobs/token-updates/token-refresh-cache-job";
-import { recalcTokenCountQueueJob } from "@/jobs/collection-updates/recalc-token-count-queue-job";
-import { fetchCollectionMetadataJob } from "@/jobs/token-updates/fetch-collection-metadata-job";
+import * as fetchCollectionMetadata from "@/jobs/token-updates/fetch-collection-metadata";
+import * as tokenRefreshCache from "@/jobs/token-updates/token-refresh-cache";
+// import { tokenRefreshCacheJob } from "@/jobs/token-updates/token-refresh-cache-job";
+// import { recalcTokenCountQueueJob } from "@/jobs/collection-updates/recalc-token-count-queue-job";
+// import { fetchCollectionMetadataJob } from "@/jobs/token-updates/fetch-collection-metadata-job";
 
 const QUEUE_NAME = "token-updates-mint-queue";
 
@@ -117,7 +120,7 @@ if (config.doBackgroundWork) {
           await idb.none(pgp.helpers.concat(queries));
 
           // Schedule a job to re-count tokens in the collection
-          await recalcTokenCountQueueJob.addToQueue({ collection: collection.id });
+          await collectionRecalcTokenCount.addToQueue(collection.id);
 
           // Refresh any dynamic token set
           const cacheKey = `refresh-collection-non-flagged-token-set:${collection.id}`;
@@ -168,7 +171,7 @@ if (config.doBackgroundWork) {
           }
         } else {
           // We fetch the collection metadata from upstream
-          await fetchCollectionMetadataJob.addToQueue([
+          await fetchCollectionMetadata.addToQueue([
             {
               contract,
               tokenId,
@@ -179,7 +182,7 @@ if (config.doBackgroundWork) {
         }
 
         // Set any cached information (eg. floor sell)
-        await tokenRefreshCacheJob.addToQueue({ contract, tokenId });
+        await tokenRefreshCache.addToQueue(contract, tokenId);
       } catch (error) {
         logger.error(
           QUEUE_NAME,
