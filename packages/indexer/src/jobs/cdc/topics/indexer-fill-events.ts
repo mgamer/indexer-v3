@@ -31,7 +31,9 @@ export class IndexerFillEventsHandler extends KafkaEventHandler {
       return;
     }
 
-    logger.info("blur-sales-debug", JSON.stringify({ txHash: payload.after.tx_hash, payload }));
+    if (payload.after.order_kind === "0x6e5bab") {
+      logger.info("blur-sales-debug", JSON.stringify({ txHash: payload.after.tx_hash, payload }));
+    }
 
     await WebsocketEventRouter({
       eventInfo: {
