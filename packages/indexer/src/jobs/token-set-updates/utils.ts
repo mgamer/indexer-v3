@@ -1,67 +1,24 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { Job, Queue, QueueScheduler, Worker } from "bullmq";
-
 import { idb, ridb } from "@/common/db";
-import { logger } from "@/common/logger";
-import { redis } from "@/common/redis";
-import { config } from "@/config/index";
+import _ from "lodash";
 import {
   WebsocketEventKind,
   WebsocketEventRouter,
 } from "@/jobs/websocket-events/websocket-event-router";
-import _ from "lodash";
 import * as handleNewBuyOrder from "@/jobs/update-attribute/handle-new-buy-order";
-import * as collectionUpdatesTopBid from "@/jobs/collection-updates/top-bid-queue";
 // import { handleNewBuyOrderJob } from "@/jobs/update-attribute/handle-new-buy-order-job";
+import * as collectionUpdatesTopBid from "@/jobs/collection-updates/top-bid-queue";
+import { logger } from "@/common/logger";
 
-const QUEUE_NAME = "token-set-updates-top-bid-queue";
-
-export const queue = new Queue(QUEUE_NAME, {
-  connection: redis.duplicate(),
-  defaultJobOptions: {
-    attempts: 10,
-    backoff: {
-      type: "exponential",
-      delay: 20000,
-    },
-    removeOnComplete: 1000,
-    removeOnFail: 10000,
-    timeout: 60000,
-  },
-});
-new QueueScheduler(QUEUE_NAME, { connection: redis.duplicate() });
-
-// BACKGROUND WORKER ONLY
-if (config.doBackgroundWork) {
-  const worker = new Worker(QUEUE_NAME, async (job: Job) => jobProcessor(job), {
-    connection: redis.duplicate(),
-    concurrency: 20,
-  });
-  worker.on("error", (error) => {
-    logger.error(QUEUE_NAME, `Worker errored: ${error}`);
-  });
-}
-
-export type TopBidInfo = {
+export type topBidPayload = {
   kind: string;
   tokenSetId: string;
   txHash: string | null;
   txTimestamp: number | null;
 };
 
-export const addToQueue = async (topBidInfos: TopBidInfo[]) => {
-  await queue.addBulk(
-    topBidInfos.map((topBidInfos) => ({
-      name: `${topBidInfos.tokenSetId}`,
-      data: topBidInfos,
-    }))
-  );
-};
-
-export const jobProcessor = async (job: Job) => {
-  const { kind, tokenSetId, txHash, txTimestamp } = job.data as TopBidInfo;
-
+export async function processTopBid(payload: topBidPayload, queueName: string) {
   try {
     let tokenSetTopBid = await idb.manyOrNone(
       `
@@ -104,10 +61,10 @@ export const jobProcessor = async (job: Job) => {
                   top_buy_value AS "topBuyValue",
                   top_buy_id AS "topBuyId"
               `,
-      { tokenSetId }
+      { tokenSetId: payload.tokenSetId }
     );
 
-    if (!tokenSetTopBid.length && kind === "revalidation") {
+    if (!tokenSetTopBid.length && payload.kind === "revalidation") {
       // When revalidating, force revalidation of the attribute / collection
       const tokenSetsResult = await ridb.manyOrNone(
         `
@@ -118,18 +75,18 @@ export const jobProcessor = async (job: Job) => {
                   WHERE token_sets.id = $/tokenSetId/
                 `,
         {
-          tokenSetId,
+          tokenSetId: payload.tokenSetId,
         }
       );
 
       if (tokenSetsResult.length) {
         tokenSetTopBid = tokenSetsResult.map(
           (result: { collection_id: any; attribute_id: any }) => ({
-            kind,
+            kind: payload.kind,
             collectionId: result.collection_id,
             attributeId: result.attribute_id,
-            txHash: txHash || null,
-            txTimestamp: txTimestamp || null,
+            txHash: payload.txHash || null,
+            txTimestamp: payload.txTimestamp || null,
           })
         );
       }
@@ -137,7 +94,7 @@ export const jobProcessor = async (job: Job) => {
 
     if (tokenSetTopBid.length) {
       if (
-        kind === "new-order" &&
+        payload.kind === "new-order" &&
         tokenSetTopBid[0].topBuyId &&
         _.isNull(tokenSetTopBid[0].collectionId)
       ) {
@@ -159,9 +116,9 @@ export const jobProcessor = async (job: Job) => {
           await collectionUpdatesTopBid.addToQueue([
             {
               collectionId: result.collectionId,
-              kind: kind,
-              txHash: txHash || null,
-              txTimestamp: txTimestamp || null,
+              kind: payload.kind,
+              txHash: payload.txHash || null,
+              txTimestamp: payload.txTimestamp || null,
             } as collectionUpdatesTopBid.TopBidInfo,
           ]);
         }
@@ -169,9 +126,9 @@ export const jobProcessor = async (job: Job) => {
     }
   } catch (error) {
     logger.error(
-      QUEUE_NAME,
-      `Failed to process token set top-bid info ${JSON.stringify(job.data)}: ${error}`
+      queueName,
+      `Failed to process token set top-bid info ${JSON.stringify(payload)}: ${error}`
     );
     throw error;
   }
-};
+}

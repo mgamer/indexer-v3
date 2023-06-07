@@ -18,6 +18,7 @@ import * as orderFixes from "@/jobs/order-fixes/fixes";
 import { Collections } from "@/models/collections";
 import { Tokens } from "@/models/tokens";
 import { OpenseaIndexerApi } from "@/utils/opensea-indexer-api";
+// import { fetchCollectionMetadataJob } from "@/jobs/token-updates/fetch-collection-metadata-job";
 
 export const postRefreshCollectionOptions: RouteOptions = {
   description: "Refresh a collection's orders and metadata",
