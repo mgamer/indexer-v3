@@ -182,7 +182,10 @@ export class RabbitMq {
     for (const queue of consumerQueues) {
       const options = {
         maxPriority: 1,
-        arguments: { "x-message-deduplication": true },
+        arguments: {
+          "x-message-deduplication": true,
+          "x-single-active-consumer": queue.getSingleActiveConsumer(),
+        },
       };
 
       // Create working queue
