@@ -57,7 +57,8 @@ if (config.doWebsocketWork && config.blurWsUrl && config.blurWsApiKey) {
       const collection = parsedMessage.contractAddress.toLowerCase();
       if (
         collection === "0xe6d48bf4ee912235398b96e16db6f310c21e82cb" ||
-        collection === "0x19b86299c21505cdf59ce63740b240a9c822b5e4"
+        collection === "0x19b86299c21505cdf59ce63740b240a9c822b5e4" ||
+        collection === "0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d"
       ) {
         logger.info(COMPONENT, message);
 
