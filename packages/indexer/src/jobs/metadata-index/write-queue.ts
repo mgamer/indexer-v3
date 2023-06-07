@@ -13,7 +13,6 @@ import { config } from "@/config/index";
 import * as resyncAttributeKeyCounts from "@/jobs/update-attribute/resync-attribute-key-counts";
 import * as resyncAttributeValueCounts from "@/jobs/update-attribute/resync-attribute-value-counts";
 import * as rarityQueue from "@/jobs/collection-updates/rarity-queue";
-import * as fetchCollectionMetadata from "@/jobs/token-updates/fetch-collection-metadata";
 import * as flagStatusUpdate from "@/jobs/flag-status/update";
 import * as updateCollectionActivity from "@/jobs/collection-updates/update-collection-activity";
 import * as updateCollectionUserActivity from "@/jobs/collection-updates/update-collection-user-activity";
@@ -23,7 +22,7 @@ import * as updateActivitiesCollection from "@/jobs/elasticsearch/update-activit
 
 import PgPromise from "pg-promise";
 import { updateActivities } from "@/jobs/activities/utils";
-// import { fetchCollectionMetadataJob } from "@/jobs/token-updates/fetch-collection-metadata-job";
+import { fetchCollectionMetadataJob } from "@/jobs/token-updates/fetch-collection-metadata-job";
 // import { resyncAttributeKeyCountsJob } from "@/jobs/update-attribute/resync-attribute-key-counts-job";
 // import { resyncAttributeValueCountsJob } from "@/jobs/update-attribute/resync-attribute-value-counts-job";
 // import { resyncAttributeCountsJob } from "@/jobs/update-attribute/update-attribute-counts-job";
@@ -135,7 +134,7 @@ if (config.doBackgroundWork) {
           }
 
           // Set the new collection and update the token association
-          await fetchCollectionMetadata.addToQueue(
+          await fetchCollectionMetadataJob.addToQueue(
             [
               {
                 contract,

@@ -187,10 +187,10 @@ import { tokenReclacSupplyJob } from "@/jobs/token-updates/token-reclac-supply-j
 import { tokenRefreshCacheJob } from "@/jobs/token-updates/token-refresh-cache-job";
 import { recalcOwnerCountQueueJob } from "@/jobs/collection-updates/recalc-owner-count-queue-job";
 import { recalcTokenCountQueueJob } from "@/jobs/collection-updates/recalc-token-count-queue-job";
-// import { normalizedFloorQueueJob } from "@/jobs/token-updates/normalized-floor-queue-job";
-// import { mintQueueJob } from "@/jobs/token-updates/mint-queue-job";
-// import { floorQueueJob } from "@/jobs/token-updates/floor-queue-job";
-// import { fetchCollectionMetadataJob } from "@/jobs/token-updates/fetch-collection-metadata-job";
+import { normalizedFloorQueueJob } from "@/jobs/token-updates/normalized-floor-queue-job";
+import { mintQueueJob } from "@/jobs/token-updates/mint-queue-job";
+import { floorQueueJob } from "@/jobs/token-updates/floor-queue-job";
+import { fetchCollectionMetadataJob } from "@/jobs/token-updates/fetch-collection-metadata-job";
 // import { handleNewBuyOrderJob } from "@/jobs/update-attribute/handle-new-buy-order-job";
 // import { handleNewSellOrderJob } from "@/jobs/update-attribute/handle-new-sell-order-job";
 // import { resyncAttributeCacheJob } from "@/jobs/update-attribute/resync-attribute-cache-job";
@@ -379,10 +379,10 @@ export class RabbitMqJobsConsumer {
       tokenRefreshCacheJob,
       recalcOwnerCountQueueJob,
       recalcTokenCountQueueJob,
-      // normalizedFloorQueueJob,
-      // mintQueueJob,
-      // floorQueueJob,
-      // fetchCollectionMetadataJob,
+      normalizedFloorQueueJob,
+      mintQueueJob,
+      floorQueueJob,
+      fetchCollectionMetadataJob,
       // handleNewBuyOrderJob,
       // handleNewSellOrderJob,
       // resyncAttributeCacheJob,
