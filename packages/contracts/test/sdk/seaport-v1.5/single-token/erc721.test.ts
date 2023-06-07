@@ -509,7 +509,7 @@ describe("SeaportV15 - SingleToken Erc721", () => {
     expect(ownerAfter).to.eq(buyer.address);
   });
 
-  it("Build and fill buy order", async () => {
+  it("Build and fill buy order dynamic price", async () => {
     const buyer = alice;
     const seller = bob;
     const price = parseEther("1");
