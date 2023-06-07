@@ -1,5 +1,5 @@
 import * as Types from "../seaport-base/types";
-import { generateRandomSalt, lc } from "../utils";
+import { bn, getCurrentTimestamp, generateRandomSalt, lc } from "../utils";
 import { BigNumber } from "@ethersproject/bignumber";
 
 export const isCurrencyItem = ({ itemType }: { itemType: Types.ItemType }) =>
@@ -146,4 +146,30 @@ export function constructPrivateListingCounterOrder(
     signature: "0x",
   };
   return counterOrder;
+}
+
+export function computeDynamicPrice(
+  isBuy: boolean,
+  params: Types.OrderComponents,
+  timestampOverride?: number
+) {
+  let price = bn(0);
+  const offerItem = isBuy ? params.offer : params.consideration;
+  for (const c of offerItem) {
+    price = price.add(
+      // startAmount - (currentTime - startTime) / (endTime - startTime) * (startAmount - endAmount)
+      bn(c.startAmount).sub(
+        bn(timestampOverride ?? getCurrentTimestamp(-60))
+          .sub(params.startTime)
+          .mul(bn(c.startAmount).sub(c.endAmount))
+          .div(bn(params.endTime).sub(params.startTime))
+      )
+    );
+    // Ensure we don't return any negative prices
+    if (price.lt(c.endAmount)) {
+      price = bn(c.endAmount);
+    }
+  }
+
+  return price;
 }
