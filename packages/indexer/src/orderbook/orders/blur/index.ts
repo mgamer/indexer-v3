@@ -46,7 +46,8 @@ export const saveFullListings = async (
       // For testing, these will be handled by the partial order logic
       if (
         order.params.collection === "0xe6d48bf4ee912235398b96e16db6f310c21e82cb" ||
-        order.params.collection === "0x19b86299c21505cdf59ce63740b240a9c822b5e4"
+        order.params.collection === "0x19b86299c21505cdf59ce63740b240a9c822b5e4" ||
+        order.params.collection === "0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d"
       ) {
         return results.push({
           id,
