@@ -5,10 +5,10 @@ import { Request } from "@hapi/hapi";
 
 import { idb, redb } from "@/common/db";
 import { logger } from "@/common/logger";
-import { redis } from "@/common/redis";
+import { allChainsSyncRedis, redis } from "@/common/redis";
 import { ApiKeyEntity, ApiKeyUpdateParams } from "@/models/api-keys/api-key-entity";
 import getUuidByString from "uuid-by-string";
-import { Channel } from "@/pubsub/channels";
+import { AllChainsChannel, Channel } from "@/pubsub/channels";
 import axios from "axios";
 import { getNetworkName } from "@/config/network";
 import { config } from "@/config/index";
@@ -65,8 +65,11 @@ export class ApiKeyManager {
       // Let's continue here, even if we can't write to redis, we should be able to check the values against the db
     }
 
-    if (created) {
+    // Sync to other chains only if created on mainnet
+    if (created && config.chainId === 1) {
       await ApiKeyManager.notifyApiKeyCreated(values);
+
+      await allChainsSyncRedis.publish(AllChainsChannel.ApiKeyCreated, JSON.stringify({ values }));
     }
 
     return {
@@ -325,6 +328,14 @@ export class ApiKeyManager {
 
     await ApiKeyManager.deleteCachedApiKey(key); // reload the cache
     await redis.publish(Channel.ApiKeyUpdated, JSON.stringify({ key }));
+
+    // Sync to other chains only if created on mainnet
+    if (config.chainId === 1) {
+      await allChainsSyncRedis.publish(
+        AllChainsChannel.ApiKeyUpdated,
+        JSON.stringify({ key, fields })
+      );
+    }
   }
 
   static async notifyApiKeyCreated(values: ApiKeyRecord) {

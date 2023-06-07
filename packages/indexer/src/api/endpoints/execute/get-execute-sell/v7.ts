@@ -34,6 +34,8 @@ const version = "v7";
 
 export const getExecuteSellV7Options: RouteOptions = {
   description: "Sell tokens (accept bids)",
+  notes:
+    "Use this API to accept bids. We recommend using the SDK over this API as the SDK will iterate through the steps and return callbacks. Please mark `excludeEOA` as `true` to exclude Blur orders.",
   tags: ["api", "Fill Orders (buy & sell)"],
   timeout: {
     server: 40 * 1000,
@@ -126,7 +128,11 @@ export const getExecuteSellV7Options: RouteOptions = {
         .description(
           "If true, filling will be forced to use the common 'approval + transfer' method instead of the approval-less 'on-received hook' method"
         ),
-      maxFeePerGas: Joi.string().pattern(regex.number).description("Optional custom gas settings."),
+      maxFeePerGas: Joi.string()
+        .pattern(regex.number)
+        .description(
+          "Optional custom gas settings. Includes base fee & priority fee in this limit."
+        ),
       maxPriorityFeePerGas: Joi.string()
         .pattern(regex.number)
         .description("Optional custom gas settings."),
@@ -135,6 +141,7 @@ export const getExecuteSellV7Options: RouteOptions = {
       openseaApiKey: Joi.string().description(
         "Optional OpenSea API key used for filling. You don't need to pass your own key, but if you don't, you are more likely to be rate-limited."
       ),
+      blurAuth: Joi.string().description("Optional Blur auth used for filling"),
     }),
   },
   response: {
@@ -516,12 +523,17 @@ export const getExecuteSellV7Options: RouteOptions = {
                 AND token_sets_tokens.contract = $/contract/
                 AND token_sets_tokens.token_id = $/tokenId/
                 AND orders.side = 'buy'
-                AND (orders.taker = '\\x0000000000000000000000000000000000000000' OR orders.taker IS NULL)
+                AND (
+                  orders.taker IS NULL
+                  OR orders.taker = '\\x0000000000000000000000000000000000000000'
+                  OR orders.taker = $/taker/
+                )
             `,
             {
               id: item.orderId,
               contract: toBuffer(contract),
               tokenId,
+              taker: toBuffer(payload.taker),
             }
           );
 
@@ -672,7 +684,11 @@ export const getExecuteSellV7Options: RouteOptions = {
                 AND token_sets_tokens.token_id = $/tokenId/
                 AND orders.side = 'buy'
                 AND orders.fillability_status = 'fillable' AND orders.approval_status = 'approved'
-                AND (orders.taker = '\\x0000000000000000000000000000000000000000' OR orders.taker IS NULL)
+                AND (
+                  orders.taker IS NULL
+                  OR orders.taker = '\\x0000000000000000000000000000000000000000'
+                  OR orders.taker = $/taker/
+                )
                 ${payload.normalizeRoyalties ? " AND orders.normalized_value IS NOT NULL" : ""}
                 ${payload.excludeEOA ? " AND orders.kind != 'blur'" : ""}
                 ${item.exactOrderSource ? " AND orders.source_id_int = $/sourceId/" : ""}
@@ -688,6 +704,7 @@ export const getExecuteSellV7Options: RouteOptions = {
               sourceId: item.exactOrderSource
                 ? sources.getByDomain(item.exactOrderSource)?.id ?? -1
                 : undefined,
+              taker: toBuffer(payload.taker),
             }
           );
 
@@ -754,14 +771,17 @@ export const getExecuteSellV7Options: RouteOptions = {
               availableQuantity -= quantityFilled[result.id];
             }
 
-            // Account for the already filled maker's balance
             const maker = fromBuffer(result.maker);
             const currency = fromBuffer(result.currency);
-            const key = getMakerBalancesKey(maker, currency);
-            if (makerBalances[key]) {
-              const makerAvailableQuantity = makerBalances[key].div(result.price).toNumber();
-              if (makerAvailableQuantity < availableQuantity) {
-                availableQuantity = makerAvailableQuantity;
+
+            // Account for the already filled maker's balance (not needed for Blur orders)
+            if (result.kind !== "blur") {
+              const key = getMakerBalancesKey(maker, currency);
+              if (makerBalances[key]) {
+                const makerAvailableQuantity = makerBalances[key].div(result.price).toNumber();
+                if (makerAvailableQuantity < availableQuantity) {
+                  availableQuantity = makerAvailableQuantity;
+                }
               }
             }
 
@@ -1022,6 +1042,10 @@ export const getExecuteSellV7Options: RouteOptions = {
             steps,
             path,
           };
+        } else {
+          steps[1].items.push({
+            status: "complete",
+          });
         }
       }
 

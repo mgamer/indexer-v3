@@ -14,6 +14,7 @@ const kafka = new Kafka({
 export const producer = kafka.producer();
 export const consumer = kafka.consumer({
   groupId: config.kafkaConsumerGroupId,
+  maxBytesPerPartition: config.kafkaMaxBytesPerPartition || 1048576, // (default is 1MB)
 });
 
 export async function startKafkaProducer(): Promise<void> {
@@ -45,49 +46,73 @@ export async function startKafkaConsumer(): Promise<void> {
   await consumer.run({
     partitionsConsumedConcurrently: config.kafkaPartitionsConsumedConcurrently,
 
-    eachMessage: async ({ message, topic }) => {
-      try {
-        const event = JSON.parse(message.value!.toString());
+    eachBatchAutoResolve: true,
 
-        // Find the corresponding topic handler and call the handle method on it, if the topic is not a dead letter topic
-        if (topic.endsWith("-dead-letter")) {
-          // if topic is dead letter, no need to process it
-          logger.info(
-            `${getServiceName()}-kafka-consumer`,
-            `Dead letter topic=${topic}, message=${JSON.stringify(event)}`
-          );
-          return;
-        }
+    eachBatch: async ({ batch, resolveOffset, heartbeat }) => {
+      const messagePromises = batch.messages.map(async (message) => {
+        try {
+          const event = JSON.parse(message.value!.toString());
 
-        for (const handler of TopicHandlers) {
-          if (handler.getTopics().includes(topic)) {
-            // If the event has not been retried before, set the retryCount to 0
-            if (!event.payload.retryCount) {
-              event.payload.retryCount = 0;
+          if (batch.topic.endsWith("-dead-letter")) {
+            logger.info(
+              `${getServiceName()}-kafka-consumer`,
+              `Dead letter topic=${batch.topic}, message=${JSON.stringify(event)}`
+            );
+            return;
+          }
+
+          for (const handler of TopicHandlers) {
+            if (handler.getTopics().includes(batch.topic)) {
+              if (!event.payload.retryCount) {
+                event.payload.retryCount = 0;
+              }
+
+              await handler.handle(event.payload);
+              break;
             }
+          }
 
-            await handler.handle(event.payload);
-            break;
+          await resolveOffset(message.offset);
+        } catch (error) {
+          try {
+            logger.error(
+              `${getServiceName()}-kafka-consumer`,
+              `Error handling topic=${batch.topic}, error=${error}, payload=${JSON.stringify(
+                message
+              )}`
+            );
+
+            const newMessage = {
+              error: JSON.stringify(error),
+              value: message.value,
+            };
+
+            await producer.send({
+              topic: `${batch.topic}-dead-letter`,
+              messages: [newMessage],
+            });
+          } catch (error) {
+            logger.error(
+              `${getServiceName()}-kafka-consumer`,
+              `Error sending to dead letter topic=${batch.topic}, error=${error}}`
+            );
           }
         }
-      } catch (error) {
-        logger.error(
-          `${getServiceName()}-kafka-consumer`,
-          `Error handling topic=${topic}, error=${error}, payload=${message.value!.toString()}`
-        );
+      });
 
-        const newMessage = {
-          error: JSON.stringify(error),
-          value: message.value,
-        };
-
-        // If the event has an issue with finding its corresponding topic handler, send it to the dead letter queue
-        await producer.send({
-          topic: `${topic}-dead-letter`,
-          messages: [newMessage],
-        });
-      }
+      await Promise.all(messagePromises);
+      await heartbeat();
     },
+  });
+
+  consumer.on("consumer.crash", async (error) => {
+    logger.error(`${getServiceName()}-kafka-consumer`, `Consumer crashed, error=${error}`);
+    await restartKafkaConsumer();
+  });
+
+  consumer.on("consumer.disconnect", async (error) => {
+    logger.error(`${getServiceName()}-kafka-consumer`, `Consumer disconnected, error=${error}`);
+    await restartKafkaConsumer();
   });
 }
 

@@ -2,6 +2,7 @@ export const config = {
   version: String(process.env.VERSION),
   port: Number(process.env.PORT),
   chainId: Number(process.env.CHAIN_ID),
+  environment: String(process.env.ENVIRONMENT),
 
   adminApiKey: String(process.env.ADMIN_API_KEY),
   bullmqAdminPassword: String(process.env.BULLMQ_ADMIN_PASSWORD),
@@ -44,6 +45,7 @@ export const config = {
   redisWebsocketUrl: String(process.env.REDIS_WEBSOCKET_URL || process.env.REDIS_URL),
   metricsRedisUrl: String(process.env.METRICS_REDIS_URL || process.env.REDIS_URL),
   orderbookRedisUrl: String(process.env.ORDERSBOOK_REDIS_URL || process.env.REDIS_URL),
+  allChainsSyncRedisUrl: String(process.env.ALL_CHAINS_SYNC_REDIS_URL || process.env.REDIS_URL),
   redshiftUrl: String(process.env.REDSHIFT_URL),
 
   master: Boolean(Number(process.env.MASTER)),
@@ -60,6 +62,7 @@ export const config = {
   kafkaConsumerGroupId: String(process.env.KAFKA_CONSUMER_GROUP_ID),
   kafkaBrokers: String(process.env.KAFKA_BROKERS).split(","),
   kafkaClientId: String(process.env.KAFKA_CLIENT_ID),
+  kafkaMaxBytesPerPartition: Number(process.env.KAFKA_MAX_BYTES_PER_PARTITION),
 
   // for testing order websocket triggers
   doOldOrderWebsocketWork: Boolean(Number(process.env.DO_OLD_ORDER_WEBSOCKET_WORK)),
@@ -109,7 +112,6 @@ export const config = {
   blurWsUrl: process.env.BLUR_WS_URL,
 
   orderFetcherBaseUrl: String(process.env.ORDER_FETCHER_BASE_URL),
-  railwayStaticUrl: String(process.env.RAILWAY_STATIC_URL || ""),
 
   cipherSecret: String(process.env.CIPHER_SECRET),
 
@@ -133,4 +135,13 @@ export const config = {
   // Elasticsearch
   elasticsearchUrl: String(process.env.ELASTICSEARCH_URL || ""),
   doElasticsearchWork: Boolean(Number(process.env.DO_ELASTICSEARCH_WORK)),
+  enableElasticsearchRead: Boolean(Number(process.env.ENABLE_ELASTICSEARCH_READ)),
+
+  // realtime v2
+  enableRealtimeProcessing: Boolean(process.env.ENABLE_REALTIME_PROCESSING),
+  enableRealtimeV2BlockQueue: Boolean(process.env.ENABLE_REALTIME_V2_BLOCK_QUEUE),
+
+  // RabbitMq
+  rabbitMqUrl: `amqp://${String(process.env.RABBIT_URL)}:5672`,
+  rabbitHttpUrl: `http://${String(process.env.RABBIT_URL)}:15672`,
 };

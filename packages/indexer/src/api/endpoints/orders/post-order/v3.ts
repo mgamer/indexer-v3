@@ -198,33 +198,6 @@ export const postOrderV3Options: RouteOptions = {
           }
         }
 
-        case "blur": {
-          if (orderbook !== "reservoir") {
-            throw Boom.badRequest("Unsupported orderbook");
-          }
-
-          const orderInfo: orders.blur.ListingOrderInfo = {
-            orderParams: order.data,
-            metadata: {
-              schema,
-            },
-          };
-
-          const [result] = await orders.blur.saveListings([orderInfo]);
-
-          if (result.status === "already-exists") {
-            return { message: "Success", orderId: result.id };
-          }
-
-          if (result.status === "success") {
-            return { message: "Success", orderId: result.id };
-          } else {
-            const error = Boom.badRequest(result.status);
-            error.output.payload.orderId = result.id;
-            throw error;
-          }
-        }
-
         case "alienswap":
         case "seaport":
         case "seaport-v1.4":

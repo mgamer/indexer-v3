@@ -5,7 +5,6 @@ import _ from "lodash";
 import { idb, redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { toBuffer, now } from "@/common/utils";
-import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 import {
   CollectionsEntity,
   CollectionsEntityParams,
@@ -13,11 +12,18 @@ import {
 } from "@/models/collections/collections-entity";
 import { Tokens } from "@/models/tokens";
 import { updateBlurRoyalties } from "@/utils/blur";
-import MetadataApi from "@/utils/metadata-api";
 import * as marketplaceBlacklist from "@/utils/marketplace-blacklists";
 import * as marketplaceFees from "@/utils/marketplace-fees";
+import MetadataApi from "@/utils/metadata-api";
 import * as royalties from "@/utils/royalties";
-import * as collectionRecalcOwnerCount from "@/jobs/collection-updates/recalc-owner-count-queue";
+import {
+  getOpenCollectionMints,
+  simulateAndUpdateCollectionMint,
+} from "@/utils/mints/collection-mints";
+
+import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
+import { recalcOwnerCountQueueJob } from "@/jobs/collection-updates/recalc-owner-count-queue-job";
+import { fetchCollectionMetadataJob } from "@/jobs/token-updates/fetch-collection-metadata-job";
 
 export class Collections {
   public static async getById(collectionId: string, readReplica = false) {
@@ -87,10 +93,44 @@ export class Collections {
   }
 
   public static async updateCollectionCache(contract: string, tokenId: string, community = "") {
-    logger.info(
-      "updateCollectionCache",
-      `Start. contract=${contract}, tokenId=${tokenId}, community=${community}`
+    const collectionExists = await idb.oneOrNone(
+      `
+        SELECT
+          collections.id
+        FROM tokens
+        JOIN collections
+          ON tokens.collection_id = collections.id
+        WHERE tokens.contract = $/contract/
+          AND tokens.token_id = $/tokenId/
+      `,
+      {
+        contract: toBuffer(contract),
+        tokenId,
+      }
     );
+    if (!collectionExists) {
+      // If the collection doesn't exist, push a job to retrieve it
+      await fetchCollectionMetadataJob.addToQueue([
+        {
+          contract,
+          tokenId,
+          context: "updateCollectionCache",
+        },
+      ]);
+      return;
+    }
+
+    if (isNaN(Number(tokenId))) {
+      logger.error(
+        "updateCollectionCache",
+        JSON.stringify({
+          message: "Invalid tokenId",
+          contract,
+          tokenId,
+          community,
+        })
+      );
+    }
 
     const collection = await MetadataApi.getCollectionMetadata(contract, tokenId, community);
 
@@ -111,7 +151,7 @@ export class Collections {
 
     const tokenCount = await Tokens.countTokensInCollection(collection.id);
 
-    await collectionRecalcOwnerCount.addToQueue([
+    await recalcOwnerCountQueueJob.addToQueue([
       {
         context: "updateCollectionCache",
         kind: "collectionId",
@@ -156,6 +196,12 @@ export class Collections {
 
     // Refresh any contract blacklists
     await marketplaceBlacklist.updateMarketplaceBlacklist(collection.contract);
+
+    // Simulate any open mints
+    const collectionMints = await getOpenCollectionMints(collection.id);
+    await Promise.all(
+      collectionMints.map((collectionMint) => simulateAndUpdateCollectionMint(collectionMint))
+    );
   }
 
   public static async update(collectionId: string, fields: CollectionsEntityUpdateParams) {
