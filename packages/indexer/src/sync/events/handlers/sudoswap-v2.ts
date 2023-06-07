@@ -17,6 +17,8 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
     sell: new Map<string, number>(),
   };
 
+  logger.info("sudoswap-v2-debug", JSON.stringify(events));
+
   // Handle the events
   for (const { subKind, baseEventParams, log } of events) {
     const eventData = getEventData([subKind])[0];
@@ -399,5 +401,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         break;
       }
     }
+
+    logger.info("sudoswap-v2-debug", JSON.stringify(onChainData));
   }
 };
