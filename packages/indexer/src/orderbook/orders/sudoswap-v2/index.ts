@@ -376,7 +376,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         }
       } catch (error) {
         logger.error(
-          "orders-sudoswa-v2-save",
+          "orders-sudoswap-v2-save",
           `Failed to handle buy order with params ${JSON.stringify(orderParams)}: ${error}`
         );
       }
@@ -616,6 +616,8 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
   // Process all orders concurrently
   const limit = pLimit(20);
   await Promise.all(orderInfos.map((orderInfo) => limit(() => handleOrder(orderInfo))));
+
+  logger.info("sudoswap-v2-debug", JSON.stringify(results));
 
   if (orderValues.length) {
     const columns = new pgp.helpers.ColumnSet(
