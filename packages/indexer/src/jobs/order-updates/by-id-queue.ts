@@ -22,7 +22,7 @@ import {
 } from "@/jobs/websocket-events/websocket-event-router";
 import { BidEventsList } from "@/models/bid-events-list";
 import { normalizedFloorQueueJob } from "@/jobs/token-updates/normalized-floor-queue-job";
-import { floorQueueJob } from "@/jobs/token-updates/floor-queue-job";
+import { tokenFloorQueueJob } from "@/jobs/token-updates/token-floor-queue-job";
 // import { topBidQueueJob } from "@/jobs/token-set-updates/top-bid-queue-job";
 
 const QUEUE_NAME = "order-updates-by-id";
@@ -121,7 +121,7 @@ if (config.doBackgroundWork) {
             };
 
             await Promise.all([
-              floorQueueJob.addToQueue([floorAskInfo]),
+              tokenFloorQueueJob.addToQueue([floorAskInfo]),
               normalizedFloorQueueJob.addToQueue([floorAskInfo]),
             ]);
           }
