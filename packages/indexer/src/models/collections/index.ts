@@ -121,6 +121,18 @@ export class Collections {
       return;
     }
 
+    if (isNaN(Number(tokenId))) {
+      logger.error(
+        "updateCollectionCache",
+        JSON.stringify({
+          message: "Invalid tokenId",
+          contract,
+          tokenId,
+          community,
+        })
+      );
+    }
+
     const collection = await MetadataApi.getCollectionMetadata(contract, tokenId, community);
 
     if (collection.metadata == null) {
