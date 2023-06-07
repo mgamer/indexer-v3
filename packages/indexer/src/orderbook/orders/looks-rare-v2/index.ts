@@ -13,7 +13,7 @@ import { offChainCheck } from "@/orderbook/orders/looks-rare-v2/check";
 // import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import * as tokenSet from "@/orderbook/token-sets";
 import * as royalties from "@/utils/royalties";
-import { Royalty } from "@/utils/royalties";
+// import { Royalty } from "@/utils/royalties";
 import _ from "lodash";
 
 export type OrderInfo = {
@@ -176,39 +176,42 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       const currency = order.params.currency;
 
       // Handle: fees
-      let feeBreakdown: {
-        kind: string;
-        bps: number;
-        recipient: string;
-      }[] = [];
+      const feeBreakdown = [
+        {
+          kind: "marketplace",
+          recipient: "0x1838de7d4e4e42c8eb7b204a91e28e9fad14f536",
+          bps: 50,
+        },
+      ];
 
+      // Temp Disable
       // Handle: royalties
-      let onChainRoyalties: Royalty[];
+      // let onChainRoyalties: Royalty[];
 
-      if (order.params.kind === "single-token") {
-        onChainRoyalties = await royalties.getRoyalties(
-          order.params.collection,
-          order.params.itemIds[0],
-          "onchain"
-        );
-      } else {
-        onChainRoyalties = await royalties.getRoyaltiesByTokenSet(tokenSetId, "onchain");
-      }
+      // if (order.params.kind === "single-token") {
+      //   onChainRoyalties = await royalties.getRoyalties(
+      //     order.params.collection,
+      //     order.params.itemIds[0],
+      //     "onchain"
+      //   );
+      // } else {
+      //   onChainRoyalties = await royalties.getRoyaltiesByTokenSet(tokenSetId, "onchain");
+      // }
 
-      if (onChainRoyalties.length) {
-        feeBreakdown = [
-          ...feeBreakdown,
-          {
-            kind: "royalty",
-            recipient: onChainRoyalties[0].recipient,
-            // LooksRare has fixed 0.5% royalties
-            bps: 50,
-          },
-        ];
-      } else {
-        // If there is no royalty, the marketplace fee will be 0.5%
-        feeBreakdown[0].bps = 50;
-      }
+      // if (onChainRoyalties.length) {
+      //   feeBreakdown = [
+      //     ...feeBreakdown,
+      //     {
+      //       kind: "royalty",
+      //       recipient: onChainRoyalties[0].recipient,
+      //       // LooksRare has fixed 0.5% royalties
+      //       bps: 50,
+      //     },
+      //   ];
+      // } else {
+      //   // If there is no royalty, the marketplace fee will be 0.5%
+      //   feeBreakdown[0].bps = 50;
+      // }
 
       const price = order.params.price;
 
