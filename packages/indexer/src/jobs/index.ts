@@ -184,8 +184,8 @@ import { PausedRabbitMqQueues } from "@/models/paused-rabbit-mq-queues";
 import { logger } from "@/common/logger";
 import { RabbitMQMessage } from "@/common/rabbit-mq";
 import { tokenReclacSupplyJob } from "@/jobs/token-updates/token-reclac-supply-job";
-// import { tokenRefreshCacheJob } from "@/jobs/token-updates/token-refresh-cache-job";
-// import { recalcOwnerCountQueueJob } from "@/jobs/collection-updates/recalc-owner-count-queue-job";
+import { tokenRefreshCacheJob } from "@/jobs/token-updates/token-refresh-cache-job";
+import { recalcOwnerCountQueueJob } from "@/jobs/collection-updates/recalc-owner-count-queue-job";
 // import { recalcTokenCountQueueJob } from "@/jobs/collection-updates/recalc-token-count-queue-job";
 // import { normalizedFloorQueueJob } from "@/jobs/token-updates/normalized-floor-queue-job";
 // import { mintQueueJob } from "@/jobs/token-updates/mint-queue-job";
@@ -376,8 +376,8 @@ export class RabbitMqJobsConsumer {
   public static getQueues(): AbstractRabbitMqJobHandler[] {
     return [
       tokenReclacSupplyJob,
-      // tokenRefreshCacheJob,
-      // recalcOwnerCountQueueJob,
+      tokenRefreshCacheJob,
+      recalcOwnerCountQueueJob,
       // recalcTokenCountQueueJob,
       // normalizedFloorQueueJob,
       // mintQueueJob,
