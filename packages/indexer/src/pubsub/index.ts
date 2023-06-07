@@ -7,7 +7,7 @@ import { AllChainsChannel, Channel } from "@/pubsub/channels";
 import { ApiKeyUpdatedEvent } from "@/pubsub/events/api-key-updated-event";
 import { RateLimitUpdatedEvent } from "@/pubsub/events/rate-limit-updated-event";
 import { RoutersUpdatedEvent } from "@/pubsub/events/routers-updated-event";
-// import { SourcesUpdatedEvent } from "@/pubsub/events/sources-updated-event";
+import { SourcesUpdatedEvent } from "@/pubsub/events/sources-updated-event";
 import { ApiKeyCreatedAllChainsEvent } from "@/pubsub/all-chains-events/api-key-created-all-chains-event";
 import { ApiKeyUpdatedAllChainsEvent } from "@/pubsub/all-chains-events/api-key-updated-all-chains-event";
 import { PauseRabbitConsumerQueueEvent } from "@/pubsub/events/pause-rabbit-consumer-queue-event";
@@ -43,9 +43,9 @@ redisSubscriber.on("message", async (channel, message) => {
       await RoutersUpdatedEvent.handleEvent(message);
       break;
 
-    // case Channel.SourcesUpdated:
-    //   await SourcesUpdatedEvent.handleEvent(message);
-    //   break;
+    case Channel.SourcesUpdated:
+      await SourcesUpdatedEvent.handleEvent(message);
+      break;
 
     case Channel.PauseRabbitConsumerQueue:
       await PauseRabbitConsumerQueueEvent.handleEvent(message);
