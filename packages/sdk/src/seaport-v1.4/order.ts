@@ -202,6 +202,7 @@ export class Order implements IOrder {
     if (!info) {
       throw new Error("Could not get order info");
     }
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     if (!(info as any).isDynamic) {
       if (info.side === "buy") {
