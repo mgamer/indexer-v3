@@ -98,8 +98,8 @@ if (config.doBackgroundWork) {
                 info: {
                   orderParams: {
                     collection,
-                    tokenId: l.tokenId,
-                    createdAt: l.createdAt,
+                    tokenId: l.raw_data.tokenId,
+                    createdAt: l.raw_data.createdAt,
                   },
                   metadata: {},
                 },
