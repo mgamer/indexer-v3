@@ -142,6 +142,6 @@ export const config = {
   enableRealtimeV2BlockQueue: Boolean(process.env.ENABLE_REALTIME_V2_BLOCK_QUEUE),
 
   // RabbitMq
-  rabbitMqUrl: `amqp://${String(process.env.RABBIT_URL)}:5673`,
-  rabbitHttpUrl: `http://${String(process.env.RABBIT_URL)}:15673`,
+  rabbitMqUrl: `amqp://${String(process.env.RABBIT_URL)}:5672`,
+  rabbitHttpUrl: `http://${String(process.env.RABBIT_URL)}:15672`,
 };
