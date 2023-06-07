@@ -7,7 +7,7 @@ import { EventData } from "@/events-sync/data";
 export const sellERC721: EventData = {
   kind: "sudoswap-v2",
   subKind: "sudoswap-v2-sell-erc721",
-  topic: "0x3614eb567740a0ee3897c0e2b11ad6a5720d2e4438f9c8accf6c95c24af3a470",
+  topic: "0x7a0e7e58d91fd23a96b0008604db1b2d1cee4aae434e3aad9a20fdd7c0995f89",
   numTopics: 1,
   abi: new Interface([`event SwapNFTInPair(uint256 amountOut, uint256[] ids)`]),
 };
@@ -15,7 +15,7 @@ export const sellERC721: EventData = {
 export const sellERC1155: EventData = {
   kind: "sudoswap-v2",
   subKind: "sudoswap-v2-sell-erc1155",
-  topic: "0x3614eb567740a0ee3897c0e2b11ad6a5720d2e4438f9c8accf6c95c24af3a470",
+  topic: "0x58e7e2e8d4c949c019e4fe5f6e2a8f10e4e078a8747730386e9a230da8c969f0",
   numTopics: 1,
   abi: new Interface([`event SwapNFTInPair(uint256 amountOut, uint256 numNFTs)`]),
 };
@@ -23,7 +23,7 @@ export const sellERC1155: EventData = {
 export const buyERC721: EventData = {
   kind: "sudoswap-v2",
   subKind: "sudoswap-v2-buy-erc721",
-  topic: "0xbc479dfc6cb9c1a9d880f987ee4b30fa43dd7f06aec121db685b67d587c93c93",
+  topic: "0xa13c46268c53408442d94eb370f2e476cb7f0fbe027ae5bad73ce13d4469c8b9",
   numTopics: 1,
   abi: new Interface([`event SwapNFTOutPair(uint256 amountIn, uint256[] ids)`]),
 };
@@ -31,9 +31,9 @@ export const buyERC721: EventData = {
 export const buyERC1155: EventData = {
   kind: "sudoswap-v2",
   subKind: "sudoswap-v2-buy-erc1155",
-  topic: "0xbc479dfc6cb9c1a9d880f987ee4b30fa43dd7f06aec121db685b67d587c93c93",
+  topic: "0xd9c2402e1a067734ae78dab98f06d5b28e8a2d2c6370ec0e6ff8cc2749d050f1",
   numTopics: 1,
-  abi: new Interface([` event SwapNFTOutPair(uint256 amountIn, uint256 numNFTs)`]),
+  abi: new Interface([`event SwapNFTOutPair(uint256 amountIn, uint256 numNFTs)`]),
 };
 
 export const tokenDeposit: EventData = {
@@ -72,7 +72,7 @@ export const newERC721Pair: EventData = {
   kind: "sudoswap-v2",
   subKind: "sudoswap-v2-new-erc721-pair",
   addresses: { [SudoswapV2.Addresses.PairFactory[config.chainId]?.toLowerCase()]: true },
-  topic: "0xf5bdc103c3e68a20d5f97d2d46792d3fdddfa4efeb6761f8141e6a7b936ca66c",
+  topic: "0xe8e1cee58c33f242c87d563bbc00f2ac82eb90f10a252b0ba8498ae6c1dc241a",
   numTopics: 1,
   abi: new Interface([`event NewERC721Pair(address indexed poolAddress, uint256[] initialIds)`]),
 };
@@ -81,9 +81,7 @@ export const newERC1155Pair: EventData = {
   kind: "sudoswap-v2",
   subKind: "sudoswap-v2-new-erc1155-pair",
   addresses: { [SudoswapV2.Addresses.PairFactory[config.chainId]?.toLowerCase()]: true },
-  topic: "0xf5bdc103c3e68a20d5f97d2d46792d3fdddfa4efeb6761f8141e6a7b936ca66c",
+  topic: "0x2966b6b401975e778520aec46cbefbe73799119a5670feda3e8f884c7c3ffb11",
   numTopics: 1,
-  abi: new Interface([
-    `event NewERC1155Pair(address indexed poolAddress, uint256 initialBalance);`,
-  ]),
+  abi: new Interface([`event NewERC1155Pair(address indexed poolAddress, uint256 initialBalance)`]),
 };
