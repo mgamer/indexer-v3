@@ -52,6 +52,21 @@ export const tokenWithdrawal: EventData = {
   abi: new Interface([`event TokenWithdrawal(uint256 amount)`]),
 };
 
+export const nftWithdrawalERC721: EventData = {
+  kind: "sudoswap-v2",
+  subKind: "sudoswap-v2-nft-withdrawal-erc721",
+  topic: "0x840318695eadabb7c175aa7b9a9b3f9bbd1cb2dd11e9374a159a090d7125f8c8",
+  numTopics: 1,
+  abi: new Interface([`event NFTWithdrawal(uint256[] ids)`]),
+};
+export const nftWithdrawalERC1155: EventData = {
+  kind: "sudoswap-v2",
+  subKind: "sudoswap-v2-nft-withdrawal-erc1155",
+  topic: "0xd26d84b7e96b5b61cbb9f851a5a2953408c61abc7502e33a59d3e6146c0428b0",
+  numTopics: 1,
+  abi: new Interface([`event NFTWithdrawal(uint256 numNFTs)`]),
+};
+
 export const spotPriceUpdate: EventData = {
   kind: "sudoswap-v2",
   subKind: "sudoswap-v2-spot-price-update",
