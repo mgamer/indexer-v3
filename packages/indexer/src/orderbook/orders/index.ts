@@ -154,6 +154,7 @@ export const getOrderSourceByOrderKind = async (
       case "cryptopunks":
         return sources.getOrInsert("cryptopunks.app");
       case "sudoswap":
+      case "sudoswap-v2":
         return sources.getOrInsert("sudoswap.xyz");
       case "universe":
         return sources.getOrInsert("universe.xyz");
@@ -182,10 +183,6 @@ export const getOrderSourceByOrderKind = async (
         return sources.getOrInsert("alienswap.xyz");
       case "collectionxyz":
         return sources.getOrInsert("collection.xyz");
-
-      case "sudoswap-v2":
-        return sources.getOrInsert("sudoswap.xyz");
-
       case "mint": {
         if (address && mintsSources.has(address)) {
           return sources.getOrInsert(mintsSources.get(address)!);
@@ -299,24 +296,11 @@ export const generateListingDetailsV6 = (
     }
 
     case "seaport-v1.4": {
-      if (order.rawData && !order.rawData.partial) {
-        return {
-          kind: "seaport-v1.4",
-          ...common,
-          order: new Sdk.SeaportV14.Order(config.chainId, order.rawData),
-        };
-      } else {
-        // Sorry for all the below `any` types
-        return {
-          kind: "seaport-v1.4-partial" as any,
-          ...common,
-          order: {
-            contract: token.contract,
-            tokenId: token.tokenId,
-            id: order.id,
-          } as any,
-        };
-      }
+      return {
+        kind: "seaport-v1.4",
+        ...common,
+        order: new Sdk.SeaportV14.Order(config.chainId, order.rawData),
+      };
     }
 
     case "seaport-v1.5": {
@@ -511,50 +495,36 @@ export const generateBidDetailsV6 = async (
     }
 
     case "seaport-v1.4": {
-      if (order.rawData && !order.rawData.partial) {
-        const extraArgs: any = {};
+      const extraArgs: any = {};
 
-        const sdkOrder = new Sdk.SeaportV14.Order(config.chainId, order.rawData);
-        if (sdkOrder.params.kind?.includes("token-list")) {
-          // When filling a "token-list" order, we also need to pass in the
-          // full list of tokens the order was made on (in order to be able
-          // to generate a valid merkle proof)
-          const tokens = await idb.manyOrNone(
-            `
+      const sdkOrder = new Sdk.SeaportV14.Order(config.chainId, order.rawData);
+      if (sdkOrder.params.kind?.includes("token-list")) {
+        // When filling a "token-list" order, we also need to pass in the
+        // full list of tokens the order was made on (in order to be able
+        // to generate a valid merkle proof)
+        const tokens = await idb.manyOrNone(
+          `
+            SELECT
+              token_sets_tokens.token_id
+            FROM token_sets_tokens
+            WHERE token_sets_tokens.token_set_id = (
               SELECT
-                token_sets_tokens.token_id
-              FROM token_sets_tokens
-              WHERE token_sets_tokens.token_set_id = (
-                SELECT
-                  orders.token_set_id
-                FROM orders
-                WHERE orders.id = $/id/
-              )
-            `,
-            { id: sdkOrder.hash() }
-          );
-          extraArgs.tokenIds = tokens.map(({ token_id }) => token_id);
-        }
-
-        return {
-          kind: "seaport-v1.4",
-          ...common,
-          extraArgs,
-          order: sdkOrder,
-        };
-      } else {
-        // Sorry for all the below `any` types
-        return {
-          kind: "seaport-v1.4-partial" as any,
-          ...common,
-          order: {
-            contract: token.contract,
-            tokenId: token.tokenId,
-            id: order.id,
-            unitPrice: order.unitPrice,
-          } as any,
-        };
+                orders.token_set_id
+              FROM orders
+              WHERE orders.id = $/id/
+            )
+          `,
+          { id: sdkOrder.hash() }
+        );
+        extraArgs.tokenIds = tokens.map(({ token_id }) => token_id);
       }
+
+      return {
+        kind: "seaport-v1.4",
+        ...common,
+        extraArgs,
+        order: sdkOrder,
+      };
     }
 
     case "seaport-v1.5": {

@@ -1864,12 +1864,12 @@ export class Router {
         tokenOutAmount: totalPrice,
         recipient: module.address,
         refundTo: relayer,
-        details: sudoswapDetails,
+        details: sudoswapV2Details,
         executionIndex: executions.length - 1,
       });
 
       // Mark the listings as successfully handled
-      for (const { orderId } of sudoswapDetails) {
+      for (const { orderId } of sudoswapV2Details) {
         success[orderId] = true;
         orderIds.push(orderId);
       }
