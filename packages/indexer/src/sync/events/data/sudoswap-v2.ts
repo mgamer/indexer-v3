@@ -100,3 +100,32 @@ export const newERC1155Pair: EventData = {
   numTopics: 2,
   abi: new Interface([`event NewERC1155Pair(address indexed poolAddress, uint256 initialBalance)`]),
 };
+
+export const erc20Deposit: EventData = {
+  kind: "sudoswap-v2",
+  subKind: "sudoswap-v2-erc20-deposit",
+  addresses: { [SudoswapV2.Addresses.PairFactory[config.chainId]?.toLowerCase()]: true },
+  topic: "0xc5a9c13052901cb7714b549fb3e30327a1049e8a6a814847fc70293cc6dec747",
+  numTopics: 2,
+  abi: new Interface([`event ERC20Deposit(address indexed poolAddress, uint256 amount)`]),
+};
+
+export const erc721Deposit: EventData = {
+  kind: "sudoswap-v2",
+  subKind: "sudoswap-v2-erc721-deposit",
+  addresses: { [SudoswapV2.Addresses.PairFactory[config.chainId]?.toLowerCase()]: true },
+  topic: "0x232f0dddad405387becb8c1dd6afed4c32d6ce5d66105ebbbe38bc27c6843f63",
+  numTopics: 2,
+  abi: new Interface([`event NFTDeposit(address indexed poolAddress, uint256[] ids)`]),
+};
+
+export const erc1155Deposit: EventData = {
+  kind: "sudoswap-v2",
+  subKind: "sudoswap-v2-erc1155-deposit",
+  addresses: { [SudoswapV2.Addresses.PairFactory[config.chainId]?.toLowerCase()]: true },
+  topic: "0xd9d59b1027358505410c5d75718be0c5f30233b2c78ce49b8951d7d0f99fa675",
+  numTopics: 3,
+  abi: new Interface([
+    `event ERC1155Deposit(address indexed poolAddress, uint256 indexed id, uint256 amount)`,
+  ]),
+};

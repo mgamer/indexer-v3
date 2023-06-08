@@ -244,6 +244,9 @@ export type EventSubKind =
   | "sudoswap-v2-token-withdrawal"
   | "sudoswap-v2-nft-withdrawal-erc721"
   | "sudoswap-v2-nft-withdrawal-erc1155"
+  | "sudoswap-v2-erc20-deposit"
+  | "sudoswap-v2-erc721-deposit"
+  | "sudoswap-v2-erc1155-deposit"
   | "sudoswap-v2-spot-price-update"
   | "sudoswap-v2-delta-update"
   | "sudoswap-v2-new-erc721-pair"
@@ -415,8 +418,11 @@ const allEventData = [
   sudoswapV2.sellERC1155,
   sudoswapV2.tokenDeposit,
   sudoswapV2.tokenWithdrawal,
+  sudoswapV2.nftWithdrawalERC721,
   sudoswapV2.nftWithdrawalERC1155,
-  sudoswapV2.nftWithdrawalERC1155,
+  sudoswapV2.erc20Deposit,
+  sudoswapV2.erc721Deposit,
+  sudoswapV2.erc1155Deposit,
   sudoswapV2.spotPriceUpdate,
   sudoswapV2.deltaUpdate,
   sudoswapV2.newERC721Pair,
