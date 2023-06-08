@@ -359,7 +359,10 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
       }
 
       case "sudoswap-v2-new-erc1155-pair":
-      case "sudoswap-v2-new-erc721-pair": {
+      case "sudoswap-v2-new-erc721-pair":
+      case "sudoswap-v2-erc20-deposit":
+      case "sudoswap-v2-erc721-deposit":
+      case "sudoswap-v2-erc1155-deposit": {
         const parsedLog = eventData.abi.parseLog(log);
         const pool = parsedLog.args["poolAddress"].toLowerCase();
 
@@ -384,9 +387,6 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
       case "sudoswap-v2-token-withdrawal":
       case "sudoswap-v2-nft-withdrawal-erc721":
       case "sudoswap-v2-nft-withdrawal-erc1155":
-      case "sudoswap-v2-erc20-deposit":
-      case "sudoswap-v2-erc721-deposit":
-      case "sudoswap-v2-erc1155-deposit":
       case "sudoswap-v2-spot-price-update":
       case "sudoswap-v2-delta-update": {
         onChainData.orders.push({
