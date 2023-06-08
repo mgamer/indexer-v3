@@ -411,7 +411,12 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
           const prices: BigNumber[] = [];
           for (let i = 0; i < priceList.length; i++) {
-            prices.push(bn(priceList[i]).sub(i > 0 ? priceList[i - 1] : 0));
+            prices.push(
+              bn(priceList[i])
+                .sub(i > 0 ? priceList[i - 1] : 0)
+                // Just for safety, add 1 wei
+                .add(1)
+            );
           }
 
           // Handle: prices
