@@ -29,7 +29,7 @@ export const saveSudoswapV2Pool = async (sudoswapPool: SudoswapV2Pool) => {
         pool_kind,
         pair_kind,
         property_checker,
-        token_id,
+        token_id
       ) VALUES (
         $/address/,
         $/nft/,
