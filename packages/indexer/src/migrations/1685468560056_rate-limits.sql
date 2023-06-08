@@ -8,5 +8,3 @@ CREATE UNIQUE INDEX "rate_limit_rules_correlation_id_unique_index"
   ON "rate_limit_rules" ("correlation_id");
 
 -- Down Migration
-
-DROP TABLE "rate_limit_rules";
