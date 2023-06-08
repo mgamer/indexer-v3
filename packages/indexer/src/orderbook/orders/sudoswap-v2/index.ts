@@ -70,11 +70,6 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         throw new Error("Unsupported currency");
       }
 
-      const isERC1155 = pool.pairKind > 1;
-      if (isERC1155) {
-        throw new Error("ERC1155 orders are not yet supported");
-      }
-
       // Force recheck at most once per hour
       const recheckCondition = orderParams.forceRecheck
         ? `AND orders.updated_at < to_timestamp(${orderParams.txTimestamp - 3600})`
@@ -128,9 +123,15 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         },
       ];
 
+      const isERC1155 = pool.pairKind > 1;
+
       // Handle buy orders
       try {
         if ([SudoswapV2PoolKind.TOKEN, SudoswapV2PoolKind.TRADE].includes(pool.poolKind)) {
+          if (isERC1155) {
+            throw new Error("ERC1155 buy orders are not yet supported");
+          }
+
           if (pool.propertyChecker !== AddressZero) {
             throw new Error("Property checked pools are not yet supported on the buy-side");
           }
@@ -422,9 +423,13 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
           const limit = pLimit(50);
           await Promise.all(
-            poolOwnedTokenIds.map((tokenId) =>
+            poolOwnedTokenIds.map(({ tokenId, amount }) =>
               limit(async () => {
                 try {
+                  if (isERC1155 && tokenId !== pool.tokenId) {
+                    return;
+                  }
+
                   const id = getOrderId(orderParams.pool, "sell", tokenId);
 
                   // Handle: royalties on top
@@ -467,7 +472,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                   // Handle: core sdk order
                   const sdkOrder: Sdk.SudoswapV2.Order = new Sdk.SudoswapV2.Order(config.chainId, {
                     pair: orderParams.pool,
-                    amount: isERC1155 ? "1" : undefined,
+                    amount: isERC1155 ? amount : undefined,
                     tokenId,
                     extra: {
                       prices: prices.map(String),
@@ -518,7 +523,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                       currency_price: price,
                       currency_value: value,
                       needs_conversion: null,
-                      quantity_remaining: "1",
+                      quantity_remaining: isERC1155 ? amount : "1",
                       valid_between: `tstzrange(${validFrom}, ${validTo}, '[]')`,
                       nonce: null,
                       source_id_int: source?.id,
@@ -554,7 +559,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                           currency_price = $/price/,
                           value = $/value/,
                           currency_value = $/value/,
-                          quantity_remaining = 1,
+                          quantity_remaining = $/amount/,
                           valid_between = tstzrange(date_trunc('seconds', to_timestamp(${orderParams.txTimestamp})), 'Infinity', '[]'),
                           expiration = 'Infinity',
                           updated_at = now(),
@@ -573,6 +578,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                         id,
                         price,
                         value,
+                        amount: isERC1155 ? amount : "1",
                         rawData: sdkOrder.params,
                         missingRoyalties: missingRoyalties,
                         normalizedValue: normalizedValue.toString(),

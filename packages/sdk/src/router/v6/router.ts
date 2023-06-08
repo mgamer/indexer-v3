@@ -1845,7 +1845,7 @@ export class Router {
         module: module.address,
         data: module.interface.encodeFunctionData("buyWithETH", [
           sudoswapV2Details.map((d) => (d.order as Sdk.SudoswapV2.Order).params.pair),
-          sudoswapV2Details.map((d) => (d.amount ? d.amount : d.tokenId)),
+          sudoswapV2Details.map((d) => (d.contractKind === "erc721" ? d.tokenId : d.amount ?? 1)),
           {
             fillTo: taker,
             refundTo: relayer,
@@ -3203,108 +3203,6 @@ export class Router {
           break;
         }
 
-        case "seaport-v1.4-partial": {
-          const order = detail.order as Sdk.SeaportBase.Types.PartialOrder;
-          const module = this.contracts.seaportV14Module;
-
-          if (detail.isProtected) {
-            if (detail.fees?.length || options?.globalFees?.length) {
-              throw new Error("Fees not supported for protected OpenSea orders");
-            }
-          }
-
-          try {
-            const result = await axios.post(`${this.options?.orderFetcherBaseUrl}/api/offer`, {
-              orderHash: order.id,
-              contract: order.contract,
-              tokenId: order.tokenId,
-              taker: detail.isProtected ? taker : detail.owner ?? taker,
-              chainId: this.chainId,
-              protocolVersion: "v1.4",
-              unitPrice: order.unitPrice,
-              isProtected: detail.isProtected,
-              openseaApiKey: this.options?.openseaApiKey,
-              metadata: this.options?.orderFetcherMetadata,
-            });
-
-            if (result.data.calldata) {
-              const contract = detail.contract;
-              const owner = taker;
-              const operator = new Sdk.SeaportBase.ConduitController(this.chainId).deriveConduit(
-                Sdk.SeaportBase.Addresses.OpenseaConduitKey[this.chainId]
-              );
-
-              // Fill directly
-              txs.push({
-                txData: {
-                  from: taker,
-                  to: Sdk.SeaportV14.Addresses.Exchange[this.chainId],
-                  data: result.data.calldata + generateSourceBytes(options?.source),
-                },
-                approvals: [
-                  {
-                    orderIds: [detail.orderId],
-                    contract,
-                    owner,
-                    operator,
-                    txData: generateNFTApprovalTxData(contract, owner, operator),
-                  },
-                ],
-                orderIds: [detail.orderId],
-              });
-            } else {
-              const fullOrder = new Sdk.SeaportV14.Order(this.chainId, result.data.order);
-              executionsWithDetails.push({
-                detail,
-                execution: {
-                  module: module.address,
-                  data: module.interface.encodeFunctionData(
-                    detail.contractKind === "erc721" ? "acceptERC721Offer" : "acceptERC1155Offer",
-                    [
-                      {
-                        parameters: {
-                          ...fullOrder.params,
-                          totalOriginalConsiderationItems: fullOrder.params.consideration.length,
-                        },
-                        numerator: detail.amount ?? 1,
-                        denominator: fullOrder.getInfo()!.amount,
-                        signature: fullOrder.params.signature,
-                        extraData: result.data.extraData,
-                      },
-                      result.data.criteriaResolvers ?? [],
-                      {
-                        fillTo: taker,
-                        refundTo: taker,
-                        revertIfIncomplete: Boolean(!options?.partial),
-                      },
-                      fees,
-                    ]
-                  ),
-                  value: 0,
-                },
-              });
-            }
-
-            success[detail.orderId] = true;
-          } catch (error) {
-            if (options?.onError) {
-              options.onError("order-fetcher-opensea-offer", error, {
-                orderId: detail.orderId,
-                additionalInfo: {
-                  detail,
-                  taker,
-                },
-              });
-            }
-
-            if (!options?.partial) {
-              throw new Error(getErrorMessage(error));
-            }
-          }
-
-          break;
-        }
-
         case "seaport-v1.5": {
           const order = detail.order as Sdk.SeaportV15.Order;
           const module = this.contracts.seaportV15Module;
@@ -3541,7 +3439,7 @@ export class Router {
               module: module.address,
               data: module.interface.encodeFunctionData("sell", [
                 order.params.pair,
-                order.params.tokenId ? order.params.amount : detail.tokenId,
+                detail.contractKind === "erc721" ? detail.tokenId : detail.amount ?? 1,
                 bn(order.params.extra.prices[0]).sub(
                   // Take into account the protocol fee of 0.5%
                   bn(order.params.extra.prices[0]).mul(50).div(10000)
