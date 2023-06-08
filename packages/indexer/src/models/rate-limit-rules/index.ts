@@ -161,6 +161,7 @@ export class RateLimitRules {
 
     return rateLimitRuleEntity;
   }
+
   public static async updateByCorrelationId(
     correlationId: string,
     fields: RateLimitRuleUpdateParams
