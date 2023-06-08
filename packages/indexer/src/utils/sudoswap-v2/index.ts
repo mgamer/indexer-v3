@@ -9,7 +9,7 @@ import { getSudoswapV2Pool, saveSudoswapV2Pool } from "@/models/sudoswap-v2-pool
 
 export const getPoolDetails = async (address: string) =>
   getSudoswapV2Pool(address).catch(async () => {
-    if (Sdk.Sudoswap.Addresses.PairFactory[config.chainId]) {
+    if (Sdk.SudoswapV2.Addresses.PairFactory[config.chainId]) {
       const iface = new Interface([
         "function nft() view returns (address)",
         "function token() view returns (address)",
