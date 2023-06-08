@@ -17,8 +17,8 @@ import * as marketplaceFees from "@/utils/marketplace-fees";
 import * as collectionUpdatesFloorAsk from "@/jobs/collection-updates/floor-queue";
 import * as collectionUpdatesNonFlaggedFloorAsk from "@/jobs/collection-updates/non-flagged-floor-queue";
 import * as collectionUpdatesNormalizedFloorAsk from "@/jobs/collection-updates/normalized-floor-queue";
-import { recalcTokenCountQueueJob } from "@/jobs/collection-updates/recalc-token-count-queue-job";
 import { recalcOwnerCountQueueJob } from "@/jobs/collection-updates/recalc-owner-count-queue-job";
+import { recalcTokenCountQueueJob } from "@/jobs/collection-updates/recalc-token-count-queue-job";
 
 const QUEUE_NAME = "token-updates-fetch-collection-metadata-queue";
 
@@ -44,6 +44,27 @@ if (config.doBackgroundWork) {
     async (job: Job) => {
       const { contract, tokenId, mintedTimestamp, newCollection, oldCollectionId } =
         job.data as FetchCollectionMetadataInfo;
+
+      if (contract === "0x82c7a8f707110f5fbb16184a5933e9f78a34c6ab") {
+        logger.info(
+          QUEUE_NAME,
+          JSON.stringify({
+            topic: "debug-emblem-vault",
+            message: "Start",
+            jobData: job.data,
+          })
+        );
+      }
+
+      if (isNaN(Number(tokenId))) {
+        logger.error(
+          QUEUE_NAME,
+          JSON.stringify({
+            message: "Invalid tokenId",
+            jobData: job.data,
+          })
+        );
+      }
 
       try {
         // Fetch collection metadata
@@ -121,6 +142,20 @@ if (config.doBackgroundWork) {
             collection: collection.id,
           },
         });
+
+        if (contract === "0x82c7a8f707110f5fbb16184a5933e9f78a34c6ab") {
+          logger.info(
+            QUEUE_NAME,
+            JSON.stringify({
+              topic: "debug-emblem-vault",
+              message: "After update tokens",
+              jobData: job.data,
+              collection,
+              tokenIdRange,
+              tokenFilter,
+            })
+          );
+        }
 
         // Write the collection to the database
         await idb.none(pgp.helpers.concat(queries));
@@ -206,6 +241,8 @@ export type FetchCollectionMetadataInfo = {
   mintedTimestamp?: number;
   newCollection?: boolean;
   oldCollectionId?: string;
+  allowFallbackCollectionMetadata?: boolean;
+  context?: string;
 };
 
 export const addToQueue = async (infos: FetchCollectionMetadataInfo[], jobId = "") => {
@@ -217,6 +254,8 @@ export const addToQueue = async (infos: FetchCollectionMetadataInfo[], jobId = "
           ? `${info.contract}-${info.tokenId}`
           : info.contract;
       }
+
+      info.allowFallbackCollectionMetadata = info.allowFallbackCollectionMetadata ?? true;
 
       return {
         name: jobId,

@@ -28,7 +28,6 @@ export const postRefreshCollectionOptions: RouteOptions = {
     }).options({ allowUnknown: true }),
     payload: Joi.object({
       collection: Joi.string()
-        .lowercase()
         .description(
           "Refresh the given collection. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
         )
@@ -68,6 +67,8 @@ export const postRefreshCollectionOptions: RouteOptions = {
             {
               contract: fromBuffer(tokenResult.contract),
               tokenId: tokenResult.token_id,
+              allowFallbackCollectionMetadata: false,
+              context: "post-refresh-collection",
             },
           ]);
 

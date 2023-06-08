@@ -7,6 +7,9 @@ import { RabbitMqJobsConsumer } from "@/jobs/index";
 import { logger } from "@/common/logger";
 import { getNetworkName } from "@/config/network";
 import { acquireLock } from "@/common/redis";
+import axios from "axios";
+import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handler";
+import pLimit from "p-limit";
 
 export type RabbitMQMessage = {
   payload: any;
@@ -18,16 +21,42 @@ export type RabbitMQMessage = {
   retryCount?: number;
 };
 
+export type CreatePolicyPayload = {
+  applyTo: "all" | "queues" | "exchanges" | "classic_queues" | "quorum_queues" | "streams";
+  name: string;
+  pattern: string;
+  priority: number;
+  vhost?: string;
+  definition: {
+    "max-length"?: number;
+    "max-length-bytes"?: number;
+    expires?: number;
+    "message-ttl"?: number;
+    "alternate-exchange"?: string;
+  };
+};
+
+export type DeletePolicyPayload = {
+  name: string;
+  vhost?: string;
+};
+
 export class RabbitMq {
   public static delayedExchangeName = `${getNetworkName()}.delayed`;
 
   private static rabbitMqPublisherConnection: Connection;
-  private static rabbitMqPublisherChannel: ConfirmChannel;
+
+  private static maxPublisherChannelsCount = 10;
+  private static rabbitMqPublisherChannels: ConfirmChannel[] = [];
 
   public static async connect() {
     RabbitMq.rabbitMqPublisherConnection = await amqplib.connect(config.rabbitMqUrl);
-    RabbitMq.rabbitMqPublisherChannel =
-      await this.rabbitMqPublisherConnection.createConfirmChannel();
+
+    for (let i = 0; i < RabbitMq.maxPublisherChannelsCount; ++i) {
+      RabbitMq.rabbitMqPublisherChannels.push(
+        await this.rabbitMqPublisherConnection.createConfirmChannel()
+      );
+    }
   }
 
   public static async send(queueName: string, content: RabbitMQMessage, delay = 0, priority = 0) {
@@ -39,12 +68,14 @@ export class RabbitMq {
         return;
       }
 
+      const channelIndex = _.random(0, RabbitMq.maxPublisherChannelsCount - 1);
+
       await new Promise<void>((resolve, reject) => {
         if (delay) {
           content.delay = delay;
 
           // If delay given publish to the delayed exchange
-          RabbitMq.rabbitMqPublisherChannel.publish(
+          RabbitMq.rabbitMqPublisherChannels[channelIndex].publish(
             RabbitMq.delayedExchangeName,
             queueName,
             Buffer.from(JSON.stringify(content)),
@@ -65,7 +96,7 @@ export class RabbitMq {
           );
         } else {
           // If no delay send directly to queue to save any unnecessary routing
-          RabbitMq.rabbitMqPublisherChannel.sendToQueue(
+          RabbitMq.rabbitMqPublisherChannels[channelIndex].sendToQueue(
             queueName,
             Buffer.from(JSON.stringify(content)),
             { priority, headers: { "x-deduplication-header": content.jobId } },
@@ -80,25 +111,63 @@ export class RabbitMq {
         }
       });
     } catch (error) {
-      logger.warn(
-        "rabbitmq-publish",
-        `failed to publish ${JSON.stringify(content)} to ${queueName}`
+      logger.debug(
+        `rabbitmq-publish-${queueName}`,
+        `failed to publish ${error} content=${JSON.stringify(content)}`
       );
     }
   }
 
   public static async sendBatch(
     queueName: string,
-    content: RabbitMQMessage[],
-    delay = 0,
-    priority = 0
+    messages: {
+      content: RabbitMQMessage;
+      delay?: number;
+      priority?: number;
+    }[]
   ) {
-    await Promise.all(content.map((c) => RabbitMq.send(queueName, c, delay, priority)));
+    const limit = pLimit(50);
+    await Promise.all(
+      messages.map((message) =>
+        limit(() => {
+          message.delay = message.delay ?? 0;
+          message.priority = message.priority ?? 0;
+          return RabbitMq.send(queueName, message.content, message.delay, message.priority);
+        })
+      )
+    );
+  }
+
+  public static async createOrUpdatePolicy(policy: CreatePolicyPayload) {
+    policy.vhost = policy.vhost ?? "/";
+    const url = `${config.rabbitHttpUrl}/api/policies/%2F/${policy.name}`;
+
+    await axios.put(url, {
+      "apply-to": policy.applyTo,
+      definition: policy.definition,
+      name: policy.name,
+      pattern: policy.pattern,
+      priority: policy.priority,
+      vhost: policy.vhost,
+    });
+  }
+
+  public static async deletePolicy(policy: DeletePolicyPayload) {
+    policy.vhost = policy.vhost ?? "/";
+    const url = `${config.rabbitHttpUrl}/api/policies/%2F/${policy.name}`;
+
+    await axios.delete(url, {
+      data: {
+        component: "policy",
+        name: policy.name,
+        vhost: policy.vhost,
+      },
+    });
   }
 
   public static async assertQueuesAndExchanges() {
     // Assert the exchange for delayed messages
-    await this.rabbitMqPublisherChannel.assertExchange(
+    await this.rabbitMqPublisherChannels[0].assertExchange(
       RabbitMq.delayedExchangeName,
       "x-delayed-message",
       {
@@ -113,32 +182,61 @@ export class RabbitMq {
     for (const queue of consumerQueues) {
       const options = {
         maxPriority: 1,
-        arguments: { "x-message-deduplication": true },
+        arguments: {
+          "x-message-deduplication": true,
+          "x-single-active-consumer": queue.getSingleActiveConsumer(),
+        },
       };
 
       // Create working queue
-      await this.rabbitMqPublisherChannel.assertQueue(queue.getQueue(), options);
+      await this.rabbitMqPublisherChannels[0].assertQueue(queue.getQueue(), options);
 
       // Create retry queue
-      await this.rabbitMqPublisherChannel.assertQueue(queue.getRetryQueue(), options);
+      await this.rabbitMqPublisherChannels[0].assertQueue(queue.getRetryQueue(), options);
 
       // Bind queues to the delayed exchange
-      await this.rabbitMqPublisherChannel.bindQueue(
+      await this.rabbitMqPublisherChannels[0].bindQueue(
         queue.getQueue(),
         RabbitMq.delayedExchangeName,
         queue.getQueue()
       );
-      await this.rabbitMqPublisherChannel.bindQueue(
+
+      await this.rabbitMqPublisherChannels[0].bindQueue(
         queue.getRetryQueue(),
         RabbitMq.delayedExchangeName,
         queue.getRetryQueue()
       );
 
       // Create dead letter queue for all jobs the failed more than the max retries
-      await this.rabbitMqPublisherChannel.assertQueue(queue.getDeadLetterQueue(), {
+      await this.rabbitMqPublisherChannels[0].assertQueue(queue.getDeadLetterQueue(), {
         arguments: { "x-message-deduplication": true },
-        maxLength: queue.getMaxDeadLetterQueue(),
       });
+
+      // If the dead letter queue have custom max length
+      if (queue.getMaxDeadLetterQueue() !== AbstractRabbitMqJobHandler.defaultMaxDeadLetterQueue) {
+        await this.createOrUpdatePolicy({
+          name: `${queue.getDeadLetterQueue()}-policy`,
+          vhost: "/",
+          priority: 10,
+          pattern: `^${queue.getDeadLetterQueue()}$`,
+          applyTo: "queues",
+          definition: {
+            "max-length": queue.getMaxDeadLetterQueue(),
+          },
+        });
+      }
     }
+
+    // Create general rule for all dead letters queues
+    await this.createOrUpdatePolicy({
+      name: `${getNetworkName()}.dead-letter-queues-policy`,
+      vhost: "/",
+      priority: 1,
+      pattern: `^${getNetworkName()}.+-dead-letter$`,
+      applyTo: "queues",
+      definition: {
+        "max-length": AbstractRabbitMqJobHandler.defaultMaxDeadLetterQueue,
+      },
+    });
   }
 }

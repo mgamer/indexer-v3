@@ -25,6 +25,8 @@ export type AbstractRabbitMqJobHandlerEvents = {
 };
 
 export abstract class AbstractRabbitMqJobHandler extends (EventEmitter as new () => TypedEmitter<AbstractRabbitMqJobHandlerEvents>) {
+  static defaultMaxDeadLetterQueue = 5000;
+
   abstract queueName: string;
   abstract maxRetries: number;
 
@@ -33,6 +35,7 @@ export abstract class AbstractRabbitMqJobHandler extends (EventEmitter as new ()
   protected concurrency = 1;
   protected maxDeadLetterQueue = 5000;
   protected backoff: BackoffStrategy = null;
+  protected singleActiveConsumer: boolean | undefined;
 
   public async consume(message: RabbitMQMessage): Promise<void> {
     message.consumedTime = message.consumedTime ?? _.now();
@@ -46,9 +49,13 @@ export abstract class AbstractRabbitMqJobHandler extends (EventEmitter as new ()
       this.emit("onError", message, error);
       let queueName = this.getRetryQueue();
 
+      // Set the backoff strategy delay
+      let delay = this.getBackoffDelay(message);
+
       // If the event has already been retried maxRetries times, send it to the dead letter queue
       if (message.retryCount > this.maxRetries) {
         queueName = this.getDeadLetterQueue();
+        delay = 0;
       }
 
       logger.error(
@@ -57,9 +64,6 @@ export abstract class AbstractRabbitMqJobHandler extends (EventEmitter as new ()
           message
         )}, retryCount=${message.retryCount}`
       );
-
-      // Set the backoff strategy delay
-      const delay = this.getBackoffDelay(message);
 
       await RabbitMq.send(queueName, message, delay);
     }
@@ -106,6 +110,10 @@ export abstract class AbstractRabbitMqJobHandler extends (EventEmitter as new ()
     return this.maxDeadLetterQueue;
   }
 
+  public getSingleActiveConsumer(): boolean | undefined {
+    return this.singleActiveConsumer ? this.singleActiveConsumer : undefined;
+  }
+
   public getBackoff(): BackoffStrategy {
     return this.backoff;
   }
@@ -119,15 +127,16 @@ export abstract class AbstractRabbitMqJobHandler extends (EventEmitter as new ()
     );
   }
 
-  protected async sendBatch(job: { payload: any; jobId?: string }[], delay = 0, priority = 0) {
+  protected async sendBatch(
+    job: { payload: any; jobId?: string; delay?: number; priority?: number }[]
+  ) {
     await RabbitMq.sendBatch(
       this.getQueue(),
       job.map((j) => ({
-        payload: j.payload,
-        jobId: j.jobId ? `${this.getQueue()}:${j.jobId}` : undefined,
-      })),
-      delay,
-      priority
+        content: { payload: j.payload, jobId: j.jobId },
+        delay: j.delay,
+        priority: j.priority,
+      }))
     );
   }
 }
