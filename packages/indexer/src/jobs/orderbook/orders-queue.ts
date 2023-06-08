@@ -304,6 +304,11 @@ export const jobProcessor = async (job: Job) => {
         break;
       }
 
+      case "sudoswap-v2": {
+        result = await orders.sudoswapV2.save([info]);
+        break;
+      }
+
       case "zeroex-v4": {
         result = await orders.zeroExV4.save([info]);
         break;
