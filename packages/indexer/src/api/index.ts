@@ -361,4 +361,10 @@ export const start = async (): Promise<void> => {
   logger.info("process", `Started on port ${config.port}`);
 };
 
-export const inject = (options: Hapi.ServerInjectOptions) => server.inject(options);
+export const inject = async (options: Hapi.ServerInjectOptions) => {
+  if (server) {
+    return server.inject(options);
+  }
+
+  return {};
+};
