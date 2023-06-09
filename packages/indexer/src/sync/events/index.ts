@@ -48,6 +48,8 @@ export const extractEventsBatches = async (
       limit(() => {
         const kindToEvents = new Map<EventKind, EnhancedEvent[]>();
         let blockHash = "";
+        let logIndex = null;
+        let batchIndex = null;
 
         for (const event of events) {
           if (!kindToEvents.has(event.kind)) {
@@ -56,6 +58,8 @@ export const extractEventsBatches = async (
 
           if (!blockHash) {
             blockHash = event.baseEventParams.blockHash;
+            logIndex = event.baseEventParams.logIndex;
+            batchIndex = event.baseEventParams.batchIndex;
           }
 
           kindToEvents.get(event.kind)!.push(event);
@@ -129,6 +133,10 @@ export const extractEventsBatches = async (
           {
             kind: "sudoswap",
             data: kindToEvents.get("sudoswap") ?? [],
+          },
+          {
+            kind: "sudoswap-v2",
+            data: kindToEvents.get("sudoswap-v2") ?? [],
           },
           {
             kind: "wyvern",
@@ -240,7 +248,7 @@ export const extractEventsBatches = async (
         ];
 
         txHashToEventsBatch.set(txHash, {
-          id: getUuidByString(`${txHash}:${blockHash}`),
+          id: getUuidByString(`${txHash}:${logIndex}:${batchIndex}:${blockHash}`),
           events: eventsByKind,
           backfill,
         });
@@ -437,7 +445,7 @@ export const syncEvents = async (
 
       // Log blocks for which no logs were fetched from the RPC provider
       if (!_.isEmpty(blockNumbersArray)) {
-        logger.warn(
+        logger.debug(
           "sync-events",
           `[${fromBlock}, ${toBlock}] No logs fetched for ${JSON.stringify(blockNumbersArray)}`
         );

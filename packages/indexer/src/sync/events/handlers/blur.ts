@@ -77,9 +77,6 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           const sellInput = inputData.sell;
           const buyInput = inputData.buy;
 
-          const callFromBlend =
-            executeCallTraceCall?.from === Sdk.Blend.Addresses.Blend[config.chainId];
-
           // Determine if the input has signature
           const isSellOrder = sellInput.order.side === 1 && sellInput.s != HashZero;
           const traderOfSell = sellInput.order.trader.toLowerCase();
@@ -89,6 +86,8 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           maker = isSellOrder ? traderOfSell : traderOfBuy;
           taker = isSellOrder ? traderOfBuy : traderOfSell;
 
+          const callFromBlend =
+            executeCallTraceCall?.from === Sdk.Blend.Addresses.Blend[config.chainId];
           if (callFromBlend) {
             taker = (await utils.fetchTransaction(baseEventParams.txHash)).from.toLowerCase();
           }
@@ -96,6 +95,9 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
 
         if (routers.get(maker)) {
           maker = sell.trader.toLowerCase();
+        }
+        if (taker === Sdk.Blend.Addresses.Blend[config.chainId]) {
+          taker = (await utils.fetchTransaction(baseEventParams.txHash)).from.toLowerCase();
         }
 
         // Handle: attribution
@@ -106,7 +108,6 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           orderKind,
           { orderId }
         );
-
         if (attributionData.taker) {
           taker = attributionData.taker;
         }

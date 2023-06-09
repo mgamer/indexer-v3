@@ -330,7 +330,7 @@ export const savePartialListings = async (
   const orderValues: DbOrder[] = [];
 
   const handleOrder = async ({ orderParams }: PartialListingOrderInfo) => {
-    logger.info("blur-debug", JSON.stringify(orderInfos));
+    // logger.info("blur-debug", JSON.stringify(orderInfos));
 
     try {
       // Fetch current owner
@@ -357,7 +357,7 @@ export const savePartialListings = async (
       const source = await sources.getOrInsert("blur.io");
 
       // Invalidate any old orders
-      const anyActiveOrders = orderParams.price && orderParams.createdAt;
+      const anyActiveOrders = orderParams.price;
       const invalidatedOrderIds = await idb.manyOrNone(
         `
           UPDATE orders SET
@@ -369,12 +369,18 @@ export const savePartialListings = async (
             AND orders.fillability_status = 'fillable'
             AND orders.raw_data->>'createdAt' IS NOT NULL
             AND orders.id != $/excludeOrderId/
+            ${
+              orderParams.createdAt
+                ? ` AND (orders.raw_data->>'createdAt')::TIMESTAMPTZ <= $/createdAt/`
+                : ""
+            }
           RETURNING orders.id
         `,
         {
           tokenSetId: `token:${orderParams.collection}:${orderParams.tokenId}`,
           sourceId: source.id,
           excludeOrderId: anyActiveOrders ? getBlurListingId(orderParams, owner) : HashZero,
+          createdAt: orderParams.createdAt,
         }
       );
       for (const { id } of invalidatedOrderIds) {
@@ -428,8 +434,6 @@ export const savePartialListings = async (
         { id }
       );
       if (!orderResult) {
-        // Order does not exist
-
         // Check and save: associated token set
         const schemaHash = generateSchemaHash();
         const [{ id: tokenSetId }] = await tokenSet.singleToken.save([
@@ -492,8 +496,7 @@ export const savePartialListings = async (
         });
       } else {
         // Order already exists
-
-        await idb.none(
+        const wasUpdated = await idb.oneOrNone(
           `
             UPDATE orders SET
               fillability_status = 'fillable',
@@ -507,6 +510,8 @@ export const savePartialListings = async (
               updated_at = now(),
               raw_data = $/rawData:json/
             WHERE orders.id = $/id/
+              AND orders.fillability_status != 'fillable'
+            RETURNING orders.id
           `,
           {
             id,
@@ -514,12 +519,13 @@ export const savePartialListings = async (
             rawData: orderParams,
           }
         );
-
-        results.push({
-          id,
-          status: "success",
-          triggerKind: "reprice",
-        });
+        if (wasUpdated) {
+          results.push({
+            id,
+            status: "success",
+            triggerKind: "reprice",
+          });
+        }
       }
     } catch (error) {
       logger.error(
@@ -532,8 +538,6 @@ export const savePartialListings = async (
   // Process all orders concurrently
   const limit = pLimit(20);
   await Promise.all(orderInfos.map((orderInfo) => limit(() => handleOrder(orderInfo))));
-
-  logger.info("blur-debug", JSON.stringify(results));
 
   if (orderValues.length) {
     const columns = new pgp.helpers.ColumnSet(
@@ -776,27 +780,41 @@ export const savePartialBids = async (
         currentBid.pricePoints = currentBid.pricePoints.filter((pp) => pp.executableSize > 0);
 
         if (!currentBid.pricePoints.length) {
+          // Force empty price points
+          currentBid.pricePoints = [];
+
           await idb.none(
             `
               UPDATE orders SET
                 fillability_status = 'no-balance',
+                raw_data = $/rawData/,
                 expiration = now(),
                 updated_at = now()
               WHERE orders.id = $/id/
             `,
-            { id }
+            {
+              id,
+              rawData: currentBid,
+            }
           );
         } else if (isFiltered) {
           if (orderResult.fillability_status === "fillable") {
+            // Force empty price points
+            currentBid.pricePoints = [];
+
             await idb.none(
               `
                 UPDATE orders SET
                   fillability_status = 'no-balance',
+                  raw_data = $/rawData/,
                   expiration = now(),
                   updated_at = now()
                 WHERE orders.id = $/id/
               `,
-              { id }
+              {
+                id,
+                rawData: currentBid,
+              }
             );
           } else {
             return results.push({
