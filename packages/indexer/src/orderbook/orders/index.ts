@@ -304,7 +304,7 @@ export const generateListingDetailsV6 = (
     }
 
     case "seaport-v1.5": {
-      if (order.rawData && !order.rawData.partial) {
+      if (order.rawData && !order.rawData.partial && order.rawData.signature) {
         return {
           kind: "seaport-v1.5",
           ...common,
@@ -528,7 +528,7 @@ export const generateBidDetailsV6 = async (
     }
 
     case "seaport-v1.5": {
-      if (order.rawData && !order.rawData.partial) {
+      if (order.rawData && !order.rawData.partial && order.rawData.signature) {
         const extraArgs: any = {};
 
         const sdkOrder = new Sdk.SeaportV15.Order(config.chainId, order.rawData);
