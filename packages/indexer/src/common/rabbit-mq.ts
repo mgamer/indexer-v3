@@ -34,6 +34,7 @@ export type CreatePolicyPayload = {
     expires?: number;
     "message-ttl"?: number;
     "alternate-exchange"?: string;
+    "queue-mode"?: "default" | "lazy";
   };
 };
 
@@ -228,6 +229,20 @@ export class RabbitMq {
           applyTo: "queues",
           definition: {
             "max-length": queue.getMaxDeadLetterQueue(),
+          },
+        });
+      }
+
+      // If the queue defined as lazy ie use only disk for this queue messages
+      if (queue.isLazyMode()) {
+        await this.createOrUpdatePolicy({
+          name: `${queue.getQueue()}-policy`,
+          vhost: "/",
+          priority: 10,
+          pattern: `^${queue.getQueue()}$|^${queue.getRetryQueue()}$`,
+          applyTo: "queues",
+          definition: {
+            "queue-mode": "lazy",
           },
         });
       }

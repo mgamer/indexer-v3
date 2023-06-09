@@ -38,6 +38,7 @@ export abstract class AbstractRabbitMqJobHandler extends (EventEmitter as new ()
   protected singleActiveConsumer: boolean | undefined;
   protected persistent = true;
   protected useSharedChannel = false;
+  protected lazyMode = false;
 
   private sharedChannelName = "shared-channel";
 
@@ -120,6 +121,10 @@ export abstract class AbstractRabbitMqJobHandler extends (EventEmitter as new ()
 
   public getUseSharedChannel(): boolean {
     return this.useSharedChannel;
+  }
+
+  public isLazyMode(): boolean {
+    return this.lazyMode;
   }
 
   public getSingleActiveConsumer(): boolean | undefined {
