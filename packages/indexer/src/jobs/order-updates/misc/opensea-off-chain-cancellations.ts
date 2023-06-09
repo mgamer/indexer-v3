@@ -30,6 +30,8 @@ if (config.doBackgroundWork) {
     async (job: Job) => {
       const { orderId } = job.data as { orderId: string };
 
+      logger.info(QUEUE_NAME, JSON.stringify({ orderId }));
+
       try {
         const result = await idb.oneOrNone(
           `
