@@ -366,5 +366,8 @@ export const inject = async (options: Hapi.ServerInjectOptions) => {
     return server.inject(options);
   }
 
-  return {};
+  return {
+    payload: "",
+    statusCode: 0,
+  };
 };
