@@ -34,7 +34,10 @@ export const checkMarketplaceIsFiltered = async (
   }
 
   const customCheck = await isBlockedByCustomRegistry(contract, operators);
-  if (customCheck) return customCheck;
+  if (customCheck) {
+    return customCheck;
+  }
+
   return operators.some((c) => result!.includes(c));
 };
 
@@ -59,7 +62,7 @@ export const getMarketplaceBlacklist = async (contract: string): Promise<string[
   const iface = new Interface([
     "function filteredOperators(address registrant) external view returns (address[] memory)",
   ]);
-  const c = new Contract(
+  const opensea = new Contract(
     Sdk.SeaportBase.Addresses.OperatorFilterRegistry[config.chainId],
     iface,
     baseProvider
@@ -69,11 +72,14 @@ export const getMarketplaceBlacklist = async (contract: string): Promise<string[
     iface,
     baseProvider
   );
-  const [operators, blurOperators] = await Promise.all([
-    c.filteredOperators(contract),
+  const [openseaOperators, blurOperators] = await Promise.all([
+    opensea.filteredOperators(contract),
     blur.filteredOperators(contract),
   ]);
-  const allOperatorsList = operators.concat(blurOperators).map((o: string) => o.toLowerCase());
+
+  const allOperatorsList = openseaOperators
+    .concat(blurOperators)
+    .map((o: string) => o.toLowerCase());
   return Array.from(new Set(allOperatorsList));
 };
 
