@@ -15,6 +15,7 @@ export class ResyncAttributeCollectionJob extends AbstractRabbitMqJobHandler {
   maxRetries = 10;
   concurrency = 4;
   useSharedChannel = true;
+  lazyMode = true;
 
   protected async process(payload: ResyncAttributeCollectionJobPayload) {
     const { continuation } = payload;
