@@ -13,6 +13,7 @@ export class FetchSourceInfoJob extends AbstractRabbitMqJobHandler {
   maxRetries = 10;
   concurrency = 3;
   persistent = false;
+  useSharedChannel = true;
 
   protected async process(payload: FetchSourceInfoJobPayload) {
     const { sourceDomain } = payload;
