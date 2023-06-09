@@ -497,7 +497,10 @@ export class RabbitMqJobsConsumer {
       try {
         await RabbitMqJobsConsumer.subscribe(queue);
       } catch (error) {
-        logger.error(queue.queueName, `failed to subscribe to ${queue.queueName} error ${error}`);
+        logger.error(
+          "rabbit-subscribe",
+          `failed to subscribe to ${queue.queueName} error ${error}`
+        );
       }
     }
   }
