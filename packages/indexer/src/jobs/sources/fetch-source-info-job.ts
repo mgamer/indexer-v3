@@ -14,7 +14,9 @@ export class FetchSourceInfoJob extends AbstractRabbitMqJobHandler {
   concurrency = 3;
 
   protected async process(payload: FetchSourceInfoJobPayload) {
-    let url = payload.sourceDomain;
+    const { sourceDomain } = payload;
+
+    let url = sourceDomain;
     let iconUrl;
 
     if (!_.startsWith(url, "http")) {
@@ -33,7 +35,7 @@ export class FetchSourceInfoJob extends AbstractRabbitMqJobHandler {
     // First get the custom reservoir title tag
     const reservoirTitle = html.querySelector("meta[property='reservoir:title']");
 
-    let titleText = payload.sourceDomain; // Default name for source is the domain
+    let titleText = sourceDomain; // Default name for source is the domain
     if (reservoirTitle) {
       titleText = reservoirTitle.getAttribute("content") ?? "";
     }
@@ -70,7 +72,7 @@ export class FetchSourceInfoJob extends AbstractRabbitMqJobHandler {
 
     // Update the source data
     const sources = await Sources.getInstance();
-    await sources.update(payload.sourceDomain, {
+    await sources.update(sourceDomain, {
       title: titleText,
       icon: iconUrl,
       tokenUrlMainnet,
