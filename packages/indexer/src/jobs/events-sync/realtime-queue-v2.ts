@@ -4,7 +4,7 @@ import { randomUUID } from "crypto";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
 import { config } from "@/config/index";
-import { syncEvents } from "@/events-sync/syncEventsV2";
+import { checkForOrphanedBlock, syncEvents } from "@/events-sync/syncEventsV2";
 
 const QUEUE_NAME = "events-sync-realtime-v2";
 
@@ -32,6 +32,8 @@ if (config.doBackgroundWork && config.enableRealtimeProcessing) {
     async (job) => {
       try {
         const { block } = job.data as { block: number };
+
+        await checkForOrphanedBlock(block);
         await syncEvents(block);
       } catch (error) {
         logger.warn(QUEUE_NAME, `Events realtime syncing failed: ${error}`);
