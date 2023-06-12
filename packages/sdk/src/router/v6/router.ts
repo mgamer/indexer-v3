@@ -55,6 +55,8 @@ import SwapModuleAbi from "./abis/SwapModule.json";
 import X2Y2ModuleAbi from "./abis/X2Y2Module.json";
 import ZeroExV4ModuleAbi from "./abis/ZeroExV4Module.json";
 import ZoraModuleAbi from "./abis/ZoraModule.json";
+import PermitModuleAbi from "./abis/PermitModule.json";
+import { PermitTransfer } from "./permit";
 
 type SetupOptions = {
   x2y2ApiKey?: string;
@@ -171,6 +173,11 @@ export class Router {
         AlienswapModuleAbi,
         provider
       ),
+      permitModule: new Contract(
+        Addresses.PermitModule[chainId] ?? AddressZero,
+        PermitModuleAbi,
+        provider
+      ),
     };
   }
 
@@ -179,6 +186,8 @@ export class Router {
     taker: string,
     buyInCurrency = Sdk.Common.Addresses.Eth[this.chainId],
     options?: {
+      // Gasless buy
+      tryGasLess?: boolean;
       source?: string;
       // Will be split among all listings to get filled
       globalFees?: Fee[];
@@ -210,6 +219,7 @@ export class Router {
 
     const txs: {
       approvals: FTApproval[];
+      permitTransfers: PermitTransfer[];
       txData: TxData;
       orderIds: string[];
     }[] = [];
@@ -247,6 +257,7 @@ export class Router {
         const exchange = new Sdk.Universe.Exchange(this.chainId);
         txs.push({
           approvals: approval ? [approval] : [],
+          permitTransfers: [],
           txData: await exchange.fillOrderTx(taker, order, {
             amount: Number(detail.amount),
             source: options?.source,
@@ -271,6 +282,7 @@ export class Router {
         const exchange = new Sdk.CryptoPunks.Exchange(this.chainId);
         txs.push({
           approvals: [],
+          permitTransfers: [],
           txData: exchange.fillListingTx(taker, order, options),
           orderIds: [detail.orderId],
         });
@@ -306,6 +318,7 @@ export class Router {
         const exchange = new Sdk.Flow.Exchange(this.chainId);
         txs.push({
           approvals: approval ? [approval] : [],
+          permitTransfers: [],
           txData: exchange.takeMultipleOneOrdersTx(taker, [order]),
           orderIds: [detail.orderId],
         });
@@ -331,6 +344,7 @@ export class Router {
 
         txs.push({
           approvals: [],
+          permitTransfers: [],
           txData: exchange.fillOrderTx(
             taker,
             Number(order.params.id),
@@ -436,6 +450,7 @@ export class Router {
 
             txs.push({
               approvals: [],
+              permitTransfers: [],
               txData: {
                 from: data.from,
                 to: data.to,
@@ -2595,36 +2610,72 @@ export class Router {
         });
       }
 
-      txs.push({
-        approvals,
-        txData: {
-          from: relayer,
-          ...(ftTransferItems.length
-            ? {
-                to: this.contracts.approvalProxy.address,
-                data:
-                  this.contracts.approvalProxy.interface.encodeFunctionData(
-                    "bulkTransferWithExecute",
-                    [
-                      ftTransferItems,
-                      executions,
-                      Sdk.SeaportBase.Addresses.ReservoirConduitKey[this.chainId],
-                    ]
-                  ) + generateSourceBytes(options?.source),
-              }
-            : {
-                to: this.contracts.router.address,
-                data:
-                  this.contracts.router.interface.encodeFunctionData("execute", [executions]) +
-                  generateSourceBytes(options?.source),
-                value: executions
-                  .map((e) => bn(e.value))
-                  .reduce((a, b) => a.add(b))
-                  .toHexString(),
-              }),
-        },
-        orderIds,
-      });
+      const permitCurrencies = [Sdk.Common.Addresses.Usdc[this.chainId]];
+
+      const useGasless =
+        options?.tryGasLess &&
+        permitCurrencies.includes(buyInCurrency) &&
+        approvals.every((c) => c.currency === buyInCurrency);
+      if (useGasless) {
+        txs.push({
+          approvals,
+          permitTransfers: [
+            // Convert approvals to permit transfers via PermitModule
+            {
+              approval: approvals[0],
+              transferDetails: ftTransferItems,
+            },
+          ],
+          txData: {
+            from: relayer,
+            ...{
+              to: this.contracts.router.address,
+              data:
+                this.contracts.router.interface.encodeFunctionData("execute", [executions]) +
+                generateSourceBytes(options?.source),
+              value: executions
+                .map((e) => bn(e.value))
+                .reduce((a, b) => a.add(b))
+                .toHexString(),
+            },
+          },
+          orderIds,
+        });
+      }
+
+      if (!useGasless) {
+        txs.push({
+          approvals,
+          permitTransfers: [],
+          txData: {
+            from: relayer,
+            ...(ftTransferItems.length
+              ? {
+                  to: this.contracts.approvalProxy.address,
+                  data:
+                    this.contracts.approvalProxy.interface.encodeFunctionData(
+                      "bulkTransferWithExecute",
+                      [
+                        ftTransferItems,
+                        executions,
+                        Sdk.SeaportBase.Addresses.ReservoirConduitKey[this.chainId],
+                      ]
+                    ) + generateSourceBytes(options?.source),
+                }
+              : {
+                  to: this.contracts.router.address,
+                  data:
+                    this.contracts.router.interface.encodeFunctionData("execute", [executions]) +
+                    generateSourceBytes(options?.source),
+                  value: executions
+                    .map((e) => bn(e.value))
+                    .reduce((a, b) => a.add(b))
+                    .toHexString(),
+                }),
+          },
+          orderIds,
+        });
+      }
     }
 
     if (!txs.length) {

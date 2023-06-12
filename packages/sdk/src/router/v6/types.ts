@@ -2,6 +2,7 @@ import { BigNumberish } from "@ethersproject/bignumber";
 
 import * as Sdk from "../../index";
 import { TxData } from "../../utils";
+import { PermitTransfer } from "./permit";
 
 // Approvals and permits
 
@@ -173,6 +174,7 @@ export type FillListingsResult = {
     approvals: FTApproval[];
     txData: TxData;
     orderIds: string[];
+    permitTransfers: PermitTransfer[];
   }[];
   success: { [orderId: string]: boolean };
 };
