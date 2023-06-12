@@ -12,11 +12,8 @@ import * as blocksModel from "@/models/blocks";
 import getUuidByString from "uuid-by-string";
 import { BlockWithTransactions } from "@ethersproject/abstract-provider";
 
-import * as realtimeEventsSyncV2 from "@/jobs/events-sync/realtime-queue-v2";
-
 import * as removeUnsyncedEventsActivities from "@/jobs/activities/remove-unsynced-events-activities";
 import { Block } from "@/models/blocks";
-import { redis } from "@/common/redis";
 
 export const extractEventsBatches = (enhancedEvents: EnhancedEvent[]): EventsBatch[] => {
   const txHashToEvents = new Map<string, EnhancedEvent[]>();
@@ -272,27 +269,6 @@ const _saveBlockTransactions = async (blockData: BlockWithTransactions) => {
 export const syncEvents = async (block: number) => {
   try {
     logger.info("sync-events-v2", `Events realtime syncing block ${block}`);
-
-    // lets set the latest block to the block we are syncing if it is higher than the current latest block by 1. If it is higher than 1, we create a job to sync the missing blocks
-    // if its lower than the current latest block, we dont update the latest block in redis, but we still sync the block (this is for when we are catching up on missed blocks, or when we are syncing a block that is older than the current latest block)
-
-    const latestBlock = await redis.get("latest-block-realtime");
-    if (latestBlock) {
-      const latestBlockNumber = Number(latestBlock);
-      if (block > latestBlockNumber) {
-        if (block - latestBlockNumber === 1) {
-          await redis.set("latest-block-realtime", block);
-        } else {
-          // if we are missing more than 1 block, we need to sync the missing blocks
-          for (let i = latestBlockNumber + 1; i < block; i++) {
-            logger.info("sync-events-v2", `Found missing block: ${i}`);
-            await realtimeEventsSyncV2.addToQueue({ block });
-          }
-        }
-      }
-    } else {
-      await redis.set("latest-block-realtime", block);
-    }
 
     const startSyncTime = Date.now();
 
