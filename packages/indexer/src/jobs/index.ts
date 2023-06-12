@@ -490,6 +490,10 @@ export class RabbitMqJobsConsumer {
         consumerTag: RabbitMqJobsConsumer.getConsumerTag(job.getRetryQueue()),
       }
     );
+
+    channel.on("error", (error) => {
+      logger.error("rabbit-queues", `Channel error ${error}`);
+    });
   }
 
   /**
