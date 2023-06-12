@@ -16,7 +16,6 @@ import { BlockWithTransactions } from "@ethersproject/abstract-provider";
 
 import * as removeUnsyncedEventsActivities from "@/jobs/activities/remove-unsynced-events-activities";
 import { Block } from "@/models/blocks";
-import { deleteBlockTransactions } from "@/models/transactions";
 
 export const extractEventsBatches = (enhancedEvents: EnhancedEvent[]): EventsBatch[] => {
   const txHashToEvents = new Map<string, EnhancedEvent[]>();
@@ -424,7 +423,10 @@ export const checkForOrphanedBlock = async (block: number) => {
     // delete the orphaned block data
     await unsyncEvents(block, blockInDB[0].hash);
 
-    // delete the transaction data
-    await deleteBlockTransactions(block);
+    // TODO: add block hash to transactions table and delete transactions associated to the orphaned block
+    // await deleteBlockTransactions(block);
+
+    // delete the block data
+    await blocksModel.deleteBlock(block, blockInDB[0].hash);
   }
 };

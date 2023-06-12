@@ -187,16 +187,6 @@ export const saveTransactionsV2 = async (transactions: Transaction[]) => {
   );
 };
 
-export const deleteBlockTransactions = async (blockNumber: number) => {
-  await idb.none(
-    `
-      DELETE FROM transactions
-      WHERE block_number = $/blockNumber/
-    `,
-    { blockNumber }
-  );
-};
-
 export const getTransaction = async (
   hash: string
 ): Promise<Pick<Transaction, "hash" | "from" | "to" | "value" | "data" | "blockTimestamp">> => {

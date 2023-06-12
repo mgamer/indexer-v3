@@ -33,8 +33,8 @@ if (config.doBackgroundWork && config.enableRealtimeProcessing) {
       try {
         const { block } = job.data as { block: number };
 
-        await checkForOrphanedBlock(block);
         await syncEvents(block);
+        await checkForOrphanedBlock(block);
       } catch (error) {
         logger.warn(QUEUE_NAME, `Events realtime syncing failed: ${error}`);
         throw error;
