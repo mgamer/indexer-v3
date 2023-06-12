@@ -5,6 +5,7 @@ import { redis } from "@/common/redis";
 import { config } from "@/config/index";
 import * as ActivitiesIndex from "@/elasticsearch/indexes/activities";
 import { Collections } from "@/models/collections";
+import { randomUUID } from "crypto";
 
 const QUEUE_NAME = "refresh-activities-collection-metadata-queue";
 
@@ -14,6 +15,7 @@ export const queue = new Queue(QUEUE_NAME, {
     attempts: 10,
     removeOnComplete: 1000,
     removeOnFail: 1000,
+    timeout: 120000,
     backoff: {
       type: "fixed",
       delay: 5000,
@@ -27,14 +29,29 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      logger.info(QUEUE_NAME, `Worker started. jobData=${JSON.stringify(job.data)}`);
+      const collectionId = job.data.collectionId;
+      let collectionUpdateData = job.data.collectionData;
 
-      const { collectionId } = job.data;
+      if (!collectionUpdateData) {
+        const collectionData = await Collections.getById(collectionId);
 
-      const collectionData = await Collections.getById(collectionId);
+        if (collectionData) {
+          collectionUpdateData = {
+            name: collectionData.name,
+            image: collectionData.metadata?.imageUrl,
+          };
+        }
+      }
 
-      if (collectionData) {
-        await ActivitiesIndex.updateActivitiesCollectionMetadata(collectionId, collectionData);
+      if (collectionUpdateData) {
+        const keepGoing = await ActivitiesIndex.updateActivitiesCollectionMetadata(
+          collectionId,
+          collectionUpdateData
+        );
+
+        if (keepGoing) {
+          await addToQueue(collectionId, collectionUpdateData);
+        }
       }
     },
     { connection: redis.duplicate(), concurrency: 1 }
@@ -45,6 +62,9 @@ if (config.doBackgroundWork) {
   });
 }
 
-export const addToQueue = async (collectionId: string) => {
-  await queue.add(`${collectionId}`, { collectionId }, { jobId: `${collectionId}` });
+export const addToQueue = async (
+  collectionId: string,
+  collectionUpdateData?: { name: string | null; image?: string | null }
+) => {
+  await queue.add(randomUUID(), { collectionId, collectionUpdateData });
 };

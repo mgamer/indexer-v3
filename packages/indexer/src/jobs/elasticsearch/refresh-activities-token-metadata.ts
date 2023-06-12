@@ -5,6 +5,8 @@ import { redis } from "@/common/redis";
 import { config } from "@/config/index";
 import { Tokens } from "@/models/tokens";
 import * as ActivitiesIndex from "@/elasticsearch/indexes/activities";
+import { randomUUID } from "crypto";
+import _ from "lodash";
 
 const QUEUE_NAME = "refresh-activities-token-metadata-queue";
 
@@ -27,14 +29,30 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      logger.info(QUEUE_NAME, `Worker started. jobData=${JSON.stringify(job.data)}`);
-
       const { contract, tokenId } = job.data;
 
-      const tokenData = await Tokens.getByContractAndTokenId(contract, tokenId);
+      let tokenUpdateData =
+        job.data.tokenUpdateData ?? (await Tokens.getByContractAndTokenId(contract, tokenId));
 
-      if (tokenData) {
-        await ActivitiesIndex.updateActivitiesTokenMetadata(contract, tokenId, tokenData);
+      tokenUpdateData = _.pickBy(tokenUpdateData, (value) => value !== null);
+
+      if (!_.isEmpty(tokenUpdateData)) {
+        const keepGoing = await ActivitiesIndex.updateActivitiesTokenMetadata(
+          contract,
+          tokenId,
+          tokenUpdateData
+        );
+
+        if (keepGoing) {
+          await addToQueue(contract, tokenId, tokenUpdateData);
+        }
+      } else {
+        logger.info(
+          QUEUE_NAME,
+          `Worker Skipped. jobData=${JSON.stringify(job.data)}, tokenUpdateData=${JSON.stringify(
+            tokenUpdateData
+          )}`
+        );
       }
     },
     { connection: redis.duplicate(), concurrency: 1 }
@@ -45,10 +63,10 @@ if (config.doBackgroundWork) {
   });
 }
 
-export const addToQueue = async (contract: string, tokenId: string) => {
-  await queue.add(
-    `${contract}:${tokenId}`,
-    { contract, tokenId },
-    { jobId: `${contract}:${tokenId}` }
-  );
+export const addToQueue = async (
+  contract: string,
+  tokenId: string,
+  tokenUpdateData?: { name?: string | null; image?: string | null; media?: string | null }
+) => {
+  await queue.add(randomUUID(), { contract, tokenId, tokenUpdateData });
 };
