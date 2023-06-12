@@ -191,6 +191,8 @@ export class RabbitMq {
         maxPriority: queue.getQueueType() === "classic" ? 1 : undefined,
         arguments: {
           "x-message-deduplication": true,
+          "x-cache-size": 1000,
+          "x-cache-persistence": "memory",
           "x-single-active-consumer": queue.getSingleActiveConsumer(),
           "x-queue-type": queue.getQueueType(),
         },
