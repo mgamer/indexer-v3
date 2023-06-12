@@ -19,6 +19,8 @@ export type BackoffStrategy =
     }
   | null;
 
+export type QueueType = "classic" | "quorum";
+
 export type AbstractRabbitMqJobHandlerEvents = {
   onCompleted: (message: RabbitMQMessage) => void;
   onError: (message: RabbitMQMessage, error: any) => void;
@@ -39,6 +41,7 @@ export abstract class AbstractRabbitMqJobHandler extends (EventEmitter as new ()
   protected persistent = true;
   protected useSharedChannel = false;
   protected lazyMode = false;
+  protected queueType: QueueType = "classic";
 
   private sharedChannelName = "shared-channel";
 
@@ -133,6 +136,10 @@ export abstract class AbstractRabbitMqJobHandler extends (EventEmitter as new ()
 
   public getBackoff(): BackoffStrategy {
     return this.backoff;
+  }
+
+  public getQueueType(): string {
+    return this.queueType;
   }
 
   public async send(job: { payload?: any; jobId?: string } = {}, delay = 0, priority = 0) {

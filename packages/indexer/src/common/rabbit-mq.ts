@@ -188,10 +188,11 @@ export class RabbitMq {
     const consumerQueues = RabbitMqJobsConsumer.getQueues();
     for (const queue of consumerQueues) {
       const options = {
-        maxPriority: 1,
+        maxPriority: queue.getQueueType() === "classic" ? 1 : undefined,
         arguments: {
           "x-message-deduplication": true,
           "x-single-active-consumer": queue.getSingleActiveConsumer(),
+          "x-queue-type": queue.getQueueType(),
         },
       };
 
