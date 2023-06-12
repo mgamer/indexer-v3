@@ -9,6 +9,7 @@ export interface WebsocketMessage {
   changed?: string[];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data: any;
+  offset?: string;
 }
 
 export const publishWebsocketEvent = async (message: WebsocketMessage): Promise<void> => {
