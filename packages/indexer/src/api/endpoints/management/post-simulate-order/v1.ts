@@ -126,7 +126,14 @@ export const postSimulateOrderV1Options: RouteOptions = {
           .catch((error) => {
             logger.info(
               "debug-blur-simulation",
-              JSON.stringify({ error, message: error.message, data: error.reponse?.data })
+              JSON.stringify({
+                error,
+                message: error.message,
+                data: error.reponse?.data,
+                url: `${config.orderFetcherBaseUrl}/api/blur-token?collection=${
+                  orderResult.token_set_id.split(":")[1]
+                }&tokenId=${orderResult.token_set_id.split(":")[2]}`,
+              })
             );
           });
         logger.info(
@@ -136,6 +143,9 @@ export const postSimulateOrderV1Options: RouteOptions = {
             price: orderResult.price,
             blurPrice,
             isDifferent: orderResult.price !== blurPrice,
+            url: `${config.orderFetcherBaseUrl}/api/blur-token?collection=${
+              orderResult.token_set_id.split(":")[1]
+            }&tokenId=${orderResult.token_set_id.split(":")[2]}`,
           })
         );
       }
