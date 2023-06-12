@@ -539,7 +539,7 @@ export const getExecuteSellV7Options: RouteOptions = {
                   OR orders.taker = '\\x0000000000000000000000000000000000000000'
                   OR orders.taker = $/taker/
                 )
-                ${item.exclusions?.length ? " AND orders.id NOT IN ($/excludedOrderIds/)" : ""}
+                ${item.exclusions?.length ? " AND orders.id NOT IN ($/excludedOrderIds:list/)" : ""}
             `,
             {
               id: item.orderId,
@@ -705,7 +705,7 @@ export const getExecuteSellV7Options: RouteOptions = {
                 ${payload.normalizeRoyalties ? " AND orders.normalized_value IS NOT NULL" : ""}
                 ${payload.excludeEOA ? " AND orders.kind != 'blur'" : ""}
                 ${item.exactOrderSource ? " AND orders.source_id_int = $/sourceId/" : ""}
-                ${item.exclusions?.length ? " AND orders.id NOT IN ($/excludedOrderIds/)" : ""}
+                ${item.exclusions?.length ? " AND orders.id NOT IN ($/excludedOrderIds:list/)" : ""}
               ORDER BY ${
                 payload.normalizeRoyalties ? "orders.normalized_value" : "orders.value"
               } DESC

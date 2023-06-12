@@ -591,7 +591,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
                   OR orders.taker = '\\x0000000000000000000000000000000000000000'
                   OR orders.taker = $/taker/
                 )
-                ${item.exclusions?.length ? " AND orders.id NOT IN ($/excludedOrderIds/)" : ""}
+                ${item.exclusions?.length ? " AND orders.id NOT IN ($/excludedOrderIds:list/)" : ""}
             `,
             {
               taker: toBuffer(payload.taker),
@@ -856,7 +856,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
                     : ""
                 }
                 ${item.exactOrderSource ? " AND orders.source_id_int = $/sourceId/" : ""}
-                ${item.exclusions?.length ? " AND orders.id NOT IN ($/excludedOrderIds/)" : ""}
+                ${item.exclusions?.length ? " AND orders.id NOT IN ($/excludedOrderIds:list/)" : ""}
               ORDER BY
                 ${payload.normalizeRoyalties ? "orders.normalized_value" : "orders.value"},
                 ${
