@@ -164,16 +164,16 @@ export const setupRouterWithModules = async (chainId: number, deployer: SignerWi
     );
   Sdk.RouterV6.Addresses.ApprovalProxy[chainId] = approvalProxy.address.toLowerCase();
 
-  const permitModule = await ethers
-    .getContractFactory("PermitModule", deployer)
+  const permitProxy = await ethers
+    .getContractFactory("PermitProxy", deployer)
     .then((factory) =>
       factory.deploy(
         deployer.address,
-        deployer.address,
+        router.address,
       )
     );
 
-  Sdk.RouterV6.Addresses.PermitModule[chainId] = permitModule.address.toLowerCase();
+  Sdk.RouterV6.Addresses.PermitProxy[chainId] = permitProxy.address.toLowerCase();
 
   const conduitKey = await setupConduit(chainId, deployer, [approvalProxy.address]);
   Sdk.SeaportBase.Addresses.ReservoirConduitKey[chainId] = conduitKey;

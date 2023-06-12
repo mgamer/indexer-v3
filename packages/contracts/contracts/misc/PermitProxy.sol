@@ -1,17 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
+import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import {ERC2771Context} from "../interfaces/ERC2771Context.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20Permit} from "../interfaces/IERC20Permit.sol";
+import {IReservoirV6_0_1} from "../interfaces/IReservoirV6_0_1.sol";
 
-import {BaseExchangeModule} from "./BaseExchangeModule.sol";
-import {BaseModule} from "../BaseModule.sol";
-import {IUniswapV3Router} from "../../../interfaces/IUniswapV3Router.sol";
-import {IERC20Permit} from "../../../interfaces/IERC20Permit.sol";
 
 // Notes:
-// - transfer ERC20 token via gasless permit signature
+// - transfer ERC20 token via gasless permit signature and with the ERC2771 sender check
 
-contract PermitModule is BaseExchangeModule {
+contract PermitProxy is ERC2771Context, ReentrancyGuard {
+
+  IReservoirV6_0_1 internal immutable _ROUTER;
 
   struct TransferDetail {
     address recipient;
@@ -29,10 +31,8 @@ contract PermitModule is BaseExchangeModule {
   }
 
   // --- Constructor ---
-  constructor(
-    address owner,
-    address router
-  ) BaseModule(owner) BaseExchangeModule(router) {
+  constructor(address trustedForwarder, address router) ERC2771Context(trustedForwarder) {
+    _ROUTER = IReservoirV6_0_1(router);
   }
 
   function splitSignature(bytes memory sig) public pure returns (bytes32 r, bytes32 s, uint8 v) {
@@ -44,12 +44,13 @@ contract PermitModule is BaseExchangeModule {
     }
   }
 
-  // --- Wrap ---
-  function transfer(PermitTransfer[] calldata transfers) external payable nonReentrant {
+  function transferWithExecute(PermitTransfer[] calldata transfers, IReservoirV6_0_1.ExecutionInfo[] calldata executionInfos) external nonReentrant {
     uint256 length = transfers.length;
+    // forward funds
     for (uint256 i = 0; i < length; ) {
       PermitTransfer memory transfer = transfers[i];
       (bytes32 r, bytes32 s, uint8 v) = splitSignature(transfer.signature);
+      require(transfer.owner == _msgSender(), "Invalid _msgSender");
       IERC20Permit(transfers[i].token).permit(
         transfer.owner,
         transfer.spender,
@@ -75,5 +76,6 @@ contract PermitModule is BaseExchangeModule {
         ++i;
       }
     }
+    _ROUTER.execute(executionInfos);
   }
 }

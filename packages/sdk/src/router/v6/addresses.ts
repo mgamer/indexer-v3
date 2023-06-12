@@ -156,6 +156,6 @@ export const SuperRareModule: ChainIdToAddress = {
   [Network.Ethereum]: "0x512a6a1a74f1f08aac8155605b9da8ace46b3d9c",
 };
 
-export const PermitModule: ChainIdToAddress = {
+export const PermitProxy: ChainIdToAddress = {
   [Network.Ethereum]: "",
 };

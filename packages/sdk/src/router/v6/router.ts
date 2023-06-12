@@ -55,7 +55,7 @@ import SwapModuleAbi from "./abis/SwapModule.json";
 import X2Y2ModuleAbi from "./abis/X2Y2Module.json";
 import ZeroExV4ModuleAbi from "./abis/ZeroExV4Module.json";
 import ZoraModuleAbi from "./abis/ZoraModule.json";
-import PermitModuleAbi from "./abis/PermitModule.json";
+import PermitProxyAbi from "./abis/PermitProxy.json";
 import { PermitTransfer } from "./permit";
 import SudoswapV2ModuleAbi from "./abis/SudoswapV2Module.json";
 
@@ -179,9 +179,9 @@ export class Router {
         AlienswapModuleAbi,
         provider
       ),
-      permitModule: new Contract(
-        Addresses.PermitModule[chainId] ?? AddressZero,
-        PermitModuleAbi,
+      permitProxy: new Contract(
+        Addresses.PermitProxy[chainId] ?? AddressZero,
+        PermitProxyAbi,
         provider
       ),
     };

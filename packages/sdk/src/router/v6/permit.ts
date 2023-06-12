@@ -4,7 +4,7 @@ import { Contract } from "@ethersproject/contracts";
 import { TxData, getCurrentTimestamp } from "../../utils";
 import * as ApprovalProxy from "./approval-proxy";
 import RouterAbi from "./abis/ReservoirV6_0_1.json";
-import PermitModuleAbi from "./abis/PermitModule.json";
+import PermitProxyAbi from "./abis/PermitProxy.json";
 import * as Addresses from "./addresses";
 import { FTApproval } from "./types";
 
@@ -34,16 +34,12 @@ export class PermitHandler {
   public chainId: number;
   public provider: Provider;
 
-  public permit2Module: Contract;
+  public permitProxy: Contract;
 
   constructor(chainId: number, provider: Provider) {
     this.chainId = chainId;
     this.provider = provider;
-    this.permit2Module = new Contract(
-      Addresses.PermitModule[this.chainId],
-      PermitModuleAbi,
-      provider
-    );
+    this.permitProxy = new Contract(Addresses.PermitProxy[this.chainId], PermitProxyAbi, provider);
   }
 
   public async getSignatureData(permitTransfer: PermitTransfer, expiresIn = 10 * 60) {
@@ -75,7 +71,7 @@ export class PermitHandler {
 
     const values = {
       owner: approval.owner,
-      spender: this.permit2Module.address,
+      spender: this.permitProxy.address,
       value: approval.amount,
       nonce,
       deadline,
@@ -119,23 +115,15 @@ export class PermitHandler {
     };
   }
 
-  public attachToRouterExecution(txData: TxData, permitTransfer: PermitData): TxData {
+  public bundleRouterExecution(txData: TxData, permitTransfer: PermitData): TxData {
     const routerIface = new Interface(RouterAbi);
     const executionInfos = routerIface.decodeFunctionData("execute", txData.data).executionInfos;
-
     return {
       ...txData,
-      data: routerIface.encodeFunctionData("execute", [
-        [
-          ...[
-            {
-              module: this.permit2Module.address,
-              data: this.permit2Module.interface.encodeFunctionData("transfer", [[permitTransfer]]),
-              value: 0,
-            },
-          ],
-          ...executionInfos,
-        ],
+      to: this.permitProxy.address,
+      data: this.permitProxy.interface.encodeFunctionData("transferWithExecute", [
+        [permitTransfer],
+        executionInfos,
       ]),
     };
   }
