@@ -4,7 +4,7 @@ import { randomUUID } from "crypto";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
 import { config } from "@/config/index";
-import { syncEvents } from "@/events-sync/syncEventsV2";
+import { checkForOrphanedBlock, syncEvents } from "@/events-sync/syncEventsV2";
 
 const QUEUE_NAME = "events-sync-realtime-v2";
 
@@ -32,7 +32,6 @@ if (config.doBackgroundWork && config.enableRealtimeProcessing) {
     async (job) => {
       try {
         const { block } = job.data as { block: number };
-
         // lets set the latest block to the block we are syncing if it is higher than the current latest block by 1. If it is higher than 1, we create a job to sync the missing blocks
         // if its lower than the current latest block, we dont update the latest block in redis, but we still sync the block (this is for when we are catching up on missed blocks, or when we are syncing a block that is older than the current latest block)
         const latestBlock = await redis.get("latest-block-realtime");
@@ -54,6 +53,7 @@ if (config.doBackgroundWork && config.enableRealtimeProcessing) {
         }
 
         await syncEvents(block);
+        await checkForOrphanedBlock(block);
       } catch (error) {
         logger.warn(QUEUE_NAME, `Events realtime syncing failed: ${error}`);
         throw error;

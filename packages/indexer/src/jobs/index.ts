@@ -2,6 +2,7 @@
 
 // Initialize all background job queues and crons
 
+import "@/jobs/arweave-relay";
 import "@/jobs/backfill";
 import "@/jobs/bid-updates";
 import "@/jobs/cache-check";
@@ -136,7 +137,6 @@ import * as orderbookPostOrderExternalOpensea from "@/jobs/orderbook/post-order-
 
 import * as orderbookTokenSets from "@/jobs/orderbook/token-sets-queue";
 import * as orderbookOpenseaListings from "@/jobs/orderbook/opensea-listings-queue";
-import * as orderbookSaveOpenseaWebsocketEvents from "@/jobs/orderbook/save-opensea-websocket-events-queue";
 
 import * as fetchSourceInfo from "@/jobs/sources/fetch-source-info";
 
@@ -331,7 +331,6 @@ export const allJobQueues = [
   orderbookPostOrderExternalOpensea.queue,
   orderbookTokenSets.queue,
   orderbookOpenseaListings.queue,
-  orderbookSaveOpenseaWebsocketEvents.queue,
 
   fetchSourceInfo.queue,
 

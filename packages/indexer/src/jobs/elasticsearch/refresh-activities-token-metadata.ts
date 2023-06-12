@@ -6,6 +6,7 @@ import { config } from "@/config/index";
 import { Tokens } from "@/models/tokens";
 import * as ActivitiesIndex from "@/elasticsearch/indexes/activities";
 import { randomUUID } from "crypto";
+import _ from "lodash";
 
 const QUEUE_NAME = "refresh-activities-token-metadata-queue";
 
@@ -28,25 +29,14 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      logger.info(QUEUE_NAME, `Worker started. jobData=${JSON.stringify(job.data)}`);
-
       const { contract, tokenId } = job.data;
 
-      let tokenUpdateData = job.data.tokenUpdateData;
+      let tokenUpdateData =
+        job.data.tokenUpdateData ?? (await Tokens.getByContractAndTokenId(contract, tokenId));
 
-      if (!tokenUpdateData) {
-        const tokenData = await Tokens.getByContractAndTokenId(contract, tokenId);
+      tokenUpdateData = _.pickBy(tokenUpdateData, (value) => value !== null);
 
-        if (tokenData) {
-          tokenUpdateData = {
-            name: tokenData.name,
-            image: tokenData.image,
-            media: tokenData.media,
-          };
-        }
-      }
-
-      if (tokenUpdateData) {
+      if (!_.isEmpty(tokenUpdateData)) {
         const keepGoing = await ActivitiesIndex.updateActivitiesTokenMetadata(
           contract,
           tokenId,
@@ -54,15 +44,15 @@ if (config.doBackgroundWork) {
         );
 
         if (keepGoing) {
-          logger.info(
-            QUEUE_NAME,
-            `KeepGoing. jobData=${JSON.stringify(job.data)}, tokenUpdateData=${JSON.stringify(
-              tokenUpdateData
-            )}`
-          );
-
           await addToQueue(contract, tokenId, tokenUpdateData);
         }
+      } else {
+        logger.info(
+          QUEUE_NAME,
+          `Worker Skipped. jobData=${JSON.stringify(job.data)}, tokenUpdateData=${JSON.stringify(
+            tokenUpdateData
+          )}`
+        );
       }
     },
     { connection: redis.duplicate(), concurrency: 1 }
@@ -76,7 +66,7 @@ if (config.doBackgroundWork) {
 export const addToQueue = async (
   contract: string,
   tokenId: string,
-  tokenUpdateData?: { name: string | null; image?: string | null; media?: string | null }
+  tokenUpdateData?: { name?: string | null; image?: string | null; media?: string | null }
 ) => {
   await queue.add(randomUUID(), { contract, tokenId, tokenUpdateData });
 };

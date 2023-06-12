@@ -384,7 +384,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
       // Handle sell orders
       try {
-        if ([SudoswapV2PoolKind.TOKEN, SudoswapV2PoolKind.TRADE].includes(pool.poolKind)) {
+        if ([SudoswapV2PoolKind.NFT, SudoswapV2PoolKind.TRADE].includes(pool.poolKind)) {
           let tmpPriceList: (BigNumber | undefined)[] = Array.from(
             { length: POOL_ORDERS_MAX_PRICE_POINTS_COUNT },
             () => undefined
