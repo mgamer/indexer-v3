@@ -4,6 +4,7 @@ import * as Boom from "@hapi/boom";
 
 import { logger } from "@/common/logger";
 import * as orderRevalidations from "@/jobs/order-fixes/revalidations";
+import * as blurBidsRefresh from "@/jobs/order-updates/misc/blur-bids-refresh";
 
 // Callback for errors coming from the router logic
 export const fillErrorCallback = async (
@@ -19,6 +20,13 @@ export const fillErrorCallback = async (
   if (isUnrecoverable) {
     // Invalidate the order
     await orderRevalidations.addToQueue([{ id: data.orderId, status: "inactive" }]);
+  }
+
+  // Custom logic based on the error kind
+  if (kind === "order-fetcher-blur-offers") {
+    if (data.additionalInfo.contract) {
+      await blurBidsRefresh.addToQueue(data.additionalInfo.contract, true);
+    }
   }
 
   logger.warn(
@@ -72,7 +80,6 @@ const prettifyError = (msg: string): PrettyErrorDetails => {
       };
 
     case matches("request was throttled"):
-    case matches("could not fetch calldata for all blur listings"):
       return {
         message: "Unable to fetch the order due to rate limiting. Please try again soon.",
         status: StatusCode.FAILED_DEPENDENCY,
@@ -82,11 +89,13 @@ const prettifyError = (msg: string): PrettyErrorDetails => {
     case matches("requested order is inactive and can only be seen by the order creator"):
     case matches("the order_hash you provided does not exist"):
     case matches("cannot read properties of undefined (reading 'node')"):
+    case matches("listingnotfound"):
       return {
         message: "The order is not available anymore",
         status: StatusCode.GONE,
       };
 
+    case matches("could not fetch calldata for all blur listings"):
     case matches("error when generating fulfillment data"):
     case matches("you are not eligible to fulfill this order"):
     case matches("cannot be fulfilled for identifier"):
