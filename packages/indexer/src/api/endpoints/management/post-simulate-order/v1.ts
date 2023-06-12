@@ -114,7 +114,7 @@ export const postSimulateOrderV1Options: RouteOptions = {
       if (orderResult.side === "sell" && orderResult.kind === "blur") {
         const blurPrice = await axios
           .get(
-            `${config.orderFetcherBaseUrl}/api/blur-token?collection=${
+            `${config.orderFetcherBaseUrl}/api/blur-token?contract=${
               orderResult.token_set_id.split(":")[1]
             }&tokenId=${orderResult.token_set_id.split(":")[2]}`
           )
@@ -130,7 +130,7 @@ export const postSimulateOrderV1Options: RouteOptions = {
                 error,
                 message: error.message,
                 data: error.reponse?.data,
-                url: `${config.orderFetcherBaseUrl}/api/blur-token?collection=${
+                url: `${config.orderFetcherBaseUrl}/api/blur-token?contract=${
                   orderResult.token_set_id.split(":")[1]
                 }&tokenId=${orderResult.token_set_id.split(":")[2]}`,
               })
@@ -143,7 +143,7 @@ export const postSimulateOrderV1Options: RouteOptions = {
             price: orderResult.price,
             blurPrice,
             isDifferent: orderResult.price !== blurPrice,
-            url: `${config.orderFetcherBaseUrl}/api/blur-token?collection=${
+            url: `${config.orderFetcherBaseUrl}/api/blur-token?contract=${
               orderResult.token_set_id.split(":")[1]
             }&tokenId=${orderResult.token_set_id.split(":")[2]}`,
           })
