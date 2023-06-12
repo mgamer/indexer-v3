@@ -42,26 +42,36 @@ export const checkMarketplaceIsFiltered = async (
 };
 
 export const isBlockedByCustomRegistry = async (contract: string, operators: string[]) => {
-  const iface = new Interface(["function registry() external view returns (address)"]);
-  const nft = new Contract(contract, iface, baseProvider);
-  try {
-    const registryAddress = await nft.registry();
-    const registry = new Contract(
-      registryAddress,
-      new Interface(["function isAllowedOperator(address operator) external view returns (bool)"]),
-      baseProvider
-    );
-    const allowedStats = await Promise.all(operators.map((c) => registry.isAllowedOperator(c)));
-    return allowedStats.some((c) => c === false);
-  } catch {
-    return false;
+  const cacheKey = `marketplace-blacklist-custom-registry:${contract}`;
+  const cache = await redis.get(cacheKey);
+  if (!cache) {
+    await redis.set(cacheKey, "locked", "EX", 24 * 3600);
+
+    const iface = new Interface(["function registry() external view returns (address)"]);
+    const nft = new Contract(contract, iface, baseProvider);
+    try {
+      const registry = new Contract(
+        await nft.registry(),
+        new Interface([
+          "function isAllowedOperator(address operator) external view returns (bool)",
+        ]),
+        baseProvider
+      );
+      const allowed = await Promise.all(operators.map((c) => registry.isAllowedOperator(c)));
+      return allowed.some((c) => c === false);
+    } catch {
+      return false;
+    }
   }
+
+  return false;
 };
 
 export const getMarketplaceBlacklist = async (contract: string): Promise<string[]> => {
   const iface = new Interface([
-    "function filteredOperators(address registrant) external view returns (address[] memory)",
+    "function filteredOperators(address registrant) external view returns (address[])",
   ]);
+
   const opensea = new Contract(
     Sdk.SeaportBase.Addresses.OperatorFilterRegistry[config.chainId],
     iface,
