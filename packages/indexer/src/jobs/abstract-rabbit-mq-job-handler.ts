@@ -60,8 +60,18 @@ export abstract class AbstractRabbitMqJobHandler extends (EventEmitter as new ()
       // Set the backoff strategy delay
       let delay = this.getBackoffDelay(message);
 
+      // Retry enforce duplications
+      if (message.jobId) {
+        message.jobId = `${message.jobId}.retry-${message.retryCount}`;
+      }
+
       // If the event has already been retried maxRetries times, send it to the dead letter queue
       if (message.retryCount > this.maxRetries) {
+        // String the retry from the job id when sending to the dead letter
+        if (message.jobId) {
+          message.jobId = _.replace(message.jobId, /\.retry-\d+/, "");
+        }
+
         queueName = this.getDeadLetterQueue();
         delay = 0;
       }
