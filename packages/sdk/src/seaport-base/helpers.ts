@@ -1,6 +1,7 @@
+import { BigNumber } from "@ethersproject/bignumber";
+
 import * as Types from "../seaport-base/types";
 import { bn, getCurrentTimestamp, generateRandomSalt, lc } from "../utils";
-import { BigNumber } from "@ethersproject/bignumber";
 
 export const isCurrencyItem = ({ itemType }: { itemType: Types.ItemType }) =>
   [Types.ItemType.NATIVE, Types.ItemType.ERC20].includes(itemType);
@@ -154,15 +155,16 @@ export function computeDynamicPrice(
   timestampOverride?: number
 ) {
   let price = bn(0);
-  const offerItem = isBuy ? params.offer : params.consideration;
-  for (const c of offerItem) {
+
+  const items = isBuy ? params.offer : params.consideration;
+  for (const c of items) {
     const decreasing = bn(c.startAmount).gt(c.endAmount);
+
     // startAmount + (currentTime - startTime) / (endTime - startTime) * (endAmount - startAmount)
     const priceChange = bn(timestampOverride ?? getCurrentTimestamp(-60))
       .sub(params.startTime)
       .mul(bn(c.endAmount).sub(c.startAmount))
       .div(bn(params.endTime).sub(params.startTime));
-
     price = price.add(bn(c.startAmount).add(priceChange));
 
     // Ensure we don't return any negative prices

@@ -548,7 +548,7 @@ describe("SeaportV15 - SingleToken Erc721", () => {
         paymentToken: Common.Addresses.Weth[chainId],
         price,
         counter: 0,
-        startTime: await getCurrentTimestamp(ethers.provider) - 120,
+        startTime: (await getCurrentTimestamp(ethers.provider)) - 120,
         endTime: (await getCurrentTimestamp(ethers.provider)) + 600,
       },
       SeaportV15.Order
@@ -563,7 +563,6 @@ describe("SeaportV15 - SingleToken Erc721", () => {
     const matchParams = buyOrder.buildMatching();
 
     const buyerWethBalanceBefore = await weth.getBalance(buyer.address);
-    const sellerWethBalanceBefore = await weth.getBalance(seller.address);
     const ownerBefore = await nft.getOwner(boughtTokenId);
 
     expect(ownerBefore).to.eq(seller.address);
@@ -571,19 +570,17 @@ describe("SeaportV15 - SingleToken Erc721", () => {
     const fillTime = await getCurrentTimestamp(ethers.provider);
     const fillPrice = buyOrder.getMatchingPrice(fillTime);
 
-    console.log('fillPrice', fillPrice)
-
     // Match orders
     await exchange.fillOrder(seller, buyOrder, matchParams, {
-      timestampOverride: fillTime
+      timestampOverride: fillTime,
     });
 
     const buyerWethBalanceAfter = await weth.getBalance(buyer.address);
     const ownerAfter = await nft.getOwner(boughtTokenId);
 
     const diff = bn(fillPrice).sub(buyerWethBalanceAfter.sub(buyerWethBalanceBefore));
-    
-    expect(diff).to.lt(bn('3669444444444444444'));
+
+    expect(diff).to.lt(bn("3669444444444444444"));
     expect(ownerAfter).to.eq(buyer.address);
   });
 });
