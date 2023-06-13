@@ -14,9 +14,9 @@ export interface WebsocketMessage {
 }
 
 export const publishWebsocketEvent = async (message: WebsocketMessage): Promise<void> => {
+  await addOffsetToSortedSet(message, message.offset);
   message.published_at = Date.now();
   await redisWebsocketPublisher.publish("events", JSON.stringify(message));
-  await addOffsetToSortedSet(message, message.offset);
 };
 
 export const addOffsetToSortedSet = async (
