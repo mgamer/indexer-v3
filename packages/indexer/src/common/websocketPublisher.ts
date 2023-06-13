@@ -1,4 +1,5 @@
-import { redisWebsocketPublisher } from "./redis";
+import { logger } from "@/common/logger";
+import { redisWebsocketClient, redisWebsocketPublisher } from "./redis";
 
 export interface WebsocketMessage {
   published_at?: number;
@@ -22,8 +23,19 @@ export const addOffsetToSortedSet = async (
   event: WebsocketMessage,
   offset?: string
 ): Promise<void> => {
-  if (!offset) {
-    return;
+  try {
+    if (!offset) {
+      return;
+    }
+    const stringOffset = String(offset);
+    const stringEvent = String(event.event);
+
+    await redisWebsocketClient.zadd(
+      "offsets",
+      String(Date.now()),
+      `${stringOffset}-${stringEvent}`
+    );
+  } catch (error) {
+    logger.error("add-offset-to-sorted-set", "Failed to add offset to sorted set: " + error);
   }
-  await redisWebsocketPublisher.zadd("offsets", offset + "-" + event.event, Date.now());
 };
