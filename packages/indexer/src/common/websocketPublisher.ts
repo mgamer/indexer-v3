@@ -32,8 +32,8 @@ export const addOffsetToSortedSet = async (
 
     await redisWebsocketPublisher.zadd(
       "offsets",
-      `${stringOffset}-${stringEvent}`,
-      String(Date.now())
+      String(Date.now()),
+      `${stringOffset}-${stringEvent}`
     );
   } catch (error) {
     logger.error("add-offset-to-sorted-set", "Failed to add offset to sorted set: " + error);
