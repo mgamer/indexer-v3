@@ -1,5 +1,5 @@
 import { logger } from "@/common/logger";
-import { redisWebsocketPublisher } from "./redis";
+import { redisWebsocketClient, redisWebsocketPublisher } from "./redis";
 
 export interface WebsocketMessage {
   published_at?: number;
@@ -30,7 +30,7 @@ export const addOffsetToSortedSet = async (
     const stringOffset = String(offset);
     const stringEvent = String(event.event);
 
-    await redisWebsocketPublisher.zadd(
+    await redisWebsocketClient.zadd(
       "offsets",
       String(Date.now()),
       `${stringOffset}-${stringEvent}`
