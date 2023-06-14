@@ -1,98 +1,74 @@
-import { idb, redb } from "@/common/db";
+import { idb, redb, pgp } from "@/common/db";
 import { fromBuffer, toBuffer } from "@/common/utils";
+
+import { Interface } from "@ethersproject/abi";
+import { Contract } from "@ethersproject/contracts";
+import * as Sdk from "@reservoir0x/sdk";
+import { config } from "@/config/index";
+import { baseProvider } from "@/common/provider";
 
 export const getConduits = async (
   conduitKeys: string[]
 ): Promise<
   {
     conduitKey: string;
-    conduit: string;
-    channels: string[];
+    channel: string;
   }[]
 > => {
   const results = await redb.many(
     ` SELECT 
         conduit_key,
-        conduit,
-        channels
-      FROM seaport_conduits
-      WHERE seaport_conduits.conduit_key IN ($/keyIds:list/)
+        channel
+      FROM seaport_conduit_open_channels
+      WHERE seaport_conduit_open_channels.conduit_key IN ($/keyIds:list/)
     `,
     { keyIds: conduitKeys.map((c) => toBuffer(c)) }
   );
   return results.map((c) => {
     return {
       conduitKey: fromBuffer(c.conduit_key),
-      conduit: fromBuffer(c.conduit),
-      channels: c.channels,
+      channel: fromBuffer(c.channel),
     };
   });
 };
 
-export const checkChannelIsOpen = async (conduitKey: string, channel: string): Promise<boolean> => {
-  const results = await getConduits([conduitKey]);
-  if (!results.length) return false;
-  return results[0].channels.includes(channel);
-};
+export const updateConduitChannel = async (conduit: string) => {
+  const iface = new Interface([
+    "function getKey(address conduit) external view returns (bytes32 conduitKey)",
+    "function getChannels(address conduit) external view returns (address[] channels)",
+  ]);
 
-export const saveConduit = async (conduit: string, conduitKey: string, txHash: string) => {
+  const conduitController = new Contract(
+    Sdk.SeaportBase.Addresses.ConduitController[config.chainId],
+    iface,
+    baseProvider
+  );
+
+  const [conduitKey, channels] = await Promise.all([
+    conduitController.getKey(conduit),
+    conduitController.getChannels(conduit),
+  ]);
+
+  const columns = new pgp.helpers.ColumnSet(["conduit_key", "channel"], {
+    table: "seaport_conduit_open_channels",
+  });
+
+  const saveValues = channels.map((channel: string) => {
+    return {
+      channel: toBuffer(channel.toLowerCase()),
+      conduit_key: toBuffer(conduitKey.toLowerCase()),
+    };
+  });
   await idb.none(
     `
-      INSERT INTO seaport_conduits (
-        conduit,
-        conduit_key,
-        tx_hash,
-        channels
-      ) VALUES (
-        $/conduit/,
-        $/conduitKey/,
-        $/txHash/,
-        $/channels/
-      ) ON CONFLICT DO NOTHING
-    `,
+    INSERT INTO seaport_conduit_open_channels (
+      conduit_key,
+      channel
+    ) VALUES ${pgp.helpers.values(saveValues, columns)}
+      ON CONFLICT DO NOTHING
+  `,
     {
-      conduit: toBuffer(conduit),
-      conduitKey: toBuffer(conduitKey),
-      txHash: toBuffer(txHash),
-      channels: "[]",
+      conduitKey: toBuffer(conduitKey.toLowerCase()),
     }
   );
-};
-
-export const updateConduitChannels = async (conduit: string, channel: string, open: boolean) => {
-  const conduitState = await redb.oneOrNone(
-    `
-      SELECT channels, conduit 
-      FROM seaport_conduits 
-      WHERE seaport_conduits.conduit = $/conduit/
-    `,
-    {
-      conduit: toBuffer(conduit),
-    }
-  );
-
-  if (!conduitState) {
-    throw new Error("conduit not exists");
-  }
-
-  const isExist = conduitState.channels.includes(channel);
-  let newChannels: string[] = [];
-  if (!open) {
-    newChannels = conduitState.channels.filter((c: string) => c != channel);
-  } else if (!isExist) {
-    newChannels = conduitState.channels.concat([channel]);
-  }
-
-  await idb.none(
-    `
-      UPDATE seaport_conduits
-        SET channels = $/channelList:json/
-      WHERE seaport_conduits.conduit = $/conduit/
-    `,
-    {
-      conduit: toBuffer(conduit),
-      channelList: newChannels,
-    }
-  );
-  return newChannels;
 };

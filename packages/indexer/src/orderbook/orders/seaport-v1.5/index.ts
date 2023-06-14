@@ -25,7 +25,7 @@ import * as tokenSet from "@/orderbook/token-sets";
 import { TokenSet } from "@/orderbook/token-sets/token-list";
 import { getUSDAndNativePrices } from "@/utils/prices";
 import * as royalties from "@/utils/royalties";
-import { getConduits } from "@/utils/seaport-conduit";
+// import { getConduits } from "@/utils/seaport-conduit";
 import * as refreshContractCollectionsMetadata from "@/jobs/collection-updates/refresh-contract-collections-metadata-queue";
 import * as ordersUpdateById from "@/jobs/order-updates/by-id-queue";
 import { topBidsCache } from "@/models/top-bids-caching";
@@ -129,13 +129,13 @@ export const save = async (
           Sdk.SeaportBase.Addresses.SpaceIdConduitKey[config.chainId],
         ].includes(order.params.conduitKey)
       ) {
-        const conduits = await getConduits([order.params.conduitKey]);
-        if (!conduits.length) {
-          return results.push({
-            id,
-            status: "unsupported-conduit",
-          });
-        }
+        // const conduits = await getConduits([order.params.conduitKey]);
+        // if (!conduits.length) {
+        return results.push({
+          id,
+          status: "unsupported-conduit",
+        });
+        // }
       }
 
       // Check: order has a non-zero price

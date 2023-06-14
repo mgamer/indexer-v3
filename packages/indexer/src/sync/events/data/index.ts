@@ -115,7 +115,6 @@ export type EventSubKind =
   | "seaport-order-filled"
   | "seaport-counter-incremented"
   | "seaport-order-validated"
-  | "seaport-new-conduit"
   | "seaport-channel-updated"
   | "seaport-v1.4-order-cancelled"
   | "seaport-v1.4-order-filled"
@@ -292,7 +291,6 @@ const allEventData = [
   seaport.orderCancelled,
   seaport.orderFulfilled,
   seaport.orderValidated,
-  seaport.newConduit,
   seaport.channelUpdated,
   seaportV14.counterIncremented,
   seaportV14.orderCancelled,

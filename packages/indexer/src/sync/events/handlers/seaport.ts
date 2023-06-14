@@ -2,7 +2,7 @@ import { Log } from "@ethersproject/abstract-provider";
 import { HashZero } from "@ethersproject/constants";
 import * as Sdk from "@reservoir0x/sdk";
 import { searchForCall } from "@georgeroman/evm-tx-simulator";
-import { saveConduit, updateConduitChannels } from "@/utils/seaport-conduit";
+import { updateConduitChannel } from "@/utils/seaport-conduit";
 import { bn } from "@/common/utils";
 import { config } from "@/config/index";
 import { baseProvider } from "@/common/provider";
@@ -447,20 +447,9 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         break;
       }
 
-      case "seaport-new-conduit": {
-        const parsedLog = eventData.abi.parseLog(log);
-        const conduit = parsedLog.args["conduit"].toLowerCase();
-        const conduitKey = parsedLog.args["conduitKey"].toLowerCase();
-        await saveConduit(conduit, `0x${conduitKey}`, baseEventParams.txHash);
-        break;
-      }
-
       case "seaport-channel-updated": {
-        const parsedLog = eventData.abi.parseLog(log);
         const conduit = baseEventParams.address;
-        const channel = parsedLog.args["channel"].toLowerCase();
-        const open = parsedLog.args["open"];
-        await updateConduitChannels(conduit, channel, open);
+        await updateConduitChannel(conduit);
         break;
       }
     }

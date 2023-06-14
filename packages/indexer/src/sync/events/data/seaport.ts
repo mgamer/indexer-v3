@@ -1,5 +1,5 @@
 import { Interface } from "@ethersproject/abi";
-import { SeaportV11, SeaportBase } from "@reservoir0x/sdk";
+import { SeaportV11 } from "@reservoir0x/sdk";
 
 import { config } from "@/config/index";
 import { EventData } from "@/events-sync/data";
@@ -73,20 +73,6 @@ export const orderValidated: EventData = {
       bytes32 orderHash,
       address indexed offerer,
       address indexed zone
-    )`,
-  ]),
-};
-
-export const newConduit: EventData = {
-  kind: "seaport",
-  subKind: "seaport-new-conduit",
-  addresses: { [SeaportBase.Addresses.ConduitController[config.chainId]?.toLowerCase()]: true },
-  topic: "0x4397af6128d529b8ae0442f99db1296d5136062597a15bbc61c1b2a6431a7d15",
-  numTopics: 1,
-  abi: new Interface([
-    `event NewConduit(
-      address conduit,
-      bytes32 conduitKey
     )`,
   ]),
 };
