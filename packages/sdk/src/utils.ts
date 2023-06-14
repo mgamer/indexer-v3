@@ -117,6 +117,7 @@ export enum Network {
   ScrollAlpha = 534353,
   Mumbai = 80001,
   BaseGoerli = 84531,
+  Zora = 7777777,
 }
 
 export type ChainIdToAddress = { [chainId: number]: string };
