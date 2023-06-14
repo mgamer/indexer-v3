@@ -80,7 +80,8 @@ export type EventKind =
   | "zora"
   | "looks-rare-v2"
   | "blend"
-  | "sudoswap-v2";
+  | "sudoswap-v2"
+  | "caviar-v1";
 
 // Event sub-kind in each of the above protocol/standard
 export type EventSubKind =
@@ -251,7 +252,13 @@ export type EventSubKind =
   | "sudoswap-v2-spot-price-update"
   | "sudoswap-v2-delta-update"
   | "sudoswap-v2-new-erc721-pair"
-  | "sudoswap-v2-new-erc1155-pair";
+  | "sudoswap-v2-new-erc1155-pair"
+  | "caviar-v1-add"
+  | "caviar-v1-remove"
+  | "caviar-v1-buy"
+  | "caviar-v1-sell"
+  | "caviar-v1-wrap"
+  | "caviar-v1-unwrap";
 
 export type EventData = {
   kind: EventKind;
