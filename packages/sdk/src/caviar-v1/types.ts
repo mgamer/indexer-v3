@@ -7,6 +7,9 @@ export type OrderParams = {
   proofs: string[][];
   stolenProofs: StolenProof[];
   isBuy: boolean;
+  extra: {
+    prices: string[];
+  };
 };
 
 export type StolenProof = {

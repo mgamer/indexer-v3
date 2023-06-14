@@ -38,5 +38,8 @@ const normalize = (order: Types.OrderParams): Types.OrderParams => {
         }))
       : [],
     isBuy: order.isBuy,
+    extra: {
+      prices: order.extra.prices.map(s),
+    },
   };
 };
