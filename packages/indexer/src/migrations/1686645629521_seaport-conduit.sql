@@ -4,7 +4,7 @@ CREATE TABLE "seaport_conduits" (
   "conduit_key" BYTEA NOT NULL,
   "conduit" BYTEA NOT NULL,
   "tx_hash" BYTEA NOT NULL,
-  "enabled" BOOLEAN NOT NULL
+  "channels" JSONB
 );
 
 ALTER TABLE "seaport_conduits"
