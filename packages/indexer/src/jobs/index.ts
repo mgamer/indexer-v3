@@ -107,6 +107,7 @@ import * as metadataIndexProcessBySlug from "@/jobs/metadata-index/process-queue
 import * as metadataIndexProcess from "@/jobs/metadata-index/process-queue";
 import * as metadataIndexWrite from "@/jobs/metadata-index/write-queue";
 
+import * as expiredMintsCron from "@/jobs/mints/cron/expired-mints";
 import * as mintsProcess from "@/jobs/mints/process";
 
 import * as updateNftBalanceFloorAskPrice from "@/jobs/nft-balance-updates/update-floor-ask-price-queue";
@@ -304,6 +305,7 @@ export const allJobQueues = [
   metadataIndexProcess.queue,
   metadataIndexWrite.queue,
 
+  expiredMintsCron.queue,
   mintsProcess.queue,
 
   updateNftBalanceFloorAskPrice.queue,
