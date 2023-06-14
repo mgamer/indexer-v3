@@ -39,6 +39,7 @@ import * as zora from "@/events-sync/data/zora";
 import * as looksRareV2 from "@/events-sync/data/looks-rare-v2";
 import * as blend from "@/events-sync/data/blend";
 import * as sudoswapV2 from "@/events-sync/data/sudoswap-v2";
+import * as caviarV1 from "@/events-sync/data/caviar-v1";
 
 // All events we're syncing should have an associated `EventData`
 // entry which dictates the way the event will be parsed and then
@@ -436,6 +437,12 @@ const allEventData = [
   sudoswapV2.newERC721Pair,
   sudoswapV2.newERC1155Pair,
   treasure.bidAccepted,
+  caviarV1.add,
+  caviarV1.remove,
+  caviarV1.buy,
+  caviarV1.sell,
+  caviarV1.wrap,
+  caviarV1.unwrap,
 ];
 
 export const getEventData = (events?: string[]) => {
