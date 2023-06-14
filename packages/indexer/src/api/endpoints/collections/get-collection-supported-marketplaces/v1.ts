@@ -34,6 +34,7 @@ type Marketplace = {
   orderKind: string | null;
   listingEnabled: boolean;
   customFeesSupported: boolean;
+  collectionBidSupported?: boolean;
   minimumBidExpiry?: number;
   minimumPrecision?: string;
   supportedBidCurrencies: string[];
@@ -82,6 +83,7 @@ export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
           customFeesSupported: Joi.boolean(),
           minimumBidExpiry: Joi.number(),
           minimumPrecision: Joi.string(),
+          collectionBidSupported: Joi.boolean(),
           supportedBidCurrencies: Joi.array()
             .items(Joi.string())
             .description("erc20 contract addresses"),
@@ -110,7 +112,8 @@ export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
             collections.new_royalties,
             collections.marketplace_fees,
             collections.payment_tokens,
-            collections.contract
+            collections.contract,
+            collections.token_count
           FROM collections
           JOIN contracts
             ON collections.contract = contracts.address
@@ -175,6 +178,7 @@ export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
           orderKind: "seaport-v1.5",
           listingEnabled: true,
           customFeesSupported: true,
+          collectionBidSupported: Number(collectionResult.token_count) <= config.maxTokenSetSize,
           supportedBidCurrencies: Object.keys(ns.supportedBidCurrencies),
         });
       }

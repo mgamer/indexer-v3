@@ -15,6 +15,7 @@ import { bn, now, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { getNetworkSettings } from "@/config/network";
 import { allPlatformFeeRecipients } from "@/events-sync/handlers/royalties/config";
+import { addPendingData } from "@/jobs/arweave-relay";
 import { Collections } from "@/models/collections";
 import { Sources } from "@/models/sources";
 import { SourcesEntity } from "@/models/sources/sources-entity";
@@ -446,7 +447,7 @@ export const save = async (
       let feeAmount = order.getFeeAmount();
 
       // Handle: price and value
-      let price = bn(order.getMatchingPrice());
+      let price = bn(order.getMatchingPrice(Math.max(now(), startTime)));
       let value = price;
       if (info.side === "buy") {
         // For buy orders, we set the value as `price - fee` since it
@@ -789,6 +790,15 @@ export const save = async (
         status: "success",
         unfillable,
       });
+
+      if (!unfillable && isReservoir) {
+        await addPendingData([
+          JSON.stringify({
+            kind: "seaport-v1.5",
+            data: order.params,
+          }),
+        ]);
+      }
     } catch (error) {
       logger.warn(
         "orders-seaport-v1.5-save",

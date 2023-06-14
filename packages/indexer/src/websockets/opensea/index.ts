@@ -27,7 +27,7 @@ import { handleEvent as handleItemListedEvent } from "@/websockets/opensea/handl
 import { handleEvent as handleItemReceivedBidEvent } from "@/websockets/opensea/handlers/item_received_bid";
 import { handleEvent as handleCollectionOfferEvent } from "@/websockets/opensea/handlers/collection_offer";
 import { handleEvent as handleItemCancelled } from "@/websockets/opensea/handlers/item_cancelled";
-import { handleEvent as handleOrderInvalidate } from "@/websockets/opensea/handlers/order_invalidate";
+import { handleEvent as handleOrderRevalidate } from "@/websockets/opensea/handlers/order_revalidate";
 import { handleEvent as handleTraitOfferEvent } from "@/websockets/opensea/handlers/trait_offer";
 import MetadataApi from "@/utils/metadata-api";
 import * as metadataIndexWrite from "@/jobs/metadata-index/write-queue";
@@ -60,7 +60,7 @@ if (config.doWebsocketWork && config.openSeaApiKey) {
       EventType.COLLECTION_OFFER,
       EventType.TRAIT_OFFER,
       EventType.ITEM_CANCELLED,
-      EventType.ORDER_INVALIDATE,
+      EventType.ORDER_REVALIDATE,
     ],
     async (event) => {
       try {
@@ -203,8 +203,8 @@ export const handleEvent = async (
       return handleTraitOfferEvent(payload as TraitOfferEventPayload);
     case EventType.ITEM_CANCELLED:
       return await handleItemCancelled(payload as ItemCancelledEventPayload);
-    case EventType.ORDER_INVALIDATE:
-      return await handleOrderInvalidate(payload as OrderValidationEventPayload);
+    case EventType.ORDER_REVALIDATE:
+      return await handleOrderRevalidate(payload as OrderValidationEventPayload);
     default:
       return null;
   }

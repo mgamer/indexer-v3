@@ -2,8 +2,8 @@
 
 // Initialize all background job queues and crons
 
+import "@/jobs/arweave-relay";
 import "@/jobs/backfill";
-import "@/jobs/bid-updates";
 import "@/jobs/cache-check";
 import "@/jobs/collections-refresh";
 import "@/jobs/collection-updates";
@@ -51,8 +51,6 @@ import * as backfillNftTransferEventsCreatedAt from "@/jobs/backfill/backfill-nf
 import * as backfillCollectionsRoyalties from "@/jobs/backfill/backfill-collections-royalties";
 import * as backfillWrongNftBalances from "@/jobs/backfill/backfill-wrong-nft-balances";
 import * as backfillFoundationOrders from "@/jobs/backfill/backfill-foundation-orders";
-
-import * as topBidUpdate from "@/jobs/bid-updates/top-bid-update-queue";
 
 import * as collectionsRefresh from "@/jobs/collections-refresh/collections-refresh";
 import * as collectionsRefreshCache from "@/jobs/collections-refresh/collections-refresh-cache";
@@ -106,7 +104,9 @@ import * as metadataIndexProcessBySlug from "@/jobs/metadata-index/process-queue
 import * as metadataIndexProcess from "@/jobs/metadata-index/process-queue";
 import * as metadataIndexWrite from "@/jobs/metadata-index/write-queue";
 
+import * as expiredMintsCron from "@/jobs/mints/cron/expired-mints";
 import * as mintsProcess from "@/jobs/mints/process";
+import * as mintsSupplyCheck from "@/jobs/mints/supply-check";
 
 import * as updateNftBalanceFloorAskPrice from "@/jobs/nft-balance-updates/update-floor-ask-price-queue";
 import * as updateNftBalanceTopBid from "@/jobs/nft-balance-updates/update-top-bid-queue";
@@ -136,7 +136,6 @@ import * as orderbookPostOrderExternalOpensea from "@/jobs/orderbook/post-order-
 
 import * as orderbookTokenSets from "@/jobs/orderbook/token-sets-queue";
 import * as orderbookOpenseaListings from "@/jobs/orderbook/opensea-listings-queue";
-import * as orderbookSaveOpenseaWebsocketEvents from "@/jobs/orderbook/save-opensea-websocket-events-queue";
 
 import * as fetchSourceInfo from "@/jobs/sources/fetch-source-info";
 
@@ -162,8 +161,8 @@ import * as approvalWebsocketEventsTriggerQueue from "@/jobs/websocket-events/ap
 import * as transferWebsocketEventsTriggerQueue from "@/jobs/websocket-events/transfer-websocket-events-trigger-queue";
 import * as saleWebsocketEventsTriggerQueue from "@/jobs/websocket-events/sale-websocket-events-trigger-queue";
 import * as tokenWebsocketEventsTriggerQueue from "@/jobs/websocket-events/token-websocket-events-trigger-queue";
+import * as topBidWebsocketEventsTriggerQueue from "@/jobs/websocket-events/top-bid-websocket-events-trigger-queue";
 
-import * as newTopBidTriggerQueue from "@/jobs/websocket-events/new-top-bid-trigger-queue";
 import * as countApiUsage from "@/jobs/metrics/count-api-usage";
 
 import * as openseaOrdersProcessQueue from "@/jobs/opensea-orders/process-queue";
@@ -207,6 +206,10 @@ import { resyncAttributeValueCountsJob } from "@/jobs/update-attribute/resync-at
 import { resyncAttributeCountsJob } from "@/jobs/update-attribute/update-attribute-counts-job";
 import { topBidQueueJob } from "@/jobs/token-set-updates/top-bid-queue-job";
 import { topBidSingleTokenQueueJob } from "@/jobs/token-set-updates/top-bid-single-token-queue-job";
+import { fetchSourceInfoJob } from "@/jobs/sources/fetch-source-info-job";
+import { removeUnsyncedEventsActivitiesJob } from "@/jobs/activities/remove-unsynced-events-activities-job";
+import { fixActivitiesMissingCollectionJob } from "@/jobs/activities/fix-activities-missing-collection-job";
+import { collectionMetadataQueueJob } from "@/jobs/collection-updates/collection-metadata-queue-job";
 
 export const gracefulShutdownJobWorkers = [
   orderUpdatesById.worker,
@@ -246,8 +249,6 @@ export const allJobQueues = [
   backfillBlurSales.queue,
 
   currencies.queue,
-
-  topBidUpdate.queue,
 
   collectionsRefresh.queue,
   collectionsRefreshCache.queue,
@@ -301,7 +302,9 @@ export const allJobQueues = [
   metadataIndexProcess.queue,
   metadataIndexWrite.queue,
 
+  expiredMintsCron.queue,
   mintsProcess.queue,
+  mintsSupplyCheck.queue,
 
   updateNftBalanceFloorAskPrice.queue,
   updateNftBalanceTopBid.queue,
@@ -331,7 +334,6 @@ export const allJobQueues = [
   orderbookPostOrderExternalOpensea.queue,
   orderbookTokenSets.queue,
   orderbookOpenseaListings.queue,
-  orderbookSaveOpenseaWebsocketEvents.queue,
 
   fetchSourceInfo.queue,
 
@@ -357,7 +359,7 @@ export const allJobQueues = [
   transferWebsocketEventsTriggerQueue.queue,
   saleWebsocketEventsTriggerQueue.queue,
   tokenWebsocketEventsTriggerQueue.queue,
-  newTopBidTriggerQueue.queue,
+  topBidWebsocketEventsTriggerQueue.queue,
 
   countApiUsage.queue,
 
@@ -403,6 +405,10 @@ export class RabbitMqJobsConsumer {
       resyncAttributeCountsJob,
       topBidQueueJob,
       topBidSingleTokenQueueJob,
+      fetchSourceInfoJob,
+      removeUnsyncedEventsActivitiesJob,
+      fixActivitiesMissingCollectionJob,
+      collectionMetadataQueueJob,
     ];
   }
 
@@ -430,8 +436,22 @@ export class RabbitMqJobsConsumer {
       return;
     }
 
-    const channel = await this.rabbitMqConsumerConnection.createChannel();
-    RabbitMqJobsConsumer.queueToChannel.set(job.getQueue(), channel);
+    let channel: Channel;
+
+    // Some queues can use a shared channel as they are less important with low traffic
+    if (job.getUseSharedChannel()) {
+      const sharedChannel = RabbitMqJobsConsumer.queueToChannel.get(job.getSharedChannelName());
+
+      if (sharedChannel) {
+        channel = sharedChannel;
+      } else {
+        channel = await this.rabbitMqConsumerConnection.createChannel();
+        RabbitMqJobsConsumer.queueToChannel.set(job.getSharedChannelName(), channel);
+      }
+    } else {
+      channel = await this.rabbitMqConsumerConnection.createChannel();
+      RabbitMqJobsConsumer.queueToChannel.set(job.getQueue(), channel);
+    }
 
     await channel.prefetch(job.getConcurrency()); // Set the number of messages to consume simultaneously
 
@@ -474,6 +494,10 @@ export class RabbitMqJobsConsumer {
         consumerTag: RabbitMqJobsConsumer.getConsumerTag(job.getRetryQueue()),
       }
     );
+
+    channel.on("error", (error) => {
+      logger.error("rabbit-queues", `Channel error ${error}`);
+    });
   }
 
   /**
@@ -481,7 +505,8 @@ export class RabbitMqJobsConsumer {
    * @param job
    */
   static async unsubscribe(job: AbstractRabbitMqJobHandler) {
-    const channel = RabbitMqJobsConsumer.queueToChannel.get(job.getQueue());
+    const channelName = job.getUseSharedChannel() ? job.getSharedChannelName() : job.getQueue();
+    const channel = RabbitMqJobsConsumer.queueToChannel.get(channelName);
 
     if (channel) {
       await channel.cancel(RabbitMqJobsConsumer.getConsumerTag(job.getQueue()));

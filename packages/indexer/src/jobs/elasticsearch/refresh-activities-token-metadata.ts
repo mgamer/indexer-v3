@@ -6,6 +6,8 @@ import { config } from "@/config/index";
 import { Tokens } from "@/models/tokens";
 import * as ActivitiesIndex from "@/elasticsearch/indexes/activities";
 import { randomUUID } from "crypto";
+import _ from "lodash";
+import { Collections } from "@/models/collections";
 
 const QUEUE_NAME = "refresh-activities-token-metadata-queue";
 
@@ -28,40 +30,49 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
-      logger.info(QUEUE_NAME, `Worker started. jobData=${JSON.stringify(job.data)}`);
+      const { contract, tokenId, collectionId } = job.data;
 
-      const { contract, tokenId } = job.data;
+      let collectionDay30Rank;
 
-      let tokenUpdateData = job.data.tokenUpdateData;
+      if (collectionId) {
+        const collectionDay30RankCache = await redis.get(`collection-day-30-rank:${collectionId}`);
 
-      if (!tokenUpdateData) {
-        const tokenData = await Tokens.getByContractAndTokenId(contract, tokenId);
-
-        if (tokenData) {
-          tokenUpdateData = {
-            name: tokenData.name,
-            image: tokenData.image,
-            media: tokenData.media,
-          };
+        if (collectionDay30RankCache != null) {
+          collectionDay30Rank = Number(collectionDay30RankCache);
         }
       }
 
-      if (tokenUpdateData) {
-        const keepGoing = await ActivitiesIndex.updateActivitiesTokenMetadata(
-          contract,
-          tokenId,
-          tokenUpdateData
-        );
+      if (!collectionDay30Rank) {
+        const collection = await Collections.getByContractAndTokenId(contract, tokenId);
 
-        if (keepGoing) {
-          logger.info(
-            QUEUE_NAME,
-            `KeepGoing. jobData=${JSON.stringify(job.data)}, tokenUpdateData=${JSON.stringify(
-              tokenUpdateData
-            )}`
+        if (collection) {
+          collectionDay30Rank = collection.day30Rank;
+
+          await redis.set(
+            `collection-day-30-rank:${collection.id}`,
+            collectionDay30Rank,
+            "EX",
+            3600
+          );
+        }
+      }
+
+      if (collectionDay30Rank && collectionDay30Rank <= 1000) {
+        let tokenUpdateData =
+          job.data.tokenUpdateData ?? (await Tokens.getByContractAndTokenId(contract, tokenId));
+
+        tokenUpdateData = _.pickBy(tokenUpdateData, (value) => value !== null);
+
+        if (!_.isEmpty(tokenUpdateData)) {
+          const keepGoing = await ActivitiesIndex.updateActivitiesTokenMetadata(
+            contract,
+            tokenId,
+            tokenUpdateData
           );
 
-          await addToQueue(contract, tokenId, tokenUpdateData);
+          if (keepGoing) {
+            await addToQueue(contract, tokenId, collectionId, tokenUpdateData);
+          }
         }
       }
     },
@@ -76,7 +87,8 @@ if (config.doBackgroundWork) {
 export const addToQueue = async (
   contract: string,
   tokenId: string,
-  tokenUpdateData?: { name: string | null; image?: string | null; media?: string | null }
+  collectionId: string,
+  tokenUpdateData?: { name?: string | null; image?: string | null; media?: string | null }
 ) => {
-  await queue.add(randomUUID(), { contract, tokenId, tokenUpdateData });
+  await queue.add(randomUUID(), { contract, tokenId, collectionId, tokenUpdateData });
 };
