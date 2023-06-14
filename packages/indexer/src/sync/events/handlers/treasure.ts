@@ -66,15 +66,16 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
 
         break;
       }
+
       case "treasure-bid-accepted": {
         const { args } = eventData.abi.parseLog(log);
         const maker = args["bidder"].toLowerCase();
         const taker = args["seller"].toLowerCase();
-        const currency = args["paymentToken"];
-        const tokenId = args["tokenId"];
-        const tokenContract = args["nftAddress"];
-        const currencyPrice = args["pricePerItem"];
-        const amount = args["quantity"];
+        const currency = args["paymentToken"].toLowerCase();
+        const tokenId = args["tokenId"].toString();
+        const tokenContract = args["nftAddress"].toLowerCase();
+        const currencyPrice = args["pricePerItem"].toString();
+        const amount = args["quantity"].toString();
 
         const priceData = await getUSDAndNativePrices(
           currency,
@@ -119,6 +120,8 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           amount: amount.toString(),
           price: priceData.nativePrice,
           timestamp: baseEventParams.timestamp,
+          maker,
+          taker,
         });
       }
     }
