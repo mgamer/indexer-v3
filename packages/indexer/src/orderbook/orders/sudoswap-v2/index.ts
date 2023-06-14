@@ -48,6 +48,8 @@ type SaveResult = {
   triggerKind?: "new-order" | "reprice";
 };
 
+export const getBuyOrderId = (pool: string, tokenId: string) =>
+  keccak256(["string", "address", "string"], ["sudoswap-v2", pool, "buy", tokenId]);
 export const getOrderId = (pool: string, side: "sell" | "buy", tokenId?: string) =>
   side === "buy"
     ? // Buy orders have a single order id per pool
@@ -128,10 +130,6 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       // Handle buy orders
       try {
         if ([SudoswapV2PoolKind.TOKEN, SudoswapV2PoolKind.TRADE].includes(pool.poolKind)) {
-          if (isERC1155) {
-            throw new Error("ERC1155 buy orders are not yet supported");
-          }
-
           if (pool.propertyChecker !== AddressZero) {
             throw new Error("Property checked pools are not yet supported on the buy-side");
           }
@@ -167,7 +165,9 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
             prices.push(bn(priceList[i]).sub(i > 0 ? priceList[i - 1] : 0));
           }
 
-          const id = getOrderId(orderParams.pool, "buy");
+          const id = isERC1155
+            ? getBuyOrderId(orderParams.pool, pool.tokenId!)
+            : getOrderId(orderParams.pool, "buy");
           if (prices.length) {
             // Handle: prices
             const price = prices[0].toString();
