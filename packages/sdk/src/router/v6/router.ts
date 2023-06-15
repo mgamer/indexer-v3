@@ -56,6 +56,7 @@ import X2Y2ModuleAbi from "./abis/X2Y2Module.json";
 import ZeroExV4ModuleAbi from "./abis/ZeroExV4Module.json";
 import ZoraModuleAbi from "./abis/ZoraModule.json";
 import SudoswapV2ModuleAbi from "./abis/SudoswapV2Module.json";
+import CryptoPunkModuleAbi from "./abis/CryptopunkModule.json";
 
 type SetupOptions = {
   x2y2ApiKey?: string;
@@ -175,6 +176,11 @@ export class Router {
       alienswapModule: new Contract(
         Addresses.AlienswapModule[chainId] ?? AddressZero,
         AlienswapModuleAbi,
+        provider
+      ),
+      cryptoPunkModule: new Contract(
+        Addresses.CryptoPunkModule[chainId] ?? AddressZero,
+        CryptoPunkModuleAbi,
         provider
       ),
     };
@@ -825,6 +831,7 @@ export class Router {
     const nftxDetails: ListingDetails[] = [];
     const raribleDetails: ListingDetails[] = [];
     const superRareDetails: ListingDetails[] = [];
+    const cryptoPunkDetails: ListingDetails[] = [];
 
     for (const detail of details) {
       // Skip any listings handled in a previous step
@@ -918,6 +925,11 @@ export class Router {
 
         case "superrare": {
           detailsRef = superRareDetails;
+          break;
+        }
+
+        case "cryptopunks": {
+          detailsRef = cryptoPunkDetails;
           break;
         }
 
@@ -2521,6 +2533,52 @@ export class Router {
       }
     }
 
+    // Handle CryptoPunks listings
+    if (cryptoPunkDetails.length) {
+      const orders = cryptoPunkDetails.map((d) => d.order as Sdk.CryptoPunks.Order);
+      const module = this.contracts.cryptoPunksModule;
+
+      const price = orders.
+        map((order) => bn(order.params.price)).reduce((a, b) => a.add(b), bn(0));
+      // cryptopunk has no fee
+      const totalPrice = price;
+
+      executions.push({
+        module: module.address,
+        data: module.interface.encodeFunctionData("batchBuyPunksWithETH", [
+          orders.map((order) => ({
+              buyer: taker,
+              price: price,
+              punkIndex: order.params.tokenId
+            })),
+            {
+              fillTo: taker,
+              refundTo: relayer,
+              revertIfIncomplete: Boolean(!options?.partial),
+              amount: price,
+            },
+          ]),
+        value: totalPrice,
+      });
+
+      // Track any possibly required swap
+      swapDetails.push({
+        tokenIn: buyInCurrency,
+        tokenOut: Sdk.Common.Addresses.Eth[this.chainId],
+        tokenOutAmount: totalPrice,
+        recipient: module.address,
+        refundTo: relayer,
+        details: cryptoPunkDetails,
+        executionIndex: executions.length - 1,
+      });
+
+      // Mark the listings as successfully handled
+      for (const { orderId } of cryptoPunkDetails) {
+        success[orderId] = true;
+        orderIds.push(orderId);
+      }
+    }
+
     // Handle any needed swaps
 
     const successfulSwapExecutions: ExecutionInfo[] = [];
@@ -3034,6 +3092,11 @@ export class Router {
 
         case "rarible": {
           module = this.contracts.raribleModule;
+          break;
+        }
+        
+        case "cryptopunks": {
+          module = this.contracts.cryptoPunksModule;
           break;
         }
 
@@ -3771,6 +3834,40 @@ export class Router {
                   fees,
                 ]
               ),
+              value: 0,
+            },
+          });
+
+          success[detail.orderId] = true;
+
+          break;
+        }
+
+        //  Attention:
+        // 'batchSellPunks' method based on the contract has received the punks to 
+        // be sold because we don't have 'approval' in punks'contract, but it's tricky 
+        // if we split one tx into two txs, one for approval and one for selling so
+        // just remain following codes for dicussion
+        case "cryptopunks": {
+          const order = detail.order as Sdk.CryptoPunks.Order;
+          const module = this.contracts.cryptoPunksModule;
+
+          executionsWithDetails.push({
+            detail,
+            execution: {
+              module: module.address,
+              data: module.interface.encodeFunctionData("batchSellPunks", [
+                {
+                  seller: taker,
+                  price: order.params.price,
+                  punkIndex: order.params.tokenId
+                },
+                {
+                  fillTo: taker,
+                  refundTo: taker,
+                  revertIfIncomplete: Boolean(!options?.partial),
+                },
+              ]),
               value: 0,
             },
           });

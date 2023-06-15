@@ -155,3 +155,7 @@ export const RaribleModule: ChainIdToAddress = {
 export const SuperRareModule: ChainIdToAddress = {
   [Network.Ethereum]: "0x512a6a1a74f1f08aac8155605b9da8ace46b3d9c",
 };
+
+export const CryptoPunkModule: ChainIdToAddress = {
+  [Network.Ethereum]: "0xb47e3cd837dDF8e4c57F05d70Ab865de6e193BBB",
+};
