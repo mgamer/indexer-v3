@@ -156,24 +156,24 @@ export const addEvents = async (events: Event[]) => {
 };
 
 export const removeEvents = async (block: number, blockHash: string) => {
-  try {
-    // Mark fill events as deleted but skip reverting order status updates
-    // since it is not possible to know what to revert to and even if
-    // we knew, it might mess up other higher-level order processes.
-    const events = await idb.any(
-      `
+  // Mark fill events as deleted but skip reverting order status updates
+  // since it is not possible to know what to revert to and even if
+  // we knew, it might mess up other higher-level order processes.
+  const events = await idb.any(
+    `
       UPDATE fill_events_2
       SET is_deleted = 1
       WHERE block = $/block/
       AND block_hash = $/blockHash/
       RETURNING tx_hash, log_index, batch_index
     `,
-      {
-        block,
-        blockHash: toBuffer(blockHash),
-      }
-    );
+    {
+      block,
+      blockHash: toBuffer(blockHash),
+    }
+  );
 
+  try {
     // trigger websocket event
     if (config.doOldOrderWebsocketWork) {
       await Promise.all(
@@ -194,9 +194,9 @@ export const removeEvents = async (block: number, blockHash: string) => {
   } catch (error) {
     logger.error(
       "removeEvents",
-      `Error removing fill events. block=${block}, blockHash=${blockHash}, error=${JSON.stringify(
+      `Error processing websocket event. error=${JSON.stringify(
         error
-      )}`
+      )}, block=${block}, blockHash=${blockHash}`
     );
   }
 };
