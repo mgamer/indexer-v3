@@ -418,13 +418,7 @@ export class RabbitMqJobsConsumer {
       async (msg) => {
         if (!_.isNull(msg)) {
           const rabbitMQMessage = JSON.parse(msg.content.toString()) as RabbitMQMessage;
-
-          await job.consume(rabbitMQMessage);
-          await channel.ack(msg);
-
-          if (rabbitMQMessage.completeTime) {
-            job.emit("onCompleted", rabbitMQMessage);
-          }
+          await job.consume(channel, msg, rabbitMQMessage);
         }
       },
       {
@@ -438,13 +432,7 @@ export class RabbitMqJobsConsumer {
       async (msg) => {
         if (!_.isNull(msg)) {
           const rabbitMQMessage = JSON.parse(msg.content.toString()) as RabbitMQMessage;
-
-          await job.consume(rabbitMQMessage);
-          await channel.ack(msg);
-
-          if (rabbitMQMessage.completeTime) {
-            job.emit("onCompleted", rabbitMQMessage);
-          }
+          await job.consume(channel, msg, rabbitMQMessage);
         }
       },
       {
