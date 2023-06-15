@@ -55,10 +55,8 @@ import * as collectionsRefresh from "@/jobs/collections-refresh/collections-refr
 import * as collectionsRefreshCache from "@/jobs/collections-refresh/collections-refresh-cache";
 
 import * as collectionUpdatesFloorAsk from "@/jobs/collection-updates/floor-queue";
-import * as collectionUpdatesNonFlaggedFloorAsk from "@/jobs/collection-updates/non-flagged-floor-queue";
 import * as collectionSetCommunity from "@/jobs/collection-updates/set-community-queue";
 import * as collectionUpdatesTopBid from "@/jobs/collection-updates/top-bid-queue";
-import * as refreshContractCollectionsMetadata from "@/jobs/collection-updates/refresh-contract-collections-metadata-queue";
 import * as updateCollectionActivity from "@/jobs/collection-updates/update-collection-activity";
 import * as updateCollectionUserActivity from "@/jobs/collection-updates/update-collection-user-activity";
 import * as updateCollectionDailyVolume from "@/jobs/collection-updates/update-collection-daily-volume";
@@ -190,6 +188,7 @@ import { fixActivitiesMissingCollectionJob } from "@/jobs/activities/fix-activit
 import { collectionMetadataQueueJob } from "@/jobs/collection-updates/collection-metadata-queue-job";
 import { rarityQueueJob } from "@/jobs/collection-updates/rarity-queue-job";
 import { nonFlaggedFloorQueueJob } from "@/jobs/collection-updates/non-flagged-floor-queue-job";
+import { refreshContractCollectionsMetadataQueueJob } from "@/jobs/collection-updates/refresh-contract-collections-metadata-queue-job";
 
 export const gracefulShutdownJobWorkers = [
   orderUpdatesById.worker,
@@ -233,12 +232,10 @@ export const allJobQueues = [
   collectionsRefreshCache.queue,
 
   collectionUpdatesFloorAsk.queue,
-  collectionUpdatesNonFlaggedFloorAsk.queue,
   collectionSetCommunity.queue,
 
   tokenSetUpdatesTopBid.queue,
   collectionUpdatesTopBid.queue,
-  refreshContractCollectionsMetadata.queue,
   updateCollectionActivity.queue,
   updateCollectionUserActivity.queue,
   updateCollectionDailyVolume.queue,
@@ -368,6 +365,7 @@ export class RabbitMqJobsConsumer {
       collectionMetadataQueueJob,
       rarityQueueJob,
       nonFlaggedFloorQueueJob,
+      refreshContractCollectionsMetadataQueueJob,
     ];
   }
 
