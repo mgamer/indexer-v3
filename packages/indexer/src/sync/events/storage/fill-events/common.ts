@@ -1,6 +1,11 @@
 import { idb, pgp } from "@/common/db";
 import { toBuffer } from "@/common/utils";
+import { config } from "@/config/index";
 import { DbEvent, Event } from "@/events-sync/storage/fill-events";
+import {
+  WebsocketEventKind,
+  WebsocketEventRouter,
+} from "@/jobs/websocket-events/websocket-event-router";
 
 export const addEvents = async (events: Event[]) => {
   const fillValues: DbEvent[] = [];
@@ -150,6 +155,23 @@ export const addEvents = async (events: Event[]) => {
 };
 
 export const removeEvents = async (block: number, blockHash: string) => {
+  // get the events to be deleted
+  const events = await idb.any(
+    `
+      SELECT
+        fill_events_2.tx_hash,
+        fill_events_2.log_index,
+        fill_events_2.batch_index
+      FROM fill_events_2
+      WHERE block = $/block/
+      AND block_hash = $/blockHash/
+    `,
+    {
+      block,
+      blockHash: toBuffer(blockHash),
+    }
+  );
+
   // Mark fill events as deleted but skip reverting order status updates
   // since it is not possible to know what to revert to and even if
   // we knew, it might mess up other higher-level order processes.
@@ -165,4 +187,22 @@ export const removeEvents = async (block: number, blockHash: string) => {
       blockHash: toBuffer(blockHash),
     }
   );
+
+  // trigger websocket event
+  if (config.doOldOrderWebsocketWork) {
+    await Promise.all(
+      events.map((event) =>
+        WebsocketEventRouter({
+          eventInfo: {
+            tx_hash: event.tx_hash,
+            log_index: event.log_index,
+            batch_index: event.batch_index,
+            trigger: "update",
+            offset: "",
+          },
+          eventKind: WebsocketEventKind.SaleEvent,
+        })
+      )
+    );
+  }
 };
