@@ -63,18 +63,21 @@ export const updateConduitChannel = async (conduit: string) => {
     };
   });
 
-  // const existChannels = await getConduits([conduitKey]);
-  // const removedChannels = existChannels.map(c => c.channel).filter(c => !channels.includes(c));
-
-  await Promise.all([
-    idb.none(
-      `
-      INSERT INTO seaport_conduit_open_channels (
-        conduit_key,
-        channel
-      ) VALUES ${pgp.helpers.values(saveValues, columns)}
-      ON CONFLICT DO NOTHING
+  const saveQuery = pgp.as.format(
     `
-    ),
-  ]);
+    WITH x AS (
+      DELETE FROM seaport_conduit_open_channels WHERE conduit_key = $/conduitKey/
+    )
+    INSERT INTO seaport_conduit_open_channels (
+      conduit_key,
+      channel
+    ) VALUES ${pgp.helpers.values(saveValues, columns)}
+    ON CONFLICT DO NOTHING
+  `,
+    {
+      conduitKey,
+    }
+  );
+
+  await idb.none(saveQuery);
 };
