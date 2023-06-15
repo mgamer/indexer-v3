@@ -15,7 +15,7 @@ export const getConduits = async (
     channel: string;
   }[]
 > => {
-  const results = await redb.many(
+  const results = await redb.manyOrNone(
     ` SELECT 
         conduit_key,
         channel
@@ -44,10 +44,13 @@ export const updateConduitChannel = async (conduit: string) => {
     baseProvider
   );
 
-  const [conduitKey, channels] = await Promise.all([
+  const [conduitKeyRaw, channelsRaw] = await Promise.all([
     conduitController.getKey(conduit),
     conduitController.getChannels(conduit),
   ]);
+
+  const conduitKey = conduitKeyRaw.toLowerCase();
+  const channels = channelsRaw.map((c: string) => c.toLowerCase());
 
   const columns = new pgp.helpers.ColumnSet(["conduit_key", "channel"], {
     table: "seaport_conduit_open_channels",
@@ -55,20 +58,23 @@ export const updateConduitChannel = async (conduit: string) => {
 
   const saveValues = channels.map((channel: string) => {
     return {
-      channel: toBuffer(channel.toLowerCase()),
-      conduit_key: toBuffer(conduitKey.toLowerCase()),
+      channel: toBuffer(channel),
+      conduit_key: toBuffer(conduitKey),
     };
   });
-  await idb.none(
-    `
-    INSERT INTO seaport_conduit_open_channels (
-      conduit_key,
-      channel
-    ) VALUES ${pgp.helpers.values(saveValues, columns)}
+
+  // const existChannels = await getConduits([conduitKey]);
+  // const removedChannels = existChannels.map(c => c.channel).filter(c => !channels.includes(c));
+
+  await Promise.all([
+    idb.none(
+      `
+      INSERT INTO seaport_conduit_open_channels (
+        conduit_key,
+        channel
+      ) VALUES ${pgp.helpers.values(saveValues, columns)}
       ON CONFLICT DO NOTHING
-  `,
-    {
-      conduitKey: toBuffer(conduitKey.toLowerCase()),
-    }
-  );
+    `
+    ),
+  ]);
 };
