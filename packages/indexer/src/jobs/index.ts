@@ -57,7 +57,6 @@ import * as collectionsRefreshCache from "@/jobs/collections-refresh/collections
 import * as collectionUpdatesFloorAsk from "@/jobs/collection-updates/floor-queue";
 import * as collectionUpdatesNonFlaggedFloorAsk from "@/jobs/collection-updates/non-flagged-floor-queue";
 import * as collectionSetCommunity from "@/jobs/collection-updates/set-community-queue";
-import * as rarity from "@/jobs/collection-updates/rarity-queue";
 import * as collectionUpdatesTopBid from "@/jobs/collection-updates/top-bid-queue";
 import * as refreshContractCollectionsMetadata from "@/jobs/collection-updates/refresh-contract-collections-metadata-queue";
 import * as updateCollectionActivity from "@/jobs/collection-updates/update-collection-activity";
@@ -189,6 +188,7 @@ import { fetchSourceInfoJob } from "@/jobs/sources/fetch-source-info-job";
 import { removeUnsyncedEventsActivitiesJob } from "@/jobs/activities/remove-unsynced-events-activities-job";
 import { fixActivitiesMissingCollectionJob } from "@/jobs/activities/fix-activities-missing-collection-job";
 import { collectionMetadataQueueJob } from "@/jobs/collection-updates/collection-metadata-queue-job";
+import { rarityQueueJob } from "@/jobs/collection-updates/rarity-queue-job";
 
 export const gracefulShutdownJobWorkers = [
   orderUpdatesById.worker,
@@ -236,7 +236,6 @@ export const allJobQueues = [
   collectionSetCommunity.queue,
 
   tokenSetUpdatesTopBid.queue,
-  rarity.queue,
   collectionUpdatesTopBid.queue,
   refreshContractCollectionsMetadata.queue,
   updateCollectionActivity.queue,
@@ -366,6 +365,7 @@ export class RabbitMqJobsConsumer {
       removeUnsyncedEventsActivitiesJob,
       fixActivitiesMissingCollectionJob,
       collectionMetadataQueueJob,
+      rarityQueueJob,
     ];
   }
 
