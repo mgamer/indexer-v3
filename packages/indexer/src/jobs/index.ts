@@ -55,10 +55,6 @@ import * as collectionsRefresh from "@/jobs/collections-refresh/collections-refr
 import * as collectionsRefreshCache from "@/jobs/collections-refresh/collections-refresh-cache";
 
 import * as collectionUpdatesFloorAsk from "@/jobs/collection-updates/floor-queue";
-import * as collectionUpdatesTopBid from "@/jobs/collection-updates/top-bid-queue";
-import * as updateCollectionActivity from "@/jobs/collection-updates/update-collection-activity";
-import * as updateCollectionUserActivity from "@/jobs/collection-updates/update-collection-user-activity";
-import * as updateCollectionDailyVolume from "@/jobs/collection-updates/update-collection-daily-volume";
 
 import * as tokenSetUpdatesTopBid from "@/jobs/token-set-updates/top-bid-queue";
 
@@ -190,6 +186,9 @@ import { nonFlaggedFloorQueueJob } from "@/jobs/collection-updates/non-flagged-f
 import { refreshContractCollectionsMetadataQueueJob } from "@/jobs/collection-updates/refresh-contract-collections-metadata-queue-job";
 import { setCommunityQueueJob } from "@/jobs/collection-updates/set-community-queue-job";
 import { topBidCollectionJob } from "@/jobs/collection-updates/top-bid-collection-job";
+import { updateCollectionActivityJob } from "@/jobs/collection-updates/update-collection-activity-job";
+import { updateCollectionDailyVolumeJob } from "@/jobs/collection-updates/update-collection-daily-volume-job";
+import { updateCollectionUserActivityJob } from "@/jobs/collection-updates/update-collection-user-activity-job";
 
 export const gracefulShutdownJobWorkers = [
   orderUpdatesById.worker,
@@ -235,10 +234,6 @@ export const allJobQueues = [
   collectionUpdatesFloorAsk.queue,
 
   tokenSetUpdatesTopBid.queue,
-  collectionUpdatesTopBid.queue,
-  updateCollectionActivity.queue,
-  updateCollectionUserActivity.queue,
-  updateCollectionDailyVolume.queue,
 
   dailyVolumes.queue,
   oneDayVolumes.queue,
@@ -368,6 +363,9 @@ export class RabbitMqJobsConsumer {
       refreshContractCollectionsMetadataQueueJob,
       setCommunityQueueJob,
       topBidCollectionJob,
+      updateCollectionActivityJob,
+      updateCollectionDailyVolumeJob,
+      updateCollectionUserActivityJob,
     ];
   }
 
