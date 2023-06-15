@@ -189,6 +189,7 @@ import { rarityQueueJob } from "@/jobs/collection-updates/rarity-queue-job";
 import { nonFlaggedFloorQueueJob } from "@/jobs/collection-updates/non-flagged-floor-queue-job";
 import { refreshContractCollectionsMetadataQueueJob } from "@/jobs/collection-updates/refresh-contract-collections-metadata-queue-job";
 import { setCommunityQueueJob } from "@/jobs/collection-updates/set-community-queue-job";
+import { topBidCollectionJob } from "@/jobs/collection-updates/top-bid-collection-job";
 
 export const gracefulShutdownJobWorkers = [
   orderUpdatesById.worker,
@@ -366,6 +367,7 @@ export class RabbitMqJobsConsumer {
       nonFlaggedFloorQueueJob,
       refreshContractCollectionsMetadataQueueJob,
       setCommunityQueueJob,
+      topBidCollectionJob,
     ];
   }
 
