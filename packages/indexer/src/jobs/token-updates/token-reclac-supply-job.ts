@@ -5,6 +5,7 @@ import { redb } from "@/common/db";
 import { toBuffer } from "@/common/utils";
 import { AddressZero } from "@ethersproject/constants";
 import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handler";
+import _ from "lodash";
 
 export type TokenRecalcSupplyPayload = {
   contract: string;
@@ -21,39 +22,114 @@ export class TokenReclacSupplyJob extends AbstractRabbitMqJobHandler {
   protected async process(payload: TokenRecalcSupplyPayload) {
     const { contract, tokenId } = payload;
 
-    const totalSupplyQuery = `
-      SELECT SUM(amount) AS "supply"
-      FROM nft_transfer_events
-      WHERE address = $/contract/
-      AND token_id = $/tokenId/
-      AND nft_transfer_events.from = $/addressZero/
-    `;
-
-    const totalSupply = await redb.oneOrNone(totalSupplyQuery, {
-      contract: toBuffer(contract),
-      tokenId: tokenId,
-      addressZero: toBuffer(AddressZero),
-    });
-
-    const totalRemainingSupplyQuery = `
-      SELECT COALESCE(SUM(amount), 0) AS "remainingSupply"
-      FROM nft_balances
-      WHERE contract = $/contract/
-      AND token_id = $/tokenId/
-      AND owner != $/addressZero/
-      AND amount > 0
-    `;
-
-    const totalRemainingSupply = await redb.oneOrNone(totalRemainingSupplyQuery, {
-      contract: toBuffer(contract),
-      tokenId: tokenId,
-      addressZero: toBuffer(AddressZero),
-    });
+    const totalSupply = await this.calcTotalSupply(contract, tokenId);
+    const totalRemainingSupply = await this.calcRemainingSupply(contract, tokenId);
 
     await Tokens.update(contract, tokenId, {
-      supply: totalSupply.supply,
-      remainingSupply: totalRemainingSupply.remainingSupply,
+      supply: totalSupply,
+      remainingSupply: totalRemainingSupply,
     });
+  }
+
+  public async calcRemainingSupply(contract: string, tokenId: string) {
+    const limit = 1000;
+    let remainingSupply = 0;
+    let continuation = "";
+    let nftBalances = [];
+
+    const values: {
+      contract: Buffer;
+      tokenId: string;
+      addressZero: Buffer;
+      limit: number;
+      lastContract?: Buffer;
+      lastTokenId?: string;
+      lastOwner?: Buffer;
+    } = {
+      contract: toBuffer(contract),
+      tokenId: tokenId,
+      addressZero: toBuffer(AddressZero),
+      limit,
+    };
+
+    do {
+      const totalRemainingSupplyQuery = `
+        SELECT contract, token_id, owner, amount
+        FROM nft_balances
+        WHERE contract = $/contract/
+        AND token_id = $/tokenId/
+        AND owner != $/addressZero/
+        AND amount > 0
+        ${continuation}
+        ORDER BY contract, token_id, owner
+        LIMIT $/limit/
+      `;
+
+      nftBalances = await redb.manyOrNone(totalRemainingSupplyQuery, values);
+      continuation = `AND (contract, token_id, owner) > ($/lastContract/, $/lastTokenId/, $/lastOwner/)`;
+
+      if (!_.isEmpty(nftBalances)) {
+        remainingSupply += _.sumBy(nftBalances, (event) => Number(event.amount));
+
+        const lastEvent = _.last(nftBalances);
+        values.lastContract = lastEvent.contract;
+        values.lastTokenId = lastEvent.token_id;
+        values.lastOwner = lastEvent.owner;
+      }
+    } while (nftBalances.length >= limit);
+
+    return remainingSupply;
+  }
+
+  public async calcTotalSupply(contract: string, tokenId: string) {
+    const limit = 1000;
+    let totalSupply = 0;
+    let continuation = "";
+    let transferEvents = [];
+
+    const values: {
+      contract: Buffer;
+      tokenId: string;
+      addressZero: Buffer;
+      limit: number;
+      lastTimestamp?: string;
+      lastTxHash?: Buffer;
+      lastLogIndex?: number;
+      lastBatchIndex?: number;
+    } = {
+      contract: toBuffer(contract),
+      tokenId: tokenId,
+      addressZero: toBuffer(AddressZero),
+      limit,
+    };
+
+    do {
+      const totalSupplyQuery = `
+        SELECT amount, "timestamp", tx_hash, log_index, batch_index
+        FROM nft_transfer_events
+        WHERE address = $/contract/
+        AND token_id = $/tokenId/
+        AND nft_transfer_events.from = $/addressZero/
+        ${continuation}
+        ORDER BY "timestamp", tx_hash, log_index, batch_index
+        LIMIT $/limit/
+      `;
+
+      transferEvents = await redb.manyOrNone(totalSupplyQuery, values);
+      continuation = `AND ("timestamp", tx_hash, log_index, batch_index) > ($/lastTimestamp/, $/lastTxHash/, $/lastLogIndex/, $/lastBatchIndex/)`;
+
+      if (!_.isEmpty(transferEvents)) {
+        totalSupply += _.sumBy(transferEvents, (event) => Number(event.amount));
+
+        const lastEvent = _.last(transferEvents);
+        values.lastTimestamp = lastEvent.timestamp;
+        values.lastTxHash = lastEvent.tx_hash;
+        values.lastLogIndex = lastEvent.log_index;
+        values.lastBatchIndex = lastEvent.batch_index;
+      }
+    } while (transferEvents.length >= limit);
+
+    return totalSupply;
   }
 
   public async addToQueue(tokens: TokenRecalcSupplyPayload[], delay = 60 * 5 * 1000) {
