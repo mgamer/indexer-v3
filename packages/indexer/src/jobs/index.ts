@@ -7,7 +7,6 @@ import "@/jobs/backfill";
 import "@/jobs/cache-check";
 import "@/jobs/collections-refresh";
 import "@/jobs/collection-updates";
-import "@/jobs/currencies";
 import "@/jobs/daily-volumes";
 import "@/jobs/data-archive";
 import "@/jobs/data-export";
@@ -51,17 +50,9 @@ import * as backfillCollectionsRoyalties from "@/jobs/backfill/backfill-collecti
 import * as backfillWrongNftBalances from "@/jobs/backfill/backfill-wrong-nft-balances";
 import * as backfillFoundationOrders from "@/jobs/backfill/backfill-foundation-orders";
 
-import * as collectionsRefresh from "@/jobs/collections-refresh/collections-refresh";
-import * as collectionsRefreshCache from "@/jobs/collections-refresh/collections-refresh-cache";
-
 import * as collectionUpdatesFloorAsk from "@/jobs/collection-updates/floor-queue";
 
 import * as tokenSetUpdatesTopBid from "@/jobs/token-set-updates/top-bid-queue";
-
-import * as currencies from "@/jobs/currencies/index";
-
-import * as dailyVolumes from "@/jobs/daily-volumes/daily-volumes";
-import * as oneDayVolumes from "@/jobs/daily-volumes/1day-volumes";
 
 import * as processArchiveData from "@/jobs/data-archive/process-archive-data";
 import * as exportData from "@/jobs/data-export/export-data";
@@ -189,6 +180,11 @@ import { topBidCollectionJob } from "@/jobs/collection-updates/top-bid-collectio
 import { updateCollectionActivityJob } from "@/jobs/collection-updates/update-collection-activity-job";
 import { updateCollectionDailyVolumeJob } from "@/jobs/collection-updates/update-collection-daily-volume-job";
 import { updateCollectionUserActivityJob } from "@/jobs/collection-updates/update-collection-user-activity-job";
+import { collectionRefreshJob } from "@/jobs/collections-refresh/collections-refresh-job";
+import { collectionRefreshCacheJob } from "@/jobs/collections-refresh/collections-refresh-cache-job";
+import { currenciesFetchJob } from "@/jobs/currencies/currencies-fetch-job";
+import { oneDayVolumeJob } from "@/jobs/daily-volumes/1day-volumes-job";
+import { dailyVolumeJob } from "@/jobs/daily-volumes/daily-volumes-job";
 
 export const gracefulShutdownJobWorkers = [
   orderUpdatesById.worker,
@@ -226,17 +222,9 @@ export const allJobQueues = [
   backfillInvalidateSeaportV14Orders.queue,
   backfillBlurSales.queue,
 
-  currencies.queue,
-
-  collectionsRefresh.queue,
-  collectionsRefreshCache.queue,
-
   collectionUpdatesFloorAsk.queue,
 
   tokenSetUpdatesTopBid.queue,
-
-  dailyVolumes.queue,
-  oneDayVolumes.queue,
 
   processArchiveData.queue,
 
@@ -366,6 +354,11 @@ export class RabbitMqJobsConsumer {
       updateCollectionActivityJob,
       updateCollectionDailyVolumeJob,
       updateCollectionUserActivityJob,
+      collectionRefreshJob,
+      collectionRefreshCacheJob,
+      currenciesFetchJob,
+      oneDayVolumeJob,
+      dailyVolumeJob,
     ];
   }
 
