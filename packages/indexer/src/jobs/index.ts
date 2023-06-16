@@ -54,7 +54,6 @@ import * as collectionUpdatesFloorAsk from "@/jobs/collection-updates/floor-queu
 
 import * as tokenSetUpdatesTopBid from "@/jobs/token-set-updates/top-bid-queue";
 
-import * as processArchiveData from "@/jobs/data-archive/process-archive-data";
 import * as exportData from "@/jobs/data-export/export-data";
 
 import * as eventsSyncProcessResyncRequest from "@/jobs/events-sync/process-resync-request-queue";
@@ -185,6 +184,7 @@ import { collectionRefreshCacheJob } from "@/jobs/collections-refresh/collection
 import { currenciesFetchJob } from "@/jobs/currencies/currencies-fetch-job";
 import { oneDayVolumeJob } from "@/jobs/daily-volumes/1day-volumes-job";
 import { dailyVolumeJob } from "@/jobs/daily-volumes/daily-volumes-job";
+import { processArchiveDataJob } from "@/jobs/data-archive/process-archive-data-job";
 
 export const gracefulShutdownJobWorkers = [
   orderUpdatesById.worker,
@@ -225,8 +225,6 @@ export const allJobQueues = [
   collectionUpdatesFloorAsk.queue,
 
   tokenSetUpdatesTopBid.queue,
-
-  processArchiveData.queue,
 
   exportData.queue,
 
@@ -359,6 +357,7 @@ export class RabbitMqJobsConsumer {
       currenciesFetchJob,
       oneDayVolumeJob,
       dailyVolumeJob,
+      processArchiveDataJob,
     ];
   }
 
