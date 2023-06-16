@@ -71,10 +71,10 @@ export class TokenReclacSupplyJob extends AbstractRabbitMqJobHandler {
       if (!_.isEmpty(nftBalances)) {
         remainingSupply += _.sumBy(nftBalances, (event) => Number(event.amount));
 
-        const lastEvent = _.last(nftBalances);
-        values.lastContract = lastEvent.contract;
-        values.lastTokenId = lastEvent.token_id;
-        values.lastOwner = lastEvent.owner;
+        const lastBalance = _.last(nftBalances);
+        values.lastContract = lastBalance.contract;
+        values.lastTokenId = lastBalance.token_id;
+        values.lastOwner = lastBalance.owner;
       }
     } while (nftBalances.length >= limit);
 
