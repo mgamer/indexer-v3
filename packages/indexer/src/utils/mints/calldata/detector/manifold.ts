@@ -12,7 +12,6 @@ import { CollectionMint } from "@/utils/mints/collection-mints";
 
 export const tryParseCollectionMint = async (
   collection: string,
-  contract: string,
   tx: Transaction
 ): Promise<CollectionMint | undefined> => {
   if (
@@ -23,7 +22,7 @@ export const tryParseCollectionMint = async (
   ) {
     try {
       const c = new Contract(
-        collection,
+        tx.to,
         new Interface([
           `
             function mint(
@@ -91,7 +90,7 @@ export const tryParseCollectionMint = async (
           standard: "manifold",
           details: {
             tx: {
-              to: contract,
+              to: tx.to,
               data: {
                 // `mintBatch`
                 signature: "0x26c858a4",
@@ -133,8 +132,8 @@ export const tryParseCollectionMint = async (
           tokenId: claim.tokenId.toString(),
           maxMintsPerWallet: claim.walletMax.toString(),
           maxSupply: claim.totalMax.toString(),
-          startTime: claim.startDate.toNumber(),
-          endTime: claim.endDate.toNumber(),
+          startTime: claim.startDate ? claim.startDate : null,
+          endTime: claim.endDate ? claim.endDate : null,
         };
       }
     } catch (error) {

@@ -147,12 +147,12 @@ export const detectMint = async (txHash: string, skipCache = false) => {
 
   // Manifold
   if (!collectionMint) {
-    collectionMint = await manifold.tryParseCollectionMint(collection, contract, tx);
+    collectionMint = await manifold.tryParseCollectionMint(collection, tx);
   }
 
   // Zora
   if (!collectionMint) {
-    collectionMint = await zora.tryParseCollectionMint(collection, contract, tx);
+    collectionMint = await zora.tryParseCollectionMint(collection, tx);
   }
 
   // Fallback
