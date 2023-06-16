@@ -28,23 +28,12 @@ export const ReservoirConduitKey: ChainIdToAddress = {
   [Network.LineaTestnet]: "0x7e727520b29773e7f23a8665649197aaf064cef1000000000000000000000000",
 };
 
-export const OriginConduitKey: ChainIdToAddress = {
-  [Network.Ethereum]: "0x52b868f7b0d20b689d059ab141677c673d5d2b7e000000000000000000000000",
-  [Network.EthereumGoerli]: "0x52b868f7b0d20b689d059ab141677c673d5d2b7e000000000000000000000000",
-  [Network.Polygon]: "0x52b868f7b0d20b689d059ab141677c673d5d2b7e000000000000000000000000",
-};
-
-export const SpaceIdConduitKey: ChainIdToAddress = {
-  [Network.Ethereum]: "0x0e76a6dc9af8080b48c51e564e964cd15b9d6664000100000000000000000000",
-};
-
 export const ConduitController: ChainIdToAddress = {
   [Network.Ethereum]: "0x00000000f9490004c11cef243f5400493c00ad63",
   [Network.Bsc]: "0x00000000f9490004c11cef243f5400493c00ad63",
   [Network.Optimism]: "0x00000000f9490004c11cef243f5400493c00ad63",
   [Network.Gnosis]: "0x00000000f9490004c11cef243f5400493c00ad63",
   [Network.Polygon]: "0x00000000f9490004c11cef243f5400493c00ad63",
-  [Network.Bsc]: "0x00000000f9490004c11cef243f5400493c00ad63",
   [Network.Arbitrum]: "0x00000000f9490004c11cef243f5400493c00ad63",
   [Network.Avalanche]: "0x00000000f9490004c11cef243f5400493c00ad63",
   [Network.EthereumGoerli]: "0x00000000f9490004c11cef243f5400493c00ad63",
@@ -66,7 +55,6 @@ export const ConduitControllerCodeHash: ChainIdToAddress = {
   [Network.Bsc]: "0x023d904f2503c37127200ca07b976c3a53cc562623f67023115bf311f5805059",
   [Network.Optimism]: "0x023d904f2503c37127200ca07b976c3a53cc562623f67023115bf311f5805059",
   [Network.Gnosis]: "0x023d904f2503c37127200ca07b976c3a53cc562623f67023115bf311f5805059",
-  [Network.Bsc]: "0x023d904f2503c37127200ca07b976c3a53cc562623f67023115bf311f5805059",
   [Network.Polygon]: "0x023d904f2503c37127200ca07b976c3a53cc562623f67023115bf311f5805059",
   [Network.ArbitrumNova]: "0x023d904f2503c37127200ca07b976c3a53cc562623f67023115bf311f5805059",
   [Network.Arbitrum]: "0x023d904f2503c37127200ca07b976c3a53cc562623f67023115bf311f5805059",
