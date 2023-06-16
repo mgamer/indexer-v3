@@ -2,7 +2,6 @@ import { Log } from "@ethersproject/abstract-provider";
 import { HashZero } from "@ethersproject/constants";
 import * as Sdk from "@reservoir0x/sdk";
 import { searchForCall } from "@georgeroman/evm-tx-simulator";
-import { updateConduitChannel } from "@/utils/seaport-conduit";
 import { bn } from "@/common/utils";
 import { config } from "@/config/index";
 import { baseProvider } from "@/common/provider";
@@ -12,6 +11,7 @@ import * as utils from "@/events-sync/utils";
 import { getERC20Transfer } from "@/events-sync/handlers/utils/erc20";
 import { OrderKind } from "@/orderbook/orders";
 import { getUSDAndNativePrices } from "@/utils/prices";
+import { refresh } from "@/utils/seaport-conduits";
 
 const getProtocolInfoFromSubKind = (subKind: EventSubKind) => {
   if (subKind.startsWith("seaport-v1.4")) {
@@ -449,7 +449,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
 
       case "seaport-channel-updated": {
         const conduit = baseEventParams.address;
-        await updateConduitChannel(conduit);
+        await refresh(conduit);
         break;
       }
     }
