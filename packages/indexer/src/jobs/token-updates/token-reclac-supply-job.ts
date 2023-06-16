@@ -6,6 +6,7 @@ import { toBuffer } from "@/common/utils";
 import { AddressZero } from "@ethersproject/constants";
 import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handler";
 import _ from "lodash";
+import { acquireLock } from "@/common/redis";
 
 export type TokenRecalcSupplyPayload = {
   contract: string;
@@ -21,6 +22,17 @@ export class TokenReclacSupplyJob extends AbstractRabbitMqJobHandler {
 
   protected async process(payload: TokenRecalcSupplyPayload) {
     const { contract, tokenId } = payload;
+
+    const token = await Tokens.getByContractAndTokenId(contract, tokenId);
+
+    // For large supply tokens calc once a day
+    if (
+      token &&
+      token.supply > 50000 &&
+      !(await acquireLock(`${this.queueName}:${contract}:${tokenId}`, 60 * 60 * 24))
+    ) {
+      return;
+    }
 
     const totalSupply = await this.calcTotalSupply(contract, tokenId);
     const totalRemainingSupply = await this.calcRemainingSupply(contract, tokenId);
