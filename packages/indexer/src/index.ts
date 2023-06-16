@@ -18,6 +18,9 @@ import { startKafkaConsumer, startKafkaProducer } from "@/jobs/cdc/index";
 import { RabbitMq } from "@/common/rabbit-mq";
 import { RabbitMqJobsConsumer } from "@/jobs/index";
 
+import * as Sdk from "@reservoir0x/sdk";
+import { refresh } from "@/utils/seaport-conduits";
+
 process.on("unhandledRejection", (error) => {
   logger.error("process", `Unhandled rejection: ${error}`);
 
@@ -26,6 +29,26 @@ process.on("unhandledRejection", (error) => {
 });
 
 const setup = async () => {
+  try {
+    const conduits = [
+      Sdk.SeaportBase.Addresses.OpenseaConduitKey[config.chainId],
+      Sdk.SeaportBase.Addresses.OriginConduitKey[config.chainId],
+      Sdk.SeaportBase.Addresses.SpaceIdConduitKey[config.chainId],
+      Sdk.SeaportBase.Addresses.ReservoirConduitKey[config.chainId],
+    ];
+    await Promise.all(
+      conduits.map(async (c) => {
+        try {
+          await refresh(new Sdk.SeaportBase.ConduitController(config.chainId).deriveConduit(c));
+        } catch {
+          // Skip errors
+        }
+      })
+    );
+  } catch {
+    // Skip errors
+  }
+
   if (process.env.LOCAL_TESTING) {
     return;
   }
