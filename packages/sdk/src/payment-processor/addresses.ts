@@ -1,0 +1,5 @@
+import { ChainIdToAddress, Network } from "../utils";
+
+export const PaymentProcessor: ChainIdToAddress = {
+  [Network.Ethereum]: "0x009a1dc629242961c9e4f089b437afd394474cc0",
+};
