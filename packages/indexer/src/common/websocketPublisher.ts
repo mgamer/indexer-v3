@@ -26,7 +26,10 @@ export const publishWebsocketEvent = async (message: WebsocketMessage): Promise<
       messages: [{ value: JSON.stringify(message) }],
     });
   } catch (error) {
-    logger.error("publish-websocket-event", "Failed to send message to Kafka: " + error);
+    logger.error(
+      "publish-websocket-event",
+      `Failed to publish websocket message=${JSON.stringify(message)}, event=${error}`
+    );
   }
 };
 
