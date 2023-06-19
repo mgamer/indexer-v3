@@ -372,7 +372,9 @@ export class RabbitMqJobsConsumer {
         if (channel === error.channel) {
           logger.error(
             "rabbit-connection-error",
-            `Jobs stopped consume ${jobs.map((job: AbstractRabbitMqJobHandler) => job.queueName)}`
+            `Jobs stopped consume ${JSON.stringify(
+              jobs.map((job: AbstractRabbitMqJobHandler) => job.queueName)
+            )}`
           );
         }
       }
