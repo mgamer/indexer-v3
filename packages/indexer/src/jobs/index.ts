@@ -456,6 +456,20 @@ export class RabbitMqJobsConsumer {
         consumerTag: RabbitMqJobsConsumer.getConsumerTag(job.getRetryQueue()),
       }
     );
+
+    channel.on("error", (error) => {
+      logger.error("rabbit-channel-error", `Connection error ${error}`);
+
+      const jobs = RabbitMqJobsConsumer.channelsToJobs.get(channel);
+      if (jobs) {
+        logger.error(
+          "rabbit-channel-error",
+          `Jobs stopped consume ${JSON.stringify(
+            jobs.map((job: AbstractRabbitMqJobHandler) => job.queueName)
+          )}`
+        );
+      }
+    });
   }
 
   /**
