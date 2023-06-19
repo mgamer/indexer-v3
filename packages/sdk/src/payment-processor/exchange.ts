@@ -9,9 +9,6 @@ import ExchangeAbi from "./abis/PaymentProcessor.json";
 import { BigNumber } from "@ethersproject/bignumber";
 import { splitSignature } from "@ethersproject/bytes";
 
-// Blend:
-// - escrowed orderbook
-
 export class Exchange {
   public chainId: number;
   public contract: Contract;
