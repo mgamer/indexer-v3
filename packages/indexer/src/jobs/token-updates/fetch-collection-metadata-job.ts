@@ -90,7 +90,7 @@ export class FetchCollectionMetadataJob extends AbstractRabbitMqJobHandler {
           tokenIdRange,
           tokenSetId: collection.tokenSetId,
           mintedTimestamp: mintedTimestamp ?? null,
-          paymentTokens: { opensea: collection.paymentTokens } ?? null,
+          paymentTokens: collection.paymentTokens ? { opensea: collection.paymentTokens } : {},
         },
       });
 
