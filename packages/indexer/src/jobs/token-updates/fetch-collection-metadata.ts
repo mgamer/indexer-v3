@@ -45,18 +45,26 @@ if (config.doBackgroundWork) {
       const { contract, tokenId, mintedTimestamp, newCollection, oldCollectionId } =
         job.data as FetchCollectionMetadataInfo;
 
-      if (isNaN(Number(tokenId))) {
-        logger.error(
-          "updateCollectionCache",
-          `Invalid tokenId. jobData=${JSON.stringify(job.data)}`
-        );
-      }
-
       try {
         // Fetch collection metadata
         const collection = await MetadataApi.getCollectionMetadata(contract, tokenId, "", {
           allowFallback: !newCollection,
         });
+
+        if (getNetworkSettings().copyrightInfringementContracts.includes(contract.toLowerCase())) {
+          collection.name = collection.id;
+          collection.metadata = null;
+
+          logger.info(
+            QUEUE_NAME,
+            JSON.stringify({
+              topic: "debugCopyrightInfringementContracts",
+              message: "Collection is a copyright infringement",
+              contract,
+              collection,
+            })
+          );
+        }
 
         let tokenIdRange: string | null = null;
         if (collection.tokenIdRange) {

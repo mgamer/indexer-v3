@@ -28,6 +28,7 @@ import { recalcOwnerCountQueueJob } from "@/jobs/collection-updates/recalc-owner
 import { fetchCollectionMetadataJob } from "@/jobs/token-updates/fetch-collection-metadata-job";
 
 import { config } from "@/config/index";
+import { getNetworkSettings } from "@/config/network";
 
 export class Collections {
   public static async getById(collectionId: string, readReplica = false) {
@@ -97,13 +98,6 @@ export class Collections {
   }
 
   public static async updateCollectionCache(contract: string, tokenId: string, community = "") {
-    if (isNaN(Number(tokenId))) {
-      logger.error(
-        "updateCollectionCache",
-        `Invalid tokenId. contract=${contract}, tokenId=${tokenId}, community=${community}`
-      );
-    }
-
     const collectionExists = await idb.oneOrNone(
       `
         SELECT
@@ -119,6 +113,7 @@ export class Collections {
         tokenId,
       }
     );
+
     if (!collectionExists) {
       // If the collection doesn't exist, push a job to retrieve it
       await fetchCollectionMetadataJob.addToQueue([
@@ -158,6 +153,24 @@ export class Collections {
       },
     ]);
 
+    const isCopyrightInfringementContract =
+      getNetworkSettings().copyrightInfringementContracts.includes(contract.toLowerCase());
+
+    if (isCopyrightInfringementContract) {
+      collection.name = collection.id;
+      collection.metadata = null;
+
+      logger.info(
+        "updateCollectionCache",
+        JSON.stringify({
+          topic: "debugCopyrightInfringementContracts",
+          message: "Collection is a copyright infringement",
+          contract,
+          collection,
+        })
+      );
+    }
+
     const query = `
       UPDATE collections SET
         metadata = $/metadata:json/,
@@ -189,10 +202,23 @@ export class Collections {
 
     if (
       config.doElasticsearchWork &&
-      (result?.old_metadata.name != collection.name ||
+      (isCopyrightInfringementContract ||
+        result?.old_metadata.name != collection.name ||
         result?.old_metadata.metadata.imageUrl != (collection.metadata as any)?.imageUrl)
     ) {
-      await refreshActivitiesCollectionMetadata.addToQueue(collection.id);
+      logger.info(
+        "updateCollectionCache",
+        JSON.stringify({
+          message: `Metadata changed.`,
+          collection,
+          result,
+        })
+      );
+
+      await refreshActivitiesCollectionMetadata.addToQueue(collection.id, {
+        name: collection.name || null,
+        image: (collection.metadata as any)?.imageUrl || null,
+      });
     }
 
     // Refresh all royalty specs and the default royalties

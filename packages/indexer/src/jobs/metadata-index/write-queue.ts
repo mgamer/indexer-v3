@@ -3,18 +3,19 @@
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import { getUnixTime } from "date-fns";
 import _ from "lodash";
+import PgPromise from "pg-promise";
 
 import { idb, ridb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
 import { toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
+import { getNetworkSettings } from "@/config/network";
 
 import * as flagStatusUpdate from "@/jobs/flag-status/update";
 import * as updateActivitiesCollection from "@/jobs/elasticsearch/update-activities-collection";
 import * as refreshActivitiesTokenMetadata from "@/jobs/elasticsearch/refresh-activities-token-metadata";
 
-import PgPromise from "pg-promise";
 import { updateActivities } from "@/jobs/activities/utils";
 import { fetchCollectionMetadataJob } from "@/jobs/token-updates/fetch-collection-metadata-job";
 import { resyncAttributeKeyCountsJob } from "@/jobs/update-attribute/resync-attribute-key-counts-job";
@@ -48,6 +49,30 @@ if (config.doBackgroundWork) {
     QUEUE_NAME,
     async (job: Job) => {
       const tokenAttributeCounter = {};
+
+      const isCopyrightInfringementContract =
+        getNetworkSettings().copyrightInfringementContracts.includes(
+          job.data.contract.toLowerCase()
+        );
+
+      if (isCopyrightInfringementContract) {
+        job.data = {
+          collection: job.data.collection,
+          contract: job.data.contract,
+          tokenId: job.data.tokenId,
+          attributes: [],
+        };
+
+        logger.info(
+          QUEUE_NAME,
+          JSON.stringify({
+            topic: "debugCopyrightInfringementContracts",
+            message: "Collection is a copyright infringement",
+            jobData: job.data,
+          })
+        );
+      }
+
       const {
         collection,
         contract,
@@ -117,15 +142,22 @@ if (config.doBackgroundWork) {
 
         if (
           config.doElasticsearchWork &&
-          (result.old_metadata.name != name ||
+          (isCopyrightInfringementContract ||
+            result.old_metadata.name != name ||
             result.old_metadata.image != imageUrl ||
             result.old_metadata.media != mediaUrl)
         ) {
-          await refreshActivitiesTokenMetadata.addToQueue(contract, tokenId, collection, {
-            name,
-            image: imageUrl,
-            media: mediaUrl,
-          });
+          await refreshActivitiesTokenMetadata.addToQueue(
+            contract,
+            tokenId,
+            collection,
+            {
+              name: name || null,
+              image: imageUrl || null,
+              media: mediaUrl || null,
+            },
+            isCopyrightInfringementContract
+          );
         }
 
         // If the new collection ID is different from the collection ID currently stored
