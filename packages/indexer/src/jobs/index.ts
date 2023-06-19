@@ -367,6 +367,7 @@ export class RabbitMqJobsConsumer {
 
     this.rabbitMqConsumerConnection.on("error", (error) => {
       logger.error("rabbit-connection-error", `Connection error ${error}`);
+      logger.error("rabbit-connection-error", `Connection error channel ${error.channel}`);
 
       for (const [channel, jobs] of RabbitMqJobsConsumer.channelsToJobs.entries()) {
         if (channel === error.channel) {
