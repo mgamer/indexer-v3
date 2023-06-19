@@ -119,6 +119,12 @@ export const getOrdersAsksV4Options: RouteOptions = {
         .description(
           "Exclude orders that can only be filled by EOAs, to support filling with smart contracts."
         ),
+      excludeSources: Joi.alternatives()
+        .try(
+          Joi.array().max(80).items(Joi.string().pattern(regex.domain)),
+          Joi.string().pattern(regex.domain)
+        )
+        .description("Exclude orders from a list of sources. Example: `opensea.io`"),
       startTimestamp: Joi.number().description(
         "Get events after a particular unix timestamp (inclusive)"
       ),
@@ -157,6 +163,7 @@ export const getOrdersAsksV4Options: RouteOptions = {
     })
       .oxor("token", "tokenSetId")
       .oxor("contracts", "contractsSetId")
+      .oxor("source", "excludeSources")
       .with("community", "maker")
       .with("collectionsSetId", "maker"),
   },
@@ -419,6 +426,25 @@ export const getOrdersAsksV4Options: RouteOptions = {
 
         (query as any).source = source.id;
         conditions.push(`orders.source_id_int = $/source/`);
+      }
+
+      if (query.excludeSources) {
+        const sources = await Sources.getInstance();
+
+        if (!Array.isArray(query.excludeSources)) {
+          query.excludeSources = [query.excludeSources];
+        }
+
+        (query as any).excludeSourceIds = query.excludeSources.map(
+          (source: string) => sources.getByDomain(source)?.id ?? 0
+        );
+
+        conditions.push(
+          `orders.source_id_int IN (
+              SELECT id FROM sources_v2 sv
+              WHERE id NOT IN ($/excludeSourceIds:csv/)
+          )`
+        );
       }
 
       if (query.native) {
