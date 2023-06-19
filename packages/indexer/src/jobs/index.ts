@@ -315,6 +315,7 @@ export const allJobQueues = [
 export class RabbitMqJobsConsumer {
   private static rabbitMqConsumerConnection: Connection;
   private static queueToChannel: Map<string, Channel> = new Map();
+  private static channelsToJobs: Map<Channel, AbstractRabbitMqJobHandler[]> = new Map();
 
   /**
    * Return array of all jobs classes, any new job MUST be added here
@@ -363,6 +364,19 @@ export class RabbitMqJobsConsumer {
 
   public static async connect() {
     this.rabbitMqConsumerConnection = await amqplib.connect(config.rabbitMqUrl);
+
+    this.rabbitMqConsumerConnection.on("error", (error) => {
+      logger.error("rabbit-connection-error", `Connection error ${error}`);
+
+      for (const [channel, jobs] of RabbitMqJobsConsumer.channelsToJobs.entries()) {
+        if (channel === error.channel) {
+          logger.error(
+            "rabbit-connection-error",
+            `Jobs stopped consume ${jobs.map((job: AbstractRabbitMqJobHandler) => job.queueName)}`
+          );
+        }
+      }
+    });
   }
 
   /**
@@ -402,6 +416,10 @@ export class RabbitMqJobsConsumer {
       RabbitMqJobsConsumer.queueToChannel.set(job.getQueue(), channel);
     }
 
+    RabbitMqJobsConsumer.channelsToJobs.get(channel)
+      ? RabbitMqJobsConsumer.channelsToJobs.get(channel)?.push(job)
+      : RabbitMqJobsConsumer.channelsToJobs.set(channel, [job]);
+
     await channel.prefetch(job.getConcurrency()); // Set the number of messages to consume simultaneously
 
     // Subscribe to the queue
@@ -431,10 +449,6 @@ export class RabbitMqJobsConsumer {
         consumerTag: RabbitMqJobsConsumer.getConsumerTag(job.getRetryQueue()),
       }
     );
-
-    channel.on("error", (error) => {
-      logger.error("rabbit-queues", `Channel error ${error}`);
-    });
   }
 
   /**
