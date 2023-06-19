@@ -20,10 +20,14 @@ export const publishWebsocketEvent = async (message: WebsocketMessage): Promise<
   message.published_at = Date.now();
   await redisWebsocketPublisher.publish("events", JSON.stringify(message));
 
-  await producer.send({
-    topic: getNetworkName() + ".websocket-events",
-    messages: [{ value: JSON.stringify(message) }],
-  });
+  try {
+    await producer.send({
+      topic: getNetworkName() + ".websocket-events",
+      messages: [{ value: JSON.stringify(message) }],
+    });
+  } catch (error) {
+    logger.error("publish-websocket-event", "Failed to send message to Kafka: " + error);
+  }
 };
 
 const enabledOffsetLoggingEvents = ["sale.created", "sale.updated", "sale.deleted"];
