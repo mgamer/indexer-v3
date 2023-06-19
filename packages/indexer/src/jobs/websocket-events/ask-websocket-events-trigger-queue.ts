@@ -170,6 +170,8 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
           tags: {
             contract: fromBuffer(rawResult.contract),
             source: result.source.domain || "unknown",
+            maker: fromBuffer(rawResult.maker),
+            taker: fromBuffer(rawResult.taker),
           },
           data: result,
           offset: data.offset,
