@@ -424,31 +424,31 @@ export class RabbitMqJobsConsumer {
 
     await channel.prefetch(job.getConcurrency()); // Set the number of messages to consume simultaneously
 
-    // Subscribe to the queue
-    await channel.consume(
-      job.getQueue(),
-      async (msg) => {
-        if (!_.isNull(msg)) {
-          await job.consume(channel, msg);
-        }
-      },
-      {
-        consumerTag: RabbitMqJobsConsumer.getConsumerTag(job.getQueue()),
-      }
-    );
-
-    // Subscribe to the retry queue
-    await channel.consume(
-      job.getRetryQueue(),
-      async (msg) => {
-        if (!_.isNull(msg)) {
-          await job.consume(channel, msg);
-        }
-      },
-      {
-        consumerTag: RabbitMqJobsConsumer.getConsumerTag(job.getRetryQueue()),
-      }
-    );
+    // // Subscribe to the queue
+    // await channel.consume(
+    //   job.getQueue(),
+    //   async (msg) => {
+    //     if (!_.isNull(msg)) {
+    //       await job.consume(channel, msg);
+    //     }
+    //   },
+    //   {
+    //     consumerTag: RabbitMqJobsConsumer.getConsumerTag(job.getQueue()),
+    //   }
+    // );
+    //
+    // // Subscribe to the retry queue
+    // await channel.consume(
+    //   job.getRetryQueue(),
+    //   async (msg) => {
+    //     if (!_.isNull(msg)) {
+    //       await job.consume(channel, msg);
+    //     }
+    //   },
+    //   {
+    //     consumerTag: RabbitMqJobsConsumer.getConsumerTag(job.getRetryQueue()),
+    //   }
+    // );
 
     // Subscribe to the queue
     await channel.consume(
