@@ -28,6 +28,7 @@ import "@/jobs/monitoring";
 import "@/jobs/token-set-updates";
 
 // Export all job queues for monitoring through the BullMQ UI
+import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handler";
 
 import * as processActivityEvent from "@/jobs/activities/process-activity-event";
 
@@ -137,7 +138,7 @@ import * as updateActivitiesCollection from "@/jobs/elasticsearch/update-activit
 import * as refreshActivitiesTokenMetadata from "@/jobs/elasticsearch/refresh-activities-token-metadata";
 import * as refreshActivitiesCollectionMetadata from "@/jobs/elasticsearch/refresh-activities-collection-metadata";
 
-import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handler";
+import { getNetworkName } from "@/config/network";
 import amqplib, { Channel, Connection } from "amqplib";
 import { config } from "@/config/index";
 import _ from "lodash";
@@ -151,7 +152,7 @@ import { tokenReclacSupplyJob } from "@/jobs/token-updates/token-reclac-supply-j
 // import { recalcTokenCountQueueJob } from "@/jobs/collection-updates/recalc-token-count-queue-job";
 // import { normalizedFloorQueueJob } from "@/jobs/token-updates/normalized-floor-queue-job";
 import { mintQueueJob } from "@/jobs/token-updates/mint-queue-job";
-// import { tokenFloorQueueJob } from "@/jobs/token-updates/token-floor-queue-job";
+import { tokenFloorQueueJob } from "@/jobs/token-updates/token-floor-queue-job";
 // import { fetchCollectionMetadataJob } from "@/jobs/token-updates/fetch-collection-metadata-job";
 // import { handleNewBuyOrderJob } from "@/jobs/update-attribute/handle-new-buy-order-job";
 // import { handleNewSellOrderJob } from "@/jobs/update-attribute/handle-new-sell-order-job";
@@ -326,7 +327,7 @@ export class RabbitMqJobsConsumer {
       // recalcTokenCountQueueJob,
       // normalizedFloorQueueJob,
       mintQueueJob,
-      // tokenFloorQueueJob,
+      tokenFloorQueueJob,
       // fetchCollectionMetadataJob,
       // handleNewBuyOrderJob,
       // handleNewSellOrderJob,
@@ -446,6 +447,36 @@ export class RabbitMqJobsConsumer {
       },
       {
         consumerTag: RabbitMqJobsConsumer.getConsumerTag(job.getRetryQueue()),
+      }
+    );
+
+    // Subscribe to the queue
+    await channel.consume(
+      _.replace(job.getQueue(), `${getNetworkName()}.`, `${getNetworkName()}.new.`),
+      async (msg) => {
+        if (!_.isNull(msg)) {
+          await job.consume(channel, msg);
+        }
+      },
+      {
+        consumerTag: RabbitMqJobsConsumer.getConsumerTag(
+          _.replace(job.getQueue(), `${getNetworkName()}.`, `${getNetworkName()}.new.`)
+        ),
+      }
+    );
+
+    // Subscribe to the retry queue
+    await channel.consume(
+      _.replace(job.getRetryQueue(), `${getNetworkName()}.`, `${getNetworkName()}.new.`),
+      async (msg) => {
+        if (!_.isNull(msg)) {
+          await job.consume(channel, msg);
+        }
+      },
+      {
+        consumerTag: RabbitMqJobsConsumer.getConsumerTag(
+          _.replace(job.getRetryQueue(), `${getNetworkName()}.`, `${getNetworkName()}.new.`)
+        ),
       }
     );
 
