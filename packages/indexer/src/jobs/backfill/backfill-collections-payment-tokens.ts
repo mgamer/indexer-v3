@@ -6,9 +6,8 @@ import { randomUUID } from "crypto";
 import { idb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
-import { fromBuffer } from "@/common/utils";
 import { config } from "@/config/index";
-import { Collections } from "@/models/collections";
+import MetadataApi from "@/utils/metadata-api";
 
 const QUEUE_NAME = "backfill-collections-payment-tokens";
 
@@ -39,13 +38,28 @@ if (config.doBackgroundWork) {
             (SELECT tokens.token_id FROM tokens WHERE tokens.collection_id = collections.id LIMIT 1) AS token_id
           FROM collections
           WHERE collections.payment_tokens IS NULL
+          AND collections.day30_rank <= 1000
           LIMIT $/limit/
         `,
         { limit }
       );
 
       for (const { contract, token_id } of result) {
-        await Collections.updateCollectionCache(fromBuffer(contract), token_id);
+        const collection = await MetadataApi.getCollectionMetadata(contract, token_id, "");
+
+        const query = `
+          UPDATE collections SET
+            payment_tokens = $/paymentTokens/,
+            updated_at = now()
+          WHERE id = $/id/
+        `;
+
+        const values = {
+          id: collection.id,
+          paymentTokens: collection.paymentTokens ? { opensea: collection.paymentTokens } : {},
+        };
+
+        await idb.oneOrNone(query, values);
         await new Promise((resolve) => setTimeout(resolve, 2000));
       }
 
