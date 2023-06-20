@@ -148,7 +148,6 @@ import getUuidByString from "uuid-by-string";
 import { getMachineId } from "@/common/machine-id";
 import { PausedRabbitMqQueues } from "@/models/paused-rabbit-mq-queues";
 import { logger } from "@/common/logger";
-import { RabbitMQMessage } from "@/common/rabbit-mq";
 import { tokenReclacSupplyJob } from "@/jobs/token-updates/token-reclac-supply-job";
 import { tokenRefreshCacheJob } from "@/jobs/token-updates/token-refresh-cache-job";
 import { recalcOwnerCountQueueJob } from "@/jobs/collection-updates/recalc-owner-count-queue-job";
@@ -430,8 +429,7 @@ export class RabbitMqJobsConsumer {
       job.getQueue(),
       async (msg) => {
         if (!_.isNull(msg)) {
-          const rabbitMQMessage = JSON.parse(msg.content.toString()) as RabbitMQMessage;
-          await job.consume(channel, msg, rabbitMQMessage);
+          await job.consume(channel, msg);
         }
       },
       {
@@ -444,12 +442,39 @@ export class RabbitMqJobsConsumer {
       job.getRetryQueue(),
       async (msg) => {
         if (!_.isNull(msg)) {
-          const rabbitMQMessage = JSON.parse(msg.content.toString()) as RabbitMQMessage;
-          await job.consume(channel, msg, rabbitMQMessage);
+          await job.consume(channel, msg);
         }
       },
       {
         consumerTag: RabbitMqJobsConsumer.getConsumerTag(job.getRetryQueue()),
+      }
+    );
+
+    // Subscribe to the queue
+    await channel.consume(
+      _.replace(job.getQueue(), ".new", ""),
+      async (msg) => {
+        if (!_.isNull(msg)) {
+          await job.consume(channel, msg);
+        }
+      },
+      {
+        consumerTag: RabbitMqJobsConsumer.getConsumerTag(_.replace(job.getQueue(), ".new", "")),
+      }
+    );
+
+    // Subscribe to the retry queue
+    await channel.consume(
+      _.replace(job.getRetryQueue(), ".new", ""),
+      async (msg) => {
+        if (!_.isNull(msg)) {
+          await job.consume(channel, msg);
+        }
+      },
+      {
+        consumerTag: RabbitMqJobsConsumer.getConsumerTag(
+          _.replace(job.getRetryQueue(), ".new", "")
+        ),
       }
     );
 
