@@ -445,19 +445,19 @@ export class RabbitMqJobsConsumer {
       }
     );
 
-    channel.once("error", (error) => {
-      logger.error("rabbit-channel-error", `Channel error ${error}`);
-
-      const jobs = RabbitMqJobsConsumer.channelsToJobs.get(channel);
-      if (jobs) {
-        logger.error(
-          "rabbit-channel-error",
-          `Jobs stopped consume ${JSON.stringify(
-            jobs.map((job: AbstractRabbitMqJobHandler) => job.queueName)
-          )}`
-        );
-      }
-    });
+    // channel.once("error", (error) => {
+    //   logger.error("rabbit-channel-error", `Channel error ${error}`);
+    //
+    //   const jobs = RabbitMqJobsConsumer.channelsToJobs.get(channel);
+    //   if (jobs) {
+    //     logger.error(
+    //       "rabbit-channel-error",
+    //       `Jobs stopped consume ${JSON.stringify(
+    //         jobs.map((job: AbstractRabbitMqJobHandler) => job.queueName)
+    //       )}`
+    //     );
+    //   }
+    // });
   }
 
   /**
