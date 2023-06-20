@@ -184,6 +184,7 @@ import { processArchiveDataJob } from "@/jobs/data-archive/process-archive-data-
 import { exportDataJob } from "@/jobs/data-export/export-data-job";
 import { processActivityEventJob } from "@/jobs/activities/process-activity-event-job";
 import { savePendingActivitiesJob } from "@/jobs/activities/save-pending-activities-job";
+import { getNetworkName } from "@/config/network";
 
 export const gracefulShutdownJobWorkers = [
   orderUpdatesById.worker,
@@ -445,33 +446,35 @@ export class RabbitMqJobsConsumer {
       }
     );
 
-    // // Subscribe to the queue
-    // await channel.consume(
-    //   _.replace(job.getQueue(), ".new", ""),
-    //   async (msg) => {
-    //     if (!_.isNull(msg)) {
-    //       await job.consume(channel, msg);
-    //     }
-    //   },
-    //   {
-    //     consumerTag: RabbitMqJobsConsumer.getConsumerTag(_.replace(job.getQueue(), ".new", "")),
-    //   }
-    // );
-    //
-    // // Subscribe to the retry queue
-    // await channel.consume(
-    //   _.replace(job.getRetryQueue(), ".new", ""),
-    //   async (msg) => {
-    //     if (!_.isNull(msg)) {
-    //       await job.consume(channel, msg);
-    //     }
-    //   },
-    //   {
-    //     consumerTag: RabbitMqJobsConsumer.getConsumerTag(
-    //       _.replace(job.getRetryQueue(), ".new", "")
-    //     ),
-    //   }
-    // );
+    // Subscribe to the queue
+    await channel.consume(
+      _.replace(job.getQueue(), `${getNetworkName()}.`, `${getNetworkName()}.new.`),
+      async (msg) => {
+        if (!_.isNull(msg)) {
+          await job.consume(channel, msg);
+        }
+      },
+      {
+        consumerTag: RabbitMqJobsConsumer.getConsumerTag(
+          _.replace(job.getQueue(), `${getNetworkName()}.`, `${getNetworkName()}.new.`)
+        ),
+      }
+    );
+
+    // Subscribe to the retry queue
+    await channel.consume(
+      _.replace(job.getRetryQueue(), `${getNetworkName()}.`, `${getNetworkName()}.new.`),
+      async (msg) => {
+        if (!_.isNull(msg)) {
+          await job.consume(channel, msg);
+        }
+      },
+      {
+        consumerTag: RabbitMqJobsConsumer.getConsumerTag(
+          _.replace(job.getRetryQueue(), `${getNetworkName()}.`, `${getNetworkName()}.new.`)
+        ),
+      }
+    );
 
     channel.on("error", (error) => {
       logger.error("rabbit-channel-error", `Channel error ${error}`);
