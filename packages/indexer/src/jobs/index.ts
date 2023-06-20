@@ -483,19 +483,19 @@ export class RabbitMqJobsConsumer {
   static async startRabbitJobsConsumer(): Promise<void> {
     try {
       await RabbitMqJobsConsumer.connect(); // Create a connection for the consumer
+
+      for (const queue of RabbitMqJobsConsumer.getQueues()) {
+        try {
+          await RabbitMqJobsConsumer.subscribe(queue);
+        } catch (error) {
+          logger.error(
+            "rabbit-subscribe",
+            `failed to subscribe to ${queue.queueName} error ${error}`
+          );
+        }
+      }
     } catch (error) {
       logger.error("rabbit-subscribe-connection", `failed to open connections to consume ${error}`);
-    }
-
-    for (const queue of RabbitMqJobsConsumer.getQueues()) {
-      try {
-        await RabbitMqJobsConsumer.subscribe(queue);
-      } catch (error) {
-        logger.error(
-          "rabbit-subscribe",
-          `failed to subscribe to ${queue.queueName} error ${error}`
-        );
-      }
     }
   }
 }
