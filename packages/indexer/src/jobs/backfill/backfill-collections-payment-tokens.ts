@@ -8,6 +8,7 @@ import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
 import { config } from "@/config/index";
 import MetadataApi from "@/utils/metadata-api";
+import { fromBuffer } from "@/common/utils";
 
 const QUEUE_NAME = "backfill-collections-payment-tokens";
 
@@ -45,7 +46,11 @@ if (config.doBackgroundWork) {
       );
 
       for (const { contract, token_id } of result) {
-        const collection = await MetadataApi.getCollectionMetadata(contract, token_id, "");
+        const collection = await MetadataApi.getCollectionMetadata(
+          fromBuffer(contract),
+          token_id,
+          ""
+        );
 
         const query = `
           UPDATE collections SET
