@@ -315,7 +315,9 @@ export const allJobQueues = [
 ];
 
 export class RabbitMqJobsConsumer {
-  private static rabbitMqConsumerConnection: Connection;
+  private static maxConsumerConnectionsCount = 5;
+
+  private static rabbitMqConsumerConnections: Connection[] = [];
   private static queueToChannel: Map<string, Channel> = new Map();
   private static channelsToJobs: Map<Channel, AbstractRabbitMqJobHandler[]> = new Map();
 
@@ -364,7 +366,11 @@ export class RabbitMqJobsConsumer {
   }
 
   public static async connect() {
-    this.rabbitMqConsumerConnection = await amqplib.connect(config.rabbitMqUrl);
+    for (let i = 0; i < RabbitMqJobsConsumer.maxConsumerConnectionsCount; ++i) {
+      RabbitMqJobsConsumer.rabbitMqConsumerConnections.push(
+        await amqplib.connect(config.rabbitMqUrl)
+      );
+    }
   }
 
   /**
@@ -389,6 +395,8 @@ export class RabbitMqJobsConsumer {
 
     let channel: Channel;
 
+    const connectionIndex = _.random(0, RabbitMqJobsConsumer.maxConsumerConnectionsCount - 1);
+
     // Some queues can use a shared channel as they are less important with low traffic
     if (job.getUseSharedChannel()) {
       const sharedChannel = RabbitMqJobsConsumer.queueToChannel.get(job.getSharedChannelName());
@@ -396,11 +404,15 @@ export class RabbitMqJobsConsumer {
       if (sharedChannel) {
         channel = sharedChannel;
       } else {
-        channel = await this.rabbitMqConsumerConnection.createChannel();
+        channel = await RabbitMqJobsConsumer.rabbitMqConsumerConnections[
+          connectionIndex
+        ].createChannel();
         RabbitMqJobsConsumer.queueToChannel.set(job.getSharedChannelName(), channel);
       }
     } else {
-      channel = await this.rabbitMqConsumerConnection.createChannel();
+      channel = await RabbitMqJobsConsumer.rabbitMqConsumerConnections[
+        connectionIndex
+      ].createChannel();
       RabbitMqJobsConsumer.queueToChannel.set(job.getQueue(), channel);
     }
 
