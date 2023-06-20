@@ -33,7 +33,7 @@ export const publishWebsocketEvent = async (message: WebsocketMessage): Promise<
   }
 };
 
-const enabledOffsetLoggingEvents = ["sale.created", "sale.updated", "sale.deleted"];
+const enabledOffsetLoggingEvents = ["ask.created"];
 
 export const addOffsetToSortedSet = async (
   event: WebsocketMessage,
