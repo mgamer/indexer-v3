@@ -170,8 +170,8 @@ import { fixActivitiesMissingCollectionJob } from "@/jobs/activities/fix-activit
 import { collectionMetadataQueueJob } from "@/jobs/collection-updates/collection-metadata-queue-job";
 import { rarityQueueJob } from "@/jobs/collection-updates/rarity-queue-job";
 import { nonFlaggedFloorQueueJob } from "@/jobs/collection-updates/non-flagged-floor-queue-job";
-import { refreshContractCollectionsMetadataQueueJob } from "@/jobs/collection-updates/refresh-contract-collections-metadata-queue-job";
-import { setCommunityQueueJob } from "@/jobs/collection-updates/set-community-queue-job";
+// import { refreshContractCollectionsMetadataQueueJob } from "@/jobs/collection-updates/refresh-contract-collections-metadata-queue-job";
+// import { setCommunityQueueJob } from "@/jobs/collection-updates/set-community-queue-job";
 import { topBidCollectionJob } from "@/jobs/collection-updates/top-bid-collection-job";
 import { updateCollectionActivityJob } from "@/jobs/collection-updates/update-collection-activity-job";
 import { updateCollectionDailyVolumeJob } from "@/jobs/collection-updates/update-collection-daily-volume-job";
@@ -345,8 +345,8 @@ export class RabbitMqJobsConsumer {
       collectionMetadataQueueJob,
       rarityQueueJob,
       nonFlaggedFloorQueueJob,
-      refreshContractCollectionsMetadataQueueJob,
-      setCommunityQueueJob,
+      // refreshContractCollectionsMetadataQueueJob,
+      // setCommunityQueueJob,
       topBidCollectionJob,
       updateCollectionActivityJob,
       updateCollectionDailyVolumeJob,
