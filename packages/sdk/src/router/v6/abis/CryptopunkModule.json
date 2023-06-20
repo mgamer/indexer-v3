@@ -157,63 +157,28 @@
 				"internalType": "struct BaseExchangeModule.ETHListingParams",
 				"name": "params",
 				"type": "tuple"
-			}
-		],
-		"name": "batchBuyPunksWithETH",
-		"outputs": [],
-		"stateMutability": "payable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"components": [
-					{
-						"internalType": "address",
-						"name": "seller",
-						"type": "address"
-					},
-					{
-						"internalType": "uint256",
-						"name": "price",
-						"type": "uint256"
-					},
-					{
-						"internalType": "uint256",
-						"name": "punkIndex",
-						"type": "uint256"
-					}
-				],
-				"internalType": "struct ICryptoPunksMarket.SellOrder[]",
-				"name": "sellOrders",
-				"type": "tuple[]"
 			},
 			{
 				"components": [
 					{
 						"internalType": "address",
-						"name": "fillTo",
+						"name": "recipient",
 						"type": "address"
 					},
 					{
-						"internalType": "address",
-						"name": "refundTo",
-						"type": "address"
-					},
-					{
-						"internalType": "bool",
-						"name": "revertIfIncomplete",
-						"type": "bool"
+						"internalType": "uint256",
+						"name": "amount",
+						"type": "uint256"
 					}
 				],
-				"internalType": "struct BaseExchangeModule.OfferParams",
-				"name": "params",
-				"type": "tuple"
+				"internalType": "struct BaseExchangeModule.Fee[]",
+				"name": "fees",
+				"type": "tuple[]"
 			}
 		],
-		"name": "batchSellPunks",
+		"name": "batchBuyPunksWithETH",
 		"outputs": [],
-		"stateMutability": "nonpayable",
+		"stateMutability": "payable",
 		"type": "function"
 	},
 	{

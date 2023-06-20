@@ -269,26 +269,6 @@ export class Router {
       }
     }
 
-    if (details.some(({ kind }) => kind === "cryptopunks")) {
-      if (options?.relayer) {
-        throw new Error("Relayer not supported for Cryptopunks orders");
-      }
-
-      for (const detail of details.filter(({ kind }) => kind === "cryptopunks")) {
-        if (detail.fees?.length || options?.globalFees?.length) {
-          throw new Error("Fees not supported for Cryptopunks orders");
-        }
-
-        const order = detail.order as Sdk.CryptoPunks.Order;
-        const exchange = new Sdk.CryptoPunks.Exchange(this.chainId);
-        txs.push({
-          approvals: [],
-          txData: exchange.fillListingTx(taker, order, options),
-          orderIds: [detail.orderId],
-        });
-        success[detail.orderId] = true;
-      }
-    }
 
     if (details.some(({ kind }) => kind === "flow")) {
       if (options?.relayer) {
@@ -2537,11 +2517,11 @@ export class Router {
     if (cryptoPunkDetails.length) {
       const orders = cryptoPunkDetails.map((d) => d.order as Sdk.CryptoPunks.Order);
       const module = this.contracts.cryptoPunksModule;
+      const fees = getFees(cryptoPunkDetails);
 
-      const price = orders.
-        map((order) => bn(order.params.price)).reduce((a, b) => a.add(b), bn(0));
-      // cryptopunk has no fee
-      const totalPrice = price;
+      const price = orders.map((order) => bn(order.params.price)).reduce((a, b) => a.add(b), bn(0));
+      const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
+      const totalPrice = price.add(feeAmount);
 
       executions.push({
         module: module.address,
@@ -3834,40 +3814,6 @@ export class Router {
                   fees,
                 ]
               ),
-              value: 0,
-            },
-          });
-
-          success[detail.orderId] = true;
-
-          break;
-        }
-
-        //  Attention:
-        // 'batchSellPunks' method based on the contract has received the punks to 
-        // be sold because we don't have 'approval' in punks'contract, but it's tricky 
-        // if we split one tx into two txs, one for approval and one for selling so
-        // just remain following codes for dicussion
-        case "cryptopunks": {
-          const order = detail.order as Sdk.CryptoPunks.Order;
-          const module = this.contracts.cryptoPunksModule;
-
-          executionsWithDetails.push({
-            detail,
-            execution: {
-              module: module.address,
-              data: module.interface.encodeFunctionData("batchSellPunks", [
-                {
-                  seller: taker,
-                  price: order.params.price,
-                  punkIndex: order.params.tokenId
-                },
-                {
-                  fillTo: taker,
-                  refundTo: taker,
-                  revertIfIncomplete: Boolean(!options?.partial),
-                },
-              ]),
               value: 0,
             },
           });
