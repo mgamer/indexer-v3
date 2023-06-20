@@ -298,7 +298,9 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         const maker = parsedLog.args["feeRecipients"][0].toLowerCase();
         let taker = parsedLog.args["bidUser"].toLowerCase();
         const currency = parsedLog.args["currency"].toLowerCase();
-        let currencyPrice = parsedLog.args["feeAmounts"][0].toString();
+        let currencyPrice = parsedLog.args["feeAmounts"]
+          .reduce((sum: string, current: string) => sum + parseInt(current), 0)
+          .toString();
         const contract = parsedLog.args["collection"].toLowerCase();
 
         // It's might be multiple
