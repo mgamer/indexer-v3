@@ -354,8 +354,8 @@ export const savePartialListings = async (
         .then((r) => fromBuffer(r.owner));
 
       if (orderParams.owner && orderParams.owner.toLowerCase() !== owner) {
-        results.push({
-          id: getBlurListingId(orderParams, orderParams.owner),
+        return results.push({
+          id: "unknown",
           status: "redundant",
         });
       }
