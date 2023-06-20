@@ -153,7 +153,7 @@ import { tokenReclacSupplyJob } from "@/jobs/token-updates/token-reclac-supply-j
 import { normalizedFloorQueueJob } from "@/jobs/token-updates/normalized-floor-queue-job";
 import { mintQueueJob } from "@/jobs/token-updates/mint-queue-job";
 import { tokenFloorQueueJob } from "@/jobs/token-updates/token-floor-queue-job";
-// import { fetchCollectionMetadataJob } from "@/jobs/token-updates/fetch-collection-metadata-job";
+import { fetchCollectionMetadataJob } from "@/jobs/token-updates/fetch-collection-metadata-job";
 // import { handleNewBuyOrderJob } from "@/jobs/update-attribute/handle-new-buy-order-job";
 // import { handleNewSellOrderJob } from "@/jobs/update-attribute/handle-new-sell-order-job";
 // import { resyncAttributeCacheJob } from "@/jobs/update-attribute/resync-attribute-cache-job";
@@ -182,9 +182,9 @@ import { topBidSingleTokenQueueJob } from "@/jobs/token-set-updates/top-bid-sing
 // import { oneDayVolumeJob } from "@/jobs/daily-volumes/1day-volumes-job";
 // import { dailyVolumeJob } from "@/jobs/daily-volumes/daily-volumes-job";
 // import { processArchiveDataJob } from "@/jobs/data-archive/process-archive-data-job";
-// import { exportDataJob } from "@/jobs/data-export/export-data-job";
-// import { processActivityEventJob } from "@/jobs/activities/process-activity-event-job";
-// import { savePendingActivitiesJob } from "@/jobs/activities/save-pending-activities-job";
+import { exportDataJob } from "@/jobs/data-export/export-data-job";
+import { processActivityEventJob } from "@/jobs/activities/process-activity-event-job";
+import { savePendingActivitiesJob } from "@/jobs/activities/save-pending-activities-job";
 
 export const gracefulShutdownJobWorkers = [
   orderUpdatesById.worker,
@@ -328,7 +328,7 @@ export class RabbitMqJobsConsumer {
       normalizedFloorQueueJob,
       mintQueueJob,
       tokenFloorQueueJob,
-      // fetchCollectionMetadataJob,
+      fetchCollectionMetadataJob,
       // handleNewBuyOrderJob,
       // handleNewSellOrderJob,
       // resyncAttributeCacheJob,
@@ -356,9 +356,9 @@ export class RabbitMqJobsConsumer {
       // currenciesFetchJob,
       // oneDayVolumeJob,
       // processArchiveDataJob,
-      // exportDataJob,
-      // processActivityEventJob,
-      // savePendingActivitiesJob,
+      exportDataJob,
+      processActivityEventJob,
+      savePendingActivitiesJob,
     ];
   }
 
