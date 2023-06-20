@@ -185,6 +185,7 @@ import { oneDayVolumeJob } from "@/jobs/daily-volumes/1day-volumes-job";
 // import { dailyVolumeJob } from "@/jobs/daily-volumes/daily-volumes-job";
 import { processArchiveDataJob } from "@/jobs/data-archive/process-archive-data-job";
 import { exportDataJob } from "@/jobs/data-export/export-data-job";
+import { getNetworkName } from "@/config/network";
 
 export const gracefulShutdownJobWorkers = [
   orderUpdatesById.worker,
@@ -452,20 +453,7 @@ export class RabbitMqJobsConsumer {
 
     // Subscribe to the queue
     await channel.consume(
-      _.replace(job.getQueue(), ".new", ""),
-      async (msg) => {
-        if (!_.isNull(msg)) {
-          await job.consume(channel, msg);
-        }
-      },
-      {
-        consumerTag: RabbitMqJobsConsumer.getConsumerTag(_.replace(job.getQueue(), ".new", "")),
-      }
-    );
-
-    // Subscribe to the retry queue
-    await channel.consume(
-      _.replace(job.getRetryQueue(), ".new", ""),
+      _.replace(job.getQueue(), `${getNetworkName()}.`, `${getNetworkName()}.new.`),
       async (msg) => {
         if (!_.isNull(msg)) {
           await job.consume(channel, msg);
@@ -473,7 +461,22 @@ export class RabbitMqJobsConsumer {
       },
       {
         consumerTag: RabbitMqJobsConsumer.getConsumerTag(
-          _.replace(job.getRetryQueue(), ".new", "")
+          _.replace(job.getQueue(), `${getNetworkName()}.`, `${getNetworkName()}.new.`)
+        ),
+      }
+    );
+
+    // Subscribe to the retry queue
+    await channel.consume(
+      _.replace(job.getRetryQueue(), `${getNetworkName()}.`, `${getNetworkName()}.new.`),
+      async (msg) => {
+        if (!_.isNull(msg)) {
+          await job.consume(channel, msg);
+        }
+      },
+      {
+        consumerTag: RabbitMqJobsConsumer.getConsumerTag(
+          _.replace(job.getRetryQueue(), `${getNetworkName()}.`, `${getNetworkName()}.new.`)
         ),
       }
     );
