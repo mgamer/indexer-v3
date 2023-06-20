@@ -299,6 +299,7 @@ export const saveFullListings = async (
 type PartialListingOrderParams = {
   collection: string;
   tokenId: string;
+  owner?: string;
   // If empty then no Blur listing is available anymore
   price?: string;
   createdAt?: string;
@@ -350,6 +351,15 @@ export const savePartialListings = async (
         )
         .then((r) => fromBuffer(r.owner));
 
+      const id = getBlurListingId(orderParams, owner);
+
+      if (orderParams.owner && orderParams.owner.toLowerCase() !== owner) {
+        results.push({
+          id,
+          status: "redundant",
+        });
+      }
+
       // Handle: source
       const sources = await Sources.getInstance();
       const source = await sources.getOrInsert("blur.io");
@@ -396,8 +406,6 @@ export const savePartialListings = async (
           status: "no-active-orders",
         });
       }
-
-      const id = getBlurListingId(orderParams, owner);
 
       // Handle: royalties
       let feeBps = 0;
