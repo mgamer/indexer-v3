@@ -46,7 +46,6 @@ if (config.doBackgroundWork) {
       );
 
       for (const { contract, token_id } of result) {
-        logger.info(QUEUE_NAME, `contract: ${fromBuffer(contract)} token_id: ${token_id}`);
         await Collections.updateCollectionCache(fromBuffer(contract), token_id);
         await new Promise((resolve) => setTimeout(resolve, 2000));
       }
