@@ -237,8 +237,6 @@ export type EventInfo = {
 };
 
 export const addToQueue = async (events: EventInfo[]) => {
-  return;
-
   if (!config.doWebsocketServerWork) {
     return;
   }
