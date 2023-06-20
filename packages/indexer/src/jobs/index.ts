@@ -150,7 +150,7 @@ import { tokenReclacSupplyJob } from "@/jobs/token-updates/token-reclac-supply-j
 // import { tokenRefreshCacheJob } from "@/jobs/token-updates/token-refresh-cache-job";
 // import { recalcOwnerCountQueueJob } from "@/jobs/collection-updates/recalc-owner-count-queue-job";
 // import { recalcTokenCountQueueJob } from "@/jobs/collection-updates/recalc-token-count-queue-job";
-// import { normalizedFloorQueueJob } from "@/jobs/token-updates/normalized-floor-queue-job";
+import { normalizedFloorQueueJob } from "@/jobs/token-updates/normalized-floor-queue-job";
 import { mintQueueJob } from "@/jobs/token-updates/mint-queue-job";
 import { tokenFloorQueueJob } from "@/jobs/token-updates/token-floor-queue-job";
 // import { fetchCollectionMetadataJob } from "@/jobs/token-updates/fetch-collection-metadata-job";
@@ -162,8 +162,8 @@ import { tokenFloorQueueJob } from "@/jobs/token-updates/token-floor-queue-job";
 // import { resyncAttributeKeyCountsJob } from "@/jobs/update-attribute/resync-attribute-key-counts-job";
 // import { resyncAttributeValueCountsJob } from "@/jobs/update-attribute/resync-attribute-value-counts-job";
 // import { resyncAttributeCountsJob } from "@/jobs/update-attribute/update-attribute-counts-job";
-// import { topBidQueueJob } from "@/jobs/token-set-updates/top-bid-queue-job";
-// import { topBidSingleTokenQueueJob } from "@/jobs/token-set-updates/top-bid-single-token-queue-job";
+import { topBidQueueJob } from "@/jobs/token-set-updates/top-bid-queue-job";
+import { topBidSingleTokenQueueJob } from "@/jobs/token-set-updates/top-bid-single-token-queue-job";
 // import { fetchSourceInfoJob } from "@/jobs/sources/fetch-source-info-job";
 // import { removeUnsyncedEventsActivitiesJob } from "@/jobs/activities/remove-unsynced-events-activities-job";
 // import { fixActivitiesMissingCollectionJob } from "@/jobs/activities/fix-activities-missing-collection-job";
@@ -325,7 +325,7 @@ export class RabbitMqJobsConsumer {
       // tokenRefreshCacheJob,
       // recalcOwnerCountQueueJob,
       // recalcTokenCountQueueJob,
-      // normalizedFloorQueueJob,
+      normalizedFloorQueueJob,
       mintQueueJob,
       tokenFloorQueueJob,
       // fetchCollectionMetadataJob,
@@ -337,8 +337,8 @@ export class RabbitMqJobsConsumer {
       // resyncAttributeKeyCountsJob,
       // resyncAttributeValueCountsJob,
       // resyncAttributeCountsJob,
-      // topBidQueueJob,
-      // topBidSingleTokenQueueJob,
+      topBidQueueJob,
+      topBidSingleTokenQueueJob,
       // fetchSourceInfoJob,
       // removeUnsyncedEventsActivitiesJob,
       // fixActivitiesMissingCollectionJob,
