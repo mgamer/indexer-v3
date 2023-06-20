@@ -373,6 +373,10 @@ export class RabbitMqJobsConsumer {
         RabbitMqJobsConsumer.getSharedChannelName(i),
         await connection.createChannel()
       );
+
+      connection.once("error", (error) => {
+        logger.error("rabbit-connection-error", `Connection error ${error}`);
+      });
     }
   }
 
@@ -477,7 +481,11 @@ export class RabbitMqJobsConsumer {
    * Going over all the jobs and calling the subscribe function for each queue
    */
   static async startRabbitJobsConsumer(): Promise<void> {
-    await RabbitMqJobsConsumer.connect(); // Create a connection for the consumer
+    try {
+      await RabbitMqJobsConsumer.connect(); // Create a connection for the consumer
+    } catch (error) {
+      logger.error("rabbit-subscribe-connection", `failed to open connections to consume ${error}`);
+    }
 
     for (const queue of RabbitMqJobsConsumer.getQueues()) {
       try {
