@@ -395,10 +395,11 @@ export class RabbitMqJobsConsumer {
 
     let channel: Channel;
 
-    const connectionIndex = _.random(0, RabbitMqJobsConsumer.maxConsumerConnectionsCount - 1);
+    let connectionIndex = _.random(0, RabbitMqJobsConsumer.maxConsumerConnectionsCount - 1);
 
     // Some queues can use a shared channel as they are less important with low traffic
     if (job.getUseSharedChannel()) {
+      connectionIndex = 0; // Shared channels all go the same connection
       const sharedChannel = RabbitMqJobsConsumer.queueToChannel.get(job.getSharedChannelName());
 
       if (sharedChannel) {
