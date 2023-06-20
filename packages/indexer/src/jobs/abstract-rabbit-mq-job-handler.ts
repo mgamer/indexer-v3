@@ -44,8 +44,6 @@ export abstract class AbstractRabbitMqJobHandler extends (EventEmitter as new ()
   protected lazyMode = false;
   protected queueType: QueueType = "classic";
 
-  private sharedChannelName = "shared-channel";
-
   public async consume(
     channel: Channel,
     consumeMessage: ConsumeMessage,
@@ -126,10 +124,6 @@ export abstract class AbstractRabbitMqJobHandler extends (EventEmitter as new ()
 
   public getMaxDeadLetterQueue(): number {
     return this.maxDeadLetterQueue;
-  }
-
-  public getSharedChannelName(): string {
-    return this.sharedChannelName;
   }
 
   public getUseSharedChannel(): boolean {
