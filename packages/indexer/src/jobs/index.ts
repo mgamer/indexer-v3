@@ -445,7 +445,7 @@ export class RabbitMqJobsConsumer {
       }
     );
 
-    channel.on("error", (error) => {
+    channel.once("error", (error) => {
       logger.error("rabbit-channel-error", `Channel error ${error}`);
 
       const jobs = RabbitMqJobsConsumer.channelsToJobs.get(channel);
