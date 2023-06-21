@@ -58,7 +58,7 @@ if (config.doWebsocketWork && config.openSeaApiKey) {
       EventType.ITEM_LISTED,
       EventType.COLLECTION_OFFER,
       // EventType.ITEM_RECEIVED_BID,
-      EventType.TRAIT_OFFER,
+      // EventType.TRAIT_OFFER,
       EventType.ITEM_CANCELLED,
       EventType.ORDER_REVALIDATE,
     ],
