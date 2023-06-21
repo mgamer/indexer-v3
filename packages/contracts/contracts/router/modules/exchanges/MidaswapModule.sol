@@ -174,7 +174,7 @@ contract MidaswapModule is BaseExchangeModule {
     uint256[] memory tokenIds = new uint256[](1);
     tokenIds[0] = _tokenId;
     uint256 _ftAmount = MIDAS_ROUTER.getMinAmountIn(_pair, tokenIds);
-    IERC20(_tokenY).transferFrom(_to, _pair, _ftAmount);
+    IERC20(_tokenY).transferFrom(address(this), _pair, _ftAmount);
     // Execute the fill
     try
       IMidasPair(_pair).buyNFT(_tokenId, _to)
@@ -196,7 +196,7 @@ contract MidaswapModule is BaseExchangeModule {
     require(_tokenY == address(weth));
     address _pair;
     _pair = MIDAS_FACTORY.getPairERC721(_tokenX, _tokenY);
-    IERC721(_tokenX).safeTransferFrom(_to, _pair, _tokenId);
+    IERC721(_tokenX).safeTransferFrom(address(this), _pair, _tokenId);
     // Execute the fill
     try
       IMidasPair(_pair).sellNFT(_tokenId, address(this)) returns (uint128 ftAmount)
@@ -222,7 +222,7 @@ contract MidaswapModule is BaseExchangeModule {
   ) internal {
     address _pair;
     _pair = MIDAS_FACTORY.getPairERC721(_tokenX, _tokenY);
-    IERC721(_tokenX).safeTransferFrom(_to, _pair, _tokenId);
+    IERC721(_tokenX).safeTransferFrom(address(this), _pair, _tokenId);
     // Execute the fill
     try
       IMidasPair(_pair).sellNFT(_tokenId, _to)
