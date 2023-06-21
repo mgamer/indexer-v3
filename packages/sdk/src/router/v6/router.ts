@@ -56,6 +56,7 @@ import X2Y2ModuleAbi from "./abis/X2Y2Module.json";
 import ZeroExV4ModuleAbi from "./abis/ZeroExV4Module.json";
 import ZoraModuleAbi from "./abis/ZoraModule.json";
 import SudoswapV2ModuleAbi from "./abis/SudoswapV2Module.json";
+import MidaswapModuleAbi from "./abis/MidaswapModule.json";
 
 type SetupOptions = {
   x2y2ApiKey?: string;
@@ -130,6 +131,11 @@ export class Router {
       sudoswapV2Module: new Contract(
         Addresses.SudoswapV2Module[chainId] ?? AddressZero,
         SudoswapV2ModuleAbi,
+        provider
+      ),
+      midaswapModule: new Contract(
+        Addresses.MidaswapModule[chainId] ?? AddressZero,
+        MidaswapModuleAbi,
         provider
       ),
       superRareModule: new Contract(
@@ -817,6 +823,7 @@ export class Router {
     const alienswapDetails: PerCurrencyListingDetails = {};
     const sudoswapDetails: ListingDetails[] = [];
     const sudoswapV2Details: ListingDetails[] = [];
+    const midaswapDetails: ListingDetails[] = [];
     const collectionXyzDetails: ListingDetails[] = [];
     const x2y2Details: ListingDetails[] = [];
     const zeroexV4Erc721Details: ListingDetails[] = [];
@@ -892,6 +899,10 @@ export class Router {
 
         case "sudoswap-v2":
           detailsRef = sudoswapV2Details;
+          break;
+
+        case "midaswap":
+          detailsRef = midaswapDetails;
           break;
 
         case "x2y2":
@@ -1887,6 +1898,73 @@ export class Router {
 
       // Mark the listings as successfully handled
       for (const { orderId } of sudoswapV2Details) {
+        success[orderId] = true;
+        orderIds.push(orderId);
+      }
+    }
+
+    // todo
+    // Handle midaswap listings
+    if (midaswapDetails.length) {
+      const orders = midaswapDetails.map((d) => ({
+        order: d.order as Sdk.SudoswapV2.Order,
+        amount: d.amount,
+        contractKind: d.contractKind,
+      }));
+      const module = this.contracts.sudoswapV2Module;
+
+      const fees = getFees(midaswapDetails);
+      const price = orders
+        .map(({ order, amount, contractKind }) =>
+          bn(
+            // Handle multiple listings from the same pool
+            contractKind === "erc721"
+              ? // For ERC721, each order from the same pool gets a different price
+                order.params.extra.prices[
+                  orders
+                    .map(({ order }) => order)
+                    .filter((o) => o.params.pair === order.params.pair)
+                    .findIndex((o) => o.params.tokenId === order.params.tokenId)
+                ]
+              : // For ERC1155, each amount from the same pool gets a different price
+                order.params.extra.prices
+                  .slice(0, Number(amount ?? 1))
+                  .reduce((a, b) => a.add(b), bn(0))
+          )
+        )
+        .reduce((a, b) => a.add(b), bn(0));
+      const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
+      const totalPrice = price.add(feeAmount);
+
+      executions.push({
+        module: module.address,
+        data: module.interface.encodeFunctionData("buyWithETH", [
+          midaswapDetails.map((d) => (d.order as Sdk.SudoswapV2.Order).params.pair),
+          midaswapDetails.map((d) => (d.contractKind === "erc721" ? d.tokenId : d.amount ?? 1)),
+          {
+            fillTo: taker,
+            refundTo: relayer,
+            revertIfIncomplete: Boolean(!options?.partial),
+            amount: price,
+          },
+          fees,
+        ]),
+        value: totalPrice,
+      });
+
+      // Track any possibly required swap
+      swapDetails.push({
+        tokenIn: buyInCurrency,
+        tokenOut: Sdk.Common.Addresses.Eth[this.chainId],
+        tokenOutAmount: totalPrice,
+        recipient: module.address,
+        refundTo: relayer,
+        details: midaswapDetails,
+        executionIndex: executions.length - 1,
+      });
+
+      // Mark the listings as successfully handled
+      for (const { orderId } of midaswapDetails) {
         success[orderId] = true;
         orderIds.push(orderId);
       }
@@ -3007,6 +3085,11 @@ export class Router {
           break;
         }
 
+        case "midaswap": {
+          module = this.contracts.midaswapModule;
+          break;
+        }
+
         case "collectionxyz": {
           module = this.contracts.collectionXyzModule;
           break;
@@ -3449,6 +3532,38 @@ export class Router {
         case "sudoswap-v2": {
           const order = detail.order as Sdk.SudoswapV2.Order;
           const module = this.contracts.sudoswapV2Module;
+
+          executionsWithDetails.push({
+            detail,
+            execution: {
+              module: module.address,
+              data: module.interface.encodeFunctionData("sell", [
+                order.params.pair,
+                detail.contractKind === "erc721" ? detail.tokenId : detail.amount ?? 1,
+                bn(order.params.extra.prices[0]).sub(
+                  // Take into account the protocol fee of 0.5%
+                  bn(order.params.extra.prices[0]).mul(50).div(10000)
+                ),
+                {
+                  fillTo: taker,
+                  refundTo: taker,
+                  revertIfIncomplete: Boolean(!options?.partial),
+                },
+                fees,
+              ]),
+              value: 0,
+            },
+          });
+
+          success[detail.orderId] = true;
+
+          break;
+        }
+
+        // todo
+        case "midaswap": {
+          const order = detail.order as Sdk.Midaswap.Order;
+          const module = this.contracts.midaswapModule;
 
           executionsWithDetails.push({
             detail,

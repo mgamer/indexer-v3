@@ -215,6 +215,10 @@ export const trigger = {
       [1, 5].includes(chainId)
         ? dv("SudoswapV2Module", "v2", [DEPLOYER, Sdk.RouterV6.Addresses.Router[chainId]])
         : undefined,
+    MidaswapModule: async (chainId: number) =>
+      [1, 5].includes(chainId)
+        ? dv("MidaswapModule", "v1", [DEPLOYER, Sdk.RouterV6.Addresses.Router[chainId]])
+        : undefined,
     SuperRareModule: async (chainId: number) =>
       dv("SuperRareModule", "v1", [
         DEPLOYER,
