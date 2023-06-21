@@ -122,7 +122,6 @@ import * as tokenWebsocketEventsTriggerQueue from "@/jobs/websocket-events/token
 import * as topBidWebsocketEventsTriggerQueue from "@/jobs/websocket-events/top-bid-websocket-events-trigger-queue";
 import * as collectionWebsocketEventsTriggerQueue from "@/jobs/websocket-events/collection-websocket-events-trigger-queue";
 
-import * as dailyVolumeQueue from "@/jobs/daily-volumes/daily-volumes";
 import * as countApiUsage from "@/jobs/metrics/count-api-usage";
 
 import * as openseaOrdersProcessQueue from "@/jobs/opensea-orders/process-queue";
@@ -254,7 +253,6 @@ export const allJobQueues = [
 
   updateNftBalanceFloorAskPrice.queue,
   updateNftBalanceTopBid.queue,
-  dailyVolumeQueue.queue,
 
   orderFixes.queue,
   orderRevalidations.queue,
