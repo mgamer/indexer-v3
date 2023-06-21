@@ -66,29 +66,34 @@ if (config.doBackgroundWork) {
         }
       );
       for (const { tx_hash, log_index, batch_index, timestamp, order_side } of result) {
-        const txReceipt = await baseProvider.getTransactionReceipt(fromBuffer(tx_hash));
-        const log = txReceipt.logs.find((l) => l.logIndex === log_index)!;
+        try {
+          const txReceipt = await baseProvider.getTransactionReceipt(fromBuffer(tx_hash));
+          const log = txReceipt.logs.find((l) => l.logIndex === log_index)!;
 
-        const parsedLog = (order_side === "sell" ? takerBid : takerAsk).abi.parseLog(log);
+          const parsedLog = (order_side === "sell" ? takerBid : takerAsk).abi.parseLog(log);
 
-        const amount = parsedLog.args["amounts"][0].toString();
-        const currency = parsedLog.args["currency"].toLowerCase();
-        const currencyPrice = (parsedLog.args["feeAmounts"] as BigNumber[])
-          .map((amount) => bn(amount))
-          .reduce((a, b) => a.add(b))
-          .div(amount)
-          .toString();
+          const amount = parsedLog.args["amounts"][0].toString();
+          const currency = parsedLog.args["currency"].toLowerCase();
+          const currencyPrice = (parsedLog.args["feeAmounts"] as BigNumber[])
+            .map((amount) => bn(amount))
+            .reduce((a, b) => a.add(b))
+            .div(amount)
+            .toString();
 
-        const priceData = await getUSDAndNativePrices(currency, currencyPrice, timestamp);
+          const priceData = await getUSDAndNativePrices(currency, currencyPrice, timestamp);
 
-        values.push({
-          tx_hash,
-          log_index,
-          batch_index,
-          price: priceData.nativePrice,
-          usd_price: priceData.usdPrice!,
-          currency_price: currencyPrice,
-        });
+          values.push({
+            tx_hash,
+            log_index,
+            batch_index,
+            price: priceData.nativePrice,
+            usd_price: priceData.usdPrice!,
+            currency_price: currencyPrice,
+          });
+        } catch (error) {
+          logger.info(QUEUE_NAME, JSON.stringify({ txHash: fromBuffer(tx_hash), result }));
+          throw error;
+        }
       }
 
       if (values.length) {
