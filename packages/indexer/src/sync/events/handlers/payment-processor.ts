@@ -2,9 +2,10 @@ import { getEventData } from "@/events-sync/data";
 import { EnhancedEvent, OnChainData } from "@/events-sync/handlers/utils";
 import { getUSDAndNativePrices } from "@/utils/prices";
 import * as utils from "@/events-sync/utils";
-// import * as Sdk from "@reservoir0x/sdk";
-// import { config } from "@/config/index";
+import * as Sdk from "@reservoir0x/sdk";
+import { config } from "@/config/index";
 // import { searchForCall } from "@georgeroman/evm-tx-simulator";
+import * as commonHelpers from "@/orderbook/orders/common/helpers";
 
 export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChainData) => {
   // For keeping track of all individual trades per transaction
@@ -35,57 +36,222 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
       }
 
       case "payment-processor-buy-single-listing": {
-        const parsedLog = eventData.abi.parseLog(log);
+        // const parsedLog = eventData.abi.parseLog(log);
+        const txHash = baseEventParams.txHash;
+        // const txTrace = await utils.fetchTransactionTrace(txHash);
+        // if (!txTrace) {
+        //   break;
+        // }
 
-        const tokenAddress = parsedLog.args["tokenAddress"].toLowerCase();
+        const exchange = new Sdk.PaymentProcessor.Exchange(config.chainId);
+        // const exchangeAddress = exchange.contract.address;
+        const methods = [
+          {
+            selector: "0x7d26279c",
+            name: "buySingleListing",
+          },
+          {
+            selector: "0x5ed1f9bb",
+            name: "buyBatchOfListings",
+          },
+        ];
 
-        const buyer = parsedLog.args["buyer"].toLowerCase();
-        const seller = parsedLog.args["seller"].toLowerCase();
-        const tokenId = parsedLog.args["tokenId"].toString();
-        const amount = parsedLog.args["amount"].toString();
+        // const tradeRank = trades.order.get(`${txHash}-${exchangeAddress}`) ?? 0;
+        // const executeCallTrace = searchForCall(
+        //   txTrace.calls,
+        //   {
+        //     to: exchangeAddress,
+        //     type: "CALL",
+        //     sigHashes: methods.map((c) => c.selector),
+        //   },
+        //   tradeRank
+        // );
 
-        const currency = parsedLog.args["paymentCoin"].toLowerCase();
-        const currencyPrice = parsedLog.args["salePrice"].toString();
+        // if (!executeCallTrace) {
+        //   console.log("executeCallTrace", executeCallTrace)
+        //   break;
+        // }
 
-        const priceData = await getUSDAndNativePrices(
-          currency,
-          currencyPrice,
-          baseEventParams.timestamp
-        );
+        const transaction = await utils.fetchTransaction(txHash);
+        const executeCallTrace = {
+          input: transaction.data,
+        };
 
-        priceData.nativePrice = currencyPrice;
-
-        if (!priceData.nativePrice) {
-          // We must always have the native price
+        const matchMethod = methods.find((c) => executeCallTrace.input.includes(c.selector));
+        if (!matchMethod) {
           break;
         }
 
-        // Handle: attribution
-        const orderKind = "payment-processor";
-        const orderId = "";
-        const attributionData = await utils.extractAttributionData(
-          baseEventParams.txHash,
-          orderKind,
-          { orderId }
+        const inputData = exchange.contract.interface.decodeFunctionData(
+          matchMethod.name,
+          executeCallTrace.input
         );
 
-        onChainData.fillEvents.push({
-          orderKind: "payment-processor",
-          orderSide: "sell",
-          maker: seller,
-          taker: buyer,
-          price: priceData.nativePrice,
-          currency,
-          currencyPrice,
-          usdPrice: priceData.usdPrice,
-          contract: tokenAddress,
-          tokenId: tokenId,
-          amount: amount,
-          orderSourceId: attributionData.orderSource?.id,
-          aggregatorSourceId: attributionData.aggregatorSource?.id,
-          fillSourceId: attributionData.fillSource?.id,
-          baseEventParams,
-        });
+        const isBatch = matchMethod.name === "buyBatchOfListings";
+        const saleDetailsArray = isBatch ? inputData.saleDetailsArray : [inputData.saleDetails];
+        const signedListings = isBatch ? inputData.signedListings : [inputData.signedListing];
+        const signedOffers = isBatch ? inputData.signedOffers : [inputData.signedOffer];
+
+        for (let index = 0; index < saleDetailsArray.length; index++) {
+          const [saleDetail, signedListing, signedOffer] = [
+            saleDetailsArray[index],
+            signedListings[index],
+            signedOffers[index],
+          ];
+
+          const tokenAddress = saleDetail["tokenAddress"].toLowerCase();
+          const tokenId = saleDetail["tokenId"].toString();
+          const amount = saleDetail["amount"].toString();
+
+          const caller = transaction.from.toLowerCase();
+          const currency = saleDetail["paymentCoin"].toLowerCase();
+          const currencyPrice = saleDetail["offerPrice"].toString();
+
+          let taker = saleDetail["seller"].toLowerCase();
+          const maker = saleDetail["buyer"].toLowerCase();
+
+          const orderSide: "sell" | "buy" = caller != taker ? "sell" : "buy";
+
+          const sellerMinNonce = await commonHelpers.getMinNonce(
+            "payment-processor",
+            saleDetail["seller"].toLowerCase()
+          );
+          const buyerMinNonce = await commonHelpers.getMinNonce(
+            "payment-processor",
+            saleDetail["buyer"].toLowerCase()
+          );
+
+          const isCollectionLevel = saleDetail["collectionLevelOffer"];
+
+          const singleBuilder = new Sdk.PaymentProcessor.Builders.SingleToken(config.chainId);
+          const contractBuilder = new Sdk.PaymentProcessor.Builders.ContractWide(config.chainId);
+
+          const isBuyOrder = orderSide === "buy";
+          const orderSignature = isBuyOrder ? signedOffer : signedListing;
+          const signature = {
+            r: orderSignature.r,
+            s: orderSignature.s,
+            v: orderSignature.v,
+          };
+          const order = isCollectionLevel
+            ? contractBuilder.build({
+                protocol: saleDetail["protocol"],
+                collectionLevelOffer: true,
+                marketplace: saleDetail["marketplace"],
+                marketplaceFeeNumerator: saleDetail["marketplaceFeeNumerator"],
+                maxRoyaltyFeeNumerator: saleDetail["maxRoyaltyFeeNumerator"],
+                privateTaker: saleDetail["delegatedPurchaser"],
+                trader: saleDetail["buyer"],
+                tokenAddress: saleDetail["tokenAddress"],
+                amount: saleDetail["amount"],
+                price: saleDetail["offerPrice"],
+                expiration: saleDetail["expiration"],
+                nonce: saleDetail["offerNonce"],
+                coin: saleDetail["paymentCoin"],
+                masterNonce: buyerMinNonce,
+                ...signature,
+              })
+            : singleBuilder.build(
+                isBuyOrder
+                  ? {
+                      protocol: saleDetail["protocol"],
+                      marketplace: saleDetail["marketplace"],
+                      marketplaceFeeNumerator: saleDetail["marketplaceFeeNumerator"],
+                      maxRoyaltyFeeNumerator: saleDetail["maxRoyaltyFeeNumerator"],
+                      privateTaker: saleDetail["delegatedPurchaser"],
+                      trader: saleDetail["buyer"],
+                      tokenAddress: saleDetail["tokenAddress"],
+                      amount: saleDetail["amount"],
+                      tokenId: saleDetail["tokenId"],
+                      expiration: saleDetail["offerExpiration"],
+                      price: saleDetail["offerPrice"],
+                      nonce: saleDetail["offerNonce"],
+                      coin: saleDetail["paymentCoin"],
+                      masterNonce: buyerMinNonce,
+                      ...signature,
+                    }
+                  : {
+                      protocol: saleDetail["protocol"],
+                      sellerAcceptedOffer: false,
+                      marketplace: saleDetail["marketplace"],
+                      marketplaceFeeNumerator: saleDetail["marketplaceFeeNumerator"],
+                      maxRoyaltyFeeNumerator: saleDetail["maxRoyaltyFeeNumerator"],
+                      privateTaker: saleDetail["privateBuyer"],
+                      trader: saleDetail["seller"],
+                      tokenAddress: saleDetail["tokenAddress"],
+                      amount: saleDetail["amount"],
+                      tokenId: saleDetail["tokenId"],
+                      price: saleDetail["listingMinPrice"],
+                      expiration: saleDetail["listingExpiration"],
+                      nonce: saleDetail["listingNonce"],
+                      coin: saleDetail["paymentCoin"],
+                      masterNonce: sellerMinNonce,
+                      ...signature,
+                    }
+              );
+
+          let isValidated = false;
+          for (let nonce = Number(order.params.masterNonce); nonce >= 0; nonce--) {
+            order.params.masterNonce = nonce.toString();
+            try {
+              order.checkSignature();
+              isValidated = true;
+              break;
+            } catch {
+              // skip error
+            }
+          }
+
+          if (!isValidated) {
+            break;
+          }
+
+          const priceData = await getUSDAndNativePrices(
+            currency,
+            currencyPrice,
+            baseEventParams.timestamp
+          );
+
+          priceData.nativePrice = currencyPrice;
+
+          if (!priceData.nativePrice) {
+            // We must always have the native price
+            break;
+          }
+
+          // Handle: attribution
+          const orderKind = "payment-processor";
+          const orderId = order.hash();
+          const attributionData = await utils.extractAttributionData(
+            baseEventParams.txHash,
+            orderKind,
+            { orderId }
+          );
+
+          if (attributionData.taker) {
+            taker = attributionData.taker;
+          }
+
+          onChainData.fillEvents.push({
+            orderId,
+            orderKind: "payment-processor",
+            orderSide,
+            maker,
+            taker,
+            price: priceData.nativePrice,
+            currency,
+            currencyPrice,
+            usdPrice: priceData.usdPrice,
+            contract: tokenAddress,
+            tokenId: tokenId,
+            amount: amount,
+            orderSourceId: attributionData.orderSource?.id,
+            aggregatorSourceId: attributionData.aggregatorSource?.id,
+            fillSourceId: attributionData.fillSource?.id,
+            baseEventParams,
+          });
+        }
+
         break;
       }
 

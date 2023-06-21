@@ -50,6 +50,9 @@ export class SingleTokenBuilder extends BaseBuilder {
       nonce: s(params.nonce),
       coin: params.coin,
       masterNonce: s(params.masterNonce),
+      v: params.v,
+      r: params.r,
+      s: params.s,
     });
   }
 

@@ -173,58 +173,60 @@ export class Order {
       throw new Error("cancelled");
     }
 
-    if (this.params.protocol === Types.TokenProtocols.ERC721 && this.params.tokenId) {
-      const erc721 = new Common.Helpers.Erc721(provider, this.params.tokenAddress);
-      // Check ownership
-      const owner = await erc721.getOwner(this.params.tokenId);
-      if (lc(owner) !== lc(this.params.trader)) {
-        throw new Error("no-balance");
-      }
+    if (!this.isBuyOrder()) {
+      if (this.params.protocol === Types.TokenProtocols.ERC721 && this.params.tokenId) {
+        const erc721 = new Common.Helpers.Erc721(provider, this.params.tokenAddress);
+        // Check ownership
+        const owner = await erc721.getOwner(this.params.tokenId);
+        if (lc(owner) !== lc(this.params.trader)) {
+          throw new Error("no-balance");
+        }
 
-      // Check approval
-      const isApproved = await erc721.isApproved(
-        this.params.trader,
-        Addresses.PaymentProcessor[this.chainId]
-      );
-      if (!isApproved) {
-        throw new Error("no-approval");
-      }
-    } else if (this.params.protocol === Types.TokenProtocols.ERC1155 && this.params.tokenId) {
-      const erc1155 = new Common.Helpers.Erc1155(provider, this.params.tokenAddress);
-      // Check balance
-      const balance = await erc1155.getBalance(this.params.trader, this.params.tokenId);
-      if (bn(balance).lt(1)) {
-        throw new Error("no-balance");
-      }
+        // Check approval
+        const isApproved = await erc721.isApproved(
+          this.params.trader,
+          Addresses.PaymentProcessor[this.chainId]
+        );
+        if (!isApproved) {
+          throw new Error("no-approval");
+        }
+      } else if (this.params.protocol === Types.TokenProtocols.ERC1155 && this.params.tokenId) {
+        const erc1155 = new Common.Helpers.Erc1155(provider, this.params.tokenAddress);
+        // Check balance
+        const balance = await erc1155.getBalance(this.params.trader, this.params.tokenId);
+        if (bn(balance).lt(1)) {
+          throw new Error("no-balance");
+        }
 
-      // Check approval
-      const isApproved = await erc1155.isApproved(
-        this.params.trader,
-        Addresses.PaymentProcessor[this.chainId]
-      );
-      if (!isApproved) {
-        throw new Error("no-approval");
+        // Check approval
+        const isApproved = await erc1155.isApproved(
+          this.params.trader,
+          Addresses.PaymentProcessor[this.chainId]
+        );
+        if (!isApproved) {
+          throw new Error("no-approval");
+        }
+      } else {
+        throw new Error("invalid");
       }
     } else {
-      throw new Error("invalid");
-    }
+      if (this.params.coin != AddressZero) {
+        // Check that maker has enough balance to cover the payment
+        // and the approval to the token transfer proxy is set
+        const erc20 = new Common.Helpers.Erc20(provider, this.params.coin);
+        const balance = await erc20.getBalance(this.params.trader);
+        if (bn(balance).lt(this.params.price)) {
+          throw new Error("no-balance");
+        }
 
-    if (this.params.coin != AddressZero) {
-      // Check that maker has enough balance to cover the payment
-      // and the approval to the token transfer proxy is set
-      const erc20 = new Common.Helpers.Erc20(provider, this.params.coin);
-      const balance = await erc20.getBalance(this.params.trader);
-      if (bn(balance).lt(this.params.price)) {
-        throw new Error("no-balance");
-      }
-
-      // Check allowance
-      const allowance = await erc20.getAllowance(
-        this.params.trader,
-        Addresses.PaymentProcessor[chainId]
-      );
-      if (bn(allowance).lt(this.params.price)) {
-        throw new Error("no-approval");
+        // Check allowance
+        const allowance = await erc20.getAllowance(
+          this.params.trader,
+          Addresses.PaymentProcessor[chainId]
+        );
+        if (bn(allowance).lt(this.params.price)) {
+          throw new Error("no-approval");
+        }
       }
     }
   }

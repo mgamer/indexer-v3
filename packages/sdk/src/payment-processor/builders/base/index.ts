@@ -1,9 +1,8 @@
 import { BigNumberish } from "@ethersproject/bignumber";
-import { AddressZero } from "@ethersproject/constants";
-
+import { AddressZero, HashZero } from "@ethersproject/constants";
 import { Order } from "../../order";
 import { TokenProtocols } from "../../types";
-// import { getCurrentTimestamp, getRandomBytes } from "../../../utils";
+import { getRandomBytes } from "../../../utils";
 
 export type MatchingOptions = {
   taker: string;
@@ -19,7 +18,7 @@ export interface BaseBuildParams {
   amount: BigNumberish;
   price: BigNumberish;
   expiration: BigNumberish;
-  nonce: BigNumberish;
+  nonce?: BigNumberish;
   masterNonce: BigNumberish;
   coin: string;
 
@@ -34,9 +33,11 @@ export interface BaseBuildParams {
   // CollectionOfferApproval
 
   collectionLevelOffer?: boolean;
-
   takerMasterNonce?: BigNumberish;
-  signature?: string;
+
+  v?: number;
+  r?: string;
+  s?: string;
 }
 
 export abstract class BaseBuilder {
@@ -50,9 +51,10 @@ export abstract class BaseBuilder {
     params.marketplace = params.marketplace ?? AddressZero;
     params.marketplaceFeeNumerator = params.marketplaceFeeNumerator ?? "0";
     params.maxRoyaltyFeeNumerator = params.maxRoyaltyFeeNumerator ?? "0";
-
-    // params.listingSignature = params.listingSignature ?? HashZero;
-    // params.offerSignature = params.offerSignature ?? HashZero;
+    params.nonce = params.nonce ?? getRandomBytes(10);
+    params.v = params.v ?? 0;
+    params.r = params.r ?? HashZero;
+    params.s = params.s ?? HashZero;
   }
 
   public abstract isValid(order: Order): boolean;

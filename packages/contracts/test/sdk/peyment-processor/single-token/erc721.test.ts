@@ -62,7 +62,6 @@ describe("PaymentProcessor - SingleToken", () => {
       marketplace: constants.AddressZero,
       marketplaceFeeNumerator: "0",
       maxRoyaltyFeeNumerator: "0",
-      taker: constants.AddressZero,
       privateTaker: constants.AddressZero,
       trader: seller.address,
       tokenAddress: erc721.address,
@@ -126,7 +125,6 @@ describe("PaymentProcessor - SingleToken", () => {
     const exchange = new PaymentProcessor.Exchange(chainId);
     const buyerMasterNonce = await exchange.getNonce(ethers.provider, buyer.address);
     const sellerMasterNonce = await exchange.getNonce(ethers.provider, seller.address);
-
     const blockTime = await getCurrentTimestamp(ethers.provider);
 
     const builder = new PaymentProcessor.Builders.SingleToken(chainId);
