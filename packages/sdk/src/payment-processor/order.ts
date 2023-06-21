@@ -291,9 +291,9 @@ export class Order {
 
   private getBuilder(): BaseBuilder {
     switch (this.params.kind) {
-      // case "collection-offer-approval": {
-      //   return new Builders.ContractWide(this.chainId);
-      // }
+      case "collection-offer-approval": {
+        return new Builders.ContractWide(this.chainId);
+      }
 
       case "offer-approval":
       case "sale-approval": {

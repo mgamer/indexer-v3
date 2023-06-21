@@ -36,11 +36,19 @@ describe("PaymentProcessor - Contract-wide", () => {
 
   afterEach(reset);
 
-  it("Build and fill sell order", async () => {
+  it("Build and fill contract-wide buy order", async () => {
     const buyer = alice;
     const seller = bob;
     const price = parseEther("1");
     const soldTokenId = 1;
+
+    const weth = new Common.Helpers.Weth(ethers.provider, chainId);
+
+    // Mint weth to buyer
+    await weth.deposit(buyer, price);
+
+    // Approve the exchange contract for the buyer
+    await weth.approve(buyer,PaymentProcessor.Addresses.PaymentProcessor[chainId]);
 
     // Mint erc721 to seller
     await erc721.connect(seller).mint(soldTokenId);
@@ -51,173 +59,51 @@ describe("PaymentProcessor - Contract-wide", () => {
 
     const exchange = new PaymentProcessor.Exchange(chainId);
 
-    const sellerMasterNonce = await exchange.getNonce(ethers.provider, seller.address);
-    const takerMasterNonce = await exchange.getNonce(ethers.provider, buyer.address);
+    const buyerMasterNonce = await exchange.getNonce(ethers.provider, buyer.address);
     const blockTime = await getCurrentTimestamp(ethers.provider);
+    const sellerMasterNonce = await exchange.getNonce(ethers.provider, seller.address);
 
-    const builder = new PaymentProcessor.Builders.SingleToken(chainId);
-    const orderParameters = {
+    const builder = new PaymentProcessor.Builders.ContractWide(chainId);
+    const buyOrder = builder.build({
       protocol: 0,
-      sellerAcceptedOffer: false,
+      collectionLevelOffer: true,
       marketplace: constants.AddressZero,
       marketplaceFeeNumerator: "0",
       maxRoyaltyFeeNumerator: "0",
-      taker: constants.AddressZero,
       privateTaker: constants.AddressZero,
-      trader: seller.address,
+      trader: buyer.address,
       tokenAddress: erc721.address,
-      tokenId: soldTokenId,
       amount: "1",
       price: price,
       expiration: (blockTime + 60 * 60).toString(),
       nonce: "0",
-      coin: constants.AddressZero,
-      masterNonce: sellerMasterNonce
-    };
+      coin: Common.Addresses.Weth[chainId],
+      masterNonce: buyerMasterNonce
+    })
 
-    // Build buy order
-    const sellOrder = builder.build(orderParameters);
-    await sellOrder.sign(seller);
-
-    const buyOrder = sellOrder.buildMatching({
-      taker: buyer.address,
-      takerNonce: takerMasterNonce
-    });
-
+    const sellOrder = buyOrder.buildMatching({
+      taker: seller.address,
+      takerNonce: sellerMasterNonce,
+      tokenId: soldTokenId
+    })
+ 
     await buyOrder.sign(buyer);
-    console.log(sellOrder.params, buyOrder.params)
+    await sellOrder.sign(seller);
 
     buyOrder.checkSignature();
     sellOrder.checkSignature();
 
     buyOrder.checkFillability(ethers.provider);
 
-    const sellerBalanceBefore = await ethers.provider.getBalance(seller.address);
-    await exchange.fillOrder(buyer, sellOrder, buyOrder);
+    const sellerBalanceBefore = await weth.getBalance(seller.address);
+
+    await exchange.fillOrder(seller, buyOrder, sellOrder);
 
     const ownerAfter = await nft.getOwner(soldTokenId);
-    const sellerBalanceAfter = await ethers.provider.getBalance(seller.address);
+    const sellerBalanceAfter = await weth.getBalance(seller.address);
     const receiveAmount = sellerBalanceAfter.sub(sellerBalanceBefore);
 
     expect(receiveAmount).to.gte(price);
     expect(ownerAfter).to.eq(buyer.address);
   });
-
-  // it("Build and fill buy order", async () => {
-  //   const buyer = alice;
-  //   const seller = bob;
-  //   const price = parseEther("1");
-  //   const soldTokenId = 1;
-
-  //   const weth = new Common.Helpers.Weth(ethers.provider, chainId);
-
-  //   // Mint weth to buyer
-  //   await weth.deposit(buyer, price);
-
-  //   // Approve the exchange contract for the buyer
-  //   await weth.approve(buyer,PaymentProcessor.Addresses.PaymentProcessor[chainId]);
-
-  //   // Mint erc721 to seller
-  //   await erc721.connect(seller).mint(soldTokenId);
-  //   const nft = new Common.Helpers.Erc721(ethers.provider, erc721.address);
-
-  //   // Approve the exchange
-  //   await nft.approve(seller, PaymentProcessor.Addresses.PaymentProcessor[chainId]);
-
-  //   const exchange = new PaymentProcessor.Exchange(chainId);
-  //   const buyerMasterNonce = await exchange.getNonce(ethers.provider, buyer.address);
-  //   const blockTime = await getCurrentTimestamp(ethers.provider);
-  
-  //   const order = new PaymentProcessor.Order(chainId, {
-  //     protocol: 0,
-  //     marketplace: constants.AddressZero,
-  //     marketplaceFeeNumerator: "0",
-  //     maxRoyaltyFeeNumerator: "0",
-  //     privateTaker: constants.AddressZero,
-  //     trader: buyer.address,
-  //     tokenAddress: erc721.address,
-  //     tokenId: soldTokenId,
-  //     amount: "1",
-  //     price: price,
-  //     expiration: (blockTime + 60 * 60).toString(),
-  //     nonce: "0",
-  //     coin: Common.Addresses.Weth[chainId],
-  //     masterNonce: buyerMasterNonce
-  //   });
-   
-  //   await order.sign(buyer);
-  //   await order.signMatchOrder({ taker: seller.address }, seller, ethers.provider);
-
-  //   order.checkSignature();
-  //   order.checkFillability(ethers.provider);
-  //   const sellerBalanceBefore = await weth.getBalance(seller.address);
-
-  //   await exchange.fillOrder(seller, order);
-  //   const ownerAfter = await nft.getOwner(soldTokenId);
-  //   const sellerBalanceAfter = await weth.getBalance(seller.address);
-  //   const receiveAmount = sellerBalanceAfter.sub(sellerBalanceBefore);
-
-  //   expect(receiveAmount).to.gte(price);
-  //   expect(ownerAfter).to.eq(buyer.address);
-  // });
-
-
-  // it("Build and fill contract-wide buy order", async () => {
-  //   const buyer = alice;
-  //   const seller = bob;
-  //   const price = parseEther("1");
-  //   const soldTokenId = 1;
-
-  //   const weth = new Common.Helpers.Weth(ethers.provider, chainId);
-
-  //   // Mint weth to buyer
-  //   await weth.deposit(buyer, price);
-
-  //   // Approve the exchange contract for the buyer
-  //   await weth.approve(buyer,PaymentProcessor.Addresses.PaymentProcessor[chainId]);
-
-  //   // Mint erc721 to seller
-  //   await erc721.connect(seller).mint(soldTokenId);
-  //   const nft = new Common.Helpers.Erc721(ethers.provider, erc721.address);
-
-  //   // Approve the exchange
-  //   await nft.approve(seller, PaymentProcessor.Addresses.PaymentProcessor[chainId]);
-
-  //   const exchange = new PaymentProcessor.Exchange(chainId);
-
-  //   const buyerMasterNonce = await exchange.getNonce(ethers.provider, buyer.address);
-  //   const blockTime = await getCurrentTimestamp(ethers.provider);
-
-  //   const order = new PaymentProcessor.Order(chainId, {
-  //     protocol: 0,
-  //     collectionLevelOffer: true,
-  //     marketplace: constants.AddressZero,
-  //     marketplaceFeeNumerator: "0",
-  //     maxRoyaltyFeeNumerator: "0",
-  //     privateTaker: constants.AddressZero,
-  //     trader: buyer.address,
-  //     tokenAddress: erc721.address,
-  //     amount: "1",
-  //     price: price,
-  //     expiration: (blockTime + 60 * 60).toString(),
-  //     nonce: "0",
-  //     coin: Common.Addresses.Weth[chainId],
-  //     masterNonce: buyerMasterNonce
-  //   });
-    
-  //   await order.sign(buyer);
-  //   await order.signMatchOrder({ taker: seller.address, tokenId: soldTokenId }, seller, ethers.provider);
-  //   order.checkSignature();
-  //   order.checkFillability(ethers.provider);
-  //   const sellerBalanceBefore = await weth.getBalance(seller.address);
-
-  //   await exchange.fillOrder(seller, order);
-  //   const ownerAfter = await nft.getOwner(soldTokenId);
-  //   const sellerBalanceAfter = await weth.getBalance(seller.address);
-  //   const receiveAmount = sellerBalanceAfter.sub(sellerBalanceBefore);
-
-  //   expect(receiveAmount).to.gte(price);
-  //   expect(ownerAfter).to.eq(buyer.address);
-  // });
-
 });

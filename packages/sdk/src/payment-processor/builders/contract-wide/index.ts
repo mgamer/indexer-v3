@@ -1,10 +1,9 @@
-import { defaultAbiCoder } from "@ethersproject/abi";
 import { BigNumberish } from "@ethersproject/bignumber";
 
 import { BaseBuildParams, BaseBuilder } from "../base";
 import { Order } from "../../order";
-import { BytesEmpty, s } from "../../../utils";
-import { QuoteType } from "../../types";
+import { s } from "../../../utils";
+import { AddressZero } from "@ethersproject/constants";
 
 interface BuildParams extends BaseBuildParams {}
 
@@ -30,38 +29,55 @@ export class ContractWideBuilder extends BaseBuilder {
   }
 
   public build(params: BuildParams) {
-    if (params.quoteType === QuoteType.Ask) {
+    if (params.sellerAcceptedOffer != undefined) {
       throw new Error("Unsupported order side");
     }
 
     this.defaultInitialize(params);
-
     return new Order(this.chainId, {
-      kind: "contract-wide",
-      signer: params.signer,
-      collection: params.collection,
+      kind: "collection-offer-approval",
+      protocol: params.protocol,
+      collectionLevelOffer: params.collectionLevelOffer,
+      marketplace: params.marketplace!,
+      marketplaceFeeNumerator: s(params.marketplaceFeeNumerator),
+      maxRoyaltyFeeNumerator: s(params.maxRoyaltyFeeNumerator),
+      privateTaker: params.privateTaker ?? AddressZero,
+      trader: params.trader,
+      tokenAddress: params.tokenAddress,
+      amount: s(params.amount),
       price: s(params.price),
-      itemIds: [],
-      amounts: ["1"],
-      strategyId: 1,
-      currency: params.currency,
-      quoteType: params.quoteType,
-      collectionType: params.collectionType,
-
-      startTime: params.startTime!,
-      endTime: params.endTime!,
-      additionalParameters: params.additionalParameters ?? BytesEmpty,
-      globalNonce: s(params.globalNonce),
-      subsetNonce: s(params.subsetNonce),
-      orderNonce: s(params.orderNonce),
-      signature: params.signature,
+      expiration: s(params.expiration),
+      nonce: s(params.nonce),
+      coin: params.coin,
+      masterNonce: s(params.masterNonce),
     });
   }
 
-  public buildMatching(order: Order, recipient: string, data: { tokenId: BigNumberish }) {
-    return {
-      recipient,
-      additionalParameters: defaultAbiCoder.encode(["uint256"], [data.tokenId]),
-    };
+  public buildMatching(
+    order: Order,
+    options: {
+      taker: string;
+      takerNonce: BigNumberish;
+      tokenId?: BigNumberish;
+    }
+  ): Order {
+    const orderParams = order.params;
+    return new Order(order.chainId, {
+      protocol: orderParams.protocol,
+      sellerAcceptedOffer: false,
+      marketplace: orderParams.marketplace,
+      marketplaceFeeNumerator: orderParams.marketplaceFeeNumerator,
+      maxRoyaltyFeeNumerator: orderParams.maxRoyaltyFeeNumerator,
+      privateTaker: orderParams.privateTaker,
+      trader: options.taker,
+      tokenAddress: orderParams.tokenAddress,
+      tokenId: s(options.tokenId),
+      amount: orderParams.amount,
+      price: orderParams.price,
+      expiration: orderParams.expiration,
+      nonce: orderParams.nonce,
+      coin: orderParams.coin,
+      masterNonce: s(options.takerNonce),
+    });
   }
 }
