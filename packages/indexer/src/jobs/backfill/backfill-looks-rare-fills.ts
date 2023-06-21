@@ -7,11 +7,11 @@ import { randomUUID } from "crypto";
 
 import { idb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
+import { baseProvider } from "@/common/provider";
 import { redis, redlock } from "@/common/redis";
 import { bn, fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { takerAsk, takerBid } from "@/events-sync/data/looks-rare-v2";
-import { fetchTransactionLogs } from "@/events-sync/utils";
 import { getUSDAndNativePrices } from "@/utils/prices";
 
 const QUEUE_NAME = "backfill-looks-rare-fills";
@@ -66,8 +66,8 @@ if (config.doBackgroundWork) {
         }
       );
       for (const { tx_hash, log_index, batch_index, timestamp, order_side } of result) {
-        const logs = await fetchTransactionLogs(fromBuffer(tx_hash));
-        const log = logs.logs.find((l) => l.logIndex === log_index)!;
+        const txReceipt = await baseProvider.getTransactionReceipt(fromBuffer(tx_hash));
+        const log = txReceipt.logs.find((l) => l.logIndex === log_index)!;
 
         const parsedLog = (order_side === "sell" ? takerBid : takerAsk).abi.parseLog(log);
 
