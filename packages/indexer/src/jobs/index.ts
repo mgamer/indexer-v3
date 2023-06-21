@@ -49,6 +49,7 @@ import * as backfillNftTransferEventsCreatedAt from "@/jobs/backfill/backfill-nf
 import * as backfillCollectionsRoyalties from "@/jobs/backfill/backfill-collections-royalties";
 import * as backfillWrongNftBalances from "@/jobs/backfill/backfill-wrong-nft-balances";
 import * as backfillFoundationOrders from "@/jobs/backfill/backfill-foundation-orders";
+import * as backfillLooksrareFills from "@/jobs/backfill/backfill-looks-rare-fills";
 
 import * as collectionUpdatesFloorAsk from "@/jobs/collection-updates/floor-queue";
 
@@ -217,6 +218,7 @@ export const allJobQueues = [
   backfillWrongNftBalances.queue,
   backfillInvalidateSeaportV14Orders.queue,
   backfillBlurSales.queue,
+  backfillLooksrareFills.queue,
 
   collectionUpdatesFloorAsk.queue,
 
