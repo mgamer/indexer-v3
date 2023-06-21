@@ -1,10 +1,9 @@
-import { BigNumberish } from "@ethersproject/bignumber";
-
 export enum TokenProtocols {
   ERC721,
   ERC1155,
 }
 
+export type OrderKind = "sale-approval" | "offer-approval" | "collection-offer-approval";
 export type MatchOrder = {
   sellerAcceptedOffer: boolean;
   collectionLevelOffer: boolean;
@@ -17,54 +16,107 @@ export type MatchOrder = {
   delegatedPurchaser: string;
   marketplace: string;
 
-  marketplaceFeeNumerator: BigNumberish;
-  maxRoyaltyFeeNumerator: BigNumberish;
-  listingNonce: BigNumberish;
-  offerNonce: BigNumberish;
-  listingMinPrice: BigNumberish;
-  offerPrice: BigNumberish;
-  listingExpiration: BigNumberish;
-  offerExpiration: BigNumberish;
-  tokenId: BigNumberish;
-  amount: BigNumberish;
+  marketplaceFeeNumerator: string;
+  maxRoyaltyFeeNumerator: string;
+  listingNonce: string;
+  offerNonce: string;
+  listingMinPrice: string;
+  offerPrice: string;
+  listingExpiration: string;
+  offerExpiration: string;
+  tokenId: string;
+  amount: string;
 
-  sellerMasterNonce: BigNumberish;
-  buyerMasterNonce: BigNumberish;
+  sellerMasterNonce: string;
+  buyerMasterNonce: string;
 
-  listingSignature?: string;
-  offerSignature?: string;
+  listingSignature?: {
+    v: number;
+    r: string;
+    s: string;
+  };
+  offerSignature?: {
+    v: number;
+    r: string;
+    s: string;
+  };
+};
+
+export type BaseOrder = {
+  kind?: OrderKind;
+  protocol: number;
+  marketplace: string;
+  marketplaceFeeNumerator: string;
+  tokenAddress: string;
+  amount: string;
+  price: string;
+  expiration: string;
+  nonce: string;
+  masterNonce: string;
+  coin: string;
+
+  privateTaker: string; // privateBuyer | delegatedPurchaser
+  trader: string; // buyer | seller
+
+  // SaleApproval
+  sellerAcceptedOffer?: boolean;
+  maxRoyaltyFeeNumerator?: string;
+
+  // CollectionOfferApproval
+  tokenId?: string;
+  collectionLevelOffer?: boolean;
+
+  v?: number;
+  r?: string;
+  s?: string;
 };
 
 export type SaleApproval = {
   protocol: TokenProtocols;
   sellerAcceptedOffer: boolean;
   marketplace: string;
-  marketplaceFeeNumerator: BigNumberish;
-  maxRoyaltyFeeNumerator: BigNumberish;
+  marketplaceFeeNumerator: string;
+  maxRoyaltyFeeNumerator: string;
   privateBuyer: string;
   seller: string;
   tokenAddress: string;
-  tokenId: BigNumberish;
-  amount: BigNumberish;
-  minPrice: BigNumberish;
-  expiration: BigNumberish;
-  nonce: BigNumberish;
-  masterNonce: BigNumberish;
+  tokenId: string;
+  amount: string;
+  minPrice: string;
+  expiration: string;
+  nonce: string;
+  masterNonce: string;
   coin: string;
 };
 
 export type OfferApproval = {
   protocol: number;
   marketplace: string;
-  marketplaceFeeNumerator: BigNumberish;
+  marketplaceFeeNumerator: string;
   delegatedPurchaser: string;
   buyer: string;
   tokenAddress: string;
-  tokenId: BigNumberish;
-  amount: BigNumberish;
-  price: BigNumberish;
-  expiration: BigNumberish;
-  nonce: BigNumberish;
-  masterNonce: BigNumberish;
+  tokenId: string;
+  amount: string;
+  price: string;
+  expiration: string;
+  nonce: string;
+  masterNonce: string;
+  coin: string;
+};
+
+export type CollectionOfferApproval = {
+  protocol: number;
+  collectionLevelOffer: boolean;
+  marketplace: string;
+  marketplaceFeeNumerator: string;
+  delegatedPurchaser: string;
+  buyer: string;
+  tokenAddress: string;
+  amount: string;
+  price: string;
+  expiration: string;
+  nonce: string;
+  masterNonce: string;
   coin: string;
 };

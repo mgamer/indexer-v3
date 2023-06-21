@@ -1,13 +1,12 @@
 import { Signer } from "@ethersproject/abstract-signer";
 import { Contract, ContractTransaction } from "@ethersproject/contracts";
-
+import { AddressZero } from "@ethersproject/constants";
 import * as Addresses from "./addresses";
 import { Order } from "./order";
 import { TxData, generateSourceBytes } from "../utils";
 import { Provider } from "@ethersproject/abstract-provider";
 import ExchangeAbi from "./abis/PaymentProcessor.json";
 import { BigNumber } from "@ethersproject/bignumber";
-import { splitSignature } from "@ethersproject/bytes";
 
 export class Exchange {
   public chainId: number;
@@ -43,32 +42,39 @@ export class Exchange {
   public async fillOrder(
     taker: Signer,
     order: Order,
+    matchOrder: Order,
     options?: {
       source?: string;
     }
   ): Promise<ContractTransaction> {
-    const tx = this.fillOrderTx(await taker.getAddress(), order, options);
-    return taker.sendTransaction(tx);
+    const tx = this.fillOrderTx(await taker.getAddress(), order, matchOrder, options);
+    return taker.sendTransaction({
+      ...tx,
+      gasLimit: 1000000,
+    });
   }
 
   public fillOrderTx(
     taker: string,
     order: Order,
+    matchOrder: Order,
     options?: {
       source?: string;
     }
   ): TxData {
+    const macthOrder = order.getMatchOrder(matchOrder);
     const data = this.contract.interface.encodeFunctionData("buySingleListing", [
-      order.params,
-      splitSignature(order.params.listingSignature!),
-      splitSignature(order.params.offerSignature!),
+      macthOrder,
+      macthOrder.listingSignature,
+      macthOrder.offerSignature,
     ]);
 
-    const isTaker = order.params.buyer === taker.toLowerCase();
+    const isTaker =
+      macthOrder.buyer === taker.toLowerCase() && macthOrder.paymentCoin === AddressZero;
     return {
       from: taker,
       to: this.contract.address,
-      value: isTaker ? order.params.listingMinPrice.toString() : "0",
+      value: isTaker ? order.params.price.toString() : "0",
       data: data + generateSourceBytes(options?.source),
     };
   }
