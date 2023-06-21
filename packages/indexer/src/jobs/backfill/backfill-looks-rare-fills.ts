@@ -50,6 +50,7 @@ if (config.doBackgroundWork) {
           FROM fill_events_2
           WHERE (fill_events_2.block, fill_events_2.tx_hash) < ($/block/, $/txHash/)
             AND fill_events_2.order_kind = 'looks-rare-v2'
+            AND fill_events_2.is_deleted = 0
           ORDER BY
             fill_events_2.block DESC,
             fill_events_2.tx_hash DESC
