@@ -8,7 +8,7 @@ export type EventsSyncNftTransfersWriteBufferPayload = {
 };
 
 export class EventsSyncNftTransfersWriteBufferJob extends AbstractRabbitMqJobHandler {
-  queueName = "events-sync-ft-transfers-write";
+  queueName = "events-sync-nft-transfers-write";
   maxRetries = 10;
   concurrency = 10;
   lazyMode = true;
