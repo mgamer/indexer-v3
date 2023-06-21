@@ -370,13 +370,15 @@ export class RabbitMqJobsConsumer {
     for (let i = 0; i < RabbitMqJobsConsumer.maxConsumerConnectionsCount; ++i) {
       const connection = await amqplib.connect(config.rabbitMqUrl);
       RabbitMqJobsConsumer.rabbitMqConsumerConnections.push(connection);
+
+      // Create a shared channel for each connection
       RabbitMqJobsConsumer.sharedChannels.set(
         RabbitMqJobsConsumer.getSharedChannelName(i),
         await connection.createChannel()
       );
 
       connection.once("error", (error) => {
-        logger.error("rabbit-connection-error", `Connection error ${error}`);
+        logger.error("rabbit-error", `Consumer connection error ${error}`);
       });
     }
   }
@@ -480,19 +482,19 @@ export class RabbitMqJobsConsumer {
       }
     );
 
-    // channel.once("error", (error) => {
-    //   logger.error("rabbit-channel-error", `Channel error ${error}`);
-    //
-    //   const jobs = RabbitMqJobsConsumer.channelsToJobs.get(channel);
-    //   if (jobs) {
-    //     logger.error(
-    //       "rabbit-channel-error",
-    //       `Jobs stopped consume ${JSON.stringify(
-    //         jobs.map((job: AbstractRabbitMqJobHandler) => job.queueName)
-    //       )}`
-    //     );
-    //   }
-    // });
+    channel.once("error", (error) => {
+      logger.error("rabbit-error", `Consumer channel error ${error}`);
+
+      const jobs = RabbitMqJobsConsumer.channelsToJobs.get(channel);
+      if (jobs) {
+        logger.error(
+          "rabbit-error",
+          `Jobs stopped consume ${JSON.stringify(
+            jobs.map((job: AbstractRabbitMqJobHandler) => job.queueName)
+          )}`
+        );
+      }
+    });
   }
 
   /**
