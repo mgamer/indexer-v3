@@ -148,8 +148,8 @@ import { getMachineId } from "@/common/machine-id";
 import { PausedRabbitMqQueues } from "@/models/paused-rabbit-mq-queues";
 import { logger } from "@/common/logger";
 import { tokenReclacSupplyJob } from "@/jobs/token-updates/token-reclac-supply-job";
-// import { tokenRefreshCacheJob } from "@/jobs/token-updates/token-refresh-cache-job";
-// import { recalcOwnerCountQueueJob } from "@/jobs/collection-updates/recalc-owner-count-queue-job";
+import { tokenRefreshCacheJob } from "@/jobs/token-updates/token-refresh-cache-job";
+import { recalcOwnerCountQueueJob } from "@/jobs/collection-updates/recalc-owner-count-queue-job";
 import { recalcTokenCountQueueJob } from "@/jobs/collection-updates/recalc-token-count-queue-job";
 import { normalizedFloorQueueJob } from "@/jobs/token-updates/normalized-floor-queue-job";
 import { mintQueueJob } from "@/jobs/token-updates/mint-queue-job";
@@ -167,20 +167,20 @@ import { topBidQueueJob } from "@/jobs/token-set-updates/top-bid-queue-job";
 import { topBidSingleTokenQueueJob } from "@/jobs/token-set-updates/top-bid-single-token-queue-job";
 import { fetchSourceInfoJob } from "@/jobs/sources/fetch-source-info-job";
 import { removeUnsyncedEventsActivitiesJob } from "@/jobs/activities/remove-unsynced-events-activities-job";
-// import { fixActivitiesMissingCollectionJob } from "@/jobs/activities/fix-activities-missing-collection-job";
-// import { collectionMetadataQueueJob } from "@/jobs/collection-updates/collection-metadata-queue-job";
-// import { rarityQueueJob } from "@/jobs/collection-updates/rarity-queue-job";
+import { fixActivitiesMissingCollectionJob } from "@/jobs/activities/fix-activities-missing-collection-job";
+import { collectionMetadataQueueJob } from "@/jobs/collection-updates/collection-metadata-queue-job";
+import { rarityQueueJob } from "@/jobs/collection-updates/rarity-queue-job";
 import { nonFlaggedFloorQueueJob } from "@/jobs/collection-updates/non-flagged-floor-queue-job";
 import { refreshContractCollectionsMetadataQueueJob } from "@/jobs/collection-updates/refresh-contract-collections-metadata-queue-job";
-// import { setCommunityQueueJob } from "@/jobs/collection-updates/set-community-queue-job";
+import { setCommunityQueueJob } from "@/jobs/collection-updates/set-community-queue-job";
 import { topBidCollectionJob } from "@/jobs/collection-updates/top-bid-collection-job";
 import { updateCollectionActivityJob } from "@/jobs/collection-updates/update-collection-activity-job";
-// import { updateCollectionDailyVolumeJob } from "@/jobs/collection-updates/update-collection-daily-volume-job";
+import { updateCollectionDailyVolumeJob } from "@/jobs/collection-updates/update-collection-daily-volume-job";
 import { updateCollectionUserActivityJob } from "@/jobs/collection-updates/update-collection-user-activity-job";
 import { collectionRefreshJob } from "@/jobs/collections-refresh/collections-refresh-job";
 import { collectionRefreshCacheJob } from "@/jobs/collections-refresh/collections-refresh-cache-job";
 import { currenciesFetchJob } from "@/jobs/currencies/currencies-fetch-job";
-// import { oneDayVolumeJob } from "@/jobs/daily-volumes/1day-volumes-job";
+import { oneDayVolumeJob } from "@/jobs/daily-volumes/1day-volumes-job";
 // import { dailyVolumeJob } from "@/jobs/daily-volumes/daily-volumes-job";
 import { processArchiveDataJob } from "@/jobs/data-archive/process-archive-data-job";
 import { exportDataJob } from "@/jobs/data-export/export-data-job";
@@ -324,8 +324,8 @@ export class RabbitMqJobsConsumer {
   public static getQueues(): AbstractRabbitMqJobHandler[] {
     return [
       tokenReclacSupplyJob,
-      // tokenRefreshCacheJob,
-      // recalcOwnerCountQueueJob,
+      tokenRefreshCacheJob,
+      recalcOwnerCountQueueJob,
       recalcTokenCountQueueJob,
       normalizedFloorQueueJob,
       mintQueueJob,
@@ -343,20 +343,20 @@ export class RabbitMqJobsConsumer {
       topBidSingleTokenQueueJob,
       fetchSourceInfoJob,
       removeUnsyncedEventsActivitiesJob,
-      // fixActivitiesMissingCollectionJob,
-      // collectionMetadataQueueJob,
-      // rarityQueueJob,
+      fixActivitiesMissingCollectionJob,
+      collectionMetadataQueueJob,
+      rarityQueueJob,
       nonFlaggedFloorQueueJob,
       refreshContractCollectionsMetadataQueueJob,
-      // setCommunityQueueJob,
+      setCommunityQueueJob,
       topBidCollectionJob,
       updateCollectionActivityJob,
-      // updateCollectionDailyVolumeJob,
+      updateCollectionDailyVolumeJob,
       updateCollectionUserActivityJob,
       collectionRefreshJob,
       collectionRefreshCacheJob,
       currenciesFetchJob,
-      // oneDayVolumeJob,
+      oneDayVolumeJob,
       processArchiveDataJob,
       exportDataJob,
       processActivityEventJob,
