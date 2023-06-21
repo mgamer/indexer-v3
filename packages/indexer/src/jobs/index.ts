@@ -62,7 +62,6 @@ import * as eventsSyncBackfillProcess from "@/jobs/events-sync/process/backfill"
 import * as eventsSyncRealtimeProcess from "@/jobs/events-sync/process/realtime";
 import * as eventsSyncRealtime from "@/jobs/events-sync/realtime-queue";
 import * as eventsSyncRealtimeV2 from "@/jobs/events-sync/realtime-queue-v2";
-import * as eventsSyncFtTransfersWriteBuffer from "@/jobs/events-sync/write-buffers/ft-transfers";
 import * as eventsSyncNftTransfersWriteBuffer from "@/jobs/events-sync/write-buffers/nft-transfers";
 
 import * as fillUpdates from "@/jobs/fill-updates/queue";
@@ -184,6 +183,7 @@ import { processArchiveDataJob } from "@/jobs/data-archive/process-archive-data-
 import { exportDataJob } from "@/jobs/data-export/export-data-job";
 import { processActivityEventJob } from "@/jobs/activities/process-activity-event-job";
 import { savePendingActivitiesJob } from "@/jobs/activities/save-pending-activities-job";
+import { eventsSyncFtTransfersWriteBufferJob } from "@/jobs/events-sync/write-buffers/ft-transfers-job";
 
 export const gracefulShutdownJobWorkers = [
   orderUpdatesById.worker,
@@ -229,7 +229,6 @@ export const allJobQueues = [
   eventsSyncRealtimeProcess.queue,
   eventsSyncRealtime.queue,
   eventsSyncRealtimeV2.queue,
-  eventsSyncFtTransfersWriteBuffer.queue,
   eventsSyncNftTransfersWriteBuffer.queue,
 
   fillUpdates.queue,
@@ -359,6 +358,7 @@ export class RabbitMqJobsConsumer {
       exportDataJob,
       processActivityEventJob,
       savePendingActivitiesJob,
+      eventsSyncFtTransfersWriteBufferJob,
     ];
   }
 
