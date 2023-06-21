@@ -18,11 +18,13 @@ export type CollectionMint = {
   // TODO: Refactor these hardcoded types
   kind: "public";
   status: "open" | "closed";
-  standard: "unknown";
+  standard: "unknown" | "zora" | "manifold" | "thirdweb" | "seadrop-v1.0";
   details: MintDetails;
   currency: string;
   price: string;
-  maxMintsPerWallet?: number;
+  tokenId?: string;
+  maxMintsPerWallet?: string;
+  maxSupply?: string;
   startTime?: number;
   endTime?: number;
 };
@@ -53,7 +55,9 @@ export const getOpenCollectionMints = async (collection: string): Promise<Collec
         details: r.details,
         currency: fromBuffer(r.currency),
         price: r.price,
+        tokenId: r.token_id,
         maxMintsPerWallet: r.max_mints_per_wallet,
+        maxSupply: r.max_supply,
         startTime: r.start_time ? Math.floor(new Date(r.start_time).getTime() / 1000) : undefined,
         endTime: r.end_time ? Math.floor(new Date(r.end_time).getTime() / 1000) : undefined,
       } as CollectionMint)
@@ -110,7 +114,7 @@ export const simulateCollectionMint = async (
     // TODO: Detect the maximum quantity mintable per wallet via binary search
     const results = await Promise.all([simulate(1), simulate(2)]);
     if (results[0] && !results[1]) {
-      collectionMint.maxMintsPerWallet = 1;
+      collectionMint.maxMintsPerWallet = "1";
     }
 
     return results[0];
@@ -167,7 +171,9 @@ export const simulateAndSaveCollectionMint = async (collectionMint: CollectionMi
           details,
           currency,
           price,
+          token_id,
           max_mints_per_wallet,
+          max_supply,
           start_time,
           end_time
         ) VALUES (
@@ -178,7 +184,9 @@ export const simulateAndSaveCollectionMint = async (collectionMint: CollectionMi
           $/details:json/,
           $/currency/,
           $/price/,
+          $/tokenId/,
           $/maxMintsPerWallet/,
+          $/maxSupply/,
           $/startTime/,
           $/endTime/
         ) ON CONFLICT DO NOTHING
@@ -191,7 +199,9 @@ export const simulateAndSaveCollectionMint = async (collectionMint: CollectionMi
         details: collectionMint.details,
         currency: toBuffer(collectionMint.currency),
         price: collectionMint.price,
+        tokenId: collectionMint.tokenId ?? null,
         maxMintsPerWallet: collectionMint.maxMintsPerWallet ?? null,
+        maxSupply: collectionMint.maxSupply ?? null,
         startTime: collectionMint.startTime ? new Date(collectionMint.startTime * 1000) : null,
         endTime: collectionMint.endTime ? new Date(collectionMint.endTime * 1000) : null,
       }

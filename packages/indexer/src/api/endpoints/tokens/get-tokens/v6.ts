@@ -26,6 +26,7 @@ import {
 import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
 import { Assets, ImageSize } from "@/utils/assets";
+import { CollectionSets } from "@/models/collection-sets";
 
 const version = "v6";
 
@@ -288,59 +289,7 @@ export const getTokensV6Options: RouteOptions = {
   handler: async (request: Request) => {
     const query = request.query as any;
 
-    // Include top bid
-    let selectTopBid = "";
-    let topBidQuery = "";
     let nullsPosition = "LAST";
-
-    if (query.includeTopBid) {
-      selectTopBid = `, y.*`;
-      topBidQuery = `
-        LEFT JOIN LATERAL (
-          SELECT
-            o.id AS top_buy_id,
-            o.normalized_value AS top_buy_normalized_value,
-            o.currency_normalized_value AS top_buy_currency_normalized_value,
-            o.maker AS top_buy_maker,
-            o.currency AS top_buy_currency,
-            o.fee_breakdown AS top_buy_fee_breakdown,
-            o.currency_price AS top_buy_currency_price,
-            o.currency_value AS top_buy_currency_value,
-            o.price AS top_buy_price,
-            o.value AS top_buy_value,
-            o.source_id_int AS top_buy_source_id_int,
-            o.missing_royalties AS top_buy_missing_royalties,
-            DATE_PART('epoch', LOWER(o.valid_between)) AS top_buy_valid_from,
-            COALESCE(
-              NULLIF(DATE_PART('epoch', UPPER(o.valid_between)), 'Infinity'),
-              0
-            ) AS top_buy_valid_until
-          FROM orders o
-          JOIN token_sets_tokens tst
-            ON o.token_set_id = tst.token_set_id
-          WHERE tst.contract = t.contract
-            AND tst.token_id = t.token_id
-            AND o.side = 'buy'
-            AND o.fillability_status = 'fillable'
-            AND o.approval_status = 'approved'
-            AND EXISTS(
-              SELECT FROM nft_balances nb
-                WHERE nb.contract = t.contract
-                AND nb.token_id = t.token_id
-                AND nb.amount > 0
-                AND nb.owner != o.maker
-                AND (
-                  o.taker IS NULL
-                  OR o.taker = '\\x0000000000000000000000000000000000000000'
-                  OR o.taker = nb.owner
-                )
-            )
-            ${query.normalizeRoyalties ? " AND o.normalized_value IS NOT NULL" : ""}
-          ORDER BY o.value DESC
-          LIMIT 1
-        ) y ON TRUE
-      `;
-    }
 
     // Include attributes
     let selectAttributes = "";
@@ -534,8 +483,8 @@ export const getTokensV6Options: RouteOptions = {
       let baseQuery = `
         ${sourceCte}
         SELECT
-          t.contract,
-          t.token_id,
+          t.contract AS t_contract,
+          t.token_id AS t_token_id,
           t.name,
           t.description,
           t.image,
@@ -564,12 +513,10 @@ export const getTokensV6Options: RouteOptions = {
             LIMIT 1
           ) AS owner
           ${selectAttributes}
-          ${selectTopBid}
           ${selectIncludeQuantity}
           ${selectIncludeDynamicPricing}
           ${selectRoyaltyBreakdown}
         FROM tokens t
-        ${topBidQuery}
         ${
           sourceCte !== ""
             ? "JOIN filtered_orders s ON s.contract = t.contract AND s.token_id = t.token_id"
@@ -590,11 +537,16 @@ export const getTokensV6Options: RouteOptions = {
         `;
       }
 
+      let collections: any[] = [];
       if (query.collectionsSetId) {
-        baseQuery += `
-          JOIN collections_sets_collections csc
-            ON t.collection_id = csc.collection_id
-        `;
+        collections = await CollectionSets.getCollectionsIds(query.collectionsSetId);
+
+        if (collections.length > 20) {
+          baseQuery += `
+            JOIN collections_sets_collections csc
+              ON t.collection_id = csc.collection_id
+          `;
+        }
       }
 
       if (query.attributes) {
@@ -704,7 +656,7 @@ export const getTokensV6Options: RouteOptions = {
         conditions.push(`tst.token_set_id = $/tokenSetId/`);
       }
 
-      if (query.collectionsSetId) {
+      if (query.collectionsSetId && collections.length > 20) {
         conditions.push(`csc.collections_set_id = $/collectionsSetId/`);
       }
 
@@ -826,55 +778,133 @@ export const getTokensV6Options: RouteOptions = {
 
       // Sorting
 
+      const getSort = function (sortBy: string, union: boolean) {
+        switch (sortBy) {
+          case "rarity": {
+            return ` ORDER BY ${union ? "" : "t."}rarity_rank ${
+              query.sortDirection || "ASC"
+            } NULLS ${nullsPosition}, t_contract ${query.sortDirection || "ASC"}, t_token_id ${
+              query.sortDirection || "ASC"
+            }`;
+          }
+          case "tokenId": {
+            return ` ORDER BY t_contract ${query.sortDirection || "ASC"}, t_token_id ${
+              query.sortDirection || "ASC"
+            }`;
+          }
+          case "floorAskPrice":
+          default: {
+            const sortColumn = query.nativeSource
+              ? `${union ? "" : "s."}floor_sell_value`
+              : query.normalizeRoyalties
+              ? `${union ? "" : "t."}normalized_floor_sell_value`
+              : `${union ? "" : "t."}floor_sell_value`;
+
+            return ` ORDER BY ${sortColumn} ${
+              query.sortDirection || "ASC"
+            } NULLS ${nullsPosition}, t_contract ${query.sortDirection || "ASC"}, t_token_id ${
+              query.sortDirection || "ASC"
+            }`;
+          }
+        }
+      };
+
       // Only allow sorting on floorSell when we filter by collection / attributes / tokenSetId / rarity
       if (
         query.collection ||
         query.attributes ||
         query.tokenSetId ||
         query.rarity ||
-        query.collectionsSetId ||
+        (query.collectionsSetId && collections.length > 20) ||
         query.tokens
       ) {
-        switch (query.sortBy) {
-          case "rarity": {
-            baseQuery += ` ORDER BY t.rarity_rank ${
-              query.sortDirection || "ASC"
-            } NULLS ${nullsPosition}, t.contract ${query.sortDirection || "ASC"}, t.token_id ${
-              query.sortDirection || "ASC"
-            }`;
-            break;
-          }
-
-          case "tokenId": {
-            baseQuery += ` ORDER BY t.contract ${query.sortDirection || "ASC"}, t.token_id ${
-              query.sortDirection || "ASC"
-            }`;
-            break;
-          }
-
-          case "floorAskPrice":
-          default: {
-            const sortColumn = query.nativeSource
-              ? "s.floor_sell_value"
-              : query.normalizeRoyalties
-              ? "t.normalized_floor_sell_value"
-              : "t.floor_sell_value";
-
-            baseQuery += ` ORDER BY ${sortColumn} ${
-              query.sortDirection || "ASC"
-            } NULLS ${nullsPosition}, t.contract ${query.sortDirection || "ASC"}, t.token_id ${
-              query.sortDirection || "ASC"
-            }`;
-            break;
-          }
-        }
+        baseQuery += getSort(query.sortBy, false);
       } else if (query.contract) {
         baseQuery += ` ORDER BY t.contract ${query.sortDirection || "ASC"}, t.token_id ${
           query.sortDirection || "ASC"
         }`;
       }
 
+      // Break query into UNION of results for each collectionId for sets up to 20 collections
+      if (query.collectionsSetId && collections.length <= 20) {
+        const collectionsSetQueries = [];
+        const collectionsSetSort = getSort(query.sortBy, true);
+
+        for (const i in collections) {
+          (query as any)[`collection${i}`] = collections[i];
+          collectionsSetQueries.push(
+            `(
+              ${baseQuery}
+              ${conditions.length ? `AND ` : `WHERE `} t.collection_id = $/collection${i}/
+              ${collectionsSetSort}
+              LIMIT $/limit/
+            )`
+          );
+        }
+
+        baseQuery = `
+          ${collectionsSetQueries.join(` UNION ALL `)}
+          ${collectionsSetSort}
+        `;
+      }
+
       baseQuery += ` LIMIT $/limit/`;
+
+      // Include top bid
+      if (query.includeTopBid) {
+        baseQuery = `
+          WITH x AS (
+            ${baseQuery}
+          )
+          SELECT 
+            x.*, 
+            y.*
+          FROM x
+          LEFT JOIN LATERAL (
+            SELECT
+              o.id AS top_buy_id,
+              o.normalized_value AS top_buy_normalized_value,
+              o.currency_normalized_value AS top_buy_currency_normalized_value,
+              o.maker AS top_buy_maker,
+              o.currency AS top_buy_currency,
+              o.fee_breakdown AS top_buy_fee_breakdown,
+              o.currency_price AS top_buy_currency_price,
+              o.currency_value AS top_buy_currency_value,
+              o.price AS top_buy_price,
+              o.value AS top_buy_value,
+              o.source_id_int AS top_buy_source_id_int,
+              o.missing_royalties AS top_buy_missing_royalties,
+              DATE_PART('epoch', LOWER(o.valid_between)) AS top_buy_valid_from,
+              COALESCE(
+                NULLIF(DATE_PART('epoch', UPPER(o.valid_between)), 'Infinity'),
+                0
+              ) AS top_buy_valid_until
+            FROM orders o
+            JOIN token_sets_tokens tst
+              ON o.token_set_id = tst.token_set_id
+            WHERE tst.contract = x.t_contract
+              AND tst.token_id = x.t_token_id
+              AND o.side = 'buy'
+              AND o.fillability_status = 'fillable'
+              AND o.approval_status = 'approved'
+              AND EXISTS(
+                SELECT FROM nft_balances nb
+                  WHERE nb.contract = x.t_contract
+                  AND nb.token_id = x.t_token_id
+                  AND nb.amount > 0
+                  AND nb.owner != o.maker
+                  AND (
+                    o.taker IS NULL
+                    OR o.taker = '\\x0000000000000000000000000000000000000000'
+                    OR o.taker = nb.owner
+                  )
+              )
+              ${query.normalizeRoyalties ? " AND o.normalized_value IS NOT NULL" : ""}
+            ORDER BY o.value DESC
+            LIMIT 1
+          ) y ON TRUE
+        `;
+      }
 
       const rawResult = await redb.manyOrNone(baseQuery, query);
 
@@ -913,8 +943,8 @@ export const getTokensV6Options: RouteOptions = {
         }
 
         continuation +=
-          (continuation ? "_" : "") + fromBuffer(rawResult[rawResult.length - 1].contract);
-        continuation += "_" + rawResult[rawResult.length - 1].token_id;
+          (continuation ? "_" : "") + fromBuffer(rawResult[rawResult.length - 1].t_contract);
+        continuation += "_" + rawResult[rawResult.length - 1].t_token_id;
 
         continuation = buildContinuation(continuation);
       }
@@ -944,8 +974,8 @@ export const getTokensV6Options: RouteOptions = {
           }
         }
 
-        const contract = fromBuffer(r.contract);
-        const tokenId = r.token_id;
+        const contract = fromBuffer(r.t_contract);
+        const tokenId = r.t_token_id;
 
         const floorSellSource = r.floor_sell_value
           ? sources.get(Number(r.floor_sell_source_id_int), contract, tokenId)

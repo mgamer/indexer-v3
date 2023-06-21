@@ -15,10 +15,10 @@ import * as royalties from "@/utils/royalties";
 import * as marketplaceFees from "@/utils/marketplace-fees";
 
 import * as collectionUpdatesFloorAsk from "@/jobs/collection-updates/floor-queue";
-import * as collectionUpdatesNonFlaggedFloorAsk from "@/jobs/collection-updates/non-flagged-floor-queue";
 import * as collectionUpdatesNormalizedFloorAsk from "@/jobs/collection-updates/normalized-floor-queue";
 import { recalcOwnerCountQueueJob } from "@/jobs/collection-updates/recalc-owner-count-queue-job";
 import { recalcTokenCountQueueJob } from "@/jobs/collection-updates/recalc-token-count-queue-job";
+import { nonFlaggedFloorQueueJob } from "@/jobs/collection-updates/non-flagged-floor-queue-job";
 
 const QUEUE_NAME = "token-updates-fetch-collection-metadata-queue";
 
@@ -45,18 +45,26 @@ if (config.doBackgroundWork) {
       const { contract, tokenId, mintedTimestamp, newCollection, oldCollectionId } =
         job.data as FetchCollectionMetadataInfo;
 
-      if (isNaN(Number(tokenId))) {
-        logger.error(
-          "updateCollectionCache",
-          `Invalid tokenId. jobData=${JSON.stringify(job.data)}`
-        );
-      }
-
       try {
         // Fetch collection metadata
         const collection = await MetadataApi.getCollectionMetadata(contract, tokenId, "", {
           allowFallback: !newCollection,
         });
+
+        if (getNetworkSettings().copyrightInfringementContracts.includes(contract.toLowerCase())) {
+          collection.name = collection.id;
+          collection.metadata = null;
+
+          logger.info(
+            QUEUE_NAME,
+            JSON.stringify({
+              topic: "debugCopyrightInfringementContracts",
+              message: "Collection is a copyright infringement",
+              contract,
+              collection,
+            })
+          );
+        }
 
         let tokenIdRange: string | null = null;
         if (collection.tokenIdRange) {
@@ -155,7 +163,7 @@ if (config.doBackgroundWork) {
 
           await Promise.all([
             collectionUpdatesFloorAsk.addToQueue([floorAskInfo]),
-            collectionUpdatesNonFlaggedFloorAsk.addToQueue([floorAskInfo]),
+            nonFlaggedFloorQueueJob.addToQueue([floorAskInfo]),
             collectionUpdatesNormalizedFloorAsk.addToQueue([floorAskInfo]),
           ]);
         }

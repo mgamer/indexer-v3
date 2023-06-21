@@ -7,6 +7,8 @@ import _ from "lodash";
 import { getNetworkName } from "@/config/network";
 import EventEmitter from "events";
 import TypedEmitter from "typed-emitter";
+import { Channel, ConsumeMessage } from "amqplib";
+import { releaseLock } from "@/common/redis";
 
 export type BackoffStrategy =
   | {
@@ -22,7 +24,7 @@ export type BackoffStrategy =
 export type QueueType = "classic" | "quorum";
 
 export type AbstractRabbitMqJobHandlerEvents = {
-  onCompleted: (message: RabbitMQMessage) => void;
+  onCompleted: (message: RabbitMQMessage, processResult: any) => void;
   onError: (message: RabbitMQMessage, error: any) => void;
 };
 
@@ -32,7 +34,7 @@ export abstract class AbstractRabbitMqJobHandler extends (EventEmitter as new ()
   abstract queueName: string;
   abstract maxRetries: number;
 
-  protected abstract process(payload: any): Promise<void>;
+  protected abstract process(payload: any): Promise<any>;
 
   protected concurrency = 1;
   protected maxDeadLetterQueue = 5000;
@@ -43,39 +45,38 @@ export abstract class AbstractRabbitMqJobHandler extends (EventEmitter as new ()
   protected lazyMode = false;
   protected queueType: QueueType = "classic";
 
-  private sharedChannelName = "shared-channel";
+  public async consume(channel: Channel, consumeMessage: ConsumeMessage): Promise<void> {
+    const message = JSON.parse(consumeMessage.content.toString()) as RabbitMQMessage;
 
-  public async consume(message: RabbitMQMessage): Promise<void> {
     message.consumedTime = message.consumedTime ?? _.now();
     message.retryCount = message.retryCount ?? 0;
 
     try {
-      await this.process(message.payload);
-      message.completeTime = _.now();
+      const processResult = await this.process(message.payload); // Process the message
+      message.completeTime = _.now(); // Set the complete time
+      await channel.ack(consumeMessage); // Ack the message with rabbit
+      this.emit("onCompleted", message, processResult); // Emit on Completed event
+
+      // Release lock if there's a job id with no delay
+      if (message.jobId && !message.delay) {
+        await releaseLock(message.jobId).catch();
+      }
     } catch (error) {
+      this.emit("onError", message, error); // Emit error event
+
       message.retryCount += 1;
-      this.emit("onError", message, error);
       let queueName = this.getRetryQueue();
 
       // Set the backoff strategy delay
       let delay = this.getBackoffDelay(message);
 
-      // Retry enforce duplications
-      if (message.jobId) {
-        message.jobId = `${message.jobId}.retry-${message.retryCount}`;
-      }
-
       // If the event has already been retried maxRetries times, send it to the dead letter queue
       if (message.retryCount > this.maxRetries) {
-        // String the retry from the job id when sending to the dead letter
-        if (message.jobId) {
-          message.jobId = _.replace(message.jobId, /\.retry-\d+/, "");
-        }
-
         queueName = this.getDeadLetterQueue();
         delay = 0;
       }
 
+      // Lof the error
       logger.error(
         this.queueName,
         `Error handling event: ${error}, queueName=${queueName}, payload=${JSON.stringify(
@@ -83,7 +84,8 @@ export abstract class AbstractRabbitMqJobHandler extends (EventEmitter as new ()
         )}, retryCount=${message.retryCount}`
       );
 
-      await RabbitMq.send(queueName, message, delay);
+      await channel.ack(consumeMessage); // Ack the message with rabbit
+      await RabbitMq.send(queueName, message, delay); // Trigger the retry / or send to dead letter queue
     }
   }
 
@@ -128,10 +130,6 @@ export abstract class AbstractRabbitMqJobHandler extends (EventEmitter as new ()
     return this.maxDeadLetterQueue;
   }
 
-  public getSharedChannelName(): string {
-    return this.sharedChannelName;
-  }
-
   public getUseSharedChannel(): boolean {
     return this.useSharedChannel;
   }
@@ -155,7 +153,7 @@ export abstract class AbstractRabbitMqJobHandler extends (EventEmitter as new ()
   public async send(job: { payload?: any; jobId?: string } = {}, delay = 0, priority = 0) {
     await RabbitMq.send(
       this.getQueue(),
-      { payload: job.payload, jobId: job.jobId },
+      { payload: job.payload, jobId: job.jobId, persistent: this.persistent },
       delay,
       priority
     );

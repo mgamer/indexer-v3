@@ -169,7 +169,7 @@ if (config.doBackgroundWork) {
         }
       }
     },
-    { connection: redis.duplicate(), concurrency: 45 }
+    { connection: redis.duplicate(), concurrency: 15 }
   );
 
   worker.on("completed", async (job) => {

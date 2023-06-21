@@ -8,7 +8,7 @@ import { randomUUID } from "crypto";
 import _ from "lodash";
 
 import { publishWebsocketEvent } from "@/common/websocketPublisher";
-import { redb } from "@/common/db";
+import { idb } from "@/common/db";
 import { getJoiPriceObject } from "@/common/joi";
 import { fromBuffer, toBuffer } from "@/common/utils";
 import { Assets } from "@/utils/assets";
@@ -53,7 +53,7 @@ new QueueScheduler(QUEUE_NAME, { connection: redis.duplicate() });
 // };
 
 // BACKGROUND WORKER ONLY
-if (config.doBackgroundWork && config.doWebsocketServerWork) {
+if (config.doBackgroundWork && config.doWebsocketServerWork && config.kafkaBrokers.length > 0) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job: Job) => {
@@ -115,7 +115,7 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
 
         baseQuery += ` LIMIT 1`;
 
-        const rawResult = await redb.manyOrNone(baseQuery, {
+        const rawResult = await idb.manyOrNone(baseQuery, {
           contract: toBuffer(data.after.contract),
           tokenId: data.after.token_id,
         });
