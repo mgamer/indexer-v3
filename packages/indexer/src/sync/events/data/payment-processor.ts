@@ -68,7 +68,7 @@ export const masterNonceInvalidated: EventData = {
   kind: "payment-processor",
   subKind: "payment-processor-master-nonce-invalidated",
   addresses: { [PaymentProcessor.Addresses.PaymentProcessor[config.chainId]?.toLowerCase()]: true },
-  topic: "0x7ed668b30822ae5c7db7b4a32f84e6645250bb6db0d1fc73eeb484c5b34b1d1b",
+  topic: "0xb06d2760711c1c15c05bc011b1009a36c0713c6d63567c267678c3a382188b61",
   numTopics: 3,
   abi: new Interface([
     `event MasterNonceInvalidated(uint256 indexed nonce, address indexed account)`,
@@ -79,7 +79,7 @@ export const nonceInvalidated: EventData = {
   kind: "payment-processor",
   subKind: "payment-processor-nonce-invalidated",
   addresses: { [PaymentProcessor.Addresses.PaymentProcessor[config.chainId]?.toLowerCase()]: true },
-  topic: "0x7ed668b30822ae5c7db7b4a32f84e6645250bb6db0d1fc73eeb484c5b34b1d1b",
+  topic: "0x61b992b9cb8061087d0e50532a8ba94e22379c7edd39cdb465536ef827dc1be7",
   numTopics: 4,
   abi: new Interface([
     `event NonceInvalidated(

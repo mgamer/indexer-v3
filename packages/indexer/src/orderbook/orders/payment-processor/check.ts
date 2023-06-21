@@ -1,10 +1,10 @@
 import * as Sdk from "@reservoir0x/sdk";
 
-// import { baseProvider } from "@/common/provider";
-// import { bn } from "@/common/utils";
-// import { config } from "@/config/index";
+import { baseProvider } from "@/common/provider";
+import { bn } from "@/common/utils";
+import { config } from "@/config/index";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
-// import * as onChainData from "@/utils/on-chain-data";
+import * as onChainData from "@/utils/on-chain-data";
 
 export const offChainCheck = async (
   order: Sdk.PaymentProcessor.Order,
@@ -43,93 +43,83 @@ export const offChainCheck = async (
   }
 
   // Check: order's nonce was not bulk cancelled
-  // const side = order.params.quoteType === Sdk.LooksRareV2.Types.QuoteType.Ask ? "sell" : "buy";
-  // const minNonce = await commonHelpers.getMinNonce("looks-rare-v2", order.params.signer, side);
+  const side = !order.isBuyOrder() ? "sell" : "buy";
+  const minNonce = await commonHelpers.getMinNonce("payment-processor", order.params.trader, side);
 
-  // if (minNonce.gt(order.params.globalNonce)) {
-  //   throw new Error("cancelled");
-  // }
-
-  // Check: order's subsetNonce was not individually cancelled
-  // const subsetNonceCancelled = await commonHelpers.isSubsetNonceCancelled(
-  //   order.params.signer,
-  //   order.params.subsetNonce
-  // );
-
-  // if (subsetNonceCancelled) {
-  //   throw new Error("cancelled");
-  // }
+  if (minNonce.gt(order.params.masterNonce)) {
+    throw new Error("cancelled");
+  }
 
   // Check: order's nonce was not individually cancelled
-  // const nonceCancelled = await commonHelpers.isNonceCancelled(
-  //   "looks-rare-v2",
-  //   order.params.signer,
-  //   order.params.orderNonce
-  // );
+  const nonceCancelled = await commonHelpers.isNonceCancelled(
+    "payment-processor",
+    order.params.trader,
+    order.params.nonce
+  );
 
-  // if (nonceCancelled) {
-  //   throw new Error("cancelled");
-  // }
+  if (nonceCancelled) {
+    throw new Error("cancelled");
+  }
 
-  const hasBalance = true;
-  const hasApproval = true;
-  // if (order.params.quoteType !== Sdk.LooksRareV2.Types.QuoteType.Ask) {
-  //   // Check: maker has enough balance
-  //   const ftBalance = await commonHelpers.getFtBalance(order.params.coin, order.params.signer);
-  //   if (ftBalance.lt(order.params.price)) {
-  //     hasBalance = false;
-  //   }
+  let hasBalance = true;
+  let hasApproval = true;
+  if (order.isBuyOrder()) {
+    // Check: maker has enough balance
+    const ftBalance = await commonHelpers.getFtBalance(order.params.coin, order.params.trader);
+    if (ftBalance.lt(order.params.price)) {
+      hasBalance = false;
+    }
 
-  //   if (options?.onChainApprovalRecheck) {
-  //     if (
-  //       bn(
-  //         await onChainData
-  //           .fetchAndUpdateFtApproval(
-  //             order.params.currency,
-  //             order.params.signer,
-  //             Sdk.LooksRareV2.Addresses.Exchange[config.chainId],
-  //             true
-  //           )
-  //           .then((a) => a.value)
-  //       ).lt(order.params.price)
-  //     ) {
-  //       hasApproval = false;
-  //     }
-  //   }
-  // } else {
-  //   // Check: maker has enough balance
-  //   const nftBalance = await commonHelpers.getNftBalance(
-  //     order.params.collection,
-  //     order.params.itemIds[0],
-  //     order.params.signer
-  //   );
-  //   if (nftBalance.lt(1)) {
-  //     hasBalance = false;
-  //   }
+    if (options?.onChainApprovalRecheck) {
+      if (
+        bn(
+          await onChainData
+            .fetchAndUpdateFtApproval(
+              order.params.coin,
+              order.params.trader,
+              Sdk.PaymentProcessor.Addresses.PaymentProcessor[config.chainId],
+              true
+            )
+            .then((a) => a.value)
+        ).lt(order.params.price)
+      ) {
+        hasApproval = false;
+      }
+    }
+  } else {
+    // Check: maker has enough balance
+    const nftBalance = await commonHelpers.getNftBalance(
+      order.params.tokenAddress,
+      order.params.tokenId!,
+      order.params.trader
+    );
+    if (nftBalance.lt(1)) {
+      hasBalance = false;
+    }
 
-  //   const operator = Sdk.LooksRareV2.Addresses.TransferManager[config.chainId];
+    const operator = Sdk.PaymentProcessor.Addresses.PaymentProcessor[config.chainId];
 
-  //   // Check: maker has set the proper approval
-  //   const nftApproval = await commonHelpers.getNftApproval(
-  //     order.params.collection,
-  //     order.params.signer,
-  //     operator
-  //   );
-  //   if (!nftApproval) {
-  //     if (options?.onChainApprovalRecheck) {
-  //       // Re-validate the approval on-chain to handle some edge-cases
-  //       const contract =
-  //         kind === "erc721"
-  //           ? new Sdk.Common.Helpers.Erc721(baseProvider, order.params.collection)
-  //           : new Sdk.Common.Helpers.Erc1155(baseProvider, order.params.collection);
-  //       if (!(await contract.isApproved(order.params.signer, operator))) {
-  //         hasApproval = false;
-  //       }
-  //     } else {
-  //       hasApproval = false;
-  //     }
-  //   }
-  // }
+    // Check: maker has set the proper approval
+    const nftApproval = await commonHelpers.getNftApproval(
+      order.params.tokenAddress,
+      order.params.trader,
+      operator
+    );
+    if (!nftApproval) {
+      if (options?.onChainApprovalRecheck) {
+        // Re-validate the approval on-chain to handle some edge-cases
+        const contract =
+          kind === "erc721"
+            ? new Sdk.Common.Helpers.Erc721(baseProvider, order.params.tokenAddress)
+            : new Sdk.Common.Helpers.Erc1155(baseProvider, order.params.tokenAddress);
+        if (!(await contract.isApproved(order.params.trader, operator))) {
+          hasApproval = false;
+        }
+      } else {
+        hasApproval = false;
+      }
+    }
+  }
 
   if (!hasBalance && !hasApproval) {
     throw new Error("no-balance-no-approval");

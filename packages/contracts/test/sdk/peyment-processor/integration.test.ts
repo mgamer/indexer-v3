@@ -130,11 +130,6 @@ describe("PaymentProcessor - Indexer Integration Test", () => {
 
     console.log(green("\t Perform Order Saving:"));
 
-    console.log({
-      isListing,
-      maker: order.params.trader,
-      taker: matchOrder.params.trader
-    })
     // Call the Indexer to save the order
     const saveResult = await indexerHelper.doOrderSaving({
       contract: erc721.address,
@@ -165,126 +160,83 @@ describe("PaymentProcessor - Indexer Integration Test", () => {
     console.log(`\t\t - ID: ${orderInfo.id}`);
 
     // Handle Cancel Test
-    // if (cancelOrder) {
-    //   console.log("\t Cancel Order");
-    //   const tx = await exchange.cancelOrder(!isListing ? buyer : seller, order);
+    if (cancelOrder) {
+      console.log("\t Cancel Order");
+      const tx = await exchange.cancelOrder(!isListing ? buyer : seller, order);
 
-    //   console.log(green("\t Event Parsing:"));
-    //   const parseResult = await indexerHelper.doEventParsing(tx.hash, false);
-    //   const onChainData = parseResult.onChainData[0];
-    //   if (!onChainData) {
-    //     console.log("\t\t  Parse Event Failed");
-    //   }
+      console.log(green("\t Event Parsing:"));
+      const parseResult = await indexerHelper.doEventParsing(tx.hash, true);
+      const onChainData = parseResult.onChainData[0];
+      if (!onChainData) {
+        console.log("\t\t  Parse Event Failed",  tx.hash);
+      }
 
-    //   await new Promise((resolve) => {
-    //     setTimeout(resolve, 4 * 1000);
-    //   });
+      await new Promise((resolve) => {
+        setTimeout(resolve, 4 * 1000);
+      });
 
-    //   const orderState = await indexerHelper.getOrder(orderInfo.id);
-    //   const { nonceCancelEvents } = onChainData;
-    //   if (nonceCancelEvents.length) {
-    //     console.log(green(`\t\t found nonceCancelEvents(${nonceCancelEvents.length})`));
-    //   } else {
-    //     console.log(error("\t\t nonceCancelEvents not found"));
-    //   }
+      const orderState = await indexerHelper.getOrder(orderInfo.id);
+      const { nonceCancelEvents } = onChainData;
+      if (nonceCancelEvents.length) {
+        console.log(green(`\t\t found nonceCancelEvents(${nonceCancelEvents.length})`));
+      } else {
+        console.log(error("\t\t nonceCancelEvents not found"));
+      }
 
-    //   console.log(green("\t Order Status: "));
-    //   console.log(
-    //     "\t\t - Final Order Status =",
-    //     JSON.stringify({
-    //       fillability_status: orderState.fillability_status,
-    //       approval_status: orderState.approval_status,
-    //     })
-    //   );
-    //   expect(orderState.fillability_status).to.eq("cancelled");
-    //   return;
-    // }
+      console.log(green("\t Order Status: "));
+      console.log(
+        "\t\t - Final Order Status =",
+        JSON.stringify({
+          fillability_status: orderState.fillability_status,
+          approval_status: orderState.approval_status,
+        })
+      );
+      expect(orderState.fillability_status).to.eq("cancelled");
+      return;
+    }
 
     // Handle Cancel Test
-    // if (bulkCancel) {
-    //   console.log(green("\t Bulk Cancel Order"));
-    //   const orderSide = isListing ? "sell" : "buy";
-    //   const tx = await exchange.cancelAllOrders(!isListing ? buyer : seller, orderSide);
+    if (bulkCancel) {
+      console.log(green("\t Bulk Cancel Order"));
+      const tx = await exchange.cancelAllOrders(!isListing ? buyer : seller);
 
-    //   console.log(green("\t Event Parsing:"));
-    //   const parseResult = await indexerHelper.doEventParsing(tx.hash, false);
+      console.log(green("\t Event Parsing:"));
+      const parseResult = await indexerHelper.doEventParsing(tx.hash, true);
 
-    //   if (parseResult.error) {
-    //     console.log(error(JSON.stringify(parseResult.error, null, 2)));
-    //     return;
-    //   }
+      if (parseResult.error) {
+        console.log("parseResult", parseResult)
+        console.log(error(JSON.stringify(parseResult.error, null, 2)));
+        return;
+      }
 
-    //   const onChainData = parseResult.onChainData[0];
-    //   if (!onChainData) {
-    //     console.log("\t\t  Parse Event Failed");
-    //   }
+      const onChainData = parseResult.onChainData[0];
+      if (!onChainData) {
+        console.log("\t\t  Parse Event Failed");
+      }
 
-    //   await new Promise((resolve) => {
-    //     setTimeout(resolve, 2 * 1000);
-    //   });
+      await new Promise((resolve) => {
+        setTimeout(resolve, 2 * 1000);
+      });
 
-    //   const orderState = await indexerHelper.getOrder(orderInfo.id);
-    //   const { bulkCancelEvents } = onChainData;
-    //   if (bulkCancelEvents.length) {
-    //     console.log(green(`\t\t found bulkCancelEvents ${bulkCancelEvents.length}`));
-    //   } else {
-    //     console.log(error("\t\t bulkCancelEvents not found"));
-    //   }
+      const orderState = await indexerHelper.getOrder(orderInfo.id);
+      const { bulkCancelEvents } = onChainData;
+      if (bulkCancelEvents.length) {
+        console.log(green(`\t\t found bulkCancelEvents ${bulkCancelEvents.length}`));
+      } else {
+        console.log(error("\t\t bulkCancelEvents not found"));
+      }
 
-    //   console.log(green("\t Order Status: "));
-    //   console.log(
-    //     "\t\t - Final Order Status =",
-    //     JSON.stringify({
-    //       fillability_status: orderState.fillability_status,
-    //       approval_status: orderState.approval_status,
-    //     })
-    //   );
-    //   expect(orderState.fillability_status).to.eq("cancelled");
-    //   return;
-    // }
-
-    // Handle subsetCancel
-    // if (subsetCancel) {
-    //   console.log(green("\t Bulk Cancel Order"));
-    //   const tx = await exchange.cancelOrdersWithSubset(!isListing ? buyer : seller, order);
-
-    //   console.log(green("\t Event Parsing:"));
-    //   const parseResult = await indexerHelper.doEventParsing(tx.hash, false);
-
-    //   if (parseResult.error) {
-    //     console.log(error(JSON.stringify(parseResult.error, null, 2)));
-    //     return;
-    //   }
-
-    //   const onChainData = parseResult.onChainData[0];
-    //   if (!onChainData) {
-    //     console.log("\t\t  Parse Event Failed");
-    //   }
-
-    //   await new Promise((resolve) => {
-    //     setTimeout(resolve, 2 * 1000);
-    //   });
-
-    //   const orderState = await indexerHelper.getOrder(orderInfo.id);
-    //   // const { subsetNonceCancelEvents } = onChainData;
-    //   // if (subsetNonceCancelEvents.length) {
-    //   //     console.log(green(`\t\t found subsetNonceCancelEvents ${subsetNonceCancelEvents.length}`))
-    //   // } else {
-    //   //     console.log(error("\t\t subsetNonceCancelEvents not found"))
-    //   // }
-
-    //   console.log(green("\t Order Status: "));
-    //   console.log(
-    //     "\t\t - Final Order Status =",
-    //     JSON.stringify({
-    //       fillability_status: orderState.fillability_status,
-    //       maker: orderState.maker,
-    //       approval_status: orderState.approval_status,
-    //     })
-    //   );
-    //   expect(orderState.fillability_status).to.eq("cancelled");
-    //   return;
-    // }
+      console.log(green("\t Order Status: "));
+      console.log(
+        "\t\t - Final Order Status =",
+        JSON.stringify({
+          fillability_status: orderState.fillability_status,
+          approval_status: orderState.approval_status,
+        })
+      );
+      expect(orderState.fillability_status).to.eq("cancelled");
+      return;
+    }
 
     await order.checkFillability(ethers.provider);
 
@@ -360,7 +312,6 @@ describe("PaymentProcessor - Indexer Integration Test", () => {
     }
 
     const { fillEvents } = onChainData;
-    console.log("fillEvents", fillEvents)
     const matchFillEvent = fillEvents.find((event: any) => event.orderId === orderInfo.id);
     if (matchFillEvent) {
       const orderData = {
@@ -370,16 +321,6 @@ describe("PaymentProcessor - Indexer Integration Test", () => {
 
       expect(orderData.maker).to.eq(matchFillEvent.maker);
       expect(orderData.taker).to.eq(matchFillEvent.taker);
-      // console.log({
-      //     side: matchFillEvent.orderSide,
-      //     maker: matchFillEvent.maker,
-      //     taker: matchFillEvent.taker,
-      //     isListing,
-      //     order: {
-      //         maker: order.params.signer,
-      //         taker: (isListing ? buyer : seller).address
-      //     }
-      // })
       console.log("\t\t - Found Fill Event");
     } else {
       console.log("\t\t - Fill Event Not Found");
@@ -397,15 +338,12 @@ describe("PaymentProcessor - Indexer Integration Test", () => {
     );
   };
 
-  // it("Fill Listing With Bulk Cancel - Multiple", async () => {
-  //   await testCase({
-  //     cancelOrder: true,
-  //   });
-  //   await testCase({
-  //     cancelOrder: true,
-  //   });
-  //   console.log("\n");
-  // });
+  it("Fill listing with cancel", async () => {
+    await testCase({
+      cancelOrder: true,
+    });
+    console.log("\n");
+  });
 
   // it("Fill Offer via Router API", async () =>
   //   testCase({
@@ -418,20 +356,15 @@ describe("PaymentProcessor - Indexer Integration Test", () => {
   //     executeByRouterAPI: true,
   //   }));
 
-  it("Fill Offer", async () => testCase({}));
+  it("Fill offer", async () => testCase({}));
 
-  // it("Fill Listing", async () =>
-  //   testCase({
-  //     isListing: true,
-  //   }));
+  it("Fill listing", async () =>
+    testCase({
+      isListing: true,
+    }));
 
-  // it("Fill Listing With Cancel", async () =>
-  //   testCase({
-  //     bulkCancel: true,
-  //   }));
-
-  // it("Fill Listing With Subset Cancel", async () =>
-  //   testCase({
-  //     subsetCancel: true,
-  //   }));
+  it("Fill listing with bulk Cancel", async () =>
+    testCase({
+      bulkCancel: true,
+    }));
 });

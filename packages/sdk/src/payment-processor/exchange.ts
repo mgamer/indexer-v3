@@ -23,6 +23,37 @@ export class Exchange {
     return this.contract.connect(provider).masterNonces(user);
   }
 
+  // --- Cancel order ---
+
+  public async cancelOrder(maker: Signer, order: Order): Promise<ContractTransaction> {
+    const tx = this.cancelOrderTx(await maker.getAddress(), order);
+    return maker.sendTransaction(tx);
+  }
+
+  public cancelOrderTx(maker: string, order: Order): TxData {
+    return {
+      from: maker,
+      to: this.contract.address,
+      data: this.contract.interface.encodeFunctionData("revokeSingleNonce", [
+        order.params.marketplace,
+        order.params.nonce,
+      ]),
+    };
+  }
+
+  public async cancelAllOrders(maker: Signer): Promise<ContractTransaction> {
+    const tx = this.cancelAllOrdersTx(await maker.getAddress());
+    return maker.sendTransaction(tx);
+  }
+
+  public cancelAllOrdersTx(maker: string): TxData {
+    return {
+      from: maker,
+      to: this.contract.address,
+      data: this.contract.interface.encodeFunctionData("revokeMasterNonce", []),
+    };
+  }
+
   // --- Increase nonce ---
 
   public async revokeMasterNonce(maker: Signer): Promise<ContractTransaction> {

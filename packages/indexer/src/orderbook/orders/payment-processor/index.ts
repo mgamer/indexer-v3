@@ -13,6 +13,8 @@ import { offChainCheck } from "@/orderbook/orders/payment-processor/check";
 import * as tokenSet from "@/orderbook/token-sets";
 import * as royalties from "@/utils/royalties";
 import _ from "lodash";
+import { keccak256 } from "@ethersproject/solidity";
+import { BigNumber } from "ethers";
 
 export type OrderInfo = {
   orderParams: Sdk.PaymentProcessor.Types.BaseOrder;
@@ -24,6 +26,11 @@ type SaveResult = {
   status: string;
   unfillable?: boolean;
 };
+
+export function getOrderNonce(marketplace: string, nonce: string) {
+  const hash = keccak256(["address", "uint256"], [marketplace, nonce]);
+  return BigNumber.from(hash).toString();
+}
 
 export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
   const results: SaveResult[] = [];
@@ -268,7 +275,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
       // Handle: source
       const sources = await Sources.getInstance();
-      let source = await sources.getOrInsert("looksrare.org");
+      let source = await sources.getOrInsert("limitbreak.com");
       if (metadata.source) {
         source = await sources.getOrInsert(metadata.source);
       }
@@ -284,9 +291,10 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
       const validFrom = `date_trunc('seconds', now())`;
       const validTo = `date_trunc('seconds', to_timestamp(${order.params.expiration}))`;
+      const orderNonce = getOrderNonce(order.params.marketplace, order.params.nonce);
       orderValues.push({
         id,
-        kind: "looks-rare-v2",
+        kind: "payment-processor",
         side,
         fillability_status: fillabilityStatus,
         approval_status: approvalStatus,
@@ -301,7 +309,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         currency_value: value,
         needs_conversion: null,
         valid_between: `tstzrange(${validFrom}, ${validTo}, '[]')`,
-        nonce: order.params.nonce.toString(),
+        nonce: orderNonce,
         source_id_int: source?.id,
         is_reservoir: isReservoir ? isReservoir : null,
         contract: toBuffer(order.params.tokenAddress),
@@ -326,7 +334,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       });
     } catch (error) {
       logger.error(
-        "orders-looks-rare-v2-save",
+        "payment-processor",
         `Failed to handle order with params ${JSON.stringify(orderParams)}: ${error}`
       );
     }

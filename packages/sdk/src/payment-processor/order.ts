@@ -37,7 +37,7 @@ export class Order {
     return _TypedDataEncoder.hashStruct(structName, types, value);
   }
 
-  private isBuyOrder() {
+  public isBuyOrder() {
     return ["offer-approval", "collection-offer-approval"].includes(this.params.kind!);
   }
 
