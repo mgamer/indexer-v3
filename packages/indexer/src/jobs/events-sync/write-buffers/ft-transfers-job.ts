@@ -26,11 +26,8 @@ export class EventsSyncFtTransfersWriteBufferJob extends AbstractRabbitMqJobHand
     }
   }
 
-  public async addToQueue(
-    queries: EventsSyncFtTransfersWriteBufferPayload[],
-    delay = 60 * 5 * 1000
-  ) {
-    await this.sendBatch(queries.map((q) => ({ payload: q, jobId: `${randomUUID()}`, delay })));
+  public async addToQueue(query: string) {
+    await this.send({ payload: query, jobId: randomUUID() });
   }
 }
 
