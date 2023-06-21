@@ -25,7 +25,7 @@ export type RecalcOwnerCountQueueJobPayload =
 export class RecalcOwnerCountQueueJob extends AbstractRabbitMqJobHandler {
   queueName = "collection-recalc-owner-count-queue";
   maxRetries = 10;
-  concurrency = 1;
+  concurrency = 10;
   lazyMode = true;
   backoff = {
     type: "exponential",
