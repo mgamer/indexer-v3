@@ -107,7 +107,7 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
   if (queries.length) {
     if (backfill) {
       // When backfilling, use the write buffer to avoid deadlocks
-      await eventsSyncFtTransfersWriteBufferJob.addToQueue(pgp.helpers.concat(queries));
+      await eventsSyncFtTransfersWriteBufferJob.addToQueue({ query: pgp.helpers.concat(queries) });
     } else {
       // Otherwise write directly since there might be jobs that depend
       // on the events to have been written to the database at the time

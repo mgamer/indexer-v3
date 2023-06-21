@@ -1,5 +1,4 @@
 import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handler";
-import { randomUUID } from "crypto";
 
 import { edb } from "@/common/db";
 import { logger } from "@/common/logger";
@@ -12,7 +11,6 @@ export class EventsSyncFtTransfersWriteBufferJob extends AbstractRabbitMqJobHand
   queueName = "events-sync-ft-transfers-write";
   maxRetries = 10;
   concurrency = 10;
-  useSharedChannel = false;
   lazyMode = true;
 
   protected async process(payload: EventsSyncFtTransfersWriteBufferPayload) {
@@ -26,8 +24,8 @@ export class EventsSyncFtTransfersWriteBufferJob extends AbstractRabbitMqJobHand
     }
   }
 
-  public async addToQueue(query: string) {
-    await this.send({ payload: query, jobId: randomUUID() });
+  public async addToQueue(query: EventsSyncFtTransfersWriteBufferPayload) {
+    await this.send({ payload: query });
   }
 }
 
