@@ -138,7 +138,6 @@ import * as updateActivitiesCollection from "@/jobs/elasticsearch/update-activit
 import * as refreshActivitiesTokenMetadata from "@/jobs/elasticsearch/refresh-activities-token-metadata";
 import * as refreshActivitiesCollectionMetadata from "@/jobs/elasticsearch/refresh-activities-collection-metadata";
 
-import { getNetworkName } from "@/config/network";
 import amqplib, { Channel, Connection } from "amqplib";
 import { config } from "@/config/index";
 import _ from "lodash";
@@ -450,36 +449,6 @@ export class RabbitMqJobsConsumer {
       },
       {
         consumerTag: RabbitMqJobsConsumer.getConsumerTag(job.getRetryQueue()),
-      }
-    );
-
-    // Subscribe to the queue
-    await channel.consume(
-      _.replace(job.getQueue(), `${getNetworkName()}.`, `${getNetworkName()}.new.`),
-      async (msg) => {
-        if (!_.isNull(msg)) {
-          await job.consume(channel, msg);
-        }
-      },
-      {
-        consumerTag: RabbitMqJobsConsumer.getConsumerTag(
-          _.replace(job.getQueue(), `${getNetworkName()}.`, `${getNetworkName()}.new.`)
-        ),
-      }
-    );
-
-    // Subscribe to the retry queue
-    await channel.consume(
-      _.replace(job.getRetryQueue(), `${getNetworkName()}.`, `${getNetworkName()}.new.`),
-      async (msg) => {
-        if (!_.isNull(msg)) {
-          await job.consume(channel, msg);
-        }
-      },
-      {
-        consumerTag: RabbitMqJobsConsumer.getConsumerTag(
-          _.replace(job.getRetryQueue(), `${getNetworkName()}.`, `${getNetworkName()}.new.`)
-        ),
       }
     );
 
