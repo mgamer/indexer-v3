@@ -57,7 +57,7 @@ if (config.doWebsocketWork && config.openSeaApiKey) {
     [
       EventType.ITEM_LISTED,
       EventType.COLLECTION_OFFER,
-      EventType.ITEM_RECEIVED_BID,
+      // EventType.ITEM_RECEIVED_BID,
       EventType.TRAIT_OFFER,
       EventType.ITEM_CANCELLED,
       EventType.ORDER_REVALIDATE,
@@ -212,17 +212,17 @@ export const handleEvent = async (
 
 type ProtocolData =
   | {
-      kind: "seaport";
-      order: Sdk.SeaportV11.Order;
-    }
+    kind: "seaport";
+    order: Sdk.SeaportV11.Order;
+  }
   | {
-      kind: "seaport-v1.4";
-      order: Sdk.SeaportV14.Order;
-    }
+    kind: "seaport-v1.4";
+    order: Sdk.SeaportV14.Order;
+  }
   | {
-      kind: "seaport-v1.5";
-      order: Sdk.SeaportV15.Order;
-    };
+    kind: "seaport-v1.5";
+    order: Sdk.SeaportV15.Order;
+  };
 
 export const parseProtocolData = (payload: unknown): ProtocolData | undefined => {
   try {
