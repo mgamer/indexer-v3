@@ -44,6 +44,7 @@ export abstract class AbstractRabbitMqJobHandler extends (EventEmitter as new ()
   protected useSharedChannel = false;
   protected lazyMode = false;
   protected queueType: QueueType = "classic";
+  protected consumerTimeout = 0;
 
   public async consume(channel: Channel, consumeMessage: ConsumeMessage): Promise<void> {
     const message = JSON.parse(consumeMessage.content.toString()) as RabbitMQMessage;
@@ -148,6 +149,10 @@ export abstract class AbstractRabbitMqJobHandler extends (EventEmitter as new ()
 
   public getQueueType(): string {
     return this.queueType;
+  }
+
+  public getConsumerTimeout(): number {
+    return this.consumerTimeout;
   }
 
   public async send(job: { payload?: any; jobId?: string } = {}, delay = 0, priority = 0) {

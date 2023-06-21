@@ -181,7 +181,7 @@ import { collectionRefreshJob } from "@/jobs/collections-refresh/collections-ref
 import { collectionRefreshCacheJob } from "@/jobs/collections-refresh/collections-refresh-cache-job";
 import { currenciesFetchJob } from "@/jobs/currencies/currencies-fetch-job";
 import { oneDayVolumeJob } from "@/jobs/daily-volumes/1day-volumes-job";
-// import { dailyVolumeJob } from "@/jobs/daily-volumes/daily-volumes-job";
+import { dailyVolumeJob } from "@/jobs/daily-volumes/daily-volumes-job";
 import { processArchiveDataJob } from "@/jobs/data-archive/process-archive-data-job";
 import { exportDataJob } from "@/jobs/data-export/export-data-job";
 import { processActivityEventJob } from "@/jobs/activities/process-activity-event-job";
@@ -357,6 +357,7 @@ export class RabbitMqJobsConsumer {
       collectionRefreshCacheJob,
       currenciesFetchJob,
       oneDayVolumeJob,
+      dailyVolumeJob,
       processArchiveDataJob,
       exportDataJob,
       processActivityEventJob,
