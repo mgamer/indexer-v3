@@ -21,9 +21,10 @@ contract MidaswapModule is BaseExchangeModule {
     address owner,
     address router,
     address factory,
+    address midasRouter,
     IWETH _weth
   ) BaseModule(owner) BaseExchangeModule(router) {
-    MIDAS_ROUTER = IMidasRouter(router);
+    MIDAS_ROUTER = IMidasRouter(midasRouter);
     MIDAS_FACTORY = IMidasFactory(factory);
     weth = _weth;
   }
