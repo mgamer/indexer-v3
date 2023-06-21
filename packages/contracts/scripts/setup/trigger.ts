@@ -254,6 +254,12 @@ export const trigger = {
         Sdk.RouterV6.Addresses.Router[chainId],
         Sdk.CollectionXyz.Addresses.CollectionRouter[chainId],
       ]),
+    CryptoPunksModule: async (chainId: number) =>
+      dv("CryptoPunksModule", "v1", [
+        DEPLOYER,
+        Sdk.RouterV6.Addresses.Router[chainId],
+        Sdk.CryptoPunks.Addresses.Exchange[chainId],
+      ]),
   },
   // Utilities
   Utilities: {

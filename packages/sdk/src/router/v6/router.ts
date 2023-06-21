@@ -56,7 +56,7 @@ import X2Y2ModuleAbi from "./abis/X2Y2Module.json";
 import ZeroExV4ModuleAbi from "./abis/ZeroExV4Module.json";
 import ZoraModuleAbi from "./abis/ZoraModule.json";
 import SudoswapV2ModuleAbi from "./abis/SudoswapV2Module.json";
-import CryptoPunkModuleAbi from "./abis/CryptopunkModule.json";
+import CryptoPunksModuleAbi from "./abis/CryptoPunksModule.json";
 
 type SetupOptions = {
   x2y2ApiKey?: string;
@@ -178,9 +178,9 @@ export class Router {
         AlienswapModuleAbi,
         provider
       ),
-      cryptoPunkModule: new Contract(
-        Addresses.CryptoPunkModule[chainId] ?? AddressZero,
-        CryptoPunkModuleAbi,
+      cryptoPunksModule: new Contract(
+        Addresses.CryptoPunksModule[chainId] ?? AddressZero,
+        CryptoPunksModuleAbi,
         provider
       ),
     };
@@ -268,7 +268,6 @@ export class Router {
         success[detail.orderId] = true;
       }
     }
-
 
     if (details.some(({ kind }) => kind === "flow")) {
       if (options?.relayer) {
@@ -811,7 +810,7 @@ export class Router {
     const nftxDetails: ListingDetails[] = [];
     const raribleDetails: ListingDetails[] = [];
     const superRareDetails: ListingDetails[] = [];
-    const cryptoPunkDetails: ListingDetails[] = [];
+    const cryptoPunksDetails: ListingDetails[] = [];
 
     for (const detail of details) {
       // Skip any listings handled in a previous step
@@ -909,7 +908,7 @@ export class Router {
         }
 
         case "cryptopunks": {
-          detailsRef = cryptoPunkDetails;
+          detailsRef = cryptoPunksDetails;
           break;
         }
 
@@ -2514,10 +2513,10 @@ export class Router {
     }
 
     // Handle CryptoPunks listings
-    if (cryptoPunkDetails.length) {
-      const orders = cryptoPunkDetails.map((d) => d.order as Sdk.CryptoPunks.Order);
+    if (cryptoPunksDetails.length) {
+      const orders = cryptoPunksDetails.map((d) => d.order as Sdk.CryptoPunks.Order);
       const module = this.contracts.cryptoPunksModule;
-      const fees = getFees(cryptoPunkDetails);
+      const fees = getFees(cryptoPunksDetails);
 
       const price = orders.map((order) => bn(order.params.price)).reduce((a, b) => a.add(b), bn(0));
       const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
@@ -2527,17 +2526,17 @@ export class Router {
         module: module.address,
         data: module.interface.encodeFunctionData("batchBuyPunksWithETH", [
           orders.map((order) => ({
-              buyer: taker,
-              price: price,
-              punkIndex: order.params.tokenId
-            })),
-            {
-              fillTo: taker,
-              refundTo: relayer,
-              revertIfIncomplete: Boolean(!options?.partial),
-              amount: price,
-            },
-          ]),
+            buyer: taker,
+            price: price,
+            punkIndex: order.params.tokenId,
+          })),
+          {
+            fillTo: taker,
+            refundTo: relayer,
+            revertIfIncomplete: Boolean(!options?.partial),
+            amount: price,
+          },
+        ]),
         value: totalPrice,
       });
 
@@ -2548,12 +2547,12 @@ export class Router {
         tokenOutAmount: totalPrice,
         recipient: module.address,
         refundTo: relayer,
-        details: cryptoPunkDetails,
+        details: cryptoPunksDetails,
         executionIndex: executions.length - 1,
       });
 
       // Mark the listings as successfully handled
-      for (const { orderId } of cryptoPunkDetails) {
+      for (const { orderId } of cryptoPunksDetails) {
         success[orderId] = true;
         orderIds.push(orderId);
       }
@@ -3072,11 +3071,6 @@ export class Router {
 
         case "rarible": {
           module = this.contracts.raribleModule;
-          break;
-        }
-        
-        case "cryptopunks": {
-          module = this.contracts.cryptoPunksModule;
           break;
         }
 

@@ -147,10 +147,6 @@ export type GenericOrder =
   | {
       kind: "sudoswap-v2";
       order: Sdk.SudoswapV2.Order;
-    }
-    {
-      kind: "cryptopunks";
-      order: Sdk.CryptoPunks.Order;
     };
 
 // Listings
