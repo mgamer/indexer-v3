@@ -1907,11 +1907,11 @@ export class Router {
     // Handle midaswap listings
     if (midaswapDetails.length) {
       const orders = midaswapDetails.map((d) => ({
-        order: d.order as Sdk.SudoswapV2.Order,
+        order: d.order as Sdk.Midaswap.Order,
         amount: d.amount,
         contractKind: d.contractKind,
       }));
-      const module = this.contracts.sudoswapV2Module;
+      const module = this.contracts.midaswapModule;
 
       const fees = getFees(midaswapDetails);
       const price = orders
@@ -1939,7 +1939,7 @@ export class Router {
       executions.push({
         module: module.address,
         data: module.interface.encodeFunctionData("buyWithETH", [
-          midaswapDetails.map((d) => (d.order as Sdk.SudoswapV2.Order).params.pair),
+          midaswapDetails.map((d) => (d.order as Sdk.Midaswap.Order).params.pair),
           midaswapDetails.map((d) => (d.contractKind === "erc721" ? d.tokenId : d.amount ?? 1)),
           {
             fillTo: taker,
