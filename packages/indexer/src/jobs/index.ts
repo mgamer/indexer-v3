@@ -89,7 +89,6 @@ import * as orderRevalidations from "@/jobs/order-fixes/revalidations";
 
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 import * as orderUpdatesByMaker from "@/jobs/order-updates/by-maker-queue";
-import * as bundleOrderUpdatesByMaker from "@/jobs/order-updates/by-maker-bundle-queue";
 import * as dynamicOrdersCron from "@/jobs/order-updates/cron/dynamic-orders-queue";
 import * as erc20OrdersCron from "@/jobs/order-updates/cron/erc20-orders-queue";
 import * as expiredOrdersCron from "@/jobs/order-updates/cron/expired-orders-queue";
@@ -187,7 +186,6 @@ import { eventsSyncFtTransfersWriteBufferJob } from "@/jobs/events-sync/write-bu
 export const gracefulShutdownJobWorkers = [
   orderUpdatesById.worker,
   orderUpdatesByMaker.worker,
-  bundleOrderUpdatesByMaker.worker,
   dynamicOrdersCron.worker,
   erc20OrdersCron.worker,
   expiredOrdersCron.worker,
@@ -256,7 +254,6 @@ export const allJobQueues = [
 
   orderUpdatesById.queue,
   orderUpdatesByMaker.queue,
-  bundleOrderUpdatesByMaker.queue,
   dynamicOrdersCron.queue,
   erc20OrdersCron.queue,
   expiredOrdersCron.queue,
