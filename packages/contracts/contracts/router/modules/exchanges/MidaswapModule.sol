@@ -50,10 +50,7 @@ contract MidaswapModule is BaseExchangeModule {
     uint256 _length = nfts.length;
     for (uint i; i < _length; ) {
       // Execute fill
-      _buyItemsWithETH(nfts[i], address(weth), params.fillTo, nftIds[i]);
-      if (params.revertIfIncomplete) {
-        revert UnsuccessfulFill();
-      }
+      _buyItemWithETH(nfts[i], address(weth), params.fillTo, nftIds[i], params.revertIfIncomplete);
       unchecked {
         ++i;
       }
@@ -74,14 +71,11 @@ contract MidaswapModule is BaseExchangeModule {
     chargeERC20Fees(fees, params.token, params.amount)
   {
     // Approve the router if needed
-    // _approveERC20IfNeeded(params.token, address(this), params.amount);
+    _approveERC20IfNeeded(params.token, address(this), params.amount);
     uint256 _length = nfts.length;
     for (uint i; i < _length; ) {
       // Execute fill
-      _buyItems(nfts[i], address(params.token), params.fillTo, nftIds[i]);
-      if (params.revertIfIncomplete) {
-        revert UnsuccessfulFill();
-      }
+      _buyItem(nfts[i], address(params.token), params.fillTo, nftIds[i], params.revertIfIncomplete);
       unchecked {
         ++i;
       }
@@ -99,13 +93,9 @@ contract MidaswapModule is BaseExchangeModule {
     // Approve the router if needed
     _approveERC721IfNeeded(IERC721(nft), address(this));
 
-    // Build router data
-    uint256[] memory tokenIds = new uint256[](1);
-    tokenIds[0] = nftId;
-
     // Execute fill
     if (token == 0x0000000000000000000000000000000000000000) {
-      _sellItemsToETH(nft, address(weth), params.fillTo, tokenIds);
+      _sellItemToETH(nft, address(weth), params.fillTo, nftId, params.revertIfIncomplete);
       // Pay fees
       uint256 feesLength = fees.length;
       for (uint256 i; i < feesLength; ) {
@@ -115,12 +105,8 @@ contract MidaswapModule is BaseExchangeModule {
           ++i;
         }
       }
-      // Revert if specified
-      if (params.revertIfIncomplete) {
-        revert UnsuccessfulFill();
-      }
     } else {
-      _sellItems(nft, token, params.fillTo, tokenIds);
+      _sellItem(nft, token, params.fillTo, nftId, params.revertIfIncomplete);
         // Pay fees
         uint256 feesLength = fees.length;
         for (uint256 i; i < feesLength; ) {
@@ -130,15 +116,9 @@ contract MidaswapModule is BaseExchangeModule {
             ++i;
           }
         }
-      // Revert if specified
-      if (params.revertIfIncomplete) {
-        revert UnsuccessfulFill();
-      }
       // Refund any leftovers
       _sendAllERC721(params.refundTo, IERC721(nft), nftId);
     }
-
-
   }
 
   // --- ERC721 hooks ---
@@ -156,11 +136,12 @@ contract MidaswapModule is BaseExchangeModule {
   }
 
   // --- Internal ---
-  function _buyItemsWithETH(
+  function _buyItemWithETH(
     address _tokenX,
     address _tokenY,
     address _to,
-    uint256 _tokenId
+    uint256 _tokenId,
+    bool revertIfIncomplete
   ) internal {
     require(_tokenY == address(weth));
     address _pair;
@@ -169,14 +150,23 @@ contract MidaswapModule is BaseExchangeModule {
     tokenIds[0] = _tokenId;
     uint256 _ftAmount = MIDAS_ROUTER.getMinAmountIn(_pair, tokenIds);
     _wethDepositAndTransfer(_pair, _ftAmount);
-    IMidasPair(_pair).buyNFT(_tokenId, _to);
+    // Execute the fill
+    try
+      IMidasPair(_pair).buyNFT(_tokenId, _to)
+    {} catch {
+      // Revert if specified
+      if (revertIfIncomplete) {
+        revert UnsuccessfulFill();
+      }
+    }
   }
 
-  function _buyItems(
+  function _buyItem(
     address _tokenX,
     address _tokenY,
     address _to,
-    uint256 _tokenId
+    uint256 _tokenId,
+    bool revertIfIncomplete
   ) internal {
     address _pair;
     _pair = MIDAS_FACTORY.getPairERC721(_tokenX, _tokenY);
@@ -184,46 +174,61 @@ contract MidaswapModule is BaseExchangeModule {
     tokenIds[0] = _tokenId;
     uint256 _ftAmount = MIDAS_ROUTER.getMinAmountIn(_pair, tokenIds);
     IERC20(_tokenY).transferFrom(_to, _pair, _ftAmount);
-    IMidasPair(_pair).buyNFT(_tokenId, _to);
-  }
-
-  function _sellItemsToETH(
-    address _tokenX,
-    address _tokenY,
-    address _to,
-    uint256[] memory _tokenIds
-  ) internal {
-    require(_tokenY == address(weth));
-    address _pair;
-    uint256 _length;
-    _pair = MIDAS_FACTORY.getPairERC721(_tokenX, _tokenY);
-    _length = _tokenIds.length;
-    for (uint256 i; i < _length; ) {
-      IERC721(_tokenX).safeTransferFrom(_to, _pair, _tokenIds[i]);
-      uint256 _ftAmount = IMidasPair(_pair).sellNFT(_tokenIds[i], address(this));
-      weth.withdraw(_ftAmount);
-      _safeTransferETH(_to, _ftAmount);
-      unchecked {
-        ++i;
+    // Execute the fill
+    try
+      IMidasPair(_pair).buyNFT(_tokenId, _to)
+    {} catch {
+      // Revert if specified
+      if (revertIfIncomplete) {
+        revert UnsuccessfulFill();
       }
     }
   }
 
-  function _sellItems(
+  function _sellItemToETH(
     address _tokenX,
     address _tokenY,
     address _to,
-    uint256[] memory _tokenIds
+    uint256 _tokenId,
+    bool revertIfIncomplete
+  ) internal {
+    require(_tokenY == address(weth));
+    address _pair;
+    _pair = MIDAS_FACTORY.getPairERC721(_tokenX, _tokenY);
+    IERC721(_tokenX).safeTransferFrom(_to, _pair, _tokenId);
+    // Execute the fill
+    try
+      IMidasPair(_pair).sellNFT(_tokenId, address(this)) returns (uint128 ftAmount)
+    {
+      uint256 _ftAmount = ftAmount;
+      // Unwrap the WETH
+      weth.withdraw(_ftAmount);
+      _safeTransferETH(_to, _ftAmount);
+    } catch {
+      // Revert if specified
+      if (revertIfIncomplete) {
+        revert UnsuccessfulFill();
+      }
+    }
+  }
+
+  function _sellItem(
+    address _tokenX,
+    address _tokenY,
+    address _to,
+    uint256 _tokenId,
+    bool revertIfIncomplete
   ) internal {
     address _pair;
-    uint256 _length;
     _pair = MIDAS_FACTORY.getPairERC721(_tokenX, _tokenY);
-    _length = _tokenIds.length;
-    for (uint256 i; i < _length; ) {
-      IERC721(_tokenX).safeTransferFrom(_to, _pair, _tokenIds[i]);
-      IMidasPair(_pair).sellNFT(_tokenIds[i], _to);
-      unchecked {
-        ++i;
+    IERC721(_tokenX).safeTransferFrom(_to, _pair, _tokenId);
+    // Execute the fill
+    try
+      IMidasPair(_pair).sellNFT(_tokenId, _to)
+    {} catch {
+      // Revert if specified
+      if (revertIfIncomplete) {
+        revert UnsuccessfulFill();
       }
     }
   }
