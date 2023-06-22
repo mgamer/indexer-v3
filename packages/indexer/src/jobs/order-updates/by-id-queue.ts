@@ -28,8 +28,6 @@ import {
   ProcessActivityEventJobPayload,
 } from "@/jobs/activities/process-activity-event-job";
 
-import { queue as queueV2 } from "@/jobs/order-updates/by-id-queue-v2";
-
 const QUEUE_NAME = "order-updates-by-id";
 
 export const queue = new Queue(QUEUE_NAME, {
@@ -399,7 +397,7 @@ export const addToQueue = async (orderInfos: OrderInfo[]) => {
   // Ignore empty orders
   orderInfos = orderInfos.filter(({ id }) => id !== HashZero);
 
-  await queueV2.addBulk(
+  await queue.addBulk(
     orderInfos.map((orderInfo) => ({
       name: orderInfo.id ? orderInfo.id : orderInfo.tokenSetId! + "-" + orderInfo.side!,
       data: orderInfo,
