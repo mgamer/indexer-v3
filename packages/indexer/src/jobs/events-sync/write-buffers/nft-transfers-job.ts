@@ -27,8 +27,8 @@ export class EventsSyncNftTransfersWriteBufferJob extends AbstractRabbitMqJobHan
     }
   }
 
-  public async addToQueue(query: EventsSyncNftTransfersWriteBufferPayload) {
-    await this.send({ payload: query });
+  public async addToQueue(params: EventsSyncNftTransfersWriteBufferPayload) {
+    await this.send({ payload: params });
   }
 }
 
