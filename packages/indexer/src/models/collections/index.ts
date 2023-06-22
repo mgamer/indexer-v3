@@ -19,7 +19,7 @@ import * as royalties from "@/utils/royalties";
 import {
   getOpenCollectionMints,
   simulateAndUpdateCollectionMint,
-} from "@/utils/mints/collection-mints";
+} from "@/orderbook/mints/collection-mints";
 
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 import * as refreshActivitiesCollectionMetadata from "@/jobs/elasticsearch/refresh-activities-collection-metadata";

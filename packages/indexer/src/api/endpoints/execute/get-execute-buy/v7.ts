@@ -28,8 +28,8 @@ import * as b from "@/utils/auth/blur";
 import { getCurrency } from "@/utils/currencies";
 import { ExecutionsBuffer } from "@/utils/executions";
 import * as onChainData from "@/utils/on-chain-data";
-import * as mints from "@/utils/mints/collection-mints";
-import { generateMintTxData } from "@/utils/mints/calldata/generator";
+import * as mints from "@/orderbook/mints/collection-mints";
+import { generateMintTxData } from "@/orderbook/mints/calldata/generator";
 import { getUSDAndCurrencyPrices } from "@/utils/prices";
 
 const version = "v7";

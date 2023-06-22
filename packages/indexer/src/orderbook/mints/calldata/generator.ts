@@ -3,7 +3,7 @@ import { TxData } from "@reservoir0x/sdk/src/utils";
 
 import { bn } from "@/common/utils";
 
-export type AbiParam =
+type AbiParam =
   | {
       kind: "unknown";
       abiType: string;
@@ -23,24 +23,22 @@ export type AbiParam =
       abiType: string;
     };
 
-export type MintDetails = {
-  tx: {
-    to: string;
-    data: {
-      signature: string;
-      params: AbiParam[];
-    };
+export type MintTx = {
+  to: string;
+  data: {
+    signature: string;
+    params: AbiParam[];
   };
 };
 
 export const generateMintTxData = (
-  details: MintDetails,
+  tx: MintTx,
   minter: string,
   contract: string,
   quantity: number,
   price: string
 ): TxData => {
-  const abiData = details.tx.data.params.map((p) => {
+  const abiData = tx.data.params.map((p) => {
     switch (p.kind) {
       case "contract": {
         return {
@@ -73,7 +71,7 @@ export const generateMintTxData = (
   });
 
   const data =
-    details.tx.data.signature +
+    tx.data.signature +
     (abiData.length
       ? defaultAbiCoder
           .encode(
@@ -85,7 +83,7 @@ export const generateMintTxData = (
 
   return {
     from: minter,
-    to: details.tx.to,
+    to: tx.to,
     data,
     value: bn(price).mul(quantity).toHexString(),
   };
