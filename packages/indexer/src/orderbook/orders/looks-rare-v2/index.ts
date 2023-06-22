@@ -188,7 +188,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
           : [
               {
                 kind: "marketplace",
-                recipient: "0xdbBE0859791E44B52B98FcCA341DFb7577C0B077",
+                recipient: "0xdbbe0859791e44b52b98fcca341dfb7577c0b077",
                 bps: 200,
               },
             ];
