@@ -89,7 +89,6 @@ import * as orderFixes from "@/jobs/order-fixes/fixes";
 import * as orderRevalidations from "@/jobs/order-fixes/revalidations";
 
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
-import * as orderUpdatesByIdV2 from "@/jobs/order-updates/by-id-queue-v2";
 import * as orderUpdatesByMaker from "@/jobs/order-updates/by-maker-queue";
 import * as dynamicOrdersCron from "@/jobs/order-updates/cron/dynamic-orders-queue";
 import * as erc20OrdersCron from "@/jobs/order-updates/cron/erc20-orders-queue";
@@ -256,7 +255,6 @@ export const allJobQueues = [
   orderRevalidations.queue,
 
   orderUpdatesById.queue,
-  orderUpdatesByIdV2.queue,
   orderUpdatesByMaker.queue,
   dynamicOrdersCron.queue,
   erc20OrdersCron.queue,
