@@ -9,18 +9,18 @@ import { config } from "@/config/index";
 import cron from "node-cron";
 import { redlock } from "@/common/redis";
 
+const BATCH_SIZE = 500;
+
 export class SavePendingActivitiesJob extends AbstractRabbitMqJobHandler {
   queueName = "save-pending-activities-queue";
   maxRetries = 10;
   concurrency = 1;
   persistent = true;
   lazyMode = true;
-  useSharedChannel = true;
 
   protected async process() {
-    const limit = 75;
     const pendingActivitiesQueue = new PendingActivitiesQueue();
-    const pendingActivities = await pendingActivitiesQueue.get(limit);
+    const pendingActivities = await pendingActivitiesQueue.get(BATCH_SIZE);
 
     if (pendingActivities.length > 0) {
       try {
@@ -49,11 +49,6 @@ export class SavePendingActivitiesJob extends AbstractRabbitMqJobHandler {
       const pendingActivitiesCount = await pendingActivitiesQueue.count();
 
       if (pendingActivitiesCount > 0) {
-        logger.info(
-          this.queueName,
-          `requeue job. pendingActivitiesCount=${pendingActivitiesCount}`
-        );
-
         await savePendingActivitiesJob.addToQueue();
       }
     }
@@ -63,6 +58,10 @@ export class SavePendingActivitiesJob extends AbstractRabbitMqJobHandler {
     await this.send();
   }
 }
+
+export const getLockName = () => {
+  return `${savePendingActivitiesJob.queueName}-lock`;
+};
 
 export const savePendingActivitiesJob = new SavePendingActivitiesJob();
 
