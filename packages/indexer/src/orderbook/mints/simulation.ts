@@ -113,17 +113,15 @@ export const simulateCollectionMint = async (
 
   const minter = "0x0000000000000000000000000000000000000001";
   const contract = fromBuffer(collectionResult.contract);
-  const price = collectionMint.price;
   const contractKind = collectionResult.kind;
 
   const simulate = async (quantity: number) => {
     // Generate the calldata for minting
-    const txData = await generateCollectionMintTxData(
+    const { txData, price } = await generateCollectionMintTxData(
       collectionMint,
       minter,
       contract,
-      quantity,
-      price
+      quantity
     );
 
     // Simulate the mint
