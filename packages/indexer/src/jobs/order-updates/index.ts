@@ -11,6 +11,7 @@
 // many of the orders of a maker might change their state).
 
 import "@/jobs/order-updates/by-id-queue";
+import "@/jobs/order-updates/by-id-queue-v2";
 import "@/jobs/order-updates/by-maker-queue";
 import "@/jobs/order-updates/save-bid-events";
 
