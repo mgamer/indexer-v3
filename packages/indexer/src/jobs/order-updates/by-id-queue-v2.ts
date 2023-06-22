@@ -27,7 +27,7 @@ import {
   ProcessActivityEventJobPayload,
 } from "@/jobs/activities/process-activity-event-job";
 
-const QUEUE_NAME = "order-updates-by-id";
+const QUEUE_NAME = "order-updates-by-id-v2";
 
 export const queue = new Queue(QUEUE_NAME, {
   connection: orderbookRedis.duplicate(),
