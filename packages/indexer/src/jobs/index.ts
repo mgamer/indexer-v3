@@ -61,8 +61,6 @@ import * as eventsSyncBackfillProcess from "@/jobs/events-sync/process/backfill"
 import * as eventsSyncRealtimeProcess from "@/jobs/events-sync/process/realtime";
 import * as eventsSyncRealtime from "@/jobs/events-sync/realtime-queue";
 import * as eventsSyncRealtimeV2 from "@/jobs/events-sync/realtime-queue-v2";
-import * as eventsSyncFtTransfersWriteBuffer from "@/jobs/events-sync/write-buffers/ft-transfers";
-import * as eventsSyncNftTransfersWriteBuffer from "@/jobs/events-sync/write-buffers/nft-transfers";
 
 import * as fillUpdates from "@/jobs/fill-updates/queue";
 import * as fillPostProcess from "@/jobs/fill-updates/fill-post-process";
@@ -228,8 +226,6 @@ export const allJobQueues = [
   eventsSyncRealtimeProcess.queue,
   eventsSyncRealtime.queue,
   eventsSyncRealtimeV2.queue,
-  eventsSyncFtTransfersWriteBuffer.queue,
-  eventsSyncNftTransfersWriteBuffer.queue,
 
   fillUpdates.queue,
   fillPostProcess.queue,

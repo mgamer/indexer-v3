@@ -70,8 +70,6 @@ export class RabbitMq {
   }
 
   public static async send(queueName: string, content: RabbitMQMessage, delay = 0, priority = 0) {
-    content.publishTime = content.publishTime ?? _.now();
-
     try {
       // For deduplication messages use redis lock
       if (delay && content.jobId && !(await acquireLock(content.jobId, Number(delay / 1000)))) {
@@ -81,6 +79,7 @@ export class RabbitMq {
       }
 
       const channelIndex = _.random(0, RabbitMq.maxPublisherChannelsCount - 1);
+      content.publishTime = content.publishTime ?? _.now();
 
       await new Promise<void>((resolve, reject) => {
         if (delay) {
