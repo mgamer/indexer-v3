@@ -76,7 +76,7 @@ if (config.doBackgroundWork && config.doWebsocketServerWork && config.kafkaBroke
             fill_events_2.marketplace_fee_breakdown,
             fill_events_2.paid_full_royalty,
             fill_events_2.is_deleted,
-            extract(epoch from fill_events_2.updated_at) updated_ts,
+            fill_events_2.updated_at,
             fill_events_2.created_at
           FROM fill_events_2
           LEFT JOIN currencies
