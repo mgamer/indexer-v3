@@ -183,6 +183,7 @@ import { exportDataJob } from "@/jobs/data-export/export-data-job";
 import { processActivityEventJob } from "@/jobs/activities/process-activity-event-job";
 import { savePendingActivitiesJob } from "@/jobs/activities/save-pending-activities-job";
 import { eventsSyncFtTransfersWriteBufferJob } from "@/jobs/events-sync/write-buffers/ft-transfers-job";
+import { eventsSyncNftTransfersWriteBufferJob } from "@/jobs/events-sync/write-buffers/nft-transfers-job";
 
 export const gracefulShutdownJobWorkers = [
   orderUpdatesById.worker,
@@ -357,6 +358,7 @@ export class RabbitMqJobsConsumer {
       processActivityEventJob,
       savePendingActivitiesJob,
       eventsSyncFtTransfersWriteBufferJob,
+      eventsSyncNftTransfersWriteBufferJob,
     ];
   }
 

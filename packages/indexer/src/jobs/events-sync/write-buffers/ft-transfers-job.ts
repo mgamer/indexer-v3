@@ -24,8 +24,8 @@ export class EventsSyncFtTransfersWriteBufferJob extends AbstractRabbitMqJobHand
     }
   }
 
-  public async addToQueue(query: EventsSyncFtTransfersWriteBufferPayload) {
-    await this.send({ payload: query });
+  public async addToQueue(params: EventsSyncFtTransfersWriteBufferPayload) {
+    await this.send({ payload: params });
   }
 }
 
