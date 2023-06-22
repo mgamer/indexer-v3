@@ -16,6 +16,8 @@ import * as seadrop from "@/orderbook/mints/calldata/detector/seadrop";
 import * as thirdweb from "@/orderbook/mints/calldata/detector/thirdweb";
 import * as zora from "@/orderbook/mints/calldata/detector/zora";
 
+export { manifold, seadrop, thirdweb, zora };
+
 export const detectCollectionMint = async (txHash: string, skipCache = false) => {
   // Fetch all transfers associated to the transaction
   const transfers = await idb

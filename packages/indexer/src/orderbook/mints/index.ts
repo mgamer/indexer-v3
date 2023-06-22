@@ -1,18 +1,47 @@
 import { idb } from "@/common/db";
 import { fromBuffer, toBuffer } from "@/common/utils";
 
-import { MintTx } from "@/orderbook/mints/calldata/generator";
+import * as calldataDetails from "@/orderbook/mints/calldata/detector";
 import { simulateCollectionMint } from "@/orderbook/mints/simulation";
+
+export type AbiParam =
+  | {
+      kind: "unknown";
+      abiType: string;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      abiValue: any;
+    }
+  | {
+      kind: "quantity";
+      abiType: string;
+    }
+  | {
+      kind: "recipient";
+      abiType: string;
+    }
+  | {
+      kind: "contract";
+      abiType: string;
+    }
+  | {
+      kind: "allowlist-proof";
+      abiType: string;
+    };
+
+export type CollectionMintDetails = {
+  tx: {
+    to: string;
+    data: {
+      signature: string;
+      params: AbiParam[];
+    };
+  };
+  info?: calldataDetails.zora.Info;
+};
 
 type CollectionMintKind = "public" | "allowlist";
 type CollectionMintStatus = "open" | "closed";
 type CollectionMintStandard = "unknown" | "manifold" | "seadrop-v1.0" | "thirdweb" | "zora";
-
-export type CollectionMintDetails = {
-  tx: MintTx;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  custom?: any;
-};
 
 export type CollectionMint = {
   collection: string;
@@ -28,6 +57,7 @@ export type CollectionMint = {
   maxSupply?: string;
   startTime?: number;
   endTime?: number;
+  allowlistId?: string;
 };
 
 export const getOpenCollectionMints = async (collection: string): Promise<CollectionMint[]> => {
@@ -61,31 +91,41 @@ export const getOpenCollectionMints = async (collection: string): Promise<Collec
         maxSupply: r.max_supply,
         startTime: r.start_time ? Math.floor(new Date(r.start_time).getTime() / 1000) : undefined,
         endTime: r.end_time ? Math.floor(new Date(r.end_time).getTime() / 1000) : undefined,
+        allowlistId: r.allowlist_id,
       } as CollectionMint)
   );
 };
 
 export const refreshCollectionMint = async (collectionMint: CollectionMint) => {
-  const success = await simulateCollectionMint(collectionMint, false);
-  await idb.none(
-    `
-      UPDATE collection_mints SET
-        status = $/status/,
-        updated_at = now()
-      WHERE collection_mints.collection_id = $/collection/
-        AND collection_mints.stage = $/stage/
-        AND collection_mints.status != $/status/
-    `,
-    {
-      collection: collectionMint.collection,
-      stage: collectionMint.stage,
-      status: success ? "open" : "closed",
-    }
-  );
+  // TODO: At the moment, the refresh will simply simulate the details
+  // of an existing mint. This will fail in scenarios where parameters
+  // of the mint get changed. What we should do instead is trigger the
+  // detection process and update any parameters that changed. This is
+  // something that can work for both public and private mints.
+
+  if (collectionMint.kind === "public") {
+    const success = await simulateCollectionMint(collectionMint, false);
+    await idb.none(
+      `
+        UPDATE collection_mints SET
+          status = $/status/,
+          updated_at = now()
+        WHERE collection_mints.collection_id = $/collection/
+          AND collection_mints.stage = $/stage/
+          AND collection_mints.status != $/status/
+      `,
+      {
+        collection: collectionMint.collection,
+        stage: collectionMint.stage,
+        status: success ? "open" : "closed",
+      }
+    );
+  }
 };
 
 export const saveCollectionMint = async (collectionMint: CollectionMint) => {
-  const success = await simulateCollectionMint(collectionMint);
+  const success =
+    collectionMint.kind === "public" ? await simulateCollectionMint(collectionMint) : true;
   if (success) {
     await idb.none(
       `
@@ -117,7 +157,8 @@ export const saveCollectionMint = async (collectionMint: CollectionMint) => {
           max_mints_per_wallet,
           max_supply,
           start_time,
-          end_time
+          end_time,
+          allowlist_id
         ) VALUES (
           $/collection/,
           $/stage/,
@@ -130,7 +171,8 @@ export const saveCollectionMint = async (collectionMint: CollectionMint) => {
           $/maxMintsPerWallet/,
           $/maxSupply/,
           $/startTime/,
-          $/endTime/
+          $/endTime/,
+          $/allowlistId/
         ) ON CONFLICT DO NOTHING
       `,
       {
@@ -146,6 +188,7 @@ export const saveCollectionMint = async (collectionMint: CollectionMint) => {
         maxSupply: collectionMint.maxSupply ?? null,
         startTime: collectionMint.startTime ? new Date(collectionMint.startTime * 1000) : null,
         endTime: collectionMint.endTime ? new Date(collectionMint.endTime * 1000) : null,
+        allowlistId: collectionMint.allowlistId ?? null,
       }
     );
   }

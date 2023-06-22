@@ -7,7 +7,7 @@ import { logger } from "@/common/logger";
 import { bn, fromBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { CollectionMint } from "@/orderbook/mints";
-import { generateMintTxData } from "@/orderbook/mints/calldata/generator";
+import { generateCollectionMintTxData } from "@/orderbook/mints/calldata/generator";
 
 import { EventData } from "@/events-sync/data";
 import * as erc721 from "@/events-sync/data/erc721";
@@ -118,7 +118,13 @@ export const simulateCollectionMint = async (
 
   const simulate = async (quantity: number) => {
     // Generate the calldata for minting
-    const txData = generateMintTxData(collectionMint.details.tx, minter, contract, quantity, price);
+    const txData = await generateCollectionMintTxData(
+      collectionMint,
+      minter,
+      contract,
+      quantity,
+      price
+    );
 
     // Simulate the mint
     // TODO: Binary search for the maximum quantity per wallet
@@ -135,7 +141,7 @@ export const simulateCollectionMint = async (
 
   if (detectMaxMintsPerWallet && collectionMint.maxMintsPerWallet === undefined) {
     // Only try to detect the mintable quantity if we don't already
-    // know this information (eg.from a custom integration)
+    // know this information (eg. from a custom integration)
 
     // TODO: Detect the maximum quantity mintable per wallet via binary search
     const results = await Promise.all([simulate(1), simulate(2)]);

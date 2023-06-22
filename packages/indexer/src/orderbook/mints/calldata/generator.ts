@@ -1,74 +1,78 @@
 import { defaultAbiCoder } from "@ethersproject/abi";
 import { TxData } from "@reservoir0x/sdk/src/utils";
+import axios from "axios";
 
 import { bn } from "@/common/utils";
+import * as calldataDetails from "@/orderbook/mints/calldata/detector";
+import { CollectionMint } from "@/orderbook/mints";
 
-type AbiParam =
-  | {
-      kind: "unknown";
-      abiType: string;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      abiValue: any;
-    }
-  | {
-      kind: "quantity";
-      abiType: string;
-    }
-  | {
-      kind: "recipient";
-      abiType: string;
-    }
-  | {
-      kind: "contract";
-      abiType: string;
-    };
-
-export type MintTx = {
-  to: string;
-  data: {
-    signature: string;
-    params: AbiParam[];
-  };
-};
-
-export const generateMintTxData = (
-  tx: MintTx,
+export const generateCollectionMintTxData = async (
+  collectionMint: CollectionMint,
   minter: string,
   contract: string,
   quantity: number,
   price: string
-): TxData => {
-  const abiData = tx.data.params.map((p) => {
-    switch (p.kind) {
-      case "contract": {
-        return {
-          abiType: p.abiType,
-          abiValue: contract,
-        };
-      }
+): Promise<TxData> => {
+  const tx = collectionMint.details.tx;
+  const abiData = await Promise.all(
+    tx.data.params.map(async (p) => {
+      switch (p.kind) {
+        case "contract": {
+          return {
+            abiType: p.abiType,
+            abiValue: contract,
+          };
+        }
 
-      case "quantity": {
-        return {
-          abiType: p.abiType,
-          abiValue: quantity,
-        };
-      }
+        case "quantity": {
+          return {
+            abiType: p.abiType,
+            abiValue: quantity,
+          };
+        }
 
-      case "recipient": {
-        return {
-          abiType: p.abiType,
-          abiValue: minter,
-        };
-      }
+        case "recipient": {
+          return {
+            abiType: p.abiType,
+            abiValue: minter,
+          };
+        }
 
-      default: {
-        return {
-          abiType: p.abiType,
-          abiValue: p.abiValue,
-        };
+        case "allowlist-proof": {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          let abiValue: any;
+          switch (collectionMint.standard) {
+            case "zora": {
+              const info = collectionMint.details.info as calldataDetails.zora.Info;
+              abiValue = await axios
+                .get(`https://allowlist.zora.co/allowed?user=${minter}&root=${info.merkleRoot}`)
+                .then(({ data }: { data: { proof: string[] }[] }) =>
+                  data[0].proof.map((item) => `0x${item}`)
+                );
+
+              break;
+            }
+
+            default: {
+              throw new Error("Allowlists not supported");
+            }
+          }
+
+          return {
+            abiType: p.abiType,
+            abiValue,
+          };
+        }
+
+        default: {
+          return {
+            abiType: p.abiType,
+            abiValue: p.abiValue,
+          };
+        }
       }
-    }
-  });
+    })
+  );
 
   const data =
     tx.data.signature +

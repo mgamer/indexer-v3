@@ -5,9 +5,8 @@ import { logger } from "@/common/logger";
 import { bn } from "@/common/utils";
 import { config } from "@/config/index";
 import { Transaction } from "@/models/transactions";
-import { AbiParam } from "@/orderbook/mints/calldata/generator";
 import { getMaxSupply } from "@/orderbook/mints/calldata/detector/helpers";
-import { CollectionMint } from "@/orderbook/mints/collection-mints";
+import { AbiParam, CollectionMint } from "@/orderbook/mints";
 import { getMethodSignature } from "@/orderbook/mints/method-signatures";
 
 export const tryParseCollectionMint = async (

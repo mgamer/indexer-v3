@@ -8,6 +8,10 @@ export type AllowlistItem = {
 };
 
 export const createAllowlist = async (id: string, allowlist: AllowlistItem[]) => {
+  if (!allowlist.length) {
+    throw new Error("Empty allowlist");
+  }
+
   const allowlistExists = await idb.oneOrNone(
     `
       SELECT

@@ -1,6 +1,6 @@
 -- Up Migration
 
-DROP CONSTRAINT "collection_mints_pk";
+ALTER TABLE "collection_mints" DROP CONSTRAINT "collection_mints_pk";
 
 CREATE UNIQUE INDEX "collection_mints_pk" 
   ON "collection_mints" (
@@ -36,6 +36,6 @@ ALTER TABLE "allowlists_items"
 
 ALTER TABLE "collection_mints" ADD COLUMN "allowlist_id" TEXT;
 
-ALTER TYPE "collection_mint_kind_t" ADD VALUE "allowlist";
+ALTER TYPE "collection_mint_kind_t" ADD VALUE 'allowlist';
 
 -- Down Migration
