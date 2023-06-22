@@ -176,13 +176,22 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       const currency = order.params.currency;
 
       // Handle: fees
-      const feeBreakdown = [
-        {
-          kind: "marketplace",
-          recipient: "0x1838de7d4e4e42c8eb7b204a91e28e9fad14f536",
-          bps: 50,
-        },
-      ];
+      const feeBreakdown =
+        config.chainId === 1
+          ? [
+              {
+                kind: "marketplace",
+                recipient: "0x1838de7d4e4e42c8eb7b204a91e28e9fad14f536",
+                bps: 50,
+              },
+            ]
+          : [
+              {
+                kind: "marketplace",
+                recipient: "0xdbBE0859791E44B52B98FcCA341DFb7577C0B077",
+                bps: 50,
+              },
+            ];
 
       // Temp Disable
       // Handle: royalties
