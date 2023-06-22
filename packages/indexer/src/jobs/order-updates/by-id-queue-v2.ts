@@ -1,11 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { HashZero } from "@ethersproject/constants";
 import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 
 import { idb } from "@/common/db";
 import { logger } from "@/common/logger";
-import { redis } from "@/common/redis";
+import { orderbookRedis } from "@/common/redis";
 import { fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { TriggerKind } from "@/jobs/order-updates/types";
@@ -28,12 +27,10 @@ import {
   ProcessActivityEventJobPayload,
 } from "@/jobs/activities/process-activity-event-job";
 
-import { queue as queueV2 } from "@/jobs/order-updates/by-id-queue-v2";
-
 const QUEUE_NAME = "order-updates-by-id";
 
 export const queue = new Queue(QUEUE_NAME, {
-  connection: redis.duplicate(),
+  connection: orderbookRedis.duplicate(),
   defaultJobOptions: {
     attempts: 5,
     backoff: {
@@ -47,7 +44,7 @@ export const queue = new Queue(QUEUE_NAME, {
 });
 export let worker: Worker | undefined;
 
-new QueueScheduler(QUEUE_NAME, { connection: redis.duplicate() });
+new QueueScheduler(QUEUE_NAME, { connection: orderbookRedis.duplicate() });
 
 // BACKGROUND WORKER ONLY
 if (config.doBackgroundWork) {
@@ -355,7 +352,7 @@ if (config.doBackgroundWork) {
         throw error;
       }
     },
-    { connection: redis.duplicate(), concurrency: 80 }
+    { connection: orderbookRedis.duplicate(), concurrency: 80 }
   );
   worker.on("error", (error) => {
     logger.error(QUEUE_NAME, `Worker errored: ${error}`);
@@ -393,23 +390,4 @@ export type OrderInfo = {
   side?: "sell" | "buy";
   ingestMethod?: "websocket" | "rest";
   ingestDelay?: number;
-};
-
-export const addToQueue = async (orderInfos: OrderInfo[]) => {
-  // Ignore empty orders
-  orderInfos = orderInfos.filter(({ id }) => id !== HashZero);
-
-  await queueV2.addBulk(
-    orderInfos.map((orderInfo) => ({
-      name: orderInfo.id ? orderInfo.id : orderInfo.tokenSetId! + "-" + orderInfo.side!,
-      data: orderInfo,
-      opts: {
-        // We should make sure not to perform any expensive work more
-        // than once. As such, we keep the last performed jobs in the
-        // queue and give all jobs a deterministic id so that we skip
-        // handling jobs that already got executed.
-        jobId: orderInfo.context,
-      },
-    }))
-  );
 };
