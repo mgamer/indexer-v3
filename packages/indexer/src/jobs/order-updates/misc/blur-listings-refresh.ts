@@ -50,6 +50,9 @@ if (config.doBackgroundWork) {
                 createdAt: string;
               }[]
           );
+
+        logger.info(QUEUE_NAME, JSON.stringify(blurListings));
+
         // And add them to the queue (duplicates will simply be ignored)
         await orderbook.addToQueue(
           blurListings.map((l) => ({
