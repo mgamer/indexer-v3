@@ -681,7 +681,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
         if (item.collection) {
           if (!item.fillType || item.fillType === "mint") {
             // Fetch any open mints on the collection which the taker is elligible for
-            const openMints = await mints.getOpenCollectionMints(item.collection);
+            const openMints = await mints.getCollectionMints(item.collection, { status: "open" });
             for (const mint of openMints) {
               if (!payload.currency || mint.currency === payload.currency) {
                 const collectionData = await idb.one(
@@ -713,7 +713,6 @@ export const getExecuteBuyV7Options: RouteOptions = {
                   const { txData, price } = await generateCollectionMintTxData(
                     mint,
                     payload.taker,
-                    fromBuffer(collectionData.contract),
                     quantityToMint
                   );
 

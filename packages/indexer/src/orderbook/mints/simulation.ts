@@ -129,7 +129,7 @@ export const simulateCollectionMint = async (
 
   const simulate = async (quantity: number) =>
     // Generate and simulate the mint transaction
-    generateCollectionMintTxData(collectionMint, minter, contract, quantity).then(({ txData }) =>
+    generateCollectionMintTxData(collectionMint, minter, quantity).then(({ txData }) =>
       simulateMintTxData(contract, contractKind, quantity, txData)
     );
 

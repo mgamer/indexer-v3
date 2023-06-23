@@ -10,10 +10,10 @@ import { config } from "@/config/index";
 import { Transaction } from "@/models/transactions";
 import { CollectionMint } from "@/orderbook/mints";
 
-export const tryParseCollectionMint = async (
+export const extractFromTx = async (
   collection: string,
   tx: Transaction
-): Promise<CollectionMint | undefined> => {
+): Promise<CollectionMint[]> => {
   if (
     [
       "0xfa2b068f", // `mint`
@@ -83,64 +83,67 @@ export const tryParseCollectionMint = async (
         const fee = await c.MINT_FEE();
         const price = bn(claim.cost).add(fee).toString();
 
-        return {
-          collection,
-          stage: "public-sale",
-          kind: "public",
-          status: "open",
-          standard: "manifold",
-          details: {
-            tx: {
-              to: tx.to,
-              data: {
-                // `mintBatch`
-                signature: "0x26c858a4",
-                params: [
-                  {
-                    kind: "contract",
-                    abiType: "address",
-                  },
-                  {
-                    kind: "unknown",
-                    abiType: "uint256",
-                    abiValue: decodedTxData.instanceId.toString(),
-                  },
-                  {
-                    kind: "quantity",
-                    abiType: "uint16",
-                  },
-                  {
-                    kind: "unknown",
-                    abiType: "uint32[]",
-                    abiValue: [],
-                  },
-                  {
-                    kind: "unknown",
-                    abiType: "bytes32[][]",
-                    abiValue: [],
-                  },
+        return [
+          {
+            collection,
+            contract: decodedTxData.creatorContractAddress.toLowerCase(),
+            stage: "public-sale",
+            kind: "public",
+            status: "open",
+            standard: "manifold",
+            details: {
+              tx: {
+                to: tx.to,
+                data: {
+                  // `mintBatch`
+                  signature: "0x26c858a4",
+                  params: [
+                    {
+                      kind: "contract",
+                      abiType: "address",
+                    },
+                    {
+                      kind: "unknown",
+                      abiType: "uint256",
+                      abiValue: decodedTxData.instanceId.toString(),
+                    },
+                    {
+                      kind: "quantity",
+                      abiType: "uint16",
+                    },
+                    {
+                      kind: "unknown",
+                      abiType: "uint32[]",
+                      abiValue: [],
+                    },
+                    {
+                      kind: "unknown",
+                      abiType: "bytes32[][]",
+                      abiValue: [],
+                    },
 
-                  {
-                    kind: "recipient",
-                    abiType: "address",
-                  },
-                ],
+                    {
+                      kind: "recipient",
+                      abiType: "address",
+                    },
+                  ],
+                },
               },
             },
+            currency: Sdk.Common.Addresses.Eth[config.chainId],
+            price,
+            tokenId: claim.tokenId.toString(),
+            maxMintsPerWallet: bn(claim.walletMax).eq(0) ? null : claim.walletMax.toString(),
+            maxSupply: claim.totalMax.toString(),
+            startTime: claim.startDate ? claim.startDate : null,
+            endTime: claim.endDate ? claim.endDate : null,
           },
-          currency: Sdk.Common.Addresses.Eth[config.chainId],
-          price,
-          tokenId: claim.tokenId.toString(),
-          maxMintsPerWallet: bn(claim.walletMax).eq(0) ? null : claim.walletMax.toString(),
-          maxSupply: claim.totalMax.toString(),
-          startTime: claim.startDate ? claim.startDate : null,
-          endTime: claim.endDate ? claim.endDate : null,
-        };
+        ];
       }
     } catch (error) {
       logger.error("mint-detector", JSON.stringify({ kind: "manifold", error }));
     }
   }
 
-  return undefined;
+  return [];
 };

@@ -6,22 +6,20 @@ import axios from "axios";
 
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
-import { bn, now } from "@/common/utils";
+import { bn } from "@/common/utils";
 import { config } from "@/config/index";
 import { Transaction } from "@/models/transactions";
 import { CollectionMint } from "@/orderbook/mints";
 import { AllowlistItem, createAllowlist } from "@/orderbook/mints/allowlists";
+import { getStatus, toSafeTime } from "@/orderbook/mints/calldata/helpers";
 
 export type Info = {
   merkleRoot: string;
 };
 
-export const tryParseCollectionMint = async (
-  collection: string,
-  tx: Transaction
-): Promise<CollectionMint | undefined> => {
+export const getCollectionMints = async (collection: string): Promise<CollectionMint[]> => {
   const c = new Contract(
-    tx.to,
+    collection,
     new Interface([
       `
         function saleDetails() view returns (
@@ -45,133 +43,141 @@ export const tryParseCollectionMint = async (
     baseProvider
   );
 
-  // Public mints
+  const results: CollectionMint[] = [];
+  try {
+    const saleDetails = await c.saleDetails();
+    const fee = await c.zoraFeeForAmount(1).then((f: { fee: BigNumber }) => f.fee);
+
+    // Public sale
+    if (saleDetails.publicSaleActive) {
+      // price = on-chain-price + fee
+      const price = bn(saleDetails.publicSalePrice).add(fee).toString();
+
+      results.push({
+        collection,
+        contract: collection,
+        stage: "public-sale",
+        kind: "public",
+        status: "open",
+        standard: "zora",
+        details: {
+          tx: {
+            to: collection,
+            data: {
+              // `purchase`
+              signature: "0xefef39a1",
+              params: [
+                {
+                  kind: "quantity",
+                  abiType: "uint256",
+                },
+              ],
+            },
+          },
+        },
+        currency: Sdk.Common.Addresses.Eth[config.chainId],
+        price,
+        maxMintsPerWallet: saleDetails.maxSalePurchasePerAddress.toString(),
+        maxSupply: saleDetails.maxSupply.toString(),
+        startTime: toSafeTime(saleDetails.publicSaleStart),
+        endTime: toSafeTime(saleDetails.publicSaleEnd),
+      });
+    }
+
+    // Presale
+    if (saleDetails.presaleActive) {
+      const merkleRoot = saleDetails.presaleMerkleRoot;
+      const allowlistItems = await axios
+        .get(`https://allowlist.zora.co/allowlist/${merkleRoot}`)
+        .then(({ data }) => data)
+        .then(async (data: { entries: { user: string; price: string; maxCanMint: number }[] }) => {
+          return data.entries.map(
+            (e) =>
+              ({
+                address: e.user,
+                maxMints: String(e.maxCanMint),
+                // price = on-chain-price
+                price: e.price,
+                // actualPrice = on-chain-price + fee
+                actualPrice: bn(e.price).add(fee).toString(),
+              } as AllowlistItem)
+          );
+        });
+
+      await createAllowlist(merkleRoot, allowlistItems);
+
+      results.push({
+        collection,
+        contract: collection,
+        stage: "presale",
+        kind: "allowlist",
+        status: "open",
+        standard: "zora",
+        details: {
+          tx: {
+            to: collection,
+            data: {
+              // `purchasePresale`
+              signature: "0x25024a2b",
+              params: [
+                {
+                  kind: "quantity",
+                  abiType: "uint256",
+                },
+                {
+                  kind: "allowlist",
+                  abiType: "uint256",
+                },
+                {
+                  kind: "allowlist",
+                  abiType: "uint256",
+                },
+                {
+                  kind: "allowlist",
+                  abiType: "bytes32[]",
+                },
+              ],
+            },
+          },
+          info: {
+            merkleRoot,
+          },
+        },
+        currency: Sdk.Common.Addresses.Eth[config.chainId],
+        maxSupply: saleDetails.maxSupply.toString(),
+        startTime: toSafeTime(saleDetails.presaleStart),
+        endTime: toSafeTime(saleDetails.presaleEnd),
+        allowlistId: merkleRoot,
+      });
+    }
+  } catch (error) {
+    logger.error("mint-detector", JSON.stringify({ kind: "zora", error }));
+  }
+
+  // Update the status of each collection mint
+  await Promise.all(
+    results.map(async (cm) => {
+      cm.status = await getStatus(cm);
+    })
+  );
+
+  return results;
+};
+
+export const extractFromTx = async (
+  collection: string,
+  tx: Transaction
+): Promise<CollectionMint[]> => {
   if (
     [
       "0xefef39a1", // `purchase`
       "0x03ee2733", // `purchaseWithComment`
-    ].some((bytes4) => tx.data.startsWith(bytes4))
-  ) {
-    try {
-      const saleDetails = await c.saleDetails();
-      if (saleDetails.publicSaleActive && saleDetails.publicSaleStart.toNumber() <= now()) {
-        // Include the Zora mint fee into the price
-        const fee = await c.zoraFeeForAmount(1).then((f: { fee: BigNumber }) => f.fee);
-        const price = bn(saleDetails.publicSalePrice).add(fee).toString();
-
-        return {
-          collection,
-          stage: "public-sale",
-          kind: "public",
-          status: "open",
-          standard: "zora",
-          details: {
-            tx: {
-              to: tx.to,
-              data: {
-                // `purchase`
-                signature: "0xefef39a1",
-                params: [
-                  {
-                    kind: "quantity",
-                    abiType: "uint256",
-                  },
-                ],
-              },
-            },
-          },
-          currency: Sdk.Common.Addresses.Eth[config.chainId],
-          price,
-          maxMintsPerWallet: saleDetails.maxSalePurchasePerAddress.toString(),
-          maxSupply: saleDetails.maxSupply.toString(),
-          startTime: saleDetails.publicSaleStart.toNumber(),
-          endTime: saleDetails.publicSaleEnd.toNumber(),
-        };
-      }
-    } catch (error) {
-      logger.error("mint-detector", JSON.stringify({ kind: "zora", error }));
-    }
-  }
-
-  // Allowlist mints
-  if (
-    [
       "0x25024a2b", // `purchasePresale`
       "0x2e706b5a", // `purchasePresaleWithComment`
     ].some((bytes4) => tx.data.startsWith(bytes4))
   ) {
-    try {
-      const saleDetails = await c.saleDetails();
-      if (saleDetails.presaleActive && saleDetails.presaleStart.toNumber() <= now()) {
-        const merkleRoot = saleDetails.presaleMerkleRoot;
-        const allowlistItems = await axios
-          .get(`https://allowlist.zora.co/allowlist/${merkleRoot}`)
-          .then(({ data }) => data)
-          .then(
-            async (data: { entries: { user: string; price: string; maxCanMint: number }[] }) => {
-              const fee = await c.zoraFeeForAmount(1).then((f: { fee: BigNumber }) => f.fee);
-              return data.entries.map(
-                (e) =>
-                  ({
-                    address: e.user,
-                    maxMints: String(e.maxCanMint),
-                    price: e.price,
-                    // Include the Zora mint fee into the actual price
-                    actualPrice: bn(e.price).add(fee).toString(),
-                  } as AllowlistItem)
-              );
-            }
-          );
-
-        await createAllowlist(merkleRoot, allowlistItems);
-
-        return {
-          collection,
-          stage: "presale",
-          kind: "allowlist",
-          status: "open",
-          standard: "zora",
-          details: {
-            tx: {
-              to: tx.to,
-              data: {
-                // `purchasePresale`
-                signature: "0x25024a2b",
-                params: [
-                  {
-                    kind: "quantity",
-                    abiType: "uint256",
-                  },
-                  {
-                    kind: "allowlist",
-                    abiType: "uint256",
-                  },
-                  {
-                    kind: "allowlist",
-                    abiType: "uint256",
-                  },
-                  {
-                    kind: "allowlist",
-                    abiType: "bytes32[]",
-                  },
-                ],
-              },
-            },
-            info: {
-              merkleRoot,
-            },
-          },
-          currency: Sdk.Common.Addresses.Eth[config.chainId],
-          maxSupply: saleDetails.maxSupply.toString(),
-          startTime: saleDetails.presaleStart.toNumber(),
-          endTime: saleDetails.presaleEnd.toNumber(),
-          allowlistId: merkleRoot,
-        };
-      }
-    } catch (error) {
-      logger.error("mint-detector", JSON.stringify({ kind: "zora", error }));
-    }
+    return getCollectionMints(collection);
   }
 
-  return undefined;
+  return [];
 };

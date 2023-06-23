@@ -10,11 +10,11 @@ import { Transaction } from "@/models/transactions";
 import { CollectionMint } from "@/orderbook/mints";
 import { getMaxSupply } from "@/orderbook/mints/calldata/helpers";
 
-export const tryParseCollectionMint = async (
+export const extractFromTx = async (
   collection: string,
   contract: string,
   tx: Transaction
-): Promise<CollectionMint | undefined> => {
+): Promise<CollectionMint[]> => {
   if (
     [
       "0x161ac21f", // `mintPublic`
@@ -50,54 +50,57 @@ export const tryParseCollectionMint = async (
 
       const drop = await c.getPublicDrop(contract);
       if (drop.startTime && drop.endTime && drop.startTime <= now()) {
-        return {
-          collection,
-          stage: "public-sale",
-          kind: "public",
-          status: "open",
-          standard: "seadrop-v1.0",
-          details: {
-            tx: {
-              to: tx.to,
-              data: {
-                // `mintPublic`
-                signature: "0x161ac21f",
-                params: [
-                  {
-                    kind: "contract",
-                    abiType: "address",
-                  },
-                  {
-                    kind: "unknown",
-                    abiType: "address",
-                    abiValue: c.interface
-                      .decodeFunctionData("mintPublic", tx.data)
-                      .feeRecipient.toLowerCase(),
-                  },
-                  {
-                    kind: "recipient",
-                    abiType: "address",
-                  },
-                  {
-                    kind: "quantity",
-                    abiType: "uint256",
-                  },
-                ],
+        return [
+          {
+            collection,
+            contract,
+            stage: "public-sale",
+            kind: "public",
+            status: "open",
+            standard: "seadrop-v1.0",
+            details: {
+              tx: {
+                to: tx.to,
+                data: {
+                  // `mintPublic`
+                  signature: "0x161ac21f",
+                  params: [
+                    {
+                      kind: "contract",
+                      abiType: "address",
+                    },
+                    {
+                      kind: "unknown",
+                      abiType: "address",
+                      abiValue: c.interface
+                        .decodeFunctionData("mintPublic", tx.data)
+                        .feeRecipient.toLowerCase(),
+                    },
+                    {
+                      kind: "recipient",
+                      abiType: "address",
+                    },
+                    {
+                      kind: "quantity",
+                      abiType: "uint256",
+                    },
+                  ],
+                },
               },
             },
+            currency: Sdk.Common.Addresses.Eth[config.chainId],
+            price: drop.mintPrice.toString(),
+            maxMintsPerWallet: String(drop.maxTotalMintableByWallet),
+            maxSupply: await getMaxSupply(contract),
+            startTime: drop.startTime,
+            endTime: drop.endTime,
           },
-          currency: Sdk.Common.Addresses.Eth[config.chainId],
-          price: drop.mintPrice.toString(),
-          maxMintsPerWallet: String(drop.maxTotalMintableByWallet),
-          maxSupply: await getMaxSupply(contract),
-          startTime: drop.startTime,
-          endTime: drop.endTime,
-        };
+        ];
       }
     } catch (error) {
       logger.error("mint-detector", JSON.stringify({ kind: "seadrop-v1.0", error }));
     }
   }
 
-  return undefined;
+  return [];
 };

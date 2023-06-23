@@ -1,8 +1,14 @@
 import { Interface } from "@ethersproject/abi";
-import { BigNumber } from "@ethersproject/bignumber";
+import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
 import { Contract } from "@ethersproject/contracts";
 
+import { idb } from "@/common/db";
 import { baseProvider } from "@/common/provider";
+import { bn, now, toBuffer } from "@/common/utils";
+import { CollectionMint, CollectionMintStatus } from "@/orderbook/mints";
+
+export const toSafeTime = (value: BigNumberish) =>
+  bn(value).gte(9999999999) ? undefined : bn(value).toNumber();
 
 export const getMaxSupply = async (contract: string): Promise<string | undefined> => {
   let maxSupply: string | undefined;
@@ -33,4 +39,58 @@ export const getMaxSupply = async (contract: string): Promise<string | undefined
   }
 
   return maxSupply;
+};
+
+export const getStatus = async (collectionMint: CollectionMint): Promise<CollectionMintStatus> => {
+  // Check start and end time
+  const currentTime = now();
+  if (collectionMint.startTime && currentTime <= collectionMint.startTime) {
+    return "closed";
+  }
+  if (collectionMint.endTime && currentTime >= collectionMint.endTime) {
+    return "closed";
+  }
+
+  // Check maximum supply
+  if (collectionMint.maxSupply) {
+    let tokenCount: string;
+    if (collectionMint.tokenId) {
+      tokenCount = await idb
+        .one(
+          `
+            SELECT
+              sum(nft_balances.amount) AS token_count
+            FROM nft_balances
+            WHERE nft_balances.contract = $/contract/
+              AND nft_balances.token_id = $/tokenId/
+              AND nft_balances.amount > 0
+          `,
+          {
+            contract: toBuffer(collectionMint.contract),
+            tokenId: collectionMint.tokenId,
+          }
+        )
+        .then((r) => r.token_count);
+    } else {
+      tokenCount = await idb
+        .one(
+          `
+            SELECT
+              collections.token_count
+            FROM collections
+            WHERE collections.id = $/collection/
+          `,
+          {
+            collection: collectionMint.collection,
+          }
+        )
+        .then((r) => r.token_count);
+    }
+
+    if (bn(collectionMint.maxSupply).lte(tokenCount)) {
+      return "closed";
+    }
+  }
+
+  return "open";
 };
