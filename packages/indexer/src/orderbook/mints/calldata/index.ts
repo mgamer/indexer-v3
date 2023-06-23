@@ -45,7 +45,6 @@ export type CustomInfo = Zora.Info;
 export const generateCollectionMintTxData = async (
   collectionMint: CollectionMint,
   minter: string,
-  contract: string,
   quantity: number
 ): Promise<{ txData: TxData; price: string }> => {
   // For `allowlist` mints
@@ -84,7 +83,7 @@ export const generateCollectionMintTxData = async (
       case "contract": {
         abiData.push({
           abiType: p.abiType,
-          abiValue: contract,
+          abiValue: collectionMint.contract,
         });
         break;
       }

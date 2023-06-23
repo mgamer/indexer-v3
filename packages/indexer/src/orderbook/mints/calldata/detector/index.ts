@@ -8,7 +8,6 @@ import { getNetworkSettings } from "@/config/network";
 import { fetchTransaction } from "@/events-sync/utils";
 import * as mintsSupplyCheck from "@/jobs/mints/supply-check";
 import { Sources } from "@/models/sources";
-import { CollectionMint } from "@/orderbook/mints";
 
 import * as generic from "@/orderbook/mints/calldata/detector/generic";
 import * as manifold from "@/orderbook/mints/calldata/detector/manifold";
@@ -16,9 +15,7 @@ import * as seadrop from "@/orderbook/mints/calldata/detector/seadrop";
 import * as thirdweb from "@/orderbook/mints/calldata/detector/thirdweb";
 import * as zora from "@/orderbook/mints/calldata/detector/zora";
 
-export { manifold, seadrop, thirdweb, zora };
-
-export const detectCollectionMint = async (txHash: string, skipCache = false) => {
+export const extractFromTx = async (txHash: string, skipCache = false) => {
   // Fetch all transfers associated to the transaction
   const transfers = await idb
     .manyOrNone(
@@ -48,18 +45,18 @@ export const detectCollectionMint = async (txHash: string, skipCache = false) =>
 
   // Return early if no transfers are available
   if (!transfers.length) {
-    return;
+    return [];
   }
 
   // Exclude certain contracts
   const contract = transfers[0].contract;
   if (getNetworkSettings().mintsAsSalesBlacklist.includes(contract)) {
-    return;
+    return [];
   }
 
   // Make sure every mint in the transaction is associated to the same contract
   if (!transfers.every((t) => t.contract === contract)) {
-    return;
+    return [];
   }
 
   // Make sure that every mint in the transaction is associated to the same collection
@@ -77,11 +74,11 @@ export const detectCollectionMint = async (txHash: string, skipCache = false) =>
     }
   );
   if (!collectionsResult.length) {
-    return;
+    return [];
   }
   const collection = collectionsResult[0].collection_id;
   if (!collectionsResult.every((c) => c.collection_id && c.collection_id === collection)) {
-    return;
+    return [];
   }
 
   await mintsSupplyCheck.addToQueue(collection);
@@ -91,7 +88,7 @@ export const detectCollectionMint = async (txHash: string, skipCache = false) =>
     const mintDetailsLockKey = `mint-details:${collection}`;
     const mintDetailsLock = await redis.get(mintDetailsLockKey);
     if (mintDetailsLock) {
-      return;
+      return [];
     }
     await redis.set(mintDetailsLockKey, "locked", "EX", 5 * 60);
   }
@@ -99,19 +96,19 @@ export const detectCollectionMint = async (txHash: string, skipCache = false) =>
   // Make sure every mint in the transaction goes to the transaction sender
   const tx = await fetchTransaction(txHash);
   if (!transfers.every((t) => t.from === AddressZero && t.to === tx.from)) {
-    return;
+    return [];
   }
 
   // Make sure something was actually minted
   const amountMinted = transfers.map((t) => bn(t.amount)).reduce((a, b) => bn(a).add(b));
   if (amountMinted.eq(0)) {
-    return;
+    return [];
   }
 
   // Make sure the total price is evenly divisible by the amount
   const pricePerAmountMinted = bn(tx.value).div(amountMinted);
   if (!bn(tx.value).eq(pricePerAmountMinted.mul(amountMinted))) {
-    return;
+    return [];
   }
 
   // Allow at most a few decimals for the unit price
@@ -119,13 +116,13 @@ export const detectCollectionMint = async (txHash: string, skipCache = false) =>
   if (splittedPrice.length > 1) {
     const numDecimals = splittedPrice[1].length;
     if (numDecimals > 7) {
-      return;
+      return [];
     }
   }
 
   // There must be some calldata
   if (tx.data.length < 10) {
-    return;
+    return [];
   }
 
   // Remove any source tags at the end of the calldata (`mint.fun` uses them)
@@ -137,38 +134,11 @@ export const detectCollectionMint = async (txHash: string, skipCache = false) =>
     }
   }
 
-  let collectionMint: CollectionMint | undefined;
-
-  // Manifold
-  if (!collectionMint) {
-    collectionMint = await manifold.tryParseCollectionMint(collection, tx);
-  }
-
-  // Seadrop
-  if (!collectionMint) {
-    collectionMint = await seadrop.tryParseCollectionMint(collection, contract, tx);
-  }
-
-  // Thirdweb
-  if (!collectionMint) {
-    collectionMint = await thirdweb.tryParseCollectionMint(collection, tx);
-  }
-
-  // Zora
-  if (!collectionMint) {
-    collectionMint = await zora.tryParseCollectionMint(collection, tx);
-  }
-
-  // Fallback
-  if (!collectionMint) {
-    collectionMint = await generic.tryParseCollectionMint(
-      collection,
-      contract,
-      tx,
-      pricePerAmountMinted,
-      amountMinted
-    );
-  }
-
-  return collectionMint;
+  return [
+    ...(await manifold.extractFromTx(collection, tx)),
+    ...(await zora.extractFromTx(collection, tx)),
+    ...(await seadrop.extractFromTx(collection, contract, tx)),
+    ...(await thirdweb.extractFromTx(collection, tx)),
+    ...(await generic.extractFromTx(collection, contract, tx, pricePerAmountMinted, amountMinted)),
+  ];
 };

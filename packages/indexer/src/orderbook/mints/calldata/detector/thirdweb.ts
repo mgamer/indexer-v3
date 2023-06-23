@@ -10,10 +10,10 @@ import { config } from "@/config/index";
 import { Transaction } from "@/models/transactions";
 import { CollectionMint } from "@/orderbook/mints";
 
-export const tryParseCollectionMint = async (
+export const extractFromTx = async (
   collection: string,
   tx: Transaction
-): Promise<CollectionMint | undefined> => {
+): Promise<CollectionMint[]> => {
   if (
     [
       "0x84bb1e42", // `claim` (ERC721)
@@ -99,71 +99,74 @@ export const tryParseCollectionMint = async (
           const price = claimCondition.pricePerToken.toString();
           const maxMintsPerWallet = claimCondition.quantityLimitPerWallet.toString();
 
-          return {
-            collection,
-            stage: "public-sale",
-            kind: "public",
-            status: "open",
-            standard: "thirdweb",
-            details: {
-              tx: {
-                to: tx.to,
-                data: {
-                  // `claim`
-                  signature: isERC1155 ? "0x57bc3d78" : "0x84bb1e42",
-                  params: [
-                    {
-                      kind: "recipient",
-                      abiType: "address",
-                    },
-                    isERC1155
-                      ? {
-                          kind: "unknown",
-                          abiKind: "uint256",
-                          abiValue: tokenId!,
-                        }
-                      : // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        (undefined as any),
-                    {
-                      kind: "quantity",
-                      abiType: "uint256",
-                    },
-                    {
-                      kind: "unknown",
-                      abiType: "address",
-                      abiValue: Sdk.ZeroExV4.Addresses.Eth[config.chainId],
-                    },
-                    {
-                      kind: "unknown",
-                      abiType: "uint256",
-                      abiValue: price,
-                    },
-                    {
-                      kind: "unknown",
-                      abiType: "(bytes32[],uint256,uint256,address)",
-                      abiValue: [
-                        [HashZero],
-                        maxMintsPerWallet,
-                        price,
-                        Sdk.ZeroExV4.Addresses.Eth[config.chainId],
-                      ],
-                    },
-                    {
-                      kind: "unknown",
-                      abiType: "bytes",
-                      abiValue: "0x",
-                    },
-                  ].filter(Boolean),
+          return [
+            {
+              collection,
+              contract: tx.to,
+              stage: "public-sale",
+              kind: "public",
+              status: "open",
+              standard: "thirdweb",
+              details: {
+                tx: {
+                  to: tx.to,
+                  data: {
+                    // `claim`
+                    signature: isERC1155 ? "0x57bc3d78" : "0x84bb1e42",
+                    params: [
+                      {
+                        kind: "recipient",
+                        abiType: "address",
+                      },
+                      isERC1155
+                        ? {
+                            kind: "unknown",
+                            abiKind: "uint256",
+                            abiValue: tokenId!,
+                          }
+                        : // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                          (undefined as any),
+                      {
+                        kind: "quantity",
+                        abiType: "uint256",
+                      },
+                      {
+                        kind: "unknown",
+                        abiType: "address",
+                        abiValue: Sdk.ZeroExV4.Addresses.Eth[config.chainId],
+                      },
+                      {
+                        kind: "unknown",
+                        abiType: "uint256",
+                        abiValue: price,
+                      },
+                      {
+                        kind: "unknown",
+                        abiType: "(bytes32[],uint256,uint256,address)",
+                        abiValue: [
+                          [HashZero],
+                          maxMintsPerWallet,
+                          price,
+                          Sdk.ZeroExV4.Addresses.Eth[config.chainId],
+                        ],
+                      },
+                      {
+                        kind: "unknown",
+                        abiType: "bytes",
+                        abiValue: "0x",
+                      },
+                    ].filter(Boolean),
+                  },
                 },
               },
+              currency: Sdk.Common.Addresses.Eth[config.chainId],
+              price,
+              tokenId,
+              maxMintsPerWallet,
+              maxSupply: claimCondition.maxClaimableSupply.toString(),
+              startTime: claimCondition.startTimestamp,
             },
-            currency: Sdk.Common.Addresses.Eth[config.chainId],
-            price,
-            tokenId,
-            maxMintsPerWallet,
-            maxSupply: claimCondition.maxClaimableSupply.toString(),
-            startTime: claimCondition.startTimestamp,
-          };
+          ];
         }
       }
     } catch (error) {
@@ -171,5 +174,5 @@ export const tryParseCollectionMint = async (
     }
   }
 
-  return undefined;
+  return [];
 };
