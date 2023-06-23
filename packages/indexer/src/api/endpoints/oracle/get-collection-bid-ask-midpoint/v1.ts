@@ -144,43 +144,6 @@ export const getCollectionFloorAskOracleV1Options: RouteOptions = {
       `;
 
       const twapQuery = `
-        WITH
-          x AS (
-            SELECT
-              *
-            FROM ${eventsTableName} events
-            WHERE events.collection_id = $/collection/
-              AND events.created_at >= now() - interval '${query.twapSeconds} seconds'
-            ORDER BY events.created_at
-          ),
-          y AS (
-            SELECT
-              *
-            FROM ${eventsTableName} events
-            WHERE events.collection_id = $/collection/
-              AND events.created_at < (SELECT COALESCE(MIN(x.created_at), 'Infinity') FROM x)
-            ORDER BY events.created_at DESC
-            LIMIT 1
-          ),
-          z AS (
-            SELECT * FROM x
-            UNION ALL
-            SELECT * FROM y
-          ),
-          w AS (
-            SELECT
-              price,
-              floor(extract('epoch' FROM greatest(z.created_at, now() - interval '${query.twapSeconds} seconds'))) AS start_time,
-              floor(extract('epoch' FROM coalesce(lead(z.created_at, 1) OVER (ORDER BY created_at), now()))) AS end_time
-            FROM z
-          )
-          SELECT
-            floor(
-              SUM(w.price * (w.end_time - w.start_time)) / (MAX(w.end_time) - MIN(w.start_time))
-            )::NUMERIC(78, 0) AS price
-          FROM w
-
-
           WITH ask_twap as (WITH
             x AS (
               SELECT
