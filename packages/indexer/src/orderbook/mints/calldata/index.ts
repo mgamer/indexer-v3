@@ -4,8 +4,43 @@ import axios from "axios";
 
 import { idb } from "@/common/db";
 import { bn, toBuffer } from "@/common/utils";
-import * as calldataDetails from "@/orderbook/mints/calldata/detector";
 import { CollectionMint } from "@/orderbook/mints";
+
+import * as Zora from "@/orderbook/mints/calldata/detector/zora";
+
+export type AbiParam =
+  | {
+      kind: "unknown";
+      abiType: string;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      abiValue: any;
+    }
+  | {
+      kind: "quantity";
+      abiType: string;
+    }
+  | {
+      kind: "recipient";
+      abiType: string;
+    }
+  | {
+      kind: "contract";
+      abiType: string;
+    }
+  | {
+      kind: "allowlist";
+      abiType: string;
+    };
+
+export type MintTxSchema = {
+  to: string;
+  data: {
+    signature: string;
+    params: AbiParam[];
+  };
+};
+
+export type CustomInfo = Zora.Info;
 
 export const generateCollectionMintTxData = async (
   collectionMint: CollectionMint,
@@ -13,34 +48,37 @@ export const generateCollectionMintTxData = async (
   contract: string,
   quantity: number
 ): Promise<{ txData: TxData; price: string }> => {
-  const tx = collectionMint.details.tx;
-
-  const allowlistData = await idb.oneOrNone(
-    `
-      SELECT
-        allowlists_items.max_mints,
-        allowlists_items.price,
-        allowlists_items.actual_price
-      FROM collection_mints
-      JOIN allowlists_items
-        ON collection_mints.allowlist_id = allowlists_items.allowlist_id
-      WHERE collection_mints.collection_id = $/collection/
-        AND collection_mints.stage = $/stage/
-        ${collectionMint.tokenId ? " AND collection_mints.token_id = $/tokenId/" : ""}
-        AND allowlists_items.address = $/address/
-    `,
-    {
-      collection: collectionMint.collection,
-      stage: collectionMint.stage,
-      tokenId: collectionMint.tokenId ?? null,
-      address: toBuffer(minter),
-    }
-  );
+  // For `allowlist` mints
+  const allowlistData =
+    collectionMint.kind === "allowlist"
+      ? await idb.oneOrNone(
+          `
+            SELECT
+              allowlists_items.max_mints,
+              allowlists_items.price,
+              allowlists_items.actual_price
+            FROM collection_mints
+            JOIN allowlists_items
+              ON collection_mints.allowlist_id = allowlists_items.allowlist_id
+            WHERE collection_mints.collection_id = $/collection/
+              AND collection_mints.stage = $/stage/
+              ${collectionMint.tokenId ? " AND collection_mints.token_id = $/tokenId/" : ""}
+              AND allowlists_items.address = $/address/
+          `,
+          {
+            collection: collectionMint.collection,
+            stage: collectionMint.stage,
+            tokenId: collectionMint.tokenId ?? null,
+            address: toBuffer(minter),
+          }
+        )
+      : undefined;
+  let allowlistItemIndex = 0;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const abiData: { abiType: string; abiValue: any }[] = [];
 
-  let allowlistItemIndex = 0;
+  const tx = collectionMint.details.tx;
   for (const p of tx.data.params) {
     switch (p.kind) {
       case "contract": {
@@ -78,7 +116,7 @@ export const generateCollectionMintTxData = async (
             } else if (allowlistItemIndex === 1) {
               abiValue = allowlistData.price;
             } else {
-              const info = collectionMint.details.info as calldataDetails.zora.Info;
+              const info = collectionMint.details.info as Zora.Info;
               abiValue = await axios
                 .get(`https://allowlist.zora.co/allowed?user=${minter}&root=${info.merkleRoot}`)
                 .then(({ data }: { data: { proof: string[] }[] }) =>
@@ -94,6 +132,7 @@ export const generateCollectionMintTxData = async (
           }
         }
 
+        // We use the relative index of the `allowlist` parameter to determine the current value
         allowlistItemIndex++;
 
         abiData.push({
@@ -126,6 +165,7 @@ export const generateCollectionMintTxData = async (
 
   let price = collectionMint.price;
   if (!price) {
+    // If the price is not available on the main `CollectionMint`, get it from the allowlist
     price = allowlistData.actual_price!;
   }
 

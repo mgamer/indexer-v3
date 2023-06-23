@@ -29,7 +29,7 @@ import { getCurrency } from "@/utils/currencies";
 import { ExecutionsBuffer } from "@/utils/executions";
 import * as onChainData from "@/utils/on-chain-data";
 import * as mints from "@/orderbook/mints";
-import { generateCollectionMintTxData } from "@/orderbook/mints/calldata/generator";
+import { generateCollectionMintTxData } from "@/orderbook/mints/calldata";
 import { getUSDAndCurrencyPrices } from "@/utils/prices";
 
 const version = "v7";

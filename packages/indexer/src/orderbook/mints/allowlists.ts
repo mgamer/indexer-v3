@@ -4,9 +4,9 @@ import { toBuffer } from "@/common/utils";
 export type AllowlistItem = {
   address: string;
   maxMints?: string;
-  // Original price for the merkle proof
+  // Original price (which will potentially get included in the merkle proof)
   price?: string;
-  // Actual price which includes fees
+  // Actual price (which includes fees)
   actualPrice?: string;
 };
 
