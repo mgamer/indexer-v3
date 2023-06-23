@@ -20,9 +20,9 @@ import { Sources } from "@/models/sources";
 import { ContractSets } from "@/models/contract-sets";
 import { Orders } from "@/utils/orders";
 
-const version = "v5";
+const version = "v6";
 
-export const getOrdersBidsV5Options: RouteOptions = {
+export const getOrdersBidsV6Options: RouteOptions = {
   description: "Bids (offers)",
   notes:
     "Get a list of bids (offers), filtered by token, collection or maker. This API is designed for efficiently ingesting large volumes of orders, for external processing.\n\n There are a different kind of bids than can be returned:\n\n- Inputting a 'contract' will return token and attribute bids.\n\n- Inputting a 'collection-id' will return collection wide bids./n/n Please mark `excludeEOA` as `true` to exclude Blur orders.",
@@ -139,6 +139,12 @@ export const getOrdersBidsV5Options: RouteOptions = {
         .description(
           "Exclude orders that can only be filled by EOAs, to support filling with smart contracts."
         ),
+      excludeSources: Joi.alternatives()
+        .try(
+          Joi.array().max(80).items(Joi.string().pattern(regex.domain)),
+          Joi.string().pattern(regex.domain)
+        )
+        .description("Exclude orders from a list of sources. Example: `opensea.io`"),
       normalizeRoyalties: Joi.boolean()
         .default(false)
         .description("If true, prices will include missing royalties to be added on-top."),
@@ -176,6 +182,7 @@ export const getOrdersBidsV5Options: RouteOptions = {
         "collectionsSetId",
         "contractsSetId"
       )
+      .oxor("source", "excludeSources")
       .with("community", "maker")
       .with("collectionsSetId", "maker")
       .with("attribute", "collection"),
@@ -525,6 +532,25 @@ export const getOrdersBidsV5Options: RouteOptions = {
 
         (query as any).source = source.id;
         conditions.push(`orders.source_id_int = $/source/`);
+      }
+
+      if (query.excludeSources) {
+        const sources = await Sources.getInstance();
+
+        if (!Array.isArray(query.excludeSources)) {
+          query.excludeSources = [query.excludeSources];
+        }
+
+        (query as any).excludeSourceIds = query.excludeSources.map(
+          (source: string) => sources.getByDomain(source)?.id ?? 0
+        );
+
+        conditions.push(
+          `orders.source_id_int IN (
+              SELECT id FROM sources_v2 sv
+              WHERE id NOT IN ($/excludeSourceIds:csv/)
+          )`
+        );
       }
 
       if (query.native) {
