@@ -7,6 +7,7 @@ import { redis } from "@/common/redis";
 import { toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import * as orderbook from "@/jobs/orderbook/orders-queue";
+import * as blurListingsRefresh from "@/jobs/order-updates/misc/blur-listings-refresh";
 import { updateBlurRoyalties } from "@/utils/blur";
 
 const QUEUE_NAME = "blur-listings-refresh";
@@ -158,4 +159,7 @@ export const addToQueue = async (collection: string, force = false) => {
       );
     }
   }
+
+  // Also refresh listings on the collection
+  await blurListingsRefresh.addToQueue(collection, force);
 };
