@@ -105,6 +105,7 @@ export const simulateAndUpsertCollectionMint = async (collectionMint: Collection
 
   const existingCollectionMint = await getCollectionMints(collectionMint.collection, {
     stage: collectionMint.stage,
+    standard: collectionMint.standard,
     tokenId: collectionMint.tokenId,
   }).then((results) => (results.length ? results[0] : undefined));
 
