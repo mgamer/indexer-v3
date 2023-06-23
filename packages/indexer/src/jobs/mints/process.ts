@@ -3,7 +3,7 @@ import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
 import { config } from "@/config/index";
-import { saveOrUpdateCollectionMint } from "@/orderbook/mints";
+import { simulateAndUpsertCollectionMint } from "@/orderbook/mints";
 import { extractFromTx } from "@/orderbook/mints/calldata/detector";
 
 const QUEUE_NAME = "mints-process";
@@ -33,7 +33,7 @@ if (config.doBackgroundWork) {
       try {
         const collectionMints = await extractFromTx(txHash);
         for (const collectionMint of collectionMints) {
-          const result = await saveOrUpdateCollectionMint(collectionMint);
+          const result = await simulateAndUpsertCollectionMint(collectionMint);
           logger.info("mints-process", JSON.stringify({ success: result, collectionMint }));
         }
 

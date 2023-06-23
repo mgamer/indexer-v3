@@ -92,7 +92,21 @@ export const getCollectionMints = async (
   );
 };
 
-export const saveOrUpdateCollectionMint = async (collectionMint: CollectionMint) => {
+export const simulateAndUpsertCollectionMint = async (collectionMint: CollectionMint) => {
+  const simulationResult = await simulateCollectionMint(collectionMint);
+  if (!simulationResult) {
+    collectionMint.status = "closed";
+  } else {
+    // At the moment simulation will always be positive for non-public mints
+    // so we avoid changing the status of a non-public mint from inactive to
+    // active (since according to the simulation it's always active).
+    if (collectionMint.kind === "public") {
+      collectionMint.status = "open";
+    }
+  }
+
+  const isOpen = collectionMint.status === "open";
+
   const existingCollectionMint = await getCollectionMints(collectionMint.collection, {
     stage: collectionMint.stage,
     tokenId: collectionMint.tokenId,
@@ -171,11 +185,11 @@ export const saveOrUpdateCollectionMint = async (collectionMint: CollectionMint)
           ...updatedParams,
         }
       );
-
-      return true;
     }
-  } else {
-    // Otherwise, it's the first time we see this collection mint so we save it
+
+    return isOpen;
+  } else if (isOpen) {
+    // Otherwise, it's the first time we see this collection mint so we save it (only if it's an active mint)
 
     await idb.none(
       `
@@ -244,8 +258,6 @@ export const saveOrUpdateCollectionMint = async (collectionMint: CollectionMint)
 
     return true;
   }
-
-  return false;
 };
 
 export const refreshMintsForCollection = async (collection: string) => {
@@ -261,11 +273,7 @@ export const refreshMintsForCollection = async (collection: string) => {
 
       case "unknown": {
         for (const collectionMint of existingCollectionMints) {
-          const success = await simulateCollectionMint(collectionMint, false);
-          await saveOrUpdateCollectionMint({
-            ...collectionMint,
-            status: success ? "open" : "closed",
-          });
+          await simulateAndUpsertCollectionMint(collectionMint);
         }
 
         break;
@@ -277,7 +285,7 @@ export const refreshMintsForCollection = async (collection: string) => {
         // Fetch and save/update the currently available mints
         const latestCollectionMints = await zora.getCollectionMints(collection);
         for (const collectionMint of latestCollectionMints) {
-          await saveOrUpdateCollectionMint(collectionMint);
+          await simulateAndUpsertCollectionMint(collectionMint);
         }
 
         // Assume anything that exists in our system but was not returned
@@ -291,7 +299,7 @@ export const refreshMintsForCollection = async (collection: string) => {
                 latest.tokenId === existing.tokenId
             )
           ) {
-            await saveOrUpdateCollectionMint({
+            await simulateAndUpsertCollectionMint({
               ...existing,
               status: "closed",
             });
