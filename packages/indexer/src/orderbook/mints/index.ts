@@ -94,15 +94,10 @@ export const getCollectionMints = async (
 
 export const simulateAndUpsertCollectionMint = async (collectionMint: CollectionMint) => {
   const simulationResult = await simulateCollectionMint(collectionMint);
-  if (!simulationResult) {
-    collectionMint.status = "closed";
+  if (simulationResult) {
+    collectionMint.status = "open";
   } else {
-    // At the moment simulation will always be positive for non-public mints
-    // so we avoid changing the status of a non-public mint from inactive to
-    // active (since according to the simulation it's always active).
-    if (collectionMint.kind === "public") {
-      collectionMint.status = "open";
-    }
+    collectionMint.status = "closed";
   }
 
   const isOpen = collectionMint.status === "open";

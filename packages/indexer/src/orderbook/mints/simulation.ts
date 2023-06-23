@@ -103,7 +103,7 @@ export const simulateCollectionMint = async (
 ) => {
   // TODO: Add support for simulating non-public mints
   if (collectionMint.kind !== "public") {
-    return true;
+    return collectionMint.status === "open";
   }
 
   // Fetch the collection's contract and kind
