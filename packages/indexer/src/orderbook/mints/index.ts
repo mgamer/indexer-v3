@@ -116,11 +116,6 @@ export const simulateAndUpsertCollectionMint = async (collectionMint: Collection
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const updatedParams: any = {};
 
-    if (collectionMint.standard !== existingCollectionMint.standard) {
-      updatedFields.push(" standard = $/standard/");
-      updatedParams.standard = collectionMint.standard;
-    }
-
     if (collectionMint.status !== existingCollectionMint.status) {
       updatedFields.push(" status = $/status/");
       updatedParams.status = collectionMint.status;
