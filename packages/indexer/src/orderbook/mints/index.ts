@@ -24,7 +24,7 @@ export type AbiParam =
       abiType: string;
     }
   | {
-      kind: "allowlist-proof";
+      kind: "allowlist";
       abiType: string;
     };
 
@@ -51,7 +51,7 @@ export type CollectionMint = {
   standard: CollectionMintStandard;
   details: CollectionMintDetails;
   currency: string;
-  price: string;
+  price?: string;
   tokenId?: string;
   maxMintsPerWallet?: string;
   maxSupply?: string;
@@ -182,7 +182,7 @@ export const saveCollectionMint = async (collectionMint: CollectionMint) => {
         status: collectionMint.status,
         details: collectionMint.details,
         currency: toBuffer(collectionMint.currency),
-        price: collectionMint.price,
+        price: collectionMint.price ?? null,
         tokenId: collectionMint.tokenId ?? null,
         maxMintsPerWallet: collectionMint.maxMintsPerWallet ?? null,
         maxSupply: collectionMint.maxSupply ?? null,

@@ -332,7 +332,7 @@ export const savePartialListings = async (
 
   const handleOrder = async ({ orderParams }: PartialListingOrderInfo) => {
     try {
-      logger.debug("blur-debug", JSON.stringify(orderParams));
+      logger.info("blur-debug", JSON.stringify(orderParams));
 
       // Fetch current owner
       const owner = await idb
