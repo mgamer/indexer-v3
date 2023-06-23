@@ -9,7 +9,6 @@ import { redis } from "@/common/redis";
 import { fromBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { fetchCollectionMetadataJob } from "@/jobs/token-updates/fetch-collection-metadata-job";
-import { getNetworkName } from "@/config/network";
 
 const QUEUE_NAME = "backfill-collections-ids";
 
@@ -28,11 +27,12 @@ export const queue = new Queue(QUEUE_NAME, {
 new QueueScheduler(QUEUE_NAME, { connection: redis.duplicate() });
 
 // BACKGROUND WORKER ONLY
-if (config.doBackgroundWork && getNetworkName() === "prod-goerli") {
+if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
-    async () => {
+    async (job) => {
       const limit = 100;
+      const { continuation } = job.data;
       const result = await idb.manyOrNone(
         `
             WITH x AS (
@@ -40,18 +40,19 @@ if (config.doBackgroundWork && getNetworkName() === "prod-goerli") {
                 WHERE NOT EXISTS (
                     SELECT id FROM collections c WHERE 
                     c.id = tokens.collection_id 
-                ) 
+                )
+                ${continuation ? `AND collection_id > $/continuation/` : ""}
                 LIMIT $/limit/
             )
-            SELECT y.* FROM x
+            SELECT x.*, y.* FROM x
             LEFT JOIN LATERAL (
-                SELECT tokens.contract, tokens.token_id
+                SELECT t.contract, t.token_id
                 FROM tokens t
-                WHERE tokens.collection_id = x.collection_id
+                WHERE t.collection_id = x.collection_id
                 LIMIT 1
             ) y ON TRUE        
         `,
-        { limit }
+        { limit, continuation }
       );
 
       for (const { contract, token_id } of result) {
@@ -66,7 +67,7 @@ if (config.doBackgroundWork && getNetworkName() === "prod-goerli") {
       }
 
       if (result.length == limit) {
-        await addToQueue();
+        await addToQueue(result[result.length - 1].collection_id);
       }
     },
     { connection: redis.duplicate(), concurrency: 1 }
@@ -77,6 +78,6 @@ if (config.doBackgroundWork && getNetworkName() === "prod-goerli") {
   });
 }
 
-export const addToQueue = async () => {
-  await queue.add(randomUUID(), {});
+export const addToQueue = async (continuation?: string) => {
+  await queue.add(randomUUID(), { continuation });
 };
