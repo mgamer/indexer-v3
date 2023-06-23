@@ -487,7 +487,9 @@ export class RabbitMqJobsConsumer {
 
       for (const queue of RabbitMqJobsConsumer.getQueues()) {
         try {
-          await RabbitMqJobsConsumer.subscribe(queue);
+          if (!queue.isDisableConsuming()) {
+            await RabbitMqJobsConsumer.subscribe(queue);
+          }
         } catch (error) {
           logger.error(
             "rabbit-subscribe",
