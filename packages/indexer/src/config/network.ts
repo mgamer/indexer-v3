@@ -125,6 +125,7 @@ type NetworkSettings = {
   nonSimulatableContracts: string[];
   mintsAsSalesBlacklist: string[];
   mintAddresses: string[];
+  burnAddresses: string[];
   multiCollectionContracts: string[];
   whitelistedCurrencies: Map<string, Currency>;
   supportedBidCurrencies: { [currency: string]: boolean };
@@ -165,6 +166,7 @@ export const getNetworkSettings = (): NetworkSettings => {
     multiCollectionContracts: [],
     mintsAsSalesBlacklist: [],
     mintAddresses: [AddressZero],
+    burnAddresses: [AddressZero, "0x000000000000000000000000000000000000dead"],
     reorgCheckFrequency: [1, 5, 10, 30, 60], // In minutes
     whitelistedCurrencies: new Map<string, Currency>(),
     supportedBidCurrencies: { [Sdk.Common.Addresses.Weth[config.chainId]?.toLowerCase()]: true },
