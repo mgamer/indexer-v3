@@ -192,21 +192,45 @@ export const simulateAndUpsertCollectionMint = async (collectionMint: Collection
   } else if (isOpen) {
     // Otherwise, it's the first time we see this collection mint so we save it (only if it's open)
 
-    await idb.none(
+    const standardResult = await idb.oneOrNone(
       `
-        INSERT INTO collection_mint_standards (
-          collection_id,
-          standard
-        ) VALUES (
-          $/collection/,
-          $/standard/
-        ) ON CONFLICT DO NOTHING
+        SELECT
+          collection_mint_standards.standard
+        FROM collection_mint_standards
+        WHERE collection_mint_standards.collection_id = $/collection/
       `,
       {
         collection: collectionMint.collection,
-        standard: collectionMint.standard,
       }
     );
+    if (!standardResult) {
+      await idb.none(
+        `
+          INSERT INTO collection_mint_standards (
+            collection_id,
+            standard
+          ) VALUES (
+            $/collection/,
+            $/standard/
+          ) ON CONFLICT DO NOTHING
+        `,
+        {
+          collection: collectionMint.collection,
+          standard: collectionMint.standard,
+        }
+      );
+    } else if (standardResult.standard !== collectionMint.standard) {
+      // If the standard got updated (eg. `unknown` -> something known), then
+      // we need to delete all existing mints since they have different stages
+      await idb.none(
+        `
+          DELETE FROM collection_mints WHERE collection_id = $/collection/
+        `,
+        {
+          collection: collectionMint.collection,
+        }
+      );
+    }
 
     await idb.none(
       `

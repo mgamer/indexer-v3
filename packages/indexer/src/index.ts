@@ -17,7 +17,6 @@ import { startKafkaConsumer } from "@/jobs/cdc/index";
 import { RabbitMq } from "@/common/rabbit-mq";
 import { RabbitMqJobsConsumer } from "@/jobs/index";
 import { Sources } from "@/models/sources";
-import { idb } from "@/common/db";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 process.on("unhandledRejection", (error: any) => {
@@ -28,16 +27,6 @@ process.on("unhandledRejection", (error: any) => {
 });
 
 const setup = async () => {
-  try {
-    await idb.none(
-      `
-      with x as (select collection_mints.collection_id from collection_mints join collection_mint_standards on collection_mints.collection_id = collection_mint_standards.collection_id where standard = 'thirdweb') update collection_mints set stage = 'claim-0' from x where collection_mints.collection_id = x.collection_id and stage != 'claim-0'
-      `
-    );
-  } catch {
-    // skip errors
-  }
-
   if (process.env.LOCAL_TESTING) {
     return;
   }
