@@ -42,6 +42,7 @@ if (config.doBackgroundWork) {
                     c.id = tokens.collection_id 
                 )
                 ${continuation ? `AND collection_id > $/continuation/` : ""}
+                ORDER BY collection_id
                 LIMIT $/limit/
             )
             SELECT x.*, y.* FROM x
