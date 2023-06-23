@@ -147,6 +147,10 @@ export type GenericOrder =
   | {
       kind: "sudoswap-v2";
       order: Sdk.SudoswapV2.Order;
+    }
+  | {
+      kind: "caviar-v1";
+      order: Sdk.CaviarV1.Order;
     };
 
 // Listings

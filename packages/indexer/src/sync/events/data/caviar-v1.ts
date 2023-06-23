@@ -1,55 +1,74 @@
 import { Interface } from "@ethersproject/abi";
 
 import { EventData } from "@/events-sync/data";
+import { utils } from "ethers";
 
 export const add: EventData = {
   kind: "caviar-v1",
   subKind: "caviar-v1-add",
-  topic: "Add(uint256,uint256,uint256)",
-  numTopics: 1,
+  topic: utils.id("Add(uint256,uint256,uint256)"),
+  numTopics: 4,
   abi: new Interface([
-    `Add(uint256 indexed baseTokenAmount, uint256 indexed fractionalTokenAmount, uint256 indexed lpTokenAmount)`,
+    `event Add(
+        uint256 indexed baseTokenAmount, 
+        uint256 indexed fractionalTokenAmount, 
+        uint256 indexed lpTokenAmount
+    )`,
   ]),
 };
 
 export const remove: EventData = {
   kind: "caviar-v1",
   subKind: "caviar-v1-remove",
-  topic: "Remove(uint256,uint256,uint256)",
-  numTopics: 1,
+  topic: utils.id("Remove(uint256,uint256,uint256)"),
+  numTopics: 4,
   abi: new Interface([
-    `Remove(uint256 indexed baseTokenAmount, uint256 indexed fractionalTokenAmount, uint256 indexed lpTokenAmount)`,
+    `event Remove(
+        uint256 indexed baseTokenAmount, 
+        uint256 indexed fractionalTokenAmount, 
+        uint256 indexed lpTokenAmount
+    )`,
   ]),
 };
 
 export const buy: EventData = {
   kind: "caviar-v1",
   subKind: "caviar-v1-buy",
-  topic: "Buy(uint256,uint256)",
-  numTopics: 1,
-  abi: new Interface([`Buy(uint256 indexed inputAmount, uint256 indexed outputAmount)`]),
+  topic: utils.id("Buy(uint256,uint256)"),
+  numTopics: 3,
+  abi: new Interface([
+    `event Buy(
+        uint256 indexed inputAmount, 
+        uint256 indexed outputAmount
+    )`,
+  ]),
 };
 
 export const sell: EventData = {
   kind: "caviar-v1",
   subKind: "caviar-v1-sell",
-  topic: "Sell(uint256,uint256)",
-  numTopics: 1,
-  abi: new Interface([`Sell(uint256 indexed inputAmount, uint256 indexed outputAmount)`]),
+  topic: utils.id("Sell(uint256,uint256)"),
+  numTopics: 3,
+  abi: new Interface([
+    `event Sell(
+        uint256 indexed inputAmount, 
+        uint256 indexed outputAmount
+    )`,
+  ]),
 };
 
 export const wrap: EventData = {
   kind: "caviar-v1",
   subKind: "caviar-v1-wrap",
-  topic: "Wrap(uint256[])",
-  numTopics: 1,
-  abi: new Interface([`Wrap(uint256[] indexed tokenIds)`]),
+  topic: utils.id("Wrap(uint256[])"),
+  numTopics: 2,
+  abi: new Interface([`event Wrap(uint256[] indexed tokenIds)`]),
 };
 
 export const unwrap: EventData = {
   kind: "caviar-v1",
   subKind: "caviar-v1-unwrap",
-  topic: "Unwrap(uint256[])",
-  numTopics: 1,
-  abi: new Interface([`Unwrap(uint256[] indexed tokenIds)`]),
+  topic: utils.id("Unwrap(uint256[])"),
+  numTopics: 2,
+  abi: new Interface([`event Unwrap(uint256[] indexed tokenIds)`]),
 };
