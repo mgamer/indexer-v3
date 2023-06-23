@@ -216,6 +216,17 @@ export const simulateAndUpsertCollectionMint = async (collectionMint: Collection
         }
       );
     } else if (standardResult.standard !== collectionMint.standard) {
+      await idb.none(
+        `
+          UPDATE collection_mint_standards SET
+            standard = $/standard/
+          WHERE collection_mint_standards.collection_id = $/collection/
+        `,
+        {
+          collection: collectionMint.collection,
+        }
+      );
+
       // If the standard got updated (eg. `unknown` -> something known), then
       // we need to delete all existing mints since they have different stages
       await idb.none(
