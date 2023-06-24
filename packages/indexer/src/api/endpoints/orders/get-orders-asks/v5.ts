@@ -96,10 +96,13 @@ export const getOrdersAsksV5Options: RouteOptions = {
         .description(
           "activeª^º = currently valid\ninactiveª^ = temporarily invalid\nexpiredª^, canceledª^, filledª^ = permanently invalid\nanyªº = any status\nª when an `id` is passed\n^ when a `maker` is passed\nº when a `contract` is passed"
         ),
-      source: Joi.string()
-        .pattern(regex.domain)
+      sources: Joi.alternatives()
+        .try(
+          Joi.array().max(80).items(Joi.string().pattern(regex.domain)),
+          Joi.string().pattern(regex.domain)
+        )
         .description(
-          "Filter to a source by domain. Only active listed will be returned. Example: `opensea.io`"
+          "Filter to sources by domain. Only active listed will be returned. Example: `opensea.io`"
         ),
       native: Joi.boolean().description("If true, results will filter only Reservoir orders."),
       includePrivate: Joi.boolean()
@@ -163,7 +166,7 @@ export const getOrdersAsksV5Options: RouteOptions = {
     })
       .oxor("token", "tokenSetId")
       .oxor("contracts", "contractsSetId")
-      .oxor("source", "excludeSources")
+      .oxor("sources", "excludeSources")
       .with("community", "maker")
       .with("collectionsSetId", "maker"),
   },
@@ -294,7 +297,7 @@ export const getOrdersAsksV5Options: RouteOptions = {
           query.community ||
           query.collectionsSetId ||
           query.native ||
-          query.source)
+          query.sources)
       ) {
         throw Boom.badRequest(
           `You must provide one of the following: [ids, maker, contracts] in order to filter querys with sortBy = updatedAt and status != 'active.`
@@ -416,16 +419,18 @@ export const getOrdersAsksV5Options: RouteOptions = {
         }
       }
 
-      if (query.source) {
+      if (query.sources) {
         const sources = await Sources.getInstance();
-        const source = sources.getByDomain(query.source);
 
-        if (!source) {
-          return { orders: [] };
+        if (!Array.isArray(query.sources)) {
+          query.sources = [query.sources];
         }
 
-        (query as any).source = source.id;
-        conditions.push(`orders.source_id_int = $/source/`);
+        (query as any).sourceIds = query.sources.map(
+          (source: string) => sources.getByDomain(source)?.id ?? 0
+        );
+
+        conditions.push(`orders.source_id_int IN ($/sourceIds:csv/`);
       }
 
       if (query.excludeSources) {
