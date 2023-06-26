@@ -239,7 +239,7 @@ export const getTransfersV3Options: RouteOptions = {
           );
 
           (query as any).updatedAt = updateAt;
-          (query as any).address = address;
+          (query as any).address = toBuffer(address);
           (query as any).tokenId = tokenId;
 
           conditions.push(
