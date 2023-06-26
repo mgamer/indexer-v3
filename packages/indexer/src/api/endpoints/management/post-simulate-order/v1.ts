@@ -297,6 +297,13 @@ export const postSimulateOrderV1Options: RouteOptions = {
           return { message: "Nothing to simulate" };
         }
 
+        const approvalData = parsedPayload.steps.find(
+          (s: { id: string }) => s.id === "nft-approval"
+        ).items[0]?.data;
+        if (approvalData) {
+          return { message: "Order not simulatable" };
+        }
+
         const saleData = parsedPayload.steps.find((s: { id: string }) => s.id === "sale").items[0]
           ?.data;
         if (!saleData) {
