@@ -28,8 +28,8 @@ import * as b from "@/utils/auth/blur";
 import { getCurrency } from "@/utils/currencies";
 import { ExecutionsBuffer } from "@/utils/executions";
 import * as onChainData from "@/utils/on-chain-data";
-import * as mints from "@/utils/mints/collection-mints";
-import { generateMintTxData } from "@/utils/mints/calldata/generator";
+import * as mints from "@/orderbook/mints";
+import { generateCollectionMintTxData } from "@/orderbook/mints/calldata";
 import { getUSDAndCurrencyPrices } from "@/utils/prices";
 
 const version = "v7";
@@ -180,6 +180,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
   },
   response: {
     schema: Joi.object({
+      requestId: Joi.string(),
       steps: Joi.array().items(
         Joi.object({
           id: Joi.string().required(),
@@ -680,7 +681,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
         if (item.collection) {
           if (!item.fillType || item.fillType === "mint") {
             // Fetch any open mints on the collection which the taker is elligible for
-            const openMints = await mints.getOpenCollectionMints(item.collection);
+            const openMints = await mints.getCollectionMints(item.collection, { status: "open" });
             for (const mint of openMints) {
               if (!payload.currency || mint.currency === payload.currency) {
                 const collectionData = await idb.one(
@@ -706,19 +707,19 @@ export const getExecuteBuyV7Options: RouteOptions = {
                 );
                 if (collectionData) {
                   const quantityToMint = mint.maxMintsPerWallet
-                    ? Math.min(item.quantity, mint.maxMintsPerWallet)
+                    ? Math.min(item.quantity, Number(mint.maxMintsPerWallet))
                     : item.quantity;
+
+                  const { txData, price } = await generateCollectionMintTxData(
+                    mint,
+                    payload.taker,
+                    quantityToMint
+                  );
 
                   const orderId = `mint:${item.collection}`;
                   mintTxs.push({
                     orderId,
-                    txData: generateMintTxData(
-                      mint.details,
-                      payload.taker,
-                      fromBuffer(collectionData.contract),
-                      quantityToMint,
-                      mint.price
-                    ),
+                    txData,
                   });
 
                   await addToPath(
@@ -726,8 +727,8 @@ export const getExecuteBuyV7Options: RouteOptions = {
                       id: orderId,
                       kind: "mint",
                       maker: fromBuffer(collectionData.contract),
-                      nativePrice: mint.price,
-                      price: mint.price,
+                      nativePrice: price,
+                      price: price,
                       sourceId: null,
                       currency: mint.currency,
                       rawData: {},
@@ -1330,10 +1331,10 @@ export const getExecuteBuyV7Options: RouteOptions = {
           user: payload.taker,
           orderId: item.orderId,
           quantity: item.quantity,
-          calldata: txs.find((tx) => tx.orderIds.includes(item.orderId))?.txData.data,
+          ...txs.find((tx) => tx.orderIds.includes(item.orderId))?.txData,
         });
       }
-      await executionsBuffer.flush();
+      const requestId = await executionsBuffer.flush();
 
       const perfTime2 = performance.now();
 
@@ -1348,6 +1349,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
       );
 
       return {
+        requestId,
         steps: blurAuth ? [steps[0], ...steps.slice(1).filter((s) => s.items.length)] : steps,
         errors,
         path,

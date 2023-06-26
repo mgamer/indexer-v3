@@ -9,7 +9,8 @@ export type RecalcTokenCountQueueJobPayload = {
 export class RecalcTokenCountQueueJob extends AbstractRabbitMqJobHandler {
   queueName = "collection-recalc-token-count-queue";
   maxRetries = 10;
-  concurrency = 1;
+  concurrency = 10;
+  lazyMode = true;
   backoff = {
     type: "exponential",
     delay: 20000,
@@ -20,7 +21,7 @@ export class RecalcTokenCountQueueJob extends AbstractRabbitMqJobHandler {
 
     const query = `
           UPDATE "collections"
-          SET "token_count" = (SELECT COUNT(*) FROM "tokens" WHERE "collection_id" = $/collection/),
+          SET "token_count" = (SELECT COUNT(*) FROM "tokens" WHERE "collection_id" = $/collection/ AND (remaining_supply > 0 OR remaining_supply IS NULL)),
               "updated_at" = now()
           WHERE "id" = $/collection/;
       `;

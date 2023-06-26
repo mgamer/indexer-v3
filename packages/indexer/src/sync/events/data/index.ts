@@ -111,12 +111,14 @@ export type EventSubKind =
   | "foundation-buy-price-invalidated"
   | "foundation-buy-price-cancelled"
   | "foundation-buy-price-accepted"
+  | "foundation-offer-accepted"
   | "x2y2-order-cancelled"
   | "x2y2-order-inventory"
   | "seaport-order-cancelled"
   | "seaport-order-filled"
   | "seaport-counter-incremented"
   | "seaport-order-validated"
+  | "seaport-channel-updated"
   | "seaport-v1.4-order-cancelled"
   | "seaport-v1.4-order-filled"
   | "seaport-v1.4-orders-matched"
@@ -208,6 +210,7 @@ export type EventSubKind =
   | "zeroex-v2-fill"
   | "zeroex-v3-fill"
   | "treasure-item-sold"
+  | "treasure-bid-accepted"
   | "looks-rare-v2-new-bid-ask-nonces"
   | "looks-rare-v2-order-nonces-cancelled"
   | "looks-rare-v2-subset-nonces-cancelled"
@@ -284,6 +287,7 @@ const allEventData = [
   foundation.buyPriceCancelled,
   foundation.buyPriceInvalidated,
   foundation.buyPriceSet,
+  foundation.offerAccepted,
   looksRare.cancelAllOrders,
   looksRare.cancelMultipleOrders,
   looksRare.takerAsk,
@@ -297,6 +301,7 @@ const allEventData = [
   seaport.orderCancelled,
   seaport.orderFulfilled,
   seaport.orderValidated,
+  seaport.channelUpdated,
   seaportV14.counterIncremented,
   seaportV14.orderCancelled,
   seaportV14.orderFulfilled,
@@ -434,6 +439,7 @@ const allEventData = [
   sudoswapV2.deltaUpdate,
   sudoswapV2.newERC721Pair,
   sudoswapV2.newERC1155Pair,
+  treasure.bidAccepted,
   paymentProcessor.buySingleListing,
   paymentProcessor.masterNonceInvalidated,
   paymentProcessor.nonceInvalidated,
