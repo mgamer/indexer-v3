@@ -43,8 +43,7 @@ export const offChainCheck = async (
   }
 
   // Check: order's nonce was not bulk cancelled
-  const side = !order.isBuyOrder() ? "sell" : "buy";
-  const minNonce = await commonHelpers.getMinNonce("payment-processor", order.params.trader, side);
+  const minNonce = await commonHelpers.getMinNonce("payment-processor", order.params.trader);
 
   if (minNonce.gt(order.params.masterNonce)) {
     throw new Error("cancelled");
