@@ -97,6 +97,7 @@ export const getTransfersBulkV1Options: RouteOptions = {
   },
   handler: async (request: Request) => {
     const query = request.query as any;
+    query.orderBy = query.orderBy ?? "timestamp"; // Default order by is by timestamp
 
     try {
       let baseQuery = `

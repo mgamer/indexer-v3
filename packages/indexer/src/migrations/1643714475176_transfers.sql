@@ -27,8 +27,8 @@ CREATE INDEX "nft_transfer_events_block_block_hash_index"
 CREATE INDEX "nft_transfer_events_timestamp_index"
   ON "nft_transfer_events" ("timestamp" DESC);
 
-CREATE INDEX "nft_transfer_events_address_timestamp_index"
-  ON "nft_transfer_events" ("address", "timestamp" DESC);
+CREATE INDEX "nft_transfer_events_address_is_deleted_timestamp_index"
+  ON "nft_transfer_events" ("address", "is_deleted", "timestamp" DESC);
 
 CREATE INDEX "nft_transfer_events_address_token_id_timestamp_index"
   ON "nft_transfer_events" ("address", "token_id", "timestamp" DESC);

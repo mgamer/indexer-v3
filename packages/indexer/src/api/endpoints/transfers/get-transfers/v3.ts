@@ -104,6 +104,7 @@ export const getTransfersV3Options: RouteOptions = {
   },
   handler: async (request: Request) => {
     const query = request.query as any;
+    query.orderBy = query.orderBy ?? "timestamp"; // Default order by is by timestamp
 
     try {
       // Associating sales to transfers is done by searching for transfer
