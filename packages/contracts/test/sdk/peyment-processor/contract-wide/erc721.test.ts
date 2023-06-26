@@ -59,9 +59,9 @@ describe("PaymentProcessor - Contract-wide", () => {
 
     const exchange = new PaymentProcessor.Exchange(chainId);
 
-    const buyerMasterNonce = await exchange.getNonce(ethers.provider, buyer.address);
+    const buyerMasterNonce = await exchange.getMasterNonce(ethers.provider, buyer.address);
     const blockTime = await getCurrentTimestamp(ethers.provider);
-    const sellerMasterNonce = await exchange.getNonce(ethers.provider, seller.address);
+    const sellerMasterNonce = await exchange.getMasterNonce(ethers.provider, seller.address);
 
     const builder = new PaymentProcessor.Builders.ContractWide(chainId);
     const buyOrder = builder.build({

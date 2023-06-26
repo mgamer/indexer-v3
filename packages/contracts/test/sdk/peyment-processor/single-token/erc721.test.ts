@@ -51,8 +51,8 @@ describe("PaymentProcessor - SingleToken", () => {
 
     const exchange = new PaymentProcessor.Exchange(chainId);
 
-    const sellerMasterNonce = await exchange.getNonce(ethers.provider, seller.address);
-    const takerMasterNonce = await exchange.getNonce(ethers.provider, buyer.address);
+    const sellerMasterNonce = await exchange.getMasterNonce(ethers.provider, seller.address);
+    const takerMasterNonce = await exchange.getMasterNonce(ethers.provider, buyer.address);
     const blockTime = await getCurrentTimestamp(ethers.provider);
 
     const builder = new PaymentProcessor.Builders.SingleToken(chainId);
@@ -123,8 +123,8 @@ describe("PaymentProcessor - SingleToken", () => {
     await nft.approve(seller, PaymentProcessor.Addresses.PaymentProcessor[chainId]);
 
     const exchange = new PaymentProcessor.Exchange(chainId);
-    const buyerMasterNonce = await exchange.getNonce(ethers.provider, buyer.address);
-    const sellerMasterNonce = await exchange.getNonce(ethers.provider, seller.address);
+    const buyerMasterNonce = await exchange.getMasterNonce(ethers.provider, buyer.address);
+    const sellerMasterNonce = await exchange.getMasterNonce(ethers.provider, seller.address);
     const blockTime = await getCurrentTimestamp(ethers.provider);
 
     const builder = new PaymentProcessor.Builders.SingleToken(chainId);

@@ -1,7 +1,9 @@
 import { AddressZero } from "@ethersproject/constants";
 import * as Sdk from "@reservoir0x/sdk";
 import pLimit from "p-limit";
-
+import { Interface } from "@ethersproject/abi";
+import { Contract } from "@ethersproject/contracts";
+import { baseProvider } from "@/common/provider";
 import { idb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
 import { bn, now, toBuffer } from "@/common/utils";
@@ -41,6 +43,24 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       const order = new Sdk.PaymentProcessor.Order(config.chainId, orderParams);
       const id = order.hash();
 
+      const exchange = new Contract(
+        Sdk.PaymentProcessor.Addresses.PaymentProcessor[config.chainId],
+        new Interface([
+          "function getTokenSecurityPolicyId(address collectionAddress) public view returns (uint256)",
+        ]),
+        baseProvider
+      );
+
+      const securityId = await exchange.getTokenSecurityPolicyId(order.params.tokenAddress);
+
+      // DEFAULT_SECURITY_POLICY_ID = 0
+      if (securityId.toString() != "0") {
+        return results.push({
+          id,
+          status: "unsupported-security-policy",
+        });
+      }
+
       // Check: order doesn't already exist
       const orderExists = await idb.oneOrNone(`SELECT 1 FROM "orders" "o" WHERE "o"."id" = $/id/`, {
         id,
@@ -53,24 +73,6 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       }
 
       const currentTime = now();
-
-      // Check: order has a valid listing time
-      // const listingTime = now();
-      // if (listingTime - 5 * 60 >= currentTime) {
-      //   // TODO: Add support for not-yet-valid orders
-      //   return results.push({
-      //     id,
-      //     status: "invalid-listing-time",
-      //   });
-      // }
-
-      // Mutiple tokens
-      // if (order.params.itemIds.length > 1 || bn(order.params.amounts[0]).gt(1)) {
-      //   return results.push({
-      //     id,
-      //     status: "bundle-order-unsupported",
-      //   });
-      // }
 
       // Check: order is not expired
       const expirationTime = Number(order.params.expiration);
@@ -94,15 +96,15 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         });
       }
 
-      // // Check: order is valid
-      // try {
-      //   order.checkValidity();
-      // } catch {
-      //   return results.push({
-      //     id,
-      //     status: "invalid",
-      //   });
-      // }
+      // Check: order is valid
+      try {
+        order.checkValidity();
+      } catch {
+        return results.push({
+          id,
+          status: "invalid",
+        });
+      }
 
       // Check: order has a valid signature
       try {
@@ -284,9 +286,9 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       const isReservoir = false;
 
       // Handle: conduit
-      let conduit = Sdk.LooksRareV2.Addresses.Exchange[config.chainId];
+      let conduit = Sdk.PaymentProcessor.Addresses.PaymentProcessor[config.chainId];
       if (side === "sell") {
-        conduit = Sdk.LooksRareV2.Addresses.TransferManager[config.chainId];
+        conduit = Sdk.PaymentProcessor.Addresses.PaymentProcessor[config.chainId];
       }
 
       const validFrom = `date_trunc('seconds', now())`;

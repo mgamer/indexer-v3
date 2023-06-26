@@ -28,7 +28,7 @@ export const sweepCollectionERC721: EventData = {
   kind: "payment-processor",
   subKind: "payment-processor-sweep-collection-erc721",
   addresses: { [PaymentProcessor.Addresses.PaymentProcessor[config.chainId]?.toLowerCase()]: true },
-  topic: "0x7ed668b30822ae5c7db7b4a32f84e6645250bb6db0d1fc73eeb484c5b34b1d1b",
+  topic: "0x8435e05433e0d3a3fe612b10c36f6623deec79239f76721a154687fef0ca46a1",
   numTopics: 4,
   abi: new Interface([
     `event SweepCollectionERC721(
@@ -48,7 +48,7 @@ export const sweepCollectionERC1155: EventData = {
   kind: "payment-processor",
   subKind: "payment-processor-sweep-collection-erc1155",
   addresses: { [PaymentProcessor.Addresses.PaymentProcessor[config.chainId]?.toLowerCase()]: true },
-  topic: "0x7ed668b30822ae5c7db7b4a32f84e6645250bb6db0d1fc73eeb484c5b34b1d1b",
+  topic: "0x35cd37c73a78d0322074e1324a7d5d4cf5c7ff21f3265d03f4d085c532c6f019",
   numTopics: 4,
   abi: new Interface([
     `event SweepCollectionERC1155(

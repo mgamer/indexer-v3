@@ -37,7 +37,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
       case "payment-processor-master-nonce-invalidated": {
         const parsedLog = eventData.abi.parseLog(log);
         const maker = parsedLog.args["account"].toLowerCase();
-        const newNonce = parsedLog.args["none"].toString();
+        const newNonce = parsedLog.args["nonce"].toString();
 
         // Cancel all related orders across maker
         onChainData.bulkCancelEvents.push({
@@ -51,7 +51,6 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
       }
 
       case "payment-processor-buy-single-listing": {
-        // const parsedLog = eventData.abi.parseLog(log);
         const txHash = baseEventParams.txHash;
         const transaction = await utils.fetchTransaction(txHash);
 

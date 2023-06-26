@@ -4,7 +4,7 @@ export enum TokenProtocols {
 }
 
 export type OrderKind = "sale-approval" | "offer-approval" | "collection-offer-approval";
-export type MatchOrder = {
+export type MatchedOrder = {
   sellerAcceptedOffer: boolean;
   collectionLevelOffer: boolean;
   protocol: TokenProtocols;

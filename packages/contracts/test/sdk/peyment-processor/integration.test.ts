@@ -71,8 +71,8 @@ describe("PaymentProcessor - Indexer Integration Test", () => {
     const exchange = new PaymentProcessor.Exchange(chainId);
     console.log(green("\n\n\t Build Order"));
 
-    const buyerMasterNonce = await exchange.getNonce(ethers.provider, buyer.address);
-    const sellerMasterNonce = await exchange.getNonce(ethers.provider, seller.address);
+    const buyerMasterNonce = await exchange.getMasterNonce(ethers.provider, buyer.address);
+    const sellerMasterNonce = await exchange.getMasterNonce(ethers.provider, seller.address);
     const blockTime = await getCurrentTimestamp(ethers.provider);
 
     const builder = new PaymentProcessor.Builders.SingleToken(chainId);

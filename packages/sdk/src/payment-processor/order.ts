@@ -9,7 +9,6 @@ import ExchangeAbi from "./abis/PaymentProcessor.json";
 import * as Addresses from "./addresses";
 import { TypedDataSigner } from "@ethersproject/abstract-signer";
 import * as Common from "../common";
-// import { Exchange } from "./exchange";
 import { Builders } from "./builders";
 import { BaseBuilder, MatchingOptions } from "./builders/base";
 import { splitSignature } from "@ethersproject/bytes";
@@ -39,6 +38,12 @@ export class Order {
 
   public isBuyOrder() {
     return ["offer-approval", "collection-offer-approval"].includes(this.params.kind!);
+  }
+
+  public checkValidity() {
+    if (!this.getBuilder().isValid(this)) {
+      throw new Error("Invalid order");
+    }
   }
 
   private detectKind(): Types.OrderKind {
@@ -83,7 +88,7 @@ export class Order {
     };
   }
 
-  public getMatchOrder(matchOrder: Order): Types.MatchOrder {
+  public getMatchedOrder(matchOrder: Order): Types.MatchedOrder {
     const isBuyOrder = this.isBuyOrder();
 
     const sellOrder = isBuyOrder ? matchOrder.params : this.params;
@@ -129,17 +134,6 @@ export class Order {
         s: buyOrder.s!,
         v: buyOrder.v!,
       },
-    };
-  }
-
-  public getMatchOrderSignatureData() {
-    const [types, value] = this.getEip712TypesAndValue();
-    return {
-      signatureKind: "eip712",
-      domain: EIP712_DOMAIN(this.chainId),
-      types,
-      value,
-      primaryType: _TypedDataEncoder.getPrimaryType(types),
     };
   }
 

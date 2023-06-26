@@ -19,7 +19,7 @@ export class Exchange {
 
   // --- Get nonce ---
 
-  public async getNonce(provider: Provider, user: string): Promise<BigNumber> {
+  public async getMasterNonce(provider: Provider, user: string): Promise<BigNumber> {
     return this.contract.connect(provider).masterNonces(user);
   }
 
@@ -93,7 +93,7 @@ export class Exchange {
       source?: string;
     }
   ): TxData {
-    const macthOrder = order.getMatchOrder(matchOrder);
+    const macthOrder = order.getMatchedOrder(matchOrder);
     const data = this.contract.interface.encodeFunctionData("buySingleListing", [
       macthOrder,
       macthOrder.listingSignature,
