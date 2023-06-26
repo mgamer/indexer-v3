@@ -134,11 +134,17 @@ export const extractByTx = async (txHash: string, skipCache = false) => {
     }
   }
 
-  return [
+  const results = [
     ...(await manifold.extractByTx(collection, tx)),
     ...(await zora.extractByTx(collection, tx)),
     ...(await seadrop.extractByTx(collection, contract, tx)),
     ...(await thirdweb.extractByTx(collection, tx)),
-    ...(await generic.extractByTx(collection, contract, tx, pricePerAmountMinted, amountMinted)),
   ];
+  if (!results.length) {
+    results.push(
+      ...(await generic.extractByTx(collection, contract, tx, pricePerAmountMinted, amountMinted))
+    );
+  }
+
+  return results;
 };
