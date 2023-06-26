@@ -1,6 +1,6 @@
 import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handler";
-import * as eventsSyncBackfill from "@/jobs/events-sync/backfill-queue";
 import { EventSubKind } from "@/events-sync/data";
+import { eventsSyncBackfillJob } from "@/jobs/events-sync/events-sync-backfill-job";
 
 export type ProcessResyncRequestJobPayload = {
   fromBlock: number;
@@ -27,7 +27,7 @@ export class ProcessResyncRequestJob extends AbstractRabbitMqJobHandler {
   protected async process(payload: ProcessResyncRequestJobPayload) {
     const { fromBlock, toBlock, backfill, syncDetails, blocksPerBatch } = payload;
 
-    await eventsSyncBackfill.addToQueue(fromBlock, toBlock, {
+    await eventsSyncBackfillJob.addToQueue(fromBlock, toBlock, {
       backfill,
       syncDetails,
       blocksPerBatch,

@@ -55,7 +55,6 @@ import * as collectionUpdatesFloorAsk from "@/jobs/collection-updates/floor-queu
 
 import * as tokenSetUpdatesTopBid from "@/jobs/token-set-updates/top-bid-queue";
 
-import * as eventsSyncBackfill from "@/jobs/events-sync/backfill-queue";
 import * as eventsSyncBlockCheck from "@/jobs/events-sync/block-check-queue";
 import * as eventsSyncBackfillProcess from "@/jobs/events-sync/process/backfill";
 import * as eventsSyncRealtimeProcess from "@/jobs/events-sync/process/realtime";
@@ -184,6 +183,7 @@ import { eventsSyncFtTransfersWriteBufferJob } from "@/jobs/events-sync/write-bu
 import { eventsSyncNftTransfersWriteBufferJob } from "@/jobs/events-sync/write-buffers/nft-transfers-job";
 import { eventsSyncProcessBackfillJob } from "@/jobs/events-sync/process/events-sync-process-backfill";
 import { processResyncRequestJob } from "@/jobs/events-sync/process-resync-request-queue-job";
+import { eventsSyncBackfillJob } from "@/jobs/events-sync/events-sync-backfill-job";
 
 export const gracefulShutdownJobWorkers = [
   orderUpdatesById.worker,
@@ -222,7 +222,6 @@ export const allJobQueues = [
 
   tokenSetUpdatesTopBid.queue,
 
-  eventsSyncBackfill.queue,
   eventsSyncBlockCheck.queue,
   eventsSyncBackfillProcess.queue,
   eventsSyncRealtimeProcess.queue,
@@ -359,6 +358,7 @@ export class RabbitMqJobsConsumer {
       eventsSyncNftTransfersWriteBufferJob,
       eventsSyncProcessBackfillJob,
       processResyncRequestJob,
+      eventsSyncBackfillJob,
     ];
   }
 
