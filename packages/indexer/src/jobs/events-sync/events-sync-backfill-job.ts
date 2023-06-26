@@ -25,6 +25,7 @@ export class EventsSyncBackfillJob extends AbstractRabbitMqJobHandler {
   queueName = "events-sync-backfill";
   maxRetries = 10;
   concurrency = 2;
+  lazyMode = true;
   backoff = {
     type: "exponential",
     delay: 10000,
