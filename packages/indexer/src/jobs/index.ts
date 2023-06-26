@@ -49,13 +49,12 @@ import * as backfillCollectionsPaymentTokens from "@/jobs/backfill/backfill-coll
 import * as backfillWrongNftBalances from "@/jobs/backfill/backfill-wrong-nft-balances";
 import * as backfillFoundationOrders from "@/jobs/backfill/backfill-foundation-orders";
 import * as backfillLooksrareFills from "@/jobs/backfill/backfill-looks-rare-fills";
+import * as backfillCollectionsIds from "@/jobs/backfill/backfill-collections-ids";
 
 import * as collectionUpdatesFloorAsk from "@/jobs/collection-updates/floor-queue";
 
 import * as tokenSetUpdatesTopBid from "@/jobs/token-set-updates/top-bid-queue";
 
-import * as eventsSyncProcessResyncRequest from "@/jobs/events-sync/process-resync-request-queue";
-import * as eventsSyncBackfill from "@/jobs/events-sync/backfill-queue";
 import * as eventsSyncBlockCheck from "@/jobs/events-sync/block-check-queue";
 import * as eventsSyncBackfillProcess from "@/jobs/events-sync/process/backfill";
 import * as eventsSyncRealtimeProcess from "@/jobs/events-sync/process/realtime";
@@ -183,6 +182,9 @@ import { savePendingActivitiesJob } from "@/jobs/activities/save-pending-activit
 import { eventsSyncFtTransfersWriteBufferJob } from "@/jobs/events-sync/write-buffers/ft-transfers-job";
 import { eventsSyncNftTransfersWriteBufferJob } from "@/jobs/events-sync/write-buffers/nft-transfers-job";
 import { eventsSyncProcessBackfillJob } from "@/jobs/events-sync/process/events-sync-process-backfill";
+import { openseaBidsQueueJob } from "@/jobs/orderbook/opensea-bids-queue-job";
+import { processResyncRequestJob } from "@/jobs/events-sync/process-resync-request-queue-job";
+import { eventsSyncBackfillJob } from "@/jobs/events-sync/events-sync-backfill-job";
 
 export const gracefulShutdownJobWorkers = [
   orderUpdatesById.worker,
@@ -215,13 +217,12 @@ export const allJobQueues = [
   backfillInvalidateSeaportV14Orders.queue,
   backfillBlurSales.queue,
   backfillLooksrareFills.queue,
+  backfillCollectionsIds.queue,
 
   collectionUpdatesFloorAsk.queue,
 
   tokenSetUpdatesTopBid.queue,
 
-  eventsSyncProcessResyncRequest.queue,
-  eventsSyncBackfill.queue,
   eventsSyncBlockCheck.queue,
   eventsSyncBackfillProcess.queue,
   eventsSyncRealtimeProcess.queue,
@@ -357,6 +358,9 @@ export class RabbitMqJobsConsumer {
       eventsSyncFtTransfersWriteBufferJob,
       eventsSyncNftTransfersWriteBufferJob,
       eventsSyncProcessBackfillJob,
+      openseaBidsQueueJob,
+      processResyncRequestJob,
+      eventsSyncBackfillJob,
     ];
   }
 
@@ -487,7 +491,9 @@ export class RabbitMqJobsConsumer {
 
       for (const queue of RabbitMqJobsConsumer.getQueues()) {
         try {
-          await RabbitMqJobsConsumer.subscribe(queue);
+          if (!queue.isDisableConsuming()) {
+            await RabbitMqJobsConsumer.subscribe(queue);
+          }
         } catch (error) {
           logger.error(
             "rabbit-subscribe",

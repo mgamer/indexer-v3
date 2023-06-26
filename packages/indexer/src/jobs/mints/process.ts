@@ -3,8 +3,8 @@ import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
 import { config } from "@/config/index";
-import { saveCollectionMint } from "@/orderbook/mints";
-import { detectCollectionMint } from "@/orderbook/mints/calldata/detector";
+import { simulateAndUpsertCollectionMint } from "@/orderbook/mints";
+import { extractByTx } from "@/orderbook/mints/calldata/detector";
 
 const QUEUE_NAME = "mints-process";
 
@@ -31,14 +31,11 @@ if (config.doBackgroundWork) {
       const { txHash } = job.data as Mint;
 
       try {
-        const collectionMint = await detectCollectionMint(txHash);
-        if (collectionMint) {
-          const result = await saveCollectionMint(collectionMint);
+        const collectionMints = await extractByTx(txHash);
+        for (const collectionMint of collectionMints) {
+          const result = await simulateAndUpsertCollectionMint(collectionMint);
           logger.info("mints-process", JSON.stringify({ success: result, collectionMint }));
-        } else {
-          logger.info("mints-process", JSON.stringify({ success: false, txHash }));
         }
-
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (error: any) {
         logger.error(

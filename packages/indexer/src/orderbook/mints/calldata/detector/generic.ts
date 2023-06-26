@@ -5,50 +5,58 @@ import { logger } from "@/common/logger";
 import { bn } from "@/common/utils";
 import { config } from "@/config/index";
 import { Transaction } from "@/models/transactions";
-import { getMaxSupply } from "@/orderbook/mints/calldata/detector/helpers";
-import { AbiParam, CollectionMint } from "@/orderbook/mints";
+import {
+  CollectionMint,
+  getCollectionMints,
+  simulateAndUpsertCollectionMint,
+} from "@/orderbook/mints";
+import { AbiParam } from "@/orderbook/mints/calldata";
+import { getMaxSupply } from "@/orderbook/mints/calldata/helpers";
 import { getMethodSignature } from "@/orderbook/mints/method-signatures";
 
-export const tryParseCollectionMint = async (
+export const extractByTx = async (
   collection: string,
   contract: string,
   tx: Transaction,
   pricePerAmountMinted: BigNumber,
   amountMinted: BigNumber
-): Promise<CollectionMint | undefined> => {
+): Promise<CollectionMint[]> => {
   const maxSupply = await getMaxSupply(contract);
 
   if (tx.data.length === 10) {
-    return {
-      collection,
-      stage: "public-sale",
-      kind: "public",
-      status: "open",
-      standard: "unknown",
-      details: {
-        tx: {
-          to: tx.to,
-          data: {
-            signature: tx.data,
-            params: [],
+    return [
+      {
+        collection,
+        contract,
+        stage: "public-sale",
+        kind: "public",
+        status: "open",
+        standard: "unknown",
+        details: {
+          tx: {
+            to: tx.to,
+            data: {
+              signature: tx.data,
+              params: [],
+            },
           },
         },
+        currency: Sdk.Common.Addresses.Eth[config.chainId],
+        price: pricePerAmountMinted.toString(),
+        maxSupply,
       },
-      currency: Sdk.Common.Addresses.Eth[config.chainId],
-      price: pricePerAmountMinted.toString(),
-      maxSupply,
-    };
+    ];
   }
 
   // Try to get the method signature from the calldata
   const methodSignature = await getMethodSignature(tx.data);
   if (!methodSignature) {
-    return undefined;
+    return [];
   }
 
   // For now, we only support simple data types in the calldata
   if (["(", ")", "[", "]", "bytes"].some((x) => methodSignature.params.includes(x))) {
-    return undefined;
+    return [];
   }
 
   const params: AbiParam[] = [];
@@ -84,23 +92,36 @@ export const tryParseCollectionMint = async (
     logger.error("mint-detector", JSON.stringify({ kind: "generic", error }));
   }
 
-  return {
-    collection,
-    stage: "public-sale",
-    kind: "public",
-    status: "open",
-    standard: "unknown",
-    details: {
-      tx: {
-        to: tx.to,
-        data: {
-          signature: methodSignature.signature,
-          params,
+  return [
+    {
+      collection,
+      contract,
+      stage: "public-sale",
+      kind: "public",
+      status: "open",
+      standard: "unknown",
+      details: {
+        tx: {
+          to: tx.to,
+          data: {
+            signature: methodSignature.signature,
+            params,
+          },
         },
       },
+      currency: Sdk.Common.Addresses.Eth[config.chainId],
+      price: pricePerAmountMinted.toString(),
+      maxSupply,
     },
-    currency: Sdk.Common.Addresses.Eth[config.chainId],
-    price: pricePerAmountMinted.toString(),
-    maxSupply,
-  };
+  ];
+};
+
+export const refreshByCollection = async (collection: string) => {
+  const existingCollectionMints = await getCollectionMints(collection, { standard: "unknown" });
+
+  // TODO: We should look into re-detecting and updating any fields that
+  // could have changed on the mint since the initial detection
+  for (const collectionMint of existingCollectionMints) {
+    await simulateAndUpsertCollectionMint(collectionMint);
+  }
 };
