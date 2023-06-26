@@ -430,7 +430,7 @@ export const getOrdersAsksV5Options: RouteOptions = {
           (source: string) => sources.getByDomain(source)?.id ?? 0
         );
 
-        conditions.push(`orders.source_id_int IN ($/sourceIds:csv/`);
+        conditions.push(`orders.source_id_int IN ($/sourceIds:csv/)`);
       }
 
       if (query.excludeSources) {
