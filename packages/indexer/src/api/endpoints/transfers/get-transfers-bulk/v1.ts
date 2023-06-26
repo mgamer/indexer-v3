@@ -151,7 +151,10 @@ export const getTransfersBulkV1Options: RouteOptions = {
             `(nft_transfer_events.timestamp, nft_transfer_events.log_index, nft_transfer_events.batch_index) < ($/timestamp/, $/logIndex/, $/batchIndex/)`
           );
         } else if (query.orderBy == "updated_at") {
-          const [updateAt, address, tokenId] = splitContinuation(query.continuation);
+          const [updateAt, address, tokenId] = splitContinuation(
+            query.continuation,
+            /^(.+)_0x[a-fA-F0-9]{40}_(\d+)$/
+          );
 
           (query as any).updatedAt = updateAt;
           (query as any).address = address;
@@ -222,9 +225,9 @@ export const getTransfersBulkV1Options: RouteOptions = {
           );
         } else if (query.orderBy == "updated_at") {
           continuation = buildContinuation(
-            rawResult[rawResult.length - 1].updated_at +
+            rawResult[rawResult.length - 1].updated_ts +
               "_" +
-              rawResult[rawResult.length - 1].address +
+              fromBuffer(rawResult[rawResult.length - 1].address) +
               "_" +
               rawResult[rawResult.length - 1].token_id
           );
