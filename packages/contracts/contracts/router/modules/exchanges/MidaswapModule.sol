@@ -11,9 +11,15 @@ import {IMidasRouter} from "../../../interfaces/IMidaswap.sol";
 import {IMidasPair} from "../../../interfaces/IMidaswap.sol";
 import {IMidasFactory} from "../../../interfaces/IMidaswap.sol";
 
+/// @notice Works as the router of Midaswap Pairs in order to save gas. Logics of approve ERC-20 & ERC-721 are removed.
 contract MidaswapModule is BaseExchangeModule {
+  /// @notice Wrapped ETH
   IWETH public weth;
+
+  /// @notice Origin router of midaswap working for quotes
   IMidasRouter public immutable MIDAS_ROUTER;
+
+  /// @notice Factory of midaswap working for info queries
   IMidasFactory public immutable MIDAS_FACTORY;
 
   // --- Constructor ---
@@ -71,8 +77,6 @@ contract MidaswapModule is BaseExchangeModule {
     refundERC20Leftover(params.refundTo, params.token)
     chargeERC20Fees(fees, params.token, params.amount)
   {
-    // Approve the router if needed
-    _approveERC20IfNeeded(params.token, address(this), params.amount);
     uint256 _length = nfts.length;
     for (uint i; i < _length; ) {
       // Execute fill
@@ -91,9 +95,6 @@ contract MidaswapModule is BaseExchangeModule {
     OfferParams calldata params,
     Fee[] calldata fees
   ) external nonReentrant {
-    // Approve the router if needed
-    _approveERC721IfNeeded(IERC721(nft), address(this));
-
     // Execute fill
     if (token == 0x0000000000000000000000000000000000000000) {
       _sellItemToETH(nft, address(weth), params.fillTo, nftId, params.revertIfIncomplete);
