@@ -58,7 +58,7 @@ if (config.doBackgroundWork) {
             LIMIT $/limit/
           )
           UPDATE nft_transfer_events SET
-              updated_at = x.created_at
+              updated_at = COALESCE(x.created_at, NOW())
           FROM x
           WHERE nft_transfer_events.tx_hash = x.tx_hash
           AND nft_transfer_events.log_index = x.log_index
