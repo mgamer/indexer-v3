@@ -312,7 +312,7 @@ export class DailyVolume {
         await idb.none(concat);
       } catch (error: any) {
         logger.error(
-          "daily-volumes",
+          "day-1-volumes",
           `Error while inserting/updating daily volumes. collectionId=${collectionId}`
         );
 
@@ -346,7 +346,7 @@ export class DailyVolume {
         await idb.none(concat);
       } catch (error: any) {
         logger.error(
-          "daily-volumes",
+          "day-1-volumes",
           `Error while setting 1day values to null. collectionId=${collectionId}`
         );
 
