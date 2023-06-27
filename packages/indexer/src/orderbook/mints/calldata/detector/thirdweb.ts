@@ -17,7 +17,12 @@ import {
   simulateAndUpsertCollectionMint,
 } from "@/orderbook/mints";
 import { fetchMetadata, getStatus, toSafeTimestamp } from "@/orderbook/mints/calldata/helpers";
-import { AllowlistItem, allowlistExists, createAllowlist } from "@/orderbook/mints/allowlists";
+import {
+  AllowlistItem,
+  allowlistExists,
+  createAllowlist,
+  getAllowlist,
+} from "@/orderbook/mints/allowlists";
 
 export const extractByCollection = async (
   collection: string,
@@ -370,7 +375,14 @@ const generateMerkleTree = (
   };
 };
 
-export const generateProofValue = (items: AllowlistItem[], address: string) => {
+type ProofValue = [string[], string, string, string];
+
+export const generateProofValue = async (
+  collectionMint: CollectionMint,
+  address: string
+): Promise<ProofValue> => {
+  const items = await getAllowlist(collectionMint.allowlistId!);
+
   const { roots, shards, tree } = generateMerkleTree(items);
 
   const shardId = address.slice(2, 2 + SHARD_NYBBLES).toLowerCase();
@@ -383,5 +395,10 @@ export const generateProofValue = (items: AllowlistItem[], address: string) => {
 
   const item = items.find((i) => i.address === address)!;
   const itemProof = shardTree.getHexProof(hashFn(item));
-  return [itemProof.concat(shardProof), item.maxMints ?? 0, item.price ?? MaxUint256, AddressZero];
+  return [
+    itemProof.concat(shardProof),
+    item.maxMints ?? "0",
+    item.price ?? MaxUint256.toString(),
+    AddressZero,
+  ];
 };
