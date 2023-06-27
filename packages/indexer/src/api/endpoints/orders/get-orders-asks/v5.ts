@@ -427,9 +427,13 @@ export const getOrdersAsksV5Options: RouteOptions = {
           query.sources = [query.sources];
         }
 
-        (query as any).sourceIds = query.sources.map(
-          (source: string) => sources.getByDomain(source)?.id ?? 0
-        );
+        (query as any).sourceIds = query.sources
+          .map((source: string) => sources.getByDomain(source)?.id ?? 0)
+          .filter((id: number) => id != 0);
+
+        if (_.isEmpty(query.sourceIds)) {
+          return { orders: [] };
+        }
 
         conditions.push(`orders.source_id_int IN ($/sourceIds:csv/)`);
       }
@@ -441,16 +445,18 @@ export const getOrdersAsksV5Options: RouteOptions = {
           query.excludeSources = [query.excludeSources];
         }
 
-        (query as any).excludeSourceIds = query.excludeSources.map(
-          (source: string) => sources.getByDomain(source)?.id ?? 0
-        );
+        (query as any).excludeSourceIds = query.excludeSources
+          .map((source: string) => sources.getByDomain(source)?.id ?? 0)
+          .filter((id: number) => id != 0);
 
-        conditions.push(
-          `orders.source_id_int IN (
-              SELECT id FROM sources_v2 sv
-              WHERE id NOT IN ($/excludeSourceIds:csv/)
-          )`
-        );
+        if (!_.isEmpty(query.excludeSourceIds)) {
+          conditions.push(
+            `orders.source_id_int IN (
+                SELECT id FROM sources_v2 sv
+                WHERE id NOT IN ($/excludeSourceIds:csv/)
+            )`
+          );
+        }
       }
 
       if (query.native) {
