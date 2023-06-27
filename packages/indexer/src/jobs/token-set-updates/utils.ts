@@ -27,7 +27,8 @@ export async function processTopBid(payload: topBidPayload, queueName: string) {
                 WITH x AS (
                   SELECT
                     token_sets.id AS token_set_id,
-                    y.*
+                    y.*,
+                    z.*
                   FROM token_sets
                   LEFT JOIN LATERAL (
                     SELECT
@@ -43,6 +44,12 @@ export async function processTopBid(payload: topBidPayload, queueName: string) {
                     ORDER BY orders.value DESC
                     LIMIT 1
                   ) y ON TRUE
+                  LEFT JOIN LATERAL (
+                    SELECT
+                      top_buy_value
+                    FROM collections
+                    WHERE collections.id = token_sets.collection_id
+                  ) z ON TRUE
                   WHERE token_sets.id = $/tokenSetId/
                 )
                 UPDATE token_sets SET
@@ -61,7 +68,8 @@ export async function processTopBid(payload: topBidPayload, queueName: string) {
                   collection_id AS "collectionId",
                   attribute_id AS "attributeId",
                   top_buy_value AS "topBuyValue",
-                  top_buy_id AS "topBuyId"
+                  top_buy_id AS "topBuyId",
+                  collection_top_buy_value AS "collectionTopBuyValue"
               `,
       { tokenSetId: payload.tokenSetId }
     );
@@ -98,7 +106,8 @@ export async function processTopBid(payload: topBidPayload, queueName: string) {
       if (
         payload.kind === "new-order" &&
         tokenSetTopBid[0].topBuyId &&
-        _.isNull(tokenSetTopBid[0].collectionId)
+        _.isNull(tokenSetTopBid[0].collectionId) &&
+        tokenSetTopBid[0].topBuyValue > tokenSetTopBid[0].collectionTopBuyValue
       ) {
         //  Only trigger websocket event for non collection offers.
         await WebsocketEventRouter({
