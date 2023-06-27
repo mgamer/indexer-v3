@@ -52,6 +52,7 @@ import * as backfillLooksrareFills from "@/jobs/backfill/backfill-looks-rare-fil
 import * as backfillCollectionsIds from "@/jobs/backfill/backfill-collections-ids";
 
 import * as collectionUpdatesFloorAsk from "@/jobs/collection-updates/floor-queue";
+import * as collectionUpdatesNormalizedFloorAsk from "@/jobs/collection-updates/normalized-floor-queue";
 
 import * as tokenSetUpdatesTopBid from "@/jobs/token-set-updates/top-bid-queue";
 
@@ -219,6 +220,7 @@ export const allJobQueues = [
   backfillCollectionsIds.queue,
 
   collectionUpdatesFloorAsk.queue,
+  collectionUpdatesNormalizedFloorAsk.queue,
 
   tokenSetUpdatesTopBid.queue,
 
