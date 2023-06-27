@@ -1939,7 +1939,7 @@ export class Router {
       executions.push({
         module: module.address,
         data: module.interface.encodeFunctionData("buyWithETH", [
-          midaswapDetails.map((d) => (d.order as Sdk.Midaswap.Order).params.pair),
+          midaswapDetails.map((d) => (d.order as Sdk.Midaswap.Order).params.tokenX),
           midaswapDetails.map((d) => (d.contractKind === "erc721" ? d.tokenId : d.amount ?? 1)),
           {
             fillTo: taker,
@@ -3570,7 +3570,7 @@ export class Router {
             execution: {
               module: module.address,
               data: module.interface.encodeFunctionData("sell", [
-                order.params.pair,
+                order.params.tokenX,
                 detail.contractKind === "erc721" ? detail.tokenId : detail.amount ?? 1,
                 bn(order.params.extra.prices[0]).sub(
                   // Take into account the protocol fee of 0.5%

@@ -23,6 +23,7 @@ export * as superrare from "@/orderbook/orders/superrare";
 export * as looksRareV2 from "@/orderbook/orders/looks-rare-v2";
 export * as collectionxyz from "@/orderbook/orders/collectionxyz";
 export * as sudoswapV2 from "@/orderbook/orders/sudoswap-v2";
+export * as midaswap from "@/orderbook/orders/midaswap";
 
 // Imports
 
@@ -77,7 +78,8 @@ export type OrderKind =
   | "looks-rare-v2"
   | "blend"
   | "collectionxyz"
-  | "sudoswap-v2";
+  | "sudoswap-v2"
+  | "midaswap";
 
 // In case we don't have the source of an order readily available, we use
 // a default value where possible (since very often the exchange protocol
@@ -424,6 +426,14 @@ export const generateListingDetailsV6 = (
       };
     }
 
+    case "midaswap": {
+      return {
+        kind: "midaswap",
+        ...common,
+        order: new Sdk.Midaswap.Order(config.chainId, order.rawData),
+      };
+    }
+
     default: {
       throw new Error("Unsupported order kind");
     }
@@ -748,6 +758,15 @@ export const generateBidDetailsV6 = async (
       const sdkOrder = new Sdk.SudoswapV2.Order(config.chainId, order.rawData);
       return {
         kind: "sudoswap-v2",
+        ...common,
+        order: sdkOrder,
+      };
+    }
+
+    case "midaswap": {
+      const sdkOrder = new Sdk.Midaswap.Order(config.chainId, order.rawData);
+      return {
+        kind: "midaswap",
         ...common,
         order: sdkOrder,
       };

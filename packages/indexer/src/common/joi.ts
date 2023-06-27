@@ -390,6 +390,26 @@ export const getJoiDynamicPricingObject = async (
         ),
       },
     };
+  } else if (kind === "midaswap") {
+    // Pool orders
+    return {
+      kind: "pool",
+      data: {
+        pool: (raw_data as Sdk.Midaswap.OrderParams).pair,
+        prices: await Promise.all(
+          ((raw_data as Sdk.Midaswap.OrderParams).extra.prices as string[]).map((price) =>
+            getJoiPriceObject(
+              {
+                gross: {
+                  amount: bn(price).add(missingRoyalties).toString(),
+                },
+              },
+              floorAskCurrency
+            )
+          )
+        ),
+      },
+    };
   } else if (kind === "collectionxyz") {
     // Pool orders
     return {

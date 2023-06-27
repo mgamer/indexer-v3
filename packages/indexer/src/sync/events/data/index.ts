@@ -39,6 +39,7 @@ import * as zora from "@/events-sync/data/zora";
 import * as looksRareV2 from "@/events-sync/data/looks-rare-v2";
 import * as blend from "@/events-sync/data/blend";
 import * as sudoswapV2 from "@/events-sync/data/sudoswap-v2";
+import * as midaswap from "@/events-sync/data/midaswap";
 
 // All events we're syncing should have an associated `EventData`
 // entry which dictates the way the event will be parsed and then
@@ -80,7 +81,8 @@ export type EventKind =
   | "zora"
   | "looks-rare-v2"
   | "blend"
-  | "sudoswap-v2";
+  | "sudoswap-v2"
+  | "midaswap";
 
 // Event sub-kind in each of the above protocol/standard
 export type EventSubKind =
@@ -253,7 +255,16 @@ export type EventSubKind =
   | "sudoswap-v2-spot-price-update"
   | "sudoswap-v2-delta-update"
   | "sudoswap-v2-new-erc721-pair"
-  | "sudoswap-v2-new-erc1155-pair";
+  | "sudoswap-v2-new-erc1155-pair"
+  | "midaswap-sell-erc721"
+  | "midaswap-buy-erc721"
+  | "midaswap-token-deposit"
+  | "midaswap-position-burned"
+  | "midaswap-spot-price-update"
+  | "midaswap-delta-update"
+  | "midaswap-new-erc721-pair"
+  | "midaswap-erc20-deposit"
+  | "midaswap-erc721-deposit";
 
 export type EventData = {
   kind: EventKind;
@@ -432,6 +443,11 @@ const allEventData = [
   sudoswapV2.deltaUpdate,
   sudoswapV2.newERC721Pair,
   sudoswapV2.newERC1155Pair,
+  midaswap.newERC721Pair,
+  midaswap.erc20Deposit,
+  midaswap.erc721Deposit,
+  midaswap.buyERC721,
+  midaswap.sellERC721,
   treasure.bidAccepted,
 ];
 
