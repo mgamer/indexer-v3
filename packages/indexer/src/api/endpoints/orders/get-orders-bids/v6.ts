@@ -258,6 +258,7 @@ export const getOrdersBidsV6Options: RouteOptions = {
                 isReservoir: false,
                 createdAt: now(),
                 updatedAt: now(),
+                originatedAt: now(),
                 includeRawData: false,
                 rawData: {} as any,
                 normalizeRoyalties: false,
@@ -322,6 +323,7 @@ export const getOrdersBidsV6Options: RouteOptions = {
           orders.is_reservoir,
           extract(epoch from orders.created_at) AS created_at,
           extract(epoch from orders.updated_at) AS updated_at,
+          orders.originated_at,
           (${criteriaBuildQuery}) AS criteria
           ${query.includeRawData || query.includeDepth ? ", orders.raw_data" : ""}
         FROM orders
@@ -677,6 +679,7 @@ export const getOrdersBidsV6Options: RouteOptions = {
           isReservoir: r.is_reservoir,
           createdAt: r.created_at,
           updatedAt: r.updated_at,
+          originatedAt: r.originated_at,
           includeRawData: query.includeRawData,
           rawData: r.raw_data,
           normalizeRoyalties: query.normalizeRoyalties,
