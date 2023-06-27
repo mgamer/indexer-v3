@@ -313,7 +313,7 @@ export const getOrdersBidsV5Options: RouteOptions = {
           orders.is_reservoir,
           extract(epoch from orders.created_at) AS created_at,
           extract(epoch from orders.updated_at) AS updated_at,
-          extract(epoch from orders.originated_at) AS originated_at,
+          orders.originated_at,
           (${criteriaBuildQuery}) AS criteria
           ${query.includeRawData || query.includeDepth ? ", orders.raw_data" : ""}
         FROM orders

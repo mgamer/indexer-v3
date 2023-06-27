@@ -685,7 +685,7 @@ export const getJoiOrderObject = async (order: {
       order.dynamic !== undefined ? Boolean(order.dynamic || order.kind === "sudoswap") : undefined,
     createdAt: new Date(order.createdAt * 1000).toISOString(),
     updatedAt: new Date(order.updatedAt * 1000).toISOString(),
-    originatedAt: order.originatedAt ? new Date(order.originatedAt * 1000).toISOString() : null,
+    originatedAt: order.originatedAt ? new Date(order.originatedAt).toISOString() : null,
     rawData: order.includeRawData ? order.rawData : undefined,
     isNativeOffChainCancellable: order.includeRawData
       ? (order.rawData as any)?.zone ===

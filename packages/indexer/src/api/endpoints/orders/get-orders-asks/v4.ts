@@ -229,7 +229,7 @@ export const getOrdersAsksV4Options: RouteOptions = {
             END
           ) AS status,
           extract(epoch from orders.updated_at) AS updated_at,
-          extract(epoch from orders.originated_at) AS originated_at,
+          orders.originated_at,
           (${criteriaBuildQuery}) AS criteria
           ${query.includeRawData || query.includeDynamicPricing ? ", orders.raw_data" : ""}
         FROM orders
