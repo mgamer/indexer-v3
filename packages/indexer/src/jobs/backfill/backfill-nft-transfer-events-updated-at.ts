@@ -54,7 +54,7 @@ if (config.doBackgroundWork) {
               nft_transfer_events.created_at
             FROM nft_transfer_events
             ${continuationFilter}
-            ORDER BY nft_transfer_events.created_at, nft_transfer_events.tx_hash, nft_transfer_events.log_index, nft_transfer_events.batch_index
+            ORDER BY nft_transfer_events.tx_hash, nft_transfer_events.log_index, nft_transfer_events.batch_index
             LIMIT $/limit/
           )
           UPDATE nft_transfer_events SET
