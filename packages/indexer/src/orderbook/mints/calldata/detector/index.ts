@@ -148,7 +148,7 @@ export const extractByTx = async (txHash: string, skipCache = false) => {
   }
 
   // Seadrop
-  const seadropResults = await seadrop.extractByTx(collection, contract, tx);
+  const seadropResults = await seadrop.extractByTx(collection, tx);
   if (seadropResults.length) {
     return seadropResults;
   }
@@ -162,7 +162,6 @@ export const extractByTx = async (txHash: string, skipCache = false) => {
   // Generic
   const genericResults = await generic.extractByTx(
     collection,
-    contract,
     tx,
     pricePerAmountMinted,
     amountMinted

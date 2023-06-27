@@ -17,6 +17,8 @@ import {
 } from "@/orderbook/mints";
 import { fetchMetadata, getStatus, toSafeTimestamp } from "@/orderbook/mints/calldata/helpers";
 
+const STANDARD = "manifold";
+
 export type Info = {
   merkleTreeId?: string;
 };
@@ -86,7 +88,7 @@ export const extractByCollection = async (
               stage: `claim-${extension.toLowerCase()}-${instanceId}`,
               kind: "public",
               status: "open",
-              standard: "manifold",
+              standard: STANDARD,
               details: {
                 tx: {
                   to: extension.toLowerCase(),
@@ -153,7 +155,7 @@ export const extractByCollection = async (
               stage: `claim-${extension.toLowerCase()}-${instanceId}`,
               kind: "allowlist",
               status: "open",
-              standard: "manifold",
+              standard: STANDARD,
               details: {
                 tx: {
                   to: extension.toLowerCase(),
@@ -206,7 +208,7 @@ export const extractByCollection = async (
         }
       }
     } catch (error) {
-      logger.error("mint-detector", JSON.stringify({ kind: "manifold", error }));
+      logger.error("mint-detector", JSON.stringify({ kind: STANDARD, error }));
     }
   }
 
@@ -238,7 +240,7 @@ export const extractByTx = async (
 };
 
 export const refreshByCollection = async (collection: string) => {
-  const existingCollectionMints = await getCollectionMints(collection, { standard: "manifold" });
+  const existingCollectionMints = await getCollectionMints(collection, { standard: STANDARD });
 
   for (const { tokenId } of existingCollectionMints.filter((cm) => cm.tokenId)) {
     // Fetch and save/update the currently available mints

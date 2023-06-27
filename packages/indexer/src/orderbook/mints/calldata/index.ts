@@ -7,6 +7,7 @@ import { CollectionMint } from "@/orderbook/mints";
 
 import * as Generic from "@/orderbook/mints/calldata/detector/generic";
 import * as Manifold from "@/orderbook/mints/calldata/detector/manifold";
+import * as Seadrop from "@/orderbook/mints/calldata/detector/seadrop";
 import * as Thirdweb from "@/orderbook/mints/calldata/detector/thirdweb";
 import * as Zora from "@/orderbook/mints/calldata/detector/zora";
 
@@ -212,6 +213,8 @@ export const refreshMintsForCollection = async (collection: string) => {
     switch (standardResult.standard) {
       case "manifold":
         return Manifold.refreshByCollection(collection);
+      case "seadrop-v1.0":
+        return Seadrop.refreshByCollection(collection);
       case "thirdweb":
         return Thirdweb.refreshByCollection(collection);
       case "unknown":

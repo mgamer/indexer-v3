@@ -18,6 +18,8 @@ import {
 import { AllowlistItem, allowlistExists, createAllowlist } from "@/orderbook/mints/allowlists";
 import { getStatus, toSafeTimestamp } from "@/orderbook/mints/calldata/helpers";
 
+const STANDARD = "zora";
+
 export const extractByCollection = async (collection: string): Promise<CollectionMint[]> => {
   const c = new Contract(
     collection,
@@ -60,7 +62,7 @@ export const extractByCollection = async (collection: string): Promise<Collectio
         stage: "public-sale",
         kind: "public",
         status: "open",
-        standard: "zora",
+        standard: STANDARD,
         details: {
           tx: {
             to: collection,
@@ -116,7 +118,7 @@ export const extractByCollection = async (collection: string): Promise<Collectio
         stage: "presale",
         kind: "allowlist",
         status: "open",
-        standard: "zora",
+        standard: STANDARD,
         details: {
           tx: {
             to: collection,
@@ -152,7 +154,7 @@ export const extractByCollection = async (collection: string): Promise<Collectio
       });
     }
   } catch (error) {
-    logger.error("mint-detector", JSON.stringify({ kind: "zora", error }));
+    logger.error("mint-detector", JSON.stringify({ kind: STANDARD, error }));
   }
 
   // Update the status of each collection mint
@@ -184,7 +186,7 @@ export const extractByTx = async (
 };
 
 export const refreshByCollection = async (collection: string) => {
-  const existingCollectionMints = await getCollectionMints(collection, { standard: "zora" });
+  const existingCollectionMints = await getCollectionMints(collection, { standard: STANDARD });
 
   // Fetch and save/update the currently available mints
   const latestCollectionMints = await extractByCollection(collection);

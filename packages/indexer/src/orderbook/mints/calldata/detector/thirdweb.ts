@@ -24,6 +24,8 @@ import {
   getAllowlist,
 } from "@/orderbook/mints/allowlists";
 
+const STANDARD = "thirdweb";
+
 export const extractByCollection = async (
   collection: string,
   tokenId?: string
@@ -96,7 +98,7 @@ export const extractByCollection = async (
           stage: `claim-${claimConditionId}`,
           kind: "public",
           status: "open",
-          standard: "thirdweb",
+          standard: STANDARD,
           details: {
             tx: {
               to: collection,
@@ -192,7 +194,7 @@ export const extractByCollection = async (
             stage: `claim-${claimConditionId}`,
             kind: "allowlist",
             status: "open",
-            standard: "thirdweb",
+            standard: STANDARD,
             details: {
               tx: {
                 to: collection,
@@ -248,7 +250,7 @@ export const extractByCollection = async (
       }
     }
   } catch (error) {
-    logger.error("mint-detector", JSON.stringify({ kind: "thirdweb", error }));
+    logger.error("mint-detector", JSON.stringify({ kind: STANDARD, error }));
   }
 
   // Update the status of each collection mint
@@ -302,7 +304,7 @@ export const extractByTx = async (
 };
 
 export const refreshByCollection = async (collection: string) => {
-  const existingCollectionMints = await getCollectionMints(collection, { standard: "thirdweb" });
+  const existingCollectionMints = await getCollectionMints(collection, { standard: STANDARD });
 
   const uniqueTokenIds = [...new Set(existingCollectionMints.map(({ tokenId }) => tokenId))];
   for (const tokenId of uniqueTokenIds) {
