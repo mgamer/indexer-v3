@@ -1,4 +1,4 @@
-import { Kafka, logLevel } from "kafkajs";
+import { Kafka, Producer, logLevel } from "kafkajs";
 
 import { config } from "@/config/index";
 import { TopicHandlers } from "@/jobs/cdc/topics";
@@ -10,15 +10,33 @@ const kafka = new Kafka({
   logLevel: logLevel.ERROR,
 });
 
-export const producer = kafka.producer();
+export let producer: Producer;
 export const consumer = kafka.consumer({
   groupId: config.kafkaConsumerGroupId,
   maxBytesPerPartition: config.kafkaMaxBytesPerPartition || 1048576, // (default is 1MB)
 });
 
 export async function startKafkaProducer(): Promise<void> {
+  producer = kafka.producer();
   logger.info(`kafka-producer`, "Starting Kafka producer");
   await producer.connect();
+
+  try {
+    await new Promise((resolve, reject) => {
+      producer.on("producer.connect", async () => {
+        logger.info(`kafka-producer`, "Producer connected");
+        resolve(true);
+      });
+
+      setTimeout(() => {
+        reject("Producer connection timeout");
+      }, 60000);
+    });
+  } catch (e) {
+    logger.error(`kafka-producer`, `Error connecting to producer, error=${e}`);
+    await startKafkaProducer();
+    return;
+  }
 
   producer.on("producer.disconnect", async (error) => {
     logger.error(`kafka-producer`, `Producer disconnected, error=${error}`);
@@ -83,15 +101,15 @@ export async function startKafkaConsumer(): Promise<void> {
               )}`
             );
 
-            const newMessage = {
-              error: JSON.stringify(error),
-              value: message.value,
-            };
+            // const newMessage = {
+            //   error: JSON.stringify(error),
+            //   value: message.value,
+            // };
 
-            await producer.send({
-              topic: `${batch.topic}-dead-letter`,
-              messages: [newMessage],
-            });
+            // await producer.send({
+            //   topic: `${batch.topic}-dead-letter`,
+            //   messages: [newMessage],
+            // });
           } catch (error) {
             logger.error(
               `kafka-consumer`,

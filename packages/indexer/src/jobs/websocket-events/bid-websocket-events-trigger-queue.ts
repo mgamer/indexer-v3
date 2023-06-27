@@ -40,7 +40,7 @@ if (config.doBackgroundWork && config.doWebsocketServerWork && config.kafkaBroke
       const { data } = job.data as EventInfo;
 
       try {
-        const criteriaBuildQuery = Orders.buildCriteriaQuery("orders", "token_set_id", false);
+        const criteriaBuildQuery = Orders.buildCriteriaQuery("orders", "token_set_id", true);
 
         const rawResult = await idb.oneOrNone(
           `
@@ -171,6 +171,8 @@ if (config.doBackgroundWork && config.doWebsocketServerWork && config.kafkaBroke
           tags: {
             contract: fromBuffer(rawResult.contract),
             source: result.source.domain || "unknown",
+            maker: fromBuffer(rawResult.maker),
+            taker: fromBuffer(rawResult.taker),
           },
           data: result,
           offset: data.offset,

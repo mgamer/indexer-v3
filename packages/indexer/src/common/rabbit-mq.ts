@@ -35,6 +35,7 @@ export type CreatePolicyPayload = {
     "message-ttl"?: number;
     "alternate-exchange"?: string;
     "queue-mode"?: "default" | "lazy";
+    "consumer-timeout"?: number;
   };
 };
 
@@ -55,22 +56,29 @@ export class RabbitMq {
     RabbitMq.rabbitMqPublisherConnection = await amqplib.connect(config.rabbitMqUrl);
 
     for (let i = 0; i < RabbitMq.maxPublisherChannelsCount; ++i) {
-      RabbitMq.rabbitMqPublisherChannels.push(
-        await this.rabbitMqPublisherConnection.createConfirmChannel()
-      );
+      const channel = await this.rabbitMqPublisherConnection.createConfirmChannel();
+      RabbitMq.rabbitMqPublisherChannels.push(channel);
+
+      channel.once("error", (error) => {
+        logger.error("rabbit-error", `Publisher channel error ${error}`);
+      });
     }
+
+    RabbitMq.rabbitMqPublisherConnection.once("error", (error) => {
+      logger.error("rabbit-error", `Publisher connection error ${error}`);
+    });
   }
 
   public static async send(queueName: string, content: RabbitMQMessage, delay = 0, priority = 0) {
-    content.publishTime = content.publishTime ?? _.now();
-
     try {
-      // For deduplication messages with delay use redis lock
-      if (delay && content.jobId && !(await acquireLock(content.jobId, Number(delay / 1000)))) {
+      // For deduplication messages use redis lock, setting lock only if jobId is passed
+      const lockTime = delay ? Number(delay / 1000) : 5 * 60;
+      if (content.jobId && !(await acquireLock(content.jobId, lockTime))) {
         return;
       }
 
       const channelIndex = _.random(0, RabbitMq.maxPublisherChannelsCount - 1);
+      content.publishTime = content.publishTime ?? _.now();
 
       await new Promise<void>((resolve, reject) => {
         if (delay) {
@@ -103,7 +111,6 @@ export class RabbitMq {
             Buffer.from(JSON.stringify(content)),
             {
               priority,
-              headers: { "x-deduplication-header": content.jobId },
               persistent: content.persistent,
             },
             (error) => {
@@ -189,7 +196,6 @@ export class RabbitMq {
       const options = {
         maxPriority: queue.getQueueType() === "classic" ? 1 : undefined,
         arguments: {
-          "x-message-deduplication": true,
           "x-single-active-consumer": queue.getSingleActiveConsumer(),
           "x-queue-type": queue.getQueueType(),
         },
@@ -215,9 +221,7 @@ export class RabbitMq {
       );
 
       // Create dead letter queue for all jobs the failed more than the max retries
-      await this.rabbitMqPublisherChannels[0].assertQueue(queue.getDeadLetterQueue(), {
-        arguments: { "x-message-deduplication": true },
-      });
+      await this.rabbitMqPublisherChannels[0].assertQueue(queue.getDeadLetterQueue());
 
       // If the dead letter queue have custom max length
       if (queue.getMaxDeadLetterQueue() !== AbstractRabbitMqJobHandler.defaultMaxDeadLetterQueue) {
@@ -233,17 +237,26 @@ export class RabbitMq {
         });
       }
 
+      const definition: CreatePolicyPayload["definition"] = {};
+
       // If the queue defined as lazy ie use only disk for this queue messages
       if (queue.isLazyMode()) {
+        definition["queue-mode"] = "lazy";
+      }
+
+      // If the queue has specific timeout
+      if (queue.getConsumerTimeout()) {
+        definition["consumer-timeout"] = queue.getConsumerTimeout();
+      }
+
+      if (!_.isEmpty(definition)) {
         await this.createOrUpdatePolicy({
           name: `${queue.getQueue()}-policy`,
           vhost: "/",
           priority: 10,
           pattern: `^${queue.getQueue()}$|^${queue.getRetryQueue()}$`,
           applyTo: "queues",
-          definition: {
-            "queue-mode": "lazy",
-          },
+          definition,
         });
       }
     }

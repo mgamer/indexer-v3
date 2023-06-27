@@ -16,10 +16,7 @@ import * as marketplaceBlacklist from "@/utils/marketplace-blacklists";
 import * as marketplaceFees from "@/utils/marketplace-fees";
 import MetadataApi from "@/utils/metadata-api";
 import * as royalties from "@/utils/royalties";
-import {
-  getOpenCollectionMints,
-  simulateAndUpdateCollectionMint,
-} from "@/utils/mints/collection-mints";
+import { refreshMintsForCollection } from "@/orderbook/mints/calldata";
 
 import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
 import * as refreshActivitiesCollectionMetadata from "@/jobs/elasticsearch/refresh-activities-collection-metadata";
@@ -126,9 +123,27 @@ export class Collections {
       return;
     }
 
-    const collection = await MetadataApi.getCollectionMetadata(contract, tokenId, community);
+    const isCopyrightInfringementContract =
+      getNetworkSettings().copyrightInfringementContracts.includes(contract.toLowerCase());
 
-    if (collection.metadata == null) {
+    const collection = await MetadataApi.getCollectionMetadata(contract, tokenId, community, {
+      allowFallback: isCopyrightInfringementContract,
+    });
+
+    if (isCopyrightInfringementContract) {
+      collection.name = collection.id;
+      collection.metadata = null;
+
+      logger.info(
+        "updateCollectionCache",
+        JSON.stringify({
+          topic: "debugCopyrightInfringementContracts",
+          message: "Collection is a copyright infringement",
+          contract,
+          collection,
+        })
+      );
+    } else if (collection.metadata == null) {
       const collectionResult = await Collections.getById(collection.id);
 
       if (collectionResult?.metadata != null) {
@@ -153,30 +168,13 @@ export class Collections {
       },
     ]);
 
-    const isCopyrightInfringementContract =
-      getNetworkSettings().copyrightInfringementContracts.includes(contract.toLowerCase());
-
-    if (isCopyrightInfringementContract) {
-      collection.name = collection.id;
-      collection.metadata = null;
-
-      logger.info(
-        "updateCollectionCache",
-        JSON.stringify({
-          topic: "debugCopyrightInfringementContracts",
-          message: "Collection is a copyright infringement",
-          contract,
-          collection,
-        })
-      );
-    }
-
     const query = `
       UPDATE collections SET
         metadata = $/metadata:json/,
         name = $/name/,
         slug = $/slug/,
         token_count = $/tokenCount/,
+        payment_tokens = $/paymentTokens/,
         updated_at = now()
       WHERE id = $/id/
       RETURNING (
@@ -196,6 +194,7 @@ export class Collections {
       name: collection.name,
       slug: collection.slug,
       tokenCount,
+      paymentTokens: collection.paymentTokens ? { opensea: collection.paymentTokens } : {},
     };
 
     const result = await idb.oneOrNone(query, values);
@@ -240,11 +239,8 @@ export class Collections {
     // Refresh any contract blacklists
     await marketplaceBlacklist.updateMarketplaceBlacklist(collection.contract);
 
-    // Simulate any open mints
-    const collectionMints = await getOpenCollectionMints(collection.id);
-    await Promise.all(
-      collectionMints.map((collectionMint) => simulateAndUpdateCollectionMint(collectionMint))
-    );
+    // Refresh any mints on the collection
+    await refreshMintsForCollection(collection.id);
   }
 
   public static async update(collectionId: string, fields: CollectionsEntityUpdateParams) {

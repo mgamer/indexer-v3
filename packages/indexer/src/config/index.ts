@@ -57,7 +57,7 @@ export const config = {
   doKafkaWork: Boolean(Number(process.env.DO_KAFKA_WORK)),
   kafkaPartitionsConsumedConcurrently: Number(process.env.KAFKA_PARTITIONS_CONSUMED_CONCURRENTLY),
   kafkaConsumerGroupId: String(process.env.KAFKA_CONSUMER_GROUP_ID),
-  kafkaBrokers: String(process.env.KAFKA_BROKERS).split(","),
+  kafkaBrokers: process.env.KAFKA_BROKERS ? String(process.env.KAFKA_BROKERS).split(",") : [],
   kafkaClientId: String(process.env.KAFKA_CLIENT_ID),
   kafkaMaxBytesPerPartition: Number(process.env.KAFKA_MAX_BYTES_PER_PARTITION),
 
@@ -106,8 +106,6 @@ export const config = {
   cipherSecret: String(process.env.CIPHER_SECRET),
 
   slackApiKeyWebhookUrl: String(process.env.SLACK_API_KEY_WEBHOOK_URL),
-  // Used to prevent redis from being overloaded in heavy process like backfilling
-  redisMaxMemoryGB: Number(process.env.REDIS_MAX_MEMORY_GB || 25),
 
   maxParallelTokenRefreshJobs: Number(process.env.MAX_PARALLEL_TOKEN_REFRESH_JOBS || 1),
   maxParallelTokenCollectionSlugRefreshJobs: Number(
