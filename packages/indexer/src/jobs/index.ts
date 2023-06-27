@@ -183,6 +183,7 @@ import { eventsSyncProcessBackfillJob } from "@/jobs/events-sync/process/events-
 import { openseaBidsQueueJob } from "@/jobs/orderbook/opensea-bids-queue-job";
 import { processResyncRequestJob } from "@/jobs/events-sync/process-resync-request-queue-job";
 import { eventsSyncBackfillJob } from "@/jobs/events-sync/events-sync-backfill-job";
+import { blockCheckJob } from "@/jobs/events-sync/block-check-queue-job";
 
 export const gracefulShutdownJobWorkers = [
   orderUpdatesById.worker,
@@ -357,6 +358,7 @@ export class RabbitMqJobsConsumer {
       openseaBidsQueueJob,
       processResyncRequestJob,
       eventsSyncBackfillJob,
+      blockCheckJob,
     ];
   }
 
