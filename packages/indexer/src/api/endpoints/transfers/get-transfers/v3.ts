@@ -128,6 +128,7 @@ export const getTransfersV3Options: RouteOptions = {
           nft_transfer_events.log_index,
           nft_transfer_events.batch_index,
           extract(epoch from nft_transfer_events.updated_at) updated_ts,
+          nft_transfer_events.is_deleted,
           fe.price,
           fe.currency,
           fe.currency_price

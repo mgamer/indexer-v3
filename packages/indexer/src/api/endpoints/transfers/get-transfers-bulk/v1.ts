@@ -112,6 +112,7 @@ export const getTransfersBulkV1Options: RouteOptions = {
           nft_transfer_events.block,
           nft_transfer_events.log_index,
           nft_transfer_events.batch_index,
+          nft_transfer_events.is_deleted,
           extract(epoch from nft_transfer_events.updated_at) updated_ts
         FROM nft_transfer_events
       `;
