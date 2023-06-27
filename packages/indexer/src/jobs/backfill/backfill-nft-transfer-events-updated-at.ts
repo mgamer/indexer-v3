@@ -89,7 +89,9 @@ if (config.doBackgroundWork) {
 
       logger.info(
         QUEUE_NAME,
-        `Processed ${results.length} fill events.  limit=${limit}, cursor=${JSON.stringify(cursor)}`
+        `Processed ${results.length} nft transfer events. limit=${limit}, cursor=${JSON.stringify(
+          cursor
+        )}`
       );
     },
     { connection: redis.duplicate(), concurrency: 1 }
