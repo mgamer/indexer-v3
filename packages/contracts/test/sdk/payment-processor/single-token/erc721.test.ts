@@ -36,7 +36,7 @@ describe("PaymentProcessor - SingleToken", () => {
     const nft = new Common.Helpers.Erc721(ethers.provider, erc721.address);
 
     // Approve the exchange
-    await nft.approve(seller, PaymentProcessor.Addresses.PaymentProcessor[chainId]);
+    await nft.approve(seller, PaymentProcessor.Addresses.Exchange[chainId]);
 
     const exchange = new PaymentProcessor.Exchange(chainId);
 
@@ -101,14 +101,14 @@ describe("PaymentProcessor - SingleToken", () => {
     await weth.deposit(buyer, price);
 
     // Approve the exchange contract for the buyer
-    await weth.approve(buyer, PaymentProcessor.Addresses.PaymentProcessor[chainId]);
+    await weth.approve(buyer, PaymentProcessor.Addresses.Exchange[chainId]);
 
     // Mint erc721 to seller
     await erc721.connect(seller).mint(soldTokenId);
     const nft = new Common.Helpers.Erc721(ethers.provider, erc721.address);
 
     // Approve the exchange
-    await nft.approve(seller, PaymentProcessor.Addresses.PaymentProcessor[chainId]);
+    await nft.approve(seller, PaymentProcessor.Addresses.Exchange[chainId]);
 
     const exchange = new PaymentProcessor.Exchange(chainId);
     const buyerMasterNonce = await exchange.getMasterNonce(ethers.provider, buyer.address);

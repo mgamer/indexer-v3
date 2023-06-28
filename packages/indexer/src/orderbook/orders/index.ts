@@ -426,6 +426,14 @@ export const generateListingDetailsV6 = (
       };
     }
 
+    case "payment-processor": {
+      return {
+        kind: "payment-processor",
+        ...common,
+        order: new Sdk.PaymentProcessor.Order(config.chainId, order.rawData),
+      };
+    }
+
     default: {
       throw new Error("Unsupported order kind");
     }

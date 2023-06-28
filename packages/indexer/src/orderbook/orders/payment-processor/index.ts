@@ -52,8 +52,16 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         });
       }
 
+      // For now, only single amounts are supported
+      if (order.params.amount !== "1") {
+        return results.push({
+          id,
+          status: "unsupported-amount",
+        });
+      }
+
       const exchange = new Contract(
-        Sdk.PaymentProcessor.Addresses.PaymentProcessor[config.chainId],
+        Sdk.PaymentProcessor.Addresses.Exchange[config.chainId],
         new Interface([
           "function getTokenSecurityPolicyId(address collectionAddress) public view returns (uint256)",
         ]),
@@ -188,7 +196,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
           : await royalties.getRoyaltiesByTokenSet(tokenSetId, "on-chain")
       ).map((r) => ({ kind: "royalty", ...r }));
 
-      const price = order.params.price;
+      const price = bn(order.params.price).div(order.params.amount).toString();
 
       // Handle: royalties on top
       const defaultRoyalties =
@@ -257,7 +265,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       const isReservoir = false;
 
       // Handle: conduit
-      const conduit = Sdk.PaymentProcessor.Addresses.PaymentProcessor[config.chainId];
+      const conduit = Sdk.PaymentProcessor.Addresses.Exchange[config.chainId];
 
       const validFrom = `date_trunc('seconds', now())`;
       const validTo = `date_trunc('seconds', to_timestamp(${order.params.expiration}))`;

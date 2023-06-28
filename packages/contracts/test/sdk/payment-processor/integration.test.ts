@@ -55,8 +55,8 @@ describe("PaymentProcessor - Indexer Integration Test", () => {
     await weth.deposit(seller, price);
 
     // Approve the exchange contract for the buyer
-    await weth.approve(seller, PaymentProcessor.Addresses.PaymentProcessor[chainId]);
-    await weth.approve(buyer, PaymentProcessor.Addresses.PaymentProcessor[chainId]);
+    await weth.approve(seller, PaymentProcessor.Addresses.Exchange[chainId]);
+    await weth.approve(buyer, PaymentProcessor.Addresses.Exchange[chainId]);
 
     // Mint erc721 to seller
     await erc721.connect(seller).mint(boughtTokenId);
@@ -64,8 +64,8 @@ describe("PaymentProcessor - Indexer Integration Test", () => {
     const nft = new Common.Helpers.Erc721(ethers.provider, erc721.address);
 
     // Approve the transfer manager
-    await nft.approve(seller, PaymentProcessor.Addresses.PaymentProcessor[chainId]);
-    await nft.approve(buyer, PaymentProcessor.Addresses.PaymentProcessor[chainId]);
+    await nft.approve(seller, PaymentProcessor.Addresses.Exchange[chainId]);
+    await nft.approve(buyer, PaymentProcessor.Addresses.Exchange[chainId]);
 
     const exchange = new PaymentProcessor.Exchange(chainId);
     console.log(green("\n\n\t Build Order"));

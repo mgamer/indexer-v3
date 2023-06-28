@@ -16,7 +16,7 @@ export class Exchange {
 
   constructor(chainId: number) {
     this.chainId = chainId;
-    this.contract = new Contract(Addresses.PaymentProcessor[this.chainId], ExchangeAbi);
+    this.contract = new Contract(Addresses.Exchange[this.chainId], ExchangeAbi);
   }
 
   // --- Get master nonce ---

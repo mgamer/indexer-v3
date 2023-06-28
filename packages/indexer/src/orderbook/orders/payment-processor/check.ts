@@ -62,14 +62,12 @@ export const offChainCheck = async (
   let hasBalance = true;
   let hasApproval = true;
   if (order.isBuyOrder()) {
-    const totalPrice = bn(order.params.price).mul(order.params.amount);
-
     // Check: maker has enough balance
     const ftBalance = await commonHelpers.getFtBalance(
       order.params.coin,
       order.params.sellerOrBuyer
     );
-    if (ftBalance.lt(totalPrice)) {
+    if (ftBalance.lt(order.params.price)) {
       hasBalance = false;
     }
 
@@ -80,11 +78,11 @@ export const offChainCheck = async (
             .fetchAndUpdateFtApproval(
               order.params.coin,
               order.params.sellerOrBuyer,
-              Sdk.PaymentProcessor.Addresses.PaymentProcessor[config.chainId],
+              Sdk.PaymentProcessor.Addresses.Exchange[config.chainId],
               true
             )
             .then((a) => a.value)
-        ).lt(totalPrice)
+        ).lt(order.params.price)
       ) {
         hasApproval = false;
       }
@@ -100,7 +98,7 @@ export const offChainCheck = async (
       hasBalance = false;
     }
 
-    const operator = Sdk.PaymentProcessor.Addresses.PaymentProcessor[config.chainId];
+    const operator = Sdk.PaymentProcessor.Addresses.Exchange[config.chainId];
 
     // Check: maker has set the proper approval
     const nftApproval = await commonHelpers.getNftApproval(

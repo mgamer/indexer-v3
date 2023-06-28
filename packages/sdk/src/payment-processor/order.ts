@@ -146,7 +146,7 @@ export class Order {
 
   public async checkFillability(provider: Provider) {
     const chainId = await provider.getNetwork().then((n) => n.chainId);
-    const exchange = new Contract(Addresses.PaymentProcessor[this.chainId], ExchangeAbi, provider);
+    const exchange = new Contract(Addresses.Exchange[this.chainId], ExchangeAbi, provider);
 
     const traderMasterNonce = await exchange.masterNonces(this.params.sellerOrBuyer);
     if (traderMasterNonce.gt(this.params.nonce)) {
@@ -165,7 +165,7 @@ export class Order {
         // Check approval
         const isApproved = await erc721.isApproved(
           this.params.sellerOrBuyer,
-          Addresses.PaymentProcessor[this.chainId]
+          Addresses.Exchange[this.chainId]
         );
         if (!isApproved) {
           throw new Error("no-approval");
@@ -181,7 +181,7 @@ export class Order {
         // Check approval
         const isApproved = await erc1155.isApproved(
           this.params.sellerOrBuyer,
-          Addresses.PaymentProcessor[this.chainId]
+          Addresses.Exchange[this.chainId]
         );
         if (!isApproved) {
           throw new Error("no-approval");
@@ -201,7 +201,7 @@ export class Order {
       // Check allowance
       const allowance = await erc20.getAllowance(
         this.params.sellerOrBuyer,
-        Addresses.PaymentProcessor[chainId]
+        Addresses.Exchange[chainId]
       );
       if (bn(allowance).lt(totalPrice)) {
         throw new Error("no-approval");
@@ -349,7 +349,7 @@ export const EIP712_DOMAIN = (chainId: number) => ({
   name: "PaymentProcessor",
   version: "1",
   chainId,
-  verifyingContract: Addresses.PaymentProcessor[chainId],
+  verifyingContract: Addresses.Exchange[chainId],
 });
 
 const normalize = (order: Types.BaseOrder): Types.BaseOrder => {

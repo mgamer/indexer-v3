@@ -123,7 +123,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           const tokenId = saleDetail["tokenId"].toString();
           const amount = saleDetail["amount"].toString();
           const currency = saleDetail["paymentCoin"].toLowerCase();
-          const currencyPrice = saleDetail["offerPrice"].toString();
+          const currencyPrice = saleDetail["offerPrice"].div(saleDetail["amount"]).toString();
           const seller = saleDetail["seller"].toLowerCase();
           const buyer = saleDetail["buyer"].toLowerCase();
 
@@ -281,7 +281,9 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         for (let i = 0; i < tokenIds.length; i++) {
           if (!unsuccessfulFills[i]) {
             const tokenId = tokenIds[i];
-            const currencyPrice = parsedLog.args["salePrices"][i].toString();
+            const currencyPrice = parsedLog.args["salePrices"][i]
+              .div(parsedLog.args["amounts"][i])
+              .toString();
             const seller = parsedLog.args["sellers"][i].toLowerCase();
 
             const priceData = await getUSDAndNativePrices(
