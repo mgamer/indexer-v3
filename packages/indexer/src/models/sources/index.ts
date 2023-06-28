@@ -440,9 +440,9 @@ export class Sources {
         return _.replace(sourceEntity.metadata.url, "${tokenId}", tokenId);
       }
     } else if (config.chainId == 43114) {
-      if (sourceEntity.metadata.tokenUrlZora && contract && tokenId) {
+      if (sourceEntity.metadata.tokenUrlAvalanche && contract && tokenId) {
         sourceEntity.metadata.url = _.replace(
-          sourceEntity.metadata.tokenUrlZora,
+          sourceEntity.metadata.tokenUrlAvalanche,
           "${contract}",
           contract
         );
