@@ -1,39 +1,36 @@
 import { BigNumberish } from "@ethersproject/bignumber";
 import { AddressZero, HashZero } from "@ethersproject/constants";
+
 import { Order } from "../../order";
 import { TokenProtocols } from "../../types";
 import { getRandomBytes } from "../../../utils";
 
 export type MatchingOptions = {
   taker: string;
-  takerNonce: BigNumberish;
+  takerMasterNonce: BigNumberish;
   tokenId?: BigNumberish;
 };
 
 export interface BaseBuildParams {
+  trader: string;
   protocol: TokenProtocols;
-  marketplace?: string;
-  marketplaceFeeNumerator?: BigNumberish;
   tokenAddress: string;
   amount: BigNumberish;
   price: BigNumberish;
   expiration: BigNumberish;
-  nonce?: BigNumberish;
   masterNonce: BigNumberish;
   coin: string;
 
-  privateTaker?: string; // privateBuyer | delegatedPurchaser
-  taker?: string;
-  trader: string; // buyer | seller
+  marketplace?: string;
+  marketplaceFeeNumerator?: BigNumberish;
+  nonce?: BigNumberish;
 
-  // SaleApproval
+  // `SaleApproval`-only fields
   sellerAcceptedOffer?: boolean;
   maxRoyaltyFeeNumerator?: BigNumberish;
 
-  // CollectionOfferApproval
-
+  // `CollectionOfferApproval`-only fields
   collectionLevelOffer?: boolean;
-  takerMasterNonce?: BigNumberish;
 
   v?: number;
   r?: string;

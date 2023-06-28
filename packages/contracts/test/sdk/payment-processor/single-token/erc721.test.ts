@@ -6,14 +6,8 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-wit
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import { constants } from "ethers";
-import {
-  getChainId,
-  getCurrentTimestamp,
-  reset,
-  setupNFTs,
-  setupTokens,
-} from "../../../utils";
-import { _TypedDataEncoder } from "@ethersproject/hash";
+
+import { getChainId, getCurrentTimestamp, reset, setupNFTs } from "../../../utils";
 
 describe("PaymentProcessor - SingleToken", () => {
   const chainId = getChainId();
@@ -21,16 +15,11 @@ describe("PaymentProcessor - SingleToken", () => {
   let deployer: SignerWithAddress;
   let alice: SignerWithAddress;
   let bob: SignerWithAddress;
-  let ted: SignerWithAddress;
-  let carol: SignerWithAddress;
-
-  let erc20: Contract;
   let erc721: Contract;
 
   beforeEach(async () => {
-    [deployer, alice, bob, ted, carol] = await ethers.getSigners();
+    [deployer, alice, bob] = await ethers.getSigners();
 
-    ({ erc20 } = await setupTokens(deployer));
     ({ erc721 } = await setupNFTs(deployer));
   });
 
@@ -71,30 +60,29 @@ describe("PaymentProcessor - SingleToken", () => {
       expiration: (blockTime + 60 * 60).toString(),
       nonce: "0",
       coin: constants.AddressZero,
-      masterNonce: sellerMasterNonce
+      masterNonce: sellerMasterNonce,
     };
 
-    // Build buy order
+    // Build sell order
     const sellOrder = builder.build(orderParameters);
     await sellOrder.sign(seller);
 
     const buyOrder = sellOrder.buildMatching({
       taker: buyer.address,
-      takerNonce: takerMasterNonce
+      takerMasterNonce: takerMasterNonce,
     });
-
     await buyOrder.sign(buyer);
 
     buyOrder.checkSignature();
     sellOrder.checkSignature();
-
-    buyOrder.checkFillability(ethers.provider);
+    await sellOrder.checkFillability(ethers.provider);
 
     const sellerBalanceBefore = await ethers.provider.getBalance(seller.address);
+
     await exchange.fillOrder(buyer, sellOrder, buyOrder);
 
-    const ownerAfter = await nft.getOwner(soldTokenId);
     const sellerBalanceAfter = await ethers.provider.getBalance(seller.address);
+    const ownerAfter = await nft.getOwner(soldTokenId);
     const receiveAmount = sellerBalanceAfter.sub(sellerBalanceBefore);
 
     expect(receiveAmount).to.gte(price);
@@ -113,7 +101,7 @@ describe("PaymentProcessor - SingleToken", () => {
     await weth.deposit(buyer, price);
 
     // Approve the exchange contract for the buyer
-    await weth.approve(buyer,PaymentProcessor.Addresses.PaymentProcessor[chainId]);
+    await weth.approve(buyer, PaymentProcessor.Addresses.PaymentProcessor[chainId]);
 
     // Mint erc721 to seller
     await erc721.connect(seller).mint(soldTokenId);
@@ -130,11 +118,10 @@ describe("PaymentProcessor - SingleToken", () => {
     const builder = new PaymentProcessor.Builders.SingleToken(chainId);
     const orderParameters = {
       protocol: 0,
-      // sellerAcceptedOffer: false,
+      sellerAcceptedOffer: true,
       marketplace: constants.AddressZero,
       marketplaceFeeNumerator: "0",
       maxRoyaltyFeeNumerator: "0",
-      privateTaker: constants.AddressZero,
       trader: buyer.address,
       tokenAddress: erc721.address,
       tokenId: soldTokenId,
@@ -143,29 +130,28 @@ describe("PaymentProcessor - SingleToken", () => {
       expiration: (blockTime + 60 * 60).toString(),
       nonce: "0",
       coin: Common.Addresses.Weth[chainId],
-      masterNonce: buyerMasterNonce
+      masterNonce: buyerMasterNonce,
     };
-  
+
     const buyOrder = builder.build(orderParameters);
-    
+    await buyOrder.sign(buyer);
+
     const sellOrder = buyOrder.buildMatching({
       taker: seller.address,
-      takerNonce: sellerMasterNonce
-    })
- 
-    await buyOrder.sign(buyer);
+      takerMasterNonce: sellerMasterNonce,
+    });
     await sellOrder.sign(seller);
 
     buyOrder.checkSignature();
     sellOrder.checkSignature();
-
-    buyOrder.checkFillability(ethers.provider);
+    await buyOrder.checkFillability(ethers.provider);
 
     const sellerBalanceBefore = await weth.getBalance(seller.address);
 
     await exchange.fillOrder(seller, buyOrder, sellOrder);
-    const ownerAfter = await nft.getOwner(soldTokenId);
+
     const sellerBalanceAfter = await weth.getBalance(seller.address);
+    const ownerAfter = await nft.getOwner(soldTokenId);
     const receiveAmount = sellerBalanceAfter.sub(sellerBalanceBefore);
 
     expect(receiveAmount).to.gte(price);

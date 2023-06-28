@@ -1,17 +1,19 @@
-import * as Types from "./types";
-import { lc, s, n, bn } from "../utils";
+import { Provider } from "@ethersproject/abstract-provider";
+import { TypedDataSigner } from "@ethersproject/abstract-signer";
+import { splitSignature } from "@ethersproject/bytes";
+import { HashZero } from "@ethersproject/constants";
+import { Contract } from "@ethersproject/contracts";
 import { _TypedDataEncoder } from "@ethersproject/hash";
 import { verifyTypedData } from "@ethersproject/wallet";
-import { Provider } from "@ethersproject/abstract-provider";
-import { Contract } from "@ethersproject/contracts";
-import { AddressZero, HashZero } from "@ethersproject/constants";
-import ExchangeAbi from "./abis/PaymentProcessor.json";
+
 import * as Addresses from "./addresses";
-import { TypedDataSigner } from "@ethersproject/abstract-signer";
-import * as Common from "../common";
 import { Builders } from "./builders";
 import { BaseBuilder, MatchingOptions } from "./builders/base";
-import { splitSignature } from "@ethersproject/bytes";
+import * as Types from "./types";
+import * as Common from "../common";
+import { lc, s, n, bn } from "../utils";
+
+import ExchangeAbi from "./abis/PaymentProcessor.json";
 
 export class Order {
   public chainId: number;
@@ -90,40 +92,30 @@ export class Order {
 
   public getMatchedOrder(matchOrder: Order): Types.MatchedOrder {
     const isBuyOrder = this.isBuyOrder();
-
     const sellOrder = isBuyOrder ? matchOrder.params : this.params;
     const buyOrder = isBuyOrder ? this.params : matchOrder.params;
+
     return {
       sellerAcceptedOffer: sellOrder.sellerAcceptedOffer ?? false,
       collectionLevelOffer: buyOrder.collectionLevelOffer ?? false,
-
       protocol: sellOrder.protocol,
       paymentCoin: sellOrder.coin,
       tokenAddress: sellOrder.tokenAddress,
-
-      seller: sellOrder.trader,
-      privateBuyer: sellOrder.privateTaker,
-
-      buyer: buyOrder.trader,
-      delegatedPurchaser: buyOrder.privateTaker,
-
+      seller: sellOrder.sellerOrBuyer,
+      privateBuyer: sellOrder.privateBuyerOrDelegatedPurchaser,
+      buyer: buyOrder.sellerOrBuyer,
+      delegatedPurchaser: buyOrder.privateBuyerOrDelegatedPurchaser,
       marketplace: sellOrder.marketplace,
       marketplaceFeeNumerator: sellOrder.marketplaceFeeNumerator,
       maxRoyaltyFeeNumerator: sellOrder.maxRoyaltyFeeNumerator ?? "0",
-
       listingNonce: sellOrder.nonce,
       listingMinPrice: sellOrder.price,
       listingExpiration: sellOrder.expiration,
-
       offerNonce: buyOrder.nonce,
       offerPrice: buyOrder.price,
       offerExpiration: buyOrder.expiration,
-
       tokenId: sellOrder.tokenId ?? "0",
       amount: sellOrder.amount,
-
-      sellerMasterNonce: sellOrder.masterNonce,
-      buyerMasterNonce: buyOrder.masterNonce,
       listingSignature: {
         r: sellOrder.r!,
         s: sellOrder.s!,
@@ -144,15 +136,10 @@ export class Order {
       v: this.params.v!,
     };
 
-    const listing = this.getEip712TypesAndValue();
-    const recoverSinger = verifyTypedData(
-      EIP712_DOMAIN(this.chainId),
-      listing[0],
-      listing[1],
-      signature
-    );
+    const [types, value] = this.getEip712TypesAndValue();
+    const recoverSinger = verifyTypedData(EIP712_DOMAIN(this.chainId), types, value, signature);
 
-    if (lc(this.params.trader) !== lc(recoverSinger)) {
+    if (lc(this.params.sellerOrBuyer) !== lc(recoverSinger)) {
       throw new Error("Invalid listing signature");
     }
   }
@@ -161,66 +148,63 @@ export class Order {
     const chainId = await provider.getNetwork().then((n) => n.chainId);
     const exchange = new Contract(Addresses.PaymentProcessor[this.chainId], ExchangeAbi, provider);
 
-    const [buyerMasterNonce] = await Promise.all([exchange.masterNonces(this.params.trader)]);
-
-    if (buyerMasterNonce.gt(this.params.nonce)) {
+    const traderMasterNonce = await exchange.masterNonces(this.params.sellerOrBuyer);
+    if (traderMasterNonce.gt(this.params.nonce)) {
       throw new Error("cancelled");
     }
 
     if (!this.isBuyOrder()) {
-      if (this.params.protocol === Types.TokenProtocols.ERC721 && this.params.tokenId) {
+      if (this.params.protocol === Types.TokenProtocols.ERC721) {
         const erc721 = new Common.Helpers.Erc721(provider, this.params.tokenAddress);
         // Check ownership
-        const owner = await erc721.getOwner(this.params.tokenId);
-        if (lc(owner) !== lc(this.params.trader)) {
+        const owner = await erc721.getOwner(this.params.tokenId!);
+        if (lc(owner) !== lc(this.params.sellerOrBuyer)) {
           throw new Error("no-balance");
         }
 
         // Check approval
         const isApproved = await erc721.isApproved(
-          this.params.trader,
+          this.params.sellerOrBuyer,
           Addresses.PaymentProcessor[this.chainId]
         );
         if (!isApproved) {
           throw new Error("no-approval");
         }
-      } else if (this.params.protocol === Types.TokenProtocols.ERC1155 && this.params.tokenId) {
+      } else if (this.params.protocol === Types.TokenProtocols.ERC1155) {
         const erc1155 = new Common.Helpers.Erc1155(provider, this.params.tokenAddress);
         // Check balance
-        const balance = await erc1155.getBalance(this.params.trader, this.params.tokenId);
-        if (bn(balance).lt(1)) {
+        const balance = await erc1155.getBalance(this.params.sellerOrBuyer, this.params.tokenId!);
+        if (bn(balance).lt(this.params.amount)) {
           throw new Error("no-balance");
         }
 
         // Check approval
         const isApproved = await erc1155.isApproved(
-          this.params.trader,
+          this.params.sellerOrBuyer,
           Addresses.PaymentProcessor[this.chainId]
         );
         if (!isApproved) {
           throw new Error("no-approval");
         }
-      } else {
-        throw new Error("invalid");
       }
     } else {
-      if (this.params.coin != AddressZero) {
-        // Check that maker has enough balance to cover the payment
-        // and the approval to the token transfer proxy is set
-        const erc20 = new Common.Helpers.Erc20(provider, this.params.coin);
-        const balance = await erc20.getBalance(this.params.trader);
-        if (bn(balance).lt(this.params.price)) {
-          throw new Error("no-balance");
-        }
+      const totalPrice = bn(this.params.amount).mul(this.params.price);
 
-        // Check allowance
-        const allowance = await erc20.getAllowance(
-          this.params.trader,
-          Addresses.PaymentProcessor[chainId]
-        );
-        if (bn(allowance).lt(this.params.price)) {
-          throw new Error("no-approval");
-        }
+      // Check that maker has enough balance to cover the payment
+      // and the approval to the token transfer proxy is set
+      const erc20 = new Common.Helpers.Erc20(provider, this.params.coin);
+      const balance = await erc20.getBalance(this.params.sellerOrBuyer);
+      if (bn(balance).lt(totalPrice)) {
+        throw new Error("no-balance");
+      }
+
+      // Check allowance
+      const allowance = await erc20.getAllowance(
+        this.params.sellerOrBuyer,
+        Addresses.PaymentProcessor[chainId]
+      );
+      if (bn(allowance).lt(totalPrice)) {
+        throw new Error("no-approval");
       }
     }
   }
@@ -234,12 +218,12 @@ export class Order {
         marketplace: this.params.marketplace,
         marketplaceFeeNumerator: this.params.marketplaceFeeNumerator,
         maxRoyaltyFeeNumerator: this.params.maxRoyaltyFeeNumerator!,
-        privateBuyer: this.params.privateTaker,
-        seller: this.params.trader!,
+        privateBuyer: this.params.privateBuyerOrDelegatedPurchaser,
+        seller: this.params.sellerOrBuyer,
         tokenAddress: this.params.tokenAddress,
         tokenId: this.params.tokenId!,
         amount: this.params.amount,
-        minPrice: this.params.price!,
+        minPrice: this.params.price,
         expiration: this.params.expiration,
         nonce: this.params.nonce,
         masterNonce: this.params.masterNonce,
@@ -251,16 +235,14 @@ export class Order {
         protocol: this.params.protocol,
         marketplace: this.params.marketplace,
         marketplaceFeeNumerator: this.params.marketplaceFeeNumerator,
-
-        delegatedPurchaser: this.params.privateTaker,
-        buyer: this.params.trader,
+        delegatedPurchaser: this.params.privateBuyerOrDelegatedPurchaser,
+        buyer: this.params.sellerOrBuyer,
         tokenAddress: this.params.tokenAddress,
         tokenId: this.params.tokenId!,
         amount: this.params.amount,
-
-        price: this.params.price!,
-        expiration: this.params.expiration!,
-        nonce: this.params.nonce!,
+        price: this.params.price,
+        expiration: this.params.expiration,
+        nonce: this.params.nonce,
         masterNonce: this.params.masterNonce,
         coin: this.params.coin,
       };
@@ -271,13 +253,13 @@ export class Order {
         marketplace: this.params.marketplace,
         collectionLevelOffer: this.params.collectionLevelOffer!,
         marketplaceFeeNumerator: this.params.marketplaceFeeNumerator,
-        delegatedPurchaser: this.params.privateTaker,
-        buyer: this.params.trader,
+        delegatedPurchaser: this.params.privateBuyerOrDelegatedPurchaser,
+        buyer: this.params.sellerOrBuyer,
         tokenAddress: this.params.tokenAddress,
         amount: this.params.amount,
-        price: this.params.price!,
-        expiration: this.params.expiration!,
-        nonce: this.params.nonce!,
+        price: this.params.price,
+        expiration: this.params.expiration,
+        nonce: this.params.nonce,
         masterNonce: this.params.masterNonce,
         coin: this.params.coin,
       };
@@ -377,24 +359,29 @@ const normalize = (order: Types.BaseOrder): Types.BaseOrder => {
   // - lowercase all strings
   return {
     kind: order.kind,
-    sellerAcceptedOffer: order.sellerAcceptedOffer,
-    collectionLevelOffer: order.collectionLevelOffer ?? undefined,
+
     protocol: n(order.protocol),
-    coin: lc(order.coin),
-    tokenAddress: lc(order.tokenAddress),
-    privateTaker: order.privateTaker ? lc(order.privateTaker) : AddressZero,
-    trader: lc(order.trader),
     marketplace: lc(order.marketplace),
     marketplaceFeeNumerator: s(order.marketplaceFeeNumerator),
+    tokenAddress: lc(order.tokenAddress),
+    tokenId: order.tokenId ? s(order.tokenId) : undefined,
+    amount: s(order.amount),
+    price: s(order.price),
+    expiration: s(order.expiration),
+    nonce: s(order.nonce),
+    masterNonce: s(order.masterNonce),
+    coin: lc(order.coin),
+
+    privateBuyerOrDelegatedPurchaser: lc(order.privateBuyerOrDelegatedPurchaser),
+    sellerOrBuyer: lc(order.sellerOrBuyer),
+
+    sellerAcceptedOffer: order.sellerAcceptedOffer,
     maxRoyaltyFeeNumerator: order.maxRoyaltyFeeNumerator
       ? s(order.maxRoyaltyFeeNumerator)
       : undefined,
-    nonce: s(order.nonce),
-    price: s(order.price),
-    expiration: s(order.expiration),
-    tokenId: order.tokenId ? s(order.tokenId) : undefined,
-    amount: s(order.amount),
-    masterNonce: s(order.masterNonce),
+
+    collectionLevelOffer: order.collectionLevelOffer ?? undefined,
+
     v: order.v ?? 0,
     r: order.r ?? HashZero,
     s: order.s ?? HashZero,

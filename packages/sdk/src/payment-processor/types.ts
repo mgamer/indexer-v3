@@ -15,7 +15,6 @@ export type MatchedOrder = {
   buyer: string;
   delegatedPurchaser: string;
   marketplace: string;
-
   marketplaceFeeNumerator: string;
   maxRoyaltyFeeNumerator: string;
   listingNonce: string;
@@ -26,16 +25,12 @@ export type MatchedOrder = {
   offerExpiration: string;
   tokenId: string;
   amount: string;
-
-  sellerMasterNonce: string;
-  buyerMasterNonce: string;
-
-  listingSignature?: {
+  listingSignature: {
     v: number;
     r: string;
     s: string;
   };
-  offerSignature?: {
+  offerSignature: {
     v: number;
     r: string;
     s: string;
@@ -48,6 +43,7 @@ export type BaseOrder = {
   marketplace: string;
   marketplaceFeeNumerator: string;
   tokenAddress: string;
+  tokenId?: string;
   amount: string;
   price: string;
   expiration: string;
@@ -55,15 +51,14 @@ export type BaseOrder = {
   masterNonce: string;
   coin: string;
 
-  privateTaker: string; // privateBuyer | delegatedPurchaser
-  trader: string; // buyer | seller
+  privateBuyerOrDelegatedPurchaser: string;
+  sellerOrBuyer: string;
 
-  // SaleApproval
+  // `SaleApproval`-only fields
   sellerAcceptedOffer?: boolean;
   maxRoyaltyFeeNumerator?: string;
 
-  // CollectionOfferApproval
-  tokenId?: string;
+  // `CollectionOfferApproval`-only fields
   collectionLevelOffer?: boolean;
 
   v?: number;

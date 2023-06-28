@@ -1,12 +1,14 @@
+import { Provider } from "@ethersproject/abstract-provider";
 import { Signer } from "@ethersproject/abstract-signer";
-import { Contract, ContractTransaction } from "@ethersproject/contracts";
+import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
+import { Contract, ContractTransaction } from "@ethersproject/contracts";
+
 import * as Addresses from "./addresses";
 import { Order } from "./order";
 import { TxData, generateSourceBytes } from "../utils";
-import { Provider } from "@ethersproject/abstract-provider";
+
 import ExchangeAbi from "./abis/PaymentProcessor.json";
-import { BigNumber } from "@ethersproject/bignumber";
 
 export class Exchange {
   public chainId: number;
@@ -17,7 +19,7 @@ export class Exchange {
     this.contract = new Contract(Addresses.PaymentProcessor[this.chainId], ExchangeAbi);
   }
 
-  // --- Get nonce ---
+  // --- Get master nonce ---
 
   public async getMasterNonce(provider: Provider, user: string): Promise<BigNumber> {
     return this.contract.connect(provider).masterNonces(user);
@@ -41,20 +43,7 @@ export class Exchange {
     };
   }
 
-  public async cancelAllOrders(maker: Signer): Promise<ContractTransaction> {
-    const tx = this.cancelAllOrdersTx(await maker.getAddress());
-    return maker.sendTransaction(tx);
-  }
-
-  public cancelAllOrdersTx(maker: string): TxData {
-    return {
-      from: maker,
-      to: this.contract.address,
-      data: this.contract.interface.encodeFunctionData("revokeMasterNonce", []),
-    };
-  }
-
-  // --- Increase nonce ---
+  // --- Increase master nonce ---
 
   public async revokeMasterNonce(maker: Signer): Promise<ContractTransaction> {
     const tx = this.revokeMasterNonceTx(await maker.getAddress());
@@ -70,6 +59,8 @@ export class Exchange {
     };
   }
 
+  // --- Fill order ---
+
   public async fillOrder(
     taker: Signer,
     order: Order,
@@ -79,10 +70,7 @@ export class Exchange {
     }
   ): Promise<ContractTransaction> {
     const tx = this.fillOrderTx(await taker.getAddress(), order, matchOrder, options);
-    return taker.sendTransaction({
-      ...tx,
-      gasLimit: 1000000,
-    });
+    return taker.sendTransaction(tx);
   }
 
   public fillOrderTx(
@@ -100,12 +88,12 @@ export class Exchange {
       macthOrder.offerSignature,
     ]);
 
-    const isTaker =
+    const passValue =
       macthOrder.buyer === taker.toLowerCase() && macthOrder.paymentCoin === AddressZero;
     return {
       from: taker,
       to: this.contract.address,
-      value: isTaker ? order.params.price.toString() : "0",
+      value: passValue ? order.params.price.toString() : "0",
       data: data + generateSourceBytes(options?.source),
     };
   }

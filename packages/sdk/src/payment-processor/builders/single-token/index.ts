@@ -14,6 +14,7 @@ export class SingleTokenBuilder extends BaseBuilder {
     try {
       const copyOrder = this.build({
         ...order.params,
+        trader: order.params.sellerOrBuyer,
         tokenId: order.params.tokenId!,
       });
 
@@ -34,16 +35,16 @@ export class SingleTokenBuilder extends BaseBuilder {
   public build(params: BuildParams) {
     this.defaultInitialize(params);
     return new Order(this.chainId, {
-      kind: params.sellerAcceptedOffer != undefined ? "sale-approval" : "offer-approval",
-      sellerAcceptedOffer: params.sellerAcceptedOffer,
-      tokenId: s(params.tokenId),
+      kind: params.sellerAcceptedOffer ? "offer-approval" : "sale-approval",
       protocol: params.protocol,
+      sellerAcceptedOffer: params.sellerAcceptedOffer,
       marketplace: params.marketplace ?? AddressZero,
       marketplaceFeeNumerator: s(params.marketplaceFeeNumerator) ?? "0",
       maxRoyaltyFeeNumerator: s(params.maxRoyaltyFeeNumerator) ?? "0",
-      privateTaker: params.privateTaker ?? AddressZero,
-      trader: params.trader,
+      privateBuyerOrDelegatedPurchaser: AddressZero,
+      sellerOrBuyer: params.trader,
       tokenAddress: params.tokenAddress,
+      tokenId: s(params.tokenId),
       amount: s(params.amount),
       price: s(params.price),
       expiration: s(params.expiration),
@@ -60,8 +61,7 @@ export class SingleTokenBuilder extends BaseBuilder {
     order: Order,
     options: {
       taker: string;
-      takerNonce: BigNumberish;
-      tokenId?: BigNumberish;
+      takerMasterNonce: BigNumberish;
     }
   ): Order {
     const orderParams = order.params;
@@ -71,8 +71,8 @@ export class SingleTokenBuilder extends BaseBuilder {
         marketplace: orderParams.marketplace,
         marketplaceFeeNumerator: orderParams.marketplaceFeeNumerator,
         maxRoyaltyFeeNumerator: orderParams.maxRoyaltyFeeNumerator,
-        privateTaker: orderParams.privateTaker,
-        trader: options.taker,
+        privateBuyerOrDelegatedPurchaser: orderParams.privateBuyerOrDelegatedPurchaser,
+        sellerOrBuyer: options.taker,
         tokenAddress: orderParams.tokenAddress,
         tokenId: orderParams.tokenId,
         amount: orderParams.amount,
@@ -80,7 +80,7 @@ export class SingleTokenBuilder extends BaseBuilder {
         expiration: orderParams.expiration,
         nonce: orderParams.nonce,
         coin: orderParams.coin,
-        masterNonce: s(options.takerNonce),
+        masterNonce: s(options.takerMasterNonce),
       });
     } else {
       return new Order(order.chainId, {
@@ -89,8 +89,8 @@ export class SingleTokenBuilder extends BaseBuilder {
         marketplace: orderParams.marketplace,
         marketplaceFeeNumerator: orderParams.marketplaceFeeNumerator,
         maxRoyaltyFeeNumerator: orderParams.maxRoyaltyFeeNumerator,
-        privateTaker: orderParams.privateTaker,
-        trader: options.taker,
+        privateBuyerOrDelegatedPurchaser: orderParams.privateBuyerOrDelegatedPurchaser,
+        sellerOrBuyer: options.taker,
         tokenAddress: orderParams.tokenAddress,
         tokenId: orderParams.tokenId,
         amount: orderParams.amount,
@@ -98,7 +98,7 @@ export class SingleTokenBuilder extends BaseBuilder {
         expiration: orderParams.expiration,
         nonce: orderParams.nonce,
         coin: orderParams.coin,
-        masterNonce: s(options.takerNonce),
+        masterNonce: s(options.takerMasterNonce),
       });
     }
   }

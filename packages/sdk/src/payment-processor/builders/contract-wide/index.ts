@@ -1,9 +1,9 @@
 import { BigNumberish } from "@ethersproject/bignumber";
+import { AddressZero } from "@ethersproject/constants";
 
 import { BaseBuildParams, BaseBuilder } from "../base";
 import { Order } from "../../order";
 import { s } from "../../../utils";
-import { AddressZero } from "@ethersproject/constants";
 
 interface BuildParams extends BaseBuildParams {}
 
@@ -12,6 +12,7 @@ export class ContractWideBuilder extends BaseBuilder {
     try {
       const copyOrder = this.build({
         ...order.params,
+        trader: order.params.sellerOrBuyer,
       });
 
       if (!copyOrder) {
@@ -29,7 +30,7 @@ export class ContractWideBuilder extends BaseBuilder {
   }
 
   public build(params: BuildParams) {
-    if (params.sellerAcceptedOffer != undefined) {
+    if (params.sellerAcceptedOffer) {
       throw new Error("Unsupported order side");
     }
 
@@ -41,8 +42,8 @@ export class ContractWideBuilder extends BaseBuilder {
       marketplace: params.marketplace!,
       marketplaceFeeNumerator: s(params.marketplaceFeeNumerator),
       maxRoyaltyFeeNumerator: s(params.maxRoyaltyFeeNumerator),
-      privateTaker: params.privateTaker ?? AddressZero,
-      trader: params.trader,
+      privateBuyerOrDelegatedPurchaser: AddressZero,
+      sellerOrBuyer: params.trader,
       tokenAddress: params.tokenAddress,
       amount: s(params.amount),
       price: s(params.price),
@@ -60,7 +61,7 @@ export class ContractWideBuilder extends BaseBuilder {
     order: Order,
     options: {
       taker: string;
-      takerNonce: BigNumberish;
+      takerMasterNonce: BigNumberish;
       tokenId?: BigNumberish;
     }
   ): Order {
@@ -71,8 +72,8 @@ export class ContractWideBuilder extends BaseBuilder {
       marketplace: orderParams.marketplace,
       marketplaceFeeNumerator: orderParams.marketplaceFeeNumerator,
       maxRoyaltyFeeNumerator: orderParams.maxRoyaltyFeeNumerator,
-      privateTaker: orderParams.privateTaker,
-      trader: options.taker,
+      privateBuyerOrDelegatedPurchaser: AddressZero,
+      sellerOrBuyer: options.taker,
       tokenAddress: orderParams.tokenAddress,
       tokenId: s(options.tokenId),
       amount: orderParams.amount,
@@ -80,7 +81,7 @@ export class ContractWideBuilder extends BaseBuilder {
       expiration: orderParams.expiration,
       nonce: orderParams.nonce,
       coin: orderParams.coin,
-      masterNonce: s(options.takerNonce),
+      masterNonce: s(options.takerMasterNonce),
     });
   }
 }
