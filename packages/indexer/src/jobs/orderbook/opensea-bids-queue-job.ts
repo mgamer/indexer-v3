@@ -13,6 +13,7 @@ export class OpenseaBidsQueueJob extends AbstractRabbitMqJobHandler {
   concurrency = 100;
   lazyMode = true;
   consumerTimeout = 30000;
+  disableConsuming = true;
 
   protected async process(payload: OpenseaBidsQueueJobPayload) {
     const { kind, info, validateBidValue, ingestMethod, ingestDelay } = payload.orderInfo;
