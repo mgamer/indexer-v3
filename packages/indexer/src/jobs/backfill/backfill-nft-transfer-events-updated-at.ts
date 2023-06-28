@@ -30,7 +30,7 @@ if (config.doBackgroundWork) {
       let cursor = job.data.cursor as CursorInfo;
       let continuationFilter = "";
 
-      const limit = (await redis.get(`${QUEUE_NAME}-limit`)) || 5000;
+      const limit = (await redis.get(`${QUEUE_NAME}-limit`)) || 2500;
 
       if (!cursor) {
         const cursorJson = await redis.get(`${QUEUE_NAME}-next-cursor`);
