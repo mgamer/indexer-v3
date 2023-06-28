@@ -1,22 +1,23 @@
+import { Interface } from "@ethersproject/abi";
+import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
+import { Contract } from "@ethersproject/contracts";
+import { keccak256 } from "@ethersproject/solidity";
 import * as Sdk from "@reservoir0x/sdk";
 import pLimit from "p-limit";
-import { Interface } from "@ethersproject/abi";
-import { Contract } from "@ethersproject/contracts";
-import { baseProvider } from "@/common/provider";
+
 import { idb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
+import { baseProvider } from "@/common/provider";
 import { bn, now, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import * as ordersUpdateById from "@/jobs/order-updates/by-id-queue";
 import { Sources } from "@/models/sources";
-import { DbOrder, OrderMetadata, generateSchemaHash } from "@/orderbook/orders/utils";
 import { offChainCheck } from "@/orderbook/orders/payment-processor/check";
+import { DbOrder, OrderMetadata, generateSchemaHash } from "@/orderbook/orders/utils";
 import * as tokenSet from "@/orderbook/token-sets";
 import * as royalties from "@/utils/royalties";
 import _ from "lodash";
-import { keccak256 } from "@ethersproject/solidity";
-import { BigNumber } from "ethers";
 
 export type OrderInfo = {
   orderParams: Sdk.PaymentProcessor.Types.BaseOrder;
@@ -29,10 +30,10 @@ type SaveResult = {
   unfillable?: boolean;
 };
 
-export function getOrderNonce(marketplace: string, nonce: string) {
+export const getOrderNonce = (marketplace: string, nonce: string) => {
   const hash = keccak256(["address", "uint256"], [marketplace, nonce]);
   return BigNumber.from(hash).toString();
-}
+};
 
 export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
   const results: SaveResult[] = [];
@@ -43,6 +44,14 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       const order = new Sdk.PaymentProcessor.Order(config.chainId, orderParams);
       const id = order.hash();
 
+      // For now, only listings are supported
+      if (order.params.kind !== "sale-approval") {
+        return results.push({
+          id,
+          status: "unsupported-side",
+        });
+      }
+
       const exchange = new Contract(
         Sdk.PaymentProcessor.Addresses.PaymentProcessor[config.chainId],
         new Interface([
@@ -50,10 +59,9 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         ]),
         baseProvider
       );
-
       const securityId = await exchange.getTokenSecurityPolicyId(order.params.tokenAddress);
 
-      // DEFAULT_SECURITY_POLICY_ID = 0
+      // For now, only the default security policy is supported
       if (securityId.toString() != "0") {
         return results.push({
           id,
@@ -83,13 +91,8 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         });
       }
 
-      // Check: order has (W)ETH as payment token
-      if (
-        ![
-          Sdk.Common.Addresses.Weth[config.chainId],
-          Sdk.Common.Addresses.Eth[config.chainId],
-        ].includes(order.params.coin)
-      ) {
+      // Check: order has ETH as payment token
+      if (![Sdk.Common.Addresses.Eth[config.chainId]].includes(order.params.coin)) {
         return results.push({
           id,
           status: "unsupported-payment-token",
@@ -144,20 +147,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       const schemaHash = metadata.schemaHash ?? generateSchemaHash(metadata.schema);
 
       switch (order.params.kind) {
-        case "collection-offer-approval": {
-          [{ id: tokenSetId }] = await tokenSet.contractWide.save([
-            {
-              id: `contract:${order.params.tokenAddress}`,
-              schemaHash,
-              contract: order.params.tokenAddress,
-            },
-          ]);
-
-          break;
-        }
-
-        case "sale-approval":
-        case "offer-approval": {
+        case "sale-approval": {
           [{ id: tokenSetId }] = await tokenSet.singleToken.save([
             {
               id: `token:${order.params.tokenAddress}:${order.params.tokenId}`,
@@ -178,7 +168,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         });
       }
 
-      const side = ["sale-approval"].includes(order.params.kind!) ? "sell" : "buy";
+      const side = ["sale-approval"].includes(order.params.kind) ? "sell" : "buy";
 
       // Handle: currency
       const currency = order.params.coin;
@@ -188,42 +178,15 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         kind: string;
         recipient: string;
         bps: number;
-      }[] = [
-        // {
-        //   kind: "marketplace",
-        //   recipient: "0x1838de7d4e4e42c8eb7b204a91e28e9fad14f536",
-        //   bps: 50,
-        // },
-      ];
-
-      // Temp Disable
-      // Handle: royalties
-      // let onChainRoyalties: Royalty[];
-
-      // if (order.params.kind === "single-token") {
-      //   onChainRoyalties = await royalties.getRoyalties(
-      //     order.params.collection,
-      //     order.params.itemIds[0],
-      //     "onchain"
-      //   );
-      // } else {
-      //   onChainRoyalties = await royalties.getRoyaltiesByTokenSet(tokenSetId, "onchain");
-      // }
-
-      // if (onChainRoyalties.length) {
-      //   feeBreakdown = [
-      //     ...feeBreakdown,
-      //     {
-      //       kind: "royalty",
-      //       recipient: onChainRoyalties[0].recipient,
-      //       // LooksRare has fixed 0.5% royalties
-      //       bps: 50,
-      //     },
-      //   ];
-      // } else {
-      //   // If there is no royalty, the marketplace fee will be 0.5%
-      //   feeBreakdown[0].bps = 50;
-      // }
+      }[] = (
+        side === "sell"
+          ? await royalties.getRoyalties(
+              order.params.tokenAddress,
+              order.params.tokenId,
+              "on-chain"
+            )
+          : await royalties.getRoyaltiesByTokenSet(tokenSetId, "on-chain")
+      ).map((r) => ({ kind: "royalty", ...r }));
 
       const price = order.params.price;
 
@@ -233,25 +196,33 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
           ? await royalties.getRoyalties(order.params.tokenAddress, order.params.tokenId, "default")
           : await royalties.getRoyaltiesByTokenSet(tokenSetId, "default");
 
+      const totalBuiltInBps = feeBreakdown
+        .map(({ bps, kind }) => (kind === "royalty" ? bps : 0))
+        .reduce((a, b) => a + b, 0);
+      const totalDefaultBps = defaultRoyalties.map(({ bps }) => bps).reduce((a, b) => a + b, 0);
+
       const missingRoyalties = [];
       let missingRoyaltyAmount = bn(0);
-      let royaltyDeducted = false;
-      for (const { bps, recipient } of defaultRoyalties) {
-        // Get any built-in royalty payment to the current recipient
-        const existingRoyalty = feeBreakdown.find((r) => r.kind === "royalty");
+      if (totalBuiltInBps < totalDefaultBps) {
+        const validRecipients = defaultRoyalties.filter(
+          ({ bps, recipient }) => bps && recipient !== AddressZero
+        );
+        if (validRecipients.length) {
+          const bpsDiff = totalDefaultBps - totalBuiltInBps;
+          const amount = bn(price).mul(bpsDiff).div(10000);
+          missingRoyaltyAmount = missingRoyaltyAmount.add(amount);
 
-        // Deduce the 0.5% royalty LooksRare will pay if needed
-        const actualBps = existingRoyalty && !royaltyDeducted ? bps - 50 : bps;
-        royaltyDeducted = !_.isUndefined(existingRoyalty) || royaltyDeducted;
-
-        const amount = bn(price).mul(actualBps).div(10000).toString();
-        missingRoyaltyAmount = missingRoyaltyAmount.add(amount);
-
-        missingRoyalties.push({
-          bps: actualBps,
-          amount,
-          recipient,
-        });
+          // Split the missing royalties pro-rata across all royalty recipients
+          const totalBps = _.sumBy(validRecipients, ({ bps }) => bps);
+          for (const { bps, recipient } of validRecipients) {
+            // TODO: Handle lost precision (by paying it to the last or first recipient)
+            missingRoyalties.push({
+              bps: Math.floor((bpsDiff * bps) / totalBps),
+              amount: amount.mul(bps).div(totalBps).toString(),
+              recipient,
+            });
+          }
+        }
       }
 
       const feeBps = feeBreakdown.map(({ bps }) => bps).reduce((a, b) => Number(a) + Number(b), 0);
@@ -286,10 +257,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       const isReservoir = false;
 
       // Handle: conduit
-      let conduit = Sdk.PaymentProcessor.Addresses.PaymentProcessor[config.chainId];
-      if (side === "sell") {
-        conduit = Sdk.PaymentProcessor.Addresses.PaymentProcessor[config.chainId];
-      }
+      const conduit = Sdk.PaymentProcessor.Addresses.PaymentProcessor[config.chainId];
 
       const validFrom = `date_trunc('seconds', now())`;
       const validTo = `date_trunc('seconds', to_timestamp(${order.params.expiration}))`;
@@ -302,7 +270,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         approval_status: approvalStatus,
         token_set_id: tokenSetId,
         token_set_schema_hash: toBuffer(schemaHash),
-        maker: toBuffer(order.params.trader),
+        maker: toBuffer(order.params.sellerOrBuyer),
         taker: toBuffer(AddressZero),
         price,
         value,

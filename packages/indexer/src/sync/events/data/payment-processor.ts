@@ -60,7 +60,8 @@ export const sweepCollectionERC1155: EventData = {
       address[] sellers,
       uint256[] tokenIds,
       uint256[] amounts,
-      uint256[] salePrices)`,
+      uint256[] salePrices
+    )`,
   ]),
 };
 

@@ -43,8 +43,7 @@ export const offChainCheck = async (
   }
 
   // Check: order's nonce was not bulk cancelled
-  const minNonce = await commonHelpers.getMinNonce("payment-processor", order.params.trader);
-
+  const minNonce = await commonHelpers.getMinNonce("payment-processor", order.params.sellerOrBuyer);
   if (minNonce.gt(order.params.masterNonce)) {
     throw new Error("cancelled");
   }
@@ -52,7 +51,7 @@ export const offChainCheck = async (
   // Check: order's nonce was not individually cancelled
   const nonceCancelled = await commonHelpers.isNonceCancelled(
     "payment-processor",
-    order.params.trader,
+    order.params.sellerOrBuyer,
     order.params.nonce
   );
 
@@ -63,9 +62,14 @@ export const offChainCheck = async (
   let hasBalance = true;
   let hasApproval = true;
   if (order.isBuyOrder()) {
+    const totalPrice = bn(order.params.price).mul(order.params.amount);
+
     // Check: maker has enough balance
-    const ftBalance = await commonHelpers.getFtBalance(order.params.coin, order.params.trader);
-    if (ftBalance.lt(order.params.price)) {
+    const ftBalance = await commonHelpers.getFtBalance(
+      order.params.coin,
+      order.params.sellerOrBuyer
+    );
+    if (ftBalance.lt(totalPrice)) {
       hasBalance = false;
     }
 
@@ -75,12 +79,12 @@ export const offChainCheck = async (
           await onChainData
             .fetchAndUpdateFtApproval(
               order.params.coin,
-              order.params.trader,
+              order.params.sellerOrBuyer,
               Sdk.PaymentProcessor.Addresses.PaymentProcessor[config.chainId],
               true
             )
             .then((a) => a.value)
-        ).lt(order.params.price)
+        ).lt(totalPrice)
       ) {
         hasApproval = false;
       }
@@ -90,9 +94,9 @@ export const offChainCheck = async (
     const nftBalance = await commonHelpers.getNftBalance(
       order.params.tokenAddress,
       order.params.tokenId!,
-      order.params.trader
+      order.params.sellerOrBuyer
     );
-    if (nftBalance.lt(1)) {
+    if (nftBalance.lt(order.params.amount)) {
       hasBalance = false;
     }
 
@@ -101,7 +105,7 @@ export const offChainCheck = async (
     // Check: maker has set the proper approval
     const nftApproval = await commonHelpers.getNftApproval(
       order.params.tokenAddress,
-      order.params.trader,
+      order.params.sellerOrBuyer,
       operator
     );
     if (!nftApproval) {
@@ -111,7 +115,7 @@ export const offChainCheck = async (
           kind === "erc721"
             ? new Sdk.Common.Helpers.Erc721(baseProvider, order.params.tokenAddress)
             : new Sdk.Common.Helpers.Erc1155(baseProvider, order.params.tokenAddress);
-        if (!(await contract.isApproved(order.params.trader, operator))) {
+        if (!(await contract.isApproved(order.params.sellerOrBuyer, operator))) {
           hasApproval = false;
         }
       } else {
