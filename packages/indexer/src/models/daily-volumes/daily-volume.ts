@@ -5,6 +5,7 @@
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
 import { PgPromiseQuery, idb, pgp, redb, ridb } from "@/common/db";
+import _ from "lodash";
 
 export class DailyVolume {
   private static lockKey = "daily-volumes-running";
@@ -522,7 +523,7 @@ export class DailyVolume {
     }
 
     try {
-      const queries: any = [];
+      const queries: { query: string; values: any }[] = [];
       mergedArr.forEach((row: any) => {
         // When updating single collection don't update the rank
         queries.push({
@@ -542,7 +543,9 @@ export class DailyVolume {
         });
       });
 
-      await idb.none(pgp.helpers.concat(queries));
+      for (const query of _.chunk(queries, 100)) {
+        await idb.none(pgp.helpers.concat(query));
+      }
     } catch (error: any) {
       logger.error(
         "daily-volumes",
