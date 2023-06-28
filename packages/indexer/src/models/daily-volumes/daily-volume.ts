@@ -514,9 +514,14 @@ export class DailyVolume {
     );
 
     if (!mergedArr.length) {
+      // For specific collection it could be there's no volume
+      if (collectionId) {
+        return true;
+      }
+
       logger.error(
         "daily-volumes",
-        `No daily volumes found for 1, 7 and 30 days. Should be impossible. dateTimestamp=${dateTimestamp}, collectionId=${collectionId}`
+        `No daily volumes found for 1, 7 and 30 days. Should be impossible. dateTimestamp=${dateTimestamp}`
       );
 
       return false;
