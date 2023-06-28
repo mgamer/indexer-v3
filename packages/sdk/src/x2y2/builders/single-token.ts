@@ -16,7 +16,7 @@ export const buildOrder = (params: BuildParams): Types.LocalOrder => {
     network: params.network,
     intent: params.side === "sell" ? Types.Intent.SELL : Types.Intent.BUY,
     // At the moment, X2Y2 only supports ERC721 tokens
-    delegateType: Types.DelegationType.ERC721,
+    delegateType: params.delegateType ?? Types.DelegationType.ERC721,
     deadline: params.deadline,
     currency: params.currency,
     dataMask: "0x",

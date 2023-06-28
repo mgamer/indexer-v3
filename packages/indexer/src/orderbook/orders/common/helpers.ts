@@ -1,11 +1,9 @@
 import { BigNumber } from "@ethersproject/bignumber";
-import * as Sdk from "@reservoir0x/sdk";
 
 // Must use `idb` and not `redb` since a lot of important processes
 // depend on having information as up-to-date as possible
 import { idb } from "@/common/db";
 import { toBuffer, bn } from "@/common/utils";
-import { config } from "@/config/index";
 import { OrderKind } from "@/orderbook/orders";
 
 export const getContractKind = async (
@@ -218,17 +216,18 @@ export const isListingOffChainCancelled = async (
   maker: string,
   contract: string,
   tokenId: string,
+  conduit: string,
   originatedAt: string
 ) => {
   if (["blur", "x2y2"].includes(orderKind)) {
     // Blur and X2Y2 orders can get off-chain cancelled if the user
     // transferred to another wallet or revoked the approval
-    let conduit: string;
-    if (orderKind === "blur") {
-      conduit = Sdk.Blur.Addresses.ExecutionDelegate[config.chainId];
-    } else {
-      conduit = Sdk.X2Y2.Addresses.Erc721Delegate[config.chainId];
-    }
+    // let conduit: string;
+    // if (orderKind === "blur") {
+    //   conduit = Sdk.Blur.Addresses.ExecutionDelegate[config.chainId];
+    // } else {
+    //   conduit = Sdk.X2Y2.Addresses.Erc721Delegate[config.chainId];
+    // }
 
     const result = await idb.oneOrNone(
       `

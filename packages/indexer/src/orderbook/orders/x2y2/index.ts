@@ -264,7 +264,10 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       // Handle: conduit
       let conduit = Sdk.X2Y2.Addresses.Exchange[config.chainId];
       if (order.params.type === "sell") {
-        conduit = Sdk.X2Y2.Addresses.Erc721Delegate[config.chainId];
+        conduit =
+          order.params.delegateType === Sdk.X2Y2.Types.DelegationType.ERC721
+            ? Sdk.X2Y2.Addresses.Erc721Delegate[config.chainId]
+            : Sdk.X2Y2.Addresses.Erc1155Delegate[config.chainId];
       }
 
       const validFrom = `date_trunc('seconds', to_timestamp(${currentTime}))`;

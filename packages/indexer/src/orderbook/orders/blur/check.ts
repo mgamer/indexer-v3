@@ -50,6 +50,7 @@ export const offChainCheck = async (
         order.params.trader,
         order.params.collection,
         order.params.tokenId,
+        Sdk.Blur.Addresses.ExecutionDelegate[config.chainId],
         originatedAt
       );
       if (offChainCancelled) {

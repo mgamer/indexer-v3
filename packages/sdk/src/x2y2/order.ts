@@ -36,6 +36,7 @@ export class Order {
       currency: localOrder.currency,
       price: localOrder.items[0].price,
       maker: localOrder.user,
+      delegateType: localOrder.delegateType,
       taker: AddressZero,
       deadline: localOrder.deadline,
       nft: {
@@ -65,6 +66,7 @@ const normalize = (order: Types.Order): Types.Order => {
     maker: lc(order.maker),
     taker: order.taker ? lc(order.taker) : AddressZero,
     deadline: n(order.deadline),
+    delegateType: order.delegateType ?? Types.DelegationType.ERC721,
     itemHash: lc(order.itemHash),
     nft: {
       token: lc(order.nft.token),
