@@ -18,7 +18,7 @@ import {
 import { getNetworkName, getNetworkSettings } from "@/config/network";
 import _ from "lodash";
 import { buildContinuation, splitContinuation } from "@/common/utils";
-import { addToQueue as backfillActivitiesAddToQueue } from "@/jobs/elasticsearch/backfill-activities-elasticsearch";
+import { addToQueue as backfillActivitiesAddToQueue } from "@/jobs/activities/backfill/backfill-activities-elasticsearch";
 
 const INDEX_NAME = `${getNetworkName()}.activities`;
 
@@ -582,7 +582,9 @@ export const updateActivitiesMissingCollection = async (
   contract: string,
   tokenId: number,
   collection: CollectionsEntity
-): Promise<void> => {
+): Promise<boolean> => {
+  let keepGoing = false;
+
   const query = {
     bool: {
       must_not: [
@@ -611,6 +613,8 @@ export const updateActivitiesMissingCollection = async (
     const response = await elasticsearch.updateByQuery({
       index: INDEX_NAME,
       conflicts: "proceed",
+      refresh: true,
+      max_docs: 1000,
       // This is needed due to issue with elasticsearch DSL.
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
@@ -638,9 +642,14 @@ export const updateActivitiesMissingCollection = async (
           },
           query: JSON.stringify(query),
           response,
+          keepGoing,
         })
       );
     } else {
+      keepGoing = Boolean(
+        (response?.version_conflicts ?? 0) > 0 || (response?.updated ?? 0) === 1000
+      );
+
       logger.info(
         "elasticsearch-activities",
         JSON.stringify({
@@ -652,6 +661,7 @@ export const updateActivitiesMissingCollection = async (
           },
           query: JSON.stringify(query),
           response,
+          keepGoing,
         })
       );
     }
@@ -664,6 +674,7 @@ export const updateActivitiesMissingCollection = async (
           contract,
           tokenId,
           collection,
+          keepGoing,
         },
         error,
       })
@@ -671,6 +682,8 @@ export const updateActivitiesMissingCollection = async (
 
     throw error;
   }
+
+  return keepGoing;
 };
 
 export const updateActivitiesCollection = async (
@@ -678,7 +691,9 @@ export const updateActivitiesCollection = async (
   tokenId: string,
   newCollection: CollectionsEntity,
   oldCollectionId: string
-): Promise<void> => {
+): Promise<boolean> => {
+  let keepGoing = false;
+
   const query = {
     bool: {
       must: [
@@ -700,6 +715,8 @@ export const updateActivitiesCollection = async (
     const response = await elasticsearch.updateByQuery({
       index: INDEX_NAME,
       conflicts: "proceed",
+      refresh: true,
+      max_docs: 1000,
       // This is needed due to issue with elasticsearch DSL.
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
@@ -728,9 +745,14 @@ export const updateActivitiesCollection = async (
           },
           query: JSON.stringify(query),
           response,
+          keepGoing,
         })
       );
     } else {
+      keepGoing = Boolean(
+        (response?.version_conflicts ?? 0) > 0 || (response?.updated ?? 0) === 1000
+      );
+
       logger.info(
         "elasticsearch-activities",
         JSON.stringify({
@@ -743,6 +765,7 @@ export const updateActivitiesCollection = async (
           },
           query: JSON.stringify(query),
           response,
+          keepGoing,
         })
       );
     }
@@ -759,11 +782,14 @@ export const updateActivitiesCollection = async (
         },
         query: JSON.stringify(query),
         error,
+        keepGoing,
       })
     );
 
     throw error;
   }
+
+  return keepGoing;
 };
 
 export const updateActivitiesTokenMetadata = async (
@@ -894,6 +920,7 @@ export const updateActivitiesTokenMetadata = async (
           },
           query: JSON.stringify(query),
           response,
+          keepGoing,
         })
       );
     } else {
@@ -928,6 +955,7 @@ export const updateActivitiesTokenMetadata = async (
         },
         query: JSON.stringify(query),
         error,
+        keepGoing,
       })
     );
 
@@ -1036,6 +1064,7 @@ export const updateActivitiesCollectionMetadata = async (
           },
           query: JSON.stringify(query),
           response,
+          keepGoing,
         })
       );
     } else {
@@ -1068,6 +1097,7 @@ export const updateActivitiesCollectionMetadata = async (
         },
         query: JSON.stringify(query),
         error,
+        keepGoing,
       })
     );
 
