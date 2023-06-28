@@ -14,7 +14,7 @@ export type CollectionFloorJobPayload = {
 };
 
 export class CollectionFloorJob extends AbstractRabbitMqJobHandler {
-  queueName = "token-updates-floor-ask-queue";
+  queueName = "collection-updates-floor-ask-queue";
   maxRetries = 10;
   concurrency = 5;
   backoff = {
