@@ -299,6 +299,7 @@ export const saveFullListings = async (
 type PartialListingOrderParams = {
   collection: string;
   tokenId: string;
+  owner?: string;
   // If empty then no Blur listing is available anymore
   price?: string;
   createdAt?: string;
@@ -330,8 +331,6 @@ export const savePartialListings = async (
   const orderValues: DbOrder[] = [];
 
   const handleOrder = async ({ orderParams }: PartialListingOrderInfo) => {
-    // logger.info("blur-debug", JSON.stringify(orderInfos));
-
     try {
       // Fetch current owner
       const owner = await idb
@@ -351,6 +350,18 @@ export const savePartialListings = async (
           }
         )
         .then((r) => fromBuffer(r.owner));
+
+      if (
+        orderParams.owner &&
+        orderParams.owner.toLowerCase() !== owner &&
+        // Blend sell offers will have the original owner instead of the Blend contract
+        owner !== Sdk.Blend.Addresses.Blend[config.chainId]
+      ) {
+        return results.push({
+          id: "unknown",
+          status: "redundant",
+        });
+      }
 
       // Handle: source
       const sources = await Sources.getInstance();
@@ -511,6 +522,7 @@ export const savePartialListings = async (
               raw_data = $/rawData:json/
             WHERE orders.id = $/id/
               AND orders.fillability_status != 'fillable'
+              AND orders.approval_status = 'approved'
             RETURNING orders.id
           `,
           {
@@ -569,6 +581,7 @@ export const savePartialListings = async (
         "dynamic",
         "raw_data",
         { name: "expiration", mod: ":raw" },
+        "originated_at",
       ],
       {
         table: "orders",

@@ -26,7 +26,7 @@ export const getOrdersBidsV5Options: RouteOptions = {
   description: "Bids (offers)",
   notes:
     "Get a list of bids (offers), filtered by token, collection or maker. This API is designed for efficiently ingesting large volumes of orders, for external processing.\n\n There are a different kind of bids than can be returned:\n\n- Inputting a 'contract' will return token and attribute bids.\n\n- Inputting a 'collection-id' will return collection wide bids./n/n Please mark `excludeEOA` as `true` to exclude Blur orders.",
-  tags: ["api", "Orders"],
+  tags: ["api", "Orders", "x-deprecated"],
   plugins: {
     "hapi-swagger": {
       order: 5,
@@ -50,7 +50,7 @@ export const getOrdersBidsV5Options: RouteOptions = {
         .lowercase()
         .pattern(regex.address)
         .description(
-          "Filter to a particular user. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00`"
+          "Filter to a particular user. Must set `source=blur.io` to reveal maker's blur bids. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00`"
         ),
       community: Joi.string()
         .lowercase()
@@ -114,7 +114,7 @@ export const getOrdersBidsV5Options: RouteOptions = {
       source: Joi.string()
         .pattern(regex.domain)
         .description(
-          "Filter to a source by domain. Only active listed will be returned. Example: `opensea.io`"
+          "Filter to a source by domain. Only active listed will be returned. Must set `rawData=true` to reveal individual bids when `source=blur.io`. Example: `opensea.io`"
         ),
       native: Joi.boolean().description("If true, results will filter only Reservoir orders."),
       includeCriteriaMetadata: Joi.boolean()
@@ -122,7 +122,9 @@ export const getOrdersBidsV5Options: RouteOptions = {
         .description("If true, criteria metadata is included in the response."),
       includeRawData: Joi.boolean()
         .default(false)
-        .description("If true, raw data is included in the response."),
+        .description(
+          "If true, raw data is included in the response. Set `source=blur.io` and make this `true` to reveal individual blur bids."
+        ),
       includeDepth: Joi.boolean()
         .default(false)
         .description("If true, the depth of each order is included in the response."),
@@ -246,6 +248,7 @@ export const getOrdersBidsV5Options: RouteOptions = {
                 isReservoir: false,
                 createdAt: now(),
                 updatedAt: now(),
+                originatedAt: now(),
                 includeRawData: false,
                 rawData: {} as any,
                 normalizeRoyalties: false,
@@ -310,6 +313,7 @@ export const getOrdersBidsV5Options: RouteOptions = {
           orders.is_reservoir,
           extract(epoch from orders.created_at) AS created_at,
           extract(epoch from orders.updated_at) AS updated_at,
+          orders.originated_at,
           (${criteriaBuildQuery}) AS criteria
           ${query.includeRawData || query.includeDepth ? ", orders.raw_data" : ""}
         FROM orders
@@ -642,6 +646,7 @@ export const getOrdersBidsV5Options: RouteOptions = {
           isReservoir: r.is_reservoir,
           createdAt: r.created_at,
           updatedAt: r.updated_at,
+          originatedAt: r.originated_at,
           includeRawData: query.includeRawData,
           rawData: r.raw_data,
           normalizeRoyalties: query.normalizeRoyalties,

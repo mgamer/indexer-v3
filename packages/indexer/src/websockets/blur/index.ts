@@ -11,8 +11,9 @@ const COMPONENT = "blur-websocket";
 
 if (config.doWebsocketWork && config.blurWsUrl && config.blurWsApiKey) {
   const client = io(config.blurWsUrl, {
-    extraHeaders: {
-      "Api-Key": config.blurWsApiKey,
+    transports: ["websocket"],
+    auth: {
+      "api-key": config.blurWsApiKey,
     },
   });
 
@@ -55,23 +56,24 @@ if (config.doWebsocketWork && config.blurWsUrl && config.blurWsApiKey) {
       } = JSON.parse(message);
 
       const collection = parsedMessage.contractAddress.toLowerCase();
-      logger.info(COMPONENT, message);
-
-      await orderbook.addToQueue(
-        parsedMessage.tops.map((t) => ({
-          kind: "blur-listing",
-          info: {
-            orderParams: {
-              collection,
-              tokenId: t.tokenId,
-              price: t.topAsk?.marketplace === "BLUR" ? t.topAsk.amount : undefined,
-              createdAt: t.topAsk?.marketplace === "BLUR" ? t.topAsk.createdAt : undefined,
-            },
-            metadata: {},
+      const orderInfos = parsedMessage.tops.map((t) => ({
+        kind: "blur-listing",
+        info: {
+          orderParams: {
+            collection,
+            tokenId: t.tokenId,
+            price: t.topAsk?.marketplace === "BLUR" ? t.topAsk.amount : undefined,
+            createdAt: t.topAsk?.marketplace === "BLUR" ? t.topAsk.createdAt : undefined,
           },
-          ingestMethod: "websocket",
-        }))
-      );
+          metadata: {},
+        },
+        ingestMethod: "websocket",
+      }));
+
+      logger.info(COMPONENT, JSON.stringify({ message, parsedMessage, orderInfos }));
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await orderbook.addToQueue(orderInfos as any);
 
       await blurListingsRefresh.addToQueue(collection);
     } catch (error) {

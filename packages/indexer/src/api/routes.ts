@@ -132,36 +132,6 @@ export const setupRoutes = (server: Server) => {
     options: activitiesEndpoints.getUserActivityV6Options,
   });
 
-  server.route({
-    method: "GET",
-    path: "/activity/v1",
-    options: activitiesEndpoints.getActivityV1Options,
-  });
-
-  server.route({
-    method: "GET",
-    path: "/activity/v2",
-    options: activitiesEndpoints.getActivityV2Options,
-  });
-
-  server.route({
-    method: "GET",
-    path: "/activity/v3",
-    options: activitiesEndpoints.getActivityV3Options,
-  });
-
-  server.route({
-    method: "GET",
-    path: "/activity/v4",
-    options: activitiesEndpoints.getActivityV4Options,
-  });
-
-  server.route({
-    method: "GET",
-    path: "/activity/v5",
-    options: activitiesEndpoints.getActivityV5Options,
-  });
-
   // Admin
 
   server.route({
@@ -514,6 +484,13 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
+
+    path: "/collections/top-selling/v1",
+    options: collectionsEndpoints.getTopSellingCollectionsOptions,
+  });
+
+  server.route({
+    method: "GET",
     path: "/users/{user}/collections/v1",
     options: collectionsEndpoints.getUserCollectionsV1Options,
   });
@@ -810,8 +787,8 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
-    path: "/execute/mint/v1",
-    options: executeEndpoints.postExecuteMintV1Options,
+    path: "/execute/results/v1",
+    options: executeEndpoints.postExecuteResultsV1,
   });
 
   // Health
@@ -845,24 +822,6 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
-    path: "/oracle/collections/{collection}/floor-ask/v1",
-    options: oracleEndpoints.getCollectionFloorAskOracleV1Options,
-  });
-
-  server.route({
-    method: "GET",
-    path: "/oracle/collections/{collection}/floor-ask/v2",
-    options: oracleEndpoints.getCollectionFloorAskOracleV2Options,
-  });
-
-  server.route({
-    method: "GET",
-    path: "/oracle/collections/{collection}/floor-ask/v3",
-    options: oracleEndpoints.getCollectionFloorAskOracleV3Options,
-  });
-
-  server.route({
-    method: "GET",
     path: "/oracle/collections/floor-ask/v4",
     options: oracleEndpoints.getCollectionFloorAskOracleV4Options,
   });
@@ -875,8 +834,8 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
-    path: "/oracle/collections/top-bid/v1",
-    options: oracleEndpoints.getCollectionTopBidOracleV1Options,
+    path: "/oracle/collections/floor-ask/v6",
+    options: oracleEndpoints.getCollectionFloorAskOracleV6Options,
   });
 
   server.route({
@@ -887,14 +846,20 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
-    path: "/oracle/tokens/status/v1",
-    options: oracleEndpoints.getTokenStatusOracleV1Options,
+    path: "/oracle/collections/top-bid/v3",
+    options: oracleEndpoints.getCollectionTopBidOracleV3Options,
   });
 
   server.route({
     method: "GET",
     path: "/oracle/tokens/status/v2",
     options: oracleEndpoints.getTokenStatusOracleV2Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/oracle/tokens/status/v3",
+    options: oracleEndpoints.getTokenStatusOracleV3Options,
   });
 
   // Orders
@@ -949,6 +914,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
+    path: "/orders/asks/v5",
+    options: ordersEndpoints.getOrdersAsksV5Options,
+  });
+
+  server.route({
+    method: "GET",
     path: "/orders/bids/v1",
     options: ordersEndpoints.getOrdersBidsV1Options,
   });
@@ -975,6 +946,12 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/orders/bids/v5",
     options: ordersEndpoints.getOrdersBidsV5Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/orders/bids/v6",
+    options: ordersEndpoints.getOrdersBidsV6Options,
   });
 
   server.route({

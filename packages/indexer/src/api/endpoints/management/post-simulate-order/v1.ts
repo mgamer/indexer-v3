@@ -1,9 +1,9 @@
-// import { parseEther } from "@ethersproject/units";
+import { parseEther } from "@ethersproject/units";
 import { CallTrace } from "@georgeroman/evm-tx-simulator/dist/types";
 import Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
-// import axios from "axios";
+import axios from "axios";
 import Joi from "joi";
 
 import { inject } from "@/api/index";
@@ -102,7 +102,8 @@ export const postSimulateOrderV1Options: RouteOptions = {
             orders.contract,
             orders.token_set_id,
             orders.fillability_status,
-            orders.approval_status
+            orders.approval_status,
+            orders.conduit
           FROM orders
           WHERE orders.id = $/id/
         `,
@@ -111,28 +112,28 @@ export const postSimulateOrderV1Options: RouteOptions = {
       if (!orderResult?.side || !orderResult?.contract) {
         throw Boom.badRequest("Could not find order");
       }
+
+      // Custom logic for simulating Blur listings
       if (orderResult.side === "sell" && orderResult.kind === "blur") {
-        // const blurPrice = await axios
-        //   .get(
-        //     `${config.orderFetcherBaseUrl}/api/blur-token?collection=${
-        //       orderResult.token_set_id.split(":")[1]
-        //     }&tokenId=${orderResult.token_set_id.split(":")[2]}`
-        //   )
-        //   .then((response) =>
-        //     response.data.blurPrice
-        //       ? parseEther(response.data.blurPrice).toString()
-        //       : response.data.blurPrice
-        //   );
-        logger.info(
-          "debug-blur-simulation",
-          JSON.stringify({
-            tokenSetId: orderResult.token_set_id,
-            price: orderResult.price,
-            // blurPrice,
-            // isDifferent: orderResult.price !== blurPrice,
-          })
-        );
+        const [, contract, tokenId] = orderResult.token_set_id.split(":");
+
+        const blurPrice = await axios
+          .get(
+            `${config.orderFetcherBaseUrl}/api/blur-token?contract=${contract}&tokenId=${tokenId}`
+          )
+          .then((response) =>
+            response.data.blurPrice
+              ? parseEther(response.data.blurPrice).toString()
+              : response.data.blurPrice
+          );
+        if (orderResult.price !== blurPrice) {
+          logger.info("debug-blur-simulation", JSON.stringify({ contract, tokenId, id }));
+          await logAndRevalidateOrder(id, "inactive", {
+            revalidate: true,
+          });
+        }
       }
+
       if (["blur", "nftx", "sudoswap", "sudoswap-v2", "universe"].includes(orderResult.kind)) {
         return { message: "Order not simulatable" };
       }
@@ -254,10 +255,22 @@ export const postSimulateOrderV1Options: RouteOptions = {
               AND (tokens.is_flagged IS NULL OR tokens.is_flagged = 0)
               AND nft_balances.amount > 0
               AND nft_balances.acquired_at < now() - interval '3 hours'
+              AND (
+                SELECT
+                  approved
+                FROM nft_approval_events
+                WHERE nft_approval_events.address = $/contract/
+                  AND nft_approval_events.owner = nft_balances.owner
+                  AND nft_approval_events.operator = $/conduit/
+                ORDER BY nft_approval_events.block DESC
+                LIMIT 1
+              )
             LIMIT 1
           `,
           {
             tokenSetId: orderResult.token_set_id,
+            contract: orderResult.contract,
+            conduit: orderResult.conduit,
           }
         );
         if (!tokenResult) {

@@ -58,6 +58,8 @@ import ZoraModuleAbi from "./abis/ZoraModule.json";
 import PermitProxyAbi from "./abis/PermitProxy.json";
 import { PermitTransfer } from "./permit";
 import SudoswapV2ModuleAbi from "./abis/SudoswapV2Module.json";
+import CryptoPunksModuleAbi from "./abis/CryptoPunksModule.json";
+import PaymentProcessorModuleAbi from "./abis/PaymentProcessorModule.json";
 
 type SetupOptions = {
   x2y2ApiKey?: string;
@@ -179,6 +181,16 @@ export class Router {
         AlienswapModuleAbi,
         provider
       ),
+      cryptoPunksModule: new Contract(
+        Addresses.CryptoPunksModule[chainId] ?? AddressZero,
+        CryptoPunksModuleAbi,
+        provider
+      ),
+      paymentProcessorModule: new Contract(
+        Addresses.PaymentProcessorModule[chainId] ?? AddressZero,
+        PaymentProcessorModuleAbi,
+        provider
+      ),
       permitProxy: new Contract(
         Addresses.PermitProxy[chainId] ?? AddressZero,
         PermitProxyAbi,
@@ -268,28 +280,6 @@ export class Router {
             amount: Number(detail.amount),
             source: options?.source,
           }),
-          orderIds: [detail.orderId],
-        });
-        success[detail.orderId] = true;
-      }
-    }
-
-    if (details.some(({ kind }) => kind === "cryptopunks")) {
-      if (options?.relayer) {
-        throw new Error("Relayer not supported for Cryptopunks orders");
-      }
-
-      for (const detail of details.filter(({ kind }) => kind === "cryptopunks")) {
-        if (detail.fees?.length || options?.globalFees?.length) {
-          throw new Error("Fees not supported for Cryptopunks orders");
-        }
-
-        const order = detail.order as Sdk.CryptoPunks.Order;
-        const exchange = new Sdk.CryptoPunks.Exchange(this.chainId);
-        txs.push({
-          approvals: [],
-          permitTransfers: [],
-          txData: exchange.fillListingTx(taker, order, options),
           orderIds: [detail.orderId],
         });
         success[detail.orderId] = true;
@@ -846,6 +836,8 @@ export class Router {
     const nftxDetails: ListingDetails[] = [];
     const raribleDetails: ListingDetails[] = [];
     const superRareDetails: ListingDetails[] = [];
+    const cryptoPunksDetails: ListingDetails[] = [];
+    const paymentProcessorDetails: ListingDetails[] = [];
 
     for (const detail of details) {
       // Skip any listings handled in a previous step
@@ -939,6 +931,16 @@ export class Router {
 
         case "superrare": {
           detailsRef = superRareDetails;
+          break;
+        }
+
+        case "cryptopunks": {
+          detailsRef = cryptoPunksDetails;
+          break;
+        }
+
+        case "payment-processor": {
+          detailsRef = paymentProcessorDetails;
           break;
         }
 
@@ -2537,6 +2539,104 @@ export class Router {
 
       // Mark the listings as successfully handled
       for (const { orderId } of superRareDetails) {
+        success[orderId] = true;
+        orderIds.push(orderId);
+      }
+    }
+
+    // Handle CryptoPunks listings
+    if (cryptoPunksDetails.length) {
+      const orders = cryptoPunksDetails.map((d) => d.order as Sdk.CryptoPunks.Order);
+      const module = this.contracts.cryptoPunksModule;
+      const fees = getFees(cryptoPunksDetails);
+
+      const price = orders.map((order) => bn(order.params.price)).reduce((a, b) => a.add(b), bn(0));
+      const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
+      const totalPrice = price.add(feeAmount);
+
+      executions.push({
+        module: module.address,
+        data: module.interface.encodeFunctionData("batchBuyPunksWithETH", [
+          orders.map((order) => ({
+            buyer: taker,
+            price: price,
+            punkIndex: order.params.tokenId,
+          })),
+          {
+            fillTo: taker,
+            refundTo: relayer,
+            revertIfIncomplete: Boolean(!options?.partial),
+            amount: price,
+          },
+          fees,
+        ]),
+        value: totalPrice,
+      });
+
+      // Track any possibly required swap
+      swapDetails.push({
+        tokenIn: buyInCurrency,
+        tokenOut: Sdk.Common.Addresses.Eth[this.chainId],
+        tokenOutAmount: totalPrice,
+        recipient: module.address,
+        refundTo: relayer,
+        details: cryptoPunksDetails,
+        executionIndex: executions.length - 1,
+      });
+
+      // Mark the listings as successfully handled
+      for (const { orderId } of cryptoPunksDetails) {
+        success[orderId] = true;
+        orderIds.push(orderId);
+      }
+    }
+
+    // Handle PaymentProcessor listings
+    if (paymentProcessorDetails.length) {
+      const orders = paymentProcessorDetails.map((d) => d.order as Sdk.PaymentProcessor.Order);
+      const module = this.contracts.paymentProcessorModule;
+      const fees = getFees(paymentProcessorDetails);
+
+      const price = orders.map((order) => bn(order.params.price)).reduce((a, b) => a.add(b), bn(0));
+      const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
+      const totalPrice = price.add(feeAmount);
+
+      executions.push({
+        module: module.address,
+        data: module.interface.encodeFunctionData("acceptETHListings", [
+          orders.map((order) =>
+            order.getMatchedOrder(
+              order.buildMatching({
+                taker: module.address,
+                takerMasterNonce: "0",
+              })
+            )
+          ),
+          orders.map((order) => order.params),
+          {
+            fillTo: taker,
+            refundTo: relayer,
+            revertIfIncomplete: Boolean(!options?.partial),
+            amount: price,
+          },
+          fees,
+        ]),
+        value: totalPrice,
+      });
+
+      // Track any possibly required swap
+      swapDetails.push({
+        tokenIn: buyInCurrency,
+        tokenOut: Sdk.Common.Addresses.Eth[this.chainId],
+        tokenOutAmount: totalPrice,
+        recipient: module.address,
+        refundTo: relayer,
+        details: paymentProcessorDetails,
+        executionIndex: executions.length - 1,
+      });
+
+      // Mark the listings as successfully handled
+      for (const { orderId } of paymentProcessorDetails) {
         success[orderId] = true;
         orderIds.push(orderId);
       }

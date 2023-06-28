@@ -39,6 +39,7 @@ import * as zora from "@/events-sync/data/zora";
 import * as looksRareV2 from "@/events-sync/data/looks-rare-v2";
 import * as blend from "@/events-sync/data/blend";
 import * as sudoswapV2 from "@/events-sync/data/sudoswap-v2";
+import * as paymentProcessor from "@/events-sync/data/payment-processor";
 
 // All events we're syncing should have an associated `EventData`
 // entry which dictates the way the event will be parsed and then
@@ -80,7 +81,8 @@ export type EventKind =
   | "zora"
   | "looks-rare-v2"
   | "blend"
-  | "sudoswap-v2";
+  | "sudoswap-v2"
+  | "payment-processor";
 
 // Event sub-kind in each of the above protocol/standard
 export type EventSubKind =
@@ -109,12 +111,14 @@ export type EventSubKind =
   | "foundation-buy-price-invalidated"
   | "foundation-buy-price-cancelled"
   | "foundation-buy-price-accepted"
+  | "foundation-offer-accepted"
   | "x2y2-order-cancelled"
   | "x2y2-order-inventory"
   | "seaport-order-cancelled"
   | "seaport-order-filled"
   | "seaport-counter-incremented"
   | "seaport-order-validated"
+  | "seaport-channel-updated"
   | "seaport-v1.4-order-cancelled"
   | "seaport-v1.4-order-filled"
   | "seaport-v1.4-orders-matched"
@@ -206,6 +210,7 @@ export type EventSubKind =
   | "zeroex-v2-fill"
   | "zeroex-v3-fill"
   | "treasure-item-sold"
+  | "treasure-bid-accepted"
   | "looks-rare-v2-new-bid-ask-nonces"
   | "looks-rare-v2-order-nonces-cancelled"
   | "looks-rare-v2-subset-nonces-cancelled"
@@ -250,7 +255,12 @@ export type EventSubKind =
   | "sudoswap-v2-spot-price-update"
   | "sudoswap-v2-delta-update"
   | "sudoswap-v2-new-erc721-pair"
-  | "sudoswap-v2-new-erc1155-pair";
+  | "sudoswap-v2-new-erc1155-pair"
+  | "payment-processor-buy-single-listing"
+  | "payment-processor-master-nonce-invalidated"
+  | "payment-processor-nonce-invalidated"
+  | "payment-processor-sweep-collection-erc1155"
+  | "payment-processor-sweep-collection-erc721";
 
 export type EventData = {
   kind: EventKind;
@@ -277,6 +287,7 @@ const allEventData = [
   foundation.buyPriceCancelled,
   foundation.buyPriceInvalidated,
   foundation.buyPriceSet,
+  foundation.offerAccepted,
   looksRare.cancelAllOrders,
   looksRare.cancelMultipleOrders,
   looksRare.takerAsk,
@@ -290,6 +301,7 @@ const allEventData = [
   seaport.orderCancelled,
   seaport.orderFulfilled,
   seaport.orderValidated,
+  seaport.channelUpdated,
   seaportV14.counterIncremented,
   seaportV14.orderCancelled,
   seaportV14.orderFulfilled,
@@ -427,6 +439,12 @@ const allEventData = [
   sudoswapV2.deltaUpdate,
   sudoswapV2.newERC721Pair,
   sudoswapV2.newERC1155Pair,
+  treasure.bidAccepted,
+  paymentProcessor.buySingleListing,
+  paymentProcessor.masterNonceInvalidated,
+  paymentProcessor.nonceInvalidated,
+  paymentProcessor.sweepCollectionERC1155,
+  paymentProcessor.sweepCollectionERC721,
 ];
 
 export const getEventData = (events?: string[]) => {
