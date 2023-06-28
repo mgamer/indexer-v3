@@ -52,9 +52,6 @@ import * as backfillLooksrareFills from "@/jobs/backfill/backfill-looks-rare-fil
 import * as backfillCollectionsIds from "@/jobs/backfill/backfill-collections-ids";
 import * as backfillNftTransferEventsUpdatedAt from "@/jobs/backfill/backfill-nft-transfer-events-updated-at";
 
-import * as collectionUpdatesFloorAsk from "@/jobs/collection-updates/floor-queue";
-
-import * as eventsSyncRealtimeProcess from "@/jobs/events-sync/process/realtime";
 import * as eventsSyncRealtime from "@/jobs/events-sync/realtime-queue";
 import * as eventsSyncRealtimeV2 from "@/jobs/events-sync/realtime-queue-v2";
 
@@ -217,9 +214,6 @@ export const allJobQueues = [
   backfillCollectionsIds.queue,
   backfillNftTransferEventsUpdatedAt.queue,
 
-  collectionUpdatesFloorAsk.queue,
-
-  eventsSyncRealtimeProcess.queue,
   eventsSyncRealtime.queue,
   eventsSyncRealtimeV2.queue,
 
