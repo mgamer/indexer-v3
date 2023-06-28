@@ -42,7 +42,6 @@ describe("PaymentProcessor - Indexer Integration Test", () => {
     isListing = false,
     bulkCancel = false,
     executeByRouterAPI = false,
-    subsetCancel = false,
   }) => {
     const buyer = alice;
     const seller = bob;
@@ -87,16 +86,16 @@ describe("PaymentProcessor - Indexer Integration Test", () => {
       tokenId: boughtTokenId,
       amount: "1",
       price: price,
-      expiration: (blockTime + (86400 * 30)).toString(),
+      expiration: (blockTime + 86400 * 30).toString(),
       coin: Common.Addresses.Weth[chainId],
-      masterNonce: buyerMasterNonce
+      masterNonce: buyerMasterNonce,
     };
-  
+
     let order = builder.build(orderParameters);
     let matchOrder = order.buildMatching({
       taker: seller.address,
-      takerNonce: sellerMasterNonce
-    })
+      takerMasterNonce: sellerMasterNonce,
+    });
 
     await order.sign(buyer);
     await matchOrder.sign(seller);
@@ -115,17 +114,17 @@ describe("PaymentProcessor - Indexer Integration Test", () => {
         tokenId: boughtTokenId,
         amount: "1",
         price: price,
-        expiration: (blockTime + (86400 * 30)).toString(),
+        expiration: (blockTime + 86400 * 30).toString(),
         coin: constants.AddressZero,
-        masterNonce: sellerMasterNonce
+        masterNonce: sellerMasterNonce,
       };
       order = builder.build(listingParams);
       matchOrder = order.buildMatching({
         taker: buyer.address,
-        takerNonce: buyerMasterNonce
+        takerMasterNonce: buyerMasterNonce,
       });
       await order.sign(seller);
-      await matchOrder.sign(buyer)
+      await matchOrder.sign(buyer);
     }
 
     console.log(green("\t Perform Order Saving:"));
@@ -136,7 +135,7 @@ describe("PaymentProcessor - Indexer Integration Test", () => {
       kind: "erc721",
       currency: order.params.coin,
       // Refresh balance incase the local indexer doesn't have the state
-      makers: [order.params.trader],
+      makers: [order.params.sellerOrBuyer],
       nfts: [
         {
           collection: erc721.address,
@@ -168,7 +167,7 @@ describe("PaymentProcessor - Indexer Integration Test", () => {
       const parseResult = await indexerHelper.doEventParsing(tx.hash, true);
       const onChainData = parseResult.onChainData[0];
       if (!onChainData) {
-        console.log("\t\t  Parse Event Failed",  tx.hash);
+        console.log("\t\t  Parse Event Failed", tx.hash);
       }
 
       await new Promise((resolve) => {
@@ -198,13 +197,13 @@ describe("PaymentProcessor - Indexer Integration Test", () => {
     // Handle Cancel Test
     if (bulkCancel) {
       console.log(green("\t Bulk Cancel Order"));
-      const tx = await exchange.cancelAllOrders(!isListing ? buyer : seller);
+      const tx = await exchange.revokeMasterNonce(!isListing ? buyer : seller);
 
       console.log(green("\t Event Parsing:"));
       const parseResult = await indexerHelper.doEventParsing(tx.hash, true);
 
       if (parseResult.error) {
-        console.log("parseResult", parseResult)
+        console.log("parseResult", parseResult);
         console.log(error(JSON.stringify(parseResult.error, null, 2)));
         return;
       }
@@ -262,7 +261,6 @@ describe("PaymentProcessor - Indexer Integration Test", () => {
       //       ],
       //       taker: matchOrder.recipient,
       //     });
-
       //     const allSteps = executeResponse.steps;
       //     const lastSetp = allSteps[allSteps.length - 1];
       //     const tx = await seller.sendTransaction(lastSetp.items[0].data);
@@ -284,7 +282,6 @@ describe("PaymentProcessor - Indexer Integration Test", () => {
       //     const executeResponse = await indexerHelper.executeBuyV7(payload);
       //     const allSteps = executeResponse.steps;
       //     const lastSetp = allSteps[allSteps.length - 1];
-
       //     const transcation = lastSetp.items[0];
       //     const tx = await buyer.sendTransaction({
       //       ...transcation.data,
@@ -306,7 +303,7 @@ describe("PaymentProcessor - Indexer Integration Test", () => {
 
     console.log(green("\t Event Parsing:"));
     const parseResult = await indexerHelper.doEventParsing(fillTxHash, skipProcessing);
-   
+
     const onChainData = parseResult.onChainData[0];
     if (!onChainData) {
       console.log("\t\t  Parse Event Failed");
@@ -316,7 +313,7 @@ describe("PaymentProcessor - Indexer Integration Test", () => {
     const matchFillEvent = fillEvents.find((event: any) => event.orderId === orderInfo.id);
     if (matchFillEvent) {
       const orderData = {
-        maker: order.params.trader,
+        maker: order.params.sellerOrBuyer,
         taker: (isListing ? buyer : seller).address.toLowerCase(),
       };
 
