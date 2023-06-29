@@ -95,6 +95,18 @@ if (config.doBackgroundWork && config.doWebsocketServerWork && config.kafkaBroke
           return;
         }
 
+        const topBidOnCollection = await redis.get(`top-bid:${order.collection_id}`);
+        if (topBidOnCollection && Number(topBidOnCollection) > Number(order.price)) {
+          logger.warn(
+            QUEUE_NAME,
+            `Top bid on collection is higher than current bid. data=${JSON.stringify(data)}`
+          );
+
+          return;
+        } else {
+          await redis.set(`top-bid:${order.collection_id}`, order.price);
+        }
+
         const payloads = [];
         const owners = await getOwners(order.token_set_id);
         const ownersChunks = _.chunk(owners, 25 * 20);
