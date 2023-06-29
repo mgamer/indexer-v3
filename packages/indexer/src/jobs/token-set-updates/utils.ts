@@ -24,7 +24,7 @@ export async function processTopBid(payload: topBidPayload, queueName: string) {
   try {
     let tokenSetTopBid = await idb.manyOrNone(
       `
-                          WITH x AS (
+                WITH x AS (
                   SELECT
                     token_sets.id AS token_set_id,
                     y.*
@@ -98,8 +98,7 @@ export async function processTopBid(payload: topBidPayload, queueName: string) {
       if (
         payload.kind === "new-order" &&
         tokenSetTopBid[0].topBuyId &&
-        _.isNull(tokenSetTopBid[0].collectionId) &&
-        tokenSetTopBid[0].topBuyValue > tokenSetTopBid[0].collectionTopBuyValue
+        _.isNull(tokenSetTopBid[0].collectionId)
       ) {
         //  Only trigger websocket event for non collection offers.
         await WebsocketEventRouter({
