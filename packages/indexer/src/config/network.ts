@@ -297,6 +297,15 @@ export const getNetworkSettings = (): NetworkSettings => {
             },
           ],
           [
+            "0x45f93404ae1e4f0411a7f42bc6a5dc395792738d",
+            {
+              contract: "0x45f93404AE1E4f0411a7F42BC6a5Dc395792738D",
+              name: "DEGEN",
+              symbol: "DGEN",
+              decimals: 18,
+            },
+          ],
+          [
             "0x4c7c1ec97279a6f3323eab9ab317202dee7ad922",
             {
               contract: "0x4c7c1ec97279a6f3323eab9ab317202dee7ad922",
@@ -590,6 +599,15 @@ export const getNetworkSettings = (): NetworkSettings => {
               decimals: 18,
             },
           ],
+          [
+            "0xdbb5da27ffcfebea8799a5832d4607714fc6aba8",
+            {
+              contract: "0xdBb5Da27FFcFeBea8799a5832D4607714fc6aBa8",
+              name: "DEGEN",
+              symbol: "DGEN",
+              decimals: 18,
+            },
+          ]
         ]),
         coingecko: {
           networkId: "polygon-pos",
