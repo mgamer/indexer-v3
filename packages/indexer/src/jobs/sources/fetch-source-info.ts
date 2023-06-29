@@ -84,6 +84,8 @@ if (config.doBackgroundWork) {
       const tokenUrlBaseGoerli = getTokenUrl(html, url, "base-goerli");
       const tokenUrlArbitrumNova = getTokenUrl(html, url, "arbitrum-nova");
       const tokenUrlAvalanche = getTokenUrl(html, url, "avalanche");
+      const tokenUrlScrollAlpha = getTokenUrl(html, url, "scroll-alpha");
+      const tokenUrlZoraTestnet = getTokenUrl(html, url, "zora-testnet");
 
       // Update the source data
       const sources = await Sources.getInstance();
@@ -103,6 +105,8 @@ if (config.doBackgroundWork) {
         tokenUrlBaseGoerli,
         tokenUrlArbitrumNova,
         tokenUrlAvalanche,
+        tokenUrlScrollAlpha,
+        tokenUrlZoraTestnet,
       });
     },
     {

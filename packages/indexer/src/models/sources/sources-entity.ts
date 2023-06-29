@@ -28,6 +28,8 @@ export type SourcesMetadata = {
   tokenUrlBaseGoerli?: string;
   tokenUrlArbitrumNova?: string;
   tokenUrlAvalanche?: string;
+  tokenUrlScrollAlpha?: string;
+  tokenUrlZoraTestnet?: string;
 };
 
 export class SourcesEntity {
