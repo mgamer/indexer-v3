@@ -43,7 +43,9 @@ export const ApprovalProxy: ChainIdToAddress = {
 
 // Permit proxy
 
-export const PermitProxy: ChainIdToAddress = {};
+export const PermitProxy: ChainIdToAddress = {
+  [Network.EthereumGoerli]: "0x104ff9a0e2a62aa531ef0cc9d19f948bde7062de",
+};
 
 // Utility modules
 

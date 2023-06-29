@@ -558,83 +558,6 @@ export class Router {
     if (
       details.every(
         ({ kind, fees, currency, order }) =>
-          kind === "seaport-v1.4" &&
-          buyInCurrency === currency &&
-          // All orders must have the same currency
-          currency === details[0].currency &&
-          // All orders must have the same conduit
-          (order as Sdk.SeaportV14.Order).params.conduitKey ===
-            (details[0].order as Sdk.SeaportV14.Order).params.conduitKey &&
-          !fees?.length
-      ) &&
-      !options?.globalFees?.length &&
-      !options?.forceRouter &&
-      !options?.relayer
-    ) {
-      const exchange = new Sdk.SeaportV14.Exchange(this.chainId);
-
-      const conduitKey = (details[0].order as Sdk.SeaportV14.Order).params.conduitKey;
-      const conduit = exchange.deriveConduit(conduitKey);
-
-      let approval: FTApproval | undefined;
-      if (!isETH(this.chainId, details[0].currency)) {
-        approval = {
-          currency: details[0].currency,
-          amount: details[0].price,
-          owner: taker,
-          operator: conduit,
-          txData: generateFTApprovalTxData(details[0].currency, taker, conduit),
-        };
-      }
-
-      if (details.length === 1) {
-        const order = details[0].order as Sdk.SeaportV14.Order;
-        return {
-          txs: [
-            {
-              approvals: approval ? [approval] : [],
-              permits: [],
-              txData: await exchange.fillOrderTx(
-                taker,
-                order,
-                order.buildMatching({ amount: details[0].amount }),
-                {
-                  ...options,
-                  conduitKey,
-                }
-              ),
-              orderIds: [details[0].orderId],
-            },
-          ],
-          success: { [details[0].orderId]: true },
-        };
-      } else {
-        const orders = details.map((d) => d.order as Sdk.SeaportV14.Order);
-        return {
-          txs: [
-            {
-              approvals: approval ? [approval] : [],
-              permits: [],
-              txData: await exchange.fillOrdersTx(
-                taker,
-                orders,
-                orders.map((order, i) => order.buildMatching({ amount: details[i].amount })),
-                {
-                  ...options,
-                  conduitKey,
-                }
-              ),
-              orderIds: details.map((d) => d.orderId),
-            },
-          ],
-          success: Object.fromEntries(details.map((d) => [d.orderId, true])),
-        };
-      }
-    }
-
-    if (
-      details.every(
-        ({ kind, fees, currency, order }) =>
           kind === "seaport-v1.5" &&
           buyInCurrency === currency &&
           // All orders must have the same currency
@@ -646,7 +569,8 @@ export class Router {
       ) &&
       !options?.globalFees?.length &&
       !options?.forceRouter &&
-      !options?.relayer
+      !options?.relayer &&
+      !options?.usePermit
     ) {
       const exchange = new Sdk.SeaportV15.Exchange(this.chainId);
 
@@ -723,7 +647,8 @@ export class Router {
       ) &&
       !options?.globalFees?.length &&
       !options?.forceRouter &&
-      !options?.relayer
+      !options?.relayer &&
+      !options?.usePermit
     ) {
       const exchange = new Sdk.Alienswap.Exchange(this.chainId);
 
@@ -820,7 +745,6 @@ export class Router {
     const elementErc1155Details: ListingDetails[] = [];
     const foundationDetails: ListingDetails[] = [];
     const looksRareV2Details: ListingDetails[] = [];
-    // Only `seaport`, `seaport-v1.4` and `alienswap` support non-ETH listings
     const seaportDetails: PerCurrencyListingDetails = {};
     const seaportV14Details: PerCurrencyListingDetails = {};
     const seaportV15Details: PerCurrencyListingDetails = {};

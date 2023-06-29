@@ -1,6 +1,6 @@
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
-import { PermitHandler, PermitWithTransfers } from "@reservoir0x/sdk/src/router/v6/permit";
+import { PermitHandler, PermitWithTransfers } from "@reservoir0x/sdk/dist/router/v6/permit";
 import Joi from "joi";
 
 import { logger } from "@/common/logger";

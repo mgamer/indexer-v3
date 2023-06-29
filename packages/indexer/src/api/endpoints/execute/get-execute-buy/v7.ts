@@ -5,6 +5,7 @@ import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
 import { TxData } from "@reservoir0x/sdk/dist/utils";
+import { PermitHandler, PermitWithTransfers } from "@reservoir0x/sdk/dist/router/v6/permit";
 import { FillListingsResult, ListingDetails } from "@reservoir0x/sdk/dist/router/v6/types";
 import axios from "axios";
 import _ from "lodash";
@@ -32,7 +33,6 @@ import * as mints from "@/orderbook/mints";
 import { generateCollectionMintTxData } from "@/orderbook/mints/calldata";
 import { getPermitId, getPermit, savePermit } from "@/utils/permits";
 import { getUSDAndCurrencyPrices } from "@/utils/prices";
-import { PermitHandler, PermitWithTransfers } from "@reservoir0x/sdk/src/router/v6/permit";
 
 const version = "v7";
 
@@ -1289,28 +1289,27 @@ export const getExecuteBuyV7Options: RouteOptions = {
             amount: permit.data.amount,
           });
 
-          let cachedPermit = await getPermit(id);
+          const cachedPermit = await getPermit(id);
           if (cachedPermit) {
-            // If the cached permit has a signature attached to it, we can skip it
-            const hasSignature = (cachedPermit.data as PermitWithTransfers).signature;
-            if (hasSignature) {
-              continue;
-            }
-
-            // Otherwise, let's make sure to use the cached permit details
+            // Override with the cached permit data
             permit.data = cachedPermit.data;
           } else {
             // Cache the permit if it's the first time we encounter it
             await savePermit(id, permit);
-            cachedPermit = permit;
+          }
+
+          // If the permit has a signature attached to it, we can skip it
+          const hasSignature = (permit.data as PermitWithTransfers).signature;
+          if (hasSignature) {
+            continue;
           }
 
           steps[2].items.push({
             status: "incomplete",
             data: {
-              sign: await permitHandler.getSignatureData(cachedPermit.data),
+              sign: await permitHandler.getSignatureData(permit.data),
               post: {
-                endpoint: "/permits/v1",
+                endpoint: "/execute/permit-signature/v1",
                 method: "POST",
                 body: {
                   id,

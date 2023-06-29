@@ -60,7 +60,10 @@ export class PermitHandler {
     const permits: PermitWithTransfers[] = [];
     for (const [currency, transferItems] of Object.entries(currencyToTransferItems)) {
       const totalAmountPerRecipient = transferItems.map((transferItem) => ({
-        amount: transferItem.items.map((item) => bn(item.amount)).reduce((a, b) => a.add(b)),
+        amount: transferItem.items
+          .map((item) => bn(item.amount))
+          .reduce((a, b) => a.add(b))
+          .toString(),
         recipient: transferItem.recipient,
       }));
 
@@ -68,7 +71,10 @@ export class PermitHandler {
         token: currency,
         owner,
         spender: Addresses.PermitProxy[this.chainId],
-        amount: totalAmountPerRecipient.map(({ amount }) => amount).reduce((a, b) => a.add(b)),
+        amount: totalAmountPerRecipient
+          .map(({ amount }) => bn(amount))
+          .reduce((a, b) => a.add(b))
+          .toString(),
         deadline: currentTime + expiresIn,
         transfers: totalAmountPerRecipient,
       });
@@ -113,8 +119,8 @@ export class PermitHandler {
       value: {
         owner: permit.owner,
         spender: Addresses.PermitProxy[this.chainId],
-        value: permit.amount,
-        nonce,
+        value: permit.amount.toString(),
+        nonce: nonce.toString(),
         deadline: permit.deadline,
       },
     };
