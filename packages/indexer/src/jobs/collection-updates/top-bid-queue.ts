@@ -164,7 +164,11 @@ if (config.doBackgroundWork) {
         if (kind === "new-order" && collectionTopBid?.order_id) {
           await WebsocketEventRouter({
             eventKind: WebsocketEventKind.NewTopBid,
-            eventInfo: { orderId: collectionTopBid?.order_id },
+            eventInfo: {
+              orderId: collectionTopBid?.order_id,
+              orderValue: collectionTopBid?.top_buy_value,
+              collectionId,
+            },
           });
         }
       } catch (error) {

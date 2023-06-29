@@ -32,6 +32,17 @@ if (config.doBackgroundWork && config.doWebsocketServerWork && config.kafkaBroke
     async (job: Job) => {
       const { data } = job.data as EventInfo;
 
+      // if its a single token top bid, check if its lower than the top bid on the collection and skip if it is
+      const topBidOnCollection = await redis.get(`collection-top-bid:${data.collectionId}`);
+      if (topBidOnCollection && Number(topBidOnCollection) > Number(data.orderValue)) {
+        logger.warn(
+          QUEUE_NAME,
+          `Top bid on collection is higher than current bid. data=${JSON.stringify(data)}`
+        );
+
+        return;
+      }
+
       try {
         const criteriaBuildQuery = Orders.buildCriteriaQuery("orders", "token_set_id", false);
 
@@ -93,18 +104,6 @@ if (config.doBackgroundWork && config.doWebsocketServerWork && config.kafkaBroke
           logger.warn(QUEUE_NAME, `Missing order. data=${JSON.stringify(data)}`);
 
           return;
-        }
-
-        const topBidOnCollection = await redis.get(`top-bid:${order.collection_id}`);
-        if (topBidOnCollection && Number(topBidOnCollection) > Number(order.price)) {
-          logger.warn(
-            QUEUE_NAME,
-            `Top bid on collection is higher than current bid. data=${JSON.stringify(data)}`
-          );
-
-          return;
-        } else {
-          await redis.set(`top-bid:${order.collection_id}`, order.price);
         }
 
         const payloads = [];
@@ -254,6 +253,8 @@ export type EventInfo = {
 
 export type TopBidWebsocketEventInfo = {
   orderId: string;
+  orderValue: string;
+  collectionId: string;
 };
 
 export const addToQueue = async (events: EventInfo[]) => {
