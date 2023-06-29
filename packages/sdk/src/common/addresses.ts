@@ -40,7 +40,6 @@ export const Weth: ChainIdToAddress = {
   [Network.ZoraTestnet]: "0x4200000000000000000000000000000000000006",
   [Network.Zora]: "0x4200000000000000000000000000000000000006",
   [Network.BaseGoerli]: "0x4200000000000000000000000000000000000006",
-  [Network.Zora]: "0x4200000000000000000000000000000000000006",
 };
 
 // TODO: Include addresses across all supported chains

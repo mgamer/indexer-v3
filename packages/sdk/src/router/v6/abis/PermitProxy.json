@@ -3,17 +3,22 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "trustedForwarder",
+        "name": "router",
         "type": "address"
       },
       {
         "internalType": "address",
-        "name": "router",
+        "name": "trustedForwarder",
         "type": "address"
       }
     ],
     "stateMutability": "nonpayable",
     "type": "constructor"
+  },
+  {
+    "inputs": [],
+    "name": "Unauthorized",
+    "type": "error"
   },
   {
     "inputs": [
@@ -37,49 +42,15 @@
   {
     "inputs": [
       {
-        "internalType": "bytes",
-        "name": "sig",
-        "type": "bytes"
-      }
-    ],
-    "name": "splitSignature",
-    "outputs": [
-      {
-        "internalType": "bytes32",
-        "name": "r",
-        "type": "bytes32"
-      },
-      {
-        "internalType": "bytes32",
-        "name": "s",
-        "type": "bytes32"
-      },
-      {
-        "internalType": "uint8",
-        "name": "v",
-        "type": "uint8"
-      }
-    ],
-    "stateMutability": "pure",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
         "components": [
           {
-            "internalType": "address",
+            "internalType": "contract IERC20",
             "name": "token",
             "type": "address"
           },
           {
             "internalType": "address",
             "name": "owner",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "spender",
             "type": "address"
           },
           {
@@ -93,9 +64,19 @@
             "type": "uint256"
           },
           {
-            "internalType": "bytes",
-            "name": "signature",
-            "type": "bytes"
+            "internalType": "uint8",
+            "name": "v",
+            "type": "uint8"
+          },
+          {
+            "internalType": "bytes32",
+            "name": "r",
+            "type": "bytes32"
+          },
+          {
+            "internalType": "bytes32",
+            "name": "s",
+            "type": "bytes32"
           },
           {
             "components": [
@@ -110,13 +91,13 @@
                 "type": "uint256"
               }
             ],
-            "internalType": "struct PermitProxy.TransferDetail[]",
-            "name": "transferDetails",
+            "internalType": "struct PermitProxy.Transfer[]",
+            "name": "transfers",
             "type": "tuple[]"
           }
         ],
-        "internalType": "struct PermitProxy.PermitTransfer[]",
-        "name": "transfers",
+        "internalType": "struct PermitProxy.PermitWithTransfers[]",
+        "name": "permits",
         "type": "tuple[]"
       },
       {

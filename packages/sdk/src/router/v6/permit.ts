@@ -1,51 +1,85 @@
 import { Interface } from "@ethersproject/abi";
 import { Provider } from "@ethersproject/abstract-provider";
+import { BigNumberish } from "@ethersproject/bignumber";
+import { splitSignature } from "@ethersproject/bytes";
 import { Contract } from "@ethersproject/contracts";
-import { TxData, getCurrentTimestamp } from "../../utils";
-import * as ApprovalProxy from "./approval-proxy";
-import RouterAbi from "./abis/ReservoirV6_0_1.json";
-import PermitProxyAbi from "./abis/PermitProxy.json";
+import { verifyTypedData } from "@ethersproject/wallet";
+
+import { TxData, bn, getCurrentTimestamp } from "../../utils";
 import * as Addresses from "./addresses";
-import { FTApproval } from "./types";
+import * as ApprovalProxy from "./approval-proxy";
 
-export type PermitTransfer = {
-  approval: FTApproval;
-  transferDetails: ApprovalProxy.TransferItem[];
-  signature?: string;
-};
+import PermitProxyAbi from "./abis/PermitProxy.json";
+import RouterAbi from "./abis/ReservoirV6_0_1.json";
 
-export type TransferDetail = {
+export type Transfer = {
   recipient: string;
-  amount: string;
+  amount: BigNumberish;
 };
 
-export type PermitData = {
+export type PermitWithTransfers = {
   token: string;
   owner: string;
   spender: string;
-  amount: string;
-  deadline: string;
-  nonce: string;
+  amount: BigNumberish;
+  deadline: number;
+  transfers: Transfer[];
   signature?: string;
-  transferDetails: TransferDetail[];
 };
 
 export class PermitHandler {
   public chainId: number;
   public provider: Provider;
 
-  public permitProxy: Contract;
-
   constructor(chainId: number, provider: Provider) {
     this.chainId = chainId;
     this.provider = provider;
-    this.permitProxy = new Contract(Addresses.PermitProxy[this.chainId], PermitProxyAbi, provider);
   }
 
-  public async getSignatureData(permitTransfer: PermitTransfer, expiresIn = 10 * 60) {
-    const { approval } = permitTransfer;
-    const token = new Contract(
-      approval.currency,
+  public async generate(
+    owner: string,
+    transferItems: ApprovalProxy.TransferItem[],
+    expiresIn = 10 * 60
+  ): Promise<PermitWithTransfers[]> {
+    if (!transferItems.length) {
+      return [];
+    }
+
+    const currencyToTransferItems: { [currency: string]: ApprovalProxy.TransferItem[] } = {};
+    for (const transferItem of transferItems) {
+      for (const item of transferItem.items) {
+        if (!currencyToTransferItems[item.token]) {
+          currencyToTransferItems[item.token] = [];
+        }
+        currencyToTransferItems[item.token].push(transferItem);
+      }
+    }
+
+    const currentTime = getCurrentTimestamp();
+
+    const permits: PermitWithTransfers[] = [];
+    for (const [currency, transferItems] of Object.entries(currencyToTransferItems)) {
+      const totalAmountPerRecipient = transferItems.map((transferItem) => ({
+        amount: transferItem.items.map((item) => bn(item.amount)).reduce((a, b) => a.add(b)),
+        recipient: transferItem.recipient,
+      }));
+
+      permits.push({
+        token: currency,
+        owner,
+        spender: Addresses.PermitProxy[this.chainId],
+        amount: totalAmountPerRecipient.map(({ amount }) => amount).reduce((a, b) => a.add(b)),
+        deadline: currentTime + expiresIn,
+        transfers: totalAmountPerRecipient,
+      });
+    }
+
+    return permits;
+  }
+
+  public async getSignatureData(permit: PermitWithTransfers) {
+    const tokenContract = new Contract(
+      permit.token,
       new Interface([
         `function nonces(address owner) external view returns (uint256)`,
         `function name() external view returns(string)`,
@@ -53,76 +87,74 @@ export class PermitHandler {
       ]),
       this.provider
     );
-
     const [nonce, name, version] = await Promise.all([
-      token.nonces(approval.owner),
-      token.name(),
-      token.version(),
+      tokenContract.nonces(permit.owner),
+      tokenContract.name(),
+      tokenContract.version(),
     ]);
 
-    const now = getCurrentTimestamp();
-    const deadline = now + expiresIn;
-    const domain = {
-      name: name,
-      version: version,
-      chainId: this.chainId,
-      verifyingContract: approval.currency,
-    };
-
-    const values = {
-      owner: approval.owner,
-      spender: this.permitProxy.address,
-      value: approval.amount,
-      nonce,
-      deadline,
-    };
-    const types = {
-      Permit: [
-        { name: "owner", type: "address" },
-        { name: "spender", type: "address" },
-        { name: "value", type: "uint256" },
-        { name: "nonce", type: "uint256" },
-        { name: "deadline", type: "uint256" },
-      ],
-    };
-    const transferDetails: TransferDetail[] = [];
-    const permit: PermitData = {
-      token: approval.currency,
-      owner: values.owner,
-      spender: values.spender,
-      amount: values.value.toString(),
-      deadline: values.deadline.toString(),
-      nonce: values.nonce.toString(),
-      signature: undefined,
-      transferDetails: permitTransfer.transferDetails.reduce((all, one) => {
-        one.items.forEach((c) => {
-          all.push({
-            recipient: one.recipient,
-            amount: c.amount.toString(),
-          });
-        });
-        return all;
-      }, transferDetails),
-    };
     return {
-      typedData: {
-        signatureKind: "eip712",
-        domain: domain,
-        types: types,
-        value: values,
+      signatureKind: "eip712",
+      domain: {
+        name,
+        version,
+        chainId: this.chainId,
+        verifyingContract: permit.token,
       },
-      permit,
+      types: {
+        Permit: [
+          { name: "owner", type: "address" },
+          { name: "spender", type: "address" },
+          { name: "value", type: "uint256" },
+          { name: "nonce", type: "uint256" },
+          { name: "deadline", type: "uint256" },
+        ],
+      },
+      value: {
+        owner: permit.owner,
+        spender: Addresses.PermitProxy[this.chainId],
+        value: permit.amount,
+        nonce,
+        deadline: permit.deadline,
+      },
     };
   }
 
-  public bundleRouterExecution(txData: TxData, permitTransfer: PermitData): TxData {
-    const routerIface = new Interface(RouterAbi);
-    const executionInfos = routerIface.decodeFunctionData("execute", txData.data).executionInfos;
+  public async attachAndCheckSignature(permit: PermitWithTransfers, signature: string) {
+    const signatureData = await this.getSignatureData(permit);
+    const signer = verifyTypedData(
+      signatureData.domain,
+      signatureData.types,
+      signatureData.value,
+      signature
+    );
+
+    if (signer.toLowerCase() != permit.owner.toLowerCase()) {
+      throw new Error("Invalid signature");
+    }
+
+    permit.signature = signature;
+  }
+
+  public attachToRouterExecution(txData: TxData, permits: PermitWithTransfers[]): TxData {
+    // Handle the case when there's no permits to attach
+    if (!permits.length) {
+      return txData;
+    }
+
+    const executionInfos = new Interface(RouterAbi).decodeFunctionData(
+      "execute",
+      txData.data
+    ).executionInfos;
+
     return {
       ...txData,
-      to: this.permitProxy.address,
-      data: this.permitProxy.interface.encodeFunctionData("transferWithExecute", [
-        [permitTransfer],
+      to: Addresses.PermitProxy[this.chainId],
+      data: new Interface(PermitProxyAbi).encodeFunctionData("transferWithExecute", [
+        permits.map((p) => ({
+          ...p,
+          ...splitSignature(p.signature!),
+        })),
         executionInfos,
       ]),
     };

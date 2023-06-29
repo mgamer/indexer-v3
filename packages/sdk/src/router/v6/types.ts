@@ -2,7 +2,7 @@ import { BigNumberish } from "@ethersproject/bignumber";
 
 import * as Sdk from "../../index";
 import { TxData } from "../../utils";
-import { PermitTransfer } from "./permit";
+import { PermitWithTransfers } from "./permit";
 
 // Approvals and permits
 
@@ -44,6 +44,11 @@ export type ExecutionInfo = {
 export type Fee = {
   recipient: string;
   amount: BigNumberish;
+};
+
+export type Permit = {
+  kind: "erc20";
+  data: PermitWithTransfers;
 };
 
 // Orders
@@ -182,7 +187,7 @@ export type FillListingsResult = {
     approvals: FTApproval[];
     txData: TxData;
     orderIds: string[];
-    permitTransfers: PermitTransfer[];
+    permits: Permit[];
   }[];
   success: { [orderId: string]: boolean };
 };

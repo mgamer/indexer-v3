@@ -9,9 +9,11 @@ import { TokenIDs } from "fummpel";
 // Needed for `rarible`
 import { encodeForMatchOrders } from "../../rarible/utils";
 
+import * as Sdk from "../../index";
+import { TxData, bn, generateSourceBytes, getErrorMessage, uniqBy } from "../../utils";
 import * as Addresses from "./addresses";
 import * as ApprovalProxy from "./approval-proxy";
-
+import { PermitHandler, PermitWithTransfers } from "./permit";
 import {
   BidDetails,
   ExecutionInfo,
@@ -27,8 +29,6 @@ import {
 } from "./types";
 import { generateSwapExecutions } from "./uniswap";
 import { generateFTApprovalTxData, generateNFTApprovalTxData, isETH, isWETH } from "./utils";
-import * as Sdk from "../../index";
-import { TxData, bn, generateSourceBytes, getErrorMessage, uniqBy } from "../../utils";
 
 // Tokens
 import ERC721Abi from "../../common/abis/Erc721.json";
@@ -56,7 +56,6 @@ import X2Y2ModuleAbi from "./abis/X2Y2Module.json";
 import ZeroExV4ModuleAbi from "./abis/ZeroExV4Module.json";
 import ZoraModuleAbi from "./abis/ZoraModule.json";
 import PermitProxyAbi from "./abis/PermitProxy.json";
-import { PermitTransfer } from "./permit";
 import SudoswapV2ModuleAbi from "./abis/SudoswapV2Module.json";
 import CryptoPunksModuleAbi from "./abis/CryptoPunksModule.json";
 import PaymentProcessorModuleAbi from "./abis/PaymentProcessorModule.json";
@@ -204,8 +203,6 @@ export class Router {
     taker: string,
     buyInCurrency = Sdk.Common.Addresses.Eth[this.chainId],
     options?: {
-      // Gasless buy
-      tryGasLess?: boolean;
       source?: string;
       // Will be split among all listings to get filled
       globalFees?: Fee[];
@@ -219,6 +216,8 @@ export class Router {
       blurAuth?: {
         accessToken: string;
       };
+      // Use permit instead of approvals (only works for USDC)
+      usePermit?: boolean;
       // Callback for handling errors
       onError?: (
         kind: string,
@@ -237,7 +236,7 @@ export class Router {
 
     const txs: {
       approvals: FTApproval[];
-      permitTransfers: PermitTransfer[];
+      permits: { kind: "erc20"; data: PermitWithTransfers }[];
       txData: TxData;
       orderIds: string[];
     }[] = [];
@@ -275,7 +274,7 @@ export class Router {
         const exchange = new Sdk.Universe.Exchange(this.chainId);
         txs.push({
           approvals: approval ? [approval] : [],
-          permitTransfers: [],
+          permits: [],
           txData: await exchange.fillOrderTx(taker, order, {
             amount: Number(detail.amount),
             source: options?.source,
@@ -314,7 +313,7 @@ export class Router {
         const exchange = new Sdk.Flow.Exchange(this.chainId);
         txs.push({
           approvals: approval ? [approval] : [],
-          permitTransfers: [],
+          permits: [],
           txData: exchange.takeMultipleOneOrdersTx(taker, [order]),
           orderIds: [detail.orderId],
         });
@@ -340,7 +339,7 @@ export class Router {
 
         txs.push({
           approvals: [],
-          permitTransfers: [],
+          permits: [],
           txData: exchange.fillOrderTx(
             taker,
             Number(order.params.id),
@@ -452,7 +451,7 @@ export class Router {
 
             txs.push({
               approvals: [],
-              permitTransfers: [],
+              permits: [],
               txData: {
                 from: data.from,
                 to: data.to,
@@ -594,7 +593,7 @@ export class Router {
           txs: [
             {
               approvals: approval ? [approval] : [],
-              permitTransfers: [],
+              permits: [],
               txData: await exchange.fillOrderTx(
                 taker,
                 order,
@@ -615,7 +614,7 @@ export class Router {
           txs: [
             {
               approvals: approval ? [approval] : [],
-              permitTransfers: [],
+              permits: [],
               txData: await exchange.fillOrdersTx(
                 taker,
                 orders,
@@ -671,7 +670,7 @@ export class Router {
           txs: [
             {
               approvals: approval ? [approval] : [],
-              permitTransfers: [],
+              permits: [],
               txData: await exchange.fillOrderTx(
                 taker,
                 order,
@@ -692,7 +691,7 @@ export class Router {
           txs: [
             {
               approvals: approval ? [approval] : [],
-              permitTransfers: [],
+              permits: [],
               txData: await exchange.fillOrdersTx(
                 taker,
                 orders,
@@ -748,7 +747,7 @@ export class Router {
           txs: [
             {
               approvals: approval ? [approval] : [],
-              permitTransfers: [],
+              permits: [],
               txData: await exchange.fillOrderTx(
                 taker,
                 order,
@@ -769,7 +768,7 @@ export class Router {
           txs: [
             {
               approvals: approval ? [approval] : [],
-              permitTransfers: [],
+              permits: [],
               txData: await exchange.fillOrdersTx(
                 taker,
                 orders,
@@ -2743,15 +2742,17 @@ export class Router {
                 recipient: this.contracts.swapModule.address,
               });
             } else {
-              // We need to split the permit items based on the individual transfers
+              // Split based on the individual transfers
               ftTransferItems.push(
                 ...transfers.map((t) => ({
-                  items: transfers.map((t) => ({
-                    itemType: ApprovalProxy.ItemType.ERC20,
-                    token: tokenIn,
-                    identifier: 0,
-                    amount: t.amount,
-                  })),
+                  items: [
+                    {
+                      itemType: ApprovalProxy.ItemType.ERC20,
+                      token: tokenIn,
+                      identifier: 0,
+                      amount: t.amount,
+                    },
+                  ],
                   recipient: t.recipient,
                 }))
               );
@@ -2799,22 +2800,22 @@ export class Router {
         });
       }
 
-      const permitCurrencies = [Sdk.Common.Addresses.Usdc[this.chainId]];
+      if (options?.usePermit) {
+        const supportedPermitCurrencies = [Sdk.Common.Addresses.Usdc[this.chainId]];
+        if (!supportedPermitCurrencies.includes(buyInCurrency)) {
+          throw new Error("Buying with permit not supported");
+        }
 
-      const useGasless =
-        options?.tryGasLess &&
-        permitCurrencies.includes(buyInCurrency) &&
-        approvals.every((c) => c.currency === buyInCurrency);
-      if (useGasless) {
         txs.push({
-          approvals,
-          permitTransfers: [
-            // Convert approvals to permit transfers via PermitModule
-            {
-              approval: approvals[0],
-              transferDetails: ftTransferItems,
-            },
-          ],
+          approvals: [],
+          permits: await new PermitHandler(this.chainId, this.provider)
+            .generate(relayer, ftTransferItems)
+            .then((permits) =>
+              permits.map((p) => ({
+                kind: "erc20",
+                data: p,
+              }))
+            ),
           txData: {
             from: relayer,
             ...{
@@ -2830,12 +2831,10 @@ export class Router {
           },
           orderIds,
         });
-      }
-
-      if (!useGasless) {
+      } else
         txs.push({
           approvals,
-          permitTransfers: [],
+          permits: [],
           txData: {
             from: relayer,
             ...(ftTransferItems.length
@@ -2864,7 +2863,6 @@ export class Router {
           },
           orderIds,
         });
-      }
     }
 
     if (!txs.length) {

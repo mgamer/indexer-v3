@@ -97,52 +97,6 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
       });
     }
 
-    // Order 2: LooksRare
-    const seller2 = bob;
-    const tokenId2 = 1;
-    const price2 = parseEther("2");
-    const fee2 = bn(150);
-    {
-      // Mint erc721 to seller
-      await erc721.connect(seller2).mint(tokenId2);
-
-      // Approve the transfer manager
-      await erc721
-        .connect(seller2)
-        .setApprovalForAll(Sdk.LooksRare.Addresses.TransferManagerErc721[chainId], true);
-
-      const exchange = new Sdk.LooksRare.Exchange(chainId);
-      const builder = new Sdk.LooksRare.Builders.SingleToken(chainId);
-
-      // Build sell order
-      const sellOrder = builder.build({
-        isOrderAsk: true,
-        signer: seller2.address,
-        collection: erc721.address,
-        tokenId: tokenId2,
-        currency: Sdk.Common.Addresses.Weth[chainId],
-        price: price2,
-        startTime: await getCurrentTimestamp(ethers.provider),
-        endTime: (await getCurrentTimestamp(ethers.provider)) + 60,
-        nonce: await exchange.getNonce(ethers.provider, seller2.address),
-      });
-      await sellOrder.sign(seller2);
-
-      await sellOrder.checkFillability(ethers.provider);
-
-      listings.push({
-        // Irrelevant
-        orderId: "0",
-        kind: "looks-rare",
-        contractKind: "erc721",
-        contract: erc721.address,
-        tokenId: tokenId2.toString(),
-        order: sellOrder,
-        currency: Sdk.Common.Addresses.Eth[chainId],
-        price: price2.toString(),
-      });
-    }
-
     // Order 3: ZeroEx V4
     const seller3 = carol;
     const tokenId3 = 0;
@@ -196,17 +150,12 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
       });
     }
 
-    const weth = new Sdk.Common.Helpers.Weth(ethers.provider, chainId);
-
     const feeRecipientEthBalanceBefore = await feeRecipient.getBalance();
     const seller1EthBalanceBefore = await seller1.getBalance();
-    const seller2WethBalanceBefore = await weth.getBalance(seller2.address);
     const seller3EthBalanceBefore = await seller3.getBalance();
     const token1OwnerBefore = await erc721.ownerOf(tokenId1);
-    const token2OwnerBefore = await erc721.ownerOf(tokenId2);
     const token3BuyerBalanceBefore = await erc1155.balanceOf(buyer.address, tokenId3);
     expect(token1OwnerBefore).to.eq(seller1.address);
-    expect(token2OwnerBefore).to.eq(seller2.address);
     expect(token3BuyerBalanceBefore).to.eq(0);
 
     const feesOnTop = [
@@ -228,10 +177,8 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
 
     const feeRecipientEthBalanceAfter = await feeRecipient.getBalance();
     const seller1EthBalanceAfter = await seller1.getBalance();
-    const seller2WethBalanceAfter = await weth.getBalance(seller2.address);
     const seller3EthBalanceAfter = await seller3.getBalance();
     const token1OwnerAfter = await erc721.ownerOf(tokenId1);
-    const token2OwnerAfter = await erc721.ownerOf(tokenId2);
     const token3BuyerBalanceAfter = await erc1155.balanceOf(buyer.address, tokenId3);
 
     expect(feeRecipientEthBalanceAfter.sub(feeRecipientEthBalanceBefore)).to.eq(
@@ -241,9 +188,6 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
     expect(seller1EthBalanceAfter.sub(seller1EthBalanceBefore)).to.eq(
       price1.sub(price1.mul(fee1).div(10000))
     );
-    expect(seller2WethBalanceAfter.sub(seller2WethBalanceBefore)).to.eq(
-      price2.sub(price2.mul(fee2).div(10000))
-    );
     expect(seller3EthBalanceAfter.sub(seller3EthBalanceBefore)).to.eq(
       price3
         .mul(amount3)
@@ -251,12 +195,10 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
         .div(totalAmount3)
     );
     expect(token1OwnerAfter).to.eq(buyer.address);
-    expect(token2OwnerAfter).to.eq(buyer.address);
     expect(token3BuyerBalanceAfter).to.eq(amount3);
 
     // Router is stateless (it shouldn't keep any funds)
     expect(await ethers.provider.getBalance(router.contracts.router.address)).to.eq(0);
-    expect(await ethers.provider.getBalance(router.contracts.looksRareModule.address)).to.eq(0);
     expect(await ethers.provider.getBalance(router.contracts.seaportModule.address)).to.eq(0);
     expect(await ethers.provider.getBalance(router.contracts.zeroExV4Module.address)).to.eq(0);
   });
@@ -980,51 +922,6 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
       });
     }
 
-    // Order 3: LooksRare
-    const seller3 = bob;
-    const tokenId3 = 3;
-    const price3 = parseEther("2");
-    {
-      // Mint erc721 to seller
-      await erc721.connect(seller3).mint(tokenId3);
-
-      // Approve the transfer manager
-      await erc721
-        .connect(seller3)
-        .setApprovalForAll(Sdk.LooksRare.Addresses.TransferManagerErc721[chainId], true);
-
-      const exchange = new Sdk.LooksRare.Exchange(chainId);
-      const builder = new Sdk.LooksRare.Builders.SingleToken(chainId);
-
-      // Build sell order
-      const sellOrder = builder.build({
-        isOrderAsk: true,
-        signer: seller3.address,
-        collection: erc721.address,
-        tokenId: tokenId3,
-        currency: Sdk.Common.Addresses.Weth[chainId],
-        price: price3,
-        startTime: await getCurrentTimestamp(ethers.provider),
-        endTime: (await getCurrentTimestamp(ethers.provider)) + 60,
-        nonce: await exchange.getNonce(ethers.provider, seller3.address),
-      });
-      await sellOrder.sign(seller3);
-
-      await sellOrder.checkFillability(ethers.provider);
-
-      listings.push({
-        // Irrelevant
-        orderId: "0",
-        kind: "looks-rare",
-        contractKind: "erc721",
-        contract: erc721.address,
-        tokenId: tokenId3.toString(),
-        order: sellOrder,
-        currency: Sdk.Common.Addresses.Weth[chainId],
-        price: price3.toString(),
-      });
-    }
-
     // Order 4: Seaport ETH
     const seller4 = alice;
     const tokenId4 = 4;
@@ -1111,7 +1008,6 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
 
     const token1OwnerAfter = await erc721.ownerOf(tokenId1);
     const token2OwnerAfter = await erc721.ownerOf(tokenId2);
-    const token3OwnerAfter = await erc721.ownerOf(tokenId3);
     const token4OwnerAfter = await erc721.ownerOf(tokenId4);
 
     expect(seller1EthBalanceAfter.sub(seller1EthBalanceBefore)).to.eq(
@@ -1122,7 +1018,6 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
     );
     expect(token1OwnerAfter).to.eq(buyer.address);
     expect(token2OwnerAfter).to.eq(buyer.address);
-    expect(token3OwnerAfter).to.eq(buyer.address);
     expect(token4OwnerAfter).to.eq(buyer.address);
 
     // Router is stateless (it shouldn't keep any funds)
@@ -1195,7 +1090,7 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
         contract: erc721.address,
         tokenId: tokenId1.toString(),
         order: buyOrder,
-        price: price1.toString()
+        price: price1.toString(),
       });
     }
 
@@ -1250,7 +1145,7 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
         contract: erc721.address,
         tokenId: tokenId2.toString(),
         order: buyOrder,
-        price: price2.toString()
+        price: price2.toString(),
       });
     }
 
@@ -1351,7 +1246,7 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
         contract: erc721.address,
         tokenId: tokenId1.toString(),
         order: buyOrder,
-        price: price1.toString()
+        price: price1.toString(),
       });
     }
 
@@ -1406,7 +1301,7 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
         contract: erc721.address,
         tokenId: tokenId2.toString(),
         order: buyOrder,
-        price: price2.toString()
+        price: price2.toString(),
       });
     }
 
@@ -1461,7 +1356,7 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
         contract: erc721.address,
         tokenId: tokenId3.toString(),
         order: buyOrder,
-        price: price3.toString()
+        price: price3.toString(),
       });
 
       await new Sdk.SeaportV11.Exchange(chainId).cancelOrder(buyer3, buyOrder);
@@ -1493,14 +1388,12 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
       );
     }
 
-    const {
-      txs
-    } = await router.fillBidsTx(bids, seller.address, {
+    const { txs } = await router.fillBidsTx(bids, seller.address, {
       source: "reservoir.market",
       partial: true,
     });
 
-    for(const partialTx of txs) {
+    for (const partialTx of txs) {
       // Trigger approvals
       for (const approval of partialTx.approvals) {
         await seller.sendTransaction(approval.txData);
@@ -1588,7 +1481,7 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
         contract: erc721.address,
         tokenId: tokenId1.toString(),
         order: buyOrder,
-        price: price1.toString()
+        price: price1.toString(),
       });
     }
 
@@ -1604,7 +1497,7 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
       forceApprovalProxy: true,
     });
 
-    for(const tx of txs) {
+    for (const tx of txs) {
       // Trigger approvals
       for (const approval of tx.approvals) {
         await seller.sendTransaction(approval.txData);
@@ -1629,7 +1522,7 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
     expect(await weth.getBalance(router.contracts.seaportV14Module.address)).to.eq(0);
   });
 
-  it("Fill multiple listings with USDC by Permit", async () => {
+  it("Fill multiple listings with USDC permits", async () => {
     const router = new Sdk.RouterV6.Router(chainId, ethers.provider);
 
     // Get some USDC
@@ -1723,18 +1616,18 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
       });
     }
 
-    // Order 4: Seaport ETH
-    const seller4 = alice;
-    const tokenId4 = 4;
-    const price4 = parseEther("1");
-    const fee4 = bn(550);
+    // Order 2: Seaport ETH
+    const seller2 = alice;
+    const tokenId2 = 4;
+    const price2 = parseEther("1");
+    const fee2 = bn(550);
     {
       // Mint erc721 to seller
-      await erc721.connect(seller4).mint(tokenId4);
+      await erc721.connect(seller2).mint(tokenId2);
 
       // Approve the exchange
       await erc721
-        .connect(seller4)
+        .connect(seller2)
         .setApprovalForAll(Sdk.SeaportV11.Addresses.Exchange[chainId], true);
 
       // Build sell order
@@ -1743,14 +1636,14 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
         {
           side: "sell",
           tokenKind: "erc721",
-          offerer: seller4.address,
+          offerer: seller2.address,
           contract: erc721.address,
-          tokenId: tokenId4,
+          tokenId: tokenId2,
           paymentToken: Sdk.Common.Addresses.Weth[chainId],
-          price: price4.sub(price4.mul(fee1).div(10000)),
+          price: price2.sub(price2.mul(fee1).div(10000)),
           fees: [
             {
-              amount: price4.mul(fee4).div(10000),
+              amount: price2.mul(fee2).div(10000),
               recipient: deployer.address,
             },
           ],
@@ -1770,10 +1663,10 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
         kind: "seaport",
         contractKind: "erc721",
         contract: erc721.address,
-        tokenId: tokenId4.toString(),
+        tokenId: tokenId2.toString(),
         order: sellOrder,
         currency: Sdk.Common.Addresses.Weth[chainId],
-        price: price4.toString(),
+        price: price2.toString(),
       });
     }
 
@@ -1790,45 +1683,33 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
       buyer.address,
       Sdk.Common.Addresses.Usdc[chainId],
       {
-        tryGasLess: true,
         source: "reservoir.market",
+        usePermit: true,
       }
     );
-    
-    // Trigger approvals
-    for (const approval of tx.txs[0].approvals) {
-      await buyer.sendTransaction(approval.txData);
-    } 
 
+    // Sign permit
+    const { data: permit } = tx.txs[0].permits[0];
     const permitHandler = new PermitHandler(chainId, ethers.provider);
-    const result = await permitHandler.getSignatureData(tx.txs[0].permitTransfers[0]);
+    const signatureData = await permitHandler.getSignatureData(permit);
     const signature = await buyer._signTypedData(
-      result.typedData.domain,
-      result.typedData.types,
-      result.typedData.value
+      signatureData.domain,
+      signatureData.types,
+      signatureData.value
     );
+    await permitHandler.attachAndCheckSignature(permit, signature);
 
-    result.permit.signature = signature;
-
-    const txData = permitHandler.bundleRouterExecution(
-      tx.txs[0].txData,
-      result.permit
-    );
-
-    await buyer.sendTransaction({
-      ...txData,
-      gasLimit: 1000000
-    });
+    const txData = permitHandler.attachToRouterExecution(tx.txs[0].txData, [permit]);
+    await buyer.sendTransaction({ ...txData, gasLimit: 2000000 });
 
     const seller1EthBalanceAfter = await seller1.getBalance();
 
     const token1OwnerAfter = await erc721.ownerOf(tokenId1);
-    const token4OwnerAfter = await erc721.ownerOf(tokenId4);
+    const token4OwnerAfter = await erc721.ownerOf(tokenId2);
 
     expect(seller1EthBalanceAfter.sub(seller1EthBalanceBefore)).to.eq(
       price1.sub(price1.mul(fee1).div(10000))
     );
-
 
     expect(token1OwnerAfter).to.eq(buyer.address);
     expect(token4OwnerAfter).to.eq(buyer.address);

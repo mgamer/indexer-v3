@@ -117,13 +117,6 @@ export const setupRouterWithModules = async (chainId: number, deployer: SignerWi
 
   // Deploy modules
 
-  const looksRareModule = await ethers
-    .getContractFactory("LooksRareModule", deployer)
-    .then((factory) =>
-      factory.deploy(deployer.address, router.address, Sdk.LooksRare.Addresses.Exchange[chainId])
-    );
-  Sdk.RouterV6.Addresses.LooksRareModule[chainId] = looksRareModule.address.toLowerCase();
-
   const seaportModule = await ethers
     .getContractFactory("SeaportModule", deployer)
     .then((factory) =>
@@ -166,13 +159,7 @@ export const setupRouterWithModules = async (chainId: number, deployer: SignerWi
 
   const permitProxy = await ethers
     .getContractFactory("PermitProxy", deployer)
-    .then((factory) =>
-      factory.deploy(
-        deployer.address,
-        router.address,
-      )
-    );
-
+    .then((factory) => factory.deploy(router.address, deployer.address));
   Sdk.RouterV6.Addresses.PermitProxy[chainId] = permitProxy.address.toLowerCase();
 
   const conduitKey = await setupConduit(chainId, deployer, [approvalProxy.address]);
