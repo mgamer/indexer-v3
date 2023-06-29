@@ -27,6 +27,7 @@ export type SourcesMetadata = {
   tokenUrlMumbai?: string;
   tokenUrlBaseGoerli?: string;
   tokenUrlArbitrumNova?: string;
+  tokenUrlAvalanche?: string;
 };
 
 export class SourcesEntity {

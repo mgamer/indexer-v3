@@ -83,6 +83,7 @@ if (config.doBackgroundWork) {
       const tokenUrlMumbai = getTokenUrl(html, url, "mumbai");
       const tokenUrlBaseGoerli = getTokenUrl(html, url, "base-goerli");
       const tokenUrlArbitrumNova = getTokenUrl(html, url, "arbitrum-nova");
+      const tokenUrlAvalanche = getTokenUrl(html, url, "avalanche");
 
       // Update the source data
       const sources = await Sources.getInstance();
@@ -101,6 +102,7 @@ if (config.doBackgroundWork) {
         tokenUrlMumbai,
         tokenUrlBaseGoerli,
         tokenUrlArbitrumNova,
+        tokenUrlAvalanche,
       });
     },
     {
