@@ -14,6 +14,7 @@ import * as manifold from "@/orderbook/mints/calldata/detector/manifold";
 import * as seadrop from "@/orderbook/mints/calldata/detector/seadrop";
 import * as thirdweb from "@/orderbook/mints/calldata/detector/thirdweb";
 import * as zora from "@/orderbook/mints/calldata/detector/zora";
+import * as decent from "@/orderbook/mints/calldata/detector/decent";
 
 export const extractByTx = async (txHash: string, skipCache = false) => {
   // Fetch all transfers associated to the transaction
@@ -133,6 +134,12 @@ export const extractByTx = async (txHash: string, skipCache = false) => {
     if (source) {
       tx.data = tx.data.slice(0, -8);
     }
+  }
+
+  // Decent
+  const decentResults = await decent.extractByTx(collection, tx);
+  if (decentResults.length) {
+    return decentResults;
   }
 
   // Manifold

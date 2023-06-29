@@ -10,6 +10,7 @@ import * as Manifold from "@/orderbook/mints/calldata/detector/manifold";
 import * as Seadrop from "@/orderbook/mints/calldata/detector/seadrop";
 import * as Thirdweb from "@/orderbook/mints/calldata/detector/thirdweb";
 import * as Zora from "@/orderbook/mints/calldata/detector/zora";
+import * as Decent from "@/orderbook/mints/calldata/detector/decent";
 
 export type AbiParam =
   | {
@@ -139,6 +140,18 @@ export const generateCollectionMintTxData = async (
               abiValue = allowlistData.price;
             } else {
               abiValue = await Zora.generateProofValue(collectionMint, minter);
+            }
+
+            break;
+          }
+
+          case "decent": {
+            if (allowlistItemIndex === 0) {
+              abiValue = allowlistData.max_mints;
+            } else if (allowlistItemIndex === 1) {
+              abiValue = allowlistData.price;
+            } else {
+              abiValue = await Decent.generateProofValue(collectionMint, minter);
             }
 
             break;
