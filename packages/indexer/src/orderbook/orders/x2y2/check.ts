@@ -50,7 +50,6 @@ export const offChainCheck = async (
     if (order.params.type === "sell" && originatedAt) {
       // Check: order is not off-chain cancelled
       const offChainCancelled = await commonHelpers.isListingOffChainCancelled(
-        "x2y2",
         order.params.maker,
         order.params.nft.token,
         order.params.nft.tokenId!,

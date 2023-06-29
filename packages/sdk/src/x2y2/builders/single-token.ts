@@ -15,7 +15,6 @@ export const buildOrder = (params: BuildParams): Types.LocalOrder => {
     user: params.user,
     network: params.network,
     intent: params.side === "sell" ? Types.Intent.SELL : Types.Intent.BUY,
-    // At the moment, X2Y2 only supports ERC721 tokens
     delegateType: params.delegateType ?? Types.DelegationType.ERC721,
     deadline: params.deadline,
     currency: params.currency,
@@ -23,17 +22,31 @@ export const buildOrder = (params: BuildParams): Types.LocalOrder => {
     items: [
       {
         price: params.price.toString(),
-        data: defaultAbiCoder.encode(
-          ["(address token, uint256 tokenId)[]"],
-          [
-            [
-              {
-                token: params.contract,
-                tokenId: params.tokenId,
-              },
-            ],
-          ]
-        ),
+        data:
+          params.delegateType === Types.DelegationType.ERC1155
+            ? defaultAbiCoder.encode(
+                ["(address token, uint256 tokenId, uint256 amount)[]"],
+                [
+                  [
+                    {
+                      token: params.contract,
+                      tokenId: params.tokenId,
+                      amount: 1,
+                    },
+                  ],
+                ]
+              )
+            : defaultAbiCoder.encode(
+                ["(address token, uint256 tokenId)[]"],
+                [
+                  [
+                    {
+                      token: params.contract,
+                      tokenId: params.tokenId,
+                    },
+                  ],
+                ]
+              ),
       },
     ],
     signVersion: 1,

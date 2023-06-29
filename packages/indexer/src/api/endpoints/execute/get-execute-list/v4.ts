@@ -629,19 +629,11 @@ export const getExecuteListV4Options: RouteOptions = {
                   }
 
                   // Generate an approval transaction
-                  const kind =
-                    upstreamOrder.params.delegateType === Sdk.X2Y2.Types.DelegationType.ERC721
-                      ? "erc721"
-                      : "erc1155";
-                  const opreator =
-                    kind === "erc721"
-                      ? Sdk.X2Y2.Addresses.Erc721Delegate[config.chainId]
-                      : Sdk.X2Y2.Addresses.Erc1155Delegate[config.chainId];
-                  approvalTx = (
-                    kind === "erc721"
-                      ? new Sdk.Common.Helpers.Erc721(baseProvider, upstreamOrder.params.nft.token)
-                      : new Sdk.Common.Helpers.Erc1155(baseProvider, upstreamOrder.params.nft.token)
-                  ).approveTransaction(maker, opreator);
+                  approvalTx = new Sdk.Common.Helpers.Erc721(
+                    baseProvider,
+                    upstreamOrder.params.nft.token
+                  ).approveTransaction(maker, Sdk.X2Y2.Addresses.Erc721Delegate[config.chainId]);
+
                   break;
                 }
               }
