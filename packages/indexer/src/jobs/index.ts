@@ -412,7 +412,8 @@ export class RabbitMqJobsConsumer {
       ? RabbitMqJobsConsumer.channelsToJobs.get(channel)?.push(job)
       : RabbitMqJobsConsumer.channelsToJobs.set(channel, [job]);
 
-    await channel.prefetch(job.getConcurrency()); // Set the number of messages to consume simultaneously
+    // Set the number of messages to consume simultaneously
+    await channel.prefetch(job.getConcurrency());
 
     // Subscribe to the queue
     await channel.consume(
@@ -426,6 +427,9 @@ export class RabbitMqJobsConsumer {
         consumerTag: RabbitMqJobsConsumer.getConsumerTag(job.getQueue()),
       }
     );
+
+    // Set the number of messages to consume simultaneously for the retry queue
+    await channel.prefetch(_.max([_.toInteger(job.getConcurrency() / 4), 1]) ?? 1);
 
     // Subscribe to the retry queue
     await channel.consume(
