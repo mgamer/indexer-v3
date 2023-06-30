@@ -64,25 +64,28 @@ export const getOpenApiOptions: RouteOptions = {
           url: "https://api-polygon.reservoir.tools",
         },
         {
+          url: "https://api-mumbai.reservoir.tools",
+        },
+        {
+          url: "https://api-bsc.reservoir.tools",
+        },
+        {
           url: "https://api-arbitrum.reservoir.tools",
         },
         {
           url: "https://api-arbitrum-nova.reservoir.tools",
         },
         {
-          url: "https://api-bsc.reservoir.tools",
-        },
-        {
           url: "https://api-sepolia.reservoir.tools",
-        },
-        {
-          url: "https://api-mumbai.reservoir.tools",
         },
         {
           url: "https://api-base-goerli.reservoir.tools",
         },
         {
           url: "https://api-scroll-alpha.reservoir.tools",
+        },
+        {
+          url: "https://api-zora.reservoir.tools",
         },
         {
           url: "https://api-zora-testnet.reservoir.tools",
