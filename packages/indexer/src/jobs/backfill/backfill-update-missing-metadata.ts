@@ -12,10 +12,10 @@ import { ridb } from "@/common/db";
 import { fromBuffer } from "@/common/utils";
 import * as metadataIndexProcessBySlug from "@/jobs/metadata-index/process-queue-by-slug";
 import * as metadataIndexProcess from "@/jobs/metadata-index/process-queue";
-import { getIndexingMethod } from "@/jobs/metadata-index/fetch-queue";
 import { PendingRefreshTokensBySlug } from "@/models/pending-refresh-tokens-by-slug";
 import { Tokens } from "@/models/tokens";
 import { collectionMetadataQueueJob } from "@/jobs/collection-updates/collection-metadata-queue-job";
+import { metadataIndexFetchJob } from "@/jobs/metadata-index/metadata-fetch-job";
 
 const QUEUE_NAME = "backfill-update-missing-metadata-queue";
 
@@ -170,7 +170,7 @@ async function processCollection(collection: {
     );
     return;
   }
-  const indexingMethod = getIndexingMethod(collection.community);
+  const indexingMethod = metadataIndexFetchJob.getIndexingMethod(collection.community);
   const limit = Number(await redis.get(`${QUEUE_NAME}-tokens-limit`)) || 1000;
   if (!collection.slug) {
     const tokenId = await Tokens.getSingleToken(collection.id);
