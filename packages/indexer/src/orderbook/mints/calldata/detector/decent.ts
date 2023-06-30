@@ -96,7 +96,6 @@ export const extractByCollection = async (collection: string): Promise<Collectio
 
   try {
     const version = await contract.contractVersion();
-    // DCNT721A v8 looks like is under development
     let editionConfig: {
       maxTokens: string;
       tokenPrice: string;
