@@ -2,14 +2,13 @@ import { redb } from "@/common/db";
 import { fromBuffer, toBuffer } from "@/common/utils";
 import { AbstractRabbitMqJobHandler, BackoffStrategy } from "@/jobs/abstract-rabbit-mq-job-handler";
 import _ from "lodash";
-import { acquireLock } from "@/common/redis";
 import { config } from "@/config/index";
 import { PendingRefreshTokens, RefreshTokens } from "@/models/pending-refresh-tokens";
 import { logger } from "@/common/logger";
 import { PendingRefreshTokensBySlug } from "@/models/pending-refresh-tokens-by-slug";
-import * as metadataIndexProcessBySlug from "@/jobs/metadata-index/process-queue-by-slug";
 import { AddressZero } from "@ethersproject/constants";
-import * as metadataIndexProcess from "@/jobs/metadata-index/process-queue";
+import { metadataIndexProcessJob } from "@/jobs/metadata-index/metadata-process-job";
+import { metadataIndexProcessBySlugJob } from "@/jobs/metadata-index/metadata-process-by-slug-job";
 
 export type MetadataIndexFetchJobPayload =
   | {
@@ -74,14 +73,7 @@ export class MetadataIndexFetchJob extends AbstractRabbitMqJobHandler {
         prioritized
       );
 
-      if (await acquireLock(metadataIndexProcessBySlug.getLockName(data.method), 60 * 5)) {
-        logger.info(
-          this.queueName,
-          `Full collection by slug - acquireLock. data=${JSON.stringify(data)}`
-        );
-
-        await metadataIndexProcessBySlug.addToQueue();
-      }
+      await metadataIndexProcessBySlugJob.addToQueue();
       return;
     }
     if (kind === "full-collection") {
@@ -131,10 +123,7 @@ export class MetadataIndexFetchJob extends AbstractRabbitMqJobHandler {
     const pendingRefreshTokens = new PendingRefreshTokens(data.method);
     await pendingRefreshTokens.add(refreshTokens, prioritized);
 
-    if (await acquireLock(metadataIndexProcess.getLockName(data.method), 60 * 5)) {
-      // Trigger a job to process the queue
-      await metadataIndexProcess.addToQueue(data.method);
-    }
+    await metadataIndexProcessJob.addToQueue({ method: data.method });
   }
 
   public async getTokensForCollection(
