@@ -165,7 +165,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
 
         if (!callTrace) {
           logger.error(
-            "caviar-v1-buy",
+            "caviar-v1-sell",
             `No call trace found: ${baseEventParams.block} - ${baseEventParams.txHash}`
           );
 
@@ -194,7 +194,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
 
         for (let i = 0; i < tokenIds.length; i++) {
           const tokenId = tokenIds[i].toString();
-          const orderId = getOrderId(baseEventParams.address, "sell", tokenId);
+          const orderId = getOrderId(baseEventParams.address, "buy");
 
           onChainData.fillEventsPartial.push({
             orderKind,

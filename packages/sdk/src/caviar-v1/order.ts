@@ -24,20 +24,7 @@ const normalize = (order: Types.OrderParams): Types.OrderParams => {
 
   return {
     pool: lc(order.pool),
-    collection: lc(order.collection),
-    tokenIds: order.tokenIds ? order.tokenIds.map(s) : [],
-    deadline: s(order.deadline),
-    baseTokenAmount: s(order.baseTokenAmount),
-    proofs: order.proofs ? order.proofs.map((proof) => proof.map(s)) : [],
-    stolenProofs: order.stolenProofs
-      ? order.stolenProofs.map((proof) => ({
-          id: s(proof.id),
-          payload: s(proof.payload),
-          timestamp: s(proof.timestamp),
-          signature: s(proof.signature),
-        }))
-      : [],
-    isBuy: order.isBuy,
+    tokenId: order.tokenId,
     extra: {
       prices: order.extra.prices.map(s),
     },

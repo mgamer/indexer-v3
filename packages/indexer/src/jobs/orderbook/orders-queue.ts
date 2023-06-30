@@ -317,6 +317,11 @@ export const jobProcessor = async (job: Job) => {
         break;
       }
 
+      case "caviar-v1": {
+        result = await orders.caviarV1.save([info]);
+        break;
+      }
+
       case "zeroex-v4": {
         result = await orders.zeroExV4.save([info]);
         break;

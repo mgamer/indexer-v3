@@ -94,6 +94,9 @@ export const initOnChainData = (): OnChainData => ({
 export const processOnChainData = async (data: OnChainData, backfill?: boolean) => {
   // Post-process fill events
 
+  // TODO: remove this, only here for testing
+  backfill = false;
+
   const allFillEvents = concat(data.fillEvents, data.fillEventsPartial, data.fillEventsOnChain);
   const startAssignSourceToFillEvents = Date.now();
   if (!backfill) {
