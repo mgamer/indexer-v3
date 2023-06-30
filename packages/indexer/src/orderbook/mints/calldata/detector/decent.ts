@@ -57,7 +57,7 @@ const generateMerkleTree = (
 export const extractByCollection = async (collection: string): Promise<CollectionMint[]> => {
   const results: CollectionMint[] = [];
 
-  // DCNT721A
+  // DCNT721A / DCNT4907A
   const ABIV6 = new Interface([
     `function MAX_TOKENS() external view returns(uint256)`,
     `function tokenPrice() external view returns(uint256)`,
