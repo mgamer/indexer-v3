@@ -45,7 +45,7 @@ if (config.doBackgroundWork) {
         }
 
         if (by === "collection") {
-          const collectionExists = await idb.one(
+          const collectionExists = await idb.oneOrNone(
             "SELECT 1 FROM collections WHERE collections.id = $/collection/",
             {
               collection: data.collection,
