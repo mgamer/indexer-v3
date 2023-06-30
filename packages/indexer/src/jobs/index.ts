@@ -54,12 +54,6 @@ import * as backfillNftTransferEventsUpdatedAt from "@/jobs/backfill/backfill-nf
 import * as eventsSyncRealtime from "@/jobs/events-sync/realtime-queue";
 import * as eventsSyncRealtimeV2 from "@/jobs/events-sync/realtime-queue-v2";
 
-import * as flagStatusProcessJob from "@/jobs/flag-status/process-queue";
-import * as flagStatusSyncJob from "@/jobs/flag-status/sync-queue";
-import * as flagStatusGenerateAttributeTokenSet from "@/jobs/flag-status/generate-attribute-token-set";
-import * as flagStatusGenerateCollectionTokenSet from "@/jobs/flag-status/generate-collection-token-set";
-import * as flagStatusUpdate from "@/jobs/flag-status/update";
-
 import * as metadataIndexFetch from "@/jobs/metadata-index/fetch-queue";
 import * as metadataIndexProcessBySlug from "@/jobs/metadata-index/process-queue-by-slug";
 import * as metadataIndexProcess from "@/jobs/metadata-index/process-queue";
@@ -180,6 +174,7 @@ import { fillUpdatesJob } from "@/jobs/fill-updates/fill-updates-job";
 import { fillPostProcessJob } from "@/jobs/fill-updates/fill-post-process-job";
 import { generateCollectionTokenSetJob } from "@/jobs/flag-status/generate-collection-token-set-job";
 import { flagStatusUpdateJob } from "@/jobs/flag-status/flag-status-update-job";
+import { flagStatusProcessJob } from "@/jobs/flag-status/flag-status-process-job";
 
 export const gracefulShutdownJobWorkers = [
   orderUpdatesById.worker,
@@ -216,12 +211,6 @@ export const allJobQueues = [
 
   eventsSyncRealtime.queue,
   eventsSyncRealtimeV2.queue,
-
-  flagStatusProcessJob.queue,
-  flagStatusSyncJob.queue,
-  flagStatusGenerateAttributeTokenSet.queue,
-  flagStatusGenerateCollectionTokenSet.queue,
-  flagStatusUpdate.queue,
 
   metadataIndexFetch.queue,
   metadataIndexProcessBySlug.queue,
@@ -351,6 +340,7 @@ export class RabbitMqJobsConsumer {
       fillPostProcessJob,
       generateCollectionTokenSetJob,
       flagStatusUpdateJob,
+      flagStatusProcessJob,
     ];
   }
 
