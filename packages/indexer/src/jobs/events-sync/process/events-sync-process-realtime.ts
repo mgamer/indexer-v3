@@ -7,7 +7,7 @@ import { config } from "@/config/index";
 export class EventsSyncProcessRealtimeJob extends AbstractRabbitMqJobHandler {
   queueName = "events-sync-process-realtime";
   maxRetries = 10;
-  concurrency = config.chainId === 137 ? 5 : 20;
+  concurrency = config.chainId === 137 ? 3 : 20;
   lazyMode = true;
   backoff = {
     type: "exponential",
