@@ -58,7 +58,7 @@ if (config.doBackgroundWork && config.enableRealtimeProcessing) {
         throw error;
       }
     },
-    { connection: redis.duplicate(), concurrency: 1 }
+    { connection: redis.duplicate(), concurrency: 15 }
   );
 
   worker.on("error", (error) => {
