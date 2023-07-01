@@ -213,6 +213,8 @@ export const trigger = {
       ]),
     SudoswapV2Module: async (chainId: number) =>
       dv("SudoswapV2Module", "v2", [DEPLOYER, Sdk.RouterV6.Addresses.Router[chainId]]),
+    CaviarV1Module: async (chainId: number) =>
+      dv("CaviarV1Module", "v1", [DEPLOYER, Sdk.RouterV6.Addresses.Router[chainId]]),
     SuperRareModule: async (chainId: number) =>
       dv("SuperRareModule", "v1", [
         DEPLOYER,
