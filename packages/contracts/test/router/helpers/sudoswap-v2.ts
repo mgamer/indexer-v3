@@ -97,6 +97,7 @@ export const setupSudoswapOffers = async (offers: SudoswapOffer[]) => {
     FactoryAbi,
     ethers.provider
   );
+
   for (const offer of offers) {
     const { buyer, nft, price, isCancelled } = offer;
 

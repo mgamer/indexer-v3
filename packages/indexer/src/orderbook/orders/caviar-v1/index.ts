@@ -66,6 +66,10 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         throw new Error("Unsupported currency");
       }
 
+      if (pool.merkleRoot !== constants.HashZero) {
+        throw new Error("Non-floor pools not supported");
+      }
+
       const poolContract = new Contract(
         pool.address,
         new Interface([

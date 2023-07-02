@@ -64,7 +64,7 @@ contract CaviarV1Module is BaseExchangeModule {
 
     // --- Single offer ---
 
-    function sellForETH(
+    function sell(
         ICaviarPoolV1 pair,
         uint256 nftId,
         uint256 minOutput,
