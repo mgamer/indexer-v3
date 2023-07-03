@@ -24,7 +24,7 @@ const normalize = (order: Types.OrderParams): Types.OrderParams => {
 
   return {
     pool: lc(order.pool),
-    tokenId: order.tokenId,
+    tokenId: order.tokenId ? s(order.tokenId) : order.tokenId,
     extra: {
       prices: order.extra.prices.map(s),
     },
