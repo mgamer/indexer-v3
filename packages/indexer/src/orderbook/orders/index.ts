@@ -770,7 +770,7 @@ export const generateBidDetailsV6 = async (
       const sdkOrder = new Sdk.CaviarV1.Order(config.chainId, order.rawData);
 
       const response = await inject({
-        method: "POST",
+        method: "GET",
         url: `/oracle/tokens/status/v2?tokens=${sdkOrder.params.tokenAddress}:${sdkOrder.params.tokenId}}`,
         headers: {
           "Content-Type": "application/json",
