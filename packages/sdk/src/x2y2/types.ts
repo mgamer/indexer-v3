@@ -34,6 +34,7 @@ export type Order = {
   taker: string;
   deadline: number;
   itemHash: string;
+  delegateType: number;
   nft: {
     token: string;
     tokenId?: string;
