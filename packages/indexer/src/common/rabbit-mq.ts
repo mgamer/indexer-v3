@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import amqplib, { ConfirmChannel, Connection } from "amqplib";
+import amqplib, { AmqpConnectionManager, ChannelWrapper } from "amqp-connection-manager";
 import { config } from "@/config/index";
 import _ from "lodash";
 import { RabbitMqJobsConsumer } from "@/jobs/index";
@@ -48,16 +48,16 @@ export type DeletePolicyPayload = {
 export class RabbitMq {
   public static delayedExchangeName = `${getNetworkName()}.delayed`;
 
-  private static rabbitMqPublisherConnection: Connection;
+  private static rabbitMqPublisherConnection: AmqpConnectionManager;
 
   private static maxPublisherChannelsCount = 10;
-  private static rabbitMqPublisherChannels: ConfirmChannel[] = [];
+  private static rabbitMqPublisherChannels: ChannelWrapper[] = [];
 
   public static async connect() {
     RabbitMq.rabbitMqPublisherConnection = await amqplib.connect(config.rabbitMqUrl);
 
     for (let i = 0; i < RabbitMq.maxPublisherChannelsCount; ++i) {
-      const channel = await this.rabbitMqPublisherConnection.createConfirmChannel();
+      const channel = await this.rabbitMqPublisherConnection.createChannel();
       RabbitMq.rabbitMqPublisherChannels.push(channel);
 
       channel.once("error", (error) => {
@@ -65,14 +65,7 @@ export class RabbitMq {
       });
 
       channel.once("close", async () => {
-        logger.warn("rabbit-error", `Publisher channel closed ${i}`);
-
-        try {
-          RabbitMq.rabbitMqPublisherChannels[i] =
-            await this.rabbitMqPublisherConnection.createConfirmChannel();
-        } catch (error) {
-          logger.error("rabbit-error", `Failed to create published channel ${error}`);
-        }
+        logger.warn("rabbit-publisher-channel", `Rabbit publisher channel ${i} closed`);
       });
     }
 
