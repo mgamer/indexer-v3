@@ -35,6 +35,7 @@ import { idb } from "@/common/db";
 import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
 import { SourcesEntity } from "@/models/sources/sources-entity";
+import { inject } from "@/api/index";
 
 // Whenever a new order kind is added, make sure to also include an
 // entry/implementation in the below types/methods in order to have
@@ -767,10 +768,24 @@ export const generateBidDetailsV6 = async (
 
     case "caviar-v1": {
       const sdkOrder = new Sdk.CaviarV1.Order(config.chainId, order.rawData);
+
+      const response = await inject({
+        method: "POST",
+        url: `/oracle/tokens/status/v2?tokens=${sdkOrder.params.tokenAddress}:${sdkOrder.params.tokenId}}`,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      const { messages } = JSON.parse(response.payload);
+
       return {
         kind: "caviar-v1",
         ...common,
         order: sdkOrder,
+        extraArgs: {
+          stolenProof: messages[0],
+        },
       };
     }
 

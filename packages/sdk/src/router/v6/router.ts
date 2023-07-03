@@ -3557,8 +3557,6 @@ export class Router {
           const order = detail.order as Sdk.CaviarV1.Order;
           const module = this.contracts.caviarV1Module;
 
-          const exchange = new Sdk.CaviarV1.Exchange();
-
           executionsWithDetails.push({
             detail,
             execution: {
@@ -3567,7 +3565,7 @@ export class Router {
                 order.params.pool,
                 detail.tokenId,
                 bn(order.params.extra.prices[0]),
-                await exchange.fetchStolenProof(detail.tokenId, detail.contract),
+                detail.extraArgs.stolenProof,
                 {
                   fillTo: taker,
                   refundTo: taker,
