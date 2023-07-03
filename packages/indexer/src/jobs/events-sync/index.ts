@@ -1,7 +1,7 @@
 import cron from "node-cron";
 
 import { logger } from "@/common/logger";
-import { safeWebSocketSubscription } from "@/common/provider";
+import { baseProvider, safeWebSocketSubscription } from "@/common/provider";
 import { redlock } from "@/common/redis";
 import { config } from "@/config/index";
 import { getNetworkSettings } from "@/config/network";
@@ -39,6 +39,8 @@ if (config.doBackgroundWork && config.catchup) {
         .then(async () => {
           try {
             // await realtimeEventsSync.addToQueue();
+            const latestBlock = await baseProvider.getBlockNumber();
+            await realtimeEventsSyncV2.addToQueue({ block: latestBlock });
             logger.info("events-sync-catchup", "Catching up events");
           } catch (error) {
             logger.error("events-sync-catchup", `Failed to catch up events: ${error}`);
