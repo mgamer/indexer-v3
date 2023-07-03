@@ -103,6 +103,14 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         });
       }
 
+      // Check: amount
+      if (order.params.amount !== 1) {
+        return results.push({
+          id,
+          status: "unsupported-amount",
+        });
+      }
+
       // Check: order fillability
       let fillabilityStatus = "fillable";
       let approvalStatus = "approved";

@@ -20,6 +20,7 @@ export const buildOrder = (params: BuildParams): Types.LocalOrder => {
     delegateType: params.delegateType ?? Types.DelegationType.ERC721,
     deadline: params.deadline,
     currency: params.currency,
+    amount: Number(params.amount ?? 1),
     dataMask: defaultAbiCoder.encode(
       ["(address token, uint256 tokenId)[]"],
       [
