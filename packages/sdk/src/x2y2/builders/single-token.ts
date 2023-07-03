@@ -31,7 +31,7 @@ export const buildOrder = (params: BuildParams): Types.LocalOrder => {
                     {
                       token: params.contract,
                       tokenId: params.tokenId,
-                      amount: 1,
+                      amount: params.amount ?? 1,
                     },
                   ],
                 ]
