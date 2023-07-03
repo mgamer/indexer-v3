@@ -57,7 +57,6 @@ import ZeroExV4ModuleAbi from "./abis/ZeroExV4Module.json";
 import ZoraModuleAbi from "./abis/ZoraModule.json";
 import SudoswapV2ModuleAbi from "./abis/SudoswapV2Module.json";
 import CaviarV1ModuleAbi from "./abis/CaviarV1Module.json";
-import { constants } from "ethers";
 
 type SetupOptions = {
   x2y2ApiKey?: string;
@@ -3558,6 +3557,8 @@ export class Router {
           const order = detail.order as Sdk.CaviarV1.Order;
           const module = this.contracts.caviarV1Module;
 
+          const exchange = new Sdk.CaviarV1.Exchange();
+
           executionsWithDetails.push({
             detail,
             execution: {
@@ -3566,8 +3567,7 @@ export class Router {
                 order.params.pool,
                 detail.tokenId,
                 bn(order.params.extra.prices[0]),
-                // todo: should this stolen nft oracle message be fetched here or on the client side
-                { id: constants.HashZero, payload: [], timestamp: 0, signature: [] },
+                await exchange.fetchStolenProof(detail.tokenId, detail.contract),
                 {
                   fillTo: taker,
                   refundTo: taker,
