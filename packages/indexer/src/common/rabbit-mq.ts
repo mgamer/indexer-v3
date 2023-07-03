@@ -63,6 +63,17 @@ export class RabbitMq {
       channel.once("error", (error) => {
         logger.error("rabbit-error", `Publisher channel error ${error}`);
       });
+
+      channel.once("close", async () => {
+        logger.warn("rabbit-error", `Publisher channel closed ${i}`);
+
+        try {
+          RabbitMq.rabbitMqPublisherChannels[i] =
+            await this.rabbitMqPublisherConnection.createConfirmChannel();
+        } catch (error) {
+          logger.error("rabbit-error", `Failed to create published channel ${error}`);
+        }
+      });
     }
 
     RabbitMq.rabbitMqPublisherConnection.once("error", (error) => {
