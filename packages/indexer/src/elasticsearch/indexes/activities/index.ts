@@ -245,15 +245,20 @@ export const getChainStatsFromActivity = async () => {
     const mints = buckets.find((bucket: any) => bucket.key == "mint");
     const sales = buckets.find((bucket: any) => bucket.key == "sale");
 
+    const mintCount = mints?.sales_count?.value || 0;
+    const saleCount = sales?.sales_count?.value || 0;
+    const mintVolume = mints?.total_volume?.value || 0;
+    const saleVolume = sales?.total_volume?.value || 0;
+
     return {
       ...stats,
       [result.name]: {
-        mintCount: mints.sales_count.value,
-        saleCount: sales.sales_count.value,
-        totalCount: mints.sales_count.value + sales.sales_count.value,
-        mintVolume: _.round(mints.total_volume.value, 2),
-        saleVolume: _.round(sales.total_volume.value, 2),
-        totalVolume: _.round(mints.total_volume.value + sales.total_volume.value, 2),
+        mintCount,
+        saleCount,
+        totalCount: mintCount + saleCount,
+        mintVolume: _.round(mintVolume, 2),
+        saleVolume: _.round(saleVolume, 2),
+        totalVolume: _.round(mintVolume + saleVolume, 2),
       },
     };
   }, {});
@@ -359,7 +364,7 @@ export const getTopSellingCollections = async (params: {
               sort: [
                 {
                   timestamp: {
-                    order: "desc", // Sorting order (desc for descending, asc for ascending)
+                    order: "desc",
                   },
                 },
               ],
