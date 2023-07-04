@@ -22,7 +22,7 @@ export const queue = new Queue(QUEUE_NAME, {
     removeOnFail: 1000,
   },
 });
-new QueueScheduler(QUEUE_NAME, { connection: redis.duplicate() });
+new QueueScheduler(QUEUE_NAME, { connection: redis.duplicate(), maxStalledCount: 20 });
 
 // BACKGROUND WORKER ONLY
 if (config.doBackgroundWork && config.enableRealtimeProcessing) {
