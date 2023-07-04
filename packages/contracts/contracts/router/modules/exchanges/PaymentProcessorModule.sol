@@ -3,6 +3,7 @@ pragma solidity ^0.8.9;
 
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {IERC1155} from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {BaseExchangeModule} from "./BaseExchangeModule.sol";
 import {BaseModule} from "../BaseModule.sol";
@@ -70,6 +71,54 @@ contract PaymentProcessorModule is BaseExchangeModule {
             ""
           );
         }
+      } catch {
+        // Revert if specified
+        if (params.revertIfIncomplete) {
+          revert UnsuccessfulFill();
+        }
+      }
+
+      unchecked {
+        ++i;
+      }
+    }
+  }
+
+  function acceptOffers(
+    IPaymentProcessor.MatchedOrder[] memory saleDetails,
+    IPaymentProcessor.SignatureECDSA[] memory signedOffers,
+    OfferParams calldata params,
+    Fee[] calldata fees
+  ) external nonReentrant {
+    uint256 length = saleDetails.length;
+    for (uint256 i; i < length; ) {
+      // Approve the exchange if needed
+      if (saleDetails[i].protocol == IPaymentProcessor.TokenProtocols.ERC721) {
+        _approveERC721IfNeeded(IERC721(saleDetails[i].tokenAddress), address(EXCHANGE));
+      } else {
+        _approveERC1155IfNeeded(IERC1155(saleDetails[i].tokenAddress), address(EXCHANGE));
+      }
+
+      // Execute the fill
+      try
+        EXCHANGE.buySingleListing(
+          saleDetails[i],
+          IPaymentProcessor.SignatureECDSA({v: 0, r: bytes32(0), s: bytes32(0)}),
+          signedOffers[i]
+        )
+      {
+        // Pay fees
+        uint256 feesLength = fees.length;
+        for (uint256 c; c < feesLength; ) {
+          Fee memory fee = fees[c];
+          _sendERC20(fee.recipient, fee.amount, IERC20(saleDetails[i].paymentCoin));
+
+          unchecked {
+            ++c;
+          }
+        }
+        // Forward any token to the specified receiver
+        _sendAllERC20(params.fillTo, IERC20(saleDetails[i].paymentCoin));
       } catch {
         // Revert if specified
         if (params.revertIfIncomplete) {

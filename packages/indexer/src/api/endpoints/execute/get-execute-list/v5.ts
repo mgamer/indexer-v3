@@ -49,6 +49,10 @@ import * as universeCheck from "@/orderbook/orders/universe/check";
 import * as flowSellToken from "@/orderbook/orders/flow/build/sell/token";
 import * as flowCheck from "@/orderbook/orders/flow/check";
 
+// PaymentProcessor
+import * as paymentProcessorSellToken from "@/orderbook/orders/payment-processor/build/sell/token";
+import * as paymentProcessorCheck from "@/orderbook/orders/payment-processor/check";
+
 const version = "v5";
 
 export const getExecuteListV5Options: RouteOptions = {
@@ -109,7 +113,8 @@ export const getExecuteListV5Options: RouteOptions = {
               "x2y2",
               "universe",
               "flow",
-              "alienswap"
+              "alienswap",
+              "payment-processor"
             )
             .default("seaport-v1.5")
             .description("Exchange protocol used to create order. Example: `seaport-v1.5`"),
@@ -1074,6 +1079,83 @@ export const getExecuteListV5Options: RouteOptions = {
                 });
 
                 addExecution(order.hashOrderKey(), params.quantity);
+
+                break;
+              }
+
+              case "payment-processor": {
+                if (!["reservoir"].includes(params.orderbook)) {
+                  return errors.push({ message: "Unsupported orderbook", orderIndex: i });
+                }
+
+                const order = await paymentProcessorSellToken.build({
+                  ...params,
+                  maker,
+                  contract,
+                  tokenId,
+                });
+
+                // Will be set if an approval is needed before listing
+                let approvalTx: TxData | undefined;
+
+                // Check the order's fillability
+                try {
+                  await paymentProcessorCheck.offChainCheck(order, {
+                    onChainApprovalRecheck: true,
+                  });
+                } catch (error: any) {
+                  switch (error.message) {
+                    case "no-balance-no-approval":
+                    case "no-balance": {
+                      return errors.push({ message: "Maker does not own token", orderIndex: i });
+                    }
+
+                    case "no-approval": {
+                      // Generate an approval transaction
+                      const kind = order.params.kind?.startsWith("erc721") ? "erc721" : "erc1155";
+                      approvalTx = (
+                        kind === "erc721"
+                          ? new Sdk.Common.Helpers.Erc721(baseProvider, order.params.tokenAddress)
+                          : new Sdk.Common.Helpers.Erc1155(baseProvider, order.params.tokenAddress)
+                      ).approveTransaction(
+                        maker,
+                        Sdk.PaymentProcessor.Addresses.Exchange[config.chainId]
+                      );
+
+                      break;
+                    }
+                  }
+                }
+
+                steps[1].items.push({
+                  status: approvalTx ? "incomplete" : "complete",
+                  data: approvalTx,
+                  orderIndexes: [i],
+                });
+                steps[2].items.push({
+                  status: "incomplete",
+                  data: {
+                    sign: order.getSignatureData(),
+                    post: {
+                      endpoint: "/order/v3",
+                      method: "POST",
+                      body: {
+                        order: {
+                          kind: "payment-processor",
+                          data: {
+                            ...order.params,
+                          },
+                        },
+                        orderbook: params.orderbook,
+                        orderbookApiKey: params.orderbookApiKey,
+                        source,
+                      },
+                    },
+                  },
+                  orderIndexes: [i],
+                });
+
+                addExecution(order.hash(), params.quantity);
 
                 break;
               }

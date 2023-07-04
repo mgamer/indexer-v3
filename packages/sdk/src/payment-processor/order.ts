@@ -188,7 +188,7 @@ export class Order {
         }
       }
     } else {
-      const totalPrice = bn(this.params.amount).mul(this.params.price);
+      const totalPrice = this.params.price;
 
       // Check that maker has enough balance to cover the payment
       // and the approval to the token transfer proxy is set
