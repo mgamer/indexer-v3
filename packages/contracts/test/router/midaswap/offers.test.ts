@@ -5,22 +5,23 @@ import * as Sdk from "@reservoir0x/sdk/src";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 import { expect } from "chai";
 import { ethers } from "hardhat";
+import LPTokenAbi from "@reservoir0x/sdk/src/midaswap/abis/LPToken.json";
 
 import { ExecutionInfo } from "../helpers/router";
-import { SudoswapOffer, setupSudoswapOffers } from "../helpers/sudoswap-v2";
+import { MidaswapOffer, setupMidaswapOffers } from "../helpers/midaswap";
 import {
   bn,
   getChainId,
   getRandomBoolean,
-  getRandomFloat,
   getRandomInteger,
   reset,
   setupNFTs,
 } from "../../utils";
+import RouterAbi from "@reservoir0x/sdk/src/midaswap/abis/Router.json";
+import Decimal from "decimal.js";
 
-describe("[ReservoirV6_0_1] SudoswapV2 offers", () => {
+describe("[ReservoirV6_0_1] Midaswap offers", () => {
   const chainId = getChainId();
-
   let deployer: SignerWithAddress;
   let alice: SignerWithAddress;
   let bob: SignerWithAddress;
@@ -30,45 +31,30 @@ describe("[ReservoirV6_0_1] SudoswapV2 offers", () => {
 
   let erc721: Contract;
   let router: Contract;
-  let sudoswapV2Module: Contract;
+  let midaRouter: Contract;
+  let midaswapModule: Contract;
+  const deadline = Date.now() + 100 * 24 * 60 * 60 * 1000;
 
   beforeEach(async () => {
     [deployer, alice, bob, carol, david, emilio] = await ethers.getSigners();
 
     ({ erc721 } = await setupNFTs(deployer));
-
     router = await ethers
       .getContractFactory("ReservoirV6_0_1", deployer)
       .then((factory) => factory.deploy());
-    sudoswapV2Module = await ethers
-      .getContractFactory("SudoswapV2Module", deployer)
-      .then((factory) => factory.deploy(deployer.address, router.address));
+    midaswapModule = await ethers
+      .getContractFactory("MidaswapModule", deployer)
+      .then((factory) =>
+        factory.deploy(
+          deployer.address,
+          router.address,
+          Sdk.Midaswap.Addresses.PairFactory[chainId],
+          Sdk.Midaswap.Addresses.Router[chainId],
+          Sdk.Common.Addresses.Weth[chainId]
+        )
+      );
+    midaRouter = new Contract(Sdk.Midaswap.Addresses.Router[chainId], RouterAbi, ethers.provider);
   });
-
-  const getBalances = async (token: string) => {
-    if (token === Sdk.Common.Addresses.Eth[chainId]) {
-      return {
-        alice: await ethers.provider.getBalance(alice.address),
-        bob: await ethers.provider.getBalance(bob.address),
-        carol: await ethers.provider.getBalance(carol.address),
-        david: await ethers.provider.getBalance(david.address),
-        emilio: await ethers.provider.getBalance(emilio.address),
-        router: await ethers.provider.getBalance(router.address),
-        sudoswapV2Module: await ethers.provider.getBalance(sudoswapV2Module.address),
-      };
-    } else {
-      const contract = new Sdk.Common.Helpers.Erc20(ethers.provider, token);
-      return {
-        alice: await contract.getBalance(alice.address),
-        bob: await contract.getBalance(bob.address),
-        carol: await contract.getBalance(carol.address),
-        david: await contract.getBalance(david.address),
-        emilio: await contract.getBalance(emilio.address),
-        router: await contract.getBalance(router.address),
-        sudoswapV2Module: await contract.getBalance(sudoswapV2Module.address),
-      };
-    }
-  };
 
   afterEach(reset);
 
@@ -86,57 +72,70 @@ describe("[ReservoirV6_0_1] SudoswapV2 offers", () => {
 
     // Makers: Alice and Bob
     // Taker: Carol
-
-    const offers: SudoswapOffer[] = [];
+    const offers: MidaswapOffer[] = [];
     const fees: BigNumber[][] = [];
+    const bin = getRandomInteger(8298609, 8395508);
+    const swapPrice = binToPriceFixed(bin);
     for (let i = 0; i < offersCount; i++) {
-      offers.push({
-        buyer: getRandomBoolean() ? alice : bob,
-        nft: {
-          contract: erc721,
-          id: getRandomInteger(1, 10000),
-        },
-        price: parseEther(getRandomFloat(0.2, 2).toFixed(6)),
-        isCancelled: partial && getRandomBoolean(),
-      });
-      if (chargeFees) {
-        fees.push([parseEther(getRandomFloat(0.0001, 0.1).toFixed(6))]);
-      } else {
-        fees.push([]);
+      const isCancelled = partial && getRandomBoolean();
+      if (!isCancelled) {
+        offers.push({
+          buyer: getRandomBoolean() ? alice : bob,
+          nft: {
+            contract: erc721,
+            id: getRandomInteger(1, 10000),
+          },
+          price: parseEther(swapPrice),
+          bin,
+          isCancelled,
+        });
+        if (chargeFees) {
+          const fee = parseEther(swapPrice).div(10);
+          fees.push([fee]);
+        } else {
+          fees.push([]);
+        }
       }
     }
-    await setupSudoswapOffers(offers);
+    if (offers.length === 0) {
+      return;
+    }
+    await setupMidaswapOffers(offers);
 
     // Send the NFTs to the module (in real-world this will be done atomically)
     for (const offer of offers) {
-      await offer.nft.contract.connect(carol).mint(offer.nft.id);
-      await offer.nft.contract
+      const txmint = await offer.nft.contract.connect(carol).mint(offer.nft.id);
+      await txmint.wait();
+      const toModuleTx = await offer.nft.contract
         .connect(carol)
-        .transferFrom(carol.address, sudoswapV2Module.address, offer.nft.id);
+        .transferFrom(carol.address, midaswapModule.address, offer.nft.id);
+      await toModuleTx.wait();
     }
 
     // Prepare executions
-
+    const encodeBefore = (offer: { nft: { id: number } }, i: number) => {
+      const tempData = [
+        erc721.address,
+        Sdk.Common.Addresses.Eth[chainId],
+        offer.nft.id,
+        {
+          fillTo: carol.address,
+          refundTo: carol.address,
+          revertIfIncomplete,
+        },
+        [
+          ...fees[i].map((amount) => ({
+            recipient: emilio.address,
+            amount,
+          })),
+        ],
+      ];
+      return tempData;
+    };
     const executions: ExecutionInfo[] = [
-      // 1. Fill offers with the received NFTs
       ...offers.map((offer, i) => ({
-        module: sudoswapV2Module.address,
-        data: sudoswapV2Module.interface.encodeFunctionData("sell", [
-          offer.order!.params.pair,
-          offer.nft.id,
-          bn(offer.price).sub(bn(offer.price).mul(50).div(10000)),
-          {
-            fillTo: carol.address,
-            refundTo: carol.address,
-            revertIfIncomplete,
-          },
-          [
-            ...fees[i].map((amount) => ({
-              recipient: emilio.address,
-              amount,
-            })),
-          ],
-        ]),
+        module: midaswapModule.address,
+        data: midaswapModule.interface.encodeFunctionData("sell", encodeBefore(offer, i)),
         value: 0,
       })),
     ];
@@ -165,39 +164,52 @@ describe("[ReservoirV6_0_1] SudoswapV2 offers", () => {
     const tx = await router.connect(carol).execute(executions, {
       value: executions.map(({ value }) => value).reduce((a, b) => bn(a).add(b), bn(0)),
     });
+    await tx.wait();
+    let allGas = bn(0);
+    // Fetch post-state
+    const balancesAfter = await getBalances(Sdk.Common.Addresses.Eth[chainId]);
+
     const txReceipt = await ethers.provider.getTransactionReceipt(tx.hash);
     const gasUsed = txReceipt.cumulativeGasUsed.mul(txReceipt.effectiveGasPrice);
-
-    // Fetch post-state
-
-    const balancesAfter = await getBalances(Sdk.Common.Addresses.Eth[chainId]);
+    allGas = gasUsed;
 
     // Checks
 
     // Carol got the payment
-    expect(balancesAfter.carol.sub(balancesBefore.carol).add(gasUsed)).to.eq(
-      offers
-        .map((offer, i) =>
-          offer.isCancelled
-            ? bn(0)
-            : bn(offer.price)
-                .sub(
-                  // Take into consideration the protocol fee
-                  bn(offer.price).mul(50).div(10000)
-                )
-                .sub(fees[i].reduce((a, b) => bn(a).add(b), bn(0)))
-        )
-        .reduce((a, b) => bn(a).add(b), bn(0))
+    const targetPrice = offers
+      .map((offer, i) =>
+        bn(offer.price)
+          .mul(1000)
+          .div(1005)
+          .sub(fees[i].reduce((a, b) => bn(a).add(b), bn(0)))
+      )
+      .reduce((a, b) => bn(a).add(b), bn(0));
+    expect(balancesAfter.carol.sub(balancesBefore.carol).add(allGas).div(10000)).to.eq(
+      bn(targetPrice).div(10000)
     );
 
     // Emilio got the fee payments
     if (chargeFees) {
-      expect(balancesAfter.emilio.sub(balancesBefore.emilio)).to.eq(
-        offers
-          .map((_, i) => (offers[i].isCancelled ? [] : fees[i]))
-          .map((executionFees) => executionFees.reduce((a, b) => bn(a).add(b), bn(0)))
-          .reduce((a, b) => bn(a).add(b), bn(0))
-      );
+      const emilioTargetFee = offers
+        .map((_, i) => (offers[i].isCancelled ? [] : fees[i]))
+        .map((executionFees) => executionFees.reduce((a, b) => bn(a).add(b), bn(0)))
+        .reduce((a, b) => bn(a).add(b), bn(0));
+      expect(balancesAfter.emilio.sub(balancesBefore.emilio)).to.eq(emilioTargetFee);
+    }
+    const lpContract = new Contract(offers![0]!.lpInfo!.lpAddress, LPTokenAbi, ethers.provider);
+
+    for (const { buyer, lpInfo } of offers) {
+      const approve = await lpContract.connect(buyer).setApprovalForAll(midaRouter.address, true);
+      await approve.wait();
+      const remove = await midaRouter
+        .connect(buyer)
+        .removeLiquidityETH(
+          erc721.address,
+          Sdk.Common.Addresses.Weth[chainId],
+          lpInfo?.lpTokenId,
+          deadline
+        );
+      await remove.wait();
     }
 
     // Alice and Bob got the NFTs of the filled orders
@@ -211,7 +223,37 @@ describe("[ReservoirV6_0_1] SudoswapV2 offers", () => {
 
     // Router is stateless
     expect(balancesAfter.router).to.eq(0);
-    expect(balancesAfter.sudoswapV2Module).to.eq(0);
+    expect(balancesAfter.midaswapModule).to.eq(0);
+  };
+  const getBalances = async (token: string) => {
+    if (token === Sdk.Common.Addresses.Eth[chainId]) {
+      return {
+        alice: await ethers.provider.getBalance(alice.address),
+        bob: await ethers.provider.getBalance(bob.address),
+        carol: await ethers.provider.getBalance(carol.address),
+        david: await ethers.provider.getBalance(david.address),
+        emilio: await ethers.provider.getBalance(emilio.address),
+        router: await ethers.provider.getBalance(router.address),
+        midaswapModule: await ethers.provider.getBalance(midaswapModule.address),
+      };
+    } else {
+      const contract = new Sdk.Common.Helpers.Erc20(ethers.provider, token);
+      return {
+        alice: await contract.getBalance(alice.address),
+        bob: await contract.getBalance(bob.address),
+        carol: await contract.getBalance(carol.address),
+        david: await contract.getBalance(david.address),
+        emilio: await contract.getBalance(emilio.address),
+        router: await contract.getBalance(router.address),
+        midaswapModule: await contract.getBalance(midaswapModule.address),
+      };
+    }
+  };
+  const binToPriceFixed = (bin: number, decimal = 18, toFixedNumber = 18) => {
+    const powValue = bin - 8388608;
+    const b = new Decimal(10).pow(18 - decimal);
+    const price = new Decimal(1.0001).pow(powValue).times(b).toFixed(toFixedNumber);
+    return String(price);
   };
 
   // Test various combinations for filling offers
