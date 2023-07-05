@@ -361,7 +361,7 @@ export const syncEvents = async (block: number) => {
 
     const startProcessLogs = Date.now();
 
-    await Promise.all(
+    const processEventsLatencies = await Promise.all(
       eventsBatches.map(async (eventsBatch) => {
         await processEventsBatchV2([eventsBatch]);
       })
