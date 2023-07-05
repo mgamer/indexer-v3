@@ -168,6 +168,7 @@ if (config.doBackgroundWork) {
               orderId: collectionTopBid?.order_id,
               orderValue: collectionTopBid?.top_buy_value,
               collectionId,
+              skipCollectionTopBidCheck: true,
             },
           });
         }
