@@ -176,6 +176,8 @@ import { metadataIndexWriteJob } from "@/jobs/metadata-index/metadata-write-job"
 import { metadataIndexProcessBySlugJob } from "@/jobs/metadata-index/metadata-process-by-slug-job";
 import { mintsProcessJob } from "@/jobs/mints/mints-process-job";
 import { mintsCheckJob } from "@/jobs/mints/mints-check-job";
+import { nftBalanceUpdateFloorAskJob } from "@/jobs/nft-balance-updates/update-floor-ask-price-job";
+import { mintsExpiredJob } from "@/jobs/mints/cron/mints-expired-job";
 
 export const gracefulShutdownJobWorkers = [
   orderUpdatesById.worker,
@@ -343,6 +345,8 @@ export class RabbitMqJobsConsumer {
       metadataIndexProcessBySlugJob,
       mintsProcessJob,
       mintsCheckJob,
+      mintsExpiredJob,
+      nftBalanceUpdateFloorAskJob,
     ];
   }
 
