@@ -114,7 +114,7 @@ export class MintQueueJob extends AbstractRabbitMqJobHandler {
         await recalcTokenCountQueueJob.addToQueue({ collection: collection.id });
 
         // Refresh any dynamic token set
-        if (collection.token_count < config.maxTokenSetSize) {
+        if (collection.token_count <= config.maxTokenSetSize) {
           const cacheKey = `refresh-collection-non-flagged-token-set:${collection.id}`;
           if (!(await redis.get(cacheKey))) {
             const tokenSet = await tokenSets.dynamicCollectionNonFlagged.get({
