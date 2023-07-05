@@ -58,7 +58,6 @@ import * as mintsCheck from "@/jobs/mints/check";
 import * as mintsProcess from "@/jobs/mints/process";
 
 import * as updateNftBalanceFloorAskPrice from "@/jobs/nft-balance-updates/update-floor-ask-price-queue";
-import * as updateNftBalanceTopBid from "@/jobs/nft-balance-updates/update-top-bid-queue";
 
 import * as orderFixes from "@/jobs/order-fixes/fixes";
 import * as orderRevalidations from "@/jobs/order-fixes/revalidations";
@@ -176,8 +175,8 @@ import { metadataIndexWriteJob } from "@/jobs/metadata-index/metadata-write-job"
 import { metadataIndexProcessBySlugJob } from "@/jobs/metadata-index/metadata-process-by-slug-job";
 import { mintsProcessJob } from "@/jobs/mints/mints-process-job";
 import { mintsCheckJob } from "@/jobs/mints/mints-check-job";
-import { nftBalanceUpdateFloorAskJob } from "@/jobs/nft-balance-updates/update-floor-ask-price-job";
 import { mintsExpiredJob } from "@/jobs/mints/cron/mints-expired-job";
+import { nftBalanceUpdateFloorAskJob } from "@/jobs/nft-balance-updates/update-floor-ask-price-job";
 
 export const gracefulShutdownJobWorkers = [
   orderUpdatesById.worker,
@@ -219,7 +218,6 @@ export const allJobQueues = [
   mintsProcess.queue,
 
   updateNftBalanceFloorAskPrice.queue,
-  updateNftBalanceTopBid.queue,
 
   orderFixes.queue,
   orderRevalidations.queue,
