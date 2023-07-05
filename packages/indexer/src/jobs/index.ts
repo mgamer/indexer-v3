@@ -171,6 +171,7 @@ import { mintsProcessJob } from "@/jobs/mints/mints-process-job";
 import { mintsCheckJob } from "@/jobs/mints/mints-check-job";
 import { mintsExpiredJob } from "@/jobs/mints/cron/mints-expired-job";
 import { nftBalanceUpdateFloorAskJob } from "@/jobs/nft-balance-updates/update-floor-ask-price-job";
+import { orderFixesJob } from "@/jobs/order-fixes/order-fixes-job";
 
 export const gracefulShutdownJobWorkers = [
   orderUpdatesById.worker,
@@ -334,6 +335,7 @@ export class RabbitMqJobsConsumer {
       mintsCheckJob,
       mintsExpiredJob,
       nftBalanceUpdateFloorAskJob,
+      orderFixesJob,
     ];
   }
 
