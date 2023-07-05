@@ -101,6 +101,10 @@ export const save = async (
 
     // Collection is too big
     if (collection.token_count > config.maxTokenSetSize) {
+      logger.warn(
+        "token-sets",
+        `Collection ${tokenSet.schema.data.collection} has too many tokens ${collection.token_count}`
+      );
       return undefined;
     }
 
