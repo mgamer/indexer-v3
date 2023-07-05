@@ -53,8 +53,6 @@ import * as backfillCollectionsIds from "@/jobs/backfill/backfill-collections-id
 
 import * as collectionUpdatesFloorAsk from "@/jobs/collection-updates/floor-queue";
 
-import * as tokenSetUpdatesTopBid from "@/jobs/token-set-updates/top-bid-queue";
-
 import * as eventsSyncProcessResyncRequest from "@/jobs/events-sync/process-resync-request-queue";
 import * as eventsSyncBackfill from "@/jobs/events-sync/backfill-queue";
 import * as eventsSyncBlockCheck from "@/jobs/events-sync/block-check-queue";
@@ -219,8 +217,6 @@ export const allJobQueues = [
   backfillCollectionsIds.queue,
 
   collectionUpdatesFloorAsk.queue,
-
-  tokenSetUpdatesTopBid.queue,
 
   eventsSyncProcessResyncRequest.queue,
   eventsSyncBackfill.queue,
