@@ -11,7 +11,6 @@ import "@/jobs/daily-volumes";
 import "@/jobs/data-archive";
 import "@/jobs/data-export";
 import "@/jobs/events-sync";
-import "@/jobs/nft-balance-updates";
 import "@/jobs/oracle";
 import "@/jobs/order-fixes";
 import "@/jobs/order-updates";
@@ -53,11 +52,6 @@ import * as backfillNftTransferEventsUpdatedAt from "@/jobs/backfill/backfill-nf
 
 import * as eventsSyncRealtime from "@/jobs/events-sync/realtime-queue";
 import * as eventsSyncRealtimeV2 from "@/jobs/events-sync/realtime-queue-v2";
-
-import * as mintsCheck from "@/jobs/mints/check";
-import * as mintsProcess from "@/jobs/mints/process";
-
-import * as updateNftBalanceFloorAskPrice from "@/jobs/nft-balance-updates/update-floor-ask-price-queue";
 
 import * as orderFixes from "@/jobs/order-fixes/fixes";
 import * as orderRevalidations from "@/jobs/order-fixes/revalidations";
@@ -213,11 +207,6 @@ export const allJobQueues = [
 
   eventsSyncRealtime.queue,
   eventsSyncRealtimeV2.queue,
-
-  mintsCheck.queue,
-  mintsProcess.queue,
-
-  updateNftBalanceFloorAskPrice.queue,
 
   orderFixes.queue,
   orderRevalidations.queue,
