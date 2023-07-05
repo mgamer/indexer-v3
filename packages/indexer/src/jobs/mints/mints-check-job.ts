@@ -10,7 +10,7 @@ export type MintsCheckJobPayload = {
 export class MintsCheckJob extends AbstractRabbitMqJobHandler {
   queueName = "mints-check";
   maxRetries = 1;
-  concurrency = 30;
+  concurrency = 10;
   backoff = {
     type: "exponential",
     delay: 10000,
