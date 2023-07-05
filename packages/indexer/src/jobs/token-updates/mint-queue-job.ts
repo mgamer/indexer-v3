@@ -36,12 +36,14 @@ export class MintQueueJob extends AbstractRabbitMqJobHandler {
         id: string;
         token_set_id: string | null;
         community: string | null;
+        token_count: number;
       } | null = await idb.oneOrNone(
         `
             SELECT
               collections.id,
               collections.token_set_id,
-              collections.community
+              collections.community,
+              collections.token_count
             FROM collections
             WHERE collections.contract = $/contract/
               AND collections.token_id_range @> $/tokenId/::NUMERIC(78, 0)
@@ -112,29 +114,31 @@ export class MintQueueJob extends AbstractRabbitMqJobHandler {
         await recalcTokenCountQueueJob.addToQueue({ collection: collection.id });
 
         // Refresh any dynamic token set
-        const cacheKey = `refresh-collection-non-flagged-token-set:${collection.id}`;
-        if (!(await redis.get(cacheKey))) {
-          const tokenSet = await tokenSets.dynamicCollectionNonFlagged.get({
-            collection: collection.id,
-          });
-          const tokenSetResult = await idb.oneOrNone(
-            `
+        if (collection.token_count < config.maxTokenSetSize) {
+          const cacheKey = `refresh-collection-non-flagged-token-set:${collection.id}`;
+          if (!(await redis.get(cacheKey))) {
+            const tokenSet = await tokenSets.dynamicCollectionNonFlagged.get({
+              collection: collection.id,
+            });
+            const tokenSetResult = await idb.oneOrNone(
+              `
                 SELECT 1 FROM token_sets
                 WHERE token_sets.id = $/id/
               `,
-            {
-              id: tokenSet.id,
-            }
-          );
-          if (tokenSetResult) {
-            await tokenSets.dynamicCollectionNonFlagged.save(
-              { collection: collection.id },
-              undefined,
-              true
+              {
+                id: tokenSet.id,
+              }
             );
-          }
+            if (tokenSetResult) {
+              await tokenSets.dynamicCollectionNonFlagged.save(
+                { collection: collection.id },
+                undefined,
+                true
+              );
+            }
 
-          await redis.set(cacheKey, "locked", "EX", 10 * 60);
+            await redis.set(cacheKey, "locked", "EX", 10 * 60);
+          }
         }
 
         // Refresh the metadata for the new token
