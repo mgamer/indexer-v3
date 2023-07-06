@@ -1,6 +1,3 @@
-import { config as dotEnvConfig } from "dotenv";
-dotEnvConfig();
-
 import "@/jobs/index";
 import "@/jobs/cdc/index";
 import "@/common/tracer";
