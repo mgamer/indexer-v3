@@ -62,21 +62,25 @@ export class RabbitMq {
       config.rabbitMqUrl
     );
 
-    for (let i = 0; i < RabbitMq.maxPublisherChannelsCount; ++i) {
-      const channel = await this.rabbitMqPublisherConnection.createChannel();
-      RabbitMq.rabbitMqPublisherChannels.push(channel);
-
-      channel.once("error", (error) => {
-        logger.error("rabbit-error", `Publisher channel error ${error}`);
-      });
-
-      channel.once("close", async () => {
-        logger.warn("rabbit-publisher-channel", `Rabbit publisher channel ${i} closed`);
-      });
+    for (let index = 0; index < RabbitMq.maxPublisherChannelsCount; ++index) {
+      await RabbitMq.connectToPublisherChannel(index);
     }
 
     RabbitMq.rabbitMqPublisherConnection.once("error", (error) => {
       logger.error("rabbit-error", `Publisher connection error ${error}`);
+    });
+  }
+
+  public static async connectToPublisherChannel(index: number) {
+    const channel = await this.rabbitMqPublisherConnection.createChannel();
+    RabbitMq.rabbitMqPublisherChannels[index] = channel;
+
+    channel.once("error", (error) => {
+      logger.error("rabbit-error", `Publisher channel error ${error}`);
+    });
+
+    channel.once("close", async () => {
+      logger.warn("rabbit-publisher-channel", `Rabbit publisher channel ${index} closed`);
     });
   }
 
@@ -93,8 +97,8 @@ export class RabbitMq {
 
       // Make sure channel is available
       if (!RabbitMq.rabbitMqPublisherChannels[channelIndex]) {
-        RabbitMq.rabbitMqPublisherChannels[channelIndex] =
-          await this.rabbitMqPublisherConnection.createChannel();
+        logger.info("rabbit-publisher-channel", `no channel was found at index ${channelIndex}`);
+        await RabbitMq.connectToPublisherChannel(channelIndex);
       }
 
       content.publishTime = content.publishTime ?? _.now();
