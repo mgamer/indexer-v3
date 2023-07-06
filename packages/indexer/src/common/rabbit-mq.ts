@@ -90,6 +90,13 @@ export class RabbitMq {
       }
 
       const channelIndex = _.random(0, RabbitMq.maxPublisherChannelsCount - 1);
+
+      // Make sure channel is available
+      if (!RabbitMq.rabbitMqPublisherChannels[channelIndex]) {
+        RabbitMq.rabbitMqPublisherChannels[channelIndex] =
+          await this.rabbitMqPublisherConnection.createChannel();
+      }
+
       content.publishTime = content.publishTime ?? _.now();
       content.prioritized = Boolean(priority);
 
