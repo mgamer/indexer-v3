@@ -600,11 +600,6 @@ export const getExecuteBidV5Options: RouteOptions = {
                     },
                     orderIndexes: [i],
                   });
-
-                  addExecution(
-                    new Sdk.Blur.Order(config.chainId, signData.value).hash(),
-                    params.quantity
-                  );
                 }
 
                 break;
