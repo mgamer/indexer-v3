@@ -69,7 +69,3 @@ export const execution721MakerFeePacked: EventData = {
     )`,
   ]),
 };
-
-// console.log('execution721Packed', execution721Packed.abi.getEventTopic('Execution721Packed'))
-// console.log('execution721TakerFeePacked', execution721TakerFeePacked.abi.getEventTopic('Execution721TakerFeePacked'))
-// console.log('execution721MakerFeePacked', execution721MakerFeePacked.abi.getEventTopic('Execution721MakerFeePacked'))
