@@ -12,6 +12,7 @@ export class OrderRevalidationsJob extends AbstractRabbitMqJobHandler {
   queueName = "order-revalidations";
   maxRetries = 10;
   concurrency = 20;
+  lazyMode = true;
   backoff = {
     type: "exponential",
     delay: 10000,
