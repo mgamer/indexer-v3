@@ -67,7 +67,11 @@ export class RabbitMq {
     }
 
     RabbitMq.rabbitMqPublisherConnection.once("error", (error) => {
-      logger.error("rabbit-error", `Publisher connection error ${error}`);
+      logger.error("rabbit-connection", `Publisher connection error ${error}`);
+    });
+
+    RabbitMq.rabbitMqPublisherConnection.once("close", (error) => {
+      logger.warn("rabbit-connection", `Publisher connection error ${error}`);
     });
   }
 
@@ -76,11 +80,11 @@ export class RabbitMq {
     RabbitMq.rabbitMqPublisherChannels[index] = channel;
 
     channel.once("error", (error) => {
-      logger.error("rabbit-error", `Publisher channel error ${error}`);
+      logger.error("rabbit-channel", `Publisher channel error ${error}`);
     });
 
     channel.once("close", async () => {
-      logger.warn("rabbit-publisher-channel", `Rabbit publisher channel ${index} closed`);
+      logger.warn("rabbit-channel", `Rabbit publisher channel ${index} closed`);
     });
   }
 
