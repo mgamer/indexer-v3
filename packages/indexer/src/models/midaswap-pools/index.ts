@@ -9,13 +9,15 @@ export enum MidaswapPoolKind {
 
 export type MidaswapPool = {
   address: string;
+  // lpTokenAddress: string;
   nft: string;
   token: string;
-  bondingCurve: string;
-  poolKind: MidaswapPoolKind;
-  pairKind: number;
-  propertyChecker: string;
-  tokenId?: string;
+  freeRate: string;
+  // bondingCurve: string;
+  // poolKind: MidaswapPoolKind;
+  // pairKind: number;
+  // propertyChecker: string;
+  // tokenId?: string;
 };
 
 export const saveMidaswapPool = async (midaswapPool: MidaswapPool) => {
@@ -25,20 +27,12 @@ export const saveMidaswapPool = async (midaswapPool: MidaswapPool) => {
         address,
         nft,
         token,
-        bonding_curve,
-        pool_kind,
-        pair_kind,
-        property_checker,
-        token_id
+        free_rate
       ) VALUES (
         $/address/,
         $/nft/,
         $/token/,
-        $/bondingCurve/,
-        $/poolKind/,
-        $/pairKind/,
-        $/propertyChecker/,
-        $/tokenId/
+        $/freeRate/
       )
       ON CONFLICT DO NOTHING
     `,
@@ -46,11 +40,12 @@ export const saveMidaswapPool = async (midaswapPool: MidaswapPool) => {
       address: toBuffer(midaswapPool.address),
       nft: toBuffer(midaswapPool.nft),
       token: toBuffer(midaswapPool.token),
-      bondingCurve: toBuffer(midaswapPool.bondingCurve),
-      poolKind: midaswapPool.poolKind,
-      pairKind: midaswapPool.pairKind,
-      propertyChecker: toBuffer(midaswapPool.propertyChecker),
-      tokenId: midaswapPool.tokenId,
+      freeRate: toBuffer(midaswapPool.freeRate),
+      // bondingCurve: toBuffer(midaswapPool.bondingCurve),
+      // poolKind: midaswapPool.poolKind,
+      // pairKind: midaswapPool.pairKind,
+      // propertyChecker: toBuffer(midaswapPool.propertyChecker),
+      // tokenId: midaswapPool.tokenId,
     }
   );
 
@@ -64,11 +59,7 @@ export const getMidaswapPool = async (address: string): Promise<MidaswapPool> =>
         midaswap_pools.address,
         midaswap_pools.nft,
         midaswap_pools.token,
-        midaswap_pools.bonding_curve,
-        midaswap_pools.pool_kind,
-        midaswap_pools.pair_kind,
-        midaswap_pools.property_checker,
-        midaswap_pools.token_id
+        midaswap_pools.free_rate
       FROM midaswap_pools
       WHERE midaswap_pools.address = $/address/
     `,
@@ -79,10 +70,11 @@ export const getMidaswapPool = async (address: string): Promise<MidaswapPool> =>
     address,
     nft: fromBuffer(result.nft),
     token: fromBuffer(result.token),
-    bondingCurve: fromBuffer(result.bonding_curve),
-    poolKind: result.pool_kind,
-    pairKind: result.pair_kind,
-    propertyChecker: fromBuffer(result.property_checker),
-    tokenId: result.token_id,
+    freeRate: fromBuffer(result.free_rate),
+    // bondingCurve: fromBuffer(result.bonding_curve),
+    // poolKind: result.pool_kind,
+    // pairKind: result.pair_kind,
+    // propertyChecker: fromBuffer(result.property_checker),
+    // tokenId: result.token_id,
   };
 };

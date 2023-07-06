@@ -256,15 +256,12 @@ export type EventSubKind =
   | "sudoswap-v2-delta-update"
   | "sudoswap-v2-new-erc721-pair"
   | "sudoswap-v2-new-erc1155-pair"
-  | "midaswap-sell-erc721"
-  | "midaswap-buy-erc721"
-  | "midaswap-token-deposit"
-  | "midaswap-position-burned"
-  | "midaswap-spot-price-update"
-  | "midaswap-delta-update"
   | "midaswap-new-erc721-pair"
   | "midaswap-erc20-deposit"
-  | "midaswap-erc721-deposit";
+  | "midaswap-erc721-deposit"
+  | "midaswap-sell-erc721"
+  | "midaswap-buy-erc721"
+  | "midaswap-position-burned";
 
 export type EventData = {
   kind: EventKind;
@@ -448,6 +445,7 @@ const allEventData = [
   midaswap.erc721Deposit,
   midaswap.buyERC721,
   midaswap.sellERC721,
+  midaswap.positionBurned,
   treasure.bidAccepted,
 ];
 

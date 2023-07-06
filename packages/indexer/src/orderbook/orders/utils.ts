@@ -16,6 +16,13 @@ export type OrderMetadata = {
   target?: string;
   originatedAt?: string;
   fromOnChain?: boolean;
+
+  eventName?: string;
+  lpTokenId?: string;
+  nftId?: string;
+  binLower?: number;
+  binstep?: number;
+  binAmount?: number;
 };
 
 // Underlying database model for an order

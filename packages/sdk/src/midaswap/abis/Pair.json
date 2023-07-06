@@ -32,11 +32,6 @@
   },
   {
     "inputs": [],
-    "name": "MidasPair__BinSequenceWrong",
-    "type": "error"
-  },
-  {
-    "inputs": [],
     "name": "MidasPair__FlashLoanCallbackFailed",
     "type": "error"
   },

@@ -319,7 +319,8 @@ export const getJoiDynamicPricingObject = async (
     | Sdk.SeaportBase.Types.OrderComponents
     | Sdk.Sudoswap.OrderParams
     | Sdk.Nftx.Types.OrderParams
-    | Sdk.CollectionXyz.Types.OrderParams,
+    | Sdk.CollectionXyz.Types.OrderParams
+    | Sdk.Midaswap.OrderParams,
   currency?: string,
   missing_royalties?: []
 ) => {
@@ -397,11 +398,11 @@ export const getJoiDynamicPricingObject = async (
       data: {
         pool: (raw_data as Sdk.Midaswap.OrderParams).pair,
         prices: await Promise.all(
-          ((raw_data as Sdk.Midaswap.OrderParams).extra.prices as string[]).map((price) =>
+          (raw_data as Sdk.Midaswap.OrderParams).extra.prices.map((item) =>
             getJoiPriceObject(
               {
                 gross: {
-                  amount: bn(price).add(missingRoyalties).toString(),
+                  amount: bn(item.price).add(missingRoyalties).toString(),
                 },
               },
               floorAskCurrency

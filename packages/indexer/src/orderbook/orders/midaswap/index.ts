@@ -1,7 +1,4 @@
-import { Interface } from "@ethersproject/abi";
-import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
-import { Contract } from "@ethersproject/contracts";
 import { keccak256 } from "@ethersproject/solidity";
 import * as Sdk from "@reservoir0x/sdk";
 import _ from "lodash";
@@ -9,21 +6,12 @@ import pLimit from "p-limit";
 
 import { idb, pgp, redb } from "@/common/db";
 import { logger } from "@/common/logger";
-import { baseProvider } from "@/common/provider";
-import { bn, toBuffer } from "@/common/utils";
+import { toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import * as ordersUpdateById from "@/jobs/order-updates/by-id-queue";
 import { Sources } from "@/models/sources";
-import { MidaswapPoolKind } from "@/models/midaswap-pools";
-import * as commonHelpers from "@/orderbook/orders/common/helpers";
-import {
-  POOL_ORDERS_MAX_PRICE_POINTS_COUNT,
-  DbOrder,
-  OrderMetadata,
-  generateSchemaHash,
-} from "@/orderbook/orders/utils";
+import { DbOrder, OrderMetadata, generateSchemaHash } from "@/orderbook/orders/utils";
 import * as tokenSet from "@/orderbook/token-sets";
-import * as royalties from "@/utils/royalties";
 import * as midaswap from "@/utils/midaswap";
 
 export type OrderInfo = {
@@ -56,59 +44,34 @@ export const getOrderId = (pool: string, side: "sell" | "buy", tokenId?: string)
     : // Sell orders have multiple order ids per pool (one for each potential token id)
       keccak256(["string", "address", "string", "uint256"], ["midaswap", pool, side, tokenId]);
 
+const getBuyOrderId = (pool: string, lpTokenId: string, index: number) =>
+  keccak256(
+    ["string", "address", "string", "string", "uint256"],
+    ["midaswap", pool, "buy", lpTokenId, index]
+  );
+
 export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
   const results: SaveResult[] = [];
   const orderValues: DbOrder[] = [];
 
-  const handleOrder = async ({ orderParams }: OrderInfo) => {
+  const handleOrder = async ({ orderParams, metadata }: OrderInfo) => {
     try {
       const pool = await midaswap.getPoolDetails(orderParams.pool);
+
       if (!pool) {
         throw new Error("Could not fetch pool details");
       }
 
-      if (pool.token !== Sdk.Common.Addresses.Eth[config.chainId]) {
+      if (pool.token !== Sdk.Common.Addresses.Weth[config.chainId]) {
         throw new Error("Unsupported currency");
       }
 
-      // Force recheck at most once per hour
-      const recheckCondition = orderParams.forceRecheck
-        ? `AND orders.updated_at < to_timestamp(${orderParams.txTimestamp - 3600})`
-        : `AND lower(orders.valid_between) < to_timestamp(${orderParams.txTimestamp})`;
+      const { binAmount, binLower, binstep, nftId, lpTokenId } = metadata;
 
-      const poolContract = new Contract(
-        pool.address,
-        new Interface([
-          `
-            function calculateRoyaltiesView(uint256 assetId, uint256 saleAmount) view returns (
-              address[] memory royaltyRecipients,
-              uint256[] memory royaltyAmounts,
-              uint256 royaltyTotal
-            )
-          `,
-          `
-            function getSellNFTQuote(uint256 assetId, uint256 numNFTs) view returns (
-              uint8 error,
-              uint256 newSpotPrice,
-              uint256 newDelta,
-              uint256 outputAmount,
-              uint256 protocolFee,
-              uint256 royaltyAmount
-            )
-          `,
-          `
-            function getBuyNFTQuote(uint256 assetId, uint256 numNFTs) view returns (
-              uint8 error,
-              uint256 newSpotPrice,
-              uint256 newDelta,
-              uint256 inputAmount,
-              uint256 protocolFee,
-              uint256 royaltyAmount
-            )
-          `,
-        ]),
-        baseProvider
-      );
+      // Force recheck at most once per hour
+      // const recheckCondition = orderParams.forceRecheck
+      //   ? `AND orders.updated_at < to_timestamp(${orderParams.txTimestamp - 3600})`
+      //   : `AND lower(orders.valid_between) < to_timestamp(${orderParams.txTimestamp})`;
 
       // Handle: fees
       const feeBps = 50;
@@ -119,153 +82,194 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       }[] = [
         {
           kind: "marketplace",
-          recipient: "0x6853f8865ba8e9fbd9c8cce3155ce5023fb7eeb0",
+          recipient: pool.address,
           bps: 50,
         },
       ];
 
-      const isERC1155 = pool.pairKind > 1;
-
-      // Handle buy orders
-      try {
-        if ([MidaswapPoolKind.TOKEN, MidaswapPoolKind.TRADE].includes(pool.poolKind)) {
-          if (isERC1155) {
-            throw new Error("ERC1155 buy orders are not yet supported");
+      switch (metadata.eventName) {
+        // Handle sell orders
+        case "midaswap-erc721-deposit": {
+          if (
+            _.isUndefined(binAmount) ||
+            _.isUndefined(binLower) ||
+            _.isUndefined(binstep) ||
+            _.isUndefined(lpTokenId) ||
+            _.isUndefined(nftId)
+          ) {
+            return;
           }
 
-          if (pool.propertyChecker !== AddressZero) {
-            throw new Error("Property checked pools are not yet supported on the buy-side");
-          }
+          const id = getOrderId(orderParams.pool, "sell", metadata.nftId);
 
-          const tokenBalance = await baseProvider.getBalance(pool.address);
-
-          let tmpPriceList: (BigNumber | undefined)[] = Array.from(
-            { length: POOL_ORDERS_MAX_PRICE_POINTS_COUNT },
-            () => undefined
-          );
-          await Promise.all(
-            _.range(0, POOL_ORDERS_MAX_PRICE_POINTS_COUNT).map(async (index) => {
-              try {
-                const result = await poolContract.getSellNFTQuote(pool.tokenId ?? 0, index + 1);
-                if (result.error === 0 && result.outputAmount.lte(tokenBalance)) {
-                  tmpPriceList[index] = result.outputAmount;
-                }
-              } catch {
-                // Ignore errors
-              }
-            })
+          const tmpPriceList = Array.from({ length: binAmount }).map(
+            (item, index) => binLower + index * binstep
           );
 
-          // Stop when the first `undefined` is encountered
-          const firstUndefined = tmpPriceList.findIndex((p) => p === undefined);
-          if (firstUndefined !== -1) {
-            tmpPriceList = tmpPriceList.slice(0, firstUndefined);
-          }
-          const priceList = tmpPriceList.map((p) => p!);
+          const price = tmpPriceList[0];
+          const value = tmpPriceList[0];
 
-          const prices: BigNumber[] = [];
-          for (let i = 0; i < priceList.length; i++) {
-            prices.push(bn(priceList[i]).sub(i > 0 ? priceList[i - 1] : 0));
-          }
+          // Handle: core sdk order
+          const sdkOrder: Sdk.Midaswap.Order = new Sdk.Midaswap.Order(config.chainId, {
+            pair: orderParams.pool,
+            tokenX: pool.nft,
+            tokenId: nftId,
+            lpTokenId,
+            extra: {
+              prices: tmpPriceList.map((bin) => ({
+                price: bin.toString(),
+                bin: bin.toString(),
+                lpTokenId,
+              })),
+            },
+          });
 
-          const id = getOrderId(orderParams.pool, "buy");
-          if (prices.length) {
-            // Handle: prices
-            const price = prices[0].toString();
-            const value = prices[0]
-              .sub(
-                // Subtract the protocol fee from the price
-                prices[0].mul(feeBps).div(10000)
-              )
-              .toString();
+          const orderResult = await redb.oneOrNone(
+            `
+                      SELECT 1 FROM orders
+                      WHERE orders.id = $/id/
+                    `,
+            { id }
+          );
 
-            // Handle: royalties on top
-            const defaultRoyalties = await royalties.getRoyaltiesByTokenSet(
-              `contract:${pool.nft}`.toLowerCase(),
-              "default"
-            );
-
-            const totalBuiltInBps = 0;
-            const totalDefaultBps = defaultRoyalties
-              .map(({ bps }) => bps)
-              .reduce((a, b) => a + b, 0);
-
-            const missingRoyalties = [];
-            let missingRoyaltyAmount = bn(0);
-            if (totalBuiltInBps < totalDefaultBps) {
-              const validRecipients = defaultRoyalties.filter(
-                ({ bps, recipient }) => bps && recipient !== AddressZero
-              );
-              if (validRecipients.length) {
-                const bpsDiff = totalDefaultBps - totalBuiltInBps;
-                const amount = bn(price).mul(bpsDiff).div(10000);
-                missingRoyaltyAmount = missingRoyaltyAmount.add(amount);
-
-                // Split the missing royalties pro-rata across all royalty recipients
-                const totalBps = _.sumBy(validRecipients, ({ bps }) => bps);
-                for (const { bps, recipient } of validRecipients) {
-                  // TODO: Handle lost precision (by paying it to the last or first recipient)
-                  missingRoyalties.push({
-                    bps: Math.floor((bpsDiff * bps) / totalBps),
-                    amount: amount.mul(bps).div(totalBps).toString(),
-                    recipient,
-                  });
-                }
-              }
+          if (!orderResult) {
+            // Handle: token set
+            const schemaHash = generateSchemaHash();
+            const [{ id: tokenSetId }] = await tokenSet.singleToken.save([
+              {
+                id: `token:${pool.nft}:${nftId}`.toLowerCase(),
+                schemaHash,
+                contract: pool.nft,
+                tokenId: nftId,
+              },
+            ]);
+            if (!tokenSetId) {
+              throw new Error("No token set available");
             }
 
-            const normalizedValue = bn(value).sub(missingRoyaltyAmount);
+            // Handle: source
+            const sources = await Sources.getInstance();
+            const source = await sources.getOrInsert("midaswap");
 
-            // Handle: core sdk order
-            const sdkOrder: Sdk.Midaswap.Order = new Sdk.Midaswap.Order(config.chainId, {
-              pair: orderParams.pool,
-              tokenX: await new Contract(orderParams.pool, Sdk.Midaswap.PairAbi).getTokenX(),
-              amount: isERC1155 ? "1" : undefined,
-              extra: {
-                prices: prices.map(String),
-              },
+            const validFrom = `date_trunc('seconds', to_timestamp(${orderParams.txTimestamp}))`;
+            const validTo = `'Infinity'`;
+            orderValues.push({
+              id,
+              kind: "midaswap",
+              side: "sell",
+              fillability_status: "fillable",
+              approval_status: "approved",
+              token_set_id: tokenSetId,
+              token_set_schema_hash: toBuffer(schemaHash),
+              maker: toBuffer(pool.address),
+              taker: toBuffer(AddressZero),
+              price: price.toString(),
+              value: value.toString(),
+              currency: toBuffer(pool.token),
+              currency_price: price.toString(),
+              currency_value: value.toString(),
+              needs_conversion: null,
+              quantity_remaining: "1",
+              valid_between: `tstzrange(${validFrom}, ${validTo}, '[]')`,
+              nonce: null,
+              source_id_int: source?.id,
+              is_reservoir: null,
+              contract: toBuffer(pool.nft),
+              conduit: null,
+              fee_bps: feeBps,
+              fee_breakdown: feeBreakdown,
+              dynamic: null,
+              raw_data: sdkOrder.params,
+              expiration: validTo,
+              missing_royalties: null,
+              normalized_value: null,
+              currency_normalized_value: null,
+              block_number: orderParams.txBlock ?? null,
+              log_index: orderParams.logIndex ?? null,
             });
 
-            let orderResult = await idb.oneOrNone(
-              `
-                SELECT
-                  orders.token_set_id
-                FROM orders
-                WHERE orders.id = $/id/
-              `,
-              { id }
-            );
-            if (orderResult && !orderResult.token_set_id) {
-              // Delete the order since it is an incomplete one resulted from 'partial' insertion of
-              // fill events. The issue only occurs for buy orders since sell orders are handled via
-              // 'on-chain' fill events which don't insert such incomplete orders.
-              await idb.none(`DELETE FROM orders WHERE orders.id = $/id/`, { id });
-              orderResult = false;
+            results.push({
+              id,
+              txHash: orderParams.txHash,
+              txTimestamp: orderParams.txTimestamp,
+              status: "success",
+              triggerKind: "new-order",
+            });
+          }
+
+          break;
+        }
+
+        // Handle buy orders
+        case "midaswap-erc20-deposit": {
+          if (
+            _.isUndefined(binAmount) ||
+            _.isUndefined(binLower) ||
+            _.isUndefined(binstep) ||
+            _.isUndefined(lpTokenId)
+          ) {
+            return;
+          }
+
+          const orderResult = await redb.manyOrNone(
+            `
+                      SELECT id,raw_data FROM orders
+                      WHERE orders.maker = $/maker/ AND orders.side = 'buy'
+                    `,
+            {
+              maker: toBuffer(pool.address),
+            }
+          );
+
+          const tmpPriceList = Array.from({ length: binAmount })
+            .map((item, index) => binLower + index * binstep)
+            .reverse();
+          const price = tmpPriceList[0];
+          const value = tmpPriceList[0];
+          const prices = tmpPriceList.map((bin) => ({
+            price: bin.toString(),
+            bin: bin.toString(),
+            lpTokenId,
+          }));
+
+          // Handle: core sdk order
+          const sdkOrder: Sdk.Midaswap.Order = new Sdk.Midaswap.Order(config.chainId, {
+            pair: orderParams.pool,
+            tokenX: pool.nft,
+            // tokenId: nftId,
+            lpTokenId,
+            extra: {
+              prices: !orderResult.length
+                ? prices
+                : _.sortBy(prices.concat(orderResult[0].raw_data.extra.prices), "price").reverse(),
+            },
+          });
+
+          // create buy orders
+          const newBuyOrders = async () => {
+            // Handle: token set
+            const schemaHash = generateSchemaHash();
+            const [{ id: tokenSetId }] = await tokenSet.contractWide.save([
+              {
+                id: `contract:${pool.nft}`.toLowerCase(),
+                schemaHash,
+                contract: pool.nft,
+              },
+            ]);
+
+            if (!tokenSetId) {
+              throw new Error("No token set available");
             }
 
-            if (!orderResult) {
-              // Handle: token set
-              const schemaHash = generateSchemaHash();
-              const [{ id: tokenSetId }] = await tokenSet.contractWide.save([
-                {
-                  id: `contract:${pool.nft}`.toLowerCase(),
-                  schemaHash,
-                  contract: pool.nft,
-                },
-              ]);
+            // Handle: source
+            const sources = await Sources.getInstance();
+            const source = await sources.getOrInsert("midaswap");
 
-              if (!tokenSetId) {
-                throw new Error("No token set available");
-              }
-
-              // Handle: source
-              const sources = await Sources.getInstance();
-              const source = await sources.getOrInsert("midaswap");
-
-              const validFrom = `date_trunc('seconds', to_timestamp(${orderParams.txTimestamp}))`;
-              const validTo = `'Infinity'`;
+            const validFrom = `date_trunc('seconds', to_timestamp(${orderParams.txTimestamp}))`;
+            const validTo = `'Infinity'`;
+            tmpPriceList.forEach((item, index) => {
               orderValues.push({
-                id,
+                id: getBuyOrderId(pool.address, lpTokenId, index),
                 kind: "midaswap",
                 side: "buy",
                 fillability_status: "fillable",
@@ -274,13 +278,13 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                 token_set_schema_hash: toBuffer(schemaHash),
                 maker: toBuffer(pool.address),
                 taker: toBuffer(AddressZero),
-                price,
-                value,
+                price: price.toString(),
+                value: value.toString(),
                 currency: toBuffer(pool.token),
-                currency_price: price,
-                currency_value: value,
+                currency_price: price.toString(),
+                currency_value: value.toString(),
                 needs_conversion: null,
-                quantity_remaining: prices.length.toString(),
+                quantity_remaining: "1",
                 valid_between: `tstzrange(${validFrom}, ${validTo}, '[]')`,
                 nonce: null,
                 source_id_int: source?.id,
@@ -292,21 +296,30 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                 dynamic: null,
                 raw_data: sdkOrder.params,
                 expiration: validTo,
-                missing_royalties: missingRoyalties,
-                normalized_value: normalizedValue.toString(),
-                currency_normalized_value: normalizedValue.toString(),
+                missing_royalties: null,
+                normalized_value: null,
+                currency_normalized_value: null,
                 block_number: orderParams.txBlock ?? null,
                 log_index: orderParams.logIndex ?? null,
               });
 
               results.push({
-                id,
+                id: getBuyOrderId(pool.address, lpTokenId, index),
                 txHash: orderParams.txHash,
                 txTimestamp: orderParams.txTimestamp,
                 status: "success",
                 triggerKind: "new-order",
               });
-            } else {
+            });
+          };
+
+          if (!orderResult) {
+            await newBuyOrders();
+          } else {
+            await newBuyOrders();
+
+            orderResult.forEach(async (item) => {
+              // update already exist buy orders
               await idb.none(
                 `
                   UPDATE orders SET
@@ -316,308 +329,117 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                     currency_price = $/price/,
                     value = $/value/,
                     currency_value = $/value/,
-                    quantity_remaining = $/quantityRemaining/,
                     valid_between = tstzrange(date_trunc('seconds', to_timestamp(${orderParams.txTimestamp})), 'Infinity', '[]'),
-                    expiration = 'Infinity',
                     updated_at = now(),
                     raw_data = $/rawData:json/,
-                    missing_royalties = $/missingRoyalties:json/,
-                    normalized_value = $/normalizedValue/,
-                    currency_normalized_value = $/currencyNormalizedValue/,
-                    fee_bps = $/feeBps/,
-                    fee_breakdown = $/feeBreakdown:json/,
-                    block_number = $/blockNumber/,
                     log_index = $/logIndex/
                   WHERE orders.id = $/id/
-                  ${recheckCondition}
                 `,
                 {
-                  id,
+                  id: item.id,
                   price,
                   value,
-                  rawData: sdkOrder.params,
+                  rawData: {
+                    ...sdkOrder.params,
+                    lpTokenId: item.raw_data.lpTokenId,
+                  },
                   quantityRemaining: prices.length.toString(),
-                  missingRoyalties: missingRoyalties,
-                  normalizedValue: normalizedValue.toString(),
-                  currencyNormalizedValue: normalizedValue.toString(),
-                  feeBps,
-                  feeBreakdown,
                   blockNumber: orderParams.txBlock,
                   logIndex: orderParams.logIndex,
                 }
               );
-
               results.push({
-                id,
+                id: item.id,
                 txHash: orderParams.txHash,
                 txTimestamp: orderParams.txTimestamp,
                 status: "success",
                 triggerKind: "reprice",
               });
-            }
-          } else {
-            await idb.none(
-              `
-                UPDATE orders SET
-                  fillability_status = 'no-balance',
-                  expiration = to_timestamp(${orderParams.txTimestamp}),
-                  updated_at = now()
-                WHERE orders.id = $/id/
-                ${recheckCondition}
-              `,
-              { id }
-            );
-
-            results.push({
-              id,
-              txHash: orderParams.txHash,
-              txTimestamp: orderParams.txTimestamp,
-              status: "success",
-              triggerKind: "reprice",
             });
           }
+          break;
         }
-      } catch (error) {
-        logger.error(
-          "orders-midaswap-save",
-          `Failed to handle buy order with params ${JSON.stringify(orderParams)}: ${error}`
-        );
-      }
 
-      // Handle sell orders
-      try {
-        if ([MidaswapPoolKind.NFT, MidaswapPoolKind.TRADE].includes(pool.poolKind)) {
-          let tmpPriceList: (BigNumber | undefined)[] = Array.from(
-            { length: POOL_ORDERS_MAX_PRICE_POINTS_COUNT },
-            () => undefined
-          );
-          await Promise.all(
-            _.range(0, POOL_ORDERS_MAX_PRICE_POINTS_COUNT).map(async (index) => {
-              try {
-                const result = await poolContract.getBuyNFTQuote(pool.tokenId ?? 0, index + 1);
-                if (result.error === 0) {
-                  tmpPriceList[index] = result.inputAmount;
-                }
-              } catch {
-                // Ignore errors
-              }
-            })
-          );
-
-          // Stop when the first `undefined` is encountered
-          const firstUndefined = tmpPriceList.findIndex((p) => p === undefined);
-          if (firstUndefined !== -1) {
-            tmpPriceList = tmpPriceList.slice(0, firstUndefined);
-          }
-          const priceList = tmpPriceList.map((p) => p!);
-
-          const prices: BigNumber[] = [];
-          for (let i = 0; i < priceList.length; i++) {
-            prices.push(
-              bn(priceList[i])
-                .sub(i > 0 ? priceList[i - 1] : 0)
-                // Just for safety, add 1 wei
-                .add(1)
-            );
-          }
-
-          // Handle: prices
-          const price = prices[0].toString();
-          const value = prices[0].toString();
-
-          // Fetch all token ids owned by the pool
-          const poolOwnedTokenIds = await commonHelpers.getNfts(pool.nft, pool.address);
-
-          const limit = pLimit(50);
-          await Promise.all(
-            poolOwnedTokenIds.map(({ tokenId, amount }) =>
-              limit(async () => {
-                try {
-                  if (isERC1155 && tokenId !== pool.tokenId) {
-                    return;
-                  }
-
-                  const id = getOrderId(orderParams.pool, "sell", tokenId);
-
-                  // Handle: royalties on top
-                  const defaultRoyalties = await royalties.getRoyaltiesByTokenSet(
-                    `token:${pool.nft}:${tokenId}`.toLowerCase(),
-                    "default"
-                  );
-
-                  const totalBuiltInBps = 0;
-                  const totalDefaultBps = defaultRoyalties
-                    .map(({ bps }) => bps)
-                    .reduce((a, b) => a + b, 0);
-
-                  const missingRoyalties: { bps: number; amount: string; recipient: string }[] = [];
-                  let missingRoyaltyAmount = bn(0);
-                  if (totalBuiltInBps < totalDefaultBps) {
-                    const validRecipients = defaultRoyalties.filter(
-                      ({ bps, recipient }) => bps && recipient !== AddressZero
-                    );
-                    if (validRecipients.length) {
-                      const bpsDiff = totalDefaultBps - totalBuiltInBps;
-                      const amount = bn(price).mul(bpsDiff).div(10000);
-                      missingRoyaltyAmount = missingRoyaltyAmount.add(amount);
-
-                      // Split the missing royalties pro-rata across all royalty recipients
-                      const totalBps = _.sumBy(validRecipients, ({ bps }) => bps);
-                      for (const { bps, recipient } of validRecipients) {
-                        // TODO: Handle lost precision (by paying it to the last or first recipient)
-                        missingRoyalties.push({
-                          bps: Math.floor((bpsDiff * bps) / totalBps),
-                          amount: amount.mul(bps).div(totalBps).toString(),
-                          recipient,
-                        });
-                      }
-                    }
-                  }
-
-                  const normalizedValue = bn(value).add(missingRoyaltyAmount);
-
-                  // Handle: core sdk order
-                  const sdkOrder: Sdk.Midaswap.Order = new Sdk.Midaswap.Order(config.chainId, {
-                    pair: orderParams.pool,
-                    tokenX: await new Contract(orderParams.pool, Sdk.Midaswap.PairAbi).getTokenX(),
-                    amount: isERC1155 ? amount : undefined,
-                    tokenId,
-                    extra: {
-                      prices: prices.map(String),
-                    },
-                  });
-
-                  const orderResult = await redb.oneOrNone(
-                    `
-                      SELECT 1 FROM orders
-                      WHERE orders.id = $/id/
+        // Handle remove orders
+        case "midaswap-position-burned": {
+          const orderResult = await redb.manyOrNone(
+            `
+                      SELECT id,side,raw_data FROM orders
+                      WHERE orders.maker = $/maker/
                     `,
-                    { id }
-                  );
-                  if (!orderResult) {
-                    // Handle: token set
-                    const schemaHash = generateSchemaHash();
-                    const [{ id: tokenSetId }] = await tokenSet.singleToken.save([
-                      {
-                        id: `token:${pool.nft}:${tokenId}`.toLowerCase(),
-                        schemaHash,
-                        contract: pool.nft,
-                        tokenId,
-                      },
-                    ]);
-                    if (!tokenSetId) {
-                      throw new Error("No token set available");
-                    }
-
-                    // Handle: source
-                    const sources = await Sources.getInstance();
-                    const source = await sources.getOrInsert("midaswap");
-
-                    const validFrom = `date_trunc('seconds', to_timestamp(${orderParams.txTimestamp}))`;
-                    const validTo = `'Infinity'`;
-                    orderValues.push({
-                      id,
-                      kind: "midaswap",
-                      side: "sell",
-                      fillability_status: "fillable",
-                      approval_status: "approved",
-                      token_set_id: tokenSetId,
-                      token_set_schema_hash: toBuffer(schemaHash),
-                      maker: toBuffer(pool.address),
-                      taker: toBuffer(AddressZero),
-                      price,
-                      value,
-                      currency: toBuffer(pool.token),
-                      currency_price: price,
-                      currency_value: value,
-                      needs_conversion: null,
-                      quantity_remaining: isERC1155 ? amount : "1",
-                      valid_between: `tstzrange(${validFrom}, ${validTo}, '[]')`,
-                      nonce: null,
-                      source_id_int: source?.id,
-                      is_reservoir: null,
-                      contract: toBuffer(pool.nft),
-                      conduit: null,
-                      fee_bps: feeBps,
-                      fee_breakdown: feeBreakdown,
-                      dynamic: null,
-                      raw_data: sdkOrder.params,
-                      expiration: validTo,
-                      missing_royalties: missingRoyalties,
-                      normalized_value: normalizedValue.toString(),
-                      currency_normalized_value: normalizedValue.toString(),
-                      block_number: orderParams.txBlock ?? null,
-                      log_index: orderParams.logIndex ?? null,
-                    });
-
-                    results.push({
-                      id,
-                      txHash: orderParams.txHash,
-                      txTimestamp: orderParams.txTimestamp,
-                      status: "success",
-                      triggerKind: "new-order",
-                    });
-                  } else {
-                    await idb.none(
-                      `
-                        UPDATE orders SET
-                          fillability_status = 'fillable',
-                          approval_status = 'approved',
-                          price = $/price/,
-                          currency_price = $/price/,
-                          value = $/value/,
-                          currency_value = $/value/,
-                          quantity_remaining = $/amount/,
-                          valid_between = tstzrange(date_trunc('seconds', to_timestamp(${orderParams.txTimestamp})), 'Infinity', '[]'),
-                          expiration = 'Infinity',
-                          updated_at = now(),
-                          raw_data = $/rawData:json/,
-                          missing_royalties = $/missingRoyalties:json/,
-                          normalized_value = $/normalizedValue/,
-                          currency_normalized_value = $/currencyNormalizedValue/,
-                          fee_bps = $/feeBps/,
-                          fee_breakdown = $/feeBreakdown:json/,
-                          block_number = $/blockNumber/,
-                          log_index = $/logIndex/
-                        WHERE orders.id = $/id/
-                        ${recheckCondition}
-                      `,
-                      {
-                        id,
-                        price,
-                        value,
-                        amount: isERC1155 ? amount : "1",
-                        rawData: sdkOrder.params,
-                        missingRoyalties: missingRoyalties,
-                        normalizedValue: normalizedValue.toString(),
-                        currencyNormalizedValue: normalizedValue.toString(),
-                        feeBps,
-                        feeBreakdown,
-                        blockNumber: orderParams.txBlock,
-                        logIndex: orderParams.logIndex,
-                      }
-                    );
-
-                    results.push({
-                      id,
-                      txHash: orderParams.txHash,
-                      txTimestamp: orderParams.txTimestamp,
-                      status: "success",
-                      triggerKind: "reprice",
-                    });
-                  }
-                } catch {
-                  // Ignore any errors
-                }
-              })
-            )
+            {
+              maker: toBuffer(pool.address),
+            }
           );
+
+          if (orderResult.length) {
+            // remove orders by pool && lp token id
+            const ids = orderResult
+              .filter((item) => item.raw_data.lpTokenId === lpTokenId)
+              .map((item) => item.id);
+            if (ids.length) {
+              await idb.none(`DELETE FROM orders WHERE orders.id IN ($/ids:list/)`, {
+                ids,
+              });
+            }
+
+            const firstBuyOrder = orderResult.find((item) => item.side === "buy");
+
+            if (!firstBuyOrder) {
+              return;
+            }
+
+            const prices = _.remove(
+              firstBuyOrder.raw_data.extra.prices,
+              (item: Sdk.Midaswap.Price) => item.lpTokenId !== lpTokenId
+            );
+
+            if (!prices.length) {
+              return;
+            }
+
+            const price = prices[0].price;
+            const value = prices[0].price;
+
+            // update buy orders price
+            orderResult
+              .filter((item) => item.side === "buy")
+              .forEach(async (item) => {
+                await idb.none(
+                  `
+                  UPDATE orders SET
+                    fillability_status = 'fillable',
+                    approval_status = 'approved',
+                    price = $/price/,
+                    currency_price = $/price/,
+                    value = $/value/,
+                    currency_value = $/value/,
+                    valid_between = tstzrange(date_trunc('seconds', to_timestamp(${orderParams.txTimestamp})), 'Infinity', '[]'),
+                    updated_at = now(),
+                    raw_data = $/rawData:json/,
+                    log_index = $/logIndex/
+                  WHERE orders.id = $/id/
+                `,
+                  {
+                    id: item.id,
+                    price,
+                    value,
+                    rawData: {
+                      ...item.raw_data,
+                      extra: {
+                        prices,
+                      },
+                    },
+                    quantityRemaining: prices.length.toString(),
+                    blockNumber: orderParams.txBlock,
+                    logIndex: orderParams.logIndex,
+                  }
+                );
+              });
+          }
+
+          break;
         }
-      } catch (error) {
-        logger.error(
-          "orders-midaswap-save",
-          `Failed to handle sell order with params ${JSON.stringify(orderParams)}: ${error}`
-        );
       }
     } catch (error) {
       logger.error(
@@ -630,8 +452,6 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
   // Process all orders concurrently
   const limit = pLimit(20);
   await Promise.all(orderInfos.map((orderInfo) => limit(() => handleOrder(orderInfo))));
-
-  logger.info("midaswap-debug", JSON.stringify(results));
 
   if (orderValues.length) {
     const columns = new pgp.helpers.ColumnSet(
@@ -672,7 +492,14 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         table: "orders",
       }
     );
-    await idb.none(pgp.helpers.insert(orderValues, columns) + " ON CONFLICT DO NOTHING");
+    try {
+      await idb.none(pgp.helpers.insert(orderValues, columns) + " ON CONFLICT DO NOTHING");
+    } catch (error) {
+      logger.error(
+        "orders-midaswap-save",
+        `Failed to handle order with params ${JSON.stringify(error)}: ${error}`
+      );
+    }
   }
 
   await ordersUpdateById.addToQueue(

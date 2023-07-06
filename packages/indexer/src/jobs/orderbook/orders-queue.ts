@@ -317,6 +317,11 @@ export const jobProcessor = async (job: Job) => {
         break;
       }
 
+      case "midaswap": {
+        result = await orders.midaswap.save([info]);
+        break;
+      }
+
       case "zeroex-v4": {
         result = await orders.zeroExV4.save([info]);
         break;

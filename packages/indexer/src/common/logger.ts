@@ -41,6 +41,10 @@ const log = (level: "error" | "info" | "warn" | "debug") => {
           })
         : // Fallback to logging to standard output
           new transports.Console(),
+      // new transports.File({
+      //   filename: "log.txt",
+      //   dirname: ".",
+      // }),
     ],
   });
 

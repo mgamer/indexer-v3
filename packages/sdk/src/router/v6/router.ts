@@ -1925,9 +1925,10 @@ export class Router {
                     .map(({ order }) => order)
                     .filter((o) => o.params.pair === order.params.pair)
                     .findIndex((o) => o.params.tokenId === order.params.tokenId)
-                ]
+                ].price
               : // For ERC1155, each amount from the same pool gets a different price
                 order.params.extra.prices
+                  .map((item) => item.price)
                   .slice(0, Number(amount ?? 1))
                   .reduce((a, b) => a.add(b), bn(0))
           )
@@ -3572,9 +3573,9 @@ export class Router {
               data: module.interface.encodeFunctionData("sell", [
                 order.params.tokenX,
                 detail.contractKind === "erc721" ? detail.tokenId : detail.amount ?? 1,
-                bn(order.params.extra.prices[0]).sub(
+                bn(order.params.extra.prices[0].price).sub(
                   // Take into account the protocol fee of 0.5%
-                  bn(order.params.extra.prices[0]).mul(50).div(10000)
+                  bn(order.params.extra.prices[0].price).mul(50).div(10000)
                 ),
                 {
                   fillTo: taker,

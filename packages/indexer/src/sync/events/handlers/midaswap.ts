@@ -1,6 +1,3 @@
-import { Interface } from "@ethersproject/abi";
-import { searchForCall } from "@georgeroman/evm-tx-simulator";
-
 import { logger } from "@/common/logger";
 import { bn } from "@/common/utils";
 import { getEventData } from "@/events-sync/data";
@@ -9,6 +6,7 @@ import * as utils from "@/events-sync/utils";
 import * as midaswap from "@/orderbook/orders/midaswap";
 import { getUSDAndNativePrices } from "@/utils/prices";
 import * as midaswapUtils from "@/utils/midaswap";
+import { BigNumber } from "ethers";
 
 export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChainData) => {
   // For keeping track of all individual trades per transaction
@@ -22,15 +20,156 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
   // Handle the events
   for (const { subKind, baseEventParams, log } of events) {
     const eventData = getEventData([subKind])[0];
+
     switch (subKind) {
-      // Sudoswap is extremely poorly designed from the perspective of events
-      // that get emitted on trades. As such, we use transaction tracing when
-      // we detect sales in order to get more detailed information.
+      // create pool
+      case "midaswap-new-erc721-pair": {
+        midaswapUtils.getPoolDetails(baseEventParams.address);
+        break;
+      }
+
+      case "midaswap-erc721-deposit": {
+        const parsedLog = eventData.abi.parseLog(log);
+        const lpTokenId = parsedLog.args["lpTokenId"] as BigNumber;
+        const nftIds = parsedLog.args["_NFTIDs"] as BigNumber[];
+        const binLower = parsedLog.args["binLower"] as number;
+        const binStep = parsedLog.args["binStep"] as number;
+
+        onChainData.orders.push({
+          kind: "midaswap",
+          info: {
+            orderParams: {
+              pool: baseEventParams.address,
+              txHash: baseEventParams.txHash,
+              txTimestamp: baseEventParams.timestamp,
+              txBlock: baseEventParams.block,
+              logIndex: baseEventParams.logIndex,
+            },
+            metadata: {
+              eventName: subKind,
+              fromOnChain: true,
+              lpTokenId: lpTokenId.toString(),
+              // nftId: nftId.toString(),
+            },
+          },
+        });
+
+        midaswap.save(
+          nftIds.map((nftId: BigNumber) => ({
+            orderParams: {
+              pool: baseEventParams.address,
+              txHash: baseEventParams.txHash,
+              txTimestamp: baseEventParams.timestamp,
+              txBlock: baseEventParams.block,
+              logIndex: baseEventParams.logIndex,
+            },
+            metadata: {
+              eventName: subKind,
+              fromOnChain: true,
+              lpTokenId: lpTokenId.toString(),
+              nftId: nftId.toString(),
+              binLower: binLower,
+              binstep: binStep,
+              binAmount: nftIds.length,
+            },
+          }))
+        );
+        break;
+      }
+
+      case "midaswap-erc20-deposit": {
+        const parsedLog = eventData.abi.parseLog(log);
+
+        const lpTokenId = parsedLog.args["lpTokenId"] as BigNumber;
+        const binLower = parsedLog.args["binLower"] as number;
+        const binStep = parsedLog.args["binStep"] as number;
+        const binAmount = parsedLog.args["binAmount"] as BigNumber;
+
+        onChainData.orders.push({
+          kind: "midaswap",
+          info: {
+            orderParams: {
+              pool: baseEventParams.address,
+              txHash: baseEventParams.txHash,
+              txTimestamp: baseEventParams.timestamp,
+              txBlock: baseEventParams.block,
+              logIndex: baseEventParams.logIndex,
+            },
+            metadata: {
+              eventName: subKind,
+              fromOnChain: true,
+            },
+          },
+        });
+
+        midaswap.save([
+          {
+            orderParams: {
+              pool: baseEventParams.address,
+              txHash: baseEventParams.txHash,
+              txTimestamp: baseEventParams.timestamp,
+              txBlock: baseEventParams.block,
+              logIndex: baseEventParams.logIndex,
+            },
+            metadata: {
+              eventName: subKind,
+              fromOnChain: true,
+              lpTokenId: lpTokenId.toString(),
+              binLower: binLower,
+              binstep: binStep,
+              binAmount: binAmount.toNumber(),
+            },
+          },
+        ]);
+
+        break;
+      }
+
+      case "midaswap-position-burned": {
+        const parsedLog = eventData.abi.parseLog(log);
+        const lpTokenId = parsedLog.args["lpTokenId"] as BigNumber;
+
+        onChainData.orders.push({
+          kind: "midaswap",
+          info: {
+            orderParams: {
+              pool: baseEventParams.address,
+              txHash: baseEventParams.txHash,
+              txTimestamp: baseEventParams.timestamp,
+              txBlock: baseEventParams.block,
+              logIndex: baseEventParams.logIndex,
+            },
+            metadata: {
+              eventName: subKind,
+              fromOnChain: true,
+              lpTokenId: lpTokenId.toString(),
+            },
+          },
+        });
+
+        midaswap.save([
+          {
+            orderParams: {
+              pool: baseEventParams.address,
+              txHash: baseEventParams.txHash,
+              txTimestamp: baseEventParams.timestamp,
+              txBlock: baseEventParams.block,
+              logIndex: baseEventParams.logIndex,
+            },
+            metadata: {
+              eventName: subKind,
+              fromOnChain: true,
+              lpTokenId: lpTokenId.toString(),
+            },
+          },
+        ]);
+
+        break;
+      }
 
       case "midaswap-buy-erc721": {
         logger.info(subKind, JSON.stringify(baseEventParams));
-
-        const swapTokenForSpecificNFTs = "0x6d8b99f7";
+        const parsedLog = eventData.abi.parseLog(log);
 
         const txHash = baseEventParams.txHash;
         const address = baseEventParams.address;
@@ -45,160 +184,196 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
               txBlock: baseEventParams.block,
               logIndex: baseEventParams.logIndex,
             },
-            metadata: {},
+            metadata: {
+              source: subKind,
+              fromOnChain: true,
+            },
           },
         });
 
-        const txTrace = await utils.fetchTransactionTrace(txHash);
-        if (!txTrace) {
-          // Skip any failed attempts to get the trace
-          break;
-        }
+        // const txTrace = await utils.fetchTransactionTrace(txHash);
+        // if (!txTrace) {
+        //   // Skip any failed attempts to get the trace
+        //   break;
+        // }
 
         // Search for the corresponding internal call to the Sudoswap pool
         const tradeRank = trades.buy.get(`${txHash}-${address}`) ?? 0;
-        const poolCallTrace = searchForCall(
-          txTrace.calls,
-          {
-            to: address,
-            type: "CALL",
-            sigHashes: [swapTokenForSpecificNFTs],
-          },
-          tradeRank
+        // const poolCallTrace = searchForCall(
+        //   txTrace.calls,
+        //   {
+        //     to: address,
+        //     type: "CALL",
+        //     sigHashes: [swapTokenForSpecificNFTs],
+        //   },
+        //   tradeRank
+        // );
+
+        // if (poolCallTrace?.output === "0x") {
+        //   // Sometimes there can be upstream bugs and the call's output gets truncated
+        //   logger.error(
+        //     "midaswap-events-handler",
+        //     `Trace missing output: ${baseEventParams.block} - ${baseEventParams.txHash}`
+        //   );
+        // }
+
+        // if (poolCallTrace) {
+        // const sighash = poolCallTrace.input.slice(0, 10);
+        const pool = await midaswapUtils.getPoolDetails(baseEventParams.address);
+        const isERC1155 = subKind.endsWith("erc1155");
+        if (!pool) {
+          break;
+        }
+        // if (pool && sighash === swapTokenForSpecificNFTs) {
+        //   const iface = new Interface([
+        //     `
+        //       function swapTokenForSpecificNFTs(
+        //         uint256[] calldata nftIds,
+        //         uint256 maxExpectedTokenInput,
+        //         address nftRecipient,
+        //         bool isRouter,
+        //         address routerCaller
+        //       ) external returns (uint256 inputAmount)
+        //     `,
+        //   ]);
+        //   // const decodedInput = iface.decodeFunctionData(
+        //   //   "swapTokenForSpecificNFTs",
+        //   //   poolCallTrace.input
+        //   // );
+
+        //   // Reference: https://github.com/ledgerwatch/erigon/issues/5308
+        //   let estimatedInputAmount: string | undefined;
+        //   // if (poolCallTrace.output !== "0x") {
+        //     // If the trace's output is available, decode the input amount from that
+        //     estimatedInputAmount = iface
+        //       .decodeFunctionResult("swapTokenForSpecificNFTs", poolCallTrace.output)
+        //       .inputAmount.toString();
+        //   } else {
+        //     // Otherwise, estimate the input amount
+        //     estimatedInputAmount = decodedInput.maxExpectedTokenInput.toString();
+        //   }
+
+        //   if (!estimatedInputAmount) {
+        //     // Skip if we can't extract the input amount
+        //     break;
+        //   }
+        let taker = parsedLog.args["from"].toLowerCase();
+        const price = bn(parsedLog.args["tradeBin"]).toString();
+        const tokenId = parsedLog.args["nftTokenId"].toString();
+
+        // Handle: attribution
+
+        const orderKind = "midaswap";
+        const attributionData = await utils.extractAttributionData(
+          baseEventParams.txHash,
+          orderKind
+        );
+        if (attributionData.taker) {
+          taker = attributionData.taker;
+        }
+
+        // Handle: prices
+
+        const priceData = await getUSDAndNativePrices(pool.token, price, baseEventParams.timestamp);
+        if (!priceData.nativePrice) {
+          // We must always have the native price
+          break;
+        }
+
+        // for (let i = 0; i < decodedInput.nftIds.length; i++) {
+        // const tokenId = decodedInput.nftIds[i].toString();
+        const amount = isERC1155 ? tokenId.toString() : "1";
+        const orderId = midaswap.getOrderId(
+          baseEventParams.address,
+          // isERC1155 ? "erc1155" : "erc721",
+          "sell",
+          tokenId
         );
 
-        if (poolCallTrace?.output === "0x") {
-          // Sometimes there can be upstream bugs and the call's output gets truncated
-          logger.error(
-            "midaswap-events-handler",
-            `Trace missing output: ${baseEventParams.block} - ${baseEventParams.txHash}`
-          );
-        }
+        onChainData.fillEventsOnChain.push({
+          orderKind,
+          orderSide: "sell",
+          orderId,
+          maker: baseEventParams.address,
+          taker,
+          price: priceData.nativePrice,
+          currencyPrice: price,
+          usdPrice: priceData.usdPrice,
+          currency: pool.token,
+          contract: pool.nft,
+          tokenId,
+          amount,
+          orderSourceId: attributionData.orderSource?.id,
+          aggregatorSourceId: attributionData.aggregatorSource?.id,
+          fillSourceId: attributionData.fillSource?.id,
+          baseEventParams: {
+            ...baseEventParams,
+            // batchIndex: i + 1,
+          },
+        });
 
-        if (poolCallTrace) {
-          const sighash = poolCallTrace.input.slice(0, 10);
-          const pool = await midaswapUtils.getPoolDetails(baseEventParams.address);
-          const isERC1155 = subKind.endsWith("erc1155");
+        onChainData.fillInfos.push({
+          context: `midaswap-${pool.nft}-${tokenId}-${baseEventParams.txHash}`,
+          orderSide: "sell",
+          contract: pool.nft,
+          tokenId,
+          amount,
+          price: priceData.nativePrice,
+          timestamp: baseEventParams.timestamp,
+          maker: baseEventParams.address,
+          taker,
+        });
 
-          if (pool && sighash === swapTokenForSpecificNFTs) {
-            const iface = new Interface([
-              `
-                function swapTokenForSpecificNFTs(
-                  uint256[] calldata nftIds,
-                  uint256 maxExpectedTokenInput,
-                  address nftRecipient,
-                  bool isRouter,
-                  address routerCaller
-                ) external returns (uint256 inputAmount)
-              `,
-            ]);
-            const decodedInput = iface.decodeFunctionData(
-              "swapTokenForSpecificNFTs",
-              poolCallTrace.input
-            );
-
-            // Reference: https://github.com/ledgerwatch/erigon/issues/5308
-            let estimatedInputAmount: string | undefined;
-            if (poolCallTrace.output !== "0x") {
-              // If the trace's output is available, decode the input amount from that
-              estimatedInputAmount = iface
-                .decodeFunctionResult("swapTokenForSpecificNFTs", poolCallTrace.output)
-                .inputAmount.toString();
-            } else {
-              // Otherwise, estimate the input amount
-              estimatedInputAmount = decodedInput.maxExpectedTokenInput.toString();
-            }
-
-            if (!estimatedInputAmount) {
-              // Skip if we can't extract the input amount
-              break;
-            }
-
-            let taker = decodedInput.nftRecipient.toLowerCase();
-            const price = bn(estimatedInputAmount).div(decodedInput.nftIds.length).toString();
-
-            // Handle: attribution
-
-            const orderKind = "midaswap";
-            const attributionData = await utils.extractAttributionData(
-              baseEventParams.txHash,
-              orderKind
-            );
-            if (attributionData.taker) {
-              taker = attributionData.taker;
-            }
-
-            // Handle: prices
-
-            const priceData = await getUSDAndNativePrices(
-              pool.token,
-              price,
-              baseEventParams.timestamp
-            );
-            if (!priceData.nativePrice) {
-              // We must always have the native price
-              break;
-            }
-
-            for (let i = 0; i < decodedInput.nftIds.length; i++) {
-              const tokenId = isERC1155 ? pool.tokenId! : decodedInput.nftIds[i].toString();
-              const amount = isERC1155 ? decodedInput.nftIds[i].toString() : "1";
-              const orderId = midaswap.getOrderId(
-                baseEventParams.address,
-                // isERC1155 ? "erc1155" : "erc721",
-                "sell",
-                tokenId
-              );
-
-              onChainData.fillEventsOnChain.push({
-                orderKind,
-                orderSide: "sell",
-                orderId,
-                maker: baseEventParams.address,
-                taker,
-                price: priceData.nativePrice,
-                currencyPrice: price,
-                usdPrice: priceData.usdPrice,
-                currency: pool.token,
-                contract: pool.nft,
-                tokenId,
-                amount,
-                orderSourceId: attributionData.orderSource?.id,
-                aggregatorSourceId: attributionData.aggregatorSource?.id,
-                fillSourceId: attributionData.fillSource?.id,
-                baseEventParams: {
-                  ...baseEventParams,
-                  batchIndex: i + 1,
-                },
-              });
-
-              onChainData.fillInfos.push({
-                context: `midaswap-${pool.nft}-${tokenId}-${baseEventParams.txHash}`,
-                orderSide: "sell",
-                contract: pool.nft,
-                tokenId,
-                amount,
-                price: priceData.nativePrice,
-                timestamp: baseEventParams.timestamp,
-                maker: baseEventParams.address,
-                taker,
-              });
-
-              onChainData.orderInfos.push({
-                context: `filled-${orderId}-${baseEventParams.txHash}`,
-                id: orderId,
-                trigger: {
-                  kind: "sale",
-                  txHash: baseEventParams.txHash,
-                  txTimestamp: baseEventParams.timestamp,
-                },
-              });
-            }
-          }
-        }
-
+        onChainData.orderInfos.push({
+          context: `filled-${orderId}-${baseEventParams.txHash}`,
+          id: orderId,
+          trigger: {
+            kind: "sale",
+            txHash: baseEventParams.txHash,
+            txTimestamp: baseEventParams.timestamp,
+          },
+        });
+        // }
+        // }
+        // }
+        await midaswap.save([
+          {
+            // kind: "midaswap",
+            // info: {
+            orderParams: {
+              pool: baseEventParams.address,
+              txHash: baseEventParams.txHash,
+              txTimestamp: baseEventParams.timestamp,
+              txBlock: baseEventParams.block,
+              logIndex: baseEventParams.logIndex,
+            },
+            metadata: {},
+            // },
+          },
+        ]);
         // Keep track of the "buy" trade
         trades.buy.set(`${txHash}-${address}`, tradeRank + 1);
+        // const res = await doOrderSaving({
+        //   orderKind,
+        //   orderSide: "sell",
+        //   orderId,
+        //   maker: baseEventParams.address,
+        //   taker,
+        //   price: priceData.nativePrice,
+        //   currencyPrice: price,
+        //   usdPrice: priceData.usdPrice,
+        //   currency: pool.token,
+        //   contract: pool.nft,
+        //   tokenId,
+        //   amount,
+        //   orderSourceId: attributionData.orderSource?.id,
+        //   aggregatorSourceId: attributionData.aggregatorSource?.id,
+        //   fillSourceId: attributionData.fillSource?.id,
+        //   baseEventParams: {
+        //     ...baseEventParams,
+        //     // batchIndex: i + 1,
+        //   },
+        // });
 
         break;
       }
@@ -374,51 +549,9 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
 
         break;
       }
-
-      case "midaswap-new-erc721-pair":
-      case "midaswap-erc20-deposit":
-      case "midaswap-erc721-deposit": {
-        logger.info(subKind, JSON.stringify(baseEventParams));
-        const parsedLog = eventData.abi.parseLog(log);
-        const pool = parsedLog.args["poolAddress"].toLowerCase();
-
-        onChainData.orders.push({
-          kind: "midaswap",
-          info: {
-            orderParams: {
-              pool,
-              txHash: baseEventParams.txHash,
-              txTimestamp: baseEventParams.timestamp,
-              txBlock: baseEventParams.block,
-              logIndex: baseEventParams.logIndex,
-            },
-            metadata: {},
-          },
-        });
-
-        break;
-      }
-
-      case "midaswap-token-deposit":
-      case "midaswap-position-burned": {
-        onChainData.orders.push({
-          kind: "midaswap",
-          info: {
-            orderParams: {
-              pool: baseEventParams.address,
-              txHash: baseEventParams.txHash,
-              txTimestamp: baseEventParams.timestamp,
-              txBlock: baseEventParams.block,
-              logIndex: baseEventParams.logIndex,
-            },
-            metadata: {},
-          },
-        });
-
-        break;
-      }
     }
 
     logger.info("midaswap-debug", JSON.stringify(onChainData));
+    return onChainData;
   }
 };
