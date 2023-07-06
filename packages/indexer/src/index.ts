@@ -31,8 +31,8 @@ const setup = async () => {
     return;
   }
 
-  await RabbitMq.connect(); // Connect the rabbitmq
   await RabbitMq.assertQueuesAndExchanges(); // Assert queues and exchanges
+  await RabbitMq.connect(); // Connect the rabbitmq
 
   if (config.doBackgroundWork) {
     await Sources.syncSources();
