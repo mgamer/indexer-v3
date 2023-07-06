@@ -5,7 +5,7 @@ import { safeWebSocketSubscription } from "@/common/provider";
 import { redlock } from "@/common/redis";
 import { config } from "@/config/index";
 import { getNetworkSettings } from "@/config/network";
-import * as realtimeEventsSync from "@/jobs/events-sync/realtime-queue";
+// import * as realtimeEventsSync from "@/jobs/events-sync/realtime-queue";
 import * as realtimeEventsSyncV2 from "@/jobs/events-sync/realtime-queue-v2";
 
 // For syncing events we have two separate job queues. One is for
@@ -38,13 +38,7 @@ if (config.doBackgroundWork && config.catchup) {
         )
         .then(async () => {
           try {
-            if (config.chainId === 137) {
-              await realtimeEventsSync.addToQueue();
-              return;
-            }
-
-            // const latestBlock = await baseProvider.getBlockNumber();
-            // await realtimeEventsSyncV2.addToQueue({ block: latestBlock });
+            return;
             logger.info("events-sync-catchup", "Catching up events");
           } catch (error) {
             logger.error("events-sync-catchup", `Failed to catch up events: ${error}`);
@@ -67,14 +61,7 @@ if (config.doBackgroundWork && config.catchup) {
         logger.info("events-sync-catchup", `Detected new block ${block}`);
 
         try {
-          // await realtimeEventsSync.addToQueue();
-          // if (config.enableRealtimeV2BlockQueue) {
-          if (config.chainId === 137) {
-            await realtimeEventsSync.addToQueue();
-          } else {
-            await realtimeEventsSyncV2.addToQueue({ block });
-          }
-          // }
+          await realtimeEventsSyncV2.addToQueue({ block });
         } catch (error) {
           logger.error("events-sync-catchup", `Failed to catch up events: ${error}`);
         }
