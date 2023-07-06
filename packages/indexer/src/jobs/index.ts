@@ -167,6 +167,7 @@ import { metadataIndexProcessJob } from "@/jobs/metadata-index/metadata-process-
 import { metadataIndexWriteJob } from "@/jobs/metadata-index/metadata-write-job";
 import { metadataIndexProcessBySlugJob } from "@/jobs/metadata-index/metadata-process-by-slug-job";
 import { mintsProcessJob } from "@/jobs/mints/mints-process-job";
+import { mintsRefreshJob } from "@/jobs/mints/mints-refresh-job";
 import { mintsCheckJob } from "@/jobs/mints/mints-check-job";
 import { mintsExpiredJob } from "@/jobs/mints/cron/mints-expired-job";
 import { nftBalanceUpdateFloorAskJob } from "@/jobs/nft-balance-updates/update-floor-ask-price-job";
@@ -331,6 +332,7 @@ export class RabbitMqJobsConsumer {
       metadataIndexWriteJob,
       metadataIndexProcessBySlugJob,
       mintsProcessJob,
+      mintsRefreshJob,
       mintsCheckJob,
       mintsExpiredJob,
       nftBalanceUpdateFloorAskJob,
@@ -433,12 +435,12 @@ export class RabbitMqJobsConsumer {
     );
 
     channel.once("error", (error) => {
-      logger.error("rabbit-error", `Consumer channel error ${error}`);
+      logger.error("rabbit-channel", `Consumer channel error ${error}`);
 
       const jobs = RabbitMqJobsConsumer.channelsToJobs.get(channel);
       if (jobs) {
         logger.error(
-          "rabbit-error",
+          "rabbit-jobs",
           `Jobs stopped consume ${JSON.stringify(
             jobs.map((job: AbstractRabbitMqJobHandler) => job.queueName)
           )}`
