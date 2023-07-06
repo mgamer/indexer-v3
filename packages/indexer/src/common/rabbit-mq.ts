@@ -7,12 +7,10 @@ import amqplibConnectionManager, {
 } from "amqp-connection-manager";
 import { config } from "@/config/index";
 import _ from "lodash";
-import { RabbitMqJobsConsumer } from "@/jobs/index";
 import { logger } from "@/common/logger";
 import { getNetworkName } from "@/config/network";
 import { acquireLock } from "@/common/redis";
 import axios from "axios";
-import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handler";
 import pLimit from "p-limit";
 
 export type RabbitMQMessage = {
@@ -203,6 +201,9 @@ export class RabbitMq {
   }
 
   public static async assertQueuesAndExchanges() {
+    const abstract = await import("@/jobs/abstract-rabbit-mq-job-handler");
+    const jobsIndex = await import("@/jobs/index");
+
     const connection = await amqplib.connect(config.rabbitMqUrl);
     const channel = await connection.createChannel();
 
@@ -214,7 +215,7 @@ export class RabbitMq {
     });
 
     // Assert the consumer queues
-    const consumerQueues = RabbitMqJobsConsumer.getQueues();
+    const consumerQueues = jobsIndex.RabbitMqJobsConsumer.getQueues();
     for (const queue of consumerQueues) {
       const options = {
         maxPriority: queue.getQueueType() === "classic" ? 1 : undefined,
@@ -243,7 +244,10 @@ export class RabbitMq {
       await channel.assertQueue(queue.getDeadLetterQueue());
 
       // If the dead letter queue have custom max length
-      if (queue.getMaxDeadLetterQueue() !== AbstractRabbitMqJobHandler.defaultMaxDeadLetterQueue) {
+      if (
+        queue.getMaxDeadLetterQueue() !==
+        abstract.AbstractRabbitMqJobHandler.defaultMaxDeadLetterQueue
+      ) {
         await this.createOrUpdatePolicy({
           name: `${queue.getDeadLetterQueue()}-policy`,
           vhost: "/",
@@ -288,7 +292,7 @@ export class RabbitMq {
       pattern: `^${getNetworkName()}.+-dead-letter$`,
       applyTo: "queues",
       definition: {
-        "max-length": AbstractRabbitMqJobHandler.defaultMaxDeadLetterQueue,
+        "max-length": abstract.AbstractRabbitMqJobHandler.defaultMaxDeadLetterQueue,
       },
     });
 
