@@ -17,6 +17,9 @@ import {
   reset,
   setupNFTs,
 } from "../../utils";
+import RouterAbi from "@reservoir0x/sdk/src/midaswap/abis/Router.json";
+import LPTokenAbi from "@reservoir0x/sdk/src/midaswap/abis/LPToken.json";
+import Decimal from "decimal.js";
 
 describe("[ReservoirV6_0_1] Midaswap listings", () => {
   const chainId = getChainId();
@@ -30,7 +33,9 @@ describe("[ReservoirV6_0_1] Midaswap listings", () => {
 
   let erc721: Contract;
   let router: Contract;
+  let midaRouter: Contract;
   let midaswapModule: Contract;
+  const deadline = Date.now() + 100 * 24 * 60 * 60 * 1000;
 
   beforeEach(async () => {
     [deployer, alice, bob, carol, david, emilio] = await ethers.getSigners();
@@ -51,9 +56,7 @@ describe("[ReservoirV6_0_1] Midaswap listings", () => {
           Sdk.Common.Addresses.Weth[chainId]
         )
       );
-
-    console.log(router.address, midaswapModule.address, "init module");
-    // console.log(midaswapModule.address, 233);
+    midaRouter = new Contract(Sdk.Midaswap.Addresses.Router[chainId], RouterAbi, ethers.provider);
   });
 
   const getBalances = async (token: string) => {
@@ -80,6 +83,12 @@ describe("[ReservoirV6_0_1] Midaswap listings", () => {
       };
     }
   };
+  const binToPriceFixed = (bin: number, decimal = 18, toFixedNumber = 18) => {
+    const powValue = bin - 8388608;
+    const b = new Decimal(10).pow(18 - decimal);
+    const price = new Decimal(1.0001).pow(powValue).times(b).toFixed(toFixedNumber);
+    return String(price);
+  };
 
   afterEach(reset);
 
@@ -101,22 +110,34 @@ describe("[ReservoirV6_0_1] Midaswap listings", () => {
 
     const listings: MidaswapListing[] = [];
     const feesOnTop: BigNumber[] = [];
+    const bin = getRandomInteger(8298609, 8395540);
+    const swapPrice = binToPriceFixed(bin);
     for (let i = 0; i < listingsCount; i++) {
-      listings.push({
-        seller: getRandomBoolean() ? alice : bob,
-        nft: {
-          contract: erc721,
-          id: getRandomInteger(1, 10000),
-        },
-        price: parseEther(getRandomFloat(0.0001, 2).toFixed(6)),
-        isCancelled: partial && getRandomBoolean(),
-      });
-
-      if (chargeFees) {
-        feesOnTop.push(parseEther(getRandomFloat(0.0001, 0.1).toFixed(6)));
+      const isCancelled = partial && getRandomBoolean();
+      if (!isCancelled) {
+        listings.push({
+          seller: getRandomBoolean() ? alice : bob,
+          nft: {
+            contract: erc721,
+            id: getRandomInteger(1, 10000),
+          },
+          price: parseEther(swapPrice),
+          bin,
+          isCancelled,
+          lpInfo: {
+            lpAddress: "",
+            lpTokenId: 0,
+            pairAddress: "",
+          },
+        });
+        if (chargeFees) {
+          feesOnTop.push(parseEther(getRandomFloat(0.0001, 0.1).toFixed(6)));
+        }
       }
     }
-    console.log(listingsCount, "listingsCount");
+    if (listings.length === 0) {
+      return;
+    }
 
     await setupMidaswapListings(listings);
 
@@ -130,7 +151,6 @@ describe("[ReservoirV6_0_1] Midaswap listings", () => {
         )
         .reduce((a, b) => bn(a).add(b), bn(0))
     );
-    console.log(totalPrice.toString());
 
     const executions: ExecutionInfo[] = [
       // 1. Fill listings
@@ -175,6 +195,11 @@ describe("[ReservoirV6_0_1] Midaswap listings", () => {
     }
 
     // Fetch pre-state
+    const lpContract = new Contract(listings[0].lpInfo.lpAddress, LPTokenAbi, ethers.provider);
+    const approve = await lpContract.connect(alice).setApprovalForAll(midaRouter.address, true);
+    await approve.wait();
+    const boxApprove = await lpContract.connect(bob).setApprovalForAll(midaRouter.address, true);
+    await boxApprove.wait();
 
     const ethBalancesBefore = await getBalances(Sdk.Common.Addresses.Eth[chainId]);
 
@@ -183,6 +208,27 @@ describe("[ReservoirV6_0_1] Midaswap listings", () => {
     await router.connect(carol).execute(executions, {
       value: executions.map(({ value }) => value).reduce((a, b) => bn(a).add(b), bn(0)),
     });
+    let AliceRemoveLpAllGasUsed = bn(0);
+    let BobRemoveLpAllGasUsed = bn(0);
+    for (const { seller, lpInfo } of listings) {
+      const remove = await midaRouter
+        .connect(seller)
+        .removeLiquidityETH(
+          erc721.address,
+          Sdk.Common.Addresses.Weth[chainId],
+          lpInfo.lpTokenId,
+          deadline
+        );
+      const txReceipt = await ethers.provider.getTransactionReceipt(remove.hash);
+      const gasUsed = txReceipt.cumulativeGasUsed.mul(txReceipt.effectiveGasPrice);
+      if (seller === alice) {
+        AliceRemoveLpAllGasUsed = gasUsed.add(AliceRemoveLpAllGasUsed);
+      }
+      if (seller === bob) {
+        BobRemoveLpAllGasUsed = gasUsed.add(BobRemoveLpAllGasUsed);
+      }
+      await remove.wait();
+    }
 
     // Fetch post-state
 
@@ -191,35 +237,51 @@ describe("[ReservoirV6_0_1] Midaswap listings", () => {
     // Checks
 
     // Alice got the payment
-    // expect(ethBalancesAfter.alice.sub(ethBalancesBefore.alice)).to.eq(
-    //   listings
-    //     .filter(({ seller, isCancelled }) => !isCancelled && seller.address === alice.address)
-    //     .map(({ price }) => price)
-    //     .reduce((a, b) => bn(a).add(b), bn(0))
-    // );
-    // // Bob got the payment
-    // expect(ethBalancesAfter.bob.sub(ethBalancesBefore.bob)).to.eq(
-    //   listings
-    //     .filter(({ seller, isCancelled }) => !isCancelled && seller.address === bob.address)
-    //     .map(({ price }) => price)
-    //     .reduce((a, b) => bn(a).add(b), bn(0))
-    // );
+    const aliceTxs = listings.filter(
+      ({ seller, isCancelled }) => !isCancelled && seller.address === alice.address
+    );
+    const aliceTargetPrice = aliceTxs
+      .map(({ price }) => price)
+      .reduce((a, b) => bn(a).add(b), bn(0));
+
+    const AliceLiquidityLpFee = bn(aliceTargetPrice).mul(45).div(10000);
+    expect(
+      ethBalancesAfter.alice
+        .sub(ethBalancesBefore.alice)
+        .add(AliceRemoveLpAllGasUsed)
+        .sub(AliceLiquidityLpFee)
+        .div(10000000)
+    ).to.eq(bn(aliceTargetPrice).div(10000000));
+    const bobTxs = listings.filter(
+      ({ seller, isCancelled }) => !isCancelled && seller.address === bob.address
+    );
+    const BobTargetPrice = bobTxs.map(({ price }) => price).reduce((a, b) => bn(a).add(b), bn(0));
+    const BobLiquidityLpFee = bn(BobTargetPrice).mul(45).div(10000);
+    // Bob got the payment
+    expect(
+      ethBalancesAfter.bob
+        .sub(ethBalancesBefore.bob)
+        .add(BobRemoveLpAllGasUsed)
+        .sub(BobLiquidityLpFee)
+        .div(10000000)
+    ).to.eq(bn(BobTargetPrice).div(10000000));
 
     // // Emilio got the fee payments
-    // if (chargeFees) {
-    //   // Fees are charged per execution, and since we have a single execution
-    //   // here, we will have a single fee payment at the end adjusted over the
-    //   // amount that was actually paid (eg. prices of filled orders)
-    //   const actualPaid = listings
-    //     .filter(({ isCancelled }) => !isCancelled)
-    //     .map(({ price }) => bn(price).add(bn(price).mul(50).div(10000)))
-    //     .reduce((a, b) => bn(a).add(b), bn(0));
-    //   expect(ethBalancesAfter.emilio.sub(ethBalancesBefore.emilio)).to.eq(
-    //     listings
-    //       .map((_, i) => feesOnTop[i].mul(actualPaid).div(totalPrice))
-    //       .reduce((a, b) => bn(a).add(b), bn(0))
-    //   );
-    // }
+    if (chargeFees) {
+      // Fees are charged per execution, and since we have a single execution
+      // here, we will have a single fee payment at the end adjusted over the
+      // amount that was actually paid (eg. prices of filled orders)
+      const actualPaid = listings
+        .filter(({ isCancelled }) => !isCancelled)
+        .map(({ price }) => bn(price).add(bn(price).mul(50).div(10000)))
+        .reduce((a, b) => bn(a).add(b), bn(0));
+      const fee = listings
+        .map((_, i) => feesOnTop[i].mul(actualPaid).div(totalPrice))
+        .reduce((a, b) => bn(a).add(b), bn(0));
+      expect(ethBalancesAfter.emilio.sub(ethBalancesBefore.emilio).div(1000)).to.eq(
+        bn(fee).div(1000)
+      );
+    }
 
     // Carol got the NFTs from all filled orders
     for (let i = 0; i < listings.length; i++) {
@@ -236,33 +298,10 @@ describe("[ReservoirV6_0_1] Midaswap listings", () => {
     expect(ethBalancesAfter.midaswapModule).to.eq(0);
   };
 
-  // for (const multiple of [false, true]) {
-  //   for (const partial of [false, true]) {
-  //     for (const chargeFees of [false, true]) {
-  //       for (const revertIfIncomplete of [false, true]) {
-  //         it(
-  //           "[eth]" +
-  //             `${multiple ? "[multiple-orders]" : "[single-order]"}` +
-  //             `${partial ? "[partial]" : "[full]"}` +
-  //             `${chargeFees ? "[fees]" : "[no-fees]"}` +
-  //             `${revertIfIncomplete ? "[reverts]" : "[skip-reverts]"}`,
-  //           async () =>
-  //             testAcceptListings(
-  //               chargeFees,
-  //               revertIfIncomplete,
-  //               partial,
-  //               multiple ? getRandomInteger(2, 6) : 1
-  //             )
-  //         );
-  //       }
-  //     }
-  //   }
-  // }
-
-  for (const multiple of [false]) {
-    for (const partial of [false]) {
-      for (const chargeFees of [false]) {
-        for (const revertIfIncomplete of [false]) {
+  for (const multiple of [false, true]) {
+    for (const partial of [false, true]) {
+      for (const chargeFees of [false, true]) {
+        for (const revertIfIncomplete of [false, true]) {
           it(
             "[eth]" +
               `${multiple ? "[multiple-orders]" : "[single-order]"}` +

@@ -11,18 +11,13 @@ import {IMidasRouter} from "../../../interfaces/IMidaswap.sol";
 import {IMidasPair} from "../../../interfaces/IMidaswap.sol";
 import {IMidasFactory} from "../../../interfaces/IMidaswap.sol";
 
-/// @notice Works as the router of Midaswap Pairs in order to save gas. Logics of approve ERC-20 & ERC-721 are removed.
 contract MidaswapModule is BaseExchangeModule {
-  /// @notice Wrapped ETH
   IWETH public weth;
-
-  /// @notice Origin router of midaswap working for quotes
   IMidasRouter public immutable MIDAS_ROUTER;
-
-  /// @notice Factory of midaswap working for info queries
   IMidasFactory public immutable MIDAS_FACTORY;
 
   // --- Constructor ---
+
   constructor(
     address owner,
     address router,
@@ -36,6 +31,7 @@ contract MidaswapModule is BaseExchangeModule {
   }
 
   // --- Fallback ---
+
   receive() external payable {
     assert(msg.sender == address(weth)); // only accept ETH via fallback from the WETH contract
   }
@@ -77,6 +73,8 @@ contract MidaswapModule is BaseExchangeModule {
     refundERC20Leftover(params.refundTo, params.token)
     chargeERC20Fees(fees, params.token, params.amount)
   {
+    // Approve the router if needed
+    // _approveERC20IfNeeded(params.token, address(this), params.amount);
     uint256 _length = nfts.length;
     for (uint i; i < _length; ) {
       // Execute fill
@@ -88,6 +86,7 @@ contract MidaswapModule is BaseExchangeModule {
   }
 
   // --- Single offer ---
+
   function sell(
     address nft,
     address token,
@@ -95,9 +94,12 @@ contract MidaswapModule is BaseExchangeModule {
     OfferParams calldata params,
     Fee[] calldata fees
   ) external nonReentrant {
+    // Approve the router if needed
+    // _approveERC721IfNeeded(IERC721(nft), address(this));
+
     // Execute fill
     if (token == 0x0000000000000000000000000000000000000000) {
-      _sellItemToETH(nft, address(weth), params.fillTo, nftId, params.revertIfIncomplete);
+      _sellItemToETH(nft, address(weth), nftId, params.revertIfIncomplete);
       // Pay fees
       uint256 feesLength = fees.length;
       for (uint256 i; i < feesLength; ) {
@@ -107,20 +109,22 @@ contract MidaswapModule is BaseExchangeModule {
           ++i;
         }
       }
+      _sendAllETH(params.fillTo);
     } else {
-      _sellItem(nft, token, params.fillTo, nftId, params.revertIfIncomplete);
-        // Pay fees
-        uint256 feesLength = fees.length;
-        for (uint256 i; i < feesLength; ) {
-          Fee memory fee = fees[i];
-          _sendERC20(fee.recipient, fee.amount, IERC20(token));
-          unchecked {
-            ++i;
-          }
+      _sellItem(nft, token, address(this), nftId, params.revertIfIncomplete);
+      // Pay fees
+      uint256 feesLength = fees.length;
+      for (uint256 i; i < feesLength; ) {
+        Fee memory fee = fees[i];
+        _sendERC20(fee.recipient, fee.amount, IERC20(token));
+        unchecked {
+          ++i;
         }
-      // Refund any leftovers
-      _sendAllERC721(params.refundTo, IERC721(nft), nftId);
+      }
+      _sendAllERC20(params.fillTo, IERC20(token));
     }
+    // Refund any leftovers
+    _sendAllERC721(params.refundTo, IERC721(nft), nftId);
   }
 
   // --- ERC721 hooks ---
@@ -138,6 +142,7 @@ contract MidaswapModule is BaseExchangeModule {
   }
 
   // --- Internal ---
+
   function _buyItemWithETH(
     address _tokenX,
     address _tokenY,
@@ -153,9 +158,7 @@ contract MidaswapModule is BaseExchangeModule {
     uint256 _ftAmount = MIDAS_ROUTER.getMinAmountIn(_pair, tokenIds);
     _wethDepositAndTransfer(_pair, _ftAmount);
     // Execute the fill
-    try
-      IMidasPair(_pair).buyNFT(_tokenId, _to)
-    {} catch {
+    try IMidasPair(_pair).buyNFT(_tokenId, _to) {} catch {
       // Revert if specified
       if (revertIfIncomplete) {
         revert UnsuccessfulFill();
@@ -177,9 +180,7 @@ contract MidaswapModule is BaseExchangeModule {
     uint256 _ftAmount = MIDAS_ROUTER.getMinAmountIn(_pair, tokenIds);
     IERC20(_tokenY).transferFrom(address(this), _pair, _ftAmount);
     // Execute the fill
-    try
-      IMidasPair(_pair).buyNFT(_tokenId, _to)
-    {} catch {
+    try IMidasPair(_pair).buyNFT(_tokenId, _to) {} catch {
       // Revert if specified
       if (revertIfIncomplete) {
         revert UnsuccessfulFill();
@@ -190,7 +191,6 @@ contract MidaswapModule is BaseExchangeModule {
   function _sellItemToETH(
     address _tokenX,
     address _tokenY,
-    address _to,
     uint256 _tokenId,
     bool revertIfIncomplete
   ) internal {
@@ -199,13 +199,10 @@ contract MidaswapModule is BaseExchangeModule {
     _pair = MIDAS_FACTORY.getPairERC721(_tokenX, _tokenY);
     IERC721(_tokenX).safeTransferFrom(address(this), _pair, _tokenId);
     // Execute the fill
-    try
-      IMidasPair(_pair).sellNFT(_tokenId, address(this)) returns (uint128 ftAmount)
-    {
+    try IMidasPair(_pair).sellNFT(_tokenId, address(this)) returns (uint128 ftAmount) {
       uint256 _ftAmount = ftAmount;
       // Unwrap the WETH
       weth.withdraw(_ftAmount);
-      _safeTransferETH(_to, _ftAmount);
     } catch {
       // Revert if specified
       if (revertIfIncomplete) {
@@ -225,19 +222,12 @@ contract MidaswapModule is BaseExchangeModule {
     _pair = MIDAS_FACTORY.getPairERC721(_tokenX, _tokenY);
     IERC721(_tokenX).safeTransferFrom(address(this), _pair, _tokenId);
     // Execute the fill
-    try
-      IMidasPair(_pair).sellNFT(_tokenId, _to)
-    {} catch {
+    try IMidasPair(_pair).sellNFT(_tokenId, _to) {} catch {
       // Revert if specified
       if (revertIfIncomplete) {
         revert UnsuccessfulFill();
       }
     }
-  }
-
-  function _safeTransferETH(address _to, uint256 _amount) private {
-    (bool success, ) = _to.call{value: _amount}("");
-    require(success == true);
   }
 
   function _wethDepositAndTransfer(address _to, uint256 _amount) private {
