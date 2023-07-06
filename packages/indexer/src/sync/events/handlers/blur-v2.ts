@@ -88,14 +88,16 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         const inputs = !isBatchCall
           ? [inputData.inputs]
           : // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            inputData.inputs.orders.map((order: any, index: number) => {
+            inputData.inputs.exchanges.map((exchange: any) => {
               return {
-                order,
-                exchange: inputData.inputs.exchanges[index],
+                order: inputData.inputs.orders[exchange.index],
+                exchange,
               };
             });
 
-        for (const { order, exchange } of inputs) {
+        for (let i = 0; i < inputs.length; i++) {
+          const { order, exchange } = inputs[i];
+
           const listing = exchange.listing;
           const takerData = exchange.taker;
 
@@ -150,11 +152,15 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
             orderSourceId: attributionData.orderSource?.id,
             aggregatorSourceId: attributionData.aggregatorSource?.id,
             fillSourceId: attributionData.fillSource?.id,
-            baseEventParams,
+            baseEventParams: {
+              ...baseEventParams,
+              logIndex: baseEventParams.logIndex + i,
+            },
           });
         }
 
         trades.order.set(`${txHash}-${exchangeAddress}`, tradeRank + 1);
+
         break;
       }
     }
