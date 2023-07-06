@@ -63,7 +63,16 @@ export class RabbitMq {
     );
 
     for (let index = 0; index < RabbitMq.maxPublisherChannelsCount; ++index) {
-      await RabbitMq.connectToPublisherChannel(index);
+      const channel = await this.rabbitMqPublisherConnection.createChannel();
+      RabbitMq.rabbitMqPublisherChannels[index] = channel;
+
+      channel.once("error", (error) => {
+        logger.error("rabbit-channel", `Publisher channel error ${error}`);
+      });
+
+      channel.once("close", async () => {
+        logger.warn("rabbit-channel", `Rabbit publisher channel ${index} closed`);
+      });
     }
 
     RabbitMq.rabbitMqPublisherConnection.once("error", (error) => {
@@ -72,19 +81,6 @@ export class RabbitMq {
 
     RabbitMq.rabbitMqPublisherConnection.once("close", (error) => {
       logger.warn("rabbit-connection", `Publisher connection error ${error}`);
-    });
-  }
-
-  public static async connectToPublisherChannel(index: number) {
-    const channel = await this.rabbitMqPublisherConnection.createChannel();
-    RabbitMq.rabbitMqPublisherChannels[index] = channel;
-
-    channel.once("error", (error) => {
-      logger.error("rabbit-channel", `Publisher channel error ${error}`);
-    });
-
-    channel.once("close", async () => {
-      logger.warn("rabbit-channel", `Rabbit publisher channel ${index} closed`);
     });
   }
 
@@ -98,12 +94,6 @@ export class RabbitMq {
       }
 
       const channelIndex = _.random(0, RabbitMq.maxPublisherChannelsCount - 1);
-
-      // Make sure channel is available
-      if (!RabbitMq.rabbitMqPublisherChannels[channelIndex]) {
-        logger.info("rabbit-publisher-channel", `no channel was found at index ${channelIndex}`);
-        await RabbitMq.connectToPublisherChannel(channelIndex);
-      }
 
       content.publishTime = content.publishTime ?? _.now();
       content.prioritized = Boolean(priority);
@@ -154,9 +144,7 @@ export class RabbitMq {
     } catch (error) {
       logger.error(
         `rabbit-publish-error`,
-        `failed to publish to ${queueName} error ${error} lockTime ${lockTime} content=${JSON.stringify(
-          content
-        )}`
+        `failed to publish to ${queueName} error ${error} content=${JSON.stringify(content)}`
       );
     }
   }
