@@ -431,12 +431,12 @@ export const getExecuteListV5Options: RouteOptions = {
                 const approvalTx = (await commonHelpers.getNftApproval(
                   contract,
                   maker,
-                  "0x2f18f339620a63e43f0839eeb18d7de1e1be4dfb"
+                  Sdk.BlurV2.Addresses.Delegate[config.chainId]
                 ))
                   ? undefined
                   : new Sdk.Common.Helpers.Erc721(baseProvider, contract).approveTransaction(
                       maker,
-                      "0x2f18f339620a63e43f0839eeb18d7de1e1be4dfb"
+                      Sdk.BlurV2.Addresses.Delegate[config.chainId]
                     );
 
                 // TODO: Compute the order hash/id

@@ -1,12 +1,8 @@
-// import { Signer } from "@ethersproject/abstract-signer";
 import { Contract } from "@ethersproject/contracts";
-import * as Addresses from "./addresses";
-// import { TxData, generateSourceBytes } from "../utils";
-// import { Provider } from "@ethersproject/abstract-provider";
-import ExchangeAbi from "./abis/BlurV2.json";
 
-// Blend:
-// - escrowed orderbook
+import * as Addresses from "./addresses";
+
+import ExchangeAbi from "./abis/BlurV2.json";
 
 export class Exchange {
   public chainId: number;

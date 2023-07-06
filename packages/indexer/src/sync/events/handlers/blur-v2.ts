@@ -37,10 +37,14 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
             selector: "0x70bce2d6",
             name: "takeAskSingle",
           },
-          // {
-          //   selector: "0x336d8206",
-          //   name: "takeAskSinglePool",
-          // },
+          {
+            selector: "0x133ba9a6",
+            name: "takeAskPool",
+          },
+          {
+            selector: "0x336d8206",
+            name: "takeAskSinglePool",
+          },
           {
             selector: "0x7034d120",
             name: "takeBid",
@@ -50,6 +54,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
             name: "takeBidSingle",
           },
         ];
+
         const tradeRank = trades.order.get(`${txHash}-${exchangeAddress}`) ?? 0;
         const executeCallTrace = searchForCall(
           txTrace.calls,
@@ -60,7 +65,6 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           },
           tradeRank
         );
-
         if (!executeCallTrace) {
           break;
         }
@@ -75,8 +79,10 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           executeCallTrace.input
         );
 
-        const isTakeAsk = ["takeAskSingle", "takeAsk"].includes(matchMethod.name);
-        const isBatchCall = ["takeAsk", "takeBid"].includes(matchMethod.name);
+        const isTakeAsk = ["takeAsk", "takeAskSingle", "takeAskPool", "takeAskSinglePool"].includes(
+          matchMethod.name
+        );
+        const isBatchCall = ["takeAsk", "takeAskPool", "takeBid"].includes(matchMethod.name);
 
         const rawInput = inputData.inputs;
         const inputs = !isBatchCall
@@ -111,24 +117,19 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           const orderKind = "blur-v2";
           const attributionData = await utils.extractAttributionData(
             baseEventParams.txHash,
-            orderKind,
-            {}
+            orderKind
           );
-
           if (attributionData.taker) {
             taker = attributionData.taker;
           }
 
           // Handle: prices
           const currency = Sdk.Common.Addresses.Eth[config.chainId];
-
           const priceData = await getUSDAndNativePrices(
             currency,
             currencyPrice,
             baseEventParams.timestamp
           );
-
-          priceData.nativePrice = currencyPrice;
           if (!priceData.nativePrice) {
             // We must always have the native price
             break;
