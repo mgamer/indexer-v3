@@ -1,6 +1,7 @@
 import { searchForCall } from "@georgeroman/evm-tx-simulator";
 import * as Sdk from "@reservoir0x/sdk";
 
+import { bn } from "@/common/utils";
 import { config } from "@/config/index";
 import { getEventData } from "@/events-sync/data";
 import { EnhancedEvent, OnChainData } from "@/events-sync/handlers/utils";
@@ -138,7 +139,47 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
             break;
           }
 
+          const relevantEvent = events.find((e) => {
+            if (e.kind === "blur-v2") {
+              const eventData = getEventData([e.subKind])[0];
+              const { args } = eventData.abi.parseLog(e.log);
+              if (e.subKind === "blur-v2-execution") {
+                const evCollection = args["transfer"].collection.toLowerCase();
+                const evTokenId = args["transfer"].id.toString();
+                return evCollection === collection && evTokenId === tokenId;
+              } else {
+                // Last 20 bytes (make sure to pad)
+                const evCollection =
+                  "0x" +
+                  args["collectionPriceSide"]
+                    .toHexString()
+                    .slice(2)
+                    .padStart(64, "0")
+                    .slice(24)
+                    .toLowerCase();
+                // First 20 bytes (make sure to pad)
+                const evTokenId = bn(
+                  "0x" +
+                    args["tokenIdListingIndexTrader"]
+                      .toHexString()
+                      .slice(2)
+                      .padStart(64, "0")
+                      .slice(0, 22)
+                ).toString();
+                return evCollection === collection && evTokenId === tokenId;
+              }
+            }
+          });
+
+          let orderId: string | undefined;
+          if (relevantEvent) {
+            const eventData = getEventData([relevantEvent.subKind])[0];
+            const { args } = eventData.abi.parseLog(relevantEvent.log);
+            orderId = args.orderHash.toLowerCase();
+          }
+
           onChainData.fillEventsPartial.push({
+            orderId,
             orderKind,
             orderSide,
             maker,
@@ -164,20 +205,6 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
 
         break;
       }
-    }
-  }
-
-  // Populate the order id field in the fill events
-  for (const fe of onChainData.fillEventsPartial) {
-    const relevantEvent = events.find(
-      (e) =>
-        e.baseEventParams.txHash === fe.baseEventParams.txHash &&
-        e.baseEventParams.logIndex === fe.baseEventParams.logIndex
-    );
-    if (relevantEvent) {
-      const eventData = getEventData([relevantEvent.subKind])[0];
-      const { args } = eventData.abi.parseLog(relevantEvent.log);
-      fe.orderId = args.orderHash.toLowerCase();
     }
   }
 };
