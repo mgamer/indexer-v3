@@ -36,6 +36,11 @@ export type AbiParam =
   | {
       kind: "allowlist";
       abiType: string;
+    }
+  | {
+      kind: "zora-erc1155";
+      abiType: string;
+      type: "fixed-price" | "merkle";
     };
 
 export type MintTxSchema = {
@@ -153,7 +158,7 @@ export const generateCollectionMintTxData = async (
             } else if (allowlistItemIndex === 1) {
               abiValue = allowlistData.price;
             } else {
-              abiValue = await Zora.generateProofValue(collectionMint, minter);
+              abiValue = (await Zora.generateProofValue(collectionMint, minter)).proof;
             }
 
             break;
@@ -170,6 +175,26 @@ export const generateCollectionMintTxData = async (
         abiData.push({
           abiType: p.abiType,
           abiValue,
+        });
+        break;
+      }
+
+      case "zora-erc1155": {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let abiValue: any;
+        if (p.type === "fixed-price") {
+          abiValue = defaultAbiCoder.encode(["address"], [minter]);
+        } else {
+          const proofData = await Zora.generateProofValue(collectionMint, minter);
+          abiValue = defaultAbiCoder.encode(
+            ["address", "uint256", "uint256", "bytes32[]"],
+            [minter, proofData.maxCanMint, proofData.price, proofData.proof]
+          );
+        }
+
+        abiData.push({
+          abiType: p.abiType,
+          abiValue: abiValue,
         });
         break;
       }

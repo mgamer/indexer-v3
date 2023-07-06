@@ -17,7 +17,7 @@ import {
 } from "@/orderbook/mints";
 import { AllowlistItem, allowlistExists, createAllowlist } from "@/orderbook/mints/allowlists";
 import { getStatus, toSafeTimestamp } from "@/orderbook/mints/calldata/helpers";
-
+import { extractByCollectionERC1155 } from "./zora-erc1155";
 const STANDARD = "zora";
 
 export const extractByCollection = async (collection: string): Promise<CollectionMint[]> => {
@@ -182,6 +182,10 @@ export const extractByTx = async (
     return extractByCollection(collection);
   }
 
+  if (tx.data.startsWith("0x731133e9")) {
+    return extractByCollectionERC1155(collection, tx.data);
+  }
+
   return [];
 };
 
@@ -213,13 +217,18 @@ export const refreshByCollection = async (collection: string) => {
   }
 };
 
-type ProofValue = string[];
+type ProofValue = {
+  proof: string[];
+  user: string;
+  price: string;
+  maxCanMint: number;
+};
 
 export const generateProofValue = async (
   collectionMint: CollectionMint,
   address: string
 ): Promise<ProofValue> => {
-  const cacheKey = `${collectionMint.collection}-${collectionMint.stage}-${collectionMint.tokenId}`;
+  const cacheKey = `${collectionMint.collection}-${collectionMint.stage}-${collectionMint.tokenId}-${address}`;
 
   let result: ProofValue = await redis
     .get(cacheKey)
@@ -227,9 +236,10 @@ export const generateProofValue = async (
   if (!result) {
     result = await axios
       .get(`https://allowlist.zora.co/allowed?user=${address}&root=${collectionMint.allowlistId}`)
-      .then(({ data }: { data: { proof: string[] }[] }) =>
-        data[0].proof.map((item) => `0x${item}`)
-      );
+      .then(({ data }: { data: ProofValue[] }) => {
+        data[0].proof = data[0].proof.map((item) => `0x${item}`);
+        return data[0];
+      });
 
     if (result) {
       await redis.set(cacheKey, JSON.stringify(result), "EX", 3600);
