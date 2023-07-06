@@ -1,10 +1,3 @@
-import "@/jobs/index";
-import "@/jobs/cdc/index";
-import "@/common/tracer";
-import "@/config/polyfills";
-import "@/pubsub/index";
-import "@/websockets/index";
-
 import { createBullBoard } from "@bull-board/api";
 import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
 import { HapiAdapter } from "@bull-board/hapi";
