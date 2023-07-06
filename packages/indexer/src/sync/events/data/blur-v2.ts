@@ -12,13 +12,31 @@ export const execution: EventData = {
   numTopics: 1,
   abi: new Interface([
     `event Execution(
-        Transfer transfer,
-        bytes32 orderHash,
-        uint256 listingIndex,
-        uint256 price,
-        FeeRate makerFee,
-        Fees fees,
-        OrderType orderType
+      (
+        address trader,
+        uint256 id,
+        uint256 amount,
+        address collection,
+        uint8 assetType
+      ) transfer,
+      bytes32 orderHash,
+      uint256 listingIndex,
+      uint256 price,
+      (
+        address recipient,
+        uint16 rate
+      ) makerFee,
+      (
+        (
+          address recipient,
+          uint16 rate
+        ) protocolFee,
+        (
+          address recipient,
+          uint16 rate
+        ) takerFee
+      ) fees,
+      uint8 orderType
     )`,
   ]),
 };
@@ -31,9 +49,9 @@ export const execution721Packed: EventData = {
   numTopics: 1,
   abi: new Interface([
     `event Execution721Packed(
-        bytes32 orderHash,
-        uint256 tokenIdListingIndexTrader,
-        uint256 collectionPriceSide
+      bytes32 orderHash,
+      uint256 tokenIdListingIndexTrader,
+      uint256 collectionPriceSide
     )`,
   ]),
 };
@@ -46,10 +64,10 @@ export const execution721TakerFeePacked: EventData = {
   numTopics: 1,
   abi: new Interface([
     `event Execution721TakerFeePacked(
-        bytes32 orderHash,
-        uint256 tokenIdListingIndexTrader,
-        uint256 collectionPriceSide,
-        uint256 takerFeeRecipientRate
+      bytes32 orderHash,
+      uint256 tokenIdListingIndexTrader,
+      uint256 collectionPriceSide,
+      uint256 takerFeeRecipientRate
     )`,
   ]),
 };
@@ -62,10 +80,10 @@ export const execution721MakerFeePacked: EventData = {
   numTopics: 1,
   abi: new Interface([
     `event Execution721MakerFeePacked(
-        bytes32 orderHash,
-        uint256 tokenIdListingIndexTrader,
-        uint256 collectionPriceSide,
-        uint256 makerFeeRecipientRate
+      bytes32 orderHash,
+      uint256 tokenIdListingIndexTrader,
+      uint256 collectionPriceSide,
+      uint256 makerFeeRecipientRate
     )`,
   ]),
 };
