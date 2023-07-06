@@ -176,6 +176,9 @@ import { orderUpdatesDynamicOrderJob } from "@/jobs/order-updates/cron/dynamic-o
 import { orderUpdatesErc20OrderJob } from "@/jobs/order-updates/cron/erc20-orders-job";
 import { orderUpdatesExpiredOrderJob } from "@/jobs/order-updates/cron/expired-orders-job";
 import { orderUpdatesOracleOrderJob } from "@/jobs/order-updates/cron/oracle-orders-job";
+import { blurBidsBufferJob } from "@/jobs/order-updates/misc/blur-bids-buffer-job";
+import { blurBidsRefreshJob } from "@/jobs/order-updates/misc/blur-bids-refresh-job";
+import { blurListingsRefreshJob } from "@/jobs/order-updates/misc/blur-listings-refresh-job";
 
 export const gracefulShutdownJobWorkers = [
   orderUpdatesById.worker,
@@ -344,6 +347,9 @@ export class RabbitMqJobsConsumer {
       orderUpdatesErc20OrderJob,
       orderUpdatesExpiredOrderJob,
       orderUpdatesOracleOrderJob,
+      blurBidsBufferJob,
+      blurBidsRefreshJob,
+      blurListingsRefreshJob,
     ];
   }
 
