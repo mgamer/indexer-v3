@@ -1,19 +1,12 @@
 import { config as dotEnvConfig } from "dotenv";
 dotEnvConfig();
 
-import "@/jobs/index";
-import "@/jobs/cdc/index";
-import "@/common/tracer";
-import "@/config/polyfills";
-import "@/pubsub/index";
-import "@/websockets/index";
-
 import { start } from "@/api/index";
 import { logger } from "@/common/logger";
 import { config } from "@/config/index";
 import { getNetworkSettings } from "@/config/network";
 import { initIndexes } from "@/elasticsearch/indexes";
-import { startKafkaConsumer } from "@/jobs/cdc/index";
+import { startKafkaConsumer } from "@/jobs/cdc";
 import { RabbitMq } from "@/common/rabbit-mq";
 import { RabbitMqJobsConsumer } from "@/jobs/index";
 import { Sources } from "@/models/sources";
