@@ -1,6 +1,7 @@
 import { searchForCall } from "@georgeroman/evm-tx-simulator";
 import * as Sdk from "@reservoir0x/sdk";
 
+import { logger } from "@/common/logger";
 import { config } from "@/config/index";
 import { getEventData } from "@/events-sync/data";
 import { EnhancedEvent, OnChainData } from "@/events-sync/handlers/utils";
@@ -99,8 +100,9 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         for (let i = 0; i < inputs.length; i++) {
           const { order, exchange } = inputs[i];
 
+          logger.info("blur-debug-events", JSON.stringify({ events, inputs }));
           const relevantEvent = events.filter((e) => e.subKind.startsWith("blur-v2-execution"))[
-            onChainData.fillEvents.length
+            onChainData.fillEventsPartial.length
           ];
           const eventData = getEventData([relevantEvent.subKind])[0];
           const { args } = eventData.abi.parseLog(relevantEvent.log);
@@ -145,7 +147,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
             break;
           }
 
-          onChainData.fillEvents.push({
+          onChainData.fillEventsPartial.push({
             orderId,
             orderKind,
             orderSide,
