@@ -20,8 +20,6 @@ import * as royalties from "@/utils/royalties";
 import { recalcOwnerCountQueueJob } from "@/jobs/collection-updates/recalc-owner-count-queue-job";
 import { fetchCollectionMetadataJob } from "@/jobs/token-updates/fetch-collection-metadata-job";
 import { refreshActivitiesCollectionMetadataJob } from "@/jobs/activities/refresh-activities-collection-metadata-job";
-
-import { getNetworkSettings } from "@/config/network";
 import { orderUpdatesByIdJob } from "@/jobs/order-updates/order-updates-by-id-job";
 
 export class Collections {
@@ -120,21 +118,16 @@ export class Collections {
       return;
     }
 
-    const isCopyrightInfringementContract =
-      getNetworkSettings().copyrightInfringementContracts.includes(contract.toLowerCase());
+    const collection = await MetadataApi.getCollectionMetadata(contract, tokenId, community);
 
-    const collection = await MetadataApi.getCollectionMetadata(contract, tokenId, community, {
-      allowFallback: isCopyrightInfringementContract,
-    });
-
-    if (isCopyrightInfringementContract) {
+    if (collection.isCopyrightInfringement) {
       collection.name = collection.id;
       collection.metadata = null;
 
       logger.info(
         "updateCollectionCache",
         JSON.stringify({
-          topic: "debugCopyrightInfringementContracts",
+          topic: "debugCopyrightInfringement",
           message: "Collection is a copyright infringement",
           contract,
           collection,
@@ -197,7 +190,6 @@ export class Collections {
     const result = await idb.oneOrNone(query, values);
 
     if (
-      isCopyrightInfringementContract ||
       result?.old_metadata.name != collection.name ||
       result?.old_metadata.metadata.imageUrl != (collection.metadata as any)?.imageUrl
     ) {
