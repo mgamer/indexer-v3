@@ -873,8 +873,14 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
-    path: "/oracle/tokens/status/v3",
+    path: "/oracle/status/v3",
     options: oracleEndpoints.getTokenStatusOracleV3Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/oracle/collections/bid-ask-midpoint/v1",
+    options: oracleEndpoints.getCollectionBidAskMidpointOracleV1Options,
   });
 
   // Orders

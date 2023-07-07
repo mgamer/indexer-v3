@@ -18,7 +18,7 @@ import { config } from "@/config/index";
 
 const version = "v1";
 
-export const getCollectionFloorAskOracleV1Options: RouteOptions = {
+export const getCollectionBidAskMidpointOracleV1Options: RouteOptions = {
   description: "Collection mid-ask midpoint",
   notes:
     "Get a signed message of any collection's bid-ask midpoint (spot or twap). This is approximation of the colletion price. The oracle's address is 0xAeB1D03929bF87F69888f381e73FBf75753d75AF. The address is the same for all chains.",
@@ -125,23 +125,23 @@ export const getCollectionFloorAskOracleV1Options: RouteOptions = {
       }
 
       const spotQuery = `
-    with asks as( SELECT
-            events.price as ask
-          FROM "public".${eventsTableNameAsks} events
-          WHERE events.collection_id = $/collection/
-          ORDER BY events.created_at DESC
-          LIMIT 1),
-  
-      bids as( SELECT
-            events.price as bid
-          FROM ${eventsTableNameBids} events
-          WHERE events.collection_id = $/collection/
-          ORDER BY events.created_at DESC
-          LIMIT 1)
-  
-  
-  SELECT (0.5 * (( select ask from asks) + (select bid from bids)))
-      `;
+      WITH asks AS (
+      SELECT
+        price
+      FROM ${eventsTableNameAsks} events
+      WHERE events.collection_id = $/collection/
+      ORDER BY events.created_at DESC
+      LIMIT 1), 
+
+      bids as ( SELECT
+        price
+        FROM ${eventsTableNameBids} events
+        WHERE events.collection_id = $/collection/
+        ORDER BY events.created_at DESC
+        LIMIT 1)
+
+      SELECT (0.5 * ((SELECT price FROM asks)+(SELECT price FROM bids)))::NUMERIC(78, 0) as price
+    `;
 
       const twapQuery = `
           WITH ask_twap as (WITH
@@ -216,7 +216,7 @@ export const getCollectionFloorAskOracleV1Options: RouteOptions = {
               )::NUMERIC(78, 0) AS bid
             FROM w)
   
-            select (0.5 * ((select ask from ask_twap) + (select bid from bid_twap)))
+            select (0.5 * ((select ask from ask_twap) + (select bid from bid_twap)))::NUMERIC(78, 0) as price
       `;
 
       enum PriceKind {
