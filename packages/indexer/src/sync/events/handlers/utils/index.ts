@@ -9,7 +9,7 @@ import { assignSourceToFillEvents } from "@/events-sync/handlers/utils/fills";
 import { BaseEventParams } from "@/events-sync/parser";
 import * as es from "@/events-sync/storage";
 
-import * as orderbookOrders from "@/jobs/orderbook/orders-queue";
+import { GenericOrderInfo } from "@/jobs/orderbook/utils";
 import { AddressZero } from "@ethersproject/constants";
 import { RecalcCollectionOwnerCountInfo } from "@/jobs/collection-updates/recalc-owner-count-queue";
 import { recalcOwnerCountQueueJob } from "@/jobs/collection-updates/recalc-owner-count-queue-job";
@@ -35,6 +35,7 @@ import {
   orderUpdatesByMakerJob,
   OrderUpdatesByMakerJobPayload,
 } from "@/jobs/order-updates/order-updates-by-maker-job";
+import { orderbookOrdersJob } from "@/jobs/orderbook/orderbook-orders-job";
 
 // Semi-parsed and classified event
 export type EnhancedEvent = {
@@ -78,7 +79,7 @@ export type OnChainData = {
   makerInfos: OrderUpdatesByMakerJobPayload[];
 
   // Orders
-  orders: orderbookOrders.GenericOrderInfo[];
+  orders: GenericOrderInfo[];
 };
 
 export const initOnChainData = (): OnChainData => ({
@@ -228,7 +229,7 @@ export const processOnChainData = async (data: OnChainData, backfill?: boolean) 
     await Promise.all([
       orderUpdatesByIdJob.addToQueue(data.orderInfos),
       orderUpdatesByMakerJob.addToQueue(data.makerInfos),
-      orderbookOrders.addToQueue(data.orders),
+      orderbookOrdersJob.addToQueue(data.orders),
     ]);
   }
 
