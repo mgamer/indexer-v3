@@ -60,13 +60,14 @@ export const positionBurned: EventData = {
   ]),
 };
 
-export const sellERC721: EventData = {
+export const buyERC721: EventData = {
   kind: "midaswap",
-  subKind: "midaswap-sell-erc721",
-  topic: "0xa45c5281a2811e852ff2c807b388fda3e11ed2c19fc259b0756bd8e7876a0675",
+  subKind: "midaswap-buy-erc721",
+  topic: "0x5c6d0eb0552298eaa0a67c6a5ba2ad9a16a78ceb389a60bbbab9792f04a6f890",
   numTopics: 4,
   abi: new Interface([
-    `  event SellNFT(
+    `
+    event BuyNFT(
         uint256 indexed nftTokenId,
         address indexed from,
         uint24 tradeBin,
@@ -76,14 +77,13 @@ export const sellERC721: EventData = {
   ]),
 };
 
-export const buyERC721: EventData = {
+export const sellERC721: EventData = {
   kind: "midaswap",
-  subKind: "midaswap-buy-erc721",
-  topic: "0x5c6d0eb0552298eaa0a67c6a5ba2ad9a16a78ceb389a60bbbab9792f04a6f890",
+  subKind: "midaswap-sell-erc721",
+  topic: "0xa45c5281a2811e852ff2c807b388fda3e11ed2c19fc259b0756bd8e7876a0675",
   numTopics: 4,
   abi: new Interface([
-    `
-    event BuyNFT(
+    `  event SellNFT(
         uint256 indexed nftTokenId,
         address indexed from,
         uint24 tradeBin,
