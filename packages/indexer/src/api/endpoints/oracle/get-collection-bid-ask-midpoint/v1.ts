@@ -127,36 +127,42 @@ export const getCollectionBidAskMidpointOracleV1Options: RouteOptions = {
       const spotQuery = `
       WITH asks AS (
       SELECT
-        price
+        orders.value AS wta
       FROM ${eventsTableNameAsks} events
+      LEFT JOIN orders orders ON orders.id = events.order_id
       WHERE events.collection_id = $/collection/
       ORDER BY events.created_at DESC
       LIMIT 1), 
 
       bids as ( SELECT
-        price
+        orders.price AS wtp
         FROM ${eventsTableNameBids} events
+        LEFT JOIN orders orders ON orders.id = events.order_id
         WHERE events.collection_id = $/collection/
         ORDER BY events.created_at DESC
         LIMIT 1)
 
-      SELECT (0.5 * ((SELECT price FROM asks)+(SELECT price FROM bids)))::NUMERIC(78, 0) as price
+      SELECT (0.5 * ((SELECT wta FROM asks)+(SELECT wtp FROM bids)))::NUMERIC(78, 0) as price
     `;
 
       const twapQuery = `
           WITH ask_twap as (WITH
             x AS (
               SELECT
-                *
+                events.*,
+                orders.value AS wta
               FROM  ${eventsTableNameAsks} events
+              LEFT JOIN orders orders ON orders.id = events.order_id
               WHERE events.collection_id = $/collection/
                 AND events.created_at >= now() - interval '${query.twapSeconds} seconds'
               ORDER BY events.created_at
             ),
             y AS (
               SELECT
-                *
-              FROM ${eventsTableNameAsks} events
+                events.*,
+                orders.value AS wta
+              FROM  ${eventsTableNameAsks} events
+              LEFT JOIN orders orders ON orders.id = events.order_id
               WHERE events.collection_id = $/collection/
                 AND events.created_at < (SELECT COALESCE(MIN(x.created_at), 'Infinity') FROM x)
               ORDER BY events.created_at DESC
@@ -169,30 +175,34 @@ export const getCollectionBidAskMidpointOracleV1Options: RouteOptions = {
             ),
             w AS (
               SELECT
-                price,
+                wta,
                 floor(extract('epoch' FROM greatest(z.created_at, now() - interval '${query.twapSeconds} seconds'))) AS start_time,
                 floor(extract('epoch' FROM coalesce(lead(z.created_at, 1) OVER (ORDER BY created_at), now()))) AS end_time
               FROM z
             )
             SELECT
               floor(
-                SUM(w.price * (w.end_time - w.start_time)) / (MAX(w.end_time) - MIN(w.start_time))
-              )::NUMERIC(78, 0) AS ask
+                SUM(w.wta * (w.end_time - w.start_time)) / (MAX(w.end_time) - MIN(w.start_time))
+              )::NUMERIC(78, 0) AS wta
             FROM w),
   
             bid_twap as (WITH
             x AS (
               SELECT
-                e.*
+                e.*,
+                orders.price AS wtp
               FROM ${eventsTableNameBids} e
+              LEFT JOIN orders orders ON orders.id = e.order_id
               WHERE e.collection_id = $/collection/
                 AND e.created_at >= now() - interval '${query.twapSeconds} seconds'
               ORDER BY e.created_at
             ),
             y AS (
               SELECT
-                e.*
+                e.*,
+                orders.price AS wtp
               FROM ${eventsTableNameBids} e
+              LEFT JOIN orders orders ON orders.id = e.order_id
               WHERE e.collection_id = $/collection/
                 AND e.created_at < (SELECT COALESCE(MIN(x.created_at), 'Infinity') FROM x)
               ORDER BY e.created_at DESC
@@ -205,18 +215,18 @@ export const getCollectionBidAskMidpointOracleV1Options: RouteOptions = {
             ),
             w AS (
               SELECT
-                price,
+                wtp,
                 floor(extract('epoch' FROM greatest(z.created_at, now() - interval '${query.twapSeconds} seconds'))) AS start_time,
                 floor(extract('epoch' FROM coalesce(lead(z.created_at, 1) OVER (ORDER BY created_at), now()))) AS end_time
               FROM z
             )
             SELECT
               floor(
-                SUM(w.price * (w.end_time - w.start_time)) / (MAX(w.end_time) - MIN(w.start_time))
-              )::NUMERIC(78, 0) AS bid
+                SUM(w.wtp * (w.end_time - w.start_time)) / (MAX(w.end_time) - MIN(w.start_time))
+              )::NUMERIC(78, 0) AS wtp
             FROM w)
   
-            select (0.5 * ((select ask from ask_twap) + (select bid from bid_twap)))::NUMERIC(78, 0) as price
+            select (0.5 * ((select wta from ask_twap) + (select wtp from bid_twap)))::NUMERIC(78, 0) as price
       `;
 
       enum PriceKind {
