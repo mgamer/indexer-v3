@@ -172,6 +172,7 @@ import { orderUpdatesOracleOrderJob } from "@/jobs/order-updates/cron/oracle-ord
 import { blurBidsBufferJob } from "@/jobs/order-updates/misc/blur-bids-buffer-job";
 import { blurBidsRefreshJob } from "@/jobs/order-updates/misc/blur-bids-refresh-job";
 import { blurListingsRefreshJob } from "@/jobs/order-updates/misc/blur-listings-refresh-job";
+import { orderUpdatesByMakerJob } from "@/jobs/order-updates/order-updates-by-maker-job";
 
 export const gracefulShutdownJobWorkers = [orderUpdatesByMaker.worker, tokenUpdatesFloorAsk.worker];
 
@@ -328,6 +329,7 @@ export class RabbitMqJobsConsumer {
       blurBidsRefreshJob,
       blurListingsRefreshJob,
       deleteArchivedExpiredBidActivitiesJob,
+      orderUpdatesByMakerJob,
     ];
   }
 
