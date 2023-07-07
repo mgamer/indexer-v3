@@ -3,7 +3,7 @@ import { keccak256 } from "@ethersproject/solidity";
 import * as Sdk from "@reservoir0x/sdk";
 import _ from "lodash";
 import pLimit from "p-limit";
-
+import { randomUUID } from "crypto";
 import { idb, pgp, redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { toBuffer } from "@/common/utils";
@@ -44,10 +44,10 @@ export const getOrderId = (pool: string, side: "sell" | "buy", tokenId?: string)
     : // Sell orders have multiple order ids per pool (one for each potential token id)
       keccak256(["string", "address", "string", "uint256"], ["midaswap", pool, side, tokenId]);
 
-const getBuyOrderId = (pool: string, lpTokenId: string, index: number) =>
+const getBuyOrderId = (pool: string, lpTokenId: string, uuid: string) =>
   keccak256(
-    ["string", "address", "string", "string", "uint256"],
-    ["midaswap", pool, "buy", lpTokenId, index]
+    ["string", "address", "string", "string", "string"],
+    ["midaswap", pool, "buy", lpTokenId, uuid]
   );
 
 export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
@@ -66,7 +66,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         throw new Error("Unsupported currency");
       }
 
-      const { binAmount, binLower, binstep, nftId, lpTokenId } = metadata;
+      const { binAmount, binLower, binstep, nftId, lpTokenId, tradeBin } = metadata;
 
       // Force recheck at most once per hour
       // const recheckCondition = orderParams.forceRecheck
@@ -241,7 +241,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
             extra: {
               prices: !orderResult.length
                 ? prices
-                : _.sortBy(prices.concat(orderResult[0].raw_data.extra.prices), "price").reverse(),
+                : _.sortBy(prices.concat(orderResult[0].raw_data.extra.prices), "bin").reverse(),
             },
           });
 
@@ -267,9 +267,10 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
             const validFrom = `date_trunc('seconds', to_timestamp(${orderParams.txTimestamp}))`;
             const validTo = `'Infinity'`;
-            tmpPriceList.forEach((item, index) => {
+            tmpPriceList.forEach(() => {
+              const id = getBuyOrderId(pool.address, lpTokenId, randomUUID());
               orderValues.push({
-                id: getBuyOrderId(pool.address, lpTokenId, index),
+                id,
                 kind: "midaswap",
                 side: "buy",
                 fillability_status: "fillable",
@@ -304,7 +305,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
               });
 
               results.push({
-                id: getBuyOrderId(pool.address, lpTokenId, index),
+                id,
                 txHash: orderParams.txHash,
                 txTimestamp: orderParams.txTimestamp,
                 status: "success",
@@ -435,7 +436,244 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                     logIndex: orderParams.logIndex,
                   }
                 );
+
+                results.push({
+                  id: item.id,
+                  txHash: orderParams.txHash,
+                  txTimestamp: orderParams.txTimestamp,
+                  status: "success",
+                  triggerKind: "reprice",
+                });
               });
+          }
+          break;
+        }
+        case "midaswap-buy-erc721": {
+          if (_.isUndefined(tradeBin) || _.isUndefined(lpTokenId)) {
+            return;
+          }
+
+          const id = getOrderId(orderParams.pool, "sell", nftId);
+          // delete order
+          await idb.none(`DELETE FROM orders WHERE orders.id = $/id/`, { id });
+
+          const orderResult = await redb.manyOrNone(
+            `
+                      SELECT id,side,raw_data FROM orders
+                      WHERE orders.maker = $/maker/
+                    `,
+            {
+              maker: toBuffer(pool.address),
+            }
+          );
+
+          const sellOrders = orderResult.filter((item) => item.side === "sell");
+          const buyOrders = orderResult.filter((item) => item.side === "buy");
+
+          // update sell orders
+          if (sellOrders.length) {
+            const newSellPrices = _.remove(
+              sellOrders[0].raw_data.extra.prices,
+              (item: Sdk.Midaswap.Price) => item.bin !== tradeBin.toString()
+            );
+
+            const price = sellOrders[0].price;
+            const value = sellOrders[0].price;
+
+            sellOrders
+              // .filter((item) => item.id !== id)
+              .forEach(async (item) => {
+                await idb.none(
+                  `
+                  UPDATE orders SET
+                    fillability_status = 'fillable',
+                    approval_status = 'approved',
+                    price = $/price/,
+                    currency_price = $/price/,
+                    value = $/value/,
+                    currency_value = $/value/,
+                    valid_between = tstzrange(date_trunc('seconds', to_timestamp(${orderParams.txTimestamp})), 'Infinity', '[]'),
+                    updated_at = now(),
+                    raw_data = $/rawData:json/,
+                    log_index = $/logIndex/
+                  WHERE orders.id = $/id/
+                `,
+                  {
+                    id: item.id,
+                    price,
+                    value,
+                    rawData: {
+                      ...item.raw_data,
+                      extra: {
+                        prices: newSellPrices,
+                      },
+                    },
+                    quantityRemaining: sellOrders.length.toString(),
+                    blockNumber: orderParams.txBlock,
+                    logIndex: orderParams.logIndex,
+                  }
+                );
+
+                results.push({
+                  id: item.id,
+                  txHash: orderParams.txHash,
+                  txTimestamp: orderParams.txTimestamp,
+                  status: "success",
+                  triggerKind: "reprice",
+                });
+              });
+          }
+
+          // create buy orders
+          const newBuyOrders = async (newBuyPrices: Sdk.Midaswap.Price[]) => {
+            // Handle: token set
+            const schemaHash = generateSchemaHash();
+            const [{ id: tokenSetId }] = await tokenSet.contractWide.save([
+              {
+                id: `contract:${pool.nft}`.toLowerCase(),
+                schemaHash,
+                contract: pool.nft,
+              },
+            ]);
+
+            if (!tokenSetId) {
+              throw new Error("No token set available");
+            }
+
+            // Handle: source
+            const sources = await Sources.getInstance();
+            const source = await sources.getOrInsert("midaswap");
+
+            const price = newBuyPrices[0].price;
+            const value = newBuyPrices[0].price;
+
+            // Handle: core sdk order
+            const sdkOrder: Sdk.Midaswap.Order = new Sdk.Midaswap.Order(config.chainId, {
+              pair: orderParams.pool,
+              tokenX: pool.nft,
+              // tokenId: nftId,
+              lpTokenId,
+              extra: {
+                prices: newBuyPrices,
+              },
+            });
+
+            const validFrom = `date_trunc('seconds', to_timestamp(${orderParams.txTimestamp}))`;
+            const validTo = `'Infinity'`;
+            const id = getBuyOrderId(pool.address, lpTokenId, randomUUID());
+
+            orderValues.push({
+              id,
+              kind: "midaswap",
+              side: "buy",
+              fillability_status: "fillable",
+              approval_status: "approved",
+              token_set_id: tokenSetId,
+              token_set_schema_hash: toBuffer(schemaHash),
+              maker: toBuffer(pool.address),
+              taker: toBuffer(AddressZero),
+              price: price.toString(),
+              value: value.toString(),
+              currency: toBuffer(pool.token),
+              currency_price: price.toString(),
+              currency_value: value.toString(),
+              needs_conversion: null,
+              quantity_remaining: "1",
+              valid_between: `tstzrange(${validFrom}, ${validTo}, '[]')`,
+              nonce: null,
+              source_id_int: source?.id,
+              is_reservoir: null,
+              contract: toBuffer(pool.nft),
+              conduit: null,
+              fee_bps: feeBps,
+              fee_breakdown: feeBreakdown,
+              dynamic: null,
+              raw_data: sdkOrder.params,
+              expiration: validTo,
+              missing_royalties: null,
+              normalized_value: null,
+              currency_normalized_value: null,
+              block_number: orderParams.txBlock ?? null,
+              log_index: orderParams.logIndex ?? null,
+            });
+
+            results.push({
+              id,
+              txHash: orderParams.txHash,
+              txTimestamp: orderParams.txTimestamp,
+              status: "success",
+              triggerKind: "new-order",
+            });
+          };
+
+          if (buyOrders.length) {
+            const newBuyPrices: Sdk.Midaswap.Price[] = _.sortBy(
+              [
+                ...buyOrders[0].raw_data.extra.prices,
+                {
+                  price: tradeBin.toString(),
+                  bin: tradeBin.toString(),
+                  lpTokenId,
+                },
+              ],
+              "bin"
+            ).reverse();
+
+            await newBuyOrders(newBuyPrices);
+
+            const price = newBuyPrices[0].price;
+            const value = newBuyPrices[0].price;
+
+            // update buy orders price
+            buyOrders.forEach(async (item) => {
+              await idb.none(
+                `
+                  UPDATE orders SET
+                    fillability_status = 'fillable',
+                    approval_status = 'approved',
+                    price = $/price/,
+                    currency_price = $/price/,
+                    value = $/value/,
+                    currency_value = $/value/,
+                    valid_between = tstzrange(date_trunc('seconds', to_timestamp(${orderParams.txTimestamp})), 'Infinity', '[]'),
+                    updated_at = now(),
+                    raw_data = $/rawData:json/,
+                    log_index = $/logIndex/
+                  WHERE orders.id = $/id/
+                `,
+                {
+                  id: item.id,
+                  price,
+                  value,
+                  rawData: {
+                    ...item.raw_data,
+                    extra: {
+                      prices: newBuyPrices,
+                    },
+                  },
+                  quantityRemaining: newBuyPrices.length.toString(),
+                  blockNumber: orderParams.txBlock,
+                  logIndex: orderParams.logIndex,
+                }
+              );
+
+              results.push({
+                id: item.id,
+                txHash: orderParams.txHash,
+                txTimestamp: orderParams.txTimestamp,
+                status: "success",
+                triggerKind: "reprice",
+              });
+            });
+          } else {
+            const newBuyPrices: Sdk.Midaswap.Price[] = [
+              {
+                price: tradeBin.toString(),
+                bin: tradeBin.toString(),
+                lpTokenId,
+              },
+            ];
+            await newBuyOrders(newBuyPrices);
           }
 
           break;

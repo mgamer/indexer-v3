@@ -23,6 +23,7 @@ export type OrderMetadata = {
   binLower?: number;
   binstep?: number;
   binAmount?: number;
+  tradeBin?: number;
 };
 
 // Underlying database model for an order
