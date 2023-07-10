@@ -38,9 +38,8 @@ export type AbiParam =
       abiType: string;
     }
   | {
-      kind: "zora-erc1155";
+      kind: "custom";
       abiType: string;
-      type: "fixed-price" | "merkle";
     };
 
 export type MintTxSchema = {
@@ -96,6 +95,7 @@ export const generateCollectionMintTxData = async (
           abiType: p.abiType,
           abiValue: collectionMint.contract,
         });
+
         break;
       }
 
@@ -104,6 +104,7 @@ export const generateCollectionMintTxData = async (
           abiType: p.abiType,
           abiValue: quantity,
         });
+
         break;
       }
 
@@ -112,6 +113,7 @@ export const generateCollectionMintTxData = async (
           abiType: p.abiType,
           abiValue: minter,
         });
+
         break;
       }
 
@@ -153,12 +155,21 @@ export const generateCollectionMintTxData = async (
           }
 
           case "zora": {
-            if (allowlistItemIndex === 0) {
-              abiValue = allowlistData.max_mints;
-            } else if (allowlistItemIndex === 1) {
-              abiValue = allowlistData.price;
+            // Different encoding for ERC721 vs ERC1155
+            if (collectionMint.tokenId) {
+              const proofData = await Zora.generateProofValue(collectionMint, minter);
+              abiValue = defaultAbiCoder.encode(
+                ["address", "uint256", "uint256", "bytes32[]"],
+                [minter, proofData.maxCanMint, proofData.price, proofData.proof]
+              );
             } else {
-              abiValue = (await Zora.generateProofValue(collectionMint, minter)).proof;
+              if (allowlistItemIndex === 0) {
+                abiValue = allowlistData.max_mints;
+              } else if (allowlistItemIndex === 1) {
+                abiValue = allowlistData.price;
+              } else {
+                abiValue = (await Zora.generateProofValue(collectionMint, minter)).proof;
+              }
             }
 
             break;
@@ -176,26 +187,33 @@ export const generateCollectionMintTxData = async (
           abiType: p.abiType,
           abiValue,
         });
+
         break;
       }
 
-      case "zora-erc1155": {
+      case "custom": {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let abiValue: any;
-        if (p.type === "fixed-price") {
-          abiValue = defaultAbiCoder.encode(["address"], [minter]);
-        } else {
-          const proofData = await Zora.generateProofValue(collectionMint, minter);
-          abiValue = defaultAbiCoder.encode(
-            ["address", "uint256", "uint256", "bytes32[]"],
-            [minter, proofData.maxCanMint, proofData.price, proofData.proof]
-          );
+
+        switch (collectionMint.standard) {
+          case "zora": {
+            abiValue = defaultAbiCoder.encode(
+              ["bytes32"],
+              ["0x" + minter.slice(2).padStart(64, "0")]
+            );
+            break;
+          }
+
+          default: {
+            throw new Error("Custom fields not supported");
+          }
         }
 
         abiData.push({
           abiType: p.abiType,
           abiValue: abiValue,
         });
+
         break;
       }
 
@@ -204,6 +222,7 @@ export const generateCollectionMintTxData = async (
           abiType: p.abiType,
           abiValue: p.abiValue,
         });
+
         break;
       }
     }

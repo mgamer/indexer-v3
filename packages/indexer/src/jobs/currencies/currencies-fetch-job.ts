@@ -1,7 +1,6 @@
 import { idb } from "@/common/db";
 import { toBuffer } from "@/common/utils";
-import type { BackoffStrategy } from "@/jobs/abstract-rabbit-mq-job-handler";
-import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handler";
+import { BackoffStrategy, AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handler";
 import { tryGetCurrencyDetails } from "@/utils/currencies";
 
 export type CurrenciesFetchJobPayload = {
