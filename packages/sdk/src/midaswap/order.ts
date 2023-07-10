@@ -1,5 +1,6 @@
 import * as Types from "./types";
 import { lc, s } from "../utils";
+import Decimal from "decimal.js";
 
 export class Order {
   public chainId: number;
@@ -14,6 +15,13 @@ export class Order {
       throw new Error("Invalid params");
     }
   }
+
+  public static binToPriceFixed = (bin: number, decimal = 18, toFixedNumber = 18) => {
+    const powValue = bin - 8388608;
+    const b = new Decimal(10).pow(18 - decimal);
+    const price = new Decimal(1.0001).pow(powValue).times(b).toFixed(toFixedNumber);
+    return String(price);
+  };
 }
 
 const normalize = (order: Types.OrderParams): Types.OrderParams => {

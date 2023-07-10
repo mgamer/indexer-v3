@@ -1,20 +1,14 @@
 import { idb } from "@/common/db";
 import { fromBuffer, toBuffer } from "@/common/utils";
 
-export enum MidaswapPoolKind {
-  TOKEN = 0,
-  NFT = 1,
-  TRADE = 2,
-}
-
 export type MidaswapPool = {
   address: string;
   // lpTokenAddress: string;
   nft: string;
   token: string;
   freeRate: string;
+  roralty: string;
   // bondingCurve: string;
-  // poolKind: MidaswapPoolKind;
   // pairKind: number;
   // propertyChecker: string;
   // tokenId?: string;
@@ -27,12 +21,14 @@ export const saveMidaswapPool = async (midaswapPool: MidaswapPool) => {
         address,
         nft,
         token,
-        free_rate
+        free_rate_bps,
+        roralty_bps
       ) VALUES (
         $/address/,
         $/nft/,
         $/token/,
-        $/freeRate/
+        $/freeRate/,
+        $/roralty/
       )
       ON CONFLICT DO NOTHING
     `,
@@ -41,6 +37,7 @@ export const saveMidaswapPool = async (midaswapPool: MidaswapPool) => {
       nft: toBuffer(midaswapPool.nft),
       token: toBuffer(midaswapPool.token),
       freeRate: toBuffer(midaswapPool.freeRate),
+      roralty: toBuffer(midaswapPool.roralty),
       // bondingCurve: toBuffer(midaswapPool.bondingCurve),
       // poolKind: midaswapPool.poolKind,
       // pairKind: midaswapPool.pairKind,
@@ -52,14 +49,15 @@ export const saveMidaswapPool = async (midaswapPool: MidaswapPool) => {
   return midaswapPool;
 };
 
-export const getMidaswapPool = async (address: string): Promise<MidaswapPool> => {
+export const getMidaswapPool = async (address: string) => {
   const result = await idb.oneOrNone(
     `
       SELECT
         midaswap_pools.address,
         midaswap_pools.nft,
         midaswap_pools.token,
-        midaswap_pools.free_rate
+        midaswap_pools.free_rate_bps,
+        midaswap_pools.roralty_bps
       FROM midaswap_pools
       WHERE midaswap_pools.address = $/address/
     `,
@@ -71,6 +69,7 @@ export const getMidaswapPool = async (address: string): Promise<MidaswapPool> =>
     nft: fromBuffer(result.nft),
     token: fromBuffer(result.token),
     freeRate: fromBuffer(result.free_rate),
+    roralty: fromBuffer(result.roralty),
     // bondingCurve: fromBuffer(result.bonding_curve),
     // poolKind: result.pool_kind,
     // pairKind: result.pair_kind,

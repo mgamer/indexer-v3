@@ -4,7 +4,8 @@ CREATE TABLE "midaswap_pools" (
   "address" BYTEA NOT NULL,
   "nft" BYTEA NOT NULL, 
   "token" BYTEA NOT NULL,
-  "free_rate" BYTEA NOT NULL
+  "free_rate_bps" BYTEA NOT NULL,
+  "roralty_bps" BYTEA NOT NULL
 );
 
 ALTER TABLE "midaswap_pools"

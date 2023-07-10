@@ -13,13 +13,14 @@ export const getPoolDetails = async (address: string) =>
         const pool = new Contract(address, Sdk.Midaswap.PairAbi, baseProvider);
         const nft = (await pool.getTokenX()).toLowerCase();
         const token = (await pool.getTokenY()).toLowerCase();
-        const [freeRate] = (await pool.feeParameters()) as BigNumber[];
+        const [freeRate, , royaltyRate] = (await pool.feeParameters()) as BigNumber[];
 
         return saveMidaswapPool({
           address,
           nft,
           token,
-          freeRate: freeRate.toString(),
+          freeRate: (+freeRate.toString() / Math.pow(10, 14)).toString(),
+          roralty: (+royaltyRate.toString() / Math.pow(10, 14)).toString(),
         });
       } catch {
         // Skip any errors
