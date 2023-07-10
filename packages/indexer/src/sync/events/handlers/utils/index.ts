@@ -11,8 +11,10 @@ import * as es from "@/events-sync/storage";
 
 import { GenericOrderInfo } from "@/jobs/orderbook/utils";
 import { AddressZero } from "@ethersproject/constants";
-import { RecalcCollectionOwnerCountInfo } from "@/jobs/collection-updates/recalc-owner-count-queue";
-import { recalcOwnerCountQueueJob } from "@/jobs/collection-updates/recalc-owner-count-queue-job";
+import {
+  recalcOwnerCountQueueJob,
+  RecalcOwnerCountQueueJobPayload,
+} from "@/jobs/collection-updates/recalc-owner-count-queue-job";
 import { mintQueueJob, MintQueueJobPayload } from "@/jobs/token-updates/mint-queue-job";
 import {
   WebsocketEventKind,
@@ -248,7 +250,7 @@ export const processOnChainData = async (data: OnChainData, backfill?: boolean) 
 
   // TODO: Is this the best place to handle activities?
 
-  const recalcCollectionOwnerCountInfo: RecalcCollectionOwnerCountInfo[] =
+  const recalcCollectionOwnerCountInfo: RecalcOwnerCountQueueJobPayload[] =
     data.nftTransferEvents.map((event) => ({
       context: "event-sync",
       kind: "contactAndTokenId",
