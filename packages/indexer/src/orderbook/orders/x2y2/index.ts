@@ -314,7 +314,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         missing_royalties: missingRoyalties,
         normalized_value: normalizedValue,
         currency_normalized_value: normalizedValue,
-        // originated_at: metadata.originatedAt ? new Date(metadata.originatedAt) : null,
+        originated_at: metadata.originatedAt ? new Date(metadata.originatedAt).toISOString() : null,
       });
 
       results.push({
