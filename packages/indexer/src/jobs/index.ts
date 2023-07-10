@@ -427,17 +427,25 @@ export class RabbitMqJobsConsumer {
       }
     );
 
-    channel.once("error", (error) => {
+    channel.once("error", async (error) => {
       logger.error("rabbit-channel", `Consumer channel error ${error}`);
 
       const jobs = RabbitMqJobsConsumer.channelsToJobs.get(channel);
       if (jobs) {
-        logger.error(
-          "rabbit-jobs",
-          `Jobs stopped consume ${JSON.stringify(
+        // Resubscribe the jobs
+        for (const job of jobs) {
+          await this.subscribe(job);
+        }
+
+        logger.info(
+          "rabbit-channel",
+          `Resubscribed to ${JSON.stringify(
             jobs.map((job: AbstractRabbitMqJobHandler) => job.queueName)
           )}`
         );
+
+        // Clear the channel that closed
+        RabbitMqJobsConsumer.channelsToJobs.delete(channel);
       }
     });
   }
