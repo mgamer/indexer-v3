@@ -81,18 +81,8 @@ export class OpenseaBidsQueueJob extends AbstractRabbitMqJobHandler {
           break;
         }
 
-        case "universe": {
-          result = await orders.universe.save([info]);
-          break;
-        }
-
         case "rarible": {
           result = await orders.rarible.save([info]);
-          break;
-        }
-
-        case "flow": {
-          result = await orders.flow.save([info]);
           break;
         }
 

@@ -74,10 +74,8 @@ export const getExecuteBuyV7Options: RouteOptions = {
                   "seaport-v1.4",
                   "seaport-v1.5",
                   "x2y2",
-                  "universe",
                   "rarible",
                   "sudoswap",
-                  "flow",
                   "nftx",
                   "alienswap"
                 )

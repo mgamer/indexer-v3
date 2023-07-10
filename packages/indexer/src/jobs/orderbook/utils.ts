@@ -67,22 +67,8 @@ export type GenericOrderInfo =
       ingestDelay?: number;
     }
   | {
-      kind: "universe";
-      info: orders.universe.OrderInfo;
-      validateBidValue?: boolean;
-      ingestMethod?: "websocket" | "rest";
-      ingestDelay?: number;
-    }
-  | {
       kind: "rarible";
       info: orders.rarible.OrderInfo;
-      validateBidValue?: boolean;
-      ingestMethod?: "websocket" | "rest";
-      ingestDelay?: number;
-    }
-  | {
-      kind: "flow";
-      info: orders.flow.OrderInfo;
       validateBidValue?: boolean;
       ingestMethod?: "websocket" | "rest";
       ingestDelay?: number;
@@ -214,18 +200,8 @@ export const processOrder = async (job: AbstractRabbitMqJobHandler, payload: Gen
         break;
       }
 
-      case "universe": {
-        result = await orders.universe.save([info]);
-        break;
-      }
-
       case "rarible": {
         result = await orders.rarible.save([info]);
-        break;
-      }
-
-      case "flow": {
-        result = await orders.flow.save([info]);
         break;
       }
 
