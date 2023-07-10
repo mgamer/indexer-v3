@@ -134,7 +134,7 @@ export const postSimulateOrderV1Options: RouteOptions = {
         }
       }
 
-      if (["blur", "nftx", "sudoswap", "sudoswap-v2", "universe"].includes(orderResult.kind)) {
+      if (["blur", "nftx", "sudoswap", "sudoswap-v2"].includes(orderResult.kind)) {
         return { message: "Order not simulatable" };
       }
       if (getNetworkSettings().whitelistedCurrencies.has(fromBuffer(orderResult.currency))) {

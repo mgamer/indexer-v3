@@ -38,7 +38,6 @@ export const postOrdersV1Options: RouteOptions = {
               "element",
               "rarible",
               "manifold",
-              "flow",
               "looks-rare-v2"
             )
             .required(),
