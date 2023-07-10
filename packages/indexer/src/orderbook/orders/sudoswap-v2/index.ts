@@ -133,6 +133,19 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         },
       ];
 
+      const onChainRoyalties = await royalties.getRoyaltiesByTokenSet(
+        `contract:${pool.nft}`.toLowerCase(),
+        "onchain"
+      );
+
+      for (const onChainRoyaltie of onChainRoyalties) {
+        feeBreakdown.push({
+          kind: "royalty",
+          recipient: onChainRoyaltie.recipient,
+          bps: onChainRoyaltie.bps,
+        });
+      }
+
       const isERC1155 = pool.pairKind > 1;
 
       // Handle buy orders
@@ -195,7 +208,10 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
               "default"
             );
 
-            const totalBuiltInBps = 0;
+            const totalBuiltInBps = feeBreakdown
+              .map(({ bps, kind }) => (kind === "royalty" ? bps : 0))
+              .reduce((a, b) => a + b, 0);
+
             const totalDefaultBps = defaultRoyalties
               .map(({ bps }) => bps)
               .reduce((a, b) => a + b, 0);
@@ -459,7 +475,9 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                     "default"
                   );
 
-                  const totalBuiltInBps = 0;
+                  const totalBuiltInBps = feeBreakdown
+                    .map(({ bps, kind }) => (kind === "royalty" ? bps : 0))
+                    .reduce((a, b) => a + b, 0);
                   const totalDefaultBps = defaultRoyalties
                     .map(({ bps }) => bps)
                     .reduce((a, b) => a + b, 0);
