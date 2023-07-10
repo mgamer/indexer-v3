@@ -6,8 +6,9 @@ import Joi from "joi";
 
 import { logger } from "@/common/logger";
 import { config } from "@/config/index";
-import { orderbookOrdersJob } from "@/jobs/orderbook/orderbook-orders-job";
+// import { orderbookOrdersJob } from "@/jobs/orderbook/orderbook-orders-job";
 import { GenericOrderInfo } from "@/jobs/orderbook/utils";
+import * as orderbookOrders from "@/jobs/orderbook/orders-queue";
 
 const version = "v1";
 
@@ -81,7 +82,7 @@ export const postOrdersV1Options: RouteOptions = {
         });
       }
 
-      await orderbookOrdersJob.addToQueue(orderInfos);
+      await orderbookOrders.addToQueue(orderInfos);
 
       return { message: "Request accepted" };
     } catch (error) {
