@@ -709,9 +709,13 @@ export const getExecuteBuyV7Options: RouteOptions = {
                 );
                 if (collectionData) {
                   const amountMintable = await mints.getAmountMintableByWallet(mint, payload.taker);
-                  const quantityAvailable = amountMintable
-                    ? Math.min(amountMintable.toNumber(), item.quantity)
-                    : item.quantity;
+                  const quantityAvailable = bn(
+                    amountMintable
+                      ? amountMintable.lt(item.quantity)
+                        ? amountMintable
+                        : item.quantity
+                      : item.quantity
+                  ).toNumber();
 
                   const { txData, price } = await generateCollectionMintTxData(
                     mint,
