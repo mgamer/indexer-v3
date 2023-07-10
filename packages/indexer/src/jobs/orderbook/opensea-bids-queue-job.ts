@@ -3,10 +3,6 @@ import { logger } from "@/common/logger";
 import { GenericOrderInfo } from "@/jobs/orderbook/utils";
 import * as orders from "@/orderbook/orders";
 
-export type OpenseaBidsQueueJobPayload = {
-  orderInfo: GenericOrderInfo;
-};
-
 export class OpenseaBidsQueueJob extends AbstractRabbitMqJobHandler {
   queueName = "orderbook-opensea-bids-queue";
   maxRetries = 10;
@@ -14,8 +10,8 @@ export class OpenseaBidsQueueJob extends AbstractRabbitMqJobHandler {
   lazyMode = true;
   consumerTimeout = 90000;
 
-  protected async process(payload: OpenseaBidsQueueJobPayload) {
-    const { kind, info, validateBidValue, ingestMethod, ingestDelay } = payload.orderInfo;
+  protected async process(payload: GenericOrderInfo) {
+    const { kind, info, validateBidValue, ingestMethod, ingestDelay } = payload;
 
     let result: { status: string; delay?: number }[] = [];
     try {
@@ -146,7 +142,7 @@ export class OpenseaBidsQueueJob extends AbstractRabbitMqJobHandler {
   public async addToQueue(orderInfos: GenericOrderInfo[]) {
     await this.sendBatch(
       orderInfos.map((orderInfo) => ({
-        payload: { orderInfo },
+        payload: orderInfo,
       }))
     );
   }

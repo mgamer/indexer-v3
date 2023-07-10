@@ -19,7 +19,7 @@ export class OpenseaListingsJob extends AbstractRabbitMqJobHandler {
   public async addToQueue(orderInfos: GenericOrderInfo[], prioritized = false, delay = 0) {
     await this.sendBatch(
       orderInfos.map((orderInfo) => ({
-        payload: { orderInfo },
+        payload: orderInfo,
         priority: prioritized ? 1 : 0,
         delay: delay ? delay * 1000 : 0,
       }))
