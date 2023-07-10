@@ -29,11 +29,9 @@ import { handleEvent as handleOrderRevalidate } from "@/websockets/opensea/handl
 import { handleEvent as handleTraitOfferEvent } from "@/websockets/opensea/handlers/trait_offer";
 import MetadataApi from "@/utils/metadata-api";
 
-import * as orderbookOpenseaListings from "@/jobs/orderbook/opensea-listings-queue";
-
 import { openseaBidsQueueJob } from "@/jobs/orderbook/opensea-bids-queue-job";
 import { metadataIndexWriteJob } from "@/jobs/metadata-index/metadata-write-job";
-// import { openseaListingsJob } from "@/jobs/orderbook/opensea-listings-job";
+import { openseaListingsJob } from "@/jobs/orderbook/opensea-listings-job";
 
 if (config.doWebsocketWork && config.openSeaApiKey) {
   const network = config.chainId === 5 ? Network.TESTNET : Network.MAINNET;
@@ -101,7 +99,7 @@ if (config.doWebsocketWork && config.openSeaApiKey) {
             } as GenericOrderInfo;
 
             if (eventType === EventType.ITEM_LISTED) {
-              await orderbookOpenseaListings.addToQueue([orderInfo]);
+              await openseaListingsJob.addToQueue([orderInfo]);
             } else {
               bidsEvents.push(orderInfo);
 
