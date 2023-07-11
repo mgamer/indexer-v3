@@ -2685,7 +2685,7 @@ export class Router {
           },
           orderIds,
         });
-      } else
+      } else {
         txs.push({
           approvals,
           permits: [],
@@ -2717,6 +2717,7 @@ export class Router {
           },
           orderIds,
         });
+      }
     }
 
     if (!txs.length) {
