@@ -162,7 +162,6 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           const order = isCollectionLevel
             ? contractBuilder.build({
                 protocol: saleDetail["protocol"],
-                collectionLevelOffer: true,
                 marketplace: saleDetail["marketplace"],
                 marketplaceFeeNumerator: saleDetail["marketplaceFeeNumerator"],
                 maxRoyaltyFeeNumerator: saleDetail["maxRoyaltyFeeNumerator"],

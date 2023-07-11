@@ -49,19 +49,16 @@ export class Order {
   }
 
   private detectKind(): Types.OrderKind {
-    if (this.params.tokenId != undefined && this.params.sellerAcceptedOffer != undefined) {
+    if (!this.params.sellerAcceptedOffer && !this.params.collectionLevelOffer) {
       return "sale-approval";
     }
 
-    if (this.params.collectionLevelOffer != undefined) {
-      return "collection-offer-approval";
+    if (this.params.sellerAcceptedOffer && !this.params.collectionLevelOffer) {
+      return "offer-approval";
     }
 
-    if (
-      this.params.collectionLevelOffer == undefined &&
-      this.params.sellerAcceptedOffer == undefined
-    ) {
-      return "offer-approval";
+    if (this.params.sellerAcceptedOffer && this.params.collectionLevelOffer) {
+      return "collection-offer-approval";
     }
 
     throw new Error("Could not detect order kind (order might have unsupported params/calldata)");

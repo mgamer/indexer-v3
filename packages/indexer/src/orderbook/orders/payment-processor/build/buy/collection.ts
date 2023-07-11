@@ -33,6 +33,8 @@ export const build = async (options: BuildOrderOptions) => {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (buildInfo.params as any).collectionLevelOffer = true;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (buildInfo.params as any).sellerAcceptedOffer = true;
 
   const builder: BaseBuilder = new Sdk.PaymentProcessor.Builders.ContractWide(config.chainId);
   return builder.build(buildInfo.params);

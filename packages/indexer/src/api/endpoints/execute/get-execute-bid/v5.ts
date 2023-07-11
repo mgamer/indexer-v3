@@ -1159,21 +1159,25 @@ export const getExecuteBidV5Options: RouteOptions = {
                   data: {
                     sign: order.getSignatureData(),
                     post: {
-                      endpoint: "/order/v3",
+                      endpoint: "/order/v4",
                       method: "POST",
                       body: {
-                        order: {
-                          kind: "payment-processor",
-                          data: {
-                            ...order.params,
+                        items: [
+                          {
+                            order: {
+                              kind: "payment-processor",
+                              data: {
+                                ...order.params,
+                              },
+                            },
+                            tokenSetId,
+                            attribute,
+                            collection,
+                            isNonFlagged: params.excludeFlaggedTokens,
+                            orderbook: params.orderbook,
+                            orderbookApiKey: params.orderbookApiKey,
                           },
-                        },
-                        tokenSetId,
-                        attribute,
-                        collection,
-                        isNonFlagged: params.excludeFlaggedTokens,
-                        orderbook: params.orderbook,
-                        orderbookApiKey: params.orderbookApiKey,
+                        ],
                         source,
                       },
                     },

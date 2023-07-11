@@ -145,8 +145,12 @@ contract PaymentProcessorModule is BaseExchangeModule {
     address, // operator,
     address, // from
     uint256, // tokenId,
-    bytes calldata // data
-  ) external pure returns (bytes4) {
+    bytes calldata data
+  ) external returns (bytes4) {
+    if (data.length > 0) {
+      _makeCall(router, data, 0);
+    }
+
     return this.onERC721Received.selector;
   }
 
@@ -155,8 +159,12 @@ contract PaymentProcessorModule is BaseExchangeModule {
     address, // from
     uint256, // tokenId
     uint256, // amount
-    bytes calldata // data
-  ) external pure returns (bytes4) {
+    bytes calldata data
+  ) external returns (bytes4) {
+    if (data.length > 0) {
+      _makeCall(router, data, 0);
+    }
+
     return this.onERC1155Received.selector;
   }
 }

@@ -44,13 +44,17 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
   const handleOrder = async ({ orderParams, metadata }: OrderInfo) => {
     try {
-      const order = new Sdk.PaymentProcessor.Order(config.chainId, orderParams);
+      const order = new Sdk.PaymentProcessor.Order(config.chainId, {
+        ...orderParams,
+        // Force kind detection
+        kind: undefined,
+      });
       const id = order.hash();
 
       if (!order.params.kind) {
         return results.push({
           id,
-          status: "unsupported-side",
+          status: "unknown-kind",
         });
       }
 

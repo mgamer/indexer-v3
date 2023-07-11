@@ -969,17 +969,21 @@ export const getExecuteListV5Options: RouteOptions = {
                   data: {
                     sign: order.getSignatureData(),
                     post: {
-                      endpoint: "/order/v3",
+                      endpoint: "/order/v4",
                       method: "POST",
                       body: {
-                        order: {
-                          kind: "payment-processor",
-                          data: {
-                            ...order.params,
+                        items: [
+                          {
+                            order: {
+                              kind: "payment-processor",
+                              data: {
+                                ...order.params,
+                              },
+                            },
+                            orderbook: params.orderbook,
+                            orderbookApiKey: params.orderbookApiKey,
                           },
-                        },
-                        orderbook: params.orderbook,
-                        orderbookApiKey: params.orderbookApiKey,
+                        ],
                         source,
                       },
                     },

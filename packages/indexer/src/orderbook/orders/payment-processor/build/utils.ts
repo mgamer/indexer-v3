@@ -1,3 +1,4 @@
+import { AddressZero } from "@ethersproject/constants";
 import * as Sdk from "@reservoir0x/sdk";
 import { BaseBuildParams } from "@reservoir0x/sdk/dist/payment-processor/builders/base";
 
@@ -5,7 +6,6 @@ import { redb } from "@/common/db";
 import { fromBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
-import { constants } from "ethers";
 
 export interface BaseOrderBuildOptions {
   maker: string;
@@ -48,7 +48,7 @@ export const getBuildInfo = async (
       collectionResult.kind === "erc721"
         ? Sdk.PaymentProcessor.Types.TokenProtocols.ERC721
         : Sdk.PaymentProcessor.Types.TokenProtocols.ERC1155,
-    marketplace: constants.AddressZero,
+    marketplace: AddressZero,
     amount: options.quantity ?? "1",
     marketplaceFeeNumerator: "0",
     maxRoyaltyFeeNumerator: "0",

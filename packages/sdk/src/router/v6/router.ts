@@ -3763,12 +3763,14 @@ export class Router {
         case "payment-processor": {
           const order = detail.order as Sdk.PaymentProcessor.Order;
           const module = this.contracts.paymentProcessorModule;
+
           const takerOrder = order.buildMatching({
             taker: module.address,
             takerMasterNonce: "0",
             tokenId: order.params.collectionLevelOffer ? detail.tokenId : undefined,
           });
           const matchedOrder = order.getMatchedOrder(takerOrder);
+
           executionsWithDetails.push({
             detail,
             execution: {
