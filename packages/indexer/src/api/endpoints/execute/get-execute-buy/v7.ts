@@ -479,7 +479,11 @@ export const getExecuteBuyV7Options: RouteOptions = {
           items[i].originalItemIndex !== undefined ? items[i].originalItemIndex! : i;
 
         if (!item.quantity) {
-          item.quantity = 1;
+          if (preview) {
+            item.quantity = 20;
+          } else {
+            item.quantity = 1;
+          }
         }
 
         // Scenario 1: fill via `rawOrder`
