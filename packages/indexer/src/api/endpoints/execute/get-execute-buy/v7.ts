@@ -55,11 +55,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
           Joi.object({
             collection: Joi.string().lowercase().description("Collection to buy."),
             token: Joi.string().lowercase().pattern(regex.token).description("Token to buy."),
-            quantity: Joi.number()
-              .integer()
-              .positive()
-              .default(1)
-              .description("Quantity of tokens to buy."),
+            quantity: Joi.number().integer().positive().description("Quantity of tokens to buy."),
             orderId: Joi.string().lowercase().description("Optional order id to fill."),
             rawOrder: Joi.object({
               kind: Joi.string()
@@ -82,9 +78,10 @@ export const getExecuteBuyV7Options: RouteOptions = {
               data: Joi.object().required(),
             }).description("Optional raw order to fill."),
             fillType: Joi.string()
-              .valid("trade", "mint")
+              .valid("trade", "mint", "preferMint")
+              .default("preferMint")
               .description(
-                "Optionally specify a particular fill method (by default both trades and mints will be included). Only relevant when filling via `collection`."
+                "Optionally specify a particular fill method. Only relevant when filling via `collection`."
               ),
             preferredOrderSource: Joi.string()
               .lowercase()
@@ -210,7 +207,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
           orderId: Joi.string(),
           contract: Joi.string().lowercase().pattern(regex.address),
           tokenId: Joi.string().lowercase().pattern(regex.number),
-          quantity: Joi.number().unsafe().description("Can be higher than 1 if erc1155"),
+          quantity: Joi.number().unsafe(),
           source: Joi.string().allow("", null),
           currency: Joi.string().lowercase().pattern(regex.address),
           currencySymbol: Joi.string().optional(),
@@ -225,6 +222,12 @@ export const getExecuteBuyV7Options: RouteOptions = {
             .items(JoiExecuteFee)
             .description("Can be marketplace fees or royalties"),
           feesOnTop: Joi.array().items(JoiExecuteFee).description("Can be referral fees."),
+        })
+      ),
+      maxQuantites: Joi.array().items(
+        Joi.object({
+          itemIndex: Joi.number().required(),
+          maxQuantity: Joi.string().pattern(regex.number).allow(null),
         })
       ),
     }).label(`getExecuteBuy${version.toUpperCase()}Response`),
@@ -253,7 +256,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
       let path: {
         orderId: string;
         contract: string;
-        tokenId: string;
+        tokenId?: string;
         quantity: number;
         source: string | null;
         currency: string;
@@ -304,7 +307,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
         token: {
           kind: "erc721" | "erc1155";
           contract: string;
-          tokenId: string;
+          tokenId?: string;
           quantity?: number;
         }
       ) => {
@@ -328,7 +331,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
           }
 
           // Fetch the price corresponding to the order's index per pool
-          const price = priceList[poolPrices[poolId].length];
+          const price = priceList[Math.min(poolPrices[poolId].length, priceList.length - 1)];
           // Save the latest price per pool
           poolPrices[poolId].push(price);
           // Override the order's price
@@ -344,11 +347,11 @@ export const getExecuteBuyV7Options: RouteOptions = {
 
         if (order.kind !== "mint") {
           // Decrement the maker's available NFT balance
-          const key = getMakerBalancesKey(order.maker, token.contract, token.tokenId);
+          const key = getMakerBalancesKey(order.maker, token.contract, token.tokenId!);
           if (!makerBalances[key]) {
             makerBalances[key] = await commonHelpers.getNftBalance(
               token.contract,
-              token.tokenId,
+              token.tokenId!,
               order.maker
             );
           }
@@ -428,7 +431,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
               {
                 kind: token.kind,
                 contract: token.contract,
-                tokenId: token.tokenId,
+                tokenId: token.tokenId!,
                 amount: token.quantity,
                 isFlagged: Boolean(flaggedResult.is_flagged),
               }
@@ -452,7 +455,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
         exclusions?: {
           orderId: string;
         }[];
-        fillType?: "trade" | "mint";
+        fillType?: "trade" | "mint" | "preferMint";
         originalItemIndex?: number;
       }[] = payload.items;
 
@@ -462,10 +465,22 @@ export const getExecuteBuyV7Options: RouteOptions = {
         txData: TxData;
       }[] = [];
 
+      // Keep track of the maximum quantity available per item
+      // (only relevant when the below `preview` field is true)
+      const maxQuantities: {
+        itemIndex: number;
+        maxQuantity: string | null;
+      }[] = [];
+      const preview = payload.onlyPath && payload.partial && items.every((i) => !i.quantity);
+
       for (let i = 0; i < items.length; i++) {
         const item = items[i];
         const itemIndex =
           items[i].originalItemIndex !== undefined ? items[i].originalItemIndex! : i;
+
+        if (!item.quantity) {
+          item.quantity = 1;
+        }
 
         // Scenario 1: fill via `rawOrder`
         if (item.rawOrder) {
@@ -502,6 +517,14 @@ export const getExecuteBuyV7Options: RouteOptions = {
                 tokenId: order.data.tokenId,
               }
             );
+
+            if (preview) {
+              // Blur only supports ERC721 listings so max quantity is always 1
+              maxQuantities.push({
+                itemIndex,
+                maxQuantity: "1",
+              });
+            }
           } else {
             const response = await inject({
               method: "POST",
@@ -639,13 +662,22 @@ export const getExecuteBuyV7Options: RouteOptions = {
               quantity: item.quantity,
             }
           );
+
+          if (preview) {
+            // The max quantity is the quantity still fillable on the order
+            maxQuantities.push({
+              itemIndex,
+              maxQuantity: result.quantity_remaining,
+            });
+          }
         }
 
         // Scenario 3: fill via `collection`
         if (item.collection) {
           const tokenId = item.token ? item.token.split(":")[1] : undefined;
 
-          if (!item.fillType || item.fillType === "mint") {
+          let mintAvailable = false;
+          if (item.fillType === "mint" || item.fillType === "preferMint") {
             // Fetch any open mints on the collection which the taker is elligible for
             const openMints = await mints.getCollectionMints(item.collection, {
               status: "open",
@@ -656,14 +688,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
                 const collectionData = await idb.one(
                   `
                     SELECT
-                      contracts.kind AS token_kind,
-                      (
-                        SELECT
-                          MAX(tokens.token_id) + 1
-                        FROM tokens
-                        WHERE tokens.contract = collections.contract
-                          AND tokens.collection_id = collections.id
-                      ) AS next_token_id
+                      contracts.kind AS token_kind
                     FROM collections
                     JOIN contracts
                       ON collections.contract = contracts.address
@@ -712,12 +737,21 @@ export const getExecuteBuyV7Options: RouteOptions = {
                       {
                         kind: collectionData.token_kind,
                         contract: mint.contract,
-                        tokenId: tokenId ?? collectionData.next_token_id,
+                        tokenId,
                         quantity: quantityAvailable,
                       }
                     );
 
-                    item.quantity -= quantityAvailable;
+                    if (preview) {
+                      // The max quantity is the amount mintable on the collection
+                      maxQuantities.push({
+                        itemIndex,
+                        maxQuantity: amountMintable ? amountMintable.toString() : null,
+                      });
+                    }
+
+                    mintAvailable = true;
+                    break;
                   }
                 }
               }
@@ -725,7 +759,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
           }
 
           if (item.quantity > 0) {
-            if (!item.fillType || item.fillType === "trade") {
+            if (item.fillType === "trade" || (item.fillType === "preferMint" && !mintAvailable)) {
               if (tokenId) {
                 items.push({
                   token: `${item.collection}:${tokenId}`,
@@ -776,6 +810,31 @@ export const getExecuteBuyV7Options: RouteOptions = {
                   }
                 );
 
+                if (preview) {
+                  // The max quantity is the total number of tokens which can be bought from the collection
+                  maxQuantities.push({
+                    itemIndex: itemIndex,
+                    maxQuantity: await idb
+                      .one(
+                        `
+                          SELECT
+                            count(*) AS on_sale_count
+                          FROM tokens
+                          WHERE tokens.collection_id = $/collection/
+                            AND ${
+                              payload.normalizeRoyalties
+                                ? "tokens.normalized_floor_sell_id"
+                                : "tokens.floor_sell_id"
+                            } IS NOT NULL
+                        `,
+                        {
+                          collection: item.collection,
+                        }
+                      )
+                      .then((r) => String(r.on_sale_count)),
+                  });
+                }
+
                 // Add each retrieved token as a new item so that it will get
                 // processed by the next pipeline of the same API rather than
                 // building something custom for it.
@@ -814,6 +873,9 @@ export const getExecuteBuyV7Options: RouteOptions = {
 
           // Only one of `exactOrderSource` and `preferredOrderSource` will be set
           const sourceDomain = item.exactOrderSource || item.preferredOrderSource;
+
+          // Keep track of the max fillable quantity
+          let maxQuantity = bn(0);
 
           // Fetch all matching orders sorted by price
           const orderResults = await idb.manyOrNone(
@@ -884,7 +946,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
             }
 
             // Stop if we filled the total quantity
-            if (quantityToFill <= 0) {
+            if (quantityToFill <= 0 && !preview) {
               break;
             }
 
@@ -929,6 +991,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
                 quantity: Math.min(quantityToFill, availableQuantity),
               }
             );
+            maxQuantity = maxQuantity.add(availableQuantity);
 
             // Update the quantity to fill with the current order's available quantity
             quantityToFill -= availableQuantity;
@@ -943,6 +1006,15 @@ export const getExecuteBuyV7Options: RouteOptions = {
               } else {
                 throw getExecuteError("Unable to fill requested quantity");
               }
+            }
+          }
+
+          if (preview) {
+            if (!maxQuantities.find((m) => m.itemIndex === itemIndex)) {
+              maxQuantities.push({
+                itemIndex,
+                maxQuantity: maxQuantity.toString(),
+              });
             }
           }
         }
@@ -1052,7 +1124,10 @@ export const getExecuteBuyV7Options: RouteOptions = {
       }
 
       if (payload.onlyPath) {
-        return { path };
+        return {
+          path,
+          maxQuantites: preview ? maxQuantities : undefined,
+        };
       }
 
       // Set up generic filling steps
