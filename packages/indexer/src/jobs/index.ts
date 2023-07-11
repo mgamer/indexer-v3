@@ -12,7 +12,6 @@ import "@/jobs/events-sync";
 import "@/jobs/oracle";
 import "@/jobs/order-updates";
 import "@/jobs/orderbook";
-import "@/jobs/sources";
 import "@/jobs/update-attribute";
 import "@/jobs/websocket-events";
 import "@/jobs/metrics";
