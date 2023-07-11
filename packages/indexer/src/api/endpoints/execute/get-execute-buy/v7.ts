@@ -700,7 +700,8 @@ export const getExecuteBuyV7Options: RouteOptions = {
                 );
                 if (collectionData) {
                   const amountMintable = await mints.getAmountMintableByWallet(mint, payload.taker);
-                  const quantityAvailable = bn(
+
+                  let quantityToMint = bn(
                     amountMintable
                       ? amountMintable.lt(item.quantity)
                         ? amountMintable
@@ -708,11 +709,18 @@ export const getExecuteBuyV7Options: RouteOptions = {
                       : item.quantity
                   ).toNumber();
 
-                  if (quantityAvailable > 0) {
+                  // If minting by collection was request but the current mint is tied to a token,
+                  // only mint a single quantity of the current token in order to mimick the logic
+                  // of buying by collection (where we choose as many token ids as the quantity)
+                  if (!tokenId && mint.tokenId) {
+                    quantityToMint = Math.min(quantityToMint, 1);
+                  }
+
+                  if (quantityToMint > 0) {
                     const { txData, price } = await generateCollectionMintTxData(
                       mint,
                       payload.taker,
-                      quantityAvailable
+                      quantityToMint
                     );
 
                     const orderId = `mint:${item.collection}`;
@@ -738,7 +746,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
                         kind: collectionData.token_kind,
                         contract: mint.contract,
                         tokenId,
-                        quantity: quantityAvailable,
+                        quantity: quantityToMint,
                       }
                     );
 
@@ -750,8 +758,8 @@ export const getExecuteBuyV7Options: RouteOptions = {
                       });
                     }
 
+                    item.quantity -= quantityToMint;
                     mintAvailable = true;
-                    break;
                   }
                 }
               }
