@@ -2981,6 +2981,11 @@ export class Router {
           break;
         }
 
+        case "payment-processor": {
+          module = this.contracts.paymentProcessorModule;
+          break;
+        }
+
         default: {
           continue;
         }
@@ -3752,6 +3757,39 @@ export class Router {
 
           success[detail.orderId] = true;
 
+          break;
+        }
+
+        case "payment-processor": {
+          const order = detail.order as Sdk.PaymentProcessor.Order;
+          const module = this.contracts.paymentProcessorModule;
+
+          const takerOrder = order.buildMatching({
+            taker: module.address,
+            takerMasterNonce: "0",
+            tokenId: order.params.collectionLevelOffer ? detail.tokenId : undefined,
+          });
+          const matchedOrder = order.getMatchedOrder(takerOrder);
+
+          executionsWithDetails.push({
+            detail,
+            execution: {
+              module: module.address,
+              data: module.interface.encodeFunctionData("acceptOffers", [
+                [matchedOrder],
+                [order.params],
+                {
+                  fillTo: taker,
+                  refundTo: taker,
+                  revertIfIncomplete: Boolean(!options?.partial),
+                },
+                fees,
+              ]),
+              value: 0,
+            },
+          });
+
+          success[detail.orderId] = true;
           break;
         }
       }
