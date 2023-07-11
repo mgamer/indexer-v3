@@ -53,11 +53,13 @@ describe("[ReservoirV6_0_1] - PaymentProcessor offers", () => {
     await weth.deposit(buyer, price);
 
     // Approve the exchange contract for the buyer
-    await weth.approve(buyer,Sdk.PaymentProcessor.Addresses.Exchange[chainId]);
+    await weth.approve(buyer, Sdk.PaymentProcessor.Addresses.Exchange[chainId]);
 
     // Mint erc721 to seller
     await erc721.connect(seller).mint(tokenId);
-    await erc721.connect(seller).transferFrom(seller.address, paymentProcessorModule.address, tokenId);
+    await erc721
+      .connect(seller)
+      .transferFrom(seller.address, paymentProcessorModule.address, tokenId);
 
     const nft = new Common.Helpers.Erc721(ethers.provider, erc721.address);
 
@@ -72,20 +74,20 @@ describe("[ReservoirV6_0_1] - PaymentProcessor offers", () => {
 
     const builder = new Sdk.PaymentProcessor.Builders.SingleToken(chainId);
     const orderParameters = {
-        protocol: 0,
-        sellerAcceptedOffer: true,
-        marketplace: constants.AddressZero,
-        marketplaceFeeNumerator: "0",
-        maxRoyaltyFeeNumerator: "0",
-        trader: buyer.address,
-        tokenAddress: erc721.address,
-        tokenId: tokenId,
-        amount: "1",
-        price: price,
-        expiration: (blockTime + 60 * 60).toString(),
-        nonce: "0",
-        coin: Common.Addresses.Weth[chainId],
-        masterNonce: buyerMasterNonce,
+      protocol: 0,
+      sellerAcceptedOffer: true,
+      marketplace: constants.AddressZero,
+      marketplaceFeeNumerator: "0",
+      maxRoyaltyFeeNumerator: "0",
+      trader: buyer.address,
+      tokenAddress: erc721.address,
+      tokenId: tokenId,
+      amount: "1",
+      price: price,
+      expiration: (blockTime + 60 * 60).toString(),
+      nonce: "0",
+      coin: Common.Addresses.Weth[chainId],
+      masterNonce: buyerMasterNonce,
     };
 
     // Build sell order
@@ -93,8 +95,8 @@ describe("[ReservoirV6_0_1] - PaymentProcessor offers", () => {
     await buyOrder.sign(buyer);
 
     const sellOrder = buyOrder.buildMatching({
-        taker: paymentProcessorModule.address,
-        takerMasterNonce: "0",
+      taker: paymentProcessorModule.address,
+      takerMasterNonce: "0",
     });
 
     buyOrder.checkSignature();
@@ -111,10 +113,7 @@ describe("[ReservoirV6_0_1] - PaymentProcessor offers", () => {
         revertIfIncomplete: true,
         amount: price,
       },
-      [],
-      {
-        gasLimit: 1000000
-      }
+      []
     );
 
     const sellerBalanceBefore = await weth.getBalance(seller.address);
@@ -136,11 +135,13 @@ describe("[ReservoirV6_0_1] - PaymentProcessor offers", () => {
     await weth.deposit(buyer, price);
 
     // Approve the exchange contract for the buyer
-    await weth.approve(buyer,Sdk.PaymentProcessor.Addresses.Exchange[chainId]);
+    await weth.approve(buyer, Sdk.PaymentProcessor.Addresses.Exchange[chainId]);
 
     // Mint erc721 to seller
     await erc721.connect(seller).mint(tokenId);
-    await erc721.connect(seller).transferFrom(seller.address, paymentProcessorModule.address, tokenId);
+    await erc721
+      .connect(seller)
+      .transferFrom(seller.address, paymentProcessorModule.address, tokenId);
 
     const nft = new Common.Helpers.Erc721(ethers.provider, erc721.address);
 
@@ -155,20 +156,20 @@ describe("[ReservoirV6_0_1] - PaymentProcessor offers", () => {
 
     const builder = new Sdk.PaymentProcessor.Builders.ContractWide(chainId);
     const orderParameters = {
-        protocol: 0,
-        collectionLevelOffer: true,
-        marketplace: constants.AddressZero,
-        marketplaceFeeNumerator: "0",
-        maxRoyaltyFeeNumerator: "0",
-        trader: buyer.address,
-        tokenAddress: erc721.address,
-        // tokenId: tokenId,
-        amount: "1",
-        price: price,
-        expiration: (blockTime + 60 * 60).toString(),
-        nonce: "0",
-        coin: Common.Addresses.Weth[chainId],
-        masterNonce: buyerMasterNonce,
+      protocol: 0,
+      collectionLevelOffer: true,
+      marketplace: constants.AddressZero,
+      marketplaceFeeNumerator: "0",
+      maxRoyaltyFeeNumerator: "0",
+      trader: buyer.address,
+      tokenAddress: erc721.address,
+      // tokenId: tokenId,
+      amount: "1",
+      price: price,
+      expiration: (blockTime + 60 * 60).toString(),
+      nonce: "0",
+      coin: Common.Addresses.Weth[chainId],
+      masterNonce: buyerMasterNonce,
     };
 
     // Build sell order
@@ -176,9 +177,9 @@ describe("[ReservoirV6_0_1] - PaymentProcessor offers", () => {
     await buyOrder.sign(buyer);
 
     const sellOrder = buyOrder.buildMatching({
-        taker: paymentProcessorModule.address,
-        takerMasterNonce: "0",
-        tokenId: tokenId
+      taker: paymentProcessorModule.address,
+      takerMasterNonce: "0",
+      tokenId: tokenId,
     });
 
     buyOrder.checkSignature();
@@ -193,15 +194,12 @@ describe("[ReservoirV6_0_1] - PaymentProcessor offers", () => {
         revertIfIncomplete: true,
         amount: price,
       },
-      [],
-      {
-        gasLimit: 1000000
-      }
+      []
     );
 
     const receiveAmount = await weth.getBalance(seller.address);
     const ownerAfter = await nft.getOwner(tokenId);
- 
+
     expect(receiveAmount).to.gte(price);
     expect(ownerAfter).to.eq(buyer.address);
   });
@@ -219,10 +217,12 @@ describe("[ReservoirV6_0_1] - PaymentProcessor offers", () => {
 
     // Approve the exchange contract for the buyer
     await weth.approve(buyer, Sdk.PaymentProcessor.Addresses.Exchange[chainId]);
-   
+
     // Mint erc1155 to seller
     await erc1155.connect(seller).mintMany(tokenId, amount);
-    await erc1155.connect(seller).transferFrom(seller.address, paymentProcessorModule.address, tokenId, amount, "0x0");
+    await erc1155
+      .connect(seller)
+      .safeTransferFrom(seller.address, paymentProcessorModule.address, tokenId, amount, "0x00");
 
     const nft = new Common.Helpers.Erc1155(ethers.provider, erc1155.address);
 
@@ -237,20 +237,20 @@ describe("[ReservoirV6_0_1] - PaymentProcessor offers", () => {
 
     const builder = new Sdk.PaymentProcessor.Builders.SingleToken(chainId);
     const orderParameters = {
-        protocol: 1,
-        sellerAcceptedOffer: true,
-        marketplace: constants.AddressZero,
-        marketplaceFeeNumerator: "0",
-        maxRoyaltyFeeNumerator: "0",
-        trader: buyer.address,
-        tokenAddress: erc1155.address,
-        tokenId: tokenId,
-        amount: amount,
-        price: price.mul(amount),
-        expiration: (blockTime + 60 * 60).toString(),
-        nonce: "0",
-        coin: Common.Addresses.Weth[chainId],
-        masterNonce: buyerMasterNonce,
+      protocol: 1,
+      sellerAcceptedOffer: true,
+      marketplace: constants.AddressZero,
+      marketplaceFeeNumerator: "0",
+      maxRoyaltyFeeNumerator: "0",
+      trader: buyer.address,
+      tokenAddress: erc1155.address,
+      tokenId: tokenId,
+      amount: amount,
+      price: price.mul(amount),
+      expiration: (blockTime + 60 * 60).toString(),
+      nonce: "0",
+      coin: Common.Addresses.Weth[chainId],
+      masterNonce: buyerMasterNonce,
     };
 
     // Build sell order
@@ -274,10 +274,7 @@ describe("[ReservoirV6_0_1] - PaymentProcessor offers", () => {
         revertIfIncomplete: true,
         amount: price.mul(amount),
       },
-      [],
-      { 
-        gasLimit: 1000000
-     }
+      []
     );
 
     const buyerNftBalanceAfter = await nft.getBalance(buyer.address, tokenId);
@@ -286,5 +283,4 @@ describe("[ReservoirV6_0_1] - PaymentProcessor offers", () => {
     expect(receiveAmount).to.gte(price.mul(amount));
     expect(buyerNftBalanceAfter).to.eq(amount);
   });
-
 });
