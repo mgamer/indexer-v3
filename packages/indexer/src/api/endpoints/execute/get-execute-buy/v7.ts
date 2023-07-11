@@ -8,15 +8,14 @@ import { TxData } from "@reservoir0x/sdk/dist/utils";
 import { PermitHandler, PermitWithTransfers } from "@reservoir0x/sdk/dist/router/v6/permit";
 import { FillListingsResult, ListingDetails } from "@reservoir0x/sdk/dist/router/v6/types";
 import axios from "axios";
-import _ from "lodash";
 import Joi from "joi";
 
 import { inject } from "@/api/index";
 import { idb } from "@/common/db";
 import { logger } from "@/common/logger";
-import { JoiExecuteFee, JoiOrderDepth } from "@/common/joi";
+import { JoiExecuteFee } from "@/common/joi";
 import { baseProvider } from "@/common/provider";
-import { bn, formatEth, formatPrice, fromBuffer, now, regex, toBuffer } from "@/common/utils";
+import { bn, formatPrice, fromBuffer, now, regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { ApiKeyManager } from "@/models/api-keys";
 import { Sources } from "@/models/sources";
@@ -127,9 +126,6 @@ export const getExecuteBuyV7Options: RouteOptions = {
       onlyPath: Joi.boolean()
         .default(false)
         .description("If true, only the path will be returned."),
-      preview: Joi.string()
-        .valid("depth")
-        .description("When set, returns a preview of the fill (without actually filling)."),
       forceRouter: Joi.boolean().description(
         "If true, all fills will be executed through the router (where possible)"
       ),
@@ -231,12 +227,6 @@ export const getExecuteBuyV7Options: RouteOptions = {
           feesOnTop: Joi.array().items(JoiExecuteFee).description("Can be referral fees."),
         })
       ),
-      preview: Joi.array().items(
-        Joi.object({
-          itemIndex: Joi.number().required(),
-          depth: JoiOrderDepth,
-        })
-      ),
     }).label(`getExecuteBuy${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(`get-execute-buy-${version}-handler`, `Wrong response schema: ${error}`);
@@ -280,12 +270,6 @@ export const getExecuteBuyV7Options: RouteOptions = {
         builtInFees: ExecuteFee[];
         feesOnTop: ExecuteFee[];
       }[] = [];
-      const depthPreview: {
-        [itemIndex: number]: {
-          price: number;
-          quantity: number;
-        }[];
-      } = {};
 
       // Keep track of dynamically-priced orders (eg. from pools like Sudoswap and NFTX)
       const poolPrices: { [pool: string]: string[] } = {};
@@ -322,8 +306,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
           contract: string;
           tokenId: string;
           quantity?: number;
-        },
-        itemIndex: number
+        }
       ) => {
         // Handle dynamically-priced orders
         if (["sudoswap", "sudoswap-v2", "collectionxyz", "nftx"].includes(order.kind)) {
@@ -415,17 +398,6 @@ export const getExecuteBuyV7Options: RouteOptions = {
           ],
         });
 
-        const precisionDecimals = 4;
-        const scale = (value: number) => Number(value.toFixed(precisionDecimals));
-
-        if (!depthPreview[itemIndex]) {
-          depthPreview[itemIndex] = [];
-        }
-        depthPreview[itemIndex].push({
-          price: scale(formatEth(order.nativePrice)),
-          quantity,
-        });
-
         if (order.kind !== "mint") {
           const flaggedResult = await idb.oneOrNone(
             `
@@ -495,13 +467,6 @@ export const getExecuteBuyV7Options: RouteOptions = {
         const itemIndex =
           items[i].originalItemIndex !== undefined ? items[i].originalItemIndex! : i;
 
-        // When requesting the preview, force partial filling and a high enough
-        // quantity for each token in order to cover most practical use-cases
-        if (payload.preview === "depth") {
-          payload.partial = true;
-          item.quantity = 50;
-        }
-
         // Scenario 1: fill via `rawOrder`
         if (item.rawOrder) {
           const order = item.rawOrder;
@@ -535,8 +500,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
                 kind: "erc721",
                 contract: order.data.contract,
                 tokenId: order.data.tokenId,
-              },
-              itemIndex
+              }
             );
           } else {
             const response = await inject({
@@ -673,16 +637,20 @@ export const getExecuteBuyV7Options: RouteOptions = {
               contract: fromBuffer(result.contract),
               tokenId: result.token_id,
               quantity: item.quantity,
-            },
-            itemIndex
+            }
           );
         }
 
         // Scenario 3: fill via `collection`
         if (item.collection) {
+          const tokenId = item.token ? item.token.split(":")[1] : undefined;
+
           if (!item.fillType || item.fillType === "mint") {
             // Fetch any open mints on the collection which the taker is elligible for
-            const openMints = await mints.getCollectionMints(item.collection, { status: "open" });
+            const openMints = await mints.getCollectionMints(item.collection, {
+              status: "open",
+              tokenId,
+            });
             for (const mint of openMints) {
               if (!payload.currency || mint.currency === payload.currency) {
                 const collectionData = await idb.one(
@@ -715,41 +683,42 @@ export const getExecuteBuyV7Options: RouteOptions = {
                       : item.quantity
                   ).toNumber();
 
-                  const { txData, price } = await generateCollectionMintTxData(
-                    mint,
-                    payload.taker,
-                    quantityAvailable
-                  );
+                  if (quantityAvailable > 0) {
+                    const { txData, price } = await generateCollectionMintTxData(
+                      mint,
+                      payload.taker,
+                      quantityAvailable
+                    );
 
-                  const orderId = `mint:${item.collection}`;
-                  mintTxs.push({
-                    orderId,
-                    txData,
-                  });
+                    const orderId = `mint:${item.collection}`;
+                    mintTxs.push({
+                      orderId,
+                      txData,
+                    });
 
-                  await addToPath(
-                    {
-                      id: orderId,
-                      kind: "mint",
-                      maker: mint.contract,
-                      nativePrice: price,
-                      price: price,
-                      sourceId: null,
-                      currency: mint.currency,
-                      rawData: {},
-                      builtInFees: [],
-                      additionalFees: [],
-                    },
-                    {
-                      kind: collectionData.token_kind,
-                      contract: mint.contract,
-                      tokenId: collectionData.next_token_id,
-                      quantity: quantityAvailable,
-                    },
-                    itemIndex
-                  );
+                    await addToPath(
+                      {
+                        id: orderId,
+                        kind: "mint",
+                        maker: mint.contract,
+                        nativePrice: price,
+                        price: price,
+                        sourceId: null,
+                        currency: mint.currency,
+                        rawData: {},
+                        builtInFees: [],
+                        additionalFees: [],
+                      },
+                      {
+                        kind: collectionData.token_kind,
+                        contract: mint.contract,
+                        tokenId: tokenId ?? collectionData.next_token_id,
+                        quantity: quantityAvailable,
+                      }
+                    );
 
-                  item.quantity -= quantityAvailable;
+                    item.quantity -= quantityAvailable;
+                  }
                 }
               }
             }
@@ -757,64 +726,72 @@ export const getExecuteBuyV7Options: RouteOptions = {
 
           if (item.quantity > 0) {
             if (!item.fillType || item.fillType === "trade") {
-              // Filtering by collection on the `orders` table is inefficient, so what we
-              // do here is select the cheapest tokens from the `tokens` table and filter
-              // out the ones that aren't fillable. For this to work we fetch more tokens
-              // than we need, so we can filter out the ones that aren't fillable and not
-              // end up with too few tokens.
-
-              const redundancyFactor = 5;
-              const tokenResults = await idb.manyOrNone(
-                `
-                  WITH x AS (
-                    SELECT
-                      tokens.contract,
-                      tokens.token_id,
-                      ${
-                        payload.normalizeRoyalties
-                          ? "tokens.normalized_floor_sell_id"
-                          : "tokens.floor_sell_id"
-                      } AS order_id
-                    FROM tokens
-                    WHERE tokens.collection_id = $/collection/
-                    ORDER BY ${
-                      payload.normalizeRoyalties
-                        ? "tokens.normalized_floor_sell_value"
-                        : "tokens.floor_sell_value"
-                    }
-                    LIMIT $/quantity/ * ${redundancyFactor}
-                  )
-                  SELECT
-                    x.contract,
-                    x.token_id
-                  FROM x
-                  JOIN orders
-                    ON x.order_id = orders.id
-                  WHERE orders.fillability_status = 'fillable'
-                    AND orders.approval_status = 'approved'
-                  LIMIT $/quantity/
-                `,
-                {
-                  collection: item.collection,
-                  quantity: item.quantity,
-                }
-              );
-
-              // Add each retrieved token as a new item so that it will get
-              // processed by the next pipeline of the same API rather than
-              // building something custom for it.
-
-              for (const t of tokenResults) {
+              if (tokenId) {
                 items.push({
-                  token: `${fromBuffer(t.contract)}:${t.token_id}`,
-                  quantity: 1,
+                  token: `${item.collection}:${tokenId}`,
+                  quantity: item.quantity,
                   originalItemIndex: itemIndex,
                 });
-              }
+              } else {
+                // Filtering by collection on the `orders` table is inefficient, so what we
+                // do here is select the cheapest tokens from the `tokens` table and filter
+                // out the ones that aren't fillable. For this to work we fetch more tokens
+                // than we need, so we can filter out the ones that aren't fillable and not
+                // end up with too few tokens.
 
-              if (tokenResults.length < item.quantity) {
-                if (!payload.partial) {
-                  throw getExecuteError("Unable to fill requested quantity");
+                const redundancyFactor = 5;
+                const tokenResults = await idb.manyOrNone(
+                  `
+                    WITH x AS (
+                      SELECT
+                        tokens.contract,
+                        tokens.token_id,
+                        ${
+                          payload.normalizeRoyalties
+                            ? "tokens.normalized_floor_sell_id"
+                            : "tokens.floor_sell_id"
+                        } AS order_id
+                      FROM tokens
+                      WHERE tokens.collection_id = $/collection/
+                      ORDER BY ${
+                        payload.normalizeRoyalties
+                          ? "tokens.normalized_floor_sell_value"
+                          : "tokens.floor_sell_value"
+                      }
+                      LIMIT $/quantity/ * ${redundancyFactor}
+                    )
+                    SELECT
+                      x.contract,
+                      x.token_id
+                    FROM x
+                    JOIN orders
+                      ON x.order_id = orders.id
+                    WHERE orders.fillability_status = 'fillable'
+                      AND orders.approval_status = 'approved'
+                    LIMIT $/quantity/
+                  `,
+                  {
+                    collection: item.collection,
+                    quantity: item.quantity,
+                  }
+                );
+
+                // Add each retrieved token as a new item so that it will get
+                // processed by the next pipeline of the same API rather than
+                // building something custom for it.
+
+                for (const t of tokenResults) {
+                  items.push({
+                    token: `${fromBuffer(t.contract)}:${t.token_id}`,
+                    quantity: 1,
+                    originalItemIndex: itemIndex,
+                  });
+                }
+
+                if (tokenResults.length < item.quantity) {
+                  if (!payload.partial) {
+                    throw getExecuteError("Unable to fill requested quantity");
+                  }
                 }
               }
             } else {
@@ -950,8 +927,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
                 contract,
                 tokenId,
                 quantity: Math.min(quantityToFill, availableQuantity),
-              },
-              itemIndex
+              }
             );
 
             // Update the quantity to fill with the current order's available quantity
@@ -970,33 +946,6 @@ export const getExecuteBuyV7Options: RouteOptions = {
             }
           }
         }
-      }
-
-      if (payload.preview === "depth") {
-        return {
-          preview: Object.entries(depthPreview).map(([itemIndex, depth]) => ({
-            itemIndex: Number(itemIndex),
-            depth: _.orderBy(
-              [
-                ..._.reduce(
-                  depth,
-                  (aggregate, value) => {
-                    const currentQuantity = aggregate.get(value.price);
-                    if (currentQuantity) {
-                      aggregate.set(value.price, currentQuantity + value.quantity);
-                    } else {
-                      aggregate.set(value.price, value.quantity);
-                    }
-                    return aggregate;
-                  },
-                  new Map<number, number>()
-                ).entries(),
-              ].map(([price, quantity]) => ({ price, quantity })),
-              ["price"],
-              ["asc"]
-            ),
-          })),
-        };
       }
 
       if (!path.length) {
