@@ -715,41 +715,43 @@ export const getExecuteBuyV7Options: RouteOptions = {
                       : item.quantity
                   ).toNumber();
 
-                  const { txData, price } = await generateCollectionMintTxData(
-                    mint,
-                    payload.taker,
-                    quantityAvailable
-                  );
+                  if (quantityAvailable > 0) {
+                    const { txData, price } = await generateCollectionMintTxData(
+                      mint,
+                      payload.taker,
+                      quantityAvailable
+                    );
 
-                  const orderId = `mint:${item.collection}`;
-                  mintTxs.push({
-                    orderId,
-                    txData,
-                  });
+                    const orderId = `mint:${item.collection}`;
+                    mintTxs.push({
+                      orderId,
+                      txData,
+                    });
 
-                  await addToPath(
-                    {
-                      id: orderId,
-                      kind: "mint",
-                      maker: mint.contract,
-                      nativePrice: price,
-                      price: price,
-                      sourceId: null,
-                      currency: mint.currency,
-                      rawData: {},
-                      builtInFees: [],
-                      additionalFees: [],
-                    },
-                    {
-                      kind: collectionData.token_kind,
-                      contract: mint.contract,
-                      tokenId: collectionData.next_token_id,
-                      quantity: quantityAvailable,
-                    },
-                    itemIndex
-                  );
+                    await addToPath(
+                      {
+                        id: orderId,
+                        kind: "mint",
+                        maker: mint.contract,
+                        nativePrice: price,
+                        price: price,
+                        sourceId: null,
+                        currency: mint.currency,
+                        rawData: {},
+                        builtInFees: [],
+                        additionalFees: [],
+                      },
+                      {
+                        kind: collectionData.token_kind,
+                        contract: mint.contract,
+                        tokenId: collectionData.next_token_id,
+                        quantity: quantityAvailable,
+                      },
+                      itemIndex
+                    );
 
-                  item.quantity -= quantityAvailable;
+                    item.quantity -= quantityAvailable;
+                  }
                 }
               }
             }
