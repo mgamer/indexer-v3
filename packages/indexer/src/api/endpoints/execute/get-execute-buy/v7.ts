@@ -224,7 +224,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
           feesOnTop: Joi.array().items(JoiExecuteFee).description("Can be referral fees."),
         })
       ),
-      maxQuantites: Joi.array().items(
+      maxQuantities: Joi.array().items(
         Joi.object({
           itemIndex: Joi.number().required(),
           maxQuantity: Joi.string().pattern(regex.number).allow(null),
@@ -1215,7 +1215,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
       if (payload.onlyPath) {
         return {
           path,
-          maxQuantites: preview ? maxQuantities : undefined,
+          maxQuantities: preview ? maxQuantities : undefined,
         };
       }
 
