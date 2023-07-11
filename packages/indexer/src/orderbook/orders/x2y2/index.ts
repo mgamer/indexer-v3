@@ -372,7 +372,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         { name: "missing_royalties", mod: ":json" },
         "normalized_value",
         "currency_normalized_value",
-        // "originated_at",
+        "originated_at",
       ],
       {
         table: "orders",
