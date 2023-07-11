@@ -626,18 +626,6 @@ const _search = async (
 
     return results;
   } catch (error) {
-    logger.error(
-      "elasticsearch-activities",
-      JSON.stringify({
-        topic: "_search",
-        data: {
-          params: JSON.stringify(params),
-        },
-        error,
-        retries,
-      })
-    );
-
     const retryableError =
       (error as any).meta?.meta?.aborted ||
       (error as any).meta?.body?.error?.caused_by?.type === "node_not_connected_exception";
@@ -675,6 +663,19 @@ const _search = async (
       );
 
       throw new Error("Could not perform search.");
+    } else {
+      logger.error(
+        "elasticsearch-activities",
+        JSON.stringify({
+          topic: "_search",
+          message: "Unexpected error.",
+          data: {
+            params: JSON.stringify(params),
+          },
+          error,
+          retries,
+        })
+      );
     }
 
     throw error;
@@ -802,78 +803,109 @@ export const updateActivitiesMissingCollection = async (
   };
 
   try {
-    const response = await elasticsearch.updateByQuery({
-      index: INDEX_NAME,
-      conflicts: "proceed",
-      refresh: true,
-      max_docs: 1000,
-      scroll: "1m",
+    const pendingUpdateActivities = await _search({
       // This is needed due to issue with elasticsearch DSL.
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
-      query: query,
-      script: {
-        source:
-          "ctx._source.collection = [:]; ctx._source.collection.id = params.collection_id; ctx._source.collection.name = params.collection_name; ctx._source.collection.image = params.collection_image;",
-        params: {
-          collection_id: collection.id,
-          collection_name: collection.name,
-          collection_image: collection.metadata?.imageUrl,
-        },
-      },
+      query,
+      size: 1000,
     });
 
-    if (response?.failures?.length) {
+    if (pendingUpdateActivities.length) {
+      const bulkParams = {
+        body: pendingUpdateActivities.flatMap((activity) => [
+          { update: { _index: INDEX_NAME, _id: activity.id, retry_on_conflict: 3 } },
+          {
+            script: {
+              source:
+                "ctx._source.collection = [:]; ctx._source.collection.id = params.collection_id; ctx._source.collection.name = params.collection_name; ctx._source.collection.image = params.collection_image;",
+              params: {
+                collection_id: collection.id,
+                collection_name: collection.name,
+                collection_image: collection.metadata?.imageUrl,
+              },
+            },
+          },
+        ]),
+      };
+
+      const response = await elasticsearch.bulk(bulkParams);
+
+      if (response?.errors) {
+        logger.error(
+          "elasticsearch-activities",
+          JSON.stringify({
+            topic: "updateActivitiesMissingCollectionV2",
+            message: `Errors in response`,
+            data: {
+              contract,
+              tokenId,
+              collection,
+            },
+            bulkParams,
+            response,
+          })
+        );
+
+        keepGoing = true;
+      } else {
+        keepGoing = pendingUpdateActivities.length === 1000;
+
+        logger.info(
+          "elasticsearch-activities",
+          JSON.stringify({
+            topic: "updateActivitiesMissingCollectionV2",
+            message: `Success`,
+            data: {
+              contract,
+              tokenId,
+              collection,
+            },
+            bulkParams,
+            response,
+            keepGoing,
+          })
+        );
+      }
+    }
+  } catch (error) {
+    const retryableError =
+      (error as any).meta?.meta?.aborted ||
+      (error as any).meta?.body?.error?.caused_by?.type === "node_not_connected_exception";
+
+    if (retryableError) {
+      logger.warn(
+        "elasticsearch-activities",
+        JSON.stringify({
+          topic: "updateActivitiesMissingCollectionV2",
+          message: `Unexpected error`,
+          data: {
+            contract,
+            tokenId,
+            collection,
+          },
+          error,
+        })
+      );
+
+      keepGoing = true;
+    } else {
       logger.error(
         "elasticsearch-activities",
         JSON.stringify({
-          topic: "updateActivitiesMissingCollection",
+          topic: "updateActivitiesMissingCollectionV2",
+          message: `Unexpected error`,
           data: {
             contract,
             tokenId,
             collection,
           },
-          query: JSON.stringify(query),
-          response,
-          keepGoing,
+          error,
         })
-      );
-    } else {
-      keepGoing = Boolean(
-        (response?.version_conflicts ?? 0) > 0 || (response?.updated ?? 0) === 1000
       );
 
-      logger.info(
-        "elasticsearch-activities",
-        JSON.stringify({
-          topic: "updateActivitiesMissingCollection",
-          data: {
-            contract,
-            tokenId,
-            collection,
-          },
-          query: JSON.stringify(query),
-          response,
-          keepGoing,
-        })
-      );
+      throw error;
     }
-  } catch (error) {
-    logger.error(
-      "elasticsearch-activities",
-      JSON.stringify({
-        topic: "updateActivitiesMissingCollection",
-        data: {
-          contract,
-          tokenId,
-          collection,
-          keepGoing,
-        },
-        error,
-      })
-    );
-
-    throw error;
   }
 
   return keepGoing;
@@ -947,7 +979,6 @@ export const updateActivitiesCollection = async (
             },
             bulkParams,
             response,
-            keepGoing,
           })
         );
 
@@ -974,24 +1005,45 @@ export const updateActivitiesCollection = async (
       }
     }
   } catch (error) {
-    logger.error(
-      "elasticsearch-activities",
-      JSON.stringify({
-        topic: "updateActivitiesCollectionV2",
-        message: `Unexpected error`,
-        data: {
-          contract,
-          tokenId,
-          newCollection,
-          oldCollectionId,
-        },
-        query: JSON.stringify(query),
-        error,
-        keepGoing,
-      })
-    );
+    const retryableError =
+      (error as any).meta?.meta?.aborted ||
+      (error as any).meta?.body?.error?.caused_by?.type === "node_not_connected_exception";
 
-    throw error;
+    if (retryableError) {
+      logger.warn(
+        "elasticsearch-activities",
+        JSON.stringify({
+          topic: "updateActivitiesCollectionV2",
+          message: `Unexpected error`,
+          data: {
+            contract,
+            tokenId,
+            newCollection,
+            oldCollectionId,
+          },
+          error,
+        })
+      );
+
+      keepGoing = true;
+    } else {
+      logger.error(
+        "elasticsearch-activities",
+        JSON.stringify({
+          topic: "updateActivitiesCollectionV2",
+          message: `Unexpected error`,
+          data: {
+            contract,
+            tokenId,
+            newCollection,
+            oldCollectionId,
+          },
+          error,
+        })
+      );
+
+      throw error;
+    }
   }
 
   return keepGoing;
@@ -1134,7 +1186,6 @@ export const updateActivitiesTokenMetadata = async (
             },
             bulkParams,
             response,
-            keepGoing,
           })
         );
 
@@ -1160,23 +1211,43 @@ export const updateActivitiesTokenMetadata = async (
       }
     }
   } catch (error) {
-    logger.error(
-      "elasticsearch-activities",
-      JSON.stringify({
-        topic: "updateActivitiesTokenMetadataV2",
-        message: `Unexpected error`,
-        data: {
-          contract,
-          tokenId,
-          tokenData,
-        },
-        query: JSON.stringify(query),
-        error,
-        keepGoing,
-      })
-    );
+    const retryableError =
+      (error as any).meta?.meta?.aborted ||
+      (error as any).meta?.body?.error?.caused_by?.type === "node_not_connected_exception";
 
-    throw error;
+    if (retryableError) {
+      logger.warn(
+        "elasticsearch-activities",
+        JSON.stringify({
+          topic: "updateActivitiesTokenMetadataV2",
+          message: `Unexpected error`,
+          data: {
+            contract,
+            tokenId,
+            tokenData,
+          },
+          error,
+        })
+      );
+
+      keepGoing = true;
+    } else {
+      logger.error(
+        "elasticsearch-activities",
+        JSON.stringify({
+          topic: "updateActivitiesTokenMetadataV2",
+          message: `Unexpected error`,
+          data: {
+            contract,
+            tokenId,
+            tokenData,
+          },
+          error,
+        })
+      );
+
+      throw error;
+    }
   }
 
   return keepGoing;
@@ -1315,22 +1386,41 @@ export const updateActivitiesCollectionMetadata = async (
       }
     }
   } catch (error) {
-    logger.error(
-      "elasticsearch-activities",
-      JSON.stringify({
-        topic: "updateActivitiesCollectionMetadataV2",
-        message: `Unexpected error`,
-        data: {
-          collectionId,
-          collectionData,
-        },
-        query: JSON.stringify(query),
-        error,
-        keepGoing,
-      })
-    );
+    const retryableError =
+      (error as any).meta?.meta?.aborted ||
+      (error as any).meta?.body?.error?.caused_by?.type === "node_not_connected_exception";
 
-    throw error;
+    if (retryableError) {
+      logger.warn(
+        "elasticsearch-activities",
+        JSON.stringify({
+          topic: "updateActivitiesCollectionMetadataV2",
+          message: `Unexpected error`,
+          data: {
+            collectionId,
+            collectionData,
+          },
+          error,
+        })
+      );
+
+      keepGoing = true;
+    } else {
+      logger.error(
+        "elasticsearch-activities",
+        JSON.stringify({
+          topic: "updateActivitiesCollectionMetadataV2",
+          message: `Unexpected error`,
+          data: {
+            collectionId,
+            collectionData,
+          },
+          error,
+        })
+      );
+
+      throw error;
+    }
   }
 
   return keepGoing;
