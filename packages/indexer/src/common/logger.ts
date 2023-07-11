@@ -25,7 +25,7 @@ const log = (level: "error" | "info" | "warn" | "debug") => {
 
   const logger = createLogger({
     exitOnError: false,
-    level: "debug",
+    level: "info",
     format: format.combine(
       format.timestamp({
         format: "YYYY-MM-DD HH:mm:ss",

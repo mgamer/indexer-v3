@@ -44,13 +44,6 @@ import * as zeroExV4BuyAttribute from "@/orderbook/orders/zeroex-v4/build/buy/at
 import * as zeroExV4BuyToken from "@/orderbook/orders/zeroex-v4/build/buy/token";
 import * as zeroExV4BuyCollection from "@/orderbook/orders/zeroex-v4/build/buy/collection";
 
-// Universe
-import * as universeBuyToken from "@/orderbook/orders/universe/build/buy/token";
-
-// Flow
-import * as flowBuyToken from "@/orderbook/orders/flow/build/buy/token";
-import * as flowBuyCollection from "@/orderbook/orders/flow/build/buy/collection";
-
 const version = "v5";
 
 export const getExecuteBidV5Options: RouteOptions = {
@@ -104,9 +97,7 @@ export const getExecuteBidV5Options: RouteOptions = {
           attributeValue: Joi.string().description(
             "Bid on a particular attribute value. This is case sensitive. Example: `Teddy (#33)`"
           ),
-          quantity: Joi.number().description(
-            "Quantity of tokens user is buying. Only compatible with ERC1155 tokens. Example: `5`"
-          ),
+          quantity: Joi.number().description("Quantity of tokens to bid on."),
           weiPrice: Joi.string()
             .pattern(regex.number)
             .description("Amount bidder is willing to offer in wei. Example: `1000000000000000000`")
@@ -121,8 +112,6 @@ export const getExecuteBidV5Options: RouteOptions = {
               "looks-rare",
               "looks-rare-v2",
               "x2y2",
-              "universe",
-              "flow",
               "alienswap"
             )
             .default("seaport-v1.5")
@@ -148,7 +137,7 @@ export const getExecuteBidV5Options: RouteOptions = {
             }),
           }).description("Additional options."),
           orderbook: Joi.string()
-            .valid("blur", "reservoir", "opensea", "looks-rare", "x2y2", "universe", "flow")
+            .valid("blur", "reservoir", "opensea", "looks-rare", "x2y2")
             .default("reservoir")
             .description("Orderbook where order is placed. Example: `Reservoir`"),
           orderbookApiKey: Joi.string().description("Optional API key for the target orderbook"),
@@ -566,6 +555,11 @@ export const getExecuteBidV5Options: RouteOptions = {
                     authToken: blurAuth!.accessToken,
                   });
 
+                  const id = new Sdk.BlurV2.Order(config.chainId, {
+                    ...signData.value,
+                    nonce: signData.value.nonce.hex ?? signData.value.nonce,
+                  }).hash();
+
                   steps[3].items.push({
                     status: "incomplete",
                     data: {
@@ -585,6 +579,7 @@ export const getExecuteBidV5Options: RouteOptions = {
                               order: {
                                 kind: "blur",
                                 data: {
+                                  id,
                                   maker,
                                   marketplaceData,
                                   authToken: blurAuth!.accessToken,
@@ -603,10 +598,7 @@ export const getExecuteBidV5Options: RouteOptions = {
                     orderIndexes: [i],
                   });
 
-                  addExecution(
-                    new Sdk.Blur.Order(config.chainId, signData.value).hash(),
-                    params.quantity
-                  );
+                  addExecution(id, params.quantity);
                 }
 
                 break;
@@ -1014,101 +1006,6 @@ export const getExecuteBidV5Options: RouteOptions = {
                 break;
               }
 
-              case "flow": {
-                if (!["flow"].includes(params.orderbook)) {
-                  return errors.push({
-                    message: "Unsupported orderbook",
-                    orderIndex: i,
-                  });
-                }
-
-                if (params.fees?.length) {
-                  return errors.push({
-                    message: "Custom fees not supported",
-                    orderIndex: i,
-                  });
-                }
-                if (params.excludeFlaggedTokens) {
-                  return errors.push({
-                    message: "Flagged tokens exclusion not supported",
-                    orderIndex: i,
-                  });
-                }
-
-                let order: Sdk.Flow.Order;
-                if (token) {
-                  const [contract, tokenId] = token.split(":");
-                  order = await flowBuyToken.build({
-                    ...params,
-                    orderbook: "flow",
-                    maker,
-                    contract,
-                    tokenId,
-                  });
-                } else if (collection) {
-                  order = await flowBuyCollection.build({
-                    ...params,
-                    orderbook: "flow",
-                    maker,
-                    contract: collection,
-                  });
-                } else {
-                  return errors.push({
-                    message: "Only token and collection bids are supported",
-                    orderIndex: i,
-                  });
-                }
-
-                let approvalTx: TxData | undefined;
-                const wethApproval = await currency.getAllowance(
-                  maker,
-                  Sdk.Flow.Addresses.Exchange[config.chainId]
-                );
-
-                if (
-                  bn(wethApproval).lt(bn(order.params.startPrice)) ||
-                  bn(wethApproval).lt(bn(order.params.endPrice))
-                ) {
-                  approvalTx = currency.approveTransaction(
-                    maker,
-                    Sdk.Flow.Addresses.Exchange[config.chainId]
-                  );
-                }
-
-                steps[2].items.push({
-                  status: !approvalTx ? "complete" : "incomplete",
-                  data: approvalTx,
-                  orderIndexes: [i],
-                });
-                steps[3].items.push({
-                  status: "incomplete",
-                  data: {
-                    sign: order.getSignatureData(),
-                    post: {
-                      endpoint: "/order/v3",
-                      method: "POST",
-                      body: {
-                        order: {
-                          kind: "flow",
-                          data: {
-                            ...order.params,
-                          },
-                        },
-                        tokenSetId,
-                        collection,
-                        orderbook: params.orderbook,
-                        source,
-                      },
-                    },
-                  },
-                  orderIndexes: [i],
-                });
-
-                addExecution(order.hash(), params.quantity);
-
-                break;
-              }
-
               case "x2y2": {
                 if (!["x2y2"].includes(params.orderbook)) {
                   return errors.push({
@@ -1200,76 +1097,6 @@ export const getExecuteBidV5Options: RouteOptions = {
                   new Sdk.X2Y2.Exchange(config.chainId, "").hash(order),
                   params.quantity
                 );
-
-                break;
-              }
-
-              case "universe": {
-                if (!["reservoir"].includes(params.orderbook)) {
-                  return errors.push({
-                    message: "Unsupported orderbook",
-                    orderIndex: i,
-                  });
-                }
-
-                let order: Sdk.Universe.Order;
-                if (token) {
-                  const [contract, tokenId] = token.split(":");
-                  order = await universeBuyToken.build({
-                    ...params,
-                    maker,
-                    contract,
-                    tokenId,
-                  });
-                } else {
-                  return errors.push({
-                    message: "Only token bids are supported",
-                    orderIndex: i,
-                  });
-                }
-
-                // Check the maker's approval
-                let approvalTx: TxData | undefined;
-                const wethApproval = await currency.getAllowance(
-                  maker,
-                  Sdk.Universe.Addresses.Exchange[config.chainId]
-                );
-                if (bn(wethApproval).lt(bn(order.params.make.value))) {
-                  approvalTx = currency.approveTransaction(
-                    maker,
-                    Sdk.Universe.Addresses.Exchange[config.chainId]
-                  );
-                }
-
-                steps[2].items.push({
-                  status: !approvalTx ? "complete" : "incomplete",
-                  data: approvalTx,
-                  orderIndexes: [i],
-                });
-                steps[3].items.push({
-                  status: "incomplete",
-                  data: {
-                    sign: order.getSignatureData(),
-                    post: {
-                      endpoint: "/order/v3",
-                      method: "POST",
-                      body: {
-                        order: {
-                          kind: "universe",
-                          data: {
-                            ...order.params,
-                          },
-                        },
-                        orderbook: params.orderbook,
-                        orderbookApiKey: params.orderbookApiKey,
-                        source,
-                      },
-                    },
-                  },
-                  orderIndexes: [i],
-                });
-
-                addExecution(order.hashOrderKey(), params.quantity);
 
                 break;
               }

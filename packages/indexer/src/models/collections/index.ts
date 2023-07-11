@@ -16,18 +16,11 @@ import * as marketplaceBlacklist from "@/utils/marketplace-blacklists";
 import * as marketplaceFees from "@/utils/marketplace-fees";
 import MetadataApi from "@/utils/metadata-api";
 import * as royalties from "@/utils/royalties";
-import {
-  getOpenCollectionMints,
-  simulateAndUpdateCollectionMint,
-} from "@/utils/mints/collection-mints";
-
-import * as orderUpdatesById from "@/jobs/order-updates/by-id-queue";
-import * as refreshActivitiesCollectionMetadata from "@/jobs/elasticsearch/refresh-activities-collection-metadata";
 
 import { recalcOwnerCountQueueJob } from "@/jobs/collection-updates/recalc-owner-count-queue-job";
 import { fetchCollectionMetadataJob } from "@/jobs/token-updates/fetch-collection-metadata-job";
-
-import { config } from "@/config/index";
+import { refreshActivitiesCollectionMetadataJob } from "@/jobs/activities/refresh-activities-collection-metadata-job";
+import { orderUpdatesByIdJob } from "@/jobs/order-updates/order-updates-by-id-job";
 
 export class Collections {
   public static async getById(collectionId: string, readReplica = false) {
@@ -97,13 +90,6 @@ export class Collections {
   }
 
   public static async updateCollectionCache(contract: string, tokenId: string, community = "") {
-    if (isNaN(Number(tokenId))) {
-      logger.error(
-        "updateCollectionCache",
-        `Invalid tokenId. contract=${contract}, tokenId=${tokenId}, community=${community}`
-      );
-    }
-
     const collectionExists = await idb.oneOrNone(
       `
         SELECT
@@ -119,6 +105,7 @@ export class Collections {
         tokenId,
       }
     );
+
     if (!collectionExists) {
       // If the collection doesn't exist, push a job to retrieve it
       await fetchCollectionMetadataJob.addToQueue([
@@ -133,7 +120,20 @@ export class Collections {
 
     const collection = await MetadataApi.getCollectionMetadata(contract, tokenId, community);
 
-    if (collection.metadata == null) {
+    if (collection.isCopyrightInfringement) {
+      collection.name = collection.id;
+      collection.metadata = null;
+
+      logger.info(
+        "updateCollectionCache",
+        JSON.stringify({
+          topic: "debugCopyrightInfringement",
+          message: "Collection is a copyright infringement",
+          contract,
+          collection,
+        })
+      );
+    } else if (collection.metadata == null) {
       const collectionResult = await Collections.getById(collection.id);
 
       if (collectionResult?.metadata != null) {
@@ -164,6 +164,7 @@ export class Collections {
         name = $/name/,
         slug = $/slug/,
         token_count = $/tokenCount/,
+        payment_tokens = $/paymentTokens/,
         updated_at = now()
       WHERE id = $/id/
       RETURNING (
@@ -183,16 +184,22 @@ export class Collections {
       name: collection.name,
       slug: collection.slug,
       tokenCount,
+      paymentTokens: collection.paymentTokens ? { opensea: collection.paymentTokens } : {},
     };
 
     const result = await idb.oneOrNone(query, values);
 
     if (
-      config.doElasticsearchWork &&
-      (result?.old_metadata.name != collection.name ||
-        result?.old_metadata.metadata.imageUrl != (collection.metadata as any)?.imageUrl)
+      result?.old_metadata.name != collection.name ||
+      result?.old_metadata.metadata.imageUrl != (collection.metadata as any)?.imageUrl
     ) {
-      await refreshActivitiesCollectionMetadata.addToQueue(collection.id);
+      await refreshActivitiesCollectionMetadataJob.addToQueue({
+        collectionId: collection.id,
+        collectionUpdateData: {
+          name: collection.name || null,
+          image: (collection.metadata as any)?.imageUrl || null,
+        },
+      });
     }
 
     // Refresh all royalty specs and the default royalties
@@ -212,12 +219,6 @@ export class Collections {
 
     // Refresh any contract blacklists
     await marketplaceBlacklist.updateMarketplaceBlacklist(collection.contract);
-
-    // Simulate any open mints
-    const collectionMints = await getOpenCollectionMints(collection.id);
-    await Promise.all(
-      collectionMints.map((collectionMint) => simulateAndUpdateCollectionMint(collectionMint))
-    );
   }
 
   public static async update(collectionId: string, fields: CollectionsEntityUpdateParams) {
@@ -328,7 +329,7 @@ export class Collections {
 
     if (result) {
       const currentTime = now();
-      await orderUpdatesById.addToQueue(
+      await orderUpdatesByIdJob.addToQueue(
         result.map(({ token_id }) => {
           const tokenSetId = `token:${contract}:${token_id}`;
           return {
@@ -356,7 +357,7 @@ export class Collections {
 
     if (result) {
       const currentTime = now();
-      await orderUpdatesById.addToQueue(
+      await orderUpdatesByIdJob.addToQueue(
         result.map(({ token_id }) => {
           const tokenSetId = `token:${contract}:${token_id}`;
           return {
@@ -383,7 +384,7 @@ export class Collections {
 
     if (tokenSetsResult.length) {
       const currentTime = now();
-      await orderUpdatesById.addToQueue(
+      await orderUpdatesByIdJob.addToQueue(
         tokenSetsResult.map((tokenSet: { id: any }) => ({
           context: `revalidate-buy-${tokenSet.id}-${currentTime}`,
           tokenSetId: tokenSet.id,

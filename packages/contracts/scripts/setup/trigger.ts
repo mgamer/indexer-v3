@@ -94,17 +94,16 @@ export const trigger = {
         Sdk.SeaportBase.Addresses.ConduitController[chainId],
         Sdk.RouterV6.Addresses.Router[chainId],
       ]),
+    PermitProxy: async (chainId: number) =>
+      dv("PermitProxy", "v1", [
+        Sdk.RouterV6.Addresses.Router[chainId],
+        Sdk.Common.Addresses.GelatoRelay1BalanceERC2771[chainId],
+      ]),
     SeaportConduit: async (chainId: number) => {
       const contractName = "SeaportConduit";
       const version = "v1";
 
       try {
-        if (await readDeployment(contractName, version, chainId)) {
-          throw new Error(
-            `Version ${version} of ${contractName} already deployed on chain ${chainId}`
-          );
-        }
-
         const [deployer] = await ethers.getSigners();
 
         const conduitController = new Contract(
@@ -113,6 +112,7 @@ export const trigger = {
             "function getConduit(bytes32 conduitKey) view returns (address conduit, bool exists)",
             "function updateChannel(address conduit, address channel, bool isOpen)",
             "function createConduit(bytes32 conduitKey, address initialOwner)",
+            "function getChannelStatus(address conduit, address channel) view returns (bool)",
           ]),
           deployer
         );
@@ -123,6 +123,16 @@ export const trigger = {
         if (!result.exists) {
           await conduitController.createConduit(conduitKey, DEPLOYER);
           await new Promise((resolve) => setTimeout(resolve, 30000));
+        }
+
+        // Grant ApprovalProxy
+        if (
+          Sdk.RouterV6.Addresses.ApprovalProxy[chainId] &&
+          !(await conduitController.getChannelStatus(
+            result.conduit,
+            Sdk.RouterV6.Addresses.ApprovalProxy[chainId]
+          ))
+        ) {
           await conduitController.updateChannel(
             result.conduit,
             Sdk.RouterV6.Addresses.ApprovalProxy[chainId],
@@ -130,7 +140,24 @@ export const trigger = {
           );
         }
 
-        await writeDeployment(result.conduit, contractName, version, chainId);
+        // Grant Seaport
+        if (
+          Sdk.SeaportV15.Addresses.Exchange[chainId] &&
+          !(await conduitController.getChannelStatus(
+            result.conduit,
+            Sdk.SeaportV15.Addresses.Exchange[chainId]
+          ))
+        ) {
+          await conduitController.updateChannel(
+            result.conduit,
+            Sdk.SeaportV15.Addresses.Exchange[chainId],
+            true
+          );
+        }
+
+        if (!(await readDeployment(contractName, version, chainId))) {
+          await writeDeployment(result.conduit, contractName, version, chainId);
+        }
       } catch (error) {
         console.log(`Failed to deploy ${contractName}: ${error}`);
       }
@@ -212,9 +239,15 @@ export const trigger = {
         Sdk.Sudoswap.Addresses.Router[chainId],
       ]),
     SudoswapV2Module: async (chainId: number) =>
+<<<<<<< HEAD
       dv("SudoswapV2Module", "v2", [DEPLOYER, Sdk.RouterV6.Addresses.Router[chainId]]),
     CaviarV1Module: async (chainId: number) =>
       dv("CaviarV1Module", "v1", [DEPLOYER, Sdk.RouterV6.Addresses.Router[chainId]]),
+=======
+      [1, 5].includes(chainId)
+        ? dv("SudoswapV2Module", "v2", [DEPLOYER, Sdk.RouterV6.Addresses.Router[chainId]])
+        : undefined,
+>>>>>>> 1f7a59c7c84ecc1b23ed8a467f6754f3735cafd8
     SuperRareModule: async (chainId: number) =>
       dv("SuperRareModule", "v1", [
         DEPLOYER,
@@ -253,6 +286,18 @@ export const trigger = {
         DEPLOYER,
         Sdk.RouterV6.Addresses.Router[chainId],
         Sdk.CollectionXyz.Addresses.CollectionRouter[chainId],
+      ]),
+    CryptoPunksModule: async (chainId: number) =>
+      dv("CryptoPunksModule", "v1", [
+        DEPLOYER,
+        Sdk.RouterV6.Addresses.Router[chainId],
+        Sdk.CryptoPunks.Addresses.Exchange[chainId],
+      ]),
+    PaymentProcessorModule: async (chainId: number) =>
+      dv("PaymentProcessorModule", "v1", [
+        DEPLOYER,
+        Sdk.RouterV6.Addresses.Router[chainId],
+        Sdk.PaymentProcessor.Addresses.Exchange[chainId],
       ]),
   },
   // Utilities

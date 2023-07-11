@@ -26,6 +26,7 @@ import {
 import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
 import { Assets, ImageSize } from "@/utils/assets";
+import { CollectionSets } from "@/models/collection-sets";
 
 const version = "v6";
 
@@ -482,8 +483,8 @@ export const getTokensV6Options: RouteOptions = {
       let baseQuery = `
         ${sourceCte}
         SELECT
-          t.contract,
-          t.token_id,
+          t.contract AS t_contract,
+          t.token_id AS t_token_id,
           t.name,
           t.description,
           t.image,
@@ -536,11 +537,16 @@ export const getTokensV6Options: RouteOptions = {
         `;
       }
 
+      let collections: any[] = [];
       if (query.collectionsSetId) {
-        baseQuery += `
-          JOIN collections_sets_collections csc
-            ON t.collection_id = csc.collection_id
-        `;
+        collections = await CollectionSets.getCollectionsIds(query.collectionsSetId);
+
+        if (collections.length > 20) {
+          baseQuery += `
+            JOIN collections_sets_collections csc
+              ON t.collection_id = csc.collection_id
+          `;
+        }
       }
 
       if (query.attributes) {
@@ -650,7 +656,7 @@ export const getTokensV6Options: RouteOptions = {
         conditions.push(`tst.token_set_id = $/tokenSetId/`);
       }
 
-      if (query.collectionsSetId) {
+      if (query.collectionsSetId && collections.length > 20) {
         conditions.push(`csc.collections_set_id = $/collectionsSetId/`);
       }
 
@@ -689,6 +695,7 @@ export const getTokensV6Options: RouteOptions = {
           contArr = splitContinuation(contArr[0]);
         }
         if (
+          query.contract ||
           query.collection ||
           query.attributes ||
           query.tokenSetId ||
@@ -772,52 +779,71 @@ export const getTokensV6Options: RouteOptions = {
 
       // Sorting
 
+      const getSort = function (sortBy: string, union: boolean) {
+        switch (sortBy) {
+          case "rarity": {
+            return ` ORDER BY ${union ? "" : "t."}rarity_rank ${
+              query.sortDirection || "ASC"
+            } NULLS ${nullsPosition}, t_contract ${query.sortDirection || "ASC"}, t_token_id ${
+              query.sortDirection || "ASC"
+            }`;
+          }
+          case "tokenId": {
+            return ` ORDER BY t_contract ${query.sortDirection || "ASC"}, t_token_id ${
+              query.sortDirection || "ASC"
+            }`;
+          }
+          case "floorAskPrice":
+          default: {
+            const sortColumn = query.nativeSource
+              ? `${union ? "" : "s."}floor_sell_value`
+              : query.normalizeRoyalties
+              ? `${union ? "" : "t."}normalized_floor_sell_value`
+              : `${union ? "" : "t."}floor_sell_value`;
+
+            return ` ORDER BY ${sortColumn} ${
+              query.sortDirection || "ASC"
+            } NULLS ${nullsPosition}, t_contract ${query.sortDirection || "ASC"}, t_token_id ${
+              query.sortDirection || "ASC"
+            }`;
+          }
+        }
+      };
+
       // Only allow sorting on floorSell when we filter by collection / attributes / tokenSetId / rarity
       if (
+        query.contract ||
         query.collection ||
         query.attributes ||
         query.tokenSetId ||
         query.rarity ||
-        query.collectionsSetId ||
+        (query.collectionsSetId && collections.length > 20) ||
         query.tokens
       ) {
-        switch (query.sortBy) {
-          case "rarity": {
-            baseQuery += ` ORDER BY t.rarity_rank ${
-              query.sortDirection || "ASC"
-            } NULLS ${nullsPosition}, t.contract ${query.sortDirection || "ASC"}, t.token_id ${
-              query.sortDirection || "ASC"
-            }`;
-            break;
-          }
+        baseQuery += getSort(query.sortBy, false);
+      }
 
-          case "tokenId": {
-            baseQuery += ` ORDER BY t.contract ${query.sortDirection || "ASC"}, t.token_id ${
-              query.sortDirection || "ASC"
-            }`;
-            break;
-          }
+      // Break query into UNION of results for each collectionId for sets up to 20 collections
+      if (query.collectionsSetId && collections.length <= 20) {
+        const collectionsSetQueries = [];
+        const collectionsSetSort = getSort(query.sortBy, true);
 
-          case "floorAskPrice":
-          default: {
-            const sortColumn = query.nativeSource
-              ? "s.floor_sell_value"
-              : query.normalizeRoyalties
-              ? "t.normalized_floor_sell_value"
-              : "t.floor_sell_value";
-
-            baseQuery += ` ORDER BY ${sortColumn} ${
-              query.sortDirection || "ASC"
-            } NULLS ${nullsPosition}, t.contract ${query.sortDirection || "ASC"}, t.token_id ${
-              query.sortDirection || "ASC"
-            }`;
-            break;
-          }
+        for (const i in collections) {
+          (query as any)[`collection${i}`] = collections[i];
+          collectionsSetQueries.push(
+            `(
+              ${baseQuery}
+              ${conditions.length ? `AND ` : `WHERE `} t.collection_id = $/collection${i}/
+              ${collectionsSetSort}
+              LIMIT $/limit/
+            )`
+          );
         }
-      } else if (query.contract) {
-        baseQuery += ` ORDER BY t.contract ${query.sortDirection || "ASC"}, t.token_id ${
-          query.sortDirection || "ASC"
-        }`;
+
+        baseQuery = `
+          ${collectionsSetQueries.join(` UNION ALL `)}
+          ${collectionsSetSort}
+        `;
       }
 
       baseQuery += ` LIMIT $/limit/`;
@@ -854,15 +880,15 @@ export const getTokensV6Options: RouteOptions = {
             FROM orders o
             JOIN token_sets_tokens tst
               ON o.token_set_id = tst.token_set_id
-            WHERE tst.contract = x.contract
-              AND tst.token_id = x.token_id
+            WHERE tst.contract = x.t_contract
+              AND tst.token_id = x.t_token_id
               AND o.side = 'buy'
               AND o.fillability_status = 'fillable'
               AND o.approval_status = 'approved'
               AND EXISTS(
                 SELECT FROM nft_balances nb
-                  WHERE nb.contract = x.contract
-                  AND nb.token_id = x.token_id
+                  WHERE nb.contract = x.t_contract
+                  AND nb.token_id = x.t_token_id
                   AND nb.amount > 0
                   AND nb.owner != o.maker
                   AND (
@@ -895,6 +921,7 @@ export const getTokensV6Options: RouteOptions = {
         // Otherwise continuation string will just be based on the last tokenId. This is because only use sorting
         // when we have collection/attributes
         if (
+          query.contract ||
           query.collection ||
           query.attributes ||
           query.tokenSetId ||
@@ -915,8 +942,8 @@ export const getTokensV6Options: RouteOptions = {
         }
 
         continuation +=
-          (continuation ? "_" : "") + fromBuffer(rawResult[rawResult.length - 1].contract);
-        continuation += "_" + rawResult[rawResult.length - 1].token_id;
+          (continuation ? "_" : "") + fromBuffer(rawResult[rawResult.length - 1].t_contract);
+        continuation += "_" + rawResult[rawResult.length - 1].t_token_id;
 
         continuation = buildContinuation(continuation);
       }
@@ -946,8 +973,8 @@ export const getTokensV6Options: RouteOptions = {
           }
         }
 
-        const contract = fromBuffer(r.contract);
-        const tokenId = r.token_id;
+        const contract = fromBuffer(r.t_contract);
+        const tokenId = r.t_token_id;
 
         const floorSellSource = r.floor_sell_value
           ? sources.get(Number(r.floor_sell_source_id_int), contract, tokenId)

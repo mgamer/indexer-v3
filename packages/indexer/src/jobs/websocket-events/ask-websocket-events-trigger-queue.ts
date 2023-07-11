@@ -39,7 +39,7 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
       const { data } = job.data as EventInfo;
 
       try {
-        const criteriaBuildQuery = Orders.buildCriteriaQuery("orders", "token_set_id", false);
+        const criteriaBuildQuery = Orders.buildCriteriaQuery("orders", "token_set_id", true);
 
         const rawResult = await idb.oneOrNone(
           `
@@ -74,6 +74,7 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
               orders.raw_data,
               orders.created_at,
               orders.updated_at,
+              orders.originated_at,
               (
                 CASE
                   WHEN orders.fillability_status = 'filled' THEN 'filled'
@@ -155,6 +156,7 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
           isDynamic: Boolean(rawResult.dynamic || rawResult.kind === "sudoswap"),
           createdAt: new Date(rawResult.created_at).toISOString(),
           updatedAt: new Date(rawResult.updated_at).toISOString(),
+          originatedAt: new Date(rawResult.originated_at).toISOString(),
           rawData: rawResult.raw_data,
         };
 
@@ -170,6 +172,8 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
           tags: {
             contract: fromBuffer(rawResult.contract),
             source: result.source.domain || "unknown",
+            maker: fromBuffer(rawResult.maker),
+            taker: fromBuffer(rawResult.taker),
           },
           data: result,
           offset: data.offset,

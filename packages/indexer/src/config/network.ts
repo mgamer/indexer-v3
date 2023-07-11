@@ -54,6 +54,15 @@ export const getNetworkName = () => {
     case 999:
       return "zora-testnet";
 
+    case 7777777:
+      return "zora";
+
+    case 43114:
+      return "avalanche";
+
+    case 8453:
+      return "base";
+
     default:
       return "unknown";
   }
@@ -122,6 +131,7 @@ type NetworkSettings = {
   nonSimulatableContracts: string[];
   mintsAsSalesBlacklist: string[];
   mintAddresses: string[];
+  burnAddresses: string[];
   multiCollectionContracts: string[];
   whitelistedCurrencies: Map<string, Currency>;
   supportedBidCurrencies: { [currency: string]: boolean };
@@ -160,6 +170,7 @@ export const getNetworkSettings = (): NetworkSettings => {
     multiCollectionContracts: [],
     mintsAsSalesBlacklist: [],
     mintAddresses: [AddressZero],
+    burnAddresses: [AddressZero, "0x000000000000000000000000000000000000dead"],
     reorgCheckFrequency: [1, 5, 10, 30, 60], // In minutes
     whitelistedCurrencies: new Map<string, Currency>(),
     supportedBidCurrencies: { [Sdk.Common.Addresses.Weth[config.chainId]?.toLowerCase()]: true },
@@ -200,6 +211,7 @@ export const getNetworkSettings = (): NetworkSettings => {
           "0x81c6686fbe1594d599ac86a0d8e81d84a2f9bcf2",
           "0x06d51314d152ca4f88d691f87b40cf3bf453df7c",
           "0x39fdf1b13dd5b86eb8b7fdd50bce4607beae0722",
+          "0x63605e53d422c4f1ac0e01390ac59aaf84c44a51",
         ],
         multiCollectionContracts: [
           // ArtBlocks Contracts
@@ -288,6 +300,15 @@ export const getNetworkSettings = (): NetworkSettings => {
             },
           ],
           [
+            "0x45f93404ae1e4f0411a7f42bc6a5dc395792738d",
+            {
+              contract: "0x45f93404AE1E4f0411a7F42BC6a5Dc395792738D",
+              name: "DEGEN",
+              symbol: "DGEN",
+              decimals: 18,
+            },
+          ],
+          [
             "0x4c7c1ec97279a6f3323eab9ab317202dee7ad922",
             {
               contract: "0x4c7c1ec97279a6f3323eab9ab317202dee7ad922",
@@ -323,6 +344,19 @@ export const getNetworkSettings = (): NetworkSettings => {
               metadata: {
                 image:
                   "https://raw.githubusercontent.com/dappradar/tokens/main/ethereum/0xd2d8d78087d0e43bc4804b6f946674b2ee406b80/logo.png",
+              },
+            },
+          ],
+          [
+            "0xbb4f3ad7a2cf75d8effc4f6d7bd21d95f06165ca",
+            {
+              contract: "0xbb4f3ad7a2cf75d8effc4f6d7bd21d95f06165ca",
+              name: "Sheesh",
+              symbol: "SHS",
+              decimals: 18,
+              metadata: {
+                image:
+                  "https://bafybeic2ukraukxbvs7mn5f5xqnqkr42r5exxjpij4fmw4otiows2zjzbi.ipfs-public.thirdwebcdn.com/Screenshot_2023-06-15_003656.png",
               },
             },
           ],
@@ -364,7 +398,7 @@ export const getNetworkSettings = (): NetworkSettings => {
     case 5: {
       return {
         ...defaultNetworkSettings,
-        backfillBlockBatchSize: 128,
+        backfillBlockBatchSize: 32,
         subDomain: "api-goerli",
         mintsAsSalesBlacklist: [
           ...defaultNetworkSettings.mintsAsSalesBlacklist,
@@ -524,7 +558,7 @@ export const getNetworkSettings = (): NetworkSettings => {
         realtimeSyncFrequencySeconds: 2,
         lastBlockLatency: 8,
         headBlockDelay: 0,
-        backfillBlockBatchSize: 60,
+        backfillBlockBatchSize: 32,
         reorgCheckFrequency: [30],
         subDomain: "api-polygon",
         whitelistedCurrencies: new Map([
@@ -543,6 +577,15 @@ export const getNetworkSettings = (): NetworkSettings => {
               contract: "0x3b45a986621f91eb51be84547fbd9c26d0d46d02",
               name: "Gold Bar Currency",
               symbol: "GXB",
+              decimals: 18,
+            },
+          ],
+          [
+            "0xdbb5da27ffcfebea8799a5832d4607714fc6aba8",
+            {
+              contract: "0xdBb5Da27FFcFeBea8799a5832D4607714fc6aBa8",
+              name: "DEGEN",
+              symbol: "DGEN",
               decimals: 18,
             },
           ],
@@ -599,6 +642,14 @@ export const getNetworkSettings = (): NetworkSettings => {
         lastBlockLatency: 5,
         headBlockDelay: 10,
         subDomain: "api-arbitrum",
+        washTradingExcludedContracts: [
+          // Prohibition Contracts - ArtBlocks Engine
+          "0x47a91457a3a1f700097199fd63c039c4784384ab",
+        ],
+        multiCollectionContracts: [
+          // Prohibition Contracts - ArtBlocks Engine
+          "0x47a91457a3a1f700097199fd63c039c4784384ab",
+        ],
         coingecko: {
           networkId: "arbitrum-one",
         },
@@ -894,6 +945,112 @@ export const getNetworkSettings = (): NetworkSettings => {
         realtimeSyncFrequencySeconds: 5,
         lastBlockLatency: 5,
         subDomain: "api-zora-testnet",
+        onStartup: async () => {
+          // Insert the native currency
+          await Promise.all([
+            idb.none(
+              `
+                INSERT INTO currencies (
+                  contract,
+                  name,
+                  symbol,
+                  decimals,
+                  metadata
+                ) VALUES (
+                  '\\x0000000000000000000000000000000000000000',
+                  'Ether',
+                  'ETH',
+                  18,
+                  '{"coingeckoCurrencyId": "ethereum", "image": "https://assets.coingecko.com/coins/images/279/large/ethereum.png"}'
+                ) ON CONFLICT DO NOTHING
+              `
+            ),
+          ]);
+        },
+      };
+    }
+    // Zora
+    case 7777777: {
+      return {
+        ...defaultNetworkSettings,
+        enableWebSocket: false,
+        realtimeSyncMaxBlockLag: 32,
+        realtimeSyncFrequencySeconds: 5,
+        lastBlockLatency: 5,
+        subDomain: "api-zora",
+        onStartup: async () => {
+          // Insert the native currency
+          await Promise.all([
+            idb.none(
+              `
+                INSERT INTO currencies (
+                  contract,
+                  name,
+                  symbol,
+                  decimals,
+                  metadata
+                ) VALUES (
+                  '\\x0000000000000000000000000000000000000000',
+                  'Ether',
+                  'ETH',
+                  18,
+                  '{"coingeckoCurrencyId": "ethereum", "image": "https://assets.coingecko.com/coins/images/279/large/ethereum.png"}'
+                ) ON CONFLICT DO NOTHING
+              `
+            ),
+          ]);
+        },
+      };
+    }
+    // Avalanche
+    case 43114: {
+      return {
+        ...defaultNetworkSettings,
+        enableWebSocket: false,
+        realtimeSyncMaxBlockLag: 32,
+        realtimeSyncFrequencySeconds: 5,
+        lastBlockLatency: 5,
+        subDomain: "api-avalanche",
+        onStartup: async () => {
+          // Insert the native currency
+          await Promise.all([
+            idb.none(
+              `
+                INSERT INTO currencies (
+                  contract,
+                  name,
+                  symbol,
+                  decimals,
+                  metadata
+                ) VALUES (
+                  '\\x0000000000000000000000000000000000000000',
+                  'Avalanche',
+                  'AVAX',
+                  18,
+                  '{"coingeckoCurrencyId": "avalanche-2", "image": "https://assets.coingecko.com/coins/images/12559/large/Avalanche_Circle_RedWhite_Trans.png"}'
+                ) ON CONFLICT DO NOTHING
+              `
+            ),
+          ]);
+        },
+      };
+    }
+    // Base
+    case 8453: {
+      return {
+        ...defaultNetworkSettings,
+        enableWebSocket: true,
+        realtimeSyncMaxBlockLag: 32,
+        realtimeSyncFrequencySeconds: 5,
+        lastBlockLatency: 5,
+        subDomain: "api-base",
+        elasticsearch: {
+          indexes: {
+            activities: {
+              numberOfShards: 5,
+            },
+          },
+        },
         onStartup: async () => {
           // Insert the native currency
           await Promise.all([

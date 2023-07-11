@@ -11,7 +11,6 @@ export const Eth: ChainIdToAddress = {
   [Network.Gnosis]: AddressZero,
   [Network.Polygon]: AddressZero,
   [Network.Arbitrum]: AddressZero,
-  [Network.Avalanche]: AddressZero,
   [Network.ScrollAlpha]: AddressZero,
   [Network.MantleTestnet]: AddressZero,
   [Network.LineaTestnet]: AddressZero,
@@ -19,6 +18,9 @@ export const Eth: ChainIdToAddress = {
   [Network.Mumbai]: AddressZero,
   [Network.ArbitrumNova]: AddressZero,
   [Network.BaseGoerli]: AddressZero,
+  [Network.Zora]: AddressZero,
+  [Network.Avalanche]: AddressZero,
+  [Network.Base]: AddressZero,
 };
 
 export const Weth: ChainIdToAddress = {
@@ -34,13 +36,15 @@ export const Weth: ChainIdToAddress = {
   // Polygon: Wrapped MATIC
   [Network.Polygon]: "0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270",
   [Network.Mumbai]: "0x9c3c9283d3e44854697cd22d3faa240cfb032889",
-  // Avalanche: Wrapped AVAX
-  [Network.Avalanche]: "0xb31f66aa3c1e785363f0875a1b74e27b85fd66c7",
   [Network.ScrollAlpha]: "0x7160570bb153edd0ea1775ec2b2ac9b65f1ab61b",
   [Network.MantleTestnet]: "0xbaafec4b6ef4f5e0bafa850cbc48364b953efcf9",
   [Network.LineaTestnet]: "0x2c1b868d6596a18e32e61b901e4060c872647b6c",
   [Network.ZoraTestnet]: "0x4200000000000000000000000000000000000006",
+  [Network.Zora]: "0x4200000000000000000000000000000000000006",
   [Network.BaseGoerli]: "0x4200000000000000000000000000000000000006",
+  // Avalanche: Wrapped AVAX
+  [Network.Avalanche]: "0xb31f66aa3c1e785363f0875a1b74e27b85fd66c7",
+  [Network.Base]: "0x4200000000000000000000000000000000000006",
 };
 
 // TODO: Include addresses across all supported chains
@@ -50,6 +54,7 @@ export const Usdc: ChainIdToAddress = {
   [Network.Optimism]: "0x7f5c764cbc14f9669b88837ca1490cca17c31607",
   [Network.Bsc]: "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d",
   [Network.Polygon]: "0x2791bca1f2de4661ed88a30c99a7a9449aa84174",
+  [Network.Mumbai]: "0x0fa8781a83e46826621b3bc094ea2a0212e71b23",
   [Network.Arbitrum]: "0xff970a61a04b1ca14834a43f5de4533ebddb5cc8",
 };
 
@@ -66,6 +71,7 @@ export const RoyaltyEngine: ChainIdToAddress = {
   [Network.Mumbai]: "0x60b433ee91680189deb2c94b0b062ea283f6b4dd",
   [Network.BaseGoerli]: "0x8755310f937528173e7c5a106131d79a3601c9d9",
   [Network.ArbitrumNova]: "0x60b433ee91680189deb2c94b0b062ea283f6b4dd",
+  [Network.Zora]: "0x8755310f937528173e7c5a106131d79a3601c9d9",
 };
 
 export const SwapRouter: ChainIdToAddress = {
@@ -81,4 +87,12 @@ export const Create3Factory: ChainIdToAddress = {
   [Network.EthereumSepolia]: "0x0000000000000a9efe52e741bcb25da0e4438e71",
   [Network.ZoraTestnet]: "0x0000000000000a9efe52e741bcb25da0e4438e71",
   [Network.BaseGoerli]: "0x0000000000000a9efe52e741bcb25da0e4438e71",
+  [Network.Zora]: "0x0000000000000a9efe52e741bcb25da0e4438e71",
+};
+
+export const GelatoRelay1BalanceERC2771: ChainIdToAddress = {
+  [Network.Ethereum]: "0xd8253782c45a12053594b9deb72d8e8ab2fca54c",
+  [Network.EthereumGoerli]: "0xd8253782c45a12053594b9deb72d8e8ab2fca54c",
+  [Network.Polygon]: "0xd8253782c45a12053594b9deb72d8e8ab2fca54c",
+  [Network.Mumbai]: "0xd8253782c45a12053594b9deb72d8e8ab2fca54c",
 };

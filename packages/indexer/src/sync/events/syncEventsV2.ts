@@ -157,10 +157,6 @@ export const extractEventsBatches = (enhancedEvents: EnhancedEvent[]): EventsBat
         data: kindToEvents.get("zora") ?? [],
       },
       {
-        kind: "universe",
-        data: kindToEvents.get("universe") ?? [],
-      },
-      {
         kind: "rarible",
         data: kindToEvents.has("rarible")
           ? [
@@ -195,16 +191,6 @@ export const extractEventsBatches = (enhancedEvents: EnhancedEvent[]): EventsBat
         data: kindToEvents.get("superrare") ?? [],
       },
       {
-        kind: "flow",
-        data: kindToEvents.has("flow")
-          ? [
-              ...kindToEvents.get("flow")!,
-              // To properly validate bids, we need some additional events
-              ...events.filter((e) => e.subKind === "erc20-transfer"),
-            ]
-          : [],
-      },
-      {
         kind: "zeroex-v2",
         data: kindToEvents.get("zeroex-v2") ?? [],
       },
@@ -227,6 +213,22 @@ export const extractEventsBatches = (enhancedEvents: EnhancedEvent[]): EventsBat
       {
         kind: "collectionxyz",
         data: kindToEvents.get("collectionxyz") ?? [],
+      },
+      {
+        kind: "payment-processor",
+        data: kindToEvents.get("payment-processor") ?? [],
+      },
+      {
+        kind: "thirdweb",
+        data: kindToEvents.get("thirdweb") ?? [],
+      },
+      {
+        kind: "seadrop",
+        data: kindToEvents.get("seadrop") ?? [],
+      },
+      {
+        kind: "blur-v2",
+        data: kindToEvents.get("blur-v2") ?? [],
       },
     ];
 
@@ -349,6 +351,11 @@ export const syncEvents = async (block: number) => {
 
     const startProcessLogs = Date.now();
 
+    // const processEventsLatencies = await Promise.all(
+    //   eventsBatches.map(async (eventsBatch) => {
+    //     await processEventsBatchV2([eventsBatch]);
+    //   })
+    // );
     const processEventsLatencies = await processEventsBatchV2(eventsBatches);
 
     const endProcessLogs = Date.now();
@@ -407,25 +414,23 @@ export const unsyncEvents = async (block: number, blockHash: string) => {
 export const checkForOrphanedBlock = async (block: number) => {
   // Check if block number / hash does not match up (orphaned block)
   const upstreamBlockHash = (await baseProvider.getBlock(block)).hash.toLowerCase();
-  const blockInDB = await blocksModel.getBlocks(block);
 
-  if (!blockInDB.length) {
-    return;
-  }
+  // get block from db that has number = block and hash != upstreamBlockHash
+  const orphanedBlock = await blocksModel.getBlockWithNumber(block, upstreamBlockHash);
 
-  if (blockInDB[0].hash !== upstreamBlockHash) {
-    logger.info(
-      "events-sync-catchup",
-      `Detected orphaned block ${block} with hash ${blockInDB[0].hash} (upstream hash ${upstreamBlockHash})`
-    );
+  if (!orphanedBlock) return;
 
-    // delete the orphaned block data
-    await unsyncEvents(block, blockInDB[0].hash);
+  logger.info(
+    "events-sync-catchup",
+    `Detected orphaned block ${block} with hash ${orphanedBlock.hash} (upstream hash ${upstreamBlockHash})`
+  );
 
-    // TODO: add block hash to transactions table and delete transactions associated to the orphaned block
-    // await deleteBlockTransactions(block);
+  // delete the orphaned block data
+  await unsyncEvents(block, orphanedBlock.hash);
 
-    // delete the block data
-    await blocksModel.deleteBlock(block, blockInDB[0].hash);
-  }
+  // TODO: add block hash to transactions table and delete transactions associated to the orphaned block
+  // await deleteBlockTransactions(block);
+
+  // delete the block data
+  await blocksModel.deleteBlock(block, orphanedBlock.hash);
 };

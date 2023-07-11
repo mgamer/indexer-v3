@@ -46,16 +46,15 @@ export const postOrderV4Options: RouteOptions = {
                   "seaport-v1.4",
                   "seaport-v1.5",
                   "x2y2",
-                  "universe",
-                  "flow",
-                  "alienswap"
+                  "alienswap",
+                  "payment-processor"
                 )
                 .required(),
               data: Joi.object().required(),
             }),
             orderbook: Joi.string()
               .lowercase()
-              .valid("blur", "reservoir", "opensea", "looks-rare", "x2y2", "universe", "flow")
+              .valid("blur", "reservoir", "opensea", "looks-rare", "x2y2")
               .default("reservoir"),
             orderbookApiKey: Joi.string().description("Optional API key for the target orderbook"),
             attribute: Joi.object({
@@ -261,7 +260,7 @@ export const postOrderV4Options: RouteOptions = {
               let orderId: string;
 
               if (orderbook === "blur") {
-                orderId = order.data.id;
+                orderId = order.data.id ?? null;
 
                 crossPostingOrder = await crossPostingOrdersModel.saveOrder({
                   orderId,
@@ -558,72 +557,25 @@ export const postOrderV4Options: RouteOptions = {
               });
             }
 
-            case "universe": {
-              if (!["reservoir"].includes(orderbook)) {
+            case "payment-processor": {
+              if (orderbook !== "reservoir") {
                 return results.push({ message: "unsupported-orderbook", orderIndex: i });
               }
 
-              const orderId = new Sdk.Universe.Order(config.chainId, order.data).hashOrderKey();
+              const orderInfo: orders.paymentProcessor.OrderInfo = {
+                orderParams: order.data,
+                metadata: {
+                  schema,
+                  source,
+                },
+              };
 
-              const crossPostingOrder = await crossPostingOrdersModel.saveOrder({
-                orderId,
-                kind: order.kind,
-                orderbook,
-                source,
-                schema,
-                rawData: order.data,
-              } as crossPostingOrdersModel.CrossPostingOrder);
-
-              await postOrderExternal.addToQueue({
-                crossPostingOrderId: crossPostingOrder.id,
-                orderId,
-                orderData: order.data,
-                orderSchema: schema,
-                orderbook: "universe",
-                orderbookApiKey,
-              });
-
-              return results.push({
-                message: "success",
-                orderIndex: i,
-                orderId,
-                crossPostingOrderId: crossPostingOrder.id,
-                crossPostingOrderStatus: crossPostingOrder.status,
-              });
-            }
-
-            case "flow": {
-              if (!["flow"].includes(orderbook)) {
-                return results.push({ message: "unsupported-orderbook", orderIndex: i });
+              const [result] = await orders.paymentProcessor.save([orderInfo]);
+              if (["already-exists", "success"].includes(result.status)) {
+                return results.push({ message: "success", orderIndex: i, orderId: result.id });
+              } else {
+                return results.push({ message: result.status, orderIndex: i, orderId: result.id });
               }
-
-              const orderId = new Sdk.Flow.Order(config.chainId, order.data).hash();
-
-              const crossPostingOrder = await crossPostingOrdersModel.saveOrder({
-                orderId,
-                kind: order.kind,
-                orderbook,
-                source,
-                schema,
-                rawData: order.data,
-              } as crossPostingOrdersModel.CrossPostingOrder);
-
-              await postOrderExternal.addToQueue({
-                crossPostingOrderId: crossPostingOrder.id,
-                orderId,
-                orderData: order.data,
-                orderSchema: schema,
-                orderbook: "flow",
-                orderbookApiKey,
-              });
-
-              return results.push({
-                message: "success",
-                orderIndex: i,
-                orderId,
-                crossPostingOrderId: crossPostingOrder.id,
-                crossPostingOrderStatus: crossPostingOrder.status,
-              });
             }
           }
         })

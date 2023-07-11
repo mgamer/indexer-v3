@@ -10,7 +10,6 @@ import * as collectionxyz from "@/events-sync/data/collectionxyz";
 import * as cryptoPunks from "@/events-sync/data/cryptopunks";
 import * as decentraland from "@/events-sync/data/decentraland";
 import * as element from "@/events-sync/data/element";
-import * as flow from "@/events-sync/data/flow";
 import * as foundation from "@/events-sync/data/foundation";
 import * as looksRare from "@/events-sync/data/looks-rare";
 import * as manifold from "@/events-sync/data/manifold";
@@ -28,7 +27,6 @@ import * as sudoswap from "@/events-sync/data/sudoswap";
 import * as superrare from "@/events-sync/data/superrare";
 import * as tofu from "@/events-sync/data/tofu";
 import * as treasure from "@/events-sync/data/treasure";
-import * as universe from "@/events-sync/data/universe";
 import * as wyvernV2 from "@/events-sync/data/wyvern-v2";
 import * as wyvernV23 from "@/events-sync/data/wyvern-v2.3";
 import * as x2y2 from "@/events-sync/data/x2y2";
@@ -40,6 +38,10 @@ import * as looksRareV2 from "@/events-sync/data/looks-rare-v2";
 import * as blend from "@/events-sync/data/blend";
 import * as sudoswapV2 from "@/events-sync/data/sudoswap-v2";
 import * as caviarV1 from "@/events-sync/data/caviar-v1";
+import * as paymentProcessor from "@/events-sync/data/payment-processor";
+import * as thirdweb from "@/events-sync/data/thirdweb";
+import * as blurV2 from "@/events-sync/data/blur-v2";
+import * as seadrop from "@/events-sync/data/seadrop";
 
 // All events we're syncing should have an associated `EventData`
 // entry which dictates the way the event will be parsed and then
@@ -57,7 +59,6 @@ export type EventKind =
   | "cryptopunks"
   | "decentraland"
   | "element"
-  | "flow"
   | "foundation"
   | "looks-rare"
   | "manifold"
@@ -72,7 +73,6 @@ export type EventKind =
   | "superrare"
   | "tofu"
   | "treasure"
-  | "universe"
   | "wyvern"
   | "x2y2"
   | "zeroex-v2"
@@ -82,7 +82,11 @@ export type EventKind =
   | "looks-rare-v2"
   | "blend"
   | "sudoswap-v2"
-  | "caviar-v1";
+  | "caviar-v1"
+  | "payment-processor"
+  | "thirdweb"
+  | "seadrop"
+  | "blur-v2";
 
 // Event sub-kind in each of the above protocol/standard
 export type EventSubKind =
@@ -118,6 +122,7 @@ export type EventSubKind =
   | "seaport-order-filled"
   | "seaport-counter-incremented"
   | "seaport-order-validated"
+  | "seaport-channel-updated"
   | "seaport-v1.4-order-cancelled"
   | "seaport-v1.4-order-filled"
   | "seaport-v1.4-orders-matched"
@@ -154,6 +159,7 @@ export type EventSubKind =
   | "zora-ask-price-updated"
   | "zora-ask-cancelled"
   | "zora-auction-ended"
+  | "zora-sales-config-changed"
   | "nouns-auction-settled"
   | "cryptopunks-punk-offered"
   | "cryptopunks-punk-no-longer-for-sale"
@@ -168,8 +174,6 @@ export type EventSubKind =
   | "sudoswap-spot-price-update"
   | "sudoswap-delta-update"
   | "sudoswap-new-pair"
-  | "universe-match"
-  | "universe-cancel"
   | "nftx-redeemed"
   | "nftx-minted"
   | "nftx-user-staked"
@@ -184,10 +188,6 @@ export type EventSubKind =
   | "nftx-enable-mint-updated"
   | "nftx-enable-target-redeem-updated"
   | "blur-orders-matched"
-  | "flow-match-order-fulfilled"
-  | "flow-take-order-fulfilled"
-  | "flow-cancel-all-orders"
-  | "flow-cancel-multiple-orders"
   | "blur-order-cancelled"
   | "blur-nonce-incremented"
   | "manifold-purchase"
@@ -195,6 +195,8 @@ export type EventSubKind =
   | "manifold-cancel"
   | "manifold-finalize"
   | "manifold-accept"
+  | "manifold-claim-initialized"
+  | "manifold-claim-updated"
   | "tofu-inventory-update"
   | "decentraland-sale"
   | "nft-trader-swap"
@@ -260,7 +262,19 @@ export type EventSubKind =
   | "caviar-v1-buy"
   | "caviar-v1-sell"
   | "caviar-v1-wrap"
-  | "caviar-v1-unwrap";
+  | "caviar-v1-unwrap"
+  | "payment-processor-buy-single-listing"
+  | "payment-processor-master-nonce-invalidated"
+  | "payment-processor-nonce-invalidated"
+  | "payment-processor-sweep-collection-erc1155"
+  | "payment-processor-sweep-collection-erc721"
+  | "thirdweb-claim-conditions-updated-erc721"
+  | "thirdweb-claim-conditions-updated-erc1155"
+  | "seadrop-public-drop-updated"
+  | "blur-v2-execution"
+  | "blur-v2-execution-721-packed"
+  | "blur-v2-execution-721-taker-fee-packed"
+  | "blur-v2-execution-721-maker-fee-packed";
 
 export type EventData = {
   kind: EventKind;
@@ -301,6 +315,7 @@ const allEventData = [
   seaport.orderCancelled,
   seaport.orderFulfilled,
   seaport.orderValidated,
+  seaport.channelUpdated,
   seaportV14.counterIncremented,
   seaportV14.orderCancelled,
   seaportV14.orderFulfilled,
@@ -345,6 +360,7 @@ const allEventData = [
   zora.askCancelled,
   zora.askPriceUpdated,
   zora.auctionEnded,
+  zora.salesConfigChanged,
   nouns.auctionSettled,
   cryptoPunks.punkOffered,
   cryptoPunks.punkNoLongerForSale,
@@ -359,8 +375,6 @@ const allEventData = [
   sudoswap.spotPriceUpdate,
   sudoswap.deltaUpdate,
   sudoswap.newPair,
-  universe.match,
-  universe.cancel,
   nftx.minted,
   nftx.redeemed,
   nftx.swapped,
@@ -373,10 +387,6 @@ const allEventData = [
   nftx.enableMintUpdated,
   nftx.enableTargetRedeemUpdated,
   blur.ordersMatched,
-  flow.matchOrderFulfilled,
-  flow.takeOrderFulfilled,
-  flow.cancelAllOrders,
-  flow.cancelMultipleOrders,
   blur.orderCancelled,
   blur.nonceIncremented,
   manifold.modify,
@@ -384,6 +394,8 @@ const allEventData = [
   manifold.purchase,
   manifold.cancel,
   manifold.accept,
+  manifold.claimInitialized,
+  manifold.claimUpdated,
   tofu.inventoryUpdate,
   decentraland.sale,
   nftTrader.swap,
@@ -445,6 +457,18 @@ const allEventData = [
   caviarV1.sell,
   caviarV1.wrap,
   caviarV1.unwrap,
+  paymentProcessor.buySingleListing,
+  paymentProcessor.masterNonceInvalidated,
+  paymentProcessor.nonceInvalidated,
+  paymentProcessor.sweepCollectionERC1155,
+  paymentProcessor.sweepCollectionERC721,
+  thirdweb.claimConditionsUpdatedERC721,
+  thirdweb.claimConditionsUpdatedERC1155,
+  blurV2.execution,
+  blurV2.execution721MakerFeePacked,
+  blurV2.execution721Packed,
+  blurV2.execution721TakerFeePacked,
+  seadrop.publicDropUpdated,
 ];
 
 export const getEventData = (events?: string[]) => {

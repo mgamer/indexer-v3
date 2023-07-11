@@ -13,8 +13,6 @@ export * as sudoswap from "@/orderbook/orders/sudoswap";
 export * as x2y2 from "@/orderbook/orders/x2y2";
 export * as zeroExV4 from "@/orderbook/orders/zeroex-v4";
 export * as zora from "@/orderbook/orders/zora";
-export * as universe from "@/orderbook/orders/universe";
-export * as flow from "@/orderbook/orders/flow";
 export * as blur from "@/orderbook/orders/blur";
 export * as rarible from "@/orderbook/orders/rarible";
 export * as nftx from "@/orderbook/orders/nftx";
@@ -24,6 +22,7 @@ export * as looksRareV2 from "@/orderbook/orders/looks-rare-v2";
 export * as collectionxyz from "@/orderbook/orders/collectionxyz";
 export * as sudoswapV2 from "@/orderbook/orders/sudoswap-v2";
 export * as caviarV1 from "@/orderbook/orders/caviar-v1";
+export * as paymentProcessor from "@/orderbook/orders/payment-processor";
 
 // Imports
 
@@ -62,10 +61,8 @@ export type OrderKind =
   | "mint"
   | "cryptopunks"
   | "sudoswap"
-  | "universe"
   | "nftx"
   | "blur"
-  | "flow"
   | "manifold"
   | "tofu-nft"
   | "decentraland"
@@ -80,7 +77,10 @@ export type OrderKind =
   | "blend"
   | "collectionxyz"
   | "sudoswap-v2"
-  | "caviar-v1";
+  | "caviar-v1"
+  | "payment-processor"
+  | "blur-v2"
+  | "universe";
 
 // In case we don't have the source of an order readily available, we use
 // a default value where possible (since very often the exchange protocol
@@ -166,10 +166,9 @@ export const getOrderSourceByOrderKind = async (
       case "nftx":
         return sources.getOrInsert("nftx.io");
       case "blur":
+      case "blur-v2":
       case "blend":
         return sources.getOrInsert("blur.io");
-      case "flow":
-        return sources.getOrInsert("flow.so");
       case "manifold":
         return sources.getOrInsert("manifold.xyz");
       case "tofu-nft":
@@ -348,23 +347,6 @@ export const generateListingDetailsV6 = (
       };
     }
 
-    case "universe": {
-      return {
-        kind: "universe",
-        ...common,
-        order: new Sdk.Universe.Order(config.chainId, order.rawData),
-      };
-    }
-
-    case "flow": {
-      const sdkOrder = new Sdk.Flow.Order(config.chainId, order.rawData);
-      return {
-        kind: "flow",
-        ...common,
-        order: sdkOrder,
-      };
-    }
-
     case "rarible": {
       return {
         kind: "rarible",
@@ -434,6 +416,14 @@ export const generateListingDetailsV6 = (
         kind: "caviar-v1",
         ...common,
         order: new Sdk.CaviarV1.Order(config.chainId, order.rawData),
+      };
+    }
+
+    case "payment-processor": {
+      return {
+        kind: "payment-processor",
+        ...common,
+        order: new Sdk.PaymentProcessor.Order(config.chainId, order.rawData),
       };
     }
 
@@ -681,24 +671,6 @@ export const generateBidDetailsV6 = async (
       };
     }
 
-    case "universe": {
-      const sdkOrder = new Sdk.Universe.Order(config.chainId, order.rawData);
-      return {
-        kind: "universe",
-        ...common,
-        order: sdkOrder,
-      };
-    }
-
-    case "flow": {
-      const sdkOrder = new Sdk.Flow.Order(config.chainId, order.rawData);
-      return {
-        kind: "flow",
-        ...common,
-        order: sdkOrder,
-      };
-    }
-
     case "rarible": {
       return {
         kind: "rarible",
@@ -883,14 +855,6 @@ export const generateListingDetailsV5 = (
       };
     }
 
-    case "universe": {
-      return {
-        kind: "universe",
-        ...common,
-        order: new Sdk.Universe.Order(config.chainId, order.rawData),
-      };
-    }
-
     case "rarible": {
       return {
         kind: "rarible",
@@ -985,18 +949,6 @@ export const generateBidDetailsV5 = async (
         kind: "sudoswap",
         ...common,
         order: sdkOrder,
-      };
-    }
-
-    case "universe": {
-      const sdkOrder = new Sdk.Universe.Order(config.chainId, order.rawData);
-      return {
-        kind: "universe",
-        ...common,
-        order: sdkOrder,
-        extraArgs: {
-          amount: sdkOrder.params.take.value,
-        },
       };
     }
 

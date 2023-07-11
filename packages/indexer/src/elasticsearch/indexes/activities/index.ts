@@ -10,11 +10,15 @@ import {
 import { SortResults } from "@elastic/elasticsearch/lib/api/typesWithBodyKey";
 import { logger } from "@/common/logger";
 import { CollectionsEntity } from "@/models/collections/collections-entity";
-import { ActivityDocument, ActivityType } from "@/elasticsearch/indexes/activities/base";
+import {
+  ActivityDocument,
+  ActivityType,
+  CollectionAggregation,
+} from "@/elasticsearch/indexes/activities/base";
 import { getNetworkName, getNetworkSettings } from "@/config/network";
 import _ from "lodash";
 import { buildContinuation, splitContinuation } from "@/common/utils";
-import { addToQueue as backfillActivitiesAddToQueue } from "@/jobs/elasticsearch/backfill-activities-elasticsearch";
+import { addToQueue as backfillActivitiesAddToQueue } from "@/jobs/activities/backfill/backfill-activities-elasticsearch";
 
 const INDEX_NAME = `${getNetworkName()}.activities`;
 
@@ -155,14 +159,280 @@ export const save = async (activities: ActivityDocument[], upsert = true): Promi
   }
 };
 
+export const getChainStatsFromActivity = async () => {
+  const now = Date.now();
+
+  // rounds to 5 minute intervals to take advantage of caching
+  const oneDayAgo =
+    (Math.floor((now - 24 * 60 * 60 * 1000) / (5 * 60 * 1000)) * (5 * 60 * 1000)) / 1000;
+  const sevenDaysAgo =
+    (Math.floor((now - 7 * 24 * 60 * 60 * 1000) / (5 * 60 * 1000)) * (5 * 60 * 1000)) / 1000;
+
+  const periods = [
+    {
+      name: "1day",
+      startTime: oneDayAgo,
+    },
+    {
+      name: "7day",
+      startTime: sevenDaysAgo,
+    },
+  ];
+
+  const queries = periods.map(
+    (period) =>
+      ({
+        name: period.name,
+        body: {
+          query: {
+            bool: {
+              filter: [
+                {
+                  terms: {
+                    type: ["sale", "mint"],
+                  },
+                },
+                {
+                  range: {
+                    timestamp: {
+                      gte: period.startTime,
+                    },
+                  },
+                },
+              ],
+            },
+          },
+          aggs: {
+            sales_by_type: {
+              terms: {
+                field: "type",
+              },
+              aggs: {
+                sales_count: {
+                  value_count: { field: "id" },
+                },
+                total_volume: {
+                  sum: {
+                    // should be replaced when we reindex activities to include decimal fields
+                    script: {
+                      source:
+                        "doc['pricing.price'].size() == 0 ? 0 : Double.parseDouble(doc['pricing.price'].value) / Math.pow(10, 18)",
+                    },
+                  },
+                },
+              },
+            },
+          },
+          size: 0,
+        },
+      } as any)
+  );
+
+  // fetch time periods in parallel
+  const results = (await Promise.all(
+    queries.map((query) => {
+      return elasticsearch
+        .search({
+          index: INDEX_NAME,
+          body: query.body,
+        })
+        .then((result) => ({ name: query.name, result }));
+    })
+  )) as any;
+
+  return results.reduce((stats: any, result: any) => {
+    const buckets = result?.result?.aggregations?.sales_by_type?.buckets as any;
+    const mints = buckets.find((bucket: any) => bucket.key == "mint");
+    const sales = buckets.find((bucket: any) => bucket.key == "sale");
+
+    const mintCount = mints?.sales_count?.value || 0;
+    const saleCount = sales?.sales_count?.value || 0;
+    const mintVolume = mints?.total_volume?.value || 0;
+    const saleVolume = sales?.total_volume?.value || 0;
+
+    return {
+      ...stats,
+      [result.name]: {
+        mintCount,
+        saleCount,
+        totalCount: mintCount + saleCount,
+        mintVolume: _.round(mintVolume, 2),
+        saleVolume: _.round(saleVolume, 2),
+        totalVolume: _.round(mintVolume + saleVolume, 2),
+      },
+    };
+  }, {});
+};
+
+export enum TopSellingFillOptions {
+  sale = "sale",
+  mint = "mint",
+  any = "any",
+}
+
+const mapBucketToCollection = (bucket: any, includeRecentSales: boolean) => {
+  const collectionData = bucket?.top_collection_hits?.hits?.hits[0]?._source.collection;
+
+  const recentSales = bucket?.top_collection_hits?.hits?.hits.map((hit: any) => {
+    const sale = hit._source;
+
+    return {
+      contract: sale.contract,
+      token: sale.token,
+      collection: sale.collection,
+      toAddress: sale.toAddress,
+      type: sale.type,
+      timestamp: sale.timestamp,
+    };
+  });
+
+  return {
+    // can add back when we have a value to aggregate on
+    //volume: bucket?.total_sales?.value,
+    count: bucket?.total_transactions?.value,
+    id: collectionData?.id,
+    name: collectionData?.name,
+    image: collectionData?.image,
+    primaryContract: collectionData?.contract,
+    recentSales: includeRecentSales ? recentSales : [],
+  };
+};
+
+export const getTopSellingCollections = async (params: {
+  startTime: number;
+  endTime?: number;
+  fillType: TopSellingFillOptions;
+  limit: number;
+  includeRecentSales: boolean;
+}): Promise<CollectionAggregation[]> => {
+  const { startTime, endTime, fillType, limit } = params;
+
+  const salesQuery = {
+    bool: {
+      filter: [
+        {
+          terms: {
+            type: fillType == "any" ? ["sale", "mint"] : [fillType],
+          },
+        },
+        {
+          range: {
+            timestamp: {
+              gte: startTime,
+              ...(endTime ? { lte: endTime } : {}),
+            },
+          },
+        },
+      ],
+    },
+  } as any;
+
+  const collectionAggregation = {
+    collections: {
+      terms: {
+        field: "collection.id",
+        size: limit,
+        order: { total_transactions: "desc" },
+      },
+      aggs: {
+        total_transactions: {
+          value_count: {
+            field: "id",
+          },
+        },
+
+        top_collection_hits: {
+          top_hits: {
+            _source: {
+              includes: [
+                "contract",
+                "collection.name",
+                "collection.image",
+                "collection.id",
+                "name",
+                "toAddress",
+                "token.id",
+                "token.name",
+                "token.image",
+                "type",
+                "timestamp",
+              ],
+            },
+            size: params.includeRecentSales ? 8 : 1,
+
+            ...(params.includeRecentSales && {
+              sort: [
+                {
+                  timestamp: {
+                    order: "desc",
+                  },
+                },
+              ],
+            }),
+          },
+        },
+      },
+    },
+  } as any;
+
+  const esResult = (await elasticsearch.search({
+    index: INDEX_NAME,
+    size: 0,
+    body: {
+      query: salesQuery,
+      aggs: collectionAggregation,
+    },
+  })) as any;
+
+  return esResult?.aggregations?.collections?.buckets?.map((bucket: any) =>
+    mapBucketToCollection(bucket, params.includeRecentSales)
+  );
+};
+
+export const deleteActivitiesById = async (ids: string[]): Promise<void> => {
+  try {
+    const response = await elasticsearch.bulk({
+      body: ids.flatMap((id) => ({ delete: { _index: INDEX_NAME, _id: id } })),
+    });
+
+    if (response.errors) {
+      logger.info(
+        "elasticsearch-activities",
+        JSON.stringify({
+          topic: "delete-by-id-conflicts",
+          data: {
+            ids: JSON.stringify(ids),
+          },
+          response,
+        })
+      );
+    }
+  } catch (error) {
+    logger.error(
+      "elasticsearch-activities",
+      JSON.stringify({
+        topic: "delete-by-id-error",
+        data: {
+          ids: JSON.stringify(ids),
+        },
+        error,
+      })
+    );
+
+    throw error;
+  }
+};
+
 export const search = async (
   params: {
-    types?: ActivityType;
+    types?: ActivityType[];
     tokens?: { contract: string; tokenId: string }[];
     contracts?: string[];
     collections?: string[];
     sources?: number[];
     users?: string[];
+    startTimestamp?: number;
+    endTimestamp?: number;
     sortBy?: "timestamp" | "createdAt";
     limit?: number;
     continuation?: string;
@@ -244,6 +514,18 @@ export const search = async (
     });
 
     (esQuery as any).bool.filter.push(usersFilter);
+  }
+
+  if (params.startTimestamp) {
+    (esQuery as any).bool.filter.push({
+      range: { timestamp: { gte: params.endTimestamp } },
+    });
+  }
+
+  if (params.endTimestamp) {
+    (esQuery as any).bool.filter.push({
+      range: { timestamp: { lt: params.endTimestamp } },
+    });
   }
 
   const esSort: any[] = [];
@@ -344,24 +626,16 @@ const _search = async (
 
     return results;
   } catch (error) {
-    logger.error(
-      "elasticsearch-activities",
-      JSON.stringify({
-        topic: "_search",
-        data: {
-          params: JSON.stringify(params),
-        },
-        error,
-        retries,
-      })
-    );
+    const retryableError =
+      (error as any).meta?.meta?.aborted ||
+      (error as any).meta?.body?.error?.caused_by?.type === "node_not_connected_exception";
 
-    if ((error as any).meta?.body?.error?.caused_by?.type === "node_not_connected_exception") {
+    if (retryableError) {
       logger.warn(
         "elasticsearch-activities",
         JSON.stringify({
           topic: "_search",
-          message: "node_not_connected_exception error",
+          message: "Retrying...",
           data: {
             params: JSON.stringify(params),
           },
@@ -389,6 +663,19 @@ const _search = async (
       );
 
       throw new Error("Could not perform search.");
+    } else {
+      logger.error(
+        "elasticsearch-activities",
+        JSON.stringify({
+          topic: "_search",
+          message: "Unexpected error.",
+          data: {
+            params: JSON.stringify(params),
+          },
+          error,
+          retries,
+        })
+      );
     }
 
     throw error;
@@ -488,7 +775,9 @@ export const updateActivitiesMissingCollection = async (
   contract: string,
   tokenId: number,
   collection: CollectionsEntity
-): Promise<void> => {
+): Promise<boolean> => {
+  let keepGoing = false;
+
   const query = {
     bool: {
       must_not: [
@@ -514,69 +803,112 @@ export const updateActivitiesMissingCollection = async (
   };
 
   try {
-    const response = await elasticsearch.updateByQuery({
-      index: INDEX_NAME,
-      conflicts: "proceed",
+    const pendingUpdateActivities = await _search({
       // This is needed due to issue with elasticsearch DSL.
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
-      query: query,
-      script: {
-        source:
-          "ctx._source.collection = [:]; ctx._source.collection.id = params.collection_id; ctx._source.collection.name = params.collection_name; ctx._source.collection.image = params.collection_image;",
-        params: {
-          collection_id: collection.id,
-          collection_name: collection.name,
-          collection_image: collection.metadata.imageUrl,
-        },
-      },
+      query,
+      size: 1000,
     });
 
-    if (response?.failures?.length) {
+    if (pendingUpdateActivities.length) {
+      const bulkParams = {
+        body: pendingUpdateActivities.flatMap((activity) => [
+          { update: { _index: INDEX_NAME, _id: activity.id, retry_on_conflict: 3 } },
+          {
+            script: {
+              source:
+                "ctx._source.collection = [:]; ctx._source.collection.id = params.collection_id; ctx._source.collection.name = params.collection_name; ctx._source.collection.image = params.collection_image;",
+              params: {
+                collection_id: collection.id,
+                collection_name: collection.name,
+                collection_image: collection.metadata?.imageUrl,
+              },
+            },
+          },
+        ]),
+      };
+
+      const response = await elasticsearch.bulk(bulkParams);
+
+      if (response?.errors) {
+        logger.error(
+          "elasticsearch-activities",
+          JSON.stringify({
+            topic: "updateActivitiesMissingCollectionV2",
+            message: `Errors in response`,
+            data: {
+              contract,
+              tokenId,
+              collection,
+            },
+            bulkParams,
+            response,
+          })
+        );
+
+        keepGoing = true;
+      } else {
+        keepGoing = pendingUpdateActivities.length === 1000;
+
+        logger.info(
+          "elasticsearch-activities",
+          JSON.stringify({
+            topic: "updateActivitiesMissingCollectionV2",
+            message: `Success`,
+            data: {
+              contract,
+              tokenId,
+              collection,
+            },
+            bulkParams,
+            response,
+            keepGoing,
+          })
+        );
+      }
+    }
+  } catch (error) {
+    const retryableError =
+      (error as any).meta?.meta?.aborted ||
+      (error as any).meta?.body?.error?.caused_by?.type === "node_not_connected_exception";
+
+    if (retryableError) {
+      logger.warn(
+        "elasticsearch-activities",
+        JSON.stringify({
+          topic: "updateActivitiesMissingCollectionV2",
+          message: `Unexpected error`,
+          data: {
+            contract,
+            tokenId,
+            collection,
+          },
+          error,
+        })
+      );
+
+      keepGoing = true;
+    } else {
       logger.error(
         "elasticsearch-activities",
         JSON.stringify({
-          topic: "updateActivitiesMissingCollection",
+          topic: "updateActivitiesMissingCollectionV2",
+          message: `Unexpected error`,
           data: {
             contract,
             tokenId,
             collection,
           },
-          query: JSON.stringify(query),
-          response,
+          error,
         })
       );
-    } else {
-      logger.info(
-        "elasticsearch-activities",
-        JSON.stringify({
-          topic: "updateActivitiesMissingCollection",
-          data: {
-            contract,
-            tokenId,
-            collection,
-          },
-          query: JSON.stringify(query),
-          response,
-        })
-      );
-    }
-  } catch (error) {
-    logger.error(
-      "elasticsearch-activities",
-      JSON.stringify({
-        topic: "updateActivitiesMissingCollection",
-        data: {
-          contract,
-          tokenId,
-          collection,
-        },
-        error,
-      })
-    );
 
-    throw error;
+      throw error;
+    }
   }
+
+  return keepGoing;
 };
 
 export const updateActivitiesCollection = async (
@@ -584,7 +916,9 @@ export const updateActivitiesCollection = async (
   tokenId: string,
   newCollection: CollectionsEntity,
   oldCollectionId: string
-): Promise<void> => {
+): Promise<boolean> => {
+  let keepGoing = false;
+
   const query = {
     bool: {
       must: [
@@ -603,127 +937,190 @@ export const updateActivitiesCollection = async (
   };
 
   try {
-    const response = await elasticsearch.updateByQuery({
-      index: INDEX_NAME,
-      conflicts: "proceed",
+    const pendingUpdateActivities = await _search({
       // This is needed due to issue with elasticsearch DSL.
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       query,
-      script: {
-        source:
-          "ctx._source.collection = [:]; ctx._source.collection.id = params.collection_id; ctx._source.collection.name = params.collection_name; ctx._source.collection.image = params.collection_image;",
-        params: {
-          collection_id: newCollection.id,
-          collection_name: newCollection.name,
-          collection_image: newCollection.metadata?.imageUrl,
-        },
-      },
+      size: 1000,
     });
 
-    if (response?.failures?.length) {
+    if (pendingUpdateActivities.length) {
+      const bulkParams = {
+        body: pendingUpdateActivities.flatMap((activity) => [
+          { update: { _index: INDEX_NAME, _id: activity.id, retry_on_conflict: 3 } },
+          {
+            script: {
+              source:
+                "ctx._source.collection = [:]; ctx._source.collection.id = params.collection_id; ctx._source.collection.name = params.collection_name; ctx._source.collection.image = params.collection_image;",
+              params: {
+                collection_id: newCollection.id,
+                collection_name: newCollection.name,
+                collection_image: newCollection.metadata?.imageUrl,
+              },
+            },
+          },
+        ]),
+      };
+
+      const response = await elasticsearch.bulk(bulkParams);
+
+      if (response?.errors) {
+        logger.error(
+          "elasticsearch-activities",
+          JSON.stringify({
+            topic: "updateActivitiesCollectionV2",
+            message: `Errors in response`,
+            data: {
+              contract,
+              tokenId,
+              newCollection,
+              oldCollectionId,
+            },
+            bulkParams,
+            response,
+          })
+        );
+
+        keepGoing = true;
+      } else {
+        keepGoing = pendingUpdateActivities.length === 1000;
+
+        logger.info(
+          "elasticsearch-activities",
+          JSON.stringify({
+            topic: "updateActivitiesCollectionV2",
+            message: `Success`,
+            data: {
+              contract,
+              tokenId,
+              newCollection,
+              oldCollectionId,
+            },
+            bulkParams,
+            response,
+            keepGoing,
+          })
+        );
+      }
+    }
+  } catch (error) {
+    const retryableError =
+      (error as any).meta?.meta?.aborted ||
+      (error as any).meta?.body?.error?.caused_by?.type === "node_not_connected_exception";
+
+    if (retryableError) {
+      logger.warn(
+        "elasticsearch-activities",
+        JSON.stringify({
+          topic: "updateActivitiesCollectionV2",
+          message: `Unexpected error`,
+          data: {
+            contract,
+            tokenId,
+            newCollection,
+            oldCollectionId,
+          },
+          error,
+        })
+      );
+
+      keepGoing = true;
+    } else {
       logger.error(
         "elasticsearch-activities",
         JSON.stringify({
-          topic: "updateActivitiesCollection",
+          topic: "updateActivitiesCollectionV2",
+          message: `Unexpected error`,
           data: {
             contract,
             tokenId,
             newCollection,
             oldCollectionId,
           },
-          query: JSON.stringify(query),
-          response,
+          error,
         })
       );
-    } else {
-      logger.info(
-        "elasticsearch-activities",
-        JSON.stringify({
-          topic: "updateActivitiesCollection",
-          data: {
-            contract,
-            tokenId,
-            newCollection,
-            oldCollectionId,
-          },
-          query: JSON.stringify(query),
-          response,
-        })
-      );
-    }
-  } catch (error) {
-    logger.error(
-      "elasticsearch-activities",
-      JSON.stringify({
-        topic: "updateActivitiesCollection",
-        data: {
-          contract,
-          tokenId,
-          oldCollectionId,
-          newCollection,
-        },
-        query: JSON.stringify(query),
-        error,
-      })
-    );
 
-    throw error;
+      throw error;
+    }
   }
+
+  return keepGoing;
 };
 
 export const updateActivitiesTokenMetadata = async (
   contract: string,
   tokenId: string,
-  tokenData: { name?: string; image?: string; media?: string }
+  tokenData: { name: string | null; image: string | null; media: string | null }
 ): Promise<boolean> => {
   let keepGoing = false;
 
-  tokenData = _.pickBy(tokenData, (value) => value !== null);
-
-  const should: any[] = [];
-
-  if (tokenData.name) {
-    should.push({
-      bool: {
-        must_not: [
-          {
-            term: {
-              "token.name": tokenData.name,
-            },
+  const should: any[] = [
+    {
+      bool: tokenData.name
+        ? {
+            must_not: [
+              {
+                term: {
+                  "token.name": tokenData.name,
+                },
+              },
+            ],
+          }
+        : {
+            must: [
+              {
+                exists: {
+                  field: "token.name",
+                },
+              },
+            ],
           },
-        ],
-      },
-    });
-  }
-
-  if (tokenData.image) {
-    should.push({
-      bool: {
-        must_not: [
-          {
-            term: {
-              "token.image": tokenData.image,
-            },
+    },
+    {
+      bool: tokenData.image
+        ? {
+            must_not: [
+              {
+                term: {
+                  "token.image": tokenData.image,
+                },
+              },
+            ],
+          }
+        : {
+            must: [
+              {
+                exists: {
+                  field: "token.image",
+                },
+              },
+            ],
           },
-        ],
-      },
-    });
-  }
-
-  if (tokenData.media) {
-    should.push({
-      bool: {
-        must_not: [
-          {
-            term: {
-              "token.media": tokenData.media,
-            },
+    },
+    {
+      bool: tokenData.media
+        ? {
+            must_not: [
+              {
+                term: {
+                  "token.media": tokenData.media,
+                },
+              },
+            ],
+          }
+        : {
+            must: [
+              {
+                exists: {
+                  field: "token.media",
+                },
+              },
+            ],
           },
-        ],
-      },
-    });
-  }
+    },
+  ];
 
   const query = {
     bool: {
@@ -748,75 +1145,109 @@ export const updateActivitiesTokenMetadata = async (
   };
 
   try {
-    const response = await elasticsearch.updateByQuery({
-      index: INDEX_NAME,
-      conflicts: "proceed",
-      max_docs: 1000,
+    const pendingUpdateActivities = await _search({
       // This is needed due to issue with elasticsearch DSL.
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       query,
-      script: {
-        source:
-          "ctx._source.token.name = params.token_name; ctx._source.token.image = params.token_image; ctx._source.token.media = params.token_media;",
-        params: {
-          token_name: tokenData.name,
-          token_image: tokenData.image,
-          token_media: tokenData.media,
-        },
-      },
+      size: 1000,
     });
 
-    if (response?.failures?.length) {
+    if (pendingUpdateActivities.length) {
+      const bulkParams = {
+        body: pendingUpdateActivities.flatMap((activity) => [
+          { update: { _index: INDEX_NAME, _id: activity.id, retry_on_conflict: 3 } },
+          {
+            script: {
+              source:
+                "if (params.token_name == null) { ctx._source.token.remove('name') } else { ctx._source.token.name = params.token_name } if (params.token_image == null) { ctx._source.token.remove('image') } else { ctx._source.token.image = params.token_image } if (params.token_media == null) { ctx._source.token.remove('media') } else { ctx._source.token.media = params.token_media }",
+              params: {
+                token_name: tokenData.name ?? null,
+                token_image: tokenData.image ?? null,
+                token_media: tokenData.media ?? null,
+              },
+            },
+          },
+        ]),
+      };
+
+      const response = await elasticsearch.bulk(bulkParams);
+
+      if (response?.errors) {
+        logger.error(
+          "elasticsearch-activities",
+          JSON.stringify({
+            topic: "updateActivitiesTokenMetadataV2",
+            message: `Errors in response`,
+            data: {
+              contract,
+              tokenId,
+              tokenData,
+            },
+            bulkParams,
+            response,
+          })
+        );
+
+        keepGoing = true;
+      } else {
+        keepGoing = pendingUpdateActivities.length === 1000;
+
+        logger.info(
+          "elasticsearch-activities",
+          JSON.stringify({
+            topic: "updateActivitiesTokenMetadataV2",
+            message: `Success`,
+            data: {
+              contract,
+              tokenId,
+              tokenData,
+            },
+            bulkParams,
+            response,
+            keepGoing,
+          })
+        );
+      }
+    }
+  } catch (error) {
+    const retryableError =
+      (error as any).meta?.meta?.aborted ||
+      (error as any).meta?.body?.error?.caused_by?.type === "node_not_connected_exception";
+
+    if (retryableError) {
+      logger.warn(
+        "elasticsearch-activities",
+        JSON.stringify({
+          topic: "updateActivitiesTokenMetadataV2",
+          message: `Unexpected error`,
+          data: {
+            contract,
+            tokenId,
+            tokenData,
+          },
+          error,
+        })
+      );
+
+      keepGoing = true;
+    } else {
       logger.error(
         "elasticsearch-activities",
         JSON.stringify({
-          topic: "updateActivitiesTokenMetadata",
+          topic: "updateActivitiesTokenMetadataV2",
+          message: `Unexpected error`,
           data: {
             contract,
             tokenId,
             tokenData,
           },
-          query: JSON.stringify(query),
-          response,
+          error,
         })
-      );
-    } else {
-      keepGoing = Boolean(
-        (response?.version_conflicts ?? 0) > 0 || (response?.updated ?? 0) === 1000
       );
 
-      logger.info(
-        "elasticsearch-activities",
-        JSON.stringify({
-          topic: "updateActivitiesTokenMetadata",
-          data: {
-            contract,
-            tokenId,
-            tokenData,
-          },
-          query: JSON.stringify(query),
-          response,
-          keepGoing,
-        })
-      );
+      throw error;
     }
-  } catch (error) {
-    logger.error(
-      "elasticsearch-activities",
-      JSON.stringify({
-        topic: "updateActivitiesTokenMetadata",
-        data: {
-          contract,
-          tokenId,
-          tokenData,
-        },
-        query: JSON.stringify(query),
-        error,
-      })
-    );
-
-    throw error;
   }
 
   return keepGoing;
@@ -824,37 +1255,54 @@ export const updateActivitiesTokenMetadata = async (
 
 export const updateActivitiesCollectionMetadata = async (
   collectionId: string,
-  collectionData: { name: string | null; image?: string | null }
+  collectionData: { name: string | null; image: string | null }
 ): Promise<boolean> => {
   let keepGoing = false;
 
   const should: any[] = [
     {
-      bool: {
-        must_not: [
-          {
-            term: {
-              "collection.name": collectionData.name,
-            },
+      bool: collectionData.name
+        ? {
+            must_not: [
+              {
+                term: {
+                  "collection.name": collectionData.name,
+                },
+              },
+            ],
+          }
+        : {
+            must: [
+              {
+                exists: {
+                  field: "collection.name",
+                },
+              },
+            ],
           },
-        ],
-      },
+    },
+    {
+      bool: collectionData.image
+        ? {
+            must_not: [
+              {
+                term: {
+                  "collection.image": collectionData.image,
+                },
+              },
+            ],
+          }
+        : {
+            must: [
+              {
+                exists: {
+                  field: "collection.image",
+                },
+              },
+            ],
+          },
     },
   ];
-
-  if (collectionData.image) {
-    should.push({
-      bool: {
-        must_not: [
-          {
-            term: {
-              "collection.image": collectionData.image,
-            },
-          },
-        ],
-      },
-    });
-  }
 
   const query = {
     bool: {
@@ -874,71 +1322,105 @@ export const updateActivitiesCollectionMetadata = async (
   };
 
   try {
-    const response = await elasticsearch.updateByQuery({
-      index: INDEX_NAME,
-      conflicts: "proceed",
-      max_docs: 1000,
+    const pendingUpdateActivities = await _search({
       // This is needed due to issue with elasticsearch DSL.
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
       query,
-      script: {
-        source:
-          "ctx._source.collection.name = params.collection_name; ctx._source.collection.image = params.collection_image;",
-        params: {
-          collection_name: collectionData.name,
-          collection_image: collectionData.image,
-        },
-      },
+      size: 1000,
     });
 
-    if (response?.failures?.length) {
+    if (pendingUpdateActivities.length) {
+      const bulkParams = {
+        body: pendingUpdateActivities.flatMap((activity) => [
+          { update: { _index: INDEX_NAME, _id: activity.id, retry_on_conflict: 3 } },
+          {
+            script: {
+              source:
+                "if (params.collection_name == null) { ctx._source.collection.remove('name') } else { ctx._source.collection.name = params.collection_name } if (params.collection_image == null) { ctx._source.collection.remove('image') } else { ctx._source.collection.image = params.collection_image }",
+              params: {
+                collection_name: collectionData.name ?? null,
+                collection_image: collectionData.image ?? null,
+              },
+            },
+          },
+        ]),
+      };
+
+      const response = await elasticsearch.bulk(bulkParams);
+
+      if (response?.errors) {
+        logger.error(
+          "elasticsearch-activities",
+          JSON.stringify({
+            topic: "updateActivitiesCollectionMetadataV2",
+            message: `Errors in response`,
+            data: {
+              collectionId,
+              collectionData,
+            },
+            bulkParams,
+            response,
+            keepGoing,
+          })
+        );
+
+        keepGoing = true;
+      } else {
+        keepGoing = pendingUpdateActivities.length === 1000;
+
+        logger.info(
+          "elasticsearch-activities",
+          JSON.stringify({
+            topic: "updateActivitiesCollectionMetadataV2",
+            message: `Success`,
+            data: {
+              collectionId,
+              collectionData,
+            },
+            bulkParams,
+            response,
+            keepGoing,
+          })
+        );
+      }
+    }
+  } catch (error) {
+    const retryableError =
+      (error as any).meta?.meta?.aborted ||
+      (error as any).meta?.body?.error?.caused_by?.type === "node_not_connected_exception";
+
+    if (retryableError) {
+      logger.warn(
+        "elasticsearch-activities",
+        JSON.stringify({
+          topic: "updateActivitiesCollectionMetadataV2",
+          message: `Unexpected error`,
+          data: {
+            collectionId,
+            collectionData,
+          },
+          error,
+        })
+      );
+
+      keepGoing = true;
+    } else {
       logger.error(
         "elasticsearch-activities",
         JSON.stringify({
-          topic: "updateActivitiesCollectionMetadata",
+          topic: "updateActivitiesCollectionMetadataV2",
+          message: `Unexpected error`,
           data: {
             collectionId,
             collectionData,
           },
-          query: JSON.stringify(query),
-          response,
+          error,
         })
-      );
-    } else {
-      keepGoing = Boolean(
-        (response?.version_conflicts ?? 0) > 0 || (response?.updated ?? 0) === 1000
       );
 
-      logger.info(
-        "elasticsearch-activities",
-        JSON.stringify({
-          topic: "updateActivitiesCollectionMetadata",
-          data: {
-            collectionId,
-            collectionData,
-          },
-          query: JSON.stringify(query),
-          response,
-          keepGoing,
-        })
-      );
+      throw error;
     }
-  } catch (error) {
-    logger.error(
-      "elasticsearch-activities",
-      JSON.stringify({
-        topic: "updateActivitiesCollectionMetadata",
-        data: {
-          collectionId,
-          collectionData,
-        },
-        query: JSON.stringify(query),
-        error,
-      })
-    );
-
-    throw error;
   }
 
   return keepGoing;

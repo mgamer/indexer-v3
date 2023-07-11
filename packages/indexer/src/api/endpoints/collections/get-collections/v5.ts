@@ -8,6 +8,7 @@ import Joi from "joi";
 
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
+import { parseEther } from "@ethersproject/units";
 import { JoiPrice, getJoiPriceObject } from "@/common/joi";
 import {
   buildContinuation,
@@ -31,7 +32,7 @@ export const getCollectionsV5Options: RouteOptions = {
   },
   description: "Collections",
   notes: "Use this API to explore a collection’s metadata and statistics (sales, volume, etc).",
-  tags: ["api", "Collections"],
+  tags: ["api", "x-deprecated"],
   plugins: {
     "hapi-swagger": {
       order: 3,
@@ -66,6 +67,8 @@ export const getCollectionsV5Options: RouteOptions = {
       name: Joi.string()
         .lowercase()
         .description("Search for collections that match a string. Example: `bored`"),
+      maxFloorAskPrice: Joi.number().description("Maximum floor price of the collection"),
+      minFloorAskPrice: Joi.number().description("Minumum floor price of the collection"),
       includeTopBid: Joi.boolean()
         .default(false)
         .description("If true, top bid will be returned in the response."),
@@ -257,11 +260,12 @@ export const getCollectionsV5Options: RouteOptions = {
           mintStages: Joi.array().items(
             Joi.object({
               stage: Joi.string().required(),
+              tokenId: Joi.string().pattern(regex.number).allow(null),
               kind: Joi.string().required(),
               price: JoiPrice.required(),
               startTime: Joi.number().allow(null),
               endTime: Joi.number().allow(null),
-              maxMintsPerWallet: Joi.number().allow(null),
+              maxMintsPerWallet: Joi.number().unsafe().allow(null),
             })
           ),
         })
@@ -342,11 +346,12 @@ export const getCollectionsV5Options: RouteOptions = {
               array_agg(
                 json_build_object(
                   'stage', collection_mints.stage,
+                  'tokenId', collection_mints.token_id,
                   'kind', collection_mints.kind,
                   'currency', concat('0x', encode(collection_mints.currency, 'hex')),
                   'price', collection_mints.price::TEXT,
-                  'startTime', collection_mints.start_time,
-                  'endTime', collection_mints.end_time,
+                  'startTime', floor(extract(epoch from collection_mints.start_time)),
+                  'endTime', floor(extract(epoch from collection_mints.end_time)),
                   'maxMintsPerWallet', collection_mints.max_mints_per_wallet
                 )
               ) AS mint_stages
@@ -509,6 +514,16 @@ export const getCollectionsV5Options: RouteOptions = {
       if (query.name) {
         query.name = `%${query.name}%`;
         conditions.push(`collections.name ILIKE $/name/`);
+      }
+
+      if (query.maxFloorAskPrice) {
+        query.maxFloorAskPrice = parseEther(query.maxFloorAskPrice.toString()).toString();
+        conditions.push(`collections.floor_sell_value <= $/maxFloorAskPrice/`);
+      }
+
+      if (query.minFloorAskPrice) {
+        query.minFloorAskPrice = parseEther(query.minFloorAskPrice.toString()).toString();
+        conditions.push(`collections.floor_sell_value >= $/minFloorAskPrice/`);
       }
 
       // Sorting and pagination
@@ -796,6 +811,7 @@ export const getCollectionsV5Options: RouteOptions = {
               ? await Promise.all(
                   r.mint_stages.map(async (m: any) => ({
                     stage: m.stage,
+                    tokenId: m.tokenId,
                     kind: m.kind,
                     price: await getJoiPriceObject({ gross: { amount: m.price } }, m.currency),
                     startTime: m.startTime,
