@@ -46,6 +46,8 @@ export const ApprovalProxy: ChainIdToAddress = {
 export const PermitProxy: ChainIdToAddress = {
   [Network.Ethereum]: "0x104ff9a0e2a62aa531ef0cc9d19f948bde7062de",
   [Network.EthereumGoerli]: "0x104ff9a0e2a62aa531ef0cc9d19f948bde7062de",
+  [Network.Polygon]: "0x104ff9a0e2a62aa531ef0cc9d19f948bde7062de",
+  [Network.Mumbai]: "0x104ff9a0e2a62aa531ef0cc9d19f948bde7062de",
 };
 
 // Utility modules
@@ -160,6 +162,7 @@ export const NFTXZeroExModule: ChainIdToAddress = {
 
 export const RaribleModule: ChainIdToAddress = {
   [Network.Ethereum]: "0x428a6be88fc0d25778e3c3f6e09fcfdc9a526fad",
+  [Network.EthereumGoerli]: "0x428a6be88fc0d25778e3c3f6e09fcfdc9a526fad",
 };
 
 export const SuperRareModule: ChainIdToAddress = {

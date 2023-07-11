@@ -13,8 +13,6 @@ export * as sudoswap from "@/orderbook/orders/sudoswap";
 export * as x2y2 from "@/orderbook/orders/x2y2";
 export * as zeroExV4 from "@/orderbook/orders/zeroex-v4";
 export * as zora from "@/orderbook/orders/zora";
-export * as universe from "@/orderbook/orders/universe";
-export * as flow from "@/orderbook/orders/flow";
 export * as blur from "@/orderbook/orders/blur";
 export * as rarible from "@/orderbook/orders/rarible";
 export * as nftx from "@/orderbook/orders/nftx";
@@ -61,10 +59,8 @@ export type OrderKind =
   | "mint"
   | "cryptopunks"
   | "sudoswap"
-  | "universe"
   | "nftx"
   | "blur"
-  | "flow"
   | "manifold"
   | "tofu-nft"
   | "decentraland"
@@ -79,7 +75,8 @@ export type OrderKind =
   | "blend"
   | "collectionxyz"
   | "sudoswap-v2"
-  | "payment-processor";
+  | "payment-processor"
+  | "blur-v2";
 
 // In case we don't have the source of an order readily available, we use
 // a default value where possible (since very often the exchange protocol
@@ -158,15 +155,12 @@ export const getOrderSourceByOrderKind = async (
       case "sudoswap":
       case "sudoswap-v2":
         return sources.getOrInsert("sudoswap.xyz");
-      case "universe":
-        return sources.getOrInsert("universe.xyz");
       case "nftx":
         return sources.getOrInsert("nftx.io");
       case "blur":
+      case "blur-v2":
       case "blend":
         return sources.getOrInsert("blur.io");
-      case "flow":
-        return sources.getOrInsert("flow.so");
       case "manifold":
         return sources.getOrInsert("manifold.xyz");
       case "tofu-nft":
@@ -342,23 +336,6 @@ export const generateListingDetailsV6 = (
         kind: "zora",
         ...common,
         order: new Sdk.Zora.Order(config.chainId, order.rawData),
-      };
-    }
-
-    case "universe": {
-      return {
-        kind: "universe",
-        ...common,
-        order: new Sdk.Universe.Order(config.chainId, order.rawData),
-      };
-    }
-
-    case "flow": {
-      const sdkOrder = new Sdk.Flow.Order(config.chainId, order.rawData);
-      return {
-        kind: "flow",
-        ...common,
-        order: sdkOrder,
       };
     }
 
@@ -678,24 +655,6 @@ export const generateBidDetailsV6 = async (
       };
     }
 
-    case "universe": {
-      const sdkOrder = new Sdk.Universe.Order(config.chainId, order.rawData);
-      return {
-        kind: "universe",
-        ...common,
-        order: sdkOrder,
-      };
-    }
-
-    case "flow": {
-      const sdkOrder = new Sdk.Flow.Order(config.chainId, order.rawData);
-      return {
-        kind: "flow",
-        ...common,
-        order: sdkOrder,
-      };
-    }
-
     case "rarible": {
       return {
         kind: "rarible",
@@ -866,14 +825,6 @@ export const generateListingDetailsV5 = (
       };
     }
 
-    case "universe": {
-      return {
-        kind: "universe",
-        ...common,
-        order: new Sdk.Universe.Order(config.chainId, order.rawData),
-      };
-    }
-
     case "rarible": {
       return {
         kind: "rarible",
@@ -968,18 +919,6 @@ export const generateBidDetailsV5 = async (
         kind: "sudoswap",
         ...common,
         order: sdkOrder,
-      };
-    }
-
-    case "universe": {
-      const sdkOrder = new Sdk.Universe.Order(config.chainId, order.rawData);
-      return {
-        kind: "universe",
-        ...common,
-        order: sdkOrder,
-        extraArgs: {
-          amount: sdkOrder.params.take.value,
-        },
       };
     }
 

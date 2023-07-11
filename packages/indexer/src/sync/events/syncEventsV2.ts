@@ -157,10 +157,6 @@ export const extractEventsBatches = (enhancedEvents: EnhancedEvent[]): EventsBat
         data: kindToEvents.get("zora") ?? [],
       },
       {
-        kind: "universe",
-        data: kindToEvents.get("universe") ?? [],
-      },
-      {
         kind: "rarible",
         data: kindToEvents.has("rarible")
           ? [
@@ -193,16 +189,6 @@ export const extractEventsBatches = (enhancedEvents: EnhancedEvent[]): EventsBat
       {
         kind: "superrare",
         data: kindToEvents.get("superrare") ?? [],
-      },
-      {
-        kind: "flow",
-        data: kindToEvents.has("flow")
-          ? [
-              ...kindToEvents.get("flow")!,
-              // To properly validate bids, we need some additional events
-              ...events.filter((e) => e.subKind === "erc20-transfer"),
-            ]
-          : [],
       },
       {
         kind: "zeroex-v2",
@@ -239,6 +225,10 @@ export const extractEventsBatches = (enhancedEvents: EnhancedEvent[]): EventsBat
       {
         kind: "seadrop",
         data: kindToEvents.get("seadrop") ?? [],
+      },
+      {
+        kind: "blur-v2",
+        data: kindToEvents.get("blur-v2") ?? [],
       },
     ];
 
@@ -361,6 +351,11 @@ export const syncEvents = async (block: number) => {
 
     const startProcessLogs = Date.now();
 
+    // const processEventsLatencies = await Promise.all(
+    //   eventsBatches.map(async (eventsBatch) => {
+    //     await processEventsBatchV2([eventsBatch]);
+    //   })
+    // );
     const processEventsLatencies = await processEventsBatchV2(eventsBatches);
 
     const endProcessLogs = Date.now();

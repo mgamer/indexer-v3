@@ -20,6 +20,7 @@ export const Eth: ChainIdToAddress = {
   [Network.BaseGoerli]: AddressZero,
   [Network.Zora]: AddressZero,
   [Network.Avalanche]: AddressZero,
+  [Network.Base]: AddressZero,
 };
 
 export const Weth: ChainIdToAddress = {
@@ -43,6 +44,7 @@ export const Weth: ChainIdToAddress = {
   [Network.BaseGoerli]: "0x4200000000000000000000000000000000000006",
   // Avalanche: Wrapped AVAX
   [Network.Avalanche]: "0xb31f66aa3c1e785363f0875a1b74e27b85fd66c7",
+  [Network.Base]: "0x4200000000000000000000000000000000000006",
 };
 
 // TODO: Include addresses across all supported chains
@@ -52,6 +54,7 @@ export const Usdc: ChainIdToAddress = {
   [Network.Optimism]: "0x7f5c764cbc14f9669b88837ca1490cca17c31607",
   [Network.Bsc]: "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d",
   [Network.Polygon]: "0x2791bca1f2de4661ed88a30c99a7a9449aa84174",
+  [Network.Mumbai]: "0x0fa8781a83e46826621b3bc094ea2a0212e71b23",
   [Network.Arbitrum]: "0xff970a61a04b1ca14834a43f5de4533ebddb5cc8",
 };
 
@@ -90,4 +93,6 @@ export const Create3Factory: ChainIdToAddress = {
 export const GelatoRelay1BalanceERC2771: ChainIdToAddress = {
   [Network.Ethereum]: "0xd8253782c45a12053594b9deb72d8e8ab2fca54c",
   [Network.EthereumGoerli]: "0xd8253782c45a12053594b9deb72d8e8ab2fca54c",
+  [Network.Polygon]: "0xd8253782c45a12053594b9deb72d8e8ab2fca54c",
+  [Network.Mumbai]: "0xd8253782c45a12053594b9deb72d8e8ab2fca54c",
 };

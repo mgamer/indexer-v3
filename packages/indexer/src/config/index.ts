@@ -95,7 +95,6 @@ export const config = {
 
   x2y2ApiKey: String(process.env.X2Y2_API_KEY),
   cbApiKey: String(process.env.CB_API_KEY),
-  flowApiKey: String(process.env.FLOW_API_KEY),
   orderFetcherApiKey: String(process.env.ORDER_FETCHER_API_KEY),
 
   blurWsApiKey: process.env.BLUR_WS_API_KEY,
@@ -123,7 +122,6 @@ export const config = {
   // Elasticsearch
   elasticsearchUrl: String(process.env.ELASTICSEARCH_URL || ""),
   doElasticsearchWork: Boolean(Number(process.env.DO_ELASTICSEARCH_WORK)),
-  enableElasticsearchRead: Boolean(Number(process.env.ENABLE_ELASTICSEARCH_READ)),
 
   // realtime v2
   enableRealtimeProcessing: Boolean(process.env.ENABLE_REALTIME_PROCESSING),

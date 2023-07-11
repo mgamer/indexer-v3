@@ -8,6 +8,8 @@ import axios from "axios";
 import { TokenIDs } from "fummpel";
 // Needed for `rarible`
 import { encodeForMatchOrders } from "../../rarible/utils";
+// Needed for `seaport`
+import { constructOfferCounterOrderAndFulfillments } from "../../seaport-base/helpers";
 
 import * as Sdk from "../../index";
 import { TxData, bn, generateSourceBytes, getErrorMessage, uniqBy } from "../../utils";
@@ -59,6 +61,8 @@ import PermitProxyAbi from "./abis/PermitProxy.json";
 import SudoswapV2ModuleAbi from "./abis/SudoswapV2Module.json";
 import CryptoPunksModuleAbi from "./abis/CryptoPunksModule.json";
 import PaymentProcessorModuleAbi from "./abis/PaymentProcessorModule.json";
+// Exchanges
+import SeaportV15Abi from "../../seaport-v1.5/abis/Exchange.json";
 
 type SetupOptions = {
   x2y2ApiKey?: string;
@@ -245,80 +249,6 @@ export class Router {
     // When filling a single order in partial mode, propagate any errors back directly
     if (options?.partial && details.length === 1) {
       options.partial = false;
-    }
-
-    if (details.some(({ kind }) => kind === "universe")) {
-      if (options?.relayer) {
-        throw new Error("Relayer not supported for Universe orders");
-      }
-      for (const detail of details.filter(({ kind }) => kind === "universe")) {
-        if (detail.fees?.length || options?.globalFees?.length) {
-          throw new Error("Fees not supported for Universe orders");
-        }
-
-        let approval: FTApproval | undefined;
-        if (!isETH(this.chainId, detail.currency)) {
-          approval = {
-            currency: detail.currency,
-            amount: detail.price,
-            owner: taker,
-            operator: Sdk.Universe.Addresses.Exchange[this.chainId],
-            txData: generateFTApprovalTxData(
-              detail.currency,
-              taker,
-              Sdk.Universe.Addresses.Exchange[this.chainId]
-            ),
-          };
-        }
-        const order = detail.order as Sdk.Universe.Order;
-        const exchange = new Sdk.Universe.Exchange(this.chainId);
-        txs.push({
-          approvals: approval ? [approval] : [],
-          permits: [],
-          txData: await exchange.fillOrderTx(taker, order, {
-            amount: Number(detail.amount),
-            source: options?.source,
-          }),
-          orderIds: [detail.orderId],
-        });
-        success[detail.orderId] = true;
-      }
-    }
-
-    if (details.some(({ kind }) => kind === "flow")) {
-      if (options?.relayer) {
-        throw new Error("Relayer not supported for Flow orders");
-      }
-
-      for (const detail of details.filter(({ kind }) => kind === "flow")) {
-        if (detail.fees?.length || options?.globalFees?.length) {
-          throw new Error("Fees not supported for Flow orders");
-        }
-
-        let approval: FTApproval | undefined;
-        if (!isETH(this.chainId, detail.currency)) {
-          approval = {
-            currency: detail.currency,
-            amount: detail.price,
-            owner: taker,
-            operator: Sdk.Flow.Addresses.Exchange[this.chainId],
-            txData: generateNFTApprovalTxData(
-              detail.currency,
-              taker,
-              Sdk.Flow.Addresses.Exchange[this.chainId]
-            ),
-          };
-        }
-        const order = detail.order as Sdk.Flow.Order;
-        const exchange = new Sdk.Flow.Exchange(this.chainId);
-        txs.push({
-          approvals: approval ? [approval] : [],
-          permits: [],
-          txData: exchange.takeMultipleOneOrdersTx(taker, [order]),
-          orderIds: [detail.orderId],
-        });
-        success[detail.orderId] = true;
-      }
     }
 
     if (details.some(({ kind }) => kind === "manifold")) {
@@ -2755,7 +2685,7 @@ export class Router {
           },
           orderIds,
         });
-      } else
+      } else {
         txs.push({
           approvals,
           permits: [],
@@ -2787,6 +2717,7 @@ export class Router {
           },
           orderIds,
         });
+      }
     }
 
     if (!txs.length) {
@@ -2847,73 +2778,7 @@ export class Router {
     // CASE 1
     // Handle exchanges which don't have a router module implemented by filling directly
 
-    if (details.some(({ kind }) => kind === "universe")) {
-      for (const detail of details.filter(({ kind }) => kind === "universe")) {
-        if (detail.fees?.length || options?.globalFees?.length) {
-          throw new Error("Fees not supported for Universe orders");
-        }
-
-        // Approve Universe's Exchange contract
-        const approval: NFTApproval = {
-          orderIds: [detail.orderId],
-          contract: detail.contract,
-          owner: taker,
-          operator: Sdk.Universe.Addresses.Exchange[this.chainId],
-          txData: generateNFTApprovalTxData(
-            detail.contract,
-            taker,
-            Sdk.Universe.Addresses.Exchange[this.chainId]
-          ),
-        };
-
-        const order = detail.order as Sdk.Universe.Order;
-        const exchange = new Sdk.Universe.Exchange(this.chainId);
-
-        txs.push({
-          approvals: [approval],
-          txData: await exchange.fillOrderTx(taker, order, {
-            amount: Number(detail.amount ?? 1),
-            source: options?.source,
-          }),
-          orderIds: [detail.orderId],
-        });
-
-        success[detail.orderId] = true;
-      }
-    }
-
-    // TODO: Add Flow router module
-    if (details.some(({ kind }) => kind === "flow")) {
-      for (const detail of details.filter(({ kind }) => kind === "flow")) {
-        if (detail.fees?.length || options?.globalFees?.length) {
-          throw new Error("Fees not supported for Universe orders");
-        }
-
-        // Approve Universe's Exchange contract
-        const approval: NFTApproval = {
-          orderIds: [detail.orderId],
-          contract: detail.contract,
-          owner: taker,
-          operator: Sdk.Flow.Addresses.Exchange[this.chainId],
-          txData: generateNFTApprovalTxData(
-            detail.contract,
-            taker,
-            Sdk.Universe.Addresses.Exchange[this.chainId]
-          ),
-        };
-
-        const order = detail.order as Sdk.Flow.Order;
-        const exchange = new Sdk.Flow.Exchange(this.chainId);
-
-        txs.push({
-          approvals: approval ? [approval] : [],
-          txData: exchange.takeMultipleOneOrdersTx(taker, [order]),
-          orderIds: [detail.orderId],
-        });
-
-        success[detail.orderId] = true;
-      }
-    }
+    // Nothing here
 
     // CASE 2
     // Handle orders which require special handling such as direct filling
@@ -3145,9 +3010,7 @@ export class Router {
     // Step 2
     // Handle calldata generation
 
-    const numDetailsToConsider = details.filter(
-      (d) => !success[d.orderId] && !d.isProtected
-    ).length;
+    const numDetailsToConsider = details.filter((d) => !success[d.orderId]).length;
     const getFees = (ownDetail: BidDetails) =>
       [
         // Global fees
@@ -3354,12 +3217,6 @@ export class Router {
           const order = detail.order as Sdk.SeaportBase.Types.PartialOrder;
           const module = this.contracts.seaportV15Module;
 
-          if (detail.isProtected) {
-            if (detail.fees?.length || options?.globalFees?.length) {
-              throw new Error("Fees not supported for protected OpenSea orders");
-            }
-          }
-
           try {
             const result = await axios.post(`${this.options?.orderFetcherBaseUrl}/api/offer`, {
               orderHash: order.id,
@@ -3374,11 +3231,51 @@ export class Router {
               metadata: this.options?.orderFetcherMetadata,
             });
 
-            if (result.data.calldata) {
+            const fullOrder = new Sdk.SeaportV15.Order(this.chainId, result.data.order);
+            if (detail.isProtected) {
               const contract = detail.contract;
               const owner = taker;
               const operator = new Sdk.SeaportBase.ConduitController(this.chainId).deriveConduit(
                 Sdk.SeaportBase.Addresses.OpenseaConduitKey[this.chainId]
+              );
+
+              const { order: counterOrder, fulfillments } =
+                constructOfferCounterOrderAndFulfillments(fullOrder.params, taker, {
+                  counter: await new Sdk.SeaportV15.Exchange(this.chainId).getCounter(
+                    this.provider,
+                    taker
+                  ),
+                  tips: fees,
+                  amount: detail.amount,
+                  tokenId: result.data.criteriaResolvers[0]?.identifier,
+                });
+
+              const calldata = new Interface(SeaportV15Abi).encodeFunctionData(
+                "matchAdvancedOrders",
+                [
+                  [
+                    {
+                      parameters: {
+                        ...fullOrder.params,
+                        totalOriginalConsiderationItems: fullOrder.params.consideration.length,
+                      },
+                      signature: fullOrder.params.signature!,
+                      extraData: result.data.extraData,
+                      numerator: detail.amount ?? 1,
+                      denominator: fullOrder.params.consideration[0].startAmount,
+                    },
+                    {
+                      parameters: counterOrder.parameters,
+                      signature: counterOrder.signature,
+                      extraData: "0x",
+                      numerator: detail.amount ?? 1,
+                      denominator: fullOrder.params.consideration[0].startAmount,
+                    },
+                  ],
+                  result.data.criteriaResolvers ?? [],
+                  fulfillments,
+                  taker,
+                ]
               );
 
               // Fill directly
@@ -3386,7 +3283,7 @@ export class Router {
                 txData: {
                   from: taker,
                   to: Sdk.SeaportV15.Addresses.Exchange[this.chainId],
-                  data: result.data.calldata + generateSourceBytes(options?.source),
+                  data: calldata + generateSourceBytes(options?.source),
                 },
                 approvals: [
                   {
@@ -3400,7 +3297,6 @@ export class Router {
                 orderIds: [detail.orderId],
               });
             } else {
-              const fullOrder = new Sdk.SeaportV15.Order(this.chainId, result.data.order);
               executionsWithDetails.push({
                 detail,
                 execution: {

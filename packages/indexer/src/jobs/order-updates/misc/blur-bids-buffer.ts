@@ -4,8 +4,8 @@ import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
 import { config } from "@/config/index";
-import * as orderbook from "@/jobs/orderbook/orders-queue";
-import * as blurBidsRefresh from "@/jobs/order-updates/misc/blur-bids-refresh";
+import { blurBidsRefreshJob } from "@/jobs/order-updates/misc/blur-bids-refresh-job";
+import { orderbookOrdersJob } from "@/jobs/orderbook/orderbook-orders-job";
 
 const QUEUE_NAME = "blur-bids-buffer";
 
@@ -41,7 +41,7 @@ if (config.doBackgroundWork) {
 
           const pricePoints = result.map((r) => JSON.parse(r));
           if (pricePoints.length) {
-            await orderbook.addToQueue([
+            await orderbookOrdersJob.addToQueue([
               {
                 kind: "blur-bid",
                 info: {
@@ -54,7 +54,7 @@ if (config.doBackgroundWork) {
                 ingestMethod: "websocket",
               },
             ]);
-            await blurBidsRefresh.addToQueue(collection);
+            await blurBidsRefreshJob.addToQueue(collection);
           }
         }
       } catch (error) {
