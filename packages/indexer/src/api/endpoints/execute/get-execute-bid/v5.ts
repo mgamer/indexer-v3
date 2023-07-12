@@ -15,9 +15,9 @@ import { baseProvider } from "@/common/provider";
 import { bn, now, regex } from "@/common/utils";
 import { config } from "@/config/index";
 import { getExecuteError } from "@/orderbook/orders/errors";
+import { checkBlacklistAndFallback } from "@/orderbook/orders";
 import * as b from "@/utils/auth/blur";
 import { ExecutionsBuffer } from "@/utils/executions";
-import { checkBlacklistAndFallback } from "@/orderbook/orders";
 
 // Blur
 import * as blurBuyCollection from "@/orderbook/orders/blur/build/buy/collection";
