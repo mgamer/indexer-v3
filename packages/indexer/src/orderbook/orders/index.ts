@@ -939,34 +939,31 @@ export const generateBidDetailsV5 = async (
 };
 
 // Check collection's blacklist, override the `orderKind` and `orderbook` in params
-export async function checkBlacklistAndFallback(
+export const checkBlacklistAndFallback = async (
   collection: string,
   params: {
     orderKind: string;
     orderbook: string;
   }
-) {
-  // Blacklist checks
-
+) => {
   // Fallback to Seaport when LooksRare is blocked
   if (["looks-rare-v2"].includes(params.orderKind) && ["looks-rare"].includes(params.orderbook)) {
-    const looksrareBlocked = await checkMarketplaceIsFiltered(collection, [
+    const blocked = await checkMarketplaceIsFiltered(collection, [
       Sdk.LooksRareV2.Addresses.Exchange[config.chainId],
     ]);
-
-    if (looksrareBlocked) {
+    if (blocked) {
       params.orderKind = "seaport-v1.5";
       params.orderbook = "reservoir";
     }
   }
 
-  // Fallback to Payment Processor when seaport blocked and the Orderbook is Reservoir
+  // Fallback to PaymentProcessor when Seaport is blocked
   if (["seaport-v1.5"].includes(params.orderKind) && ["reservoir"].includes(params.orderbook)) {
-    const seaportBlocked = await checkMarketplaceIsFiltered(collection, [
+    const blocked = await checkMarketplaceIsFiltered(collection, [
       Sdk.SeaportV15.Addresses.Exchange[config.chainId],
     ]);
-    if (seaportBlocked) {
+    if (blocked) {
       params.orderKind = "payment-processor";
     }
   }
-}
+};
