@@ -12,7 +12,6 @@ import "@/jobs/events-sync";
 import "@/jobs/oracle";
 import "@/jobs/order-updates";
 import "@/jobs/orderbook";
-import "@/jobs/sources";
 import "@/jobs/update-attribute";
 import "@/jobs/websocket-events";
 import "@/jobs/metrics";
@@ -170,6 +169,8 @@ import { orderUpdatesByMakerJob } from "@/jobs/order-updates/order-updates-by-ma
 import { openseaOffChainCancellationsJob } from "@/jobs/order-updates/misc/opensea-off-chain-cancellations-job";
 import { orderbookOrdersJob } from "@/jobs/orderbook/orderbook-orders-job";
 import { openseaListingsJob } from "@/jobs/orderbook/opensea-listings-job";
+import { orderbookPostOrderExternalJob } from "@/jobs/orderbook/post-order-external/orderbook-post-order-external-job";
+import { orderbookPostOrderExternalOpenseaJob } from "@/jobs/orderbook/post-order-external/orderbook-post-order-external-opensea-job";
 
 export const allJobQueues = [
   backfillBlockTimestamps.queue,
@@ -325,6 +326,8 @@ export class RabbitMqJobsConsumer {
       openseaOffChainCancellationsJob,
       orderbookOrdersJob,
       openseaListingsJob,
+      orderbookPostOrderExternalJob,
+      orderbookPostOrderExternalOpenseaJob,
     ];
   }
 

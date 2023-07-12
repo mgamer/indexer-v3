@@ -93,13 +93,16 @@ const MAPPINGS: MappingTypeMapping = {
     pricing: {
       properties: {
         price: { type: "keyword" },
+        priceDecimal: { type: "double" },
         currencyPrice: { type: "keyword" },
         usdPrice: { type: "keyword" },
         feeBps: { type: "integer" },
         currency: { type: "keyword" },
         value: { type: "keyword" },
+        valueDecimal: { type: "double" },
         currencyValue: { type: "keyword" },
         normalizedValue: { type: "keyword" },
+        normalizedValueDecimal: { type: "double" },
         currencyNormalizedValue: { type: "keyword" },
       },
     },
@@ -605,6 +608,8 @@ const _search = async (
   debug = false
 ): Promise<ActivityDocument[]> => {
   try {
+    params.track_total_hits = params.track_total_hits ?? false;
+
     const esResult = await elasticsearch.search<ActivityDocument>({
       index: INDEX_NAME,
       ...params,
@@ -827,11 +832,14 @@ export const updateActivitiesMissingCollection = async (
             },
           },
         ]),
+        filter_path: "items.*.error",
       };
 
-      const response = await elasticsearch.bulk(bulkParams);
+      const response = await elasticsearch.bulk(bulkParams, { ignore: [404] });
 
       if (response?.errors) {
+        keepGoing = response?.items.some((item) => item.update?.status !== 400);
+
         logger.error(
           "elasticsearch-activities",
           JSON.stringify({
@@ -844,10 +852,9 @@ export const updateActivitiesMissingCollection = async (
             },
             bulkParams,
             response,
+            keepGoing,
           })
         );
-
-        keepGoing = true;
       } else {
         keepGoing = pendingUpdateActivities.length === 1000;
 
@@ -961,11 +968,14 @@ export const updateActivitiesCollection = async (
             },
           },
         ]),
+        filter_path: "items.*.error",
       };
 
-      const response = await elasticsearch.bulk(bulkParams);
+      const response = await elasticsearch.bulk(bulkParams, { ignore: [404] });
 
       if (response?.errors) {
+        keepGoing = response?.items.some((item) => item.update?.status !== 400);
+
         logger.error(
           "elasticsearch-activities",
           JSON.stringify({
@@ -981,8 +991,6 @@ export const updateActivitiesCollection = async (
             response,
           })
         );
-
-        keepGoing = true;
       } else {
         keepGoing = pendingUpdateActivities.length === 1000;
 
@@ -1169,11 +1177,14 @@ export const updateActivitiesTokenMetadata = async (
             },
           },
         ]),
+        filter_path: "items.*.error",
       };
 
-      const response = await elasticsearch.bulk(bulkParams);
+      const response = await elasticsearch.bulk(bulkParams, { ignore: [404] });
 
       if (response?.errors) {
+        keepGoing = response?.items.some((item) => item.update?.status !== 400);
+
         logger.error(
           "elasticsearch-activities",
           JSON.stringify({
@@ -1188,8 +1199,6 @@ export const updateActivitiesTokenMetadata = async (
             response,
           })
         );
-
-        keepGoing = true;
       } else {
         keepGoing = pendingUpdateActivities.length === 1000;
 
@@ -1345,11 +1354,14 @@ export const updateActivitiesCollectionMetadata = async (
             },
           },
         ]),
+        filter_path: "items.*.error",
       };
 
-      const response = await elasticsearch.bulk(bulkParams);
+      const response = await elasticsearch.bulk(bulkParams, { ignore: [404] });
 
       if (response?.errors) {
+        keepGoing = response?.items.some((item) => item.update?.status !== 400);
+
         logger.error(
           "elasticsearch-activities",
           JSON.stringify({
@@ -1364,8 +1376,6 @@ export const updateActivitiesCollectionMetadata = async (
             keepGoing,
           })
         );
-
-        keepGoing = true;
       } else {
         keepGoing = pendingUpdateActivities.length === 1000;
 
@@ -1426,7 +1436,9 @@ export const updateActivitiesCollectionMetadata = async (
   return keepGoing;
 };
 
-export const deleteActivitiesByBlockHash = async (blockHash: string): Promise<void> => {
+export const deleteActivitiesByBlockHash = async (blockHash: string): Promise<boolean> => {
+  let keepGoing = false;
+
   const query = {
     bool: {
       must: [
@@ -1440,53 +1452,93 @@ export const deleteActivitiesByBlockHash = async (blockHash: string): Promise<vo
   };
 
   try {
-    const response = await elasticsearch.deleteByQuery({
-      index: INDEX_NAME,
-      conflicts: "proceed",
+    const pendingDeleteActivities = await _search({
       // This is needed due to issue with elasticsearch DSL.
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
-      query: query,
+      query,
+      size: 1000,
     });
 
-    if (response?.failures?.length) {
+    if (pendingDeleteActivities.length) {
+      const bulkParams = {
+        body: pendingDeleteActivities.flatMap((activity) => [
+          { delete: { _index: INDEX_NAME, _id: activity.id } },
+        ]),
+        filter_path: "items.*.error",
+      };
+
+      const response = await elasticsearch.bulk(bulkParams, { ignore: [404] });
+
+      if (response?.errors) {
+        keepGoing = response?.items.some((item) => item.update?.status !== 400);
+
+        logger.error(
+          "elasticsearch-activities",
+          JSON.stringify({
+            topic: "deleteActivitiesByBlockHashV2",
+            message: `Errors in response`,
+            data: {
+              blockHash,
+            },
+            bulkParams,
+            response,
+            keepGoing,
+          })
+        );
+      } else {
+        keepGoing = pendingDeleteActivities.length === 1000;
+
+        logger.info(
+          "elasticsearch-activities",
+          JSON.stringify({
+            topic: "deleteActivitiesByBlockHashV2",
+            message: `Success`,
+            data: {
+              blockHash,
+            },
+            bulkParams,
+            response,
+            keepGoing,
+          })
+        );
+      }
+    }
+  } catch (error) {
+    const retryableError =
+      (error as any).meta?.meta?.aborted ||
+      (error as any).meta?.body?.error?.caused_by?.type === "node_not_connected_exception";
+
+    if (retryableError) {
+      logger.warn(
+        "elasticsearch-activities",
+        JSON.stringify({
+          topic: "deleteActivitiesByBlockHashV2",
+          message: `Unexpected error`,
+          data: {
+            blockHash,
+          },
+          error,
+        })
+      );
+
+      keepGoing = true;
+    } else {
       logger.error(
         "elasticsearch-activities",
         JSON.stringify({
-          topic: "deleteActivitiesByBlockHash",
+          topic: "deleteActivitiesByBlockHashV2",
+          message: `Unexpected error`,
           data: {
             blockHash,
           },
-          query,
-          response,
+          error,
         })
       );
-    } else {
-      logger.info(
-        "elasticsearch-activities",
-        JSON.stringify({
-          topic: "deleteActivitiesByBlockHash",
-          data: {
-            blockHash,
-          },
-          query,
-          response,
-        })
-      );
-    }
-  } catch (error) {
-    logger.error(
-      "elasticsearch-activities",
-      JSON.stringify({
-        topic: "deleteActivitiesByBlockHash",
-        data: {
-          blockHash,
-        },
-        query: JSON.stringify(query),
-        error,
-      })
-    );
 
-    throw error;
+      throw error;
+    }
   }
+
+  return keepGoing;
 };

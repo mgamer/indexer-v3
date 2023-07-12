@@ -15,6 +15,7 @@ import { baseProvider } from "@/common/provider";
 import { bn, now, regex } from "@/common/utils";
 import { config } from "@/config/index";
 import { getExecuteError } from "@/orderbook/orders/errors";
+import { checkBlacklistAndFallback } from "@/orderbook/orders";
 import * as b from "@/utils/auth/blur";
 import { ExecutionsBuffer } from "@/utils/executions";
 
@@ -43,6 +44,10 @@ import * as x2y2BuyToken from "@/orderbook/orders/x2y2/build/buy/token";
 import * as zeroExV4BuyAttribute from "@/orderbook/orders/zeroex-v4/build/buy/attribute";
 import * as zeroExV4BuyToken from "@/orderbook/orders/zeroex-v4/build/buy/token";
 import * as zeroExV4BuyCollection from "@/orderbook/orders/zeroex-v4/build/buy/collection";
+
+// PaymentProcessor
+import * as paymentProcessorBuyToken from "@/orderbook/orders/payment-processor/build/buy/token";
+import * as paymentProcessorBuyCollection from "@/orderbook/orders/payment-processor/build/buy/collection";
 
 const version = "v5";
 
@@ -112,7 +117,8 @@ export const getExecuteBidV5Options: RouteOptions = {
               "looks-rare",
               "looks-rare-v2",
               "x2y2",
-              "alienswap"
+              "alienswap",
+              "payment-processor"
             )
             .default("seaport-v1.5")
             .description("Exchange protocol used to create order. Example: `seaport-v1.5`"),
@@ -425,6 +431,11 @@ export const getExecuteBidV5Options: RouteOptions = {
           // Force usage of looks-rare-v2
           if (params.orderKind === "looks-rare") {
             params.orderKind = "looks-rare-v2";
+          }
+
+          // Blacklist checks
+          if (collectionId) {
+            await checkBlacklistAndFallback(collectionId, params);
           }
 
           // Only single-contract token sets are biddable
@@ -1097,6 +1108,90 @@ export const getExecuteBidV5Options: RouteOptions = {
                   new Sdk.X2Y2.Exchange(config.chainId, "").hash(order),
                   params.quantity
                 );
+
+                break;
+              }
+
+              case "payment-processor": {
+                if (!["reservoir"].includes(params.orderbook)) {
+                  return errors.push({
+                    message: "Unsupported orderbook",
+                    orderIndex: i,
+                  });
+                }
+
+                let order: Sdk.PaymentProcessor.Order;
+                if (token) {
+                  const [contract, tokenId] = token.split(":");
+                  order = await paymentProcessorBuyToken.build({
+                    ...params,
+                    maker,
+                    contract,
+                    tokenId,
+                  });
+                } else if (collection) {
+                  order = await paymentProcessorBuyCollection.build({
+                    ...params,
+                    maker,
+                    collection,
+                  });
+                } else {
+                  return errors.push({
+                    message: "Only token and collection bids are supported",
+                    orderIndex: i,
+                  });
+                }
+
+                // Check the maker's approval
+                let approvalTx: TxData | undefined;
+                const wethApproval = await currency.getAllowance(
+                  maker,
+                  Sdk.PaymentProcessor.Addresses.Exchange[config.chainId]
+                );
+                if (bn(wethApproval).lt(bn(order.params.price))) {
+                  approvalTx = currency.approveTransaction(
+                    maker,
+                    Sdk.PaymentProcessor.Addresses.Exchange[config.chainId]
+                  );
+                }
+
+                steps[2].items.push({
+                  status: !approvalTx ? "complete" : "incomplete",
+                  data: approvalTx,
+                  orderIndexes: [i],
+                });
+                steps[3].items.push({
+                  status: "incomplete",
+                  data: {
+                    sign: order.getSignatureData(),
+                    post: {
+                      endpoint: "/order/v4",
+                      method: "POST",
+                      body: {
+                        items: [
+                          {
+                            order: {
+                              kind: "payment-processor",
+                              data: {
+                                ...order.params,
+                              },
+                            },
+                            tokenSetId,
+                            attribute,
+                            collection,
+                            isNonFlagged: params.excludeFlaggedTokens,
+                            orderbook: params.orderbook,
+                            orderbookApiKey: params.orderbookApiKey,
+                          },
+                        ],
+                        source,
+                      },
+                    },
+                  },
+                  orderIndexes: [i],
+                });
+
+                addExecution(order.hash(), params.quantity);
 
                 break;
               }

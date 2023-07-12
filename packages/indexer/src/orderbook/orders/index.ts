@@ -35,6 +35,7 @@ import { idb } from "@/common/db";
 import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
 import { SourcesEntity } from "@/models/sources/sources-entity";
+import { checkMarketplaceIsFiltered } from "@/utils/marketplace-blacklists";
 
 // Whenever a new order kind is added, make sure to also include an
 // entry/implementation in the below types/methods in order to have
@@ -761,6 +762,15 @@ export const generateBidDetailsV6 = async (
       };
     }
 
+    case "payment-processor": {
+      const sdkOrder = new Sdk.PaymentProcessor.Order(config.chainId, order.rawData);
+      return {
+        kind: "payment-processor",
+        ...common,
+        order: sdkOrder,
+      };
+    }
+
     default: {
       throw new Error("Unsupported order kind");
     }
@@ -963,6 +973,36 @@ export const generateBidDetailsV5 = async (
 
     default: {
       throw new Error("Unsupported order kind");
+    }
+  }
+};
+
+// Check collection's blacklist, override the `orderKind` and `orderbook` in params
+export const checkBlacklistAndFallback = async (
+  collection: string,
+  params: {
+    orderKind: string;
+    orderbook: string;
+  }
+) => {
+  // Fallback to Seaport when LooksRare is blocked
+  if (["looks-rare-v2"].includes(params.orderKind) && ["looks-rare"].includes(params.orderbook)) {
+    const blocked = await checkMarketplaceIsFiltered(collection, [
+      Sdk.LooksRareV2.Addresses.Exchange[config.chainId],
+    ]);
+    if (blocked) {
+      params.orderKind = "seaport-v1.5";
+      params.orderbook = "reservoir";
+    }
+  }
+
+  // Fallback to PaymentProcessor when Seaport is blocked
+  if (["seaport-v1.5"].includes(params.orderKind) && ["reservoir"].includes(params.orderbook)) {
+    const blocked = await checkMarketplaceIsFiltered(collection, [
+      Sdk.SeaportV15.Addresses.Exchange[config.chainId],
+    ]);
+    if (blocked) {
+      params.orderKind = "payment-processor";
     }
   }
 };
