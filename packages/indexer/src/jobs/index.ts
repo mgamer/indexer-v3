@@ -162,6 +162,7 @@ import { orderbookPostOrderExternalJob } from "@/jobs/orderbook/post-order-exter
 import { orderbookPostOrderExternalOpenseaJob } from "@/jobs/orderbook/post-order-external/orderbook-post-order-external-opensea-job";
 import { openseaOrdersProcessJob } from "@/jobs/opensea-orders/opensea-orders-process-job";
 import { openseaOrdersFetchJob } from "@/jobs/opensea-orders/opensea-orders-fetch-job";
+import { saveBidEventsJob } from "@/jobs/order-updates/save-bid-events-job";
 
 export const allJobQueues = [
   backfillBlockTimestamps.queue,
@@ -312,6 +313,7 @@ export class RabbitMqJobsConsumer {
       orderbookPostOrderExternalOpenseaJob,
       openseaOrdersProcessJob,
       openseaOrdersFetchJob,
+      saveBidEventsJob,
     ];
   }
 
