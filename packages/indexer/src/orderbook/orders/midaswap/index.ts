@@ -15,6 +15,8 @@ import * as tokenSet from "@/orderbook/token-sets";
 import * as midaswap from "@/utils/midaswap";
 import { ethers } from "ethers";
 import Decimal from "decimal.js";
+import { baseProvider } from "@/common/provider";
+import { Contract } from "@ethersproject/contracts";
 
 export type OrderInfo = {
   orderParams: {
@@ -39,12 +41,11 @@ type SaveResult = {
   triggerKind?: "new-order" | "reprice";
 };
 
-export const getOrderId = (pool: string, side: "sell" | "buy", tokenId?: string) =>
-  side === "buy"
-    ? // Buy orders have a single order id per pool
-      keccak256(["string", "address", "string"], ["midaswap", pool, side])
-    : // Sell orders have multiple order ids per pool (one for each potential token id)
-      keccak256(["string", "address", "string", "uint256"], ["midaswap", pool, side, tokenId]);
+export const getSellOrderId = (pool: string, tokenId: string, lpTokenId: string) =>
+  keccak256(
+    ["string", "address", "string", "uint256", "string"],
+    ["midaswap", pool, "sell", tokenId, lpTokenId]
+  );
 
 const getBuyOrderId = (pool: string, lpTokenId: string, uuid: string) =>
   keccak256(
@@ -102,7 +103,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
             return;
           }
 
-          const id = getOrderId(orderParams.pool, "sell", metadata.nftId);
+          const id = getSellOrderId(orderParams.pool, nftId, lpTokenId);
 
           const tmpPriceList = Array.from({ length: binAmount }).map(
             (item, index) => binLower + index * binstep
@@ -490,17 +491,18 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
           break;
         }
         case "midaswap-buy-erc721": {
-          if (_.isUndefined(tradeBin) || _.isUndefined(lpTokenId)) {
+          if (_.isUndefined(tradeBin) || _.isUndefined(lpTokenId) || _.isUndefined(nftId)) {
             return;
           }
 
-          const id = getOrderId(orderParams.pool, "sell", nftId);
-          // delete order
+          const id = getSellOrderId(orderParams.pool, nftId, lpTokenId);
+
+          // delete sell order
           await idb.none(`DELETE FROM orders WHERE orders.id = $/id/`, { id });
 
           const orderResult = await redb.manyOrNone(
             `
-                      SELECT id,side,raw_data FROM orders
+                      SELECT id,side,fillability_status,raw_data FROM orders
                       WHERE orders.maker = $/maker/
                     `,
             {
@@ -508,24 +510,47 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
             }
           );
 
-          const sellOrders = orderResult.filter((item) => item.side === "sell");
+          // console.log(orderResult, "orderResult");
+
+          const sellOrders = orderResult.filter(
+            (item) => item.side === "sell" && item.raw_data.lpTokenId === lpTokenId
+          );
           const buyOrders = orderResult.filter((item) => item.side === "buy");
 
-          // update sell orders
+          const fillableBuyOrders = buyOrders.filter(
+            (item) => item.fillability_status === "fillable"
+          );
+          const cancelledOrders = buyOrders.filter(
+            (item) => item.fillability_status === "cancelled"
+          );
+
+          const pairContract = new Contract(pool.address, Sdk.Midaswap.PairAbi, baseProvider);
+          const [, floorPriceBin] = await pairContract.getIDs();
+
+          // fillability_status need to change
+          const cancelledToTillableOrders = cancelledOrders.filter(
+            (item) => item.raw_data.extra.prices[0].bin <= floorPriceBin
+          );
+
+          // console.log(id, nftId, lpTokenId, tradeBin, floorPriceBin, "id");
+
+          // Update the sell order with the same lpTokenId
           if (sellOrders.length) {
-            const newSellPrices = _.remove(
-              sellOrders[0].raw_data.extra.prices,
+            const targetPrice = sellOrders[0].raw_data.extra.prices.find(
               (item: Sdk.Midaswap.Price) => item.bin !== tradeBin.toString()
             );
 
-            const price = sellOrders[0].price;
-            const value = sellOrders[0].price;
+            const newSellPrices: Sdk.Midaswap.Price[] = _.remove(
+              sellOrders[0].raw_data.extra.prices,
+              (price) => price !== targetPrice
+            );
 
-            sellOrders
-              // .filter((item) => item.id !== id)
-              .forEach(async (item) => {
-                await idb.none(
-                  `
+            const price = newSellPrices[0].price;
+            const value = newSellPrices[0].price;
+
+            sellOrders.forEach(async (item) => {
+              await idb.none(
+                `
                   UPDATE orders SET
                     fillability_status = 'fillable',
                     approval_status = 'approved',
@@ -539,31 +564,33 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                     log_index = $/logIndex/
                   WHERE orders.id = $/id/
                 `,
-                  {
-                    id: item.id,
-                    price,
-                    value,
-                    rawData: {
-                      ...item.raw_data,
-                      extra: {
-                        prices: newSellPrices,
-                      },
-                    },
-                    quantityRemaining: sellOrders.length.toString(),
-                    blockNumber: orderParams.txBlock,
-                    logIndex: orderParams.logIndex,
-                  }
-                );
-
-                results.push({
+                {
                   id: item.id,
-                  txHash: orderParams.txHash,
-                  txTimestamp: orderParams.txTimestamp,
-                  status: "success",
-                  triggerKind: "reprice",
-                });
+                  price,
+                  value,
+                  rawData: {
+                    ...item.raw_data,
+                    extra: {
+                      prices: newSellPrices,
+                    },
+                  },
+                  quantityRemaining: sellOrders.length.toString(),
+                  blockNumber: orderParams.txBlock,
+                  logIndex: orderParams.logIndex,
+                }
+              );
+
+              results.push({
+                id: item.id,
+                txHash: orderParams.txHash,
+                txTimestamp: orderParams.txTimestamp,
+                status: "success",
+                triggerKind: "reprice",
               });
+            });
           }
+
+          // handler buy orders
 
           // create buy orders
           const newBuyOrders = async (newBuyPrices: Sdk.Midaswap.Price[]) => {
@@ -595,7 +622,23 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
               // tokenId: nftId,
               lpTokenId,
               extra: {
-                prices: newBuyPrices,
+                prices:
+                  +tradeBin <= +floorPriceBin
+                    ? newBuyPrices
+                    : [
+                        {
+                          price: ethers.utils
+                            .parseEther(
+                              new Decimal(Sdk.Midaswap.Order.binToPriceFixed(tradeBin))
+                                .div(1 + (+pool.freeRate + +pool.roralty) / 10000)
+                                .toFixed(18)
+                                .toString()
+                            )
+                            .toString(),
+                          bin: tradeBin.toString(),
+                          lpTokenId,
+                        },
+                      ],
               },
             });
 
@@ -607,7 +650,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
               id,
               kind: "midaswap",
               side: "buy",
-              fillability_status: "fillable",
+              fillability_status: +tradeBin <= +floorPriceBin ? "fillable" : "cancelled",
               approval_status: "approved",
               token_set_id: tokenSetId,
               token_set_schema_hash: toBuffer(schemaHash),
@@ -647,26 +690,81 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
             });
           };
 
-          if (buyOrders.length) {
-            const newBuyPrices: Sdk.Midaswap.Price[] = _.sortBy(
-              [
-                ...buyOrders[0].raw_data.extra.prices,
-                {
-                  price: tradeBin.toString(),
-                  bin: tradeBin.toString(),
-                  lpTokenId,
-                },
-              ],
-              "bin"
-            ).reverse();
+          const newBuyPrices: Sdk.Midaswap.Price[] = _.sortBy(
+            [
+              ...(fillableBuyOrders[0]?.raw_data.extra.prices || []), // exist fillable buy order bins
+              ...cancelledToTillableOrders.map((item) => item.raw_data.extra.prices[0]), // append cancelled to fillable order bins
+              // append new buy order bins
+              +tradeBin <= +floorPriceBin
+                ? {
+                    price: ethers.utils
+                      .parseEther(
+                        new Decimal(Sdk.Midaswap.Order.binToPriceFixed(tradeBin))
+                          .div(1 + (+pool.freeRate + +pool.roralty) / 10000)
+                          .toFixed(18)
+                          .toString()
+                      )
+                      .toString(),
+                    bin: tradeBin.toString(),
+                    lpTokenId,
+                  }
+                : undefined,
+            ].filter(Boolean),
+            "bin"
+          ).reverse();
 
+          const price = newBuyPrices[0]?.price || 0;
+          const value = newBuyPrices[0]?.price || 0;
+
+          // update cancelled buy orders price & fillability_status
+          if (cancelledToTillableOrders.length) {
+            cancelledToTillableOrders.forEach(async (item) => {
+              await idb.none(
+                `
+                  UPDATE orders SET
+                    fillability_status = 'fillable',
+                    approval_status = 'approved',
+                    price = $/price/,
+                    currency_price = $/price/,
+                    value = $/value/,
+                    currency_value = $/value/,
+                    valid_between = tstzrange(date_trunc('seconds', to_timestamp(${orderParams.txTimestamp})), 'Infinity', '[]'),
+                    updated_at = now(),
+                    raw_data = $/rawData:json/,
+                    log_index = $/logIndex/
+                  WHERE orders.id = $/id/
+                `,
+                {
+                  id: item.id,
+                  price,
+                  value,
+                  rawData: {
+                    ...item.raw_data,
+                    extra: {
+                      prices: newBuyPrices,
+                    },
+                  },
+                  quantityRemaining: newBuyPrices.length.toString(),
+                  blockNumber: orderParams.txBlock,
+                  logIndex: orderParams.logIndex,
+                }
+              );
+
+              results.push({
+                id: item.id,
+                txHash: orderParams.txHash,
+                txTimestamp: orderParams.txTimestamp,
+                status: "success",
+                triggerKind: "reprice",
+              });
+            });
+          }
+
+          if (fillableBuyOrders.length) {
             await newBuyOrders(newBuyPrices);
 
-            const price = newBuyPrices[0].price;
-            const value = newBuyPrices[0].price;
-
-            // update buy orders price
-            buyOrders.forEach(async (item) => {
+            // update fillable buy orders price
+            fillableBuyOrders.forEach(async (item) => {
               await idb.none(
                 `
                   UPDATE orders SET
@@ -707,21 +805,26 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
               });
             });
           } else {
-            const newBuyPrices: Sdk.Midaswap.Price[] = [
-              {
-                price: ethers.utils
-                  .parseEther(
-                    new Decimal(Sdk.Midaswap.Order.binToPriceFixed(tradeBin))
-                      .div(1 + (+pool.freeRate + +pool.roralty) / 10000)
-                      .toFixed(18)
-                      .toString()
-                  )
-                  .toString(),
-                bin: tradeBin.toString(),
-                lpTokenId,
-              },
-            ];
-            await newBuyOrders(newBuyPrices);
+            await newBuyOrders(
+              _.sortBy(
+                [
+                  ...cancelledToTillableOrders.map((item) => item.raw_data.extra.prices[0]),
+                  {
+                    price: ethers.utils
+                      .parseEther(
+                        new Decimal(Sdk.Midaswap.Order.binToPriceFixed(tradeBin))
+                          .div(1 + (+pool.freeRate + +pool.roralty) / 10000)
+                          .toFixed(18)
+                          .toString()
+                      )
+                      .toString(),
+                    bin: tradeBin.toString(),
+                    lpTokenId,
+                  },
+                ],
+                "bin"
+              ).reverse()
+            );
           }
 
           break;
@@ -741,7 +844,10 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
               maker: toBuffer(pool.address),
             }
           );
-          const sellOrders = orderResult.filter((item) => item.side === "sell");
+
+          const sellOrders = orderResult.filter(
+            (item) => item.side === "sell" && item.raw_data.lpTokenId === lpTokenId
+          );
           const buyOrders = orderResult.filter((item) => item.side === "buy");
 
           if (buyOrders.length) {
@@ -814,7 +920,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
           }
 
           const newSellOrder = async (newSellPrices: Sdk.Midaswap.Price[]) => {
-            const id = getOrderId(orderParams.pool, "sell", nftId);
+            const id = getSellOrderId(orderParams.pool, nftId, lpTokenId);
             const price = newSellPrices[0].price;
             const value = newSellPrices[0].price;
 

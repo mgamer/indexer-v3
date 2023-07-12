@@ -1,7 +1,6 @@
 import { logger } from "@/common/logger";
 import { getEventData } from "@/events-sync/data";
 import { EnhancedEvent, OnChainData } from "@/events-sync/handlers/utils";
-import * as midaswap from "@/orderbook/orders/midaswap";
 import * as midaswapUtils from "@/utils/midaswap";
 import { BigNumber } from "ethers";
 
@@ -13,7 +12,6 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
   // };
 
   logger.info("midaswap-debug", JSON.stringify(events));
-
   // Handle the events
   for (const { subKind, baseEventParams, log } of events) {
     const eventData = getEventData([subKind])[0];
@@ -32,45 +30,30 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         const binLower = parsedLog.args["binLower"] as number;
         const binStep = parsedLog.args["binStep"] as number;
 
-        onChainData.orders.push({
-          kind: "midaswap",
-          info: {
-            orderParams: {
-              pool: baseEventParams.address,
-              txHash: baseEventParams.txHash,
-              txTimestamp: baseEventParams.timestamp,
-              txBlock: baseEventParams.block,
-              logIndex: baseEventParams.logIndex,
+        nftIds.forEach((nftId: BigNumber) => {
+          onChainData.orders.push({
+            kind: "midaswap",
+            info: {
+              orderParams: {
+                pool: baseEventParams.address,
+                txHash: baseEventParams.txHash,
+                txTimestamp: baseEventParams.timestamp,
+                txBlock: baseEventParams.block,
+                logIndex: baseEventParams.logIndex,
+              },
+              metadata: {
+                eventName: subKind,
+                fromOnChain: true,
+                lpTokenId: lpTokenId.toString(),
+                nftId: nftId.toString(),
+                binLower: binLower,
+                binstep: binStep,
+                binAmount: nftIds.length,
+              },
             },
-            metadata: {
-              eventName: subKind,
-              fromOnChain: true,
-              lpTokenId: lpTokenId.toString(),
-              // nftId: nftId.toString(),
-            },
-          },
+          });
         });
 
-        midaswap.save(
-          nftIds.map((nftId: BigNumber) => ({
-            orderParams: {
-              pool: baseEventParams.address,
-              txHash: baseEventParams.txHash,
-              txTimestamp: baseEventParams.timestamp,
-              txBlock: baseEventParams.block,
-              logIndex: baseEventParams.logIndex,
-            },
-            metadata: {
-              eventName: subKind,
-              fromOnChain: true,
-              lpTokenId: lpTokenId.toString(),
-              nftId: nftId.toString(),
-              binLower: binLower,
-              binstep: binStep,
-              binAmount: nftIds.length,
-            },
-          }))
-        );
         break;
       }
 
@@ -95,29 +78,13 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
             metadata: {
               eventName: subKind,
               fromOnChain: true,
-            },
-          },
-        });
-
-        midaswap.save([
-          {
-            orderParams: {
-              pool: baseEventParams.address,
-              txHash: baseEventParams.txHash,
-              txTimestamp: baseEventParams.timestamp,
-              txBlock: baseEventParams.block,
-              logIndex: baseEventParams.logIndex,
-            },
-            metadata: {
-              eventName: subKind,
-              fromOnChain: true,
               lpTokenId: lpTokenId.toString(),
               binLower: binLower,
               binstep: binStep,
               binAmount: binAmount.toNumber(),
             },
           },
-        ]);
+        });
 
         break;
       }
@@ -143,23 +110,6 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
             },
           },
         });
-
-        midaswap.save([
-          {
-            orderParams: {
-              pool: baseEventParams.address,
-              txHash: baseEventParams.txHash,
-              txTimestamp: baseEventParams.timestamp,
-              txBlock: baseEventParams.block,
-              logIndex: baseEventParams.logIndex,
-            },
-            metadata: {
-              eventName: subKind,
-              fromOnChain: true,
-              lpTokenId: lpTokenId.toString(),
-            },
-          },
-        ]);
 
         break;
       }
@@ -189,24 +139,6 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
             metadata: {
               source: subKind,
               fromOnChain: true,
-            },
-          },
-        });
-
-        await midaswap.save([
-          {
-            // kind: "midaswap",
-            // info: {
-            orderParams: {
-              pool: baseEventParams.address,
-              txHash: baseEventParams.txHash,
-              txTimestamp: baseEventParams.timestamp,
-              txBlock: baseEventParams.block,
-              logIndex: baseEventParams.logIndex,
-            },
-            metadata: {
-              source: subKind,
-              fromOnChain: true,
               nftId: tokenId.toString(),
               eventName: subKind,
               tradeBin,
@@ -214,13 +146,11 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
             },
             // },
           },
-        ]);
-
+        });
         break;
       }
     }
 
     logger.info("midaswap-debug", JSON.stringify(onChainData));
-    return onChainData;
   }
 };
