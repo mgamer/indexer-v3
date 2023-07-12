@@ -37,11 +37,11 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
 
       try {
         let baseQuery = `
-            SELECT
-              t.contract,
-              t.token_id,
-              t.name,
-              t.description,
+          SELECT
+            t.contract,
+            t.token_id,
+            t.name,
+            t.description,
             (
               SELECT
                 array_agg(
@@ -56,14 +56,14 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
                     'topBidValue', attributes.top_buy_value::TEXT
                   )
                 )
-              FROM token_attributes ta
-              JOIN attributes
-                ON ta.attribute_id = attributes.id
-              WHERE ta.contract = t.contract
-                AND ta.token_id = t.token_id
-                AND ta.key != ''
-            ) AS attributes      
-            FROM "tokens" "t"
+            FROM token_attributes ta
+            JOIN attributes
+              ON ta.attribute_id = attributes.id
+            WHERE ta.contract = t.contract
+              AND ta.token_id = t.token_id
+              AND ta.key != ''
+          ) AS attributes      
+          FROM "tokens" "t"
       `;
 
         // Filters
