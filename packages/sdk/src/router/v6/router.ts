@@ -304,7 +304,7 @@ export class Router {
         const detail = details[i];
         if (
           detail.contractKind === "erc721" &&
-          ["blur.io", "opensea.io", "looksrare.org", "x2y2.io"].includes(detail.source!)
+          ["blur.io", "opensea.io"].includes(detail.source!)
         ) {
           blurCompatibleListings.push(detail);
         }
@@ -3768,6 +3768,7 @@ export class Router {
             taker: module.address,
             takerMasterNonce: "0",
             tokenId: order.params.collectionLevelOffer ? detail.tokenId : undefined,
+            maxRoyaltyFeeNumerator: detail.extraArgs?.maxRoyaltyFeeNumerator ?? "0",
           });
           const matchedOrder = order.getMatchedOrder(takerOrder);
 

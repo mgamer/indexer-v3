@@ -61,15 +61,17 @@ export class ContractWideBuilder extends BaseBuilder {
       taker: string;
       takerMasterNonce: BigNumberish;
       tokenId?: BigNumberish;
+      maxRoyaltyFeeNumerator?: BigNumberish;
     }
   ): Order {
     const orderParams = order.params;
     return new Order(order.chainId, {
       protocol: orderParams.protocol,
+      collectionLevelOffer: true,
       sellerAcceptedOffer: true,
       marketplace: orderParams.marketplace,
       marketplaceFeeNumerator: orderParams.marketplaceFeeNumerator,
-      maxRoyaltyFeeNumerator: orderParams.maxRoyaltyFeeNumerator,
+      maxRoyaltyFeeNumerator: options?.maxRoyaltyFeeNumerator?.toString() ?? "0",
       privateBuyerOrDelegatedPurchaser: AddressZero,
       sellerOrBuyer: options.taker,
       tokenAddress: orderParams.tokenAddress,
