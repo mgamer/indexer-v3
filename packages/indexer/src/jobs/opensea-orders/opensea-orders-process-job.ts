@@ -2,7 +2,7 @@ import { AbstractRabbitMqJobHandler, BackoffStrategy } from "@/jobs/abstract-rab
 import _ from "lodash";
 import { PendingRefreshOpenseaCollectionOffersCollections } from "@/models/pending-refresh-opensea-collection-offers-collections";
 import { acquireLock } from "@/common/redis";
-import * as openseaOrdersFetchQueue from "@/jobs/opensea-orders/fetch-queue";
+import { openseaOrdersFetchJob } from "@/jobs/opensea-orders/opensea-orders-fetch-job";
 
 export type OpenseaOrdersProcessJobPayload = {
   kind: "collection-offers";
@@ -43,8 +43,8 @@ export class OpenseaOrdersProcessJob extends AbstractRabbitMqJobHandler {
         prioritized
       );
 
-      if (await acquireLock(openseaOrdersFetchQueue.getLockName(), 60 * 5)) {
-        await openseaOrdersFetchQueue.addToQueue();
+      if (await acquireLock(openseaOrdersFetchJob.getLockName(), 60 * 5)) {
+        await openseaOrdersFetchJob.addToQueue();
       }
     }
   }
