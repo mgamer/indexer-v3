@@ -1,62 +1,30 @@
 import { config as dotEnvConfig } from "dotenv";
 dotEnvConfig();
 
-import "@/jobs/index";
-import "@/jobs/cdc/index";
 import "@/common/tracer";
-import "@/config/polyfills";
-import "@/pubsub/index";
-import "@/websockets/index";
 
-import { start } from "@/api/index";
-import { logger } from "@/common/logger";
-import { config } from "@/config/index";
-import { getNetworkSettings } from "@/config/network";
-import { initIndexes } from "@/elasticsearch/indexes";
-import { startKafkaConsumer, startKafkaProducer } from "@/jobs/cdc/index";
 import { RabbitMq } from "@/common/rabbit-mq";
-import { RabbitMqJobsConsumer } from "@/jobs/index";
-import { Sources } from "@/models/sources";
+import { acquireLock, redis } from "@/common/redis";
+import { config } from "@/config/index";
 
-process.on("unhandledRejection", (error) => {
-  logger.error("process", `Unhandled rejection: ${error}`);
-
-  // For now, just skip any unhandled errors
-  // process.exit(1);
-});
-
-const setup = async () => {
-  if (process.env.LOCAL_TESTING) {
-    return;
-  }
-
-  await RabbitMq.connect(); // Connect the rabbitmq
-  await RabbitMq.assertQueuesAndExchanges(); // Assert queues and exchanges
-
-  if (config.doKafkaWork) {
-    await startKafkaConsumer();
-  }
-
-  if ((config.doKafkaWork || config.doBackgroundWork) && config.kafkaBrokers.length > 0) {
-    await startKafkaProducer();
-  }
-
-  if (config.doBackgroundWork) {
-    await Sources.syncSources();
-    await RabbitMqJobsConsumer.startRabbitJobsConsumer();
-
-    const networkSettings = getNetworkSettings();
-    if (networkSettings.onStartup) {
-      await networkSettings.onStartup();
+if (process.env.LOCAL_TESTING) {
+  import("./setup");
+} else {
+  // First assert queues / exchanges and connect to rabbit, then import setup and start the server
+  RabbitMq.connect().then(async () => {
+    // Sync the pods so rabbit queues assertion will run only once per deployment by a single pod
+    if (await acquireLock(config.imageTag, 60 * 60 * 24)) {
+      await RabbitMq.assertQueuesAndExchanges();
+      await redis.set(config.imageTag, "DONE");
+      import("./setup");
+    } else {
+      // Check every 1s if the rabbit queues assertion completed
+      const intervalId = setInterval(async () => {
+        if ((await redis.get(config.imageTag)) === "DONE") {
+          clearInterval(intervalId);
+          import("./setup");
+        }
+      }, 1000);
     }
-  }
-
-  await Sources.getInstance();
-  await Sources.forceDataReload();
-
-  if (config.doElasticsearchWork) {
-    await initIndexes();
-  }
-};
-
-setup().then(() => start());
+  });
+}

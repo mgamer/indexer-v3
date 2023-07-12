@@ -6,7 +6,6 @@ import { idb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
 import { bn, now, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
-import * as ordersUpdateById from "@/jobs/order-updates/by-id-queue";
 import { Sources } from "@/models/sources";
 import { DbOrder, OrderMetadata, generateSchemaHash } from "@/orderbook/orders/utils";
 import { offChainCheck } from "@/orderbook/orders/looks-rare-v2/check";
@@ -15,6 +14,10 @@ import * as tokenSet from "@/orderbook/token-sets";
 import * as royalties from "@/utils/royalties";
 // import { Royalty } from "@/utils/royalties";
 import _ from "lodash";
+import {
+  orderUpdatesByIdJob,
+  OrderUpdatesByIdJobPayload,
+} from "@/jobs/order-updates/order-updates-by-id-job";
 
 export type OrderInfo = {
   orderParams: Sdk.LooksRareV2.Types.MakerOrderParams;
@@ -176,13 +179,22 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       const currency = order.params.currency;
 
       // Handle: fees
-      const feeBreakdown = [
-        {
-          kind: "marketplace",
-          recipient: "0x1838de7d4e4e42c8eb7b204a91e28e9fad14f536",
-          bps: 50,
-        },
-      ];
+      const feeBreakdown =
+        config.chainId === 1
+          ? [
+              {
+                kind: "marketplace",
+                recipient: "0x1838de7d4e4e42c8eb7b204a91e28e9fad14f536",
+                bps: 50,
+              },
+            ]
+          : [
+              {
+                kind: "marketplace",
+                recipient: "0xdbbe0859791e44b52b98fcca341dfb7577c0b077",
+                bps: 200,
+              },
+            ];
 
       // Temp Disable
       // Handle: royalties
@@ -315,6 +327,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         missing_royalties: missingRoyalties,
         normalized_value: normalizedValue,
         currency_normalized_value: normalizedValue,
+        originated_at: metadata.originatedAt || null,
       });
 
       const unfillable =
@@ -369,6 +382,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         { name: "missing_royalties", mod: ":json" },
         "normalized_value",
         "currency_normalized_value",
+        "originated_at",
       ],
       {
         table: "orders",
@@ -376,7 +390,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
     );
     await idb.none(pgp.helpers.insert(orderValues, columns) + " ON CONFLICT DO NOTHING");
 
-    await ordersUpdateById.addToQueue(
+    await orderUpdatesByIdJob.addToQueue(
       results
         .filter((r) => r.status === "success" && !r.unfillable)
         .map(
@@ -387,7 +401,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
               trigger: {
                 kind: "new-order",
               },
-            } as ordersUpdateById.OrderInfo)
+            } as OrderUpdatesByIdJobPayload)
         )
     );
   }

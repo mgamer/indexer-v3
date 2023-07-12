@@ -6,7 +6,7 @@ import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
 import { BidDetails, FillBidsResult } from "@reservoir0x/sdk/dist/router/v6/types";
-import { TxData } from "@reservoir0x/sdk/src/utils";
+import { TxData } from "@reservoir0x/sdk/dist/utils";
 import axios from "axios";
 import Joi from "joi";
 
@@ -73,7 +73,6 @@ export const getExecuteSellV7Options: RouteOptions = {
                   "seaport-v1.4",
                   "seaport-v1.5",
                   "x2y2",
-                  "universe",
                   "rarible",
                   "sudoswap",
                   "nftx"
@@ -193,8 +192,8 @@ export const getExecuteSellV7Options: RouteOptions = {
           quantity: Joi.number().unsafe(),
           source: Joi.string().allow("", null),
           currency: Joi.string().lowercase().pattern(regex.address),
-          currencySymbol: Joi.string().optional(),
-          currencyDecimals: Joi.number().optional(),
+          currencySymbol: Joi.string().optional().allow(null),
+          currencyDecimals: Joi.number().optional().allow(null),
           // Net price (without fees on top) = price - builtInFees
           quote: Joi.number().unsafe(),
           rawQuote: Joi.string().pattern(regex.number),
@@ -957,7 +956,7 @@ export const getExecuteSellV7Options: RouteOptions = {
         }
 
         for (const [contract, orderIds] of Object.entries(contractsAndOrderIds)) {
-          const operator = Sdk.Blur.Addresses.ExecutionDelegate[config.chainId];
+          const operator = Sdk.BlurV2.Addresses.Delegate[config.chainId];
           const isApproved = await commonHelpers.getNftApproval(contract, payload.taker, operator);
           if (!isApproved) {
             missingApprovals.push({

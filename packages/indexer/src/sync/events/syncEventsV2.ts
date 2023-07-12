@@ -161,10 +161,6 @@ export const extractEventsBatches = (enhancedEvents: EnhancedEvent[]): EventsBat
         data: kindToEvents.get("zora") ?? [],
       },
       {
-        kind: "universe",
-        data: kindToEvents.get("universe") ?? [],
-      },
-      {
         kind: "rarible",
         data: kindToEvents.has("rarible")
           ? [
@@ -199,16 +195,6 @@ export const extractEventsBatches = (enhancedEvents: EnhancedEvent[]): EventsBat
         data: kindToEvents.get("superrare") ?? [],
       },
       {
-        kind: "flow",
-        data: kindToEvents.has("flow")
-          ? [
-              ...kindToEvents.get("flow")!,
-              // To properly validate bids, we need some additional events
-              ...events.filter((e) => e.subKind === "erc20-transfer"),
-            ]
-          : [],
-      },
-      {
         kind: "zeroex-v2",
         data: kindToEvents.get("zeroex-v2") ?? [],
       },
@@ -231,6 +217,22 @@ export const extractEventsBatches = (enhancedEvents: EnhancedEvent[]): EventsBat
       {
         kind: "collectionxyz",
         data: kindToEvents.get("collectionxyz") ?? [],
+      },
+      {
+        kind: "payment-processor",
+        data: kindToEvents.get("payment-processor") ?? [],
+      },
+      {
+        kind: "thirdweb",
+        data: kindToEvents.get("thirdweb") ?? [],
+      },
+      {
+        kind: "seadrop",
+        data: kindToEvents.get("seadrop") ?? [],
+      },
+      {
+        kind: "blur-v2",
+        data: kindToEvents.get("blur-v2") ?? [],
       },
     ];
 
@@ -353,6 +355,11 @@ export const syncEvents = async (block: number) => {
 
     const startProcessLogs = Date.now();
 
+    // const processEventsLatencies = await Promise.all(
+    //   eventsBatches.map(async (eventsBatch) => {
+    //     await processEventsBatchV2([eventsBatch]);
+    //   })
+    // );
     const processEventsLatencies = await processEventsBatchV2(eventsBatches);
 
     const endProcessLogs = Date.now();
@@ -404,7 +411,7 @@ export const unsyncEvents = async (block: number, blockHash: string) => {
     es.ftTransfers.removeEvents(block, blockHash),
     es.nftApprovals.removeEvents(block, blockHash),
     es.nftTransfers.removeEvents(block, blockHash),
-    removeUnsyncedEventsActivitiesJob.addToQueue({ blockHash }),
+    removeUnsyncedEventsActivitiesJob.addToQueue(blockHash),
   ]);
 };
 

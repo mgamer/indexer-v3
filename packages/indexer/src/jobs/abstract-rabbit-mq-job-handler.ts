@@ -8,6 +8,7 @@ import { getNetworkName } from "@/config/network";
 import EventEmitter from "events";
 import TypedEmitter from "typed-emitter";
 import { Channel, ConsumeMessage } from "amqplib";
+import { releaseLock } from "@/common/redis";
 
 export type BackoffStrategy =
   | {
@@ -23,7 +24,7 @@ export type BackoffStrategy =
 export type QueueType = "classic" | "quorum";
 
 export type AbstractRabbitMqJobHandlerEvents = {
-  onCompleted: (message: RabbitMQMessage) => void;
+  onCompleted: (message: RabbitMQMessage, processResult: any) => void;
   onError: (message: RabbitMQMessage, error: any) => void;
 };
 
@@ -33,8 +34,9 @@ export abstract class AbstractRabbitMqJobHandler extends (EventEmitter as new ()
   abstract queueName: string;
   abstract maxRetries: number;
 
-  protected abstract process(payload: any): Promise<void>;
+  protected abstract process(payload: any): Promise<any>;
 
+  protected rabbitMQMessage: RabbitMQMessage | undefined; // Hold the rabbitmq message type with all the extra fields
   protected concurrency = 1;
   protected maxDeadLetterQueue = 5000;
   protected backoff: BackoffStrategy = null;
@@ -43,47 +45,52 @@ export abstract class AbstractRabbitMqJobHandler extends (EventEmitter as new ()
   protected useSharedChannel = false;
   protected lazyMode = false;
   protected queueType: QueueType = "classic";
+  protected consumerTimeout = 0;
+  protected disableConsuming = false;
 
-  private sharedChannelName = "shared-channel";
+  public async consume(channel: Channel, consumeMessage: ConsumeMessage): Promise<void> {
+    this.rabbitMQMessage = JSON.parse(consumeMessage.content.toString()) as RabbitMQMessage;
 
-  public async consume(
-    channel: Channel,
-    consumeMessage: ConsumeMessage,
-    message: RabbitMQMessage
-  ): Promise<void> {
-    message.consumedTime = message.consumedTime ?? _.now();
-    message.retryCount = message.retryCount ?? 0;
+    this.rabbitMQMessage.consumedTime = this.rabbitMQMessage.consumedTime ?? _.now();
+    this.rabbitMQMessage.retryCount = this.rabbitMQMessage.retryCount ?? 0;
 
     try {
-      await this.process(message.payload); // Process the message
-      message.completeTime = _.now(); // Set the complete time
+      const processResult = await this.process(this.rabbitMQMessage.payload); // Process the message
       await channel.ack(consumeMessage); // Ack the message with rabbit
-      this.emit("onCompleted", message); // Emit on Completed event
-    } catch (error) {
-      this.emit("onError", message, error); // Emit error event
+      this.emit("onCompleted", this.rabbitMQMessage, processResult); // Emit on Completed event
+      this.rabbitMQMessage.completeTime = _.now(); // Set the complete time
 
-      message.retryCount += 1;
+      // Release lock if there's a job id with no delay
+      if (this.rabbitMQMessage.jobId && !this.rabbitMQMessage.delay) {
+        await releaseLock(this.rabbitMQMessage.jobId).catch();
+      }
+    } catch (error) {
+      this.emit("onError", this.rabbitMQMessage, error); // Emit error event
+
+      this.rabbitMQMessage.retryCount += 1;
       let queueName = this.getRetryQueue();
 
       // Set the backoff strategy delay
-      let delay = this.getBackoffDelay(message);
+      let delay = this.getBackoffDelay(this.rabbitMQMessage);
 
       // If the event has already been retried maxRetries times, send it to the dead letter queue
-      if (message.retryCount > this.maxRetries) {
+      if (this.rabbitMQMessage.retryCount > this.maxRetries) {
         queueName = this.getDeadLetterQueue();
         delay = 0;
       }
 
-      // Lof the error
+      // Log the error
       logger.error(
         this.queueName,
-        `Error handling event: ${error}, queueName=${queueName}, payload=${JSON.stringify(
-          message
-        )}, retryCount=${message.retryCount}`
+        `Error handling event: ${JSON.stringify(
+          error
+        )}, queueName=${queueName}, payload=${JSON.stringify(this.rabbitMQMessage)}, retryCount=${
+          this.rabbitMQMessage.retryCount
+        }`
       );
 
       await channel.ack(consumeMessage); // Ack the message with rabbit
-      await RabbitMq.send(queueName, message, delay); // Trigger the retry / or send to dead letter queue
+      await RabbitMq.send(queueName, this.rabbitMQMessage, delay); // Trigger the retry / or send to dead letter queue
     }
   }
 
@@ -96,7 +103,7 @@ export abstract class AbstractRabbitMqJobHandler extends (EventEmitter as new ()
           break;
 
         case "exponential":
-          delay = 2 ^ ((Number(message.retryCount) - 1) * this.backoff.delay);
+          delay = (2 ^ (Number(message.retryCount) - 1)) * this.backoff.delay;
           break;
       }
     }
@@ -128,16 +135,16 @@ export abstract class AbstractRabbitMqJobHandler extends (EventEmitter as new ()
     return this.maxDeadLetterQueue;
   }
 
-  public getSharedChannelName(): string {
-    return this.sharedChannelName;
-  }
-
   public getUseSharedChannel(): boolean {
     return this.useSharedChannel;
   }
 
   public isLazyMode(): boolean {
     return this.lazyMode;
+  }
+
+  public isDisableConsuming(): boolean {
+    return this.disableConsuming;
   }
 
   public getSingleActiveConsumer(): boolean | undefined {
@@ -152,24 +159,36 @@ export abstract class AbstractRabbitMqJobHandler extends (EventEmitter as new ()
     return this.queueType;
   }
 
+  public getConsumerTimeout(): number {
+    return this.consumerTimeout;
+  }
+
   public async send(job: { payload?: any; jobId?: string } = {}, delay = 0, priority = 0) {
     await RabbitMq.send(
       this.getQueue(),
-      { payload: job.payload, jobId: job.jobId },
+      {
+        payload: job.payload,
+        jobId: job?.jobId ? `${this.getQueue()}:${job?.jobId}` : undefined,
+        persistent: this.persistent,
+      },
       delay,
       priority
     );
   }
 
   protected async sendBatch(
-    job: { payload: any; jobId?: string; delay?: number; priority?: number }[]
+    jobs: { payload: any; jobId?: string; delay?: number; priority?: number }[]
   ) {
     await RabbitMq.sendBatch(
       this.getQueue(),
-      job.map((j) => ({
-        content: { payload: j.payload, jobId: j.jobId, persistent: this.persistent },
-        delay: j.delay,
-        priority: j.priority,
+      jobs.map((job) => ({
+        content: {
+          payload: job.payload,
+          jobId: job?.jobId ? `${this.getQueue()}:${job?.jobId}` : undefined,
+          persistent: this.persistent,
+        },
+        delay: job.delay,
+        priority: job.priority,
       }))
     );
   }

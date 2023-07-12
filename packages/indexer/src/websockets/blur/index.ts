@@ -3,16 +3,17 @@ import { io } from "socket.io-client";
 
 import { logger } from "@/common/logger";
 import { config } from "@/config/index";
-import * as blurBidsBuffer from "@/jobs/order-updates/misc/blur-bids-buffer";
-import * as blurListingsRefresh from "@/jobs/order-updates/misc/blur-listings-refresh";
-import * as orderbook from "@/jobs/orderbook/orders-queue";
+import { blurBidsBufferJob } from "@/jobs/order-updates/misc/blur-bids-buffer-job";
+import { blurListingsRefreshJob } from "@/jobs/order-updates/misc/blur-listings-refresh-job";
+import { orderbookOrdersJob } from "@/jobs/orderbook/orderbook-orders-job";
 
 const COMPONENT = "blur-websocket";
 
 if (config.doWebsocketWork && config.blurWsUrl && config.blurWsApiKey) {
   const client = io(config.blurWsUrl, {
-    extraHeaders: {
-      "Api-Key": config.blurWsApiKey,
+    transports: ["websocket"],
+    auth: {
+      "api-key": config.blurWsApiKey,
     },
   });
 
@@ -33,7 +34,7 @@ if (config.doWebsocketWork && config.blurWsUrl && config.blurWsApiKey) {
 
       const collection = parsedMessage.contractAddress.toLowerCase();
       const pricePoints = parsedMessage.updates;
-      await blurBidsBuffer.addToQueue(collection, pricePoints);
+      await blurBidsBufferJob.addToQueue(collection, pricePoints);
     } catch (error) {
       logger.error(COMPONENT, `Error handling bid: ${error} (message = ${message})`);
     }
@@ -72,9 +73,9 @@ if (config.doWebsocketWork && config.blurWsUrl && config.blurWsApiKey) {
       logger.info(COMPONENT, JSON.stringify({ message, parsedMessage, orderInfos }));
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await orderbook.addToQueue(orderInfos as any);
+      await orderbookOrdersJob.addToQueue(orderInfos as any);
 
-      await blurListingsRefresh.addToQueue(collection);
+      await blurListingsRefreshJob.addToQueue(collection);
     } catch (error) {
       logger.error(COMPONENT, `Error handling listing: ${error} (message = ${message})`);
     }

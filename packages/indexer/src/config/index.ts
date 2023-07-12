@@ -33,6 +33,7 @@ export const config = {
   disableRealtimeMetadataRefresh: Boolean(Number(process.env.DISABLE_REALTIME_METADATA_REFRESH)),
 
   databaseUrl: String(process.env.DATABASE_URL),
+  disableDatabaseStatementTimeout: Boolean(Number(process.env.DATABASE_DISABLE_STATEMENT_TIMEOUT)),
   readReplicaDatabaseUrl: String(process.env.READ_REPLICA_DATABASE_URL || process.env.DATABASE_URL),
   writeReplicaDatabaseUrl: String(
     process.env.WRITE_REPLICA_DATABASE_URL || process.env.DATABASE_URL
@@ -95,7 +96,6 @@ export const config = {
 
   x2y2ApiKey: String(process.env.X2Y2_API_KEY),
   cbApiKey: String(process.env.CB_API_KEY),
-  flowApiKey: String(process.env.FLOW_API_KEY),
   orderFetcherApiKey: String(process.env.ORDER_FETCHER_API_KEY),
 
   blurWsApiKey: process.env.BLUR_WS_API_KEY,
@@ -104,10 +104,9 @@ export const config = {
   orderFetcherBaseUrl: String(process.env.ORDER_FETCHER_BASE_URL),
 
   cipherSecret: String(process.env.CIPHER_SECRET),
+  imageTag: String(process.env.IMAGE_TAG),
 
   slackApiKeyWebhookUrl: String(process.env.SLACK_API_KEY_WEBHOOK_URL),
-  // Used to prevent redis from being overloaded in heavy process like backfilling
-  redisMaxMemoryGB: Number(process.env.REDIS_MAX_MEMORY_GB || 25),
 
   maxParallelTokenRefreshJobs: Number(process.env.MAX_PARALLEL_TOKEN_REFRESH_JOBS || 1),
   maxParallelTokenCollectionSlugRefreshJobs: Number(
@@ -125,7 +124,6 @@ export const config = {
   // Elasticsearch
   elasticsearchUrl: String(process.env.ELASTICSEARCH_URL || ""),
   doElasticsearchWork: Boolean(Number(process.env.DO_ELASTICSEARCH_WORK)),
-  enableElasticsearchRead: Boolean(Number(process.env.ENABLE_ELASTICSEARCH_READ)),
 
   // realtime v2
   enableRealtimeProcessing: Boolean(process.env.ENABLE_REALTIME_PROCESSING),
