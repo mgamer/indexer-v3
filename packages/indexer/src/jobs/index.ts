@@ -22,10 +22,6 @@ import "@/jobs/token-set-updates";
 import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handler";
 
 import * as backfillExpiredOrders from "@/jobs/backfill/backfill-expired-orders";
-
-import * as eventsSyncRealtime from "@/jobs/events-sync/realtime-queue";
-import * as eventsSyncRealtimeV2 from "@/jobs/events-sync/realtime-queue-v2";
-
 import * as saveBidEvents from "@/jobs/order-updates/save-bid-events";
 
 import * as askWebsocketEventsTriggerQueue from "@/jobs/websocket-events/ask-websocket-events-trigger-queue";
@@ -148,10 +144,6 @@ import { countApiUsageJob } from "@/jobs/metrics/count-api-usage-job";
 
 export const allJobQueues = [
   backfillExpiredOrders.queue,
-
-  eventsSyncRealtime.queue,
-  eventsSyncRealtimeV2.queue,
-
   saveBidEvents.queue,
 
   askWebsocketEventsTriggerQueue.queue,
