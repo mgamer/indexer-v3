@@ -1,24 +1,29 @@
+import { Interface } from "@ethersproject/abi";
+import { BigNumber } from "@ethersproject/bignumber";
+import { AddressZero, HashZero } from "@ethersproject/constants";
+import { Contract } from "@ethersproject/contracts";
+import { keccak256 } from "@ethersproject/solidity";
+import { parseEther } from "@ethersproject/units";
+import * as Sdk from "@reservoir0x/sdk";
+import _ from "lodash";
+
+import { idb, pgp, redb } from "@/common/db";
 import { logger } from "@/common/logger";
+import { baseProvider } from "@/common/provider";
+import { bn, toBuffer } from "@/common/utils";
+import { config } from "@/config/index";
+import { Sources } from "@/models/sources";
+import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import {
+  POOL_ORDERS_MAX_PRICE_POINTS_COUNT,
   DbOrder,
   OrderMetadata,
-  POOL_ORDERS_MAX_PRICE_POINTS_COUNT,
   generateSchemaHash,
 } from "@/orderbook/orders/utils";
-import { keccak256 } from "@ethersproject/solidity";
-import { config } from "@/config/index";
-import * as caviarV1 from "@/utils/caviar-v1";
-import * as Sdk from "@reservoir0x/sdk";
-import { baseProvider } from "@/common/provider";
-import { Interface, parseEther } from "ethers/lib/utils";
-import { BigNumber, Contract, constants } from "ethers";
-import _ from "lodash";
-import { idb, pgp, redb } from "@/common/db";
 import * as tokenSet from "@/orderbook/token-sets";
-import { Sources } from "@/models/sources";
-import { bn, toBuffer } from "@/common/utils";
+import * as caviarV1 from "@/utils/caviar-v1";
 import * as royalties from "@/utils/royalties";
-import * as commonHelpers from "@/orderbook/orders/common/helpers";
+
 import * as ordersUpdateById from "@/jobs/order-updates/by-id-queue";
 
 export const getOrderId = (pool: string, side: "sell" | "buy", tokenId?: string) =>
@@ -66,7 +71,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         throw new Error("Unsupported currency");
       }
 
-      if (pool.merkleRoot !== constants.HashZero) {
+      if (pool.merkleRoot !== HashZero) {
         throw new Error("Non-floor pools not supported");
       }
 
@@ -79,7 +84,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         baseProvider
       );
 
-      // get the list of prices at which the pool will buy and sell at
+      // Get the list of prices at which the pool will buy and sell at
       const buyPrices: BigNumber[] = await Promise.all(
         _.range(0, POOL_ORDERS_MAX_PRICE_POINTS_COUNT).map(async (index) => {
           try {
@@ -94,9 +99,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         })
       ).then((prices) => prices.filter((p) => p.gt(0)));
 
-      ///// buy order logic
-      // get the id
-
+      // Handle bids
       try {
         const buyId = getOrderId(orderParams.pool, "buy");
         if (buyPrices.length) {
@@ -117,12 +120,12 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
             "default"
           );
 
-          // calculate the missing royalties
+          // Calculate the missing royalties
           const missingRoyalties = [];
           let missingRoyaltyAmount = bn(0);
           const totalDefaultBps = defaultRoyalties.map(({ bps }) => bps).reduce((a, b) => a + b, 0);
           const validRecipients = defaultRoyalties.filter(
-            ({ bps, recipient }) => bps && recipient !== constants.AddressZero
+            ({ bps, recipient }) => bps && recipient !== AddressZero
           );
 
           // Split the missing royalties pro-rata across all royalty recipients
@@ -146,11 +149,11 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
           let orderResult = await idb.oneOrNone(
             `
-                  SELECT
-                    orders.token_set_id
-                  FROM orders
-                  WHERE orders.id = $/id/
-                `,
+              SELECT
+                orders.token_set_id
+              FROM orders
+              WHERE orders.id = $/id/
+            `,
             { id: buyId }
           );
 
@@ -162,9 +165,9 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
             orderResult = false;
           }
 
-          // insert a new buy order
+          // Insert a new order
           if (!orderResult) {
-            // get the set of token ids that the buy order can purchase
+            // Get the set of token ids that the buy order can purchase
             const schemaHash = generateSchemaHash();
             const [{ id: tokenSetId }] = await tokenSet.contractWide.save([
               {
@@ -193,7 +196,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
               token_set_id: tokenSetId,
               token_set_schema_hash: toBuffer(schemaHash),
               maker: toBuffer(pool.address),
-              taker: toBuffer(constants.AddressZero),
+              taker: toBuffer(AddressZero),
               price,
               value,
               currency: toBuffer(pool.baseToken),
@@ -207,8 +210,8 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
               is_reservoir: null,
               contract: toBuffer(pool.nft),
               conduit: null,
-              fee_bps: 0, // no fees on caviar
-              fee_breakdown: [], // no fees on caviar
+              fee_bps: 0, // No fees on caviar
+              fee_breakdown: [], // No fees on caviar
               dynamic: null,
               raw_data: sdkOrder.params,
               expiration: validTo,
@@ -229,27 +232,27 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
           } else {
             await idb.none(
               `
-                    UPDATE orders SET
-                      fillability_status = 'fillable',
-                      approval_status = 'approved',
-                      price = $/price/,
-                      currency_price = $/price/,
-                      value = $/value/,
-                      currency_value = $/value/,
-                      quantity_remaining = $/quantityRemaining/,
-                      valid_between = tstzrange(date_trunc('seconds', to_timestamp(${orderParams.txTimestamp})), 'Infinity', '[]'),
-                      expiration = 'Infinity',
-                      updated_at = now(),
-                      raw_data = $/rawData:json/,
-                      missing_royalties = $/missingRoyalties:json/,
-                      normalized_value = $/normalizedValue/,
-                      currency_normalized_value = $/currencyNormalizedValue/,
-                      fee_bps = $/feeBps/,
-                      fee_breakdown = $/feeBreakdown:json/,
-                      block_number = $/blockNumber/,
-                      log_index = $/logIndex/
-                    WHERE orders.id = $/id/
-                  `,
+                UPDATE orders SET
+                  fillability_status = 'fillable',
+                  approval_status = 'approved',
+                  price = $/price/,
+                  currency_price = $/price/,
+                  value = $/value/,
+                  currency_value = $/value/,
+                  quantity_remaining = $/quantityRemaining/,
+                  valid_between = tstzrange(date_trunc('seconds', to_timestamp(${orderParams.txTimestamp})), 'Infinity', '[]'),
+                  expiration = 'Infinity',
+                  updated_at = now(),
+                  raw_data = $/rawData:json/,
+                  missing_royalties = $/missingRoyalties:json/,
+                  normalized_value = $/normalizedValue/,
+                  currency_normalized_value = $/currencyNormalizedValue/,
+                  fee_bps = $/feeBps/,
+                  fee_breakdown = $/feeBreakdown:json/,
+                  block_number = $/blockNumber/,
+                  log_index = $/logIndex/
+                WHERE orders.id = $/id/
+              `,
               {
                 id: buyId,
                 price,
@@ -277,12 +280,12 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         } else {
           await idb.none(
             `
-                    UPDATE orders SET
-                      fillability_status = 'no-balance',
-                      expiration = to_timestamp(${orderParams.txTimestamp}),
-                      updated_at = now()
-                    WHERE orders.id = $/id/
-                  `,
+              UPDATE orders SET
+                fillability_status = 'no-balance',
+                expiration = to_timestamp(${orderParams.txTimestamp}),
+                updated_at = now()
+              WHERE orders.id = $/id/
+            `,
             { id: buyId }
           );
 
@@ -301,9 +304,9 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         );
       }
 
-      ///// sell order logic
+      // Handle listings
       try {
-        // get the list of prices at which the pool will sell at
+        // Get the list of prices at which the pool will sell at
         const sellPrices: BigNumber[] = await Promise.all(
           _.range(0, POOL_ORDERS_MAX_PRICE_POINTS_COUNT).map(async (index) => {
             try {
@@ -330,7 +333,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
               try {
                 const id = getOrderId(orderParams.pool, "sell", tokenId);
 
-                // calculate royalties
+                // Calculate royalties
                 const defaultRoyalties = await royalties.getRoyaltiesByTokenSet(
                   `token:${pool.nft}:${tokenId}`.toLowerCase(),
                   "default"
@@ -342,7 +345,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                 const missingRoyalties: { bps: number; amount: string; recipient: string }[] = [];
                 let missingRoyaltyAmount = bn(0);
                 const validRecipients = defaultRoyalties.filter(
-                  ({ bps, recipient }) => bps && recipient !== constants.AddressZero
+                  ({ bps, recipient }) => bps && recipient !== AddressZero
                 );
                 if (validRecipients.length) {
                   const amount = bn(price).mul(totalDefaultBps).div(10000);
@@ -373,13 +376,13 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
                 const orderResult = await redb.oneOrNone(
                   `
-                        SELECT 1 FROM orders
-                        WHERE orders.id = $/id/
-                      `,
+                    SELECT 1 FROM orders
+                    WHERE orders.id = $/id/
+                  `,
                   { id }
                 );
 
-                // insert the order if it's not found
+                // Insert a new order
                 if (!orderResult) {
                   // Handle: token set
                   const schemaHash = generateSchemaHash();
@@ -411,7 +414,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                     token_set_id: tokenSetId,
                     token_set_schema_hash: toBuffer(schemaHash),
                     maker: toBuffer(pool.address),
-                    taker: toBuffer(constants.AddressZero),
+                    taker: toBuffer(AddressZero),
                     price,
                     value,
                     currency: toBuffer(pool.nft),
@@ -425,8 +428,8 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                     is_reservoir: null,
                     contract: toBuffer(pool.nft),
                     conduit: null,
-                    fee_bps: 0, // no fees on caviar
-                    fee_breakdown: [], // no fees on caviar
+                    fee_bps: 0, // No fees on caviar
+                    fee_breakdown: [], // No fees on caviar
                     dynamic: null,
                     raw_data: sdkOrder.params,
                     expiration: validTo,
@@ -447,27 +450,27 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                 } else {
                   await idb.none(
                     `
-                            UPDATE orders SET
-                              fillability_status = 'fillable',
-                              approval_status = 'approved',
-                              price = $/price/,
-                              currency_price = $/price/,
-                              value = $/value/,
-                              currency_value = $/value/,
-                              quantity_remaining = $/amount/,
-                              valid_between = tstzrange(date_trunc('seconds', to_timestamp(${orderParams.txTimestamp})), 'Infinity', '[]'),
-                              expiration = 'Infinity',
-                              updated_at = now(),
-                              raw_data = $/rawData:json/,
-                              missing_royalties = $/missingRoyalties:json/,
-                              normalized_value = $/normalizedValue/,
-                              currency_normalized_value = $/currencyNormalizedValue/,
-                              fee_bps = $/feeBps/,
-                              fee_breakdown = $/feeBreakdown:json/,
-                              block_number = $/blockNumber/,
-                              log_index = $/logIndex/
-                            WHERE orders.id = $/id/
-                          `,
+                      UPDATE orders SET
+                        fillability_status = 'fillable',
+                        approval_status = 'approved',
+                        price = $/price/,
+                        currency_price = $/price/,
+                        value = $/value/,
+                        currency_value = $/value/,
+                        quantity_remaining = $/amount/,
+                        valid_between = tstzrange(date_trunc('seconds', to_timestamp(${orderParams.txTimestamp})), 'Infinity', '[]'),
+                        expiration = 'Infinity',
+                        updated_at = now(),
+                        raw_data = $/rawData:json/,
+                        missing_royalties = $/missingRoyalties:json/,
+                        normalized_value = $/normalizedValue/,
+                        currency_normalized_value = $/currencyNormalizedValue/,
+                        fee_bps = $/feeBps/,
+                        fee_breakdown = $/feeBreakdown:json/,
+                        block_number = $/blockNumber/,
+                        log_index = $/logIndex/
+                      WHERE orders.id = $/id/
+                    `,
                     {
                       id,
                       price,
@@ -477,8 +480,8 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                       missingRoyalties: missingRoyalties,
                       normalizedValue: normalizedValue.toString(),
                       currencyNormalizedValue: normalizedValue.toString(),
-                      feeBps: 0, // no fees on caviar
-                      feeBreakdown: [], // no fees on caviar
+                      feeBps: 0, // No fees on caviar
+                      feeBreakdown: [], // No fees on caviar
                       blockNumber: orderParams.txBlock,
                       logIndex: orderParams.logIndex,
                     }
@@ -493,7 +496,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                   });
                 }
               } catch {
-                // ignore errors
+                // Ignore errors
               }
             })
           );
@@ -574,6 +577,5 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       )
   );
 
-  logger.info("caviar-v1-save", "processed save orders");
   return results;
 };

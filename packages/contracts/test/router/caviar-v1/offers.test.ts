@@ -1,25 +1,16 @@
-import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import {
-  getChainId,
-  setupNFTs,
-  reset,
-  getRandomInteger,
-  getRandomBoolean,
-  getRandomFloat,
-  bn,
-} from "../../utils";
-import { BigNumber, Contract, constants } from "ethers";
-import { ethers } from "hardhat";
-import { CaviarOffer, setupCaviarOffers } from "../helpers/caviar-v1";
-import { parseEther } from "ethers/lib/utils";
-import { ExecutionInfo } from "../helpers/router";
+import { BigNumber } from "@ethersproject/bignumber";
+import { HashZero } from "@ethersproject/constants";
+import { Contract } from "@ethersproject/contracts";
+import { parseEther } from "@ethersproject/units";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 import { expect } from "chai";
-import * as Sdk from "@reservoir0x/sdk/src";
-import { off } from "process";
+import { ethers } from "hardhat";
+
+import { ExecutionInfo } from "../helpers/router";
+import { CaviarOffer, setupCaviarOffers } from "../helpers/caviar-v1";
+import { bn, getRandomBoolean, getRandomFloat, getRandomInteger, reset } from "../../utils";
 
 describe("[ReservoirV6_0_1] CaviarV1 offers", () => {
-  const chainId = getChainId();
-
   let deployer: SignerWithAddress;
   let alice: SignerWithAddress;
   let bob: SignerWithAddress;
@@ -42,7 +33,7 @@ describe("[ReservoirV6_0_1] CaviarV1 offers", () => {
       .then((factory) => factory.deploy(deployer.address, router.address));
   });
 
-  const getBalances = async (token: string) => {
+  const getBalances = async () => {
     return {
       alice: await ethers.provider.getBalance(alice.address),
       bob: await ethers.provider.getBalance(bob.address),
@@ -69,7 +60,7 @@ describe("[ReservoirV6_0_1] CaviarV1 offers", () => {
     const offers: CaviarOffer[] = [];
     const fees: BigNumber[][] = [];
     for (let i = 0; i < offersCount; i++) {
-      const erc721: any = await ethers
+      const erc721 = await ethers
         .getContractFactory("MockERC721", deployer)
         .then((factory) => factory.deploy());
 
@@ -109,7 +100,7 @@ describe("[ReservoirV6_0_1] CaviarV1 offers", () => {
           offer.order!.params.pool,
           offer.nft.id,
           bn(offer.order!.params.extra.prices[0]),
-          { id: constants.HashZero, payload: [], timestamp: 0, signature: [] },
+          { id: HashZero, payload: [], timestamp: 0, signature: [] },
           {
             fillTo: carol.address,
             refundTo: carol.address,
@@ -140,7 +131,7 @@ describe("[ReservoirV6_0_1] CaviarV1 offers", () => {
     }
 
     // Fetch pre-state
-    const balancesBefore = await getBalances(Sdk.Common.Addresses.Eth[chainId]);
+    const balancesBefore = await getBalances();
     const poolBalancesBefore = Object.fromEntries(
       await Promise.all(
         offers.map(async ({ order }) => [
@@ -151,12 +142,10 @@ describe("[ReservoirV6_0_1] CaviarV1 offers", () => {
     );
 
     // Execute
-    const tx = await router.connect(carol).execute(executions);
-    const txReceipt = await ethers.provider.getTransactionReceipt(tx.hash);
-    const gasUsed = txReceipt.cumulativeGasUsed.mul(txReceipt.effectiveGasPrice);
+    await router.connect(carol).execute(executions);
 
     // Fetch post-state
-    const balancesAfter = await getBalances(Sdk.Common.Addresses.Eth[chainId]);
+    const balancesAfter = await getBalances();
     const poolBalancesAfter = Object.fromEntries(
       await Promise.all(
         offers.map(async ({ order }) => [

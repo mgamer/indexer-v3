@@ -247,6 +247,11 @@ export const processOrder = async (job: AbstractRabbitMqJobHandler, payload: Gen
         result = await orders.collectionxyz.save([info]);
         break;
       }
+
+      case "caviar-v1": {
+        result = await orders.caviarV1.save([info]);
+        break;
+      }
     }
   } catch (error) {
     logger.error(job.queueName, `Failed to process order ${JSON.stringify(payload)}: ${error}`);

@@ -1,13 +1,14 @@
+import { Interface } from "@ethersproject/abi";
+import { searchForCall } from "@georgeroman/evm-tx-simulator";
+
 import { logger } from "@/common/logger";
+import { bn } from "@/common/utils";
 import { getEventData } from "@/events-sync/data";
 import { EnhancedEvent, OnChainData } from "@/events-sync/handlers/utils";
 import * as utils from "@/events-sync/utils";
 import { getOrderId } from "@/orderbook/orders/caviar-v1";
-import { searchForCall } from "@georgeroman/evm-tx-simulator";
-import { Interface } from "ethers/lib/utils";
-import { bn } from "@/common/utils";
-import { getUSDAndNativePrices } from "@/utils/prices";
 import { getPoolDetails } from "@/utils/caviar-v1";
+import { getUSDAndNativePrices } from "@/utils/prices";
 
 export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChainData) => {
   // Handle the events
@@ -33,10 +34,11 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
 
     const iface = new Interface([
       `
-        function nftBuy(uint256[] calldata tokenIds, uint256 maxInputAmount, uint256 deadline)
-          public
-          payable
-          returns (uint256 inputAmount)
+        function nftBuy(
+          uint256[] calldata tokenIds,
+          uint256 maxInputAmount,
+          uint256 deadline
+        ) returns (uint256 inputAmount)
       `,
       `
         function nftSell(
@@ -45,17 +47,18 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           uint256 deadline, 
           bytes32[][] proofs, 
           (bytes32 id, bytes payload, uint256 timestamp, bytes signature)[] messages
-        )
-          public
-          payable
-          returns (uint256 inputAmount)
+        ) returns (uint256 inputAmount)
       `,
     ]);
 
     switch (subKind) {
       case "caviar-v1-buy": {
+        const parsedLog = eventData.abi.parseLog(log);
+
         const txTrace = await utils.fetchTransactionTrace(baseEventParams.txHash);
-        if (!txTrace) break;
+        if (!txTrace) {
+          break;
+        }
 
         const callTrace = searchForCall(
           txTrace.calls,
@@ -78,16 +81,16 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
 
         const { tokenIds } = iface.decodeFunctionData("nftBuy", callTrace.input);
         const taker = (await utils.fetchTransaction(baseEventParams.txHash)).from;
-        const parsedLog = eventData.abi.parseLog(log);
+
         const price = bn(parsedLog.args.inputAmount).div(tokenIds.length).toString();
         const priceData = await getUSDAndNativePrices(
           pool.baseToken,
           price,
           baseEventParams.timestamp
         );
-
-        // always have the native price
-        if (!priceData.nativePrice) break;
+        if (!priceData.nativePrice) {
+          break;
+        }
 
         const orderKind = "caviar-v1";
         const attributionData = await utils.extractAttributionData(
@@ -144,14 +147,16 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           });
         }
 
-        logger.info("caviar-v1-buy", `Processed caviar buy event`);
-
-        return;
+        break;
       }
 
       case "caviar-v1-sell": {
+        const parsedLog = eventData.abi.parseLog(log);
+
         const txTrace = await utils.fetchTransactionTrace(baseEventParams.txHash);
-        if (!txTrace) break;
+        if (!txTrace) {
+          break;
+        }
 
         const callTrace = searchForCall(
           txTrace.calls,
@@ -168,23 +173,21 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
             "caviar-v1-sell",
             `No call trace found: ${baseEventParams.block} - ${baseEventParams.txHash}`
           );
-
           break;
         }
 
         const { tokenIds } = iface.decodeFunctionData("nftSell", callTrace.input);
         const taker = (await utils.fetchTransaction(baseEventParams.txHash)).from;
 
-        const parsedLog = eventData.abi.parseLog(log);
         const price = bn(parsedLog.args.outputAmount).div(tokenIds.length).toString();
         const priceData = await getUSDAndNativePrices(
           pool.baseToken,
           price,
           baseEventParams.timestamp
         );
-
-        // always have the native price
-        if (!priceData.nativePrice) break;
+        if (!priceData.nativePrice) {
+          break;
+        }
 
         const orderKind = "caviar-v1";
         const attributionData = await utils.extractAttributionData(
@@ -241,8 +244,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           });
         }
 
-        logger.info("caviar-v1-sell", `Processed caviar sell event`);
-        return;
+        break;
       }
     }
   }

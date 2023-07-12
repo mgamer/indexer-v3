@@ -1,24 +1,15 @@
-import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import {
-  bn,
-  getChainId,
-  getRandomBoolean,
-  getRandomFloat,
-  getRandomInteger,
-  reset,
-  setupNFTs,
-} from "../../utils";
-import { BigNumber, Contract } from "ethers";
-import { ethers } from "hardhat";
-import { CaviarListing, setupCaviarListings } from "../helpers/caviar-v1";
-import { parseEther } from "ethers/lib/utils";
-import { ExecutionInfo } from "../helpers/router";
+import { BigNumber } from "@ethersproject/bignumber";
+import { Contract } from "@ethersproject/contracts";
+import { parseEther } from "@ethersproject/units";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 import { expect } from "chai";
-import * as Sdk from "@reservoir0x/sdk/src";
+import { ethers } from "hardhat";
+
+import { ExecutionInfo } from "../helpers/router";
+import { CaviarListing, setupCaviarListings } from "../helpers/caviar-v1";
+import { bn, getRandomBoolean, getRandomFloat, getRandomInteger, reset } from "../../utils";
 
 describe("[ReservoirV6_0_1] CaviarV1 listings", () => {
-  const chainId = getChainId();
-
   let deployer: SignerWithAddress;
   let alice: SignerWithAddress;
   let bob: SignerWithAddress;
@@ -68,7 +59,7 @@ describe("[ReservoirV6_0_1] CaviarV1 listings", () => {
     const listings: CaviarListing[] = [];
     const feesOnTop: BigNumber[] = [];
     for (let i = 0; i < listingsCount; i++) {
-      const erc721: any = await ethers
+      const erc721 = await ethers
         .getContractFactory("MockERC721", deployer)
         .then((factory) => factory.deploy());
 

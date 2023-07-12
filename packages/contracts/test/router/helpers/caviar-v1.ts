@@ -1,11 +1,15 @@
-import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { BigNumber, BigNumberish, Contract, constants } from "ethers";
+import { BigNumberish } from "@ethersproject/bignumber";
+import { AddressZero, HashZero, MaxUint256 } from "@ethersproject/constants";
+import { Contract } from "@ethersproject/contracts";
+import { parseEther } from "@ethersproject/units";
 import * as Sdk from "@reservoir0x/sdk/src";
-import { getChainId, getRandomInteger } from "../../utils";
-import CaviarFactoryAbi from "@reservoir0x/sdk/src/caviar-v1/abi/caviar.abi.json";
-import CaviarPoolAbi from "@reservoir0x/sdk/src/caviar-v1/abi/public-pool.abi.json";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 import { ethers } from "hardhat";
-import { parseEther } from "ethers/lib/utils";
+
+import { bn, getChainId, getRandomInteger } from "../../utils";
+
+import CaviarFactoryAbi from "@reservoir0x/sdk/src/caviar-v1/abi/Caviar.json";
+import CaviarPoolAbi from "@reservoir0x/sdk/src/caviar-v1/abi/PublicPool.json";
 
 export type CaviarListing = {
   seller: SignerWithAddress;
@@ -34,12 +38,10 @@ export const setupCaviarListings = async (listings: CaviarListing[]) => {
     // Get the pair address by making a static call to the deploy method
     const pool = await factory
       .connect(seller)
-      .callStatic.create(nft.contract.address, constants.AddressZero, constants.HashZero);
+      .callStatic.create(nft.contract.address, AddressZero, HashZero);
 
     // Actually deploy the pool
-    await factory
-      .connect(seller)
-      .create(nft.contract.address, constants.AddressZero, constants.HashZero);
+    await factory.connect(seller).create(nft.contract.address, AddressZero, HashZero);
 
     // Approve the pool contract
     const secondNftId = getRandomInteger(1, 10000);
@@ -53,10 +55,10 @@ export const setupCaviarListings = async (listings: CaviarListing[]) => {
     const caviarAdmin = await ethers.getImpersonatedSigner(
       "0x6E1696C2f1Ab89f9C2f8275fC48C8D5BE9522180"
     );
-    await factory.connect(caviarAdmin).setStolenNftFilterOracle(constants.AddressZero);
+    await factory.connect(caviarAdmin).setStolenNftFilterOracle(AddressZero);
 
     const poolContract = new Contract(pool, CaviarPoolAbi, ethers.provider);
-    const baseTokenAmount = BigNumber.from(price).mul("2");
+    const baseTokenAmount = bn(price).mul("2");
     await poolContract
       .connect(seller)
       .nftAdd(
@@ -64,7 +66,7 @@ export const setupCaviarListings = async (listings: CaviarListing[]) => {
         isCancelled ? [secondNftId, thirdNftId] : [nft.id, secondNftId],
         0,
         0,
-        constants.MaxUint256,
+        MaxUint256,
         0,
         [],
         [],
@@ -110,12 +112,10 @@ export const setupCaviarOffers = async (offers: CaviarOffer[]) => {
     // Get the pair address by making a static call to the deploy method
     const pool = await factory
       .connect(buyer)
-      .callStatic.create(nft.contract.address, constants.AddressZero, constants.HashZero);
+      .callStatic.create(nft.contract.address, AddressZero, HashZero);
 
     // Actually deploy the pool
-    await factory
-      .connect(buyer)
-      .create(nft.contract.address, constants.AddressZero, constants.HashZero);
+    await factory.connect(buyer).create(nft.contract.address, AddressZero, HashZero);
 
     // Approve the pool contract
     const nftId = getRandomInteger(1, 10000);
@@ -126,16 +126,16 @@ export const setupCaviarOffers = async (offers: CaviarOffer[]) => {
     const caviarAdmin = await ethers.getImpersonatedSigner(
       "0x6E1696C2f1Ab89f9C2f8275fC48C8D5BE9522180"
     );
-    await factory.connect(caviarAdmin).setStolenNftFilterOracle(constants.AddressZero);
+    await factory.connect(caviarAdmin).setStolenNftFilterOracle(AddressZero);
 
     // deposit liquidity
     const poolContract = new Contract(pool, CaviarPoolAbi, ethers.provider);
-    const baseTokenAmount = BigNumber.from(price);
+    const baseTokenAmount = bn(price);
 
     if (!isCancelled) {
       await poolContract
         .connect(buyer)
-        .nftAdd(baseTokenAmount, [nftId], 0, 0, constants.MaxUint256, 0, [], [], {
+        .nftAdd(baseTokenAmount, [nftId], 0, 0, MaxUint256, 0, [], [], {
           value: baseTokenAmount,
         });
     }

@@ -239,15 +239,13 @@ export const trigger = {
         Sdk.Sudoswap.Addresses.Router[chainId],
       ]),
     SudoswapV2Module: async (chainId: number) =>
-<<<<<<< HEAD
-      dv("SudoswapV2Module", "v2", [DEPLOYER, Sdk.RouterV6.Addresses.Router[chainId]]),
-    CaviarV1Module: async (chainId: number) =>
-      dv("CaviarV1Module", "v1", [DEPLOYER, Sdk.RouterV6.Addresses.Router[chainId]]),
-=======
       [1, 5].includes(chainId)
         ? dv("SudoswapV2Module", "v2", [DEPLOYER, Sdk.RouterV6.Addresses.Router[chainId]])
         : undefined,
->>>>>>> 1f7a59c7c84ecc1b23ed8a467f6754f3735cafd8
+    CaviarV1Module: async (chainId: number) =>
+      [1, 5].includes(chainId)
+        ? dv("CaviarV1Module", "v1", [DEPLOYER, Sdk.RouterV6.Addresses.Router[chainId]])
+        : undefined,
     SuperRareModule: async (chainId: number) =>
       dv("SuperRareModule", "v1", [
         DEPLOYER,
