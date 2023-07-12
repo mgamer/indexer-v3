@@ -1163,10 +1163,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
       const ordersEligibleForGlobalFees = listingDetails
         .filter(
           (b) =>
-            b.source !== "blur.io" &&
-            (hasBlurListings
-              ? !["opensea.io", "looksrare.org", "x2y2.io"].includes(b.source!)
-              : true)
+            b.source !== "blur.io" && (hasBlurListings ? !["opensea.io"].includes(b.source!) : true)
         )
         .map((b) => b.orderId);
 
