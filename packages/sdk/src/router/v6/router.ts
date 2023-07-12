@@ -29,7 +29,8 @@ import {
   PerPoolSwapDetails,
   SwapDetail,
 } from "./types";
-import { generateSwapExecutions } from "./uniswap";
+import { generateSwapExecutions as generateSwapExecutionsWithUniswap } from "./uniswap";
+import { generateSwapExecutions as generateSwapExecutionsWith1inch } from "./1inch";
 import { generateFTApprovalTxData, generateNFTApprovalTxData, isETH, isWETH } from "./utils";
 
 // Tokens
@@ -54,6 +55,7 @@ import AlienswapModuleAbi from "./abis/AlienswapModule.json";
 import SudoswapModuleAbi from "./abis/SudoswapModule.json";
 import SuperRareModuleAbi from "./abis/SuperRareModule.json";
 import SwapModuleAbi from "./abis/SwapModule.json";
+import Swap1inchModuleAbi from "./abis/Swap1inchModule.json";
 import X2Y2ModuleAbi from "./abis/X2Y2Module.json";
 import ZeroExV4ModuleAbi from "./abis/ZeroExV4Module.json";
 import ZoraModuleAbi from "./abis/ZoraModule.json";
@@ -179,6 +181,11 @@ export class Router {
         SwapModuleAbi,
         provider
       ),
+      swap1inchModule: new Contract(
+        Addresses.Swap1inchModule[chainId] ?? AddressZero,
+        Swap1inchModuleAbi,
+        provider
+      ),
       alienswapModule: new Contract(
         Addresses.AlienswapModule[chainId] ?? AddressZero,
         AlienswapModuleAbi,
@@ -222,6 +229,7 @@ export class Router {
       };
       // Use permit instead of approvals (only works for USDC)
       usePermit?: boolean;
+      swapProvider?: "uniswap" | "1inch";
       // Callback for handling errors
       onError?: (
         kind: string,
@@ -2619,22 +2627,43 @@ export class Router {
           .map((order) => bn(order.tokenOutAmount))
           .reduce((a, b) => a.add(b), bn(0));
 
+        const swapProvider = options?.swapProvider ?? "uniswap";
+        const swapRecipient =
+          swapProvider === "uniswap"
+            ? this.contracts.swapModule.address
+            : this.contracts.swap1inchModule.address;
+
         try {
           // Only generate a swap if the in token is different from the out token
           let inAmount = totalAmountOut.toString();
           if (tokenIn !== tokenOut) {
-            const { executions: swapExecutions, amountIn } = await generateSwapExecutions(
-              this.chainId,
-              this.provider,
-              tokenIn,
-              tokenOut,
-              totalAmountOut,
-              {
-                swapModule: this.contracts.swapModule,
-                transfers,
-                refundTo: relayer,
-              }
-            );
+            const { executions: swapExecutions, amountIn } =
+              swapProvider === "uniswap"
+                ? await generateSwapExecutionsWithUniswap(
+                    this.chainId,
+                    this.provider,
+                    tokenIn,
+                    tokenOut,
+                    totalAmountOut,
+                    {
+                      swapModule: this.contracts.swapModule,
+                      transfers,
+                      refundTo: relayer,
+                    }
+                  )
+                : await generateSwapExecutionsWith1inch(
+                    this.chainId,
+                    this.provider,
+                    tokenIn,
+                    tokenOut,
+                    totalAmountOut,
+                    {
+                      swapModule: this.contracts.swap1inchModule,
+                      baseSwapModule: this.contracts.swapModule,
+                      transfers,
+                      refundTo: relayer,
+                    }
+                  );
 
             successfulSwapExecutions.push(...swapExecutions);
 
@@ -2667,7 +2696,7 @@ export class Router {
                     amount: inAmount,
                   },
                 ],
-                recipient: this.contracts.swapModule.address,
+                recipient: swapRecipient,
               });
             } else {
               // Split based on the individual transfers
