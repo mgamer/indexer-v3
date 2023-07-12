@@ -5,12 +5,14 @@ import { IndexerTransferEventsHandler } from "@/jobs/cdc/topics/indexer-nft-tran
 import { IndexerOrdersHandler } from "@/jobs/cdc/topics/indexer-orders";
 import { IndexerTokensHandler } from "@/jobs/cdc/topics/indexer-tokens";
 import { IndexerCollectionsHandler } from "@/jobs/cdc/topics/indexer-collections";
+import { IndexerAttributesHandler } from "@/jobs/cdc/topics/indexer-attributes";
 
 export const TopicHandlers: KafkaEventHandler[] = [
   new IndexerTransferEventsHandler(),
   new IndexerFillEventsHandler(),
   new IndexerTokensHandler(),
   new IndexerCollectionsHandler(),
+  new IndexerAttributesHandler(),
 ];
 
 if (!config.doOldOrderWebsocketWork) {

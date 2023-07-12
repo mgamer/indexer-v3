@@ -7,6 +7,7 @@ import * as tokenWebsocketEventsTriggerQueue from "@/jobs/websocket-events/token
 import * as topBidWebsocketEventsTriggerQueue from "@/jobs/websocket-events/top-bid-websocket-events-trigger-queue";
 import * as askWebsocketEventsTriggerQueue from "@/jobs/websocket-events/ask-websocket-events-trigger-queue";
 import * as collectionWebsocketEventsTriggerQueue from "@/jobs/websocket-events/collection-websocket-events-trigger-queue";
+import * as attributeWebsocketEventsTriggerQueue from "@/jobs/websocket-events/attribute-websocket-events-trigger-queue";
 
 export const WebsocketEventRouter = async ({
   eventKind,
@@ -65,6 +66,13 @@ export const WebsocketEventRouter = async ({
         },
       ]);
       break;
+    case WebsocketEventKind.AttributeEvent:
+      await attributeWebsocketEventsTriggerQueue.addToQueue([
+        {
+          data: eventInfo as attributeWebsocketEventsTriggerQueue.AttributeWebsocketEventInfo,
+        },
+      ]);
+      break;
   }
 };
 
@@ -78,6 +86,7 @@ export enum WebsocketEventKind {
   SaleEvent = "sale-event",
   TokenEvent = "token-event",
   CollectionEvent = "collection-event",
+  AttributeEvent = "attribute-event",
 }
 
 export type EventInfo =
@@ -87,4 +96,5 @@ export type EventInfo =
   | transferWebsocketEventsTriggerQueue.TransferWebsocketEventInfo
   | saleWebsocketEventsTriggerQueue.SaleWebsocketEventInfo
   | tokenWebsocketEventsTriggerQueue.TokenWebsocketEventInfo
-  | collectionWebsocketEventsTriggerQueue.CollectionWebsocketEventInfo;
+  | collectionWebsocketEventsTriggerQueue.CollectionWebsocketEventInfo
+  | attributeWebsocketEventsTriggerQueue.AttributeWebsocketEventInfo;
