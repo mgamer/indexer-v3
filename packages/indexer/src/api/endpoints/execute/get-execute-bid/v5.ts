@@ -437,6 +437,9 @@ export const getExecuteBidV5Options: RouteOptions = {
           if (collectionId) {
             await checkBlacklistAndFallback(collectionId, params);
           }
+          if (token) {
+            await checkBlacklistAndFallback(token.split(":")[0], params);
+          }
 
           // Only single-contract token sets are biddable
           if (tokenSetId && tokenSetId.startsWith("list") && tokenSetId.split(":").length !== 3) {
