@@ -11,7 +11,6 @@ import "@/jobs/data-archive";
 import "@/jobs/events-sync";
 import "@/jobs/oracle";
 import "@/jobs/order-updates";
-import "@/jobs/update-attribute";
 import "@/jobs/websocket-events";
 import "@/jobs/metrics";
 import "@/jobs/opensea-orders";
@@ -47,7 +46,6 @@ import * as backfillNftTransferEventsUpdatedAt from "@/jobs/backfill/backfill-nf
 import * as eventsSyncRealtime from "@/jobs/events-sync/realtime-queue";
 import * as eventsSyncRealtimeV2 from "@/jobs/events-sync/realtime-queue-v2";
 
-import * as openSeaOffChainCancellations from "@/jobs/order-updates/misc/opensea-off-chain-cancellations";
 import * as saveBidEvents from "@/jobs/order-updates/save-bid-events";
 
 import * as askWebsocketEventsTriggerQueue from "@/jobs/websocket-events/ask-websocket-events-trigger-queue";
@@ -189,7 +187,6 @@ export const allJobQueues = [
   eventsSyncRealtime.queue,
   eventsSyncRealtimeV2.queue,
 
-  openSeaOffChainCancellations.queue,
   saveBidEvents.queue,
 
   askWebsocketEventsTriggerQueue.queue,
