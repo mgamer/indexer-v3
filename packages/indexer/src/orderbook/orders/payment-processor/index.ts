@@ -212,12 +212,8 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         bps: number;
       }[] = (
         side === "sell"
-          ? await royalties.getRoyalties(
-              order.params.tokenAddress,
-              order.params.tokenId,
-              "on-chain"
-            )
-          : await royalties.getRoyaltiesByTokenSet(tokenSetId, "on-chain")
+          ? await royalties.getRoyalties(order.params.tokenAddress, order.params.tokenId, "onchain")
+          : await royalties.getRoyaltiesByTokenSet(tokenSetId, "onchain")
       ).map((r) => ({ kind: "royalty", ...r }));
 
       const price = bn(order.params.price).div(order.params.amount).toString();

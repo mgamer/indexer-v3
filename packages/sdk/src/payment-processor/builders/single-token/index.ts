@@ -63,6 +63,7 @@ export class SingleTokenBuilder extends BaseBuilder {
     options: {
       taker: string;
       takerMasterNonce: BigNumberish;
+      maxRoyaltyFeeNumerator?: BigNumberish;
     }
   ): Order {
     const orderParams = order.params;
@@ -73,7 +74,7 @@ export class SingleTokenBuilder extends BaseBuilder {
         sellerAcceptedOffer: false,
         marketplace: orderParams.marketplace,
         marketplaceFeeNumerator: orderParams.marketplaceFeeNumerator,
-        maxRoyaltyFeeNumerator: orderParams.maxRoyaltyFeeNumerator,
+        maxRoyaltyFeeNumerator: options?.maxRoyaltyFeeNumerator?.toString() ?? "0",
         privateBuyerOrDelegatedPurchaser: orderParams.privateBuyerOrDelegatedPurchaser,
         sellerOrBuyer: options.taker,
         tokenAddress: orderParams.tokenAddress,
@@ -92,7 +93,7 @@ export class SingleTokenBuilder extends BaseBuilder {
         sellerAcceptedOffer: true,
         marketplace: orderParams.marketplace,
         marketplaceFeeNumerator: orderParams.marketplaceFeeNumerator,
-        maxRoyaltyFeeNumerator: orderParams.maxRoyaltyFeeNumerator,
+        maxRoyaltyFeeNumerator: options?.maxRoyaltyFeeNumerator?.toString() ?? "0",
         privateBuyerOrDelegatedPurchaser: orderParams.privateBuyerOrDelegatedPurchaser,
         sellerOrBuyer: options.taker,
         tokenAddress: orderParams.tokenAddress,
