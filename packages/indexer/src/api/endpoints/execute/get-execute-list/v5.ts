@@ -16,6 +16,7 @@ import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import { getExecuteError } from "@/orderbook/orders/errors";
 import * as b from "@/utils/auth/blur";
 import { ExecutionsBuffer } from "@/utils/executions";
+import { checkBlacklistAndFallback } from "@/orderbook/orders";
 
 // Blur
 import * as blurSellToken from "@/orderbook/orders/blur/build/sell/token";
@@ -369,6 +370,7 @@ export const getExecuteListV5Options: RouteOptions = {
       }
 
       const errors: { message: string; orderIndex: number }[] = [];
+
       await Promise.all(
         params.map(async (params, i) => {
           const [contract, tokenId] = params.token.split(":");
@@ -384,6 +386,9 @@ export const getExecuteListV5Options: RouteOptions = {
           if (params.orderKind === "looks-rare") {
             params.orderKind = "looks-rare-v2";
           }
+
+          // Blacklist checks
+          await checkBlacklistAndFallback(contract, params);
 
           // For now, ERC20 listings are only supported on Seaport
           if (
