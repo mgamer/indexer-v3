@@ -3768,6 +3768,7 @@ export class Router {
             taker: module.address,
             takerMasterNonce: "0",
             tokenId: order.params.collectionLevelOffer ? detail.tokenId : undefined,
+            maxRoyaltyFeeNumerator: detail.extraArgs?.maxRoyaltyFeeNumerator ?? "0",
           });
           const matchedOrder = order.getMatchedOrder(takerOrder);
 
