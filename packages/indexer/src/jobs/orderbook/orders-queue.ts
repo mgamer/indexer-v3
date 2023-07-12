@@ -160,29 +160,8 @@ export type GenericOrderInfo =
       ingestDelay?: number;
     }
   | {
-      kind: "universe";
-      info: orders.universe.OrderInfo;
-      validateBidValue?: boolean;
-      ingestMethod?: "websocket" | "rest";
-      ingestDelay?: number;
-    }
-  | {
       kind: "rarible";
       info: orders.rarible.OrderInfo;
-      validateBidValue?: boolean;
-      ingestMethod?: "websocket" | "rest";
-      ingestDelay?: number;
-    }
-  | {
-      kind: "flow";
-      info: orders.flow.OrderInfo;
-      validateBidValue?: boolean;
-      ingestMethod?: "websocket" | "rest";
-      ingestDelay?: number;
-    }
-  | {
-      kind: "blur";
-      info: orders.blur.FullListingOrderInfo;
       validateBidValue?: boolean;
       ingestMethod?: "websocket" | "rest";
       ingestDelay?: number;
@@ -314,23 +293,8 @@ export const jobProcessor = async (job: Job) => {
         break;
       }
 
-      case "universe": {
-        result = await orders.universe.save([info]);
-        break;
-      }
-
       case "rarible": {
         result = await orders.rarible.save([info]);
-        break;
-      }
-
-      case "flow": {
-        result = await orders.flow.save([info]);
-        break;
-      }
-
-      case "blur": {
-        result = await orders.blur.saveFullListings([info], ingestMethod);
         break;
       }
 

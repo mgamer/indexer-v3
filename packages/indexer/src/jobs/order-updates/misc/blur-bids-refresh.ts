@@ -5,8 +5,8 @@ import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
 import { config } from "@/config/index";
-import * as orderbook from "@/jobs/orderbook/orders-queue";
 import { updateBlurRoyalties } from "@/utils/blur";
+import { orderbookOrdersJob } from "@/jobs/orderbook/orderbook-orders-job";
 
 const QUEUE_NAME = "blur-bids-refresh";
 
@@ -15,8 +15,8 @@ export const queue = new Queue(QUEUE_NAME, {
   defaultJobOptions: {
     attempts: 3,
     backoff: {
-      type: "exponential",
-      delay: 10000,
+      type: "fixed",
+      delay: 30000,
     },
     removeOnComplete: 0,
     removeOnFail: 10000,
@@ -37,7 +37,7 @@ if (config.doBackgroundWork) {
           .get(`${config.orderFetcherBaseUrl}/api/blur-collection-bids?collection=${collection}`)
           .then((response) => response.data.bids as Sdk.Blur.Types.BlurBidPricePoint[]);
 
-        await orderbook.addToQueue([
+        await orderbookOrdersJob.addToQueue([
           {
             kind: "blur-bid",
             info: {

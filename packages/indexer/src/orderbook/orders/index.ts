@@ -13,8 +13,6 @@ export * as sudoswap from "@/orderbook/orders/sudoswap";
 export * as x2y2 from "@/orderbook/orders/x2y2";
 export * as zeroExV4 from "@/orderbook/orders/zeroex-v4";
 export * as zora from "@/orderbook/orders/zora";
-export * as universe from "@/orderbook/orders/universe";
-export * as flow from "@/orderbook/orders/flow";
 export * as blur from "@/orderbook/orders/blur";
 export * as rarible from "@/orderbook/orders/rarible";
 export * as nftx from "@/orderbook/orders/nftx";
@@ -23,6 +21,7 @@ export * as superrare from "@/orderbook/orders/superrare";
 export * as looksRareV2 from "@/orderbook/orders/looks-rare-v2";
 export * as collectionxyz from "@/orderbook/orders/collectionxyz";
 export * as sudoswapV2 from "@/orderbook/orders/sudoswap-v2";
+export * as paymentProcessor from "@/orderbook/orders/payment-processor";
 
 // Imports
 
@@ -34,6 +33,7 @@ import { idb } from "@/common/db";
 import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
 import { SourcesEntity } from "@/models/sources/sources-entity";
+import { checkMarketplaceIsFiltered } from "@/utils/marketplace-blacklists";
 
 // Whenever a new order kind is added, make sure to also include an
 // entry/implementation in the below types/methods in order to have
@@ -60,10 +60,8 @@ export type OrderKind =
   | "mint"
   | "cryptopunks"
   | "sudoswap"
-  | "universe"
   | "nftx"
   | "blur"
-  | "flow"
   | "manifold"
   | "tofu-nft"
   | "decentraland"
@@ -77,7 +75,9 @@ export type OrderKind =
   | "looks-rare-v2"
   | "blend"
   | "collectionxyz"
-  | "sudoswap-v2";
+  | "sudoswap-v2"
+  | "payment-processor"
+  | "blur-v2";
 
 // In case we don't have the source of an order readily available, we use
 // a default value where possible (since very often the exchange protocol
@@ -156,15 +156,12 @@ export const getOrderSourceByOrderKind = async (
       case "sudoswap":
       case "sudoswap-v2":
         return sources.getOrInsert("sudoswap.xyz");
-      case "universe":
-        return sources.getOrInsert("universe.xyz");
       case "nftx":
         return sources.getOrInsert("nftx.io");
       case "blur":
+      case "blur-v2":
       case "blend":
         return sources.getOrInsert("blur.io");
-      case "flow":
-        return sources.getOrInsert("flow.so");
       case "manifold":
         return sources.getOrInsert("manifold.xyz");
       case "tofu-nft":
@@ -343,23 +340,6 @@ export const generateListingDetailsV6 = (
       };
     }
 
-    case "universe": {
-      return {
-        kind: "universe",
-        ...common,
-        order: new Sdk.Universe.Order(config.chainId, order.rawData),
-      };
-    }
-
-    case "flow": {
-      const sdkOrder = new Sdk.Flow.Order(config.chainId, order.rawData);
-      return {
-        kind: "flow",
-        ...common,
-        order: sdkOrder,
-      };
-    }
-
     case "rarible": {
       return {
         kind: "rarible",
@@ -421,6 +401,14 @@ export const generateListingDetailsV6 = (
         kind: "sudoswap-v2",
         ...common,
         order: new Sdk.SudoswapV2.Order(config.chainId, order.rawData),
+      };
+    }
+
+    case "payment-processor": {
+      return {
+        kind: "payment-processor",
+        ...common,
+        order: new Sdk.PaymentProcessor.Order(config.chainId, order.rawData),
       };
     }
 
@@ -668,24 +656,6 @@ export const generateBidDetailsV6 = async (
       };
     }
 
-    case "universe": {
-      const sdkOrder = new Sdk.Universe.Order(config.chainId, order.rawData);
-      return {
-        kind: "universe",
-        ...common,
-        order: sdkOrder,
-      };
-    }
-
-    case "flow": {
-      const sdkOrder = new Sdk.Flow.Order(config.chainId, order.rawData);
-      return {
-        kind: "flow",
-        ...common,
-        order: sdkOrder,
-      };
-    }
-
     case "rarible": {
       return {
         kind: "rarible",
@@ -748,6 +718,15 @@ export const generateBidDetailsV6 = async (
       const sdkOrder = new Sdk.SudoswapV2.Order(config.chainId, order.rawData);
       return {
         kind: "sudoswap-v2",
+        ...common,
+        order: sdkOrder,
+      };
+    }
+
+    case "payment-processor": {
+      const sdkOrder = new Sdk.PaymentProcessor.Order(config.chainId, order.rawData);
+      return {
+        kind: "payment-processor",
         ...common,
         order: sdkOrder,
       };
@@ -844,14 +823,6 @@ export const generateListingDetailsV5 = (
         kind: "zora",
         ...common,
         order: new Sdk.Zora.Order(config.chainId, order.rawData),
-      };
-    }
-
-    case "universe": {
-      return {
-        kind: "universe",
-        ...common,
-        order: new Sdk.Universe.Order(config.chainId, order.rawData),
       };
     }
 
@@ -952,18 +923,6 @@ export const generateBidDetailsV5 = async (
       };
     }
 
-    case "universe": {
-      const sdkOrder = new Sdk.Universe.Order(config.chainId, order.rawData);
-      return {
-        kind: "universe",
-        ...common,
-        order: sdkOrder,
-        extraArgs: {
-          amount: sdkOrder.params.take.value,
-        },
-      };
-    }
-
     case "rarible": {
       const sdkOrder = new Sdk.Rarible.Order(config.chainId, order.rawData);
       return {
@@ -975,6 +934,36 @@ export const generateBidDetailsV5 = async (
 
     default: {
       throw new Error("Unsupported order kind");
+    }
+  }
+};
+
+// Check collection's blacklist, override the `orderKind` and `orderbook` in params
+export const checkBlacklistAndFallback = async (
+  collection: string,
+  params: {
+    orderKind: string;
+    orderbook: string;
+  }
+) => {
+  // Fallback to Seaport when LooksRare is blocked
+  if (["looks-rare-v2"].includes(params.orderKind) && ["looks-rare"].includes(params.orderbook)) {
+    const blocked = await checkMarketplaceIsFiltered(collection, [
+      Sdk.LooksRareV2.Addresses.Exchange[config.chainId],
+    ]);
+    if (blocked) {
+      params.orderKind = "seaport-v1.5";
+      params.orderbook = "reservoir";
+    }
+  }
+
+  // Fallback to PaymentProcessor when Seaport is blocked
+  if (["seaport-v1.5"].includes(params.orderKind) && ["reservoir"].includes(params.orderbook)) {
+    const blocked = await checkMarketplaceIsFiltered(collection, [
+      Sdk.SeaportV15.Addresses.Exchange[config.chainId],
+    ]);
+    if (blocked) {
+      params.orderKind = "payment-processor";
     }
   }
 };

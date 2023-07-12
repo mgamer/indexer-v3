@@ -62,10 +62,13 @@ export class ExportDataJob extends AbstractRabbitMqJobHandler {
   maxRetries = 10;
   concurrency = 1;
   useSharedChannel = true;
+  consumerTimeout = 120000;
 
   protected async process(payload: ExportDataJobPayload) {
     const { taskId } = payload;
     const queryLimit = 5000;
+
+    logger.info(this.queueName, `Start. taskId=${taskId}`);
 
     const timeBefore = performance.now();
 

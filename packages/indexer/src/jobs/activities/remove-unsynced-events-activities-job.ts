@@ -1,6 +1,4 @@
 import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handler";
-import { Activities } from "@/models/activities";
-import { UserActivities } from "@/models/user-activities";
 import { config } from "@/config/index";
 import * as ActivitiesIndex from "@/elasticsearch/indexes/activities";
 
@@ -17,18 +15,21 @@ export class RemoveUnsyncedEventsActivitiesJob extends AbstractRabbitMqJobHandle
   useSharedChannel = true;
 
   protected async process(payload: RemoveUnsyncedEventsActivitiesJobPayload) {
-    await Promise.all([
-      Activities.deleteByBlockHash(payload.blockHash),
-      UserActivities.deleteByBlockHash(payload.blockHash),
-    ]);
+    await ActivitiesIndex.deleteActivitiesByBlockHash(payload.blockHash);
 
-    if (config.doElasticsearchWork) {
-      await ActivitiesIndex.deleteActivitiesByBlockHash(payload.blockHash);
+    const keepGoing = await ActivitiesIndex.deleteActivitiesByBlockHash(payload.blockHash);
+
+    if (keepGoing) {
+      await this.addToQueue(payload.blockHash);
     }
   }
 
-  public async addToQueue(params: RemoveUnsyncedEventsActivitiesJobPayload) {
-    await this.send({ payload: params });
+  public async addToQueue(blockHash: string) {
+    if (!config.doElasticsearchWork) {
+      return;
+    }
+
+    await this.send({ payload: { blockHash } });
   }
 }
 

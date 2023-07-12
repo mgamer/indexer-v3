@@ -94,7 +94,8 @@
   },
   "RaribleModule": {
     "v1": {
-      "1": "0x428a6be88fc0d25778e3c3f6e09fcfdc9a526fad"
+      "1": "0x428a6be88fc0d25778e3c3f6e09fcfdc9a526fad",
+      "5": "0x428a6be88fc0d25778e3c3f6e09fcfdc9a526fad"
     }
   },
   "ReservoirApprovalProxy": {
@@ -220,6 +221,26 @@
     "v2": {
       "1": "0xe2840826c43c25e88a5ef43ff790d7105889dd6e",
       "5": "0xe2840826c43c25e88a5ef43ff790d7105889dd6e"
+    }
+  },
+  "CryptoPunksModule": {
+    "v1": {
+      "1": "0x8be240e8689547f1068a835d14f1d943958095dc"
+    }
+  },
+  "PaymentProcessorModule": {
+    "v3": {
+      "1": "0x929adee14d57019bfd4d092889abe3e2a647e706",
+      "5": "0x929adee14d57019bfd4d092889abe3e2a647e706",
+      "11155111": "0x929adee14d57019bfd4d092889abe3e2a647e706"
+    }
+  },
+  "PermitProxy": {
+    "v1": {
+      "1": "0x104ff9a0e2a62aa531ef0cc9d19f948bde7062de",
+      "5": "0x104ff9a0e2a62aa531ef0cc9d19f948bde7062de",
+      "137": "0x104ff9a0e2a62aa531ef0cc9d19f948bde7062de",
+      "80001": "0x104ff9a0e2a62aa531ef0cc9d19f948bde7062de"
     }
   }
 }

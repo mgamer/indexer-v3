@@ -12,7 +12,6 @@ import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { bn, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
-import * as ordersUpdateById from "@/jobs/order-updates/by-id-queue";
 import { Sources } from "@/models/sources";
 import { SudoswapV2PoolKind } from "@/models/sudoswap-v2-pools";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
@@ -25,6 +24,10 @@ import {
 import * as tokenSet from "@/orderbook/token-sets";
 import * as royalties from "@/utils/royalties";
 import * as sudoswapV2 from "@/utils/sudoswap-v2";
+import {
+  orderUpdatesByIdJob,
+  OrderUpdatesByIdJobPayload,
+} from "@/jobs/order-updates/order-updates-by-id-job";
 
 export type OrderInfo = {
   orderParams: {
@@ -130,6 +133,18 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         },
       ];
 
+      const onChainRoyalties = await royalties.getRoyaltiesByTokenSet(
+        `contract:${pool.nft}`.toLowerCase(),
+        "onchain"
+      );
+      for (const r of onChainRoyalties) {
+        feeBreakdown.push({
+          kind: "royalty",
+          recipient: r.recipient,
+          bps: r.bps,
+        });
+      }
+
       const isERC1155 = pool.pairKind > 1;
 
       // Handle buy orders
@@ -192,7 +207,9 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
               "default"
             );
 
-            const totalBuiltInBps = 0;
+            const totalBuiltInBps = feeBreakdown
+              .map(({ bps, kind }) => (kind === "royalty" ? bps : 0))
+              .reduce((a, b) => a + b, 0);
             const totalDefaultBps = defaultRoyalties
               .map(({ bps }) => bps)
               .reduce((a, b) => a + b, 0);
@@ -456,7 +473,9 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                     "default"
                   );
 
-                  const totalBuiltInBps = 0;
+                  const totalBuiltInBps = feeBreakdown
+                    .map(({ bps, kind }) => (kind === "royalty" ? bps : 0))
+                    .reduce((a, b) => a + b, 0);
                   const totalDefaultBps = defaultRoyalties
                     .map(({ bps }) => bps)
                     .reduce((a, b) => a + b, 0);
@@ -685,7 +704,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
     await idb.none(pgp.helpers.insert(orderValues, columns) + " ON CONFLICT DO NOTHING");
   }
 
-  await ordersUpdateById.addToQueue(
+  await orderUpdatesByIdJob.addToQueue(
     results
       .filter(({ status }) => status === "success")
       .map(
@@ -698,7 +717,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
               txHash: txHash,
               txTimestamp: txTimestamp,
             },
-          } as ordersUpdateById.OrderInfo)
+          } as OrderUpdatesByIdJobPayload)
       )
   );
 
