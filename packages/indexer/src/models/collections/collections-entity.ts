@@ -129,6 +129,6 @@ export class CollectionsEntity {
     this.lastMetadataSync = params.last_metadata_sync;
     this.mintedTimestamp = params.minted_timestamp;
     this.floorSellValue = params.floor_sell_value;
-    this.creator = fromBuffer(params.creator);
+    this.creator = params.creator ? fromBuffer(params.creator) : params.creator;
   }
 }
