@@ -29,8 +29,7 @@ import {
   PerPoolSwapDetails,
   SwapDetail,
 } from "./types";
-import { generateSwapExecutions as generateSwapExecutionsWithUniswap } from "./uniswap";
-import { generateSwapExecutions as generateSwapExecutionsWith1inch } from "./1inch";
+import { generateSwapExecutions } from "./swap/index";
 import { generateFTApprovalTxData, generateNFTApprovalTxData, isETH, isWETH } from "./utils";
 
 // Tokens
@@ -2637,33 +2636,20 @@ export class Router {
           // Only generate a swap if the in token is different from the out token
           let inAmount = totalAmountOut.toString();
           if (tokenIn !== tokenOut) {
-            const { executions: swapExecutions, amountIn } =
-              swapProvider === "uniswap"
-                ? await generateSwapExecutionsWithUniswap(
-                    this.chainId,
-                    this.provider,
-                    tokenIn,
-                    tokenOut,
-                    totalAmountOut,
-                    {
-                      swapModule: this.contracts.swapModule,
-                      transfers,
-                      refundTo: relayer,
-                    }
-                  )
-                : await generateSwapExecutionsWith1inch(
-                    this.chainId,
-                    this.provider,
-                    tokenIn,
-                    tokenOut,
-                    totalAmountOut,
-                    {
-                      swapModule: this.contracts.swap1inchModule,
-                      baseSwapModule: this.contracts.swapModule,
-                      transfers,
-                      refundTo: relayer,
-                    }
-                  );
+            const { executions: swapExecutions, amountIn } = await generateSwapExecutions(
+              this.chainId,
+              this.provider,
+              swapProvider,
+              tokenIn,
+              tokenOut,
+              totalAmountOut,
+              {
+                swapModule: this.contracts.swapModule,
+                swap1inchModule: this.contracts.swap1inchModule,
+                transfers,
+                refundTo: relayer,
+              }
+            );
 
             successfulSwapExecutions.push(...swapExecutions);
 
