@@ -29,6 +29,49 @@ export const queue = new Queue(QUEUE_NAME, {
 });
 new QueueScheduler(QUEUE_NAME, { connection: redis.duplicate() });
 
+const changedMapping = {
+  id: "collections.id",
+  slug: "collections.slug",
+  name: "collections.name",
+  metadata: "collections.metadata",
+  royalties: "collections.royalties",
+  contract: "collections.contract",
+  token_id_range: "collections.token_id_range",
+  token_set_id: "collections.token_set_id",
+  day1_rank: "collections.day1_rank",
+  day1_volume: "collections.day1_volume",
+  day7_rank: "collections.day7_rank",
+  day7_volume: "collections.day7_volume",
+  day30_rank: "collections.day30_rank",
+  day30_volume: "collections.day30_volume",
+  all_time_rank: "collections.all_time_rank",
+  all_time_volume: "collections.all_time_volume",
+  day1_volume_change: "collections.day1_volume_change",
+  day7_volume_change: "collections.day7_volume_change",
+  day30_volume_change: "collections.day30_volume_change",
+  day1_floor_sell_value: "collections.day1_floor_sell_value",
+  day7_floor_sell_value: "collections.day7_floor_sell_value",
+  day30_floor_sell_value: "collections.day30_floor_sell_value",
+  token_count: "collections.token_count",
+  owner_count: "collections.owner_count",
+  floor_sell_id: "collections.floor_sell_id",
+  floor_sell_value: "collections.floor_sell_value",
+  floor_sell_maker: "collections.floor_sell_maker",
+  floor_sell_valid_between: "collections.floor_sell_valid_between",
+  normalized_floor_sell_id: "collections.normalized_floor_sell_id",
+  normalized_floor_sell_value: "collections.normalized_floor_sell_value",
+  normalized_floor_sell_maker: "collections.normalized_floor_sell_maker",
+  normalized_floor_sell_valid_between: "collections.normalized_floor_sell_valid_between",
+  non_flagged_floor_sell_id: "collections.non_flagged_floor_sell_id",
+  non_flagged_floor_sell_value: "collections.non_flagged_floor_sell_value",
+  non_flagged_floor_sell_maker: "collections.non_flagged_floor_sell_maker",
+  non_flagged_floor_sell_valid_between: "collections.non_flagged_floor_sell_valid_between",
+  top_buy_id: "collections.top_buy_id",
+  top_buy_value: "collections.top_buy_value",
+  top_buy_maker: "collections.top_buy_maker",
+  top_buy_valid_between: "collections.top_buy_valid_between",
+};
+
 // BACKGROUND WORKER ONLY
 if (config.doBackgroundWork && config.doWebsocketServerWork) {
   const worker = new Worker(
@@ -61,7 +104,6 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
             "c"."day1_floor_sell_value",
             "c"."day7_floor_sell_value",
             "c"."day30_floor_sell_value",
-            "c"."floor_sell_value",
             "c"."token_count",
             "c"."owner_count",
             "c"."floor_sell_id",
@@ -186,23 +228,23 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
         );
 
         let eventType = "";
-        // const changed = [];
+        const changed = [];
         if (data.trigger === "insert") eventType = "collection.created";
         else if (data.trigger === "update") {
           eventType = "collection.updated";
-          // if (data.before) {
-          //   for (const key in changedMapping) {
-          //     // eslint-disable-next-line
-          //     // @ts-ignore
-          //     if (data.before[key] && data.after[key] && data.before[key] !== data.after[key]) {
-          //       changed.push(key);
-          //     }
-          //   }
-          // }
+          if (data.before) {
+            for (const key in changedMapping) {
+              // eslint-disable-next-line
+              // @ts-ignore
+              if (data.before[key] !== data.after[key]) {
+                changed.push(key);
+              }
+            }
+          }
 
-          // if (!changed.length) {
-          //   return;
-          // }
+          if (!changed.length) {
+            return;
+          }
         }
 
         await publishWebsocketEvent({
@@ -210,7 +252,7 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
           tags: {
             id: data.after.id,
           },
-          // changed: [],
+          changed,
           data: result,
         });
       } catch (error) {
