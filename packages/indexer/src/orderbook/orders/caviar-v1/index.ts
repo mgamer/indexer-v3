@@ -78,39 +78,46 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       const poolContract = new Contract(
         pool.address,
         new Interface([
-          "function buyQuote(uint256 outputAmount) view returns (uint256)",
-          "function sellQuote(uint256 inputAmount) view returns (uint256)",
+          "function baseTokenReserves() view returns (uint256)",
+          "function fractionalTokenReserves() view returns (uint256)",
         ]),
         baseProvider
       );
 
-      // Get the list of prices at which the pool will buy and sell at
-      const buyPrices: BigNumber[] = await Promise.all(
-        _.range(0, POOL_ORDERS_MAX_PRICE_POINTS_COUNT).map(async (index) => {
-          try {
-            const buyPrice = (await poolContract.sellQuote(parseEther((index + 1).toString()))).sub(
-              await poolContract.sellQuote(parseEther(index.toString()))
-            );
-
-            return buyPrice;
-          } catch {
-            return bn(0);
-          }
-        })
-      ).then((prices) => prices.filter((p) => p.gt(0)));
-
       // Handle bids
       try {
         const buyId = getOrderId(orderParams.pool, "buy");
-        if (buyPrices.length) {
-          const price = buyPrices[0].toString();
-          const value = buyPrices[0].toString();
+
+        // Determine prices
+        const prices: BigNumber[] = [];
+        let btr = await poolContract.baseTokenReserves();
+        let ftr = await poolContract.fractionalTokenReserves();
+        for (let i = 0; i < POOL_ORDERS_MAX_PRICE_POINTS_COUNT; i++) {
+          // uint256 inputAmountWithFee = inputAmount * 990
+          // (inputAmountWithFee * baseTokenReserves()) / ((fractionalTokenReserves() * 1000) + inputAmountWithFee)
+
+          const inputAmount = parseEther("1");
+          const inputAmountWithFee = inputAmount.mul(990);
+
+          const x = inputAmountWithFee.mul(btr);
+          const y = ftr.mul(1000).add(inputAmountWithFee);
+
+          const price = x.div(y);
+
+          prices.push(price);
+          btr = btr.sub(price);
+          ftr = ftr.add(inputAmount);
+        }
+
+        if (prices.length) {
+          const price = prices[0].toString();
+          const value = prices[0].toString();
 
           // Handle: core sdk order
           const sdkOrder: Sdk.CaviarV1.Order = new Sdk.CaviarV1.Order(config.chainId, {
             pool: orderParams.pool,
             extra: {
-              prices: buyPrices.map(String),
+              prices: prices.map(String),
             },
           });
 
@@ -203,7 +210,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
               currency_price: price,
               currency_value: value,
               needs_conversion: null,
-              quantity_remaining: buyPrices.length.toString(),
+              quantity_remaining: prices.length.toString(),
               valid_between: `tstzrange(${validFrom}, ${validTo}, '[]')`,
               nonce: null,
               source_id_int: source?.id,
@@ -258,7 +265,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                 price,
                 value,
                 rawData: sdkOrder.params,
-                quantityRemaining: buyPrices.length.toString(),
+                quantityRemaining: prices.length.toString(),
                 missingRoyalties: missingRoyalties,
                 normalizedValue: value.toString(),
                 currencyNormalizedValue: value.toString(),
@@ -306,24 +313,32 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
       // Handle listings
       try {
-        // Get the list of prices at which the pool will sell at
-        const sellPrices: BigNumber[] = await Promise.all(
-          _.range(0, POOL_ORDERS_MAX_PRICE_POINTS_COUNT).map(async (index) => {
-            try {
-              const sellPrice = (
-                await poolContract.buyQuote(parseEther((index + 1).toString()))
-              ).sub(await poolContract.buyQuote(parseEther(index.toString())));
+        // Determine prices
+        const prices: BigNumber[] = [];
+        let btr = await poolContract.baseTokenReserves();
+        let ftr = await poolContract.fractionalTokenReserves();
+        for (let i = 0; i < POOL_ORDERS_MAX_PRICE_POINTS_COUNT; i++) {
+          // mulDivUp(outputAmount * 1000, baseTokenReserves(), (fractionalTokenReserves() - outputAmount) * 990)
 
-              return sellPrice;
-            } catch {
-              return bn(0);
-            }
-          })
-        ).then((prices) => prices.filter((p) => p.gt(0)));
+          const outputAmount = parseEther("1");
 
-        if (sellPrices.length) {
-          const price = sellPrices[0].toString();
-          const value = sellPrices[0].toString();
+          const x = outputAmount.mul(1000);
+          const y = btr;
+          const denominator = ftr.sub(outputAmount).mul(990);
+
+          const price = x
+            .mul(y)
+            .div(denominator)
+            .add(x.mul(y).mod(denominator).gt(0) ? 1 : 0);
+
+          prices.push(price);
+          btr = btr.add(price);
+          ftr = ftr.sub(outputAmount);
+        }
+
+        if (prices.length) {
+          const price = prices[0].toString();
+          const value = prices[0].toString();
 
           // Fetch all token ids owned by the pool
           const poolOwnedTokenIds = await commonHelpers.getNfts(pool.nft, pool.address);
@@ -370,7 +385,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                   pool: orderParams.pool,
                   tokenId,
                   extra: {
-                    prices: sellPrices.map(String),
+                    prices: prices.map(String),
                   },
                 });
 
