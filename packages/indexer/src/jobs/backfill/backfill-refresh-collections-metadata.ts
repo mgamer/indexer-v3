@@ -64,11 +64,6 @@ if (config.doBackgroundWork) {
 
       if (results.length) {
         for (const result of results) {
-          logger.info(
-            QUEUE_NAME,
-            `Backfilling collection metadata. tokenSetResult=${JSON.stringify(result)}`
-          );
-
           const tokenId = await Tokens.getSingleToken(result.id);
           collectionMetadataInfos.push({
             contract: result.id,
