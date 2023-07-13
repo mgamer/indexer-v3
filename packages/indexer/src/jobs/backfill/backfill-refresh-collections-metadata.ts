@@ -78,18 +78,18 @@ if (config.doBackgroundWork) {
 
           await collectionMetadataQueueJob.addToQueueBulk(collectionMetadataInfos);
         }
+      }
 
-        if (results.length == limit) {
-          const lastResult = _.last(results);
+      if (results.length == limit) {
+        const lastResult = _.last(results);
 
-          nextCursor = {
-            collectionId: lastResult.id,
-          };
+        nextCursor = {
+          collectionId: lastResult.id,
+        };
 
-          await redis.set(`${QUEUE_NAME}-next-cursor`, JSON.stringify(nextCursor));
+        await redis.set(`${QUEUE_NAME}-next-cursor`, JSON.stringify(nextCursor));
 
-          await addToQueue(nextCursor);
-        }
+        await addToQueue(nextCursor);
       }
     },
     { connection: redis.duplicate(), concurrency: 1 }
