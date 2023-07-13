@@ -666,7 +666,7 @@ export const getCollectionsV6Options: RouteOptions = {
             onSaleCount: String(r.on_sale_count),
             primaryContract: fromBuffer(r.contract),
             tokenSetId: r.token_set_id,
-            creator: r.creator,
+            creator: r.creator ? fromBuffer(r.creator) : null,
             royalties: r.royalties
               ? {
                   // Main recipient, kept for backwards-compatibility only
