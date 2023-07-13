@@ -159,6 +159,7 @@ export const getCollectionsV6Options: RouteOptions = {
           onSaleCount: Joi.string().description("Total tokens currently on sale."),
           primaryContract: Joi.string().lowercase().pattern(regex.address),
           tokenSetId: Joi.string().allow(null),
+          creator: Joi.string().allow(null),
           royalties: Joi.object({
             recipient: Joi.string().allow("", null),
             breakdown: Joi.array().items(
@@ -400,6 +401,7 @@ export const getCollectionsV6Options: RouteOptions = {
           collections.contract,
           collections.token_id_range,
           collections.token_set_id,
+          collections.creator,
           collections.day1_rank,
           collections.day1_volume,
           collections.day7_rank,
@@ -662,6 +664,7 @@ export const getCollectionsV6Options: RouteOptions = {
             onSaleCount: String(r.on_sale_count),
             primaryContract: fromBuffer(r.contract),
             tokenSetId: r.token_set_id,
+            creator: r.creator,
             royalties: r.royalties
               ? {
                   // Main recipient, kept for backwards-compatibility only
