@@ -415,6 +415,8 @@ export class RabbitMqJobsConsumer {
 
         // Clear the channel that closed
         RabbitMqJobsConsumer.channelsToJobs.delete(channel);
+      } else {
+        logger.info("rabbit-channel", `no jobs found for channel`);
       }
     });
   }
