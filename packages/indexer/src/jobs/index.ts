@@ -396,7 +396,14 @@ export class RabbitMqJobsConsumer {
       if (jobs) {
         // Resubscribe the jobs
         for (const job of jobs) {
-          await this.subscribe(job);
+          try {
+            await this.subscribe(job);
+          } catch (error) {
+            logger.error(
+              "rabbit-channel",
+              `Consumer channel failed to resubscribe to ${job.queueName} ${error}`
+            );
+          }
         }
 
         logger.info(
