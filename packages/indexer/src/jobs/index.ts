@@ -24,6 +24,7 @@ import "@/jobs/token-set-updates";
 import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handler";
 
 import * as backfillExpiredOrders from "@/jobs/backfill/backfill-expired-orders";
+import * as backfillRefreshCollectionMetadata from "@/jobs/backfill/backfill-refresh-collections-metadata";
 
 import * as eventsSyncRealtime from "@/jobs/events-sync/realtime-queue";
 import * as eventsSyncRealtimeV2 from "@/jobs/events-sync/realtime-queue-v2";
@@ -155,6 +156,7 @@ import { eventsSyncRealtimeJob } from "@/jobs/events-sync/events-sync-realtime-j
 
 export const allJobQueues = [
   backfillExpiredOrders.queue,
+  backfillRefreshCollectionMetadata.queue,
 
   eventsSyncRealtime.queue,
   eventsSyncRealtimeV2.queue,
