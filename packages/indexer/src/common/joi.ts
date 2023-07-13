@@ -322,8 +322,7 @@ export const getJoiDynamicPricingObject = async (
   raw_data:
     | Sdk.SeaportBase.Types.OrderComponents
     | Sdk.Sudoswap.OrderParams
-    | Sdk.Nftx.Types.OrderParams
-    | Sdk.CollectionXyz.Types.OrderParams,
+    | Sdk.Nftx.Types.OrderParams,
   currency?: string,
   missing_royalties?: []
 ) => {
@@ -394,28 +393,7 @@ export const getJoiDynamicPricingObject = async (
         ),
       },
     };
-  } else if (kind === "collectionxyz") {
-    // Pool orders
-    return {
-      kind: "pool",
-      data: {
-        pool: (raw_data as Sdk.CollectionXyz.Types.OrderParams).pool,
-        prices: await Promise.all(
-          ((raw_data as Sdk.CollectionXyz.Types.OrderParams).extra.prices as string[]).map(
-            (price) =>
-              getJoiPriceObject(
-                {
-                  gross: {
-                    amount: bn(price).add(missingRoyalties).toString(),
-                  },
-                },
-                floorAskCurrency
-              )
-          )
-        ),
-      },
-    };
-  } else if (kind === "nftx") {
+  } else if (kind === "collectionxyz" || kind === "nftx" || kind === "caviar-v1") {
     // Pool orders
     return {
       kind: "pool",
@@ -476,6 +454,8 @@ export const getJoiOrderDepthObject = async (
       );
     }
 
+    case "caviar-v1":
+    case "collectionxyz":
     case "nftx": {
       const order = rawData as Sdk.Nftx.Types.OrderParams;
       return Promise.all(
