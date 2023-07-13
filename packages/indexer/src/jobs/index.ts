@@ -23,6 +23,11 @@ import "@/jobs/token-set-updates";
 
 import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handler";
 
+import amqplibConnectionManager, {
+  AmqpConnectionManager,
+  ChannelWrapper,
+} from "amqp-connection-manager";
+
 import * as backfillExpiredOrders from "@/jobs/backfill/backfill-expired-orders";
 import * as backfillRefreshCollectionMetadata from "@/jobs/backfill/backfill-refresh-collections-metadata";
 
@@ -63,7 +68,7 @@ import * as backfillActivitiesElasticsearch from "@/jobs/activities/backfill/bac
 import * as backfillDeleteExpiredBidsElasticsearch from "@/jobs/activities/backfill/backfill-delete-expired-bids-elasticsearch";
 import * as backfillSalePricingDecimalElasticsearch from "@/jobs/activities/backfill/backfill-sales-pricing-decimal-elasticsearch";
 
-import amqplib, { Channel, Connection } from "amqplib";
+import amqplib from "amqplib";
 import { config } from "@/config/index";
 import _ from "lodash";
 import getUuidByString from "uuid-by-string";
@@ -199,10 +204,10 @@ export const allJobQueues = [
 export class RabbitMqJobsConsumer {
   private static maxConsumerConnectionsCount = 5;
 
-  private static rabbitMqConsumerConnections: Connection[] = [];
-  private static queueToChannel: Map<string, Channel> = new Map();
-  private static sharedChannels: Map<string, Channel> = new Map();
-  private static channelsToJobs: Map<Channel, AbstractRabbitMqJobHandler[]> = new Map();
+  private static rabbitMqConsumerConnections: AmqpConnectionManager[] = [];
+  private static queueToChannel: Map<string, ChannelWrapper> = new Map();
+  private static sharedChannels: Map<string, ChannelWrapper> = new Map();
+  private static channelsToJobs: Map<ChannelWrapper, AbstractRabbitMqJobHandler[]> = new Map();
   private static sharedChannelName = "shared-channel";
 
   /**
@@ -301,13 +306,13 @@ export class RabbitMqJobsConsumer {
 
   public static async connect() {
     for (let i = 0; i < RabbitMqJobsConsumer.maxConsumerConnectionsCount; ++i) {
-      const connection = await amqplib.connect(config.rabbitMqUrl);
+      const connection = await amqplibConnectionManager.connect(config.rabbitMqUrl);
       RabbitMqJobsConsumer.rabbitMqConsumerConnections.push(connection);
 
       // Create a shared channel for each connection
       RabbitMqJobsConsumer.sharedChannels.set(
         RabbitMqJobsConsumer.getSharedChannelName(i),
-        await connection.createChannel()
+        await connection.createChannel({ confirm: false })
       );
 
       connection.once("error", (error) => {
@@ -336,7 +341,7 @@ export class RabbitMqJobsConsumer {
       return;
     }
 
-    let channel: Channel;
+    let channel: ChannelWrapper;
     const connectionIndex = _.random(0, RabbitMqJobsConsumer.maxConsumerConnectionsCount - 1);
     const sharedChannel = RabbitMqJobsConsumer.sharedChannels.get(
       RabbitMqJobsConsumer.getSharedChannelName(connectionIndex)
@@ -348,7 +353,7 @@ export class RabbitMqJobsConsumer {
     } else {
       channel = await RabbitMqJobsConsumer.rabbitMqConsumerConnections[
         connectionIndex
-      ].createChannel();
+      ].createChannel({ confirm: false });
     }
 
     RabbitMqJobsConsumer.queueToChannel.set(job.getQueue(), channel);
@@ -356,9 +361,6 @@ export class RabbitMqJobsConsumer {
     RabbitMqJobsConsumer.channelsToJobs.get(channel)
       ? RabbitMqJobsConsumer.channelsToJobs.get(channel)?.push(job)
       : RabbitMqJobsConsumer.channelsToJobs.set(channel, [job]);
-
-    // Set the number of messages to consume simultaneously
-    await channel.prefetch(job.getConcurrency());
 
     // Subscribe to the queue
     await channel.consume(
@@ -370,11 +372,9 @@ export class RabbitMqJobsConsumer {
       },
       {
         consumerTag: RabbitMqJobsConsumer.getConsumerTag(job.getQueue()),
+        prefetch: job.getConcurrency(),
       }
     );
-
-    // Set the number of messages to consume simultaneously for the retry queue
-    await channel.prefetch(_.max([_.toInteger(job.getConcurrency() / 4), 1]) ?? 1);
 
     // Subscribe to the retry queue
     await channel.consume(
@@ -386,6 +386,7 @@ export class RabbitMqJobsConsumer {
       },
       {
         consumerTag: RabbitMqJobsConsumer.getConsumerTag(job.getRetryQueue()),
+        prefetch: _.max([_.toInteger(job.getConcurrency() / 4), 1]) ?? 1,
       }
     );
 
