@@ -5,7 +5,7 @@ import {
   WebsocketEventRouter,
 } from "@/jobs/websocket-events/websocket-event-router";
 
-export class IndexerAttributesHandler extends KafkaEventHandler {
+export class IndexerTokenAttributesHandler extends KafkaEventHandler {
   topicName = "indexer.public.token_attributes";
 
   protected async handleInsert(payload: any): Promise<void> {
@@ -19,7 +19,7 @@ export class IndexerAttributesHandler extends KafkaEventHandler {
         after: payload.after,
         trigger: "insert",
       },
-      eventKind: WebsocketEventKind.AttributeEvent,
+      eventKind: WebsocketEventKind.TokenAttributeEvent,
     });
   }
 
@@ -34,7 +34,7 @@ export class IndexerAttributesHandler extends KafkaEventHandler {
         after: payload.after,
         trigger: "update",
       },
-      eventKind: WebsocketEventKind.AttributeEvent,
+      eventKind: WebsocketEventKind.TokenAttributeEvent,
     });
   }
 
@@ -45,7 +45,7 @@ export class IndexerAttributesHandler extends KafkaEventHandler {
         after: payload.after,
         trigger: "delete",
       },
-      eventKind: WebsocketEventKind.AttributeEvent,
+      eventKind: WebsocketEventKind.TokenAttributeEvent,
     });
   }
 }
