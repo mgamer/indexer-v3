@@ -417,7 +417,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                     taker: toBuffer(AddressZero),
                     price,
                     value,
-                    currency: toBuffer(pool.nft),
+                    currency: toBuffer(pool.baseToken),
                     currency_price: price,
                     currency_value: value,
                     needs_conversion: null,
@@ -456,6 +456,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                         price = $/price/,
                         currency_price = $/price/,
                         value = $/value/,
+                        currency = $/currency/,
                         currency_value = $/value/,
                         quantity_remaining = $/amount/,
                         valid_between = tstzrange(date_trunc('seconds', to_timestamp(${orderParams.txTimestamp})), 'Infinity', '[]'),
@@ -479,6 +480,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                       rawData: sdkOrder.params,
                       missingRoyalties: missingRoyalties,
                       normalizedValue: normalizedValue.toString(),
+                      currency: toBuffer(pool.baseToken),
                       currencyNormalizedValue: normalizedValue.toString(),
                       feeBps: 0, // No fees on caviar
                       feeBreakdown: [], // No fees on caviar
