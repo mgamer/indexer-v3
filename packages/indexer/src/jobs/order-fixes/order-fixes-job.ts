@@ -380,7 +380,7 @@ export class OrderFixesJob extends AbstractRabbitMqJobHandler {
                     const balance = await commonHelpers.getNftBalance(
                       contract,
                       tokenId,
-                      order.params.pair
+                      order.params.pool
                     );
                     if (balance.lte(0)) {
                       fillabilityStatus = "no-balance";
