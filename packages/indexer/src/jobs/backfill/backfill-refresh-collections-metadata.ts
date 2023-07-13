@@ -75,9 +75,9 @@ if (config.doBackgroundWork) {
             tokenId,
             community: "",
           });
-
-          await collectionMetadataQueueJob.addToQueueBulk(collectionMetadataInfos);
         }
+
+        await collectionMetadataQueueJob.addToQueueBulk(collectionMetadataInfos);
       }
 
       if (results.length == limit) {
