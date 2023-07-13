@@ -30,6 +30,43 @@ export const queue = new Queue(QUEUE_NAME, {
 });
 new QueueScheduler(QUEUE_NAME, { connection: redis.duplicate() });
 
+/*
+const changedMapping = {
+  contract: "fill_events_2.contract",
+  token_id: "fill_events_2.token_id",
+  order_id: "fill_events_2.order_id",
+  order_side: "fill_events_2.order_side",
+  order_kind: "fill_events_2.order_kind",
+  order_source_id_int: "fill_events_2.order_source_id_int",
+  maker: "fill_events_2.maker",
+  taker: "fill_events_2.taker",
+  amount: "fill_events_2.amount",
+  fill_source_id: "fill_events_2.fill_source_id",
+  block: "fill_events_2.block",
+  tx_hash: "fill_events_2.tx_hash",
+  timestamp: "fill_events_2.timestamp",
+  price: "fill_events_2.price",
+  currency: "fill_events_2.currency",
+  currency_price: "fill_events_2.currency_price",
+  usd_price: "fill_events_2.usd_price",
+  log_index: "fill_events_2.log_index",
+  batch_index: "fill_events_2.batch_index",
+  wash_trading_score: "fill_events_2.wash_trading_score",
+  royalty_fee_bps: "fill_events_2.royalty_fee_bps",
+  marketplace_fee_bps: "fill_events_2.marketplace_fee_bps",
+  royalty_fee_breakdown: "fill_events_2.royalty_fee_breakdown",
+  marketplace_fee_breakdown: "fill_events_2.marketplace_fee_breakdown",
+  paid_full_royalty: "fill_events_2.paid_full_royalty",
+  is_deleted: "fill_events_2.is_deleted",
+  updated_at: "fill_events_2.updated_at",
+  created_at: "fill_events_2.created_at",
+  name: "tokens.name",
+  image: "tokens.image",
+  collection_id: "tokens.collection_id",
+  collection_name: "collections.name",
+};
+*/
+
 // BACKGROUND WORKER ONLY
 if (config.doBackgroundWork && config.doWebsocketServerWork) {
   const worker = new Worker(
@@ -66,7 +103,6 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
             TRUNC(fill_events_2.currency_price, 0) AS currency_price,
             currencies.decimals,
             fill_events_2.usd_price,
-            fill_events_2.block,
             fill_events_2.log_index,
             fill_events_2.batch_index,
             fill_events_2.wash_trading_score,
@@ -155,11 +191,16 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
         delete result.saleId;
 
         let eventType = "";
+        //const changed = [];
         if (data.trigger === "insert") eventType = "sale.created";
         else if (data.trigger === "update") {
           // if isDeleted is true, then it's a delete event
           if (r.is_deleted) eventType = "sale.deleted";
-          else eventType = "sale.updated";
+          else {
+            eventType = "sale.updated";
+
+            // TODO - handle changed fields
+          }
         }
 
         await publishWebsocketEvent({
@@ -169,6 +210,7 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
             maker: fromBuffer(r.maker),
             taker: fromBuffer(r.taker),
           },
+          //changed,
           data: result,
           offset: data.offset,
         });
