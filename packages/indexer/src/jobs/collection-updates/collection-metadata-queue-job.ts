@@ -1,5 +1,5 @@
 import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handler";
-import { acquireLock, releaseLock } from "@/common/redis";
+import { acquireLock } from "@/common/redis";
 import { logger } from "@/common/logger";
 import { Collections } from "@/models/collections";
 import _ from "lodash";
@@ -29,32 +29,24 @@ export class CollectionMetadataQueueJob extends AbstractRabbitMqJobHandler {
     const { contract, tokenId, community, forceRefresh } = payload;
 
     if (forceRefresh || (await acquireLock(`${this.queueName}:${contract}`, 5 * 60))) {
-      if (await acquireLock(this.queueName, 1)) {
-        try {
-          if (isNaN(Number(tokenId)) || tokenId == null) {
-            logger.error(
-              this.queueName,
-              `Invalid tokenId. contract=${contract}, tokenId=${tokenId}, community=${community}`
-            );
-          }
-
-          await Collections.updateCollectionCache(contract, tokenId, community);
-        } catch (error) {
+      try {
+        if (isNaN(Number(tokenId)) || tokenId == null) {
           logger.error(
             this.queueName,
-            JSON.stringify({
-              message: `updateCollectionCache error ${JSON.stringify(error)}`,
-              jobData: payload,
-              error,
-            })
+            `Invalid tokenId. contract=${contract}, tokenId=${tokenId}, community=${community}`
           );
         }
-      } else {
-        if (!forceRefresh) {
-          await releaseLock(`${this.queueName}:${contract}`);
-        }
 
-        await this.addToQueue(payload, 1000);
+        await Collections.updateCollectionCache(contract, tokenId, community);
+      } catch (error) {
+        logger.error(
+          this.queueName,
+          JSON.stringify({
+            message: `updateCollectionCache error ${JSON.stringify(error)}`,
+            jobData: payload,
+            error,
+          })
+        );
       }
     }
   }
