@@ -28,6 +28,16 @@ export const queue = new Queue(QUEUE_NAME, {
 });
 new QueueScheduler(QUEUE_NAME, { connection: redis.duplicate() });
 
+const changedMapping = {
+  contract: "token_attributes.contract",
+  token_id: "token_attributes.token_id",
+  collection_id: "token_attributes.collection_id",
+  key: "token_attributes.key",
+  value: "token_attributes.value",
+  created_at: "token_attributes.created_at",
+  updated_at: "token_attributes.updated_at",
+};
+
 // BACKGROUND WORKER ONLY
 if (config.doBackgroundWork && config.doWebsocketServerWork) {
   const worker = new Worker(
@@ -74,15 +84,34 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
           );
 
         let eventType = "";
+        const changed = [];
         switch (data.trigger) {
           case "insert":
             eventType = "token-attributes.created";
             break;
           case "update":
             eventType = "token-attributes.updated";
+            if (data.before) {
+              for (const key in changedMapping) {
+                // eslint-disable-next-line
+                // @ts-ignore
+                if (data.before[key] !== data.after[key]) {
+                  changed.push(key);
+                }
+              }
+
+              if (!changed.length) {
+                return;
+              }
+            }
             break;
           case "delete":
             eventType = "token-attributes.deleted";
+            if (data.before) {
+              for (const key in changedMapping) {
+                changed.push(key);
+              }
+            }
             break;
         }
 
@@ -92,6 +121,7 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
             token_id: data.after.token_id,
             contract: data.after.contract,
           },
+          changed,
           data: result,
         });
       } catch (error) {
