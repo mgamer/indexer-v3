@@ -76,13 +76,13 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
         let eventType = "";
         switch (data.trigger) {
           case "insert":
-            eventType = "attributes.created";
+            eventType = "token-attributes.created";
             break;
           case "update":
-            eventType = "attributes.updated";
+            eventType = "token-attributes.updated";
             break;
           case "delete":
-            eventType = "attributes.deleted";
+            eventType = "token-attributes.deleted";
             break;
         }
 
