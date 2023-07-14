@@ -375,33 +375,31 @@ export class RabbitMqJobsConsumer {
     );
 
     channel.once("error", async (error) => {
-      logger.error("rabbit-channel", `Consumer channel error ${error}`);
-
-      const jobs = RabbitMqJobsConsumer.channelsToJobs.get(channel);
-      if (jobs) {
-        // Resubscribe the jobs
-        for (const job of jobs) {
-          try {
-            await this.subscribe(job);
-          } catch (error) {
-            logger.error(
-              "rabbit-channel",
-              `Consumer channel failed to resubscribe to ${job.queueName} ${error}`
-            );
+      if (error.message.includes("timeout")) {
+        const jobs = RabbitMqJobsConsumer.channelsToJobs.get(channel);
+        if (jobs) {
+          // Resubscribe the jobs
+          for (const job of jobs) {
+            try {
+              await this.subscribe(job);
+            } catch (error) {
+              logger.error(
+                "rabbit-channel",
+                `Consumer channel failed to resubscribe to ${job.queueName} ${error}`
+              );
+            }
           }
+
+          logger.info(
+            "rabbit-channel",
+            `Resubscribed to ${JSON.stringify(
+              jobs.map((job: AbstractRabbitMqJobHandler) => job.queueName)
+            )}`
+          );
+
+          // Clear the channel that closed
+          RabbitMqJobsConsumer.channelsToJobs.delete(channel);
         }
-
-        logger.info(
-          "rabbit-channel",
-          `Resubscribed to ${JSON.stringify(
-            jobs.map((job: AbstractRabbitMqJobHandler) => job.queueName)
-          )}`
-        );
-
-        // Clear the channel that closed
-        RabbitMqJobsConsumer.channelsToJobs.delete(channel);
-      } else {
-        logger.info("rabbit-channel", `no jobs found for channel`);
       }
     });
   }
