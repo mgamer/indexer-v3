@@ -31,7 +31,7 @@ if (config.doBackgroundWork) {
       let cursor = job.data.cursor as CursorInfo;
       let continuationFilter = "";
 
-      const limit = (await redis.get(`${QUEUE_NAME}-limit`)) || 1000;
+      const limit = (await redis.get(`${QUEUE_NAME}-limit`)) || 10000;
 
       if (!cursor) {
         const cursorJson = await redis.get(`${QUEUE_NAME}-next-cursor`);
@@ -49,8 +49,8 @@ if (config.doBackgroundWork) {
         `
         SELECT collections.id
         FROM collections
-        ${continuationFilter}
-        ORDER BY collections.id
+        --${continuationFilter}
+        ORDER BY all_time_volume DESC
         LIMIT $/limit/
           `,
         {
@@ -64,11 +64,6 @@ if (config.doBackgroundWork) {
 
       if (results.length) {
         for (const result of results) {
-          logger.info(
-            QUEUE_NAME,
-            `Backfilling collection metadata. tokenSetResult=${JSON.stringify(result)}`
-          );
-
           const tokenId = await Tokens.getSingleToken(result.id);
           collectionMetadataInfos.push({
             contract: result.id,
@@ -89,7 +84,7 @@ if (config.doBackgroundWork) {
 
         await redis.set(`${QUEUE_NAME}-next-cursor`, JSON.stringify(nextCursor));
 
-        await addToQueue(nextCursor);
+        // await addToQueue(nextCursor);
       }
     },
     { connection: redis.duplicate(), concurrency: 1 }
