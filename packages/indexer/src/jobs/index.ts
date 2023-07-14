@@ -29,12 +29,7 @@ import amqplibConnectionManager, {
 import * as backfillExpiredOrders from "@/jobs/backfill/backfill-expired-orders";
 import * as backfillRefreshCollectionMetadata from "@/jobs/backfill/backfill-refresh-collections-metadata";
 
-import * as eventsSyncRealtime from "@/jobs/events-sync/realtime-queue";
-import * as eventsSyncRealtimeV2 from "@/jobs/events-sync/realtime-queue-v2";
-
-import * as openSeaOffChainCancellations from "@/jobs/order-updates/misc/opensea-off-chain-cancellations";
 import * as saveBidEvents from "@/jobs/order-updates/save-bid-events";
-
 import * as askWebsocketEventsTriggerQueue from "@/jobs/websocket-events/ask-websocket-events-trigger-queue";
 import * as bidWebsocketEventsTriggerQueue from "@/jobs/websocket-events/bid-websocket-events-trigger-queue";
 import * as transferWebsocketEventsTriggerQueue from "@/jobs/websocket-events/transfer-websocket-events-trigger-queue";
@@ -157,10 +152,6 @@ export const allJobQueues = [
   backfillExpiredOrders.queue,
   backfillRefreshCollectionMetadata.queue,
 
-  eventsSyncRealtime.queue,
-  eventsSyncRealtimeV2.queue,
-
-  openSeaOffChainCancellations.queue,
   saveBidEvents.queue,
 
   askWebsocketEventsTriggerQueue.queue,

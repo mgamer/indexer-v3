@@ -24,7 +24,10 @@ import * as tokenSet from "@/orderbook/token-sets";
 import * as caviarV1 from "@/utils/caviar-v1";
 import * as royalties from "@/utils/royalties";
 
-import * as ordersUpdateById from "@/jobs/order-updates/by-id-queue";
+import {
+  orderUpdatesByIdJob,
+  OrderUpdatesByIdJobPayload,
+} from "@/jobs/order-updates/order-updates-by-id-job";
 
 export const getOrderId = (pool: string, side: "sell" | "buy", tokenId?: string) =>
   side === "buy"
@@ -585,7 +588,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
     await idb.none(pgp.helpers.insert(orderValues, columns) + " ON CONFLICT DO NOTHING");
   }
 
-  await ordersUpdateById.addToQueue(
+  await orderUpdatesByIdJob.addToQueue(
     results
       .filter(({ status }) => status === "success")
       .map(
@@ -598,7 +601,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
               txHash: txHash,
               txTimestamp: txTimestamp,
             },
-          } as ordersUpdateById.OrderInfo)
+          } as OrderUpdatesByIdJobPayload)
       )
   );
 
