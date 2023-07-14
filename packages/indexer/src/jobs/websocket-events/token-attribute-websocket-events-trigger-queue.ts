@@ -1,52 +1,36 @@
-import { Job, Queue, QueueScheduler, Worker } from "bullmq";
-
 import { logger } from "@/common/logger";
-import { redis } from "@/common/redis";
 import { config } from "@/config/index";
-
-import { randomUUID } from "crypto";
-import _ from "lodash";
-
 import { publishWebsocketEvent } from "@/common/websocketPublisher";
 import { redb } from "@/common/db";
 import { fromBuffer, toBuffer } from "@/common/utils";
+import { AbstractRabbitMqJobHandler, BackoffStrategy } from "@/jobs/abstract-rabbit-mq-job-handler";
 
-const QUEUE_NAME = "token-attribute-websocket-events-trigger-queue";
-
-export const queue = new Queue(QUEUE_NAME, {
-  connection: redis.duplicate(),
-  defaultJobOptions: {
-    attempts: 5,
-    backoff: {
-      type: "exponential",
-      delay: 1000,
-    },
-    removeOnComplete: 1000,
-    removeOnFail: 1000,
-    timeout: 60000,
-  },
-});
-new QueueScheduler(QUEUE_NAME, { connection: redis.duplicate() });
-
-const changedMapping = {
-  contract: "token_attributes.contract",
-  token_id: "token_attributes.token_id",
-  collection_id: "token_attributes.collection_id",
-  key: "token_attributes.key",
-  value: "token_attributes.value",
-  created_at: "token_attributes.created_at",
-  updated_at: "token_attributes.updated_at",
+export type TokenAttributeWebsocketEventsTriggerQueueJobPayload = {
+  data: TokenAttributeWebsocketEventInfo;
 };
 
-// BACKGROUND WORKER ONLY
-if (config.doBackgroundWork && config.doWebsocketServerWork) {
-  const worker = new Worker(
-    QUEUE_NAME,
-    async (job: Job) => {
-      const { data } = job.data as EventInfo;
+const changedMapping = {
+  collection_id: "collection.id",
+  key: "key",
+  value: "value",
+  updated_at: "updatedAt",
+};
 
-      try {
-        const baseQuery = `
+export class TokenAttributeWebsocketEventsTriggerQueueJob extends AbstractRabbitMqJobHandler {
+  queueName = "token-attribute-websocket-events-trigger-queue";
+  maxRetries = 5;
+  concurrency = 10;
+  consumerTimeout = 60000;
+  backoff = {
+    type: "exponential",
+    delay: 1000,
+  } as BackoffStrategy;
+
+  protected async process(payload: TokenAttributeWebsocketEventsTriggerQueueJobPayload) {
+    const { data } = payload;
+
+    try {
+      const baseQuery = `
           SELECT
             ta.contract,
             ta.token_id,
@@ -62,36 +46,39 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
           LIMIT 1
       `;
 
-        const result = await redb
-          .oneOrNone(baseQuery, {
-            contract: toBuffer(data.after.contract),
-            tokenId: data.after.token_id,
-          })
-          .then((r) =>
-            !r
-              ? null
-              : {
-                  token: {
-                    contract: fromBuffer(r.contract),
-                    tokenId: r.token_id,
-                  },
-                  collection: {
-                    id: r.collection_id,
-                  },
-                  key: r.key,
-                  value: r.value,
-                }
-          );
+      const result = await redb
+        .oneOrNone(baseQuery, {
+          contract: toBuffer(data.after.contract),
+          tokenId: data.after.token_id,
+        })
+        .then((r) =>
+          !r
+            ? null
+            : {
+                token: {
+                  contract: fromBuffer(r.contract),
+                  tokenId: r.token_id,
+                },
+                collection: {
+                  id: r.collection_id,
+                },
+                key: r.key,
+                value: r.value,
+                createdAt: r.created_at,
+                updatedAt: r.updated_at,
+              }
+        );
 
-        let eventType = "";
-        const changed = [];
-        switch (data.trigger) {
-          case "insert":
-            eventType = "token-attributes.created";
-            break;
-          case "update":
-            eventType = "token-attributes.updated";
-            if (data.before) {
+      let eventType = "";
+      const changed = [];
+      switch (data.trigger) {
+        case "insert":
+          eventType = "token-attributes.created";
+          break;
+        case "update":
+          eventType = "token-attributes.updated";
+          if (data.before) {
+            /*
               for (const key in changedMapping) {
                 // eslint-disable-next-line
                 // @ts-ignore
@@ -103,60 +90,56 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
               if (!changed.length) {
                 return;
               }
-            }
-            break;
-          case "delete":
-            eventType = "token-attributes.deleted";
-            if (data.before) {
-              for (const key in changedMapping) {
-                changed.push(key);
-              }
-            }
-            break;
-        }
+              */
 
-        await publishWebsocketEvent({
-          event: eventType,
-          tags: {
-            token_id: data.after.token_id,
-            contract: data.after.contract,
-          },
-          changed,
-          data: result,
-        });
-      } catch (error) {
-        logger.error(
-          QUEUE_NAME,
-          `Error processing websocket event. data=${JSON.stringify(data)}, error=${JSON.stringify(
-            error
-          )}`
-        );
-        throw error;
+            logger.info(this.queueName, "update token attributes");
+          }
+          break;
+        case "delete":
+          eventType = "token-attributes.deleted";
+          if (data.before) {
+            for (const key in changedMapping) {
+              changed.push(key);
+            }
+          }
+          break;
       }
-    },
-    { connection: redis.duplicate(), concurrency: 10 }
-  );
 
-  worker.on("error", (error) => {
-    logger.error(QUEUE_NAME, `Worker errored. error=${JSON.stringify(error)}`);
-  });
+      await publishWebsocketEvent({
+        event: eventType,
+        tags: {
+          token_id: data.after.token_id,
+          contract: data.after.contract,
+        },
+        changed,
+        data: result,
+      });
+    } catch (error) {
+      logger.error(
+        this.queueName,
+        `Error processing websocket event. data=${JSON.stringify(data)}, error=${JSON.stringify(
+          error
+        )}`
+      );
+      throw error;
+    }
+  }
+
+  public async addToQueue(events: TokenAttributeWebsocketEventsTriggerQueueJobPayload[]) {
+    if (!config.doWebsocketServerWork) {
+      return;
+    }
+
+    await this.sendBatch(
+      events.map((event) => ({
+        payload: event,
+      }))
+    );
+  }
 }
 
 export type EventInfo = {
   data: TokenAttributeWebsocketEventInfo;
-};
-
-export const addToQueue = async (events: EventInfo[]) => {
-  if (!config.doWebsocketServerWork) {
-    return;
-  }
-
-  await queue.addBulk(
-    _.map(events, (event) => ({
-      name: randomUUID(),
-      data: event,
-    }))
-  );
 };
 
 interface TokenAttributeInfo {
@@ -169,3 +152,6 @@ export type TokenAttributeWebsocketEventInfo = {
   after: TokenAttributeInfo;
   trigger: "insert" | "update" | "delete";
 };
+
+export const tokenAttributeWebsocketEventsTriggerQueueJob =
+  new TokenAttributeWebsocketEventsTriggerQueueJob();
