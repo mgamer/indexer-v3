@@ -93,20 +93,24 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         let btr = await poolContract.baseTokenReserves();
         let ftr = await poolContract.fractionalTokenReserves();
         for (let i = 0; i < POOL_ORDERS_MAX_PRICE_POINTS_COUNT; i++) {
-          // uint256 inputAmountWithFee = inputAmount * 990
-          // (inputAmountWithFee * baseTokenReserves()) / ((fractionalTokenReserves() * 1000) + inputAmountWithFee)
+          try {
+            // uint256 inputAmountWithFee = inputAmount * 990
+            // (inputAmountWithFee * baseTokenReserves()) / ((fractionalTokenReserves() * 1000) + inputAmountWithFee)
 
-          const inputAmount = parseEther("1");
-          const inputAmountWithFee = inputAmount.mul(990);
+            const inputAmount = parseEther("1");
+            const inputAmountWithFee = inputAmount.mul(990);
 
-          const x = inputAmountWithFee.mul(btr);
-          const y = ftr.mul(1000).add(inputAmountWithFee);
+            const x = inputAmountWithFee.mul(btr);
+            const y = ftr.mul(1000).add(inputAmountWithFee);
 
-          const price = x.div(y);
+            const price = x.div(y);
 
-          prices.push(price);
-          btr = btr.sub(price);
-          ftr = ftr.add(inputAmount);
+            prices.push(price);
+            btr = btr.sub(price);
+            ftr = ftr.add(inputAmount);
+          } catch {
+            break;
+          }
         }
 
         if (prices.length) {
@@ -318,22 +322,26 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         let btr = await poolContract.baseTokenReserves();
         let ftr = await poolContract.fractionalTokenReserves();
         for (let i = 0; i < POOL_ORDERS_MAX_PRICE_POINTS_COUNT; i++) {
-          // mulDivUp(outputAmount * 1000, baseTokenReserves(), (fractionalTokenReserves() - outputAmount) * 990)
+          try {
+            // mulDivUp(outputAmount * 1000, baseTokenReserves(), (fractionalTokenReserves() - outputAmount) * 990)
 
-          const outputAmount = parseEther("1");
+            const outputAmount = parseEther("1");
 
-          const x = outputAmount.mul(1000);
-          const y = btr;
-          const denominator = ftr.sub(outputAmount).mul(990);
+            const x = outputAmount.mul(1000);
+            const y = btr;
+            const denominator = ftr.sub(outputAmount).mul(990);
 
-          const price = x
-            .mul(y)
-            .div(denominator)
-            .add(x.mul(y).mod(denominator).gt(0) ? 1 : 0);
+            const price = x
+              .mul(y)
+              .div(denominator)
+              .add(x.mul(y).mod(denominator).gt(0) ? 1 : 0);
 
-          prices.push(price);
-          btr = btr.add(price);
-          ftr = ftr.sub(outputAmount);
+            prices.push(price);
+            btr = btr.add(price);
+            ftr = ftr.sub(outputAmount);
+          } catch {
+            break;
+          }
         }
 
         if (prices.length) {
