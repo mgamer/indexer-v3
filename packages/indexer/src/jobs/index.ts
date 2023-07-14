@@ -11,8 +11,6 @@ import "@/jobs/data-archive";
 import "@/jobs/events-sync";
 import "@/jobs/oracle";
 import "@/jobs/order-updates";
-import "@/jobs/orderbook";
-import "@/jobs/update-attribute";
 import "@/jobs/websocket-events";
 import "@/jobs/metrics";
 import "@/jobs/opensea-orders";
@@ -31,20 +29,7 @@ import amqplibConnectionManager, {
 import * as backfillExpiredOrders from "@/jobs/backfill/backfill-expired-orders";
 import * as backfillRefreshCollectionMetadata from "@/jobs/backfill/backfill-refresh-collections-metadata";
 
-import * as eventsSyncRealtime from "@/jobs/events-sync/realtime-queue";
-import * as eventsSyncRealtimeV2 from "@/jobs/events-sync/realtime-queue-v2";
-
-import * as openSeaOffChainCancellations from "@/jobs/order-updates/misc/opensea-off-chain-cancellations";
 import * as saveBidEvents from "@/jobs/order-updates/save-bid-events";
-
-import * as orderbookOrders from "@/jobs/orderbook/orders-queue";
-import * as orderbookOrdersV2 from "@/jobs/orderbook/orders-queue-v2";
-import * as orderbookPostOrderExternal from "@/jobs/orderbook/post-order-external/orderbook-post-order-external-queue";
-import * as orderbookPostOrderExternalOpensea from "@/jobs/orderbook/post-order-external/orderbook-post-order-external-opensea-queue";
-
-import * as orderbookTokenSets from "@/jobs/orderbook/token-sets-queue";
-import * as orderbookOpenseaListings from "@/jobs/orderbook/opensea-listings-queue";
-
 import * as askWebsocketEventsTriggerQueue from "@/jobs/websocket-events/ask-websocket-events-trigger-queue";
 import * as bidWebsocketEventsTriggerQueue from "@/jobs/websocket-events/bid-websocket-events-trigger-queue";
 import * as transferWebsocketEventsTriggerQueue from "@/jobs/websocket-events/transfer-websocket-events-trigger-queue";
@@ -158,24 +143,16 @@ import { openseaListingsJob } from "@/jobs/orderbook/opensea-listings-job";
 import { orderbookPostOrderExternalJob } from "@/jobs/orderbook/post-order-external/orderbook-post-order-external-job";
 import { orderbookPostOrderExternalOpenseaJob } from "@/jobs/orderbook/post-order-external/orderbook-post-order-external-opensea-job";
 import { eventsSyncRealtimeJob } from "@/jobs/events-sync/events-sync-realtime-job";
+import { openseaOrdersProcessJob } from "@/jobs/opensea-orders/opensea-orders-process-job";
+import { openseaOrdersFetchJob } from "@/jobs/opensea-orders/opensea-orders-fetch-job";
+import { saveBidEventsJob } from "@/jobs/order-updates/save-bid-events-job";
+import { countApiUsageJob } from "@/jobs/metrics/count-api-usage-job";
 
 export const allJobQueues = [
   backfillExpiredOrders.queue,
   backfillRefreshCollectionMetadata.queue,
 
-  eventsSyncRealtime.queue,
-  eventsSyncRealtimeV2.queue,
-
-  openSeaOffChainCancellations.queue,
   saveBidEvents.queue,
-
-  orderbookOrders.queue,
-  orderbookOrdersV2.queue,
-
-  orderbookPostOrderExternal.queue,
-  orderbookPostOrderExternalOpensea.queue,
-  orderbookTokenSets.queue,
-  orderbookOpenseaListings.queue,
 
   askWebsocketEventsTriggerQueue.queue,
   bidWebsocketEventsTriggerQueue.queue,
@@ -297,6 +274,10 @@ export class RabbitMqJobsConsumer {
       orderbookPostOrderExternalJob,
       orderbookPostOrderExternalOpenseaJob,
       eventsSyncRealtimeJob,
+      openseaOrdersProcessJob,
+      openseaOrdersFetchJob,
+      saveBidEventsJob,
+      countApiUsageJob,
     ];
   }
 
