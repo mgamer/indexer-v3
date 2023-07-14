@@ -15,12 +15,14 @@ if (process.env.LOCAL_TESTING) {
     if (await acquireLock(config.imageTag, 75)) {
       await RabbitMq.assertQueuesAndExchanges();
       await redis.set(config.imageTag, "DONE", "EX", 60 * 60 * 24); // Update the lock ttl
+
       import("./setup");
     } else {
       // Check every 1s if the rabbit queues assertion completed
       const intervalId = setInterval(async () => {
         if ((await redis.get(config.imageTag)) === "DONE") {
           clearInterval(intervalId);
+
           import("./setup");
         }
       }, 1000);
