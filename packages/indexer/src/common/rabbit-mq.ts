@@ -52,7 +52,7 @@ export class RabbitMq {
 
   private static rabbitMqPublisherConnection: AmqpConnectionManager;
 
-  private static maxPublisherChannelsCount = 12;
+  private static maxPublisherChannelsCount = 10;
   private static rabbitMqPublisherChannels: ChannelWrapper[] = [];
 
   public static async connect() {
@@ -155,7 +155,7 @@ export class RabbitMq {
       priority?: number;
     }[]
   ) {
-    const limit = pLimit(40);
+    const limit = pLimit(50);
     await Promise.all(
       messages.map((message) =>
         limit(() => {
