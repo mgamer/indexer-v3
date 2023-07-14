@@ -47,7 +47,7 @@ if (config.doBackgroundWork) {
             .then(async (collections) => {
               logger.info("refresh-opensea-collection-offers-collections", "Start");
 
-              openseaOrdersProcessJob.addToQueue(
+              await openseaOrdersProcessJob.addToQueue(
                 collections.map((collection: { contract: string; id: string; slug: string }) => ({
                   kind: "collection-offers",
                   data: {
