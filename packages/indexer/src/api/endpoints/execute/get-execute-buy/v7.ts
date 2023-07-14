@@ -319,7 +319,9 @@ export const getExecuteBuyV7Options: RouteOptions = {
         }
       ) => {
         // Handle dynamically-priced orders
-        if (["sudoswap", "sudoswap-v2", "collectionxyz", "nftx"].includes(order.kind)) {
+        if (
+          ["sudoswap", "sudoswap-v2", "collectionxyz", "nftx", "caviar-v1"].includes(order.kind)
+        ) {
           let poolId: string;
           let priceList: string[];
 
@@ -487,7 +489,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
 
         if (!item.quantity) {
           if (preview) {
-            item.quantity = 20;
+            item.quantity = 30;
           } else {
             item.quantity = 1;
           }
@@ -1168,12 +1170,11 @@ export const getExecuteBuyV7Options: RouteOptions = {
         .map((b) => b.orderId);
 
       const addGlobalFee = async (item: (typeof path)[0], fee: Sdk.RouterV6.Types.Fee) => {
+        // The fees should be relative to a single quantity
+        fee.amount = bn(fee.amount).div(item.quantity).toString();
+
         // Global fees get split across all eligible orders
         const adjustedFeeAmount = bn(fee.amount).div(ordersEligibleForGlobalFees.length).toString();
-
-        const itemNetPrice = bn(item.rawQuote).sub(
-          item.feesOnTop.map((f) => bn(f.rawAmount)).reduce((a, b) => a.add(b), bn(0))
-        );
 
         const amount = formatPrice(
           adjustedFeeAmount,
@@ -1184,7 +1185,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
 
         item.feesOnTop.push({
           recipient: fee.recipient,
-          bps: bn(itemNetPrice).mul(10000).div(item.rawQuote).toNumber(),
+          bps: bn(fee.amount).mul(10000).div(item.rawQuote).toNumber(),
           amount,
           rawAmount,
         });
