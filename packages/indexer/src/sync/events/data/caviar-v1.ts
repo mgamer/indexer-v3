@@ -13,8 +13,8 @@ export const create: EventData = {
   numTopics: 4,
   abi: new Interface([
     `event Create(
-      uint256 indexed nft,
-      uint256 indexed baseToken,
+      address indexed nft,
+      address indexed baseToken,
       bytes32 indexed merkleRoot
     )`,
   ]),
