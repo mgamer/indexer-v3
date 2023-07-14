@@ -1,7 +1,24 @@
 import { Interface } from "@ethersproject/abi";
 import { id } from "@ethersproject/hash";
+import { CaviarV1 } from "@reservoir0x/sdk";
 
+import { config } from "@/config/index";
 import { EventData } from "@/events-sync/data";
+
+export const create: EventData = {
+  kind: "caviar-v1",
+  subKind: "caviar-v1-create",
+  addresses: { [CaviarV1.Addresses.CaviarFactoryContract[config.chainId]?.toLowerCase()]: true },
+  topic: id("Create(address,address,bytes32)"),
+  numTopics: 4,
+  abi: new Interface([
+    `event Create(
+      uint256 indexed nft,
+      uint256 indexed baseToken,
+      bytes32 indexed merkleRoot
+    )`,
+  ]),
+};
 
 export const add: EventData = {
   kind: "caviar-v1",
@@ -10,9 +27,9 @@ export const add: EventData = {
   numTopics: 4,
   abi: new Interface([
     `event Add(
-        uint256 indexed baseTokenAmount, 
-        uint256 indexed fractionalTokenAmount, 
-        uint256 indexed lpTokenAmount
+      uint256 indexed baseTokenAmount,
+      uint256 indexed fractionalTokenAmount,
+      uint256 indexed lpTokenAmount
     )`,
   ]),
 };
@@ -24,9 +41,9 @@ export const remove: EventData = {
   numTopics: 4,
   abi: new Interface([
     `event Remove(
-        uint256 indexed baseTokenAmount, 
-        uint256 indexed fractionalTokenAmount, 
-        uint256 indexed lpTokenAmount
+      uint256 indexed baseTokenAmount,
+      uint256 indexed fractionalTokenAmount,
+      uint256 indexed lpTokenAmount
     )`,
   ]),
 };
@@ -38,8 +55,8 @@ export const buy: EventData = {
   numTopics: 3,
   abi: new Interface([
     `event Buy(
-        uint256 indexed inputAmount, 
-        uint256 indexed outputAmount
+      uint256 indexed inputAmount,
+      uint256 indexed outputAmount
     )`,
   ]),
 };
@@ -51,8 +68,8 @@ export const sell: EventData = {
   numTopics: 3,
   abi: new Interface([
     `event Sell(
-        uint256 indexed inputAmount, 
-        uint256 indexed outputAmount
+      uint256 indexed inputAmount,
+      uint256 indexed outputAmount
     )`,
   ]),
 };
