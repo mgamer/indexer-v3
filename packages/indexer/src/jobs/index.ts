@@ -46,7 +46,7 @@ import * as transferWebsocketEventsTriggerQueue from "@/jobs/websocket-events/tr
 import * as saleWebsocketEventsTriggerQueue from "@/jobs/websocket-events/sale-websocket-events-trigger-queue";
 import * as tokenWebsocketEventsTriggerQueue from "@/jobs/websocket-events/token-websocket-events-trigger-queue";
 import * as topBidWebsocketEventsTriggerQueue from "@/jobs/websocket-events/top-bid-websocket-events-trigger-queue";
-import * as collectionWebsocketEventsTriggerQueue from "@/jobs/websocket-events/collection-websocket-events-trigger-queue";
+import { collectionWebsocketEventsTriggerQueueJob } from "@/jobs/websocket-events/collection-websocket-events-trigger-queue";
 
 import * as countApiUsage from "@/jobs/metrics/count-api-usage";
 
@@ -178,7 +178,6 @@ export const allJobQueues = [
   saleWebsocketEventsTriggerQueue.queue,
   tokenWebsocketEventsTriggerQueue.queue,
   topBidWebsocketEventsTriggerQueue.queue,
-  collectionWebsocketEventsTriggerQueue.queue,
 
   countApiUsage.queue,
 
@@ -292,6 +291,7 @@ export class RabbitMqJobsConsumer {
       orderbookPostOrderExternalJob,
       orderbookPostOrderExternalOpenseaJob,
       eventsSyncRealtimeJob,
+      collectionWebsocketEventsTriggerQueueJob,
     ];
   }
 
