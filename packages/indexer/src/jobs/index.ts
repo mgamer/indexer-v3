@@ -287,13 +287,13 @@ export class RabbitMqJobsConsumer {
 
   public static async connect() {
     for (let i = 0; i < RabbitMqJobsConsumer.maxConsumerConnectionsCount; ++i) {
-      const connection = await amqplibConnectionManager.connect(config.rabbitMqUrl);
+      const connection = amqplibConnectionManager.connect(config.rabbitMqUrl);
       RabbitMqJobsConsumer.rabbitMqConsumerConnections.push(connection);
 
       // Create a shared channel for each connection
       RabbitMqJobsConsumer.sharedChannels.set(
         RabbitMqJobsConsumer.getSharedChannelName(i),
-        await connection.createChannel({ confirm: false })
+        connection.createChannel({ confirm: false })
       );
 
       connection.once("error", (error) => {
@@ -332,9 +332,10 @@ export class RabbitMqJobsConsumer {
     if (job.getUseSharedChannel() && sharedChannel) {
       channel = sharedChannel;
     } else {
-      channel = await RabbitMqJobsConsumer.rabbitMqConsumerConnections[
-        connectionIndex
-      ].createChannel({ confirm: false });
+      channel = RabbitMqJobsConsumer.rabbitMqConsumerConnections[connectionIndex].createChannel({
+        confirm: false,
+      });
+      await channel.waitForConnect();
     }
 
     RabbitMqJobsConsumer.queueToChannel.set(job.getQueue(), channel);
