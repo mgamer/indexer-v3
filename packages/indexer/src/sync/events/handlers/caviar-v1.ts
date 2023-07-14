@@ -1,7 +1,6 @@
 import { Interface } from "@ethersproject/abi";
 import { searchForCall } from "@georgeroman/evm-tx-simulator";
 
-import { logger } from "@/common/logger";
 import { bn } from "@/common/utils";
 import { getEventData } from "@/events-sync/data";
 import { EnhancedEvent, OnChainData } from "@/events-sync/handlers/utils";
@@ -15,8 +14,6 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
   for (const { subKind, baseEventParams, log } of events) {
     const eventData = getEventData([subKind])[0];
     const pool = await getPoolDetails(baseEventParams.address);
-
-    logger.info("caviar-v1", `caviar-v1: ${JSON.stringify(eventData)}`);
 
     onChainData.orders.push({
       kind: "caviar-v1",
@@ -71,11 +68,6 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         );
 
         if (!callTrace) {
-          logger.error(
-            "caviar-v1-buy",
-            `No call trace found: ${baseEventParams.block} - ${baseEventParams.txHash}`
-          );
-
           break;
         }
 
@@ -169,10 +161,6 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         );
 
         if (!callTrace) {
-          logger.error(
-            "caviar-v1-sell",
-            `No call trace found: ${baseEventParams.block} - ${baseEventParams.txHash}`
-          );
           break;
         }
 

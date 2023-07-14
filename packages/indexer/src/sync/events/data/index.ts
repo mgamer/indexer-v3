@@ -257,6 +257,7 @@ export type EventSubKind =
   | "sudoswap-v2-delta-update"
   | "sudoswap-v2-new-erc721-pair"
   | "sudoswap-v2-new-erc1155-pair"
+  | "caviar-v1-create"
   | "caviar-v1-add"
   | "caviar-v1-remove"
   | "caviar-v1-buy"
@@ -451,6 +452,7 @@ const allEventData = [
   sudoswapV2.newERC721Pair,
   sudoswapV2.newERC1155Pair,
   treasure.bidAccepted,
+  caviarV1.create,
   caviarV1.add,
   caviarV1.remove,
   caviarV1.buy,
