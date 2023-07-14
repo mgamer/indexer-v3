@@ -8,7 +8,7 @@ import { eventsSyncRealtimeJob } from "@/jobs/events-sync/events-sync-realtime-j
 import { openseaBidsQueueJob } from "@/jobs/orderbook/opensea-bids-queue-job";
 
 if (config.doBackgroundWork) {
-  cron.schedule("*/5 * * * *", async () => {
+  cron.schedule("* * * * *", async () => {
     // Log metadata queue length
     for (const method of ["opensea"]) {
       const pendingRefreshTokens = new PendingRefreshTokens(method);
