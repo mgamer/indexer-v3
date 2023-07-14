@@ -312,8 +312,8 @@ export const getCollectionsV6Options: RouteOptions = {
                   'kind', collection_mints.kind,
                   'currency', concat('0x', encode(collection_mints.currency, 'hex')),
                   'price', collection_mints.price::TEXT,
-                  'startTime', collection_mints.start_time,
-                  'endTime', collection_mints.end_time,
+                  'startTime', floor(extract(epoch from collection_mints.start_time)),
+                  'endTime', floor(extract(epoch from collection_mints.end_time)),
                   'maxMintsPerWallet', collection_mints.max_mints_per_wallet
                 )
               ) AS mint_stages
