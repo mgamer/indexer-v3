@@ -373,6 +373,7 @@ export class RabbitMqJobsConsumer {
       {
         consumerTag: RabbitMqJobsConsumer.getConsumerTag(job.getQueue()),
         prefetch: job.getConcurrency(),
+        noAck: false,
       }
     );
 
@@ -387,6 +388,7 @@ export class RabbitMqJobsConsumer {
       {
         consumerTag: RabbitMqJobsConsumer.getConsumerTag(job.getRetryQueue()),
         prefetch: _.max([_.toInteger(job.getConcurrency() / 4), 1]) ?? 1,
+        noAck: false,
       }
     );
 
