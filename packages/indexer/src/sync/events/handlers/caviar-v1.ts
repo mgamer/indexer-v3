@@ -1,6 +1,9 @@
 import { Interface } from "@ethersproject/abi";
+import { AddressZero } from "@ethersproject/constants";
+import { Contract } from "@ethersproject/contracts";
 import { searchForCall } from "@georgeroman/evm-tx-simulator";
 
+import { baseProvider } from "@/common/provider";
 import { bn } from "@/common/utils";
 import { getEventData } from "@/events-sync/data";
 import { EnhancedEvent, OnChainData } from "@/events-sync/handlers/utils";
@@ -13,21 +16,6 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
   // Handle the events
   for (const { subKind, baseEventParams, log } of events) {
     const eventData = getEventData([subKind])[0];
-    const pool = await getPoolDetails(baseEventParams.address);
-
-    onChainData.orders.push({
-      kind: "caviar-v1",
-      info: {
-        orderParams: {
-          pool: baseEventParams.address,
-          txHash: baseEventParams.txHash,
-          txTimestamp: baseEventParams.timestamp,
-          txBlock: baseEventParams.block,
-          logIndex: baseEventParams.logIndex,
-        },
-        metadata: {},
-      },
-    });
 
     const iface = new Interface([
       `
@@ -46,11 +34,32 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           (bytes32 id, bytes payload, uint256 timestamp, bytes signature)[] messages
         ) returns (uint256 inputAmount)
       `,
+      `
+        function pairs(
+          address nft,
+          address baseToken,
+          bytes32 merkleRoot
+        ) view returns (address)
+      `,
     ]);
 
     switch (subKind) {
       case "caviar-v1-buy": {
         const parsedLog = eventData.abi.parseLog(log);
+
+        onChainData.orders.push({
+          kind: "caviar-v1",
+          info: {
+            orderParams: {
+              pool: baseEventParams.address,
+              txHash: baseEventParams.txHash,
+              txTimestamp: baseEventParams.timestamp,
+              txBlock: baseEventParams.block,
+              logIndex: baseEventParams.logIndex,
+            },
+            metadata: {},
+          },
+        });
 
         const txTrace = await utils.fetchTransactionTrace(baseEventParams.txHash);
         if (!txTrace) {
@@ -73,6 +82,8 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
 
         const { tokenIds } = iface.decodeFunctionData("nftBuy", callTrace.input);
         const taker = (await utils.fetchTransaction(baseEventParams.txHash)).from;
+
+        const pool = await getPoolDetails(baseEventParams.address);
 
         const price = bn(parsedLog.args.inputAmount).div(tokenIds.length).toString();
         const priceData = await getUSDAndNativePrices(
@@ -145,6 +156,20 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
       case "caviar-v1-sell": {
         const parsedLog = eventData.abi.parseLog(log);
 
+        onChainData.orders.push({
+          kind: "caviar-v1",
+          info: {
+            orderParams: {
+              pool: baseEventParams.address,
+              txHash: baseEventParams.txHash,
+              txTimestamp: baseEventParams.timestamp,
+              txBlock: baseEventParams.block,
+              logIndex: baseEventParams.logIndex,
+            },
+            metadata: {},
+          },
+        });
+
         const txTrace = await utils.fetchTransactionTrace(baseEventParams.txHash);
         if (!txTrace) {
           break;
@@ -166,6 +191,8 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
 
         const { tokenIds } = iface.decodeFunctionData("nftSell", callTrace.input);
         const taker = (await utils.fetchTransaction(baseEventParams.txHash)).from;
+
+        const pool = await getPoolDetails(baseEventParams.address);
 
         const price = bn(parsedLog.args.outputAmount).div(tokenIds.length).toString();
         const priceData = await getUSDAndNativePrices(
@@ -228,6 +255,58 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
               kind: "sale",
               txHash: baseEventParams.txHash,
               txTimestamp: baseEventParams.timestamp,
+            },
+          });
+        }
+
+        break;
+      }
+
+      case "caviar-v1-add":
+      case "caviar-v1-remove":
+      case "caviar-v1-wrap":
+      case "caviar-v1-unwrap": {
+        onChainData.orders.push({
+          kind: "caviar-v1",
+          info: {
+            orderParams: {
+              pool: baseEventParams.address,
+              txHash: baseEventParams.txHash,
+              txTimestamp: baseEventParams.timestamp,
+              txBlock: baseEventParams.block,
+              logIndex: baseEventParams.logIndex,
+            },
+            metadata: {},
+          },
+        });
+
+        break;
+      }
+
+      case "caviar-v1-create": {
+        const parsedLog = eventData.abi.parseLog(log);
+
+        const factory = new Contract(baseEventParams.address, iface, baseProvider);
+        const pool = await factory
+          .pairs(
+            parsedLog.args["nft"].toLowerCase(),
+            parsedLog.args["baseToken"].toLowerCase(),
+            parsedLog.args["merkleRoot"].toLowerCase()
+          )
+          .then((p: string) => p.toLowerCase());
+
+        if (pool !== AddressZero) {
+          onChainData.orders.push({
+            kind: "caviar-v1",
+            info: {
+              orderParams: {
+                pool,
+                txHash: baseEventParams.txHash,
+                txTimestamp: baseEventParams.timestamp,
+                txBlock: baseEventParams.block,
+                logIndex: baseEventParams.logIndex,
+              },
+              metadata: {},
             },
           });
         }
