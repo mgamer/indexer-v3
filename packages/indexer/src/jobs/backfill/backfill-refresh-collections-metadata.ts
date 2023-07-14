@@ -49,7 +49,7 @@ if (config.doBackgroundWork) {
         `
         SELECT collections.id
         FROM collections
-        ${continuationFilter}
+        --${continuationFilter}
         ORDER BY all_time_volume DESC
         LIMIT $/limit/
           `,
