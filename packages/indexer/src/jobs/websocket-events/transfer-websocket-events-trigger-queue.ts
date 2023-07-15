@@ -1,110 +1,113 @@
-import { Job, Queue, QueueScheduler, Worker } from "bullmq";
-
 import { logger } from "@/common/logger";
-import { redis } from "@/common/redis";
 import { config } from "@/config/index";
-
-import { randomUUID } from "crypto";
-import _ from "lodash";
-
 import { publishWebsocketEvent } from "@/common/websocketPublisher";
 import crypto from "crypto";
+import { AbstractRabbitMqJobHandler, BackoffStrategy } from "@/jobs/abstract-rabbit-mq-job-handler";
 
-const QUEUE_NAME = "transfer-websocket-events-trigger-queue";
+export type TransferWebsocketEventsTriggerQueueJobPayload = {
+  data: TransferWebsocketEventInfo;
+};
 
-export const queue = new Queue(QUEUE_NAME, {
-  connection: redis.duplicate(),
-  defaultJobOptions: {
-    attempts: 5,
-    backoff: {
-      type: "exponential",
-      delay: 1000,
-    },
-    removeOnComplete: 1000,
-    removeOnFail: 1000,
-    timeout: 60000,
-  },
-});
-new QueueScheduler(QUEUE_NAME, { connection: redis.duplicate() });
+//const changedMapping = {};
 
-// BACKGROUND WORKER ONLY
-if (config.doBackgroundWork && config.doWebsocketServerWork) {
-  const worker = new Worker(
-    QUEUE_NAME,
-    async (job: Job) => {
-      const { data } = job.data as EventInfo;
+export class TransferWebsocketEventsTriggerQueueJob extends AbstractRabbitMqJobHandler {
+  queueName = "transfer-websocket-events-trigger-queue";
+  maxRetries = 5;
+  concurrency = 10;
+  consumerTimeout = 60000;
+  backoff = {
+    type: "exponential",
+    delay: 1000,
+  } as BackoffStrategy;
 
-      try {
-        const result = {
-          id: crypto
-            .createHash("sha256")
-            .update(`${data.tx_hash}${data.log_index}${data.batch_index}`)
-            .digest("hex"),
-          token: {
-            contract: data.address,
-            tokenId: data.token_id,
-          },
-          from: data.from,
-          to: data.to,
-          amount: data.amount,
-          block: data.block,
-          txHash: data.tx_hash,
-          logIndex: data.log_index,
-          batchIndex: data.batch_index,
-          timestamp: data.timestamp,
-        };
+  protected async process(payload: TransferWebsocketEventsTriggerQueueJobPayload) {
+    const { data } = payload;
 
-        let eventType = "";
-        if (data.is_deleted) eventType = "transfer.deleted";
-        else if (data.trigger === "insert") eventType = "transfer.created";
-        else if (data.trigger === "update") eventType = "transfer.updated";
+    try {
+      const result = {
+        id: crypto
+          .createHash("sha256")
+          .update(`${data.after.tx_hash}${data.after.log_index}${data.after.batch_index}`)
+          .digest("hex"),
+        token: {
+          contract: data.after.address,
+          tokenId: data.after.token_id,
+        },
+        from: data.after.from,
+        to: data.after.to,
+        amount: data.after.amount,
+        block: data.after.block,
+        txHash: data.after.tx_hash,
+        logIndex: data.after.log_index,
+        batchIndex: data.after.batch_index,
+        timestamp: data.after.timestamp,
+      };
 
-        await publishWebsocketEvent({
-          event: eventType,
-          tags: {
-            address: result.token.contract,
-            from: result.from,
-            to: result.to,
-          },
-          data: result,
-          offset: data.offset,
-        });
-      } catch (error) {
-        logger.error(
-          QUEUE_NAME,
-          `Error processing websocket event. data=${JSON.stringify(data)}, error=${JSON.stringify(
-            error
-          )}`
-        );
-        throw error;
+      let eventType = "";
+      //const changed = [];
+      if (data.after.is_deleted) eventType = "transfer.deleted";
+      else if (data.trigger === "insert") eventType = "transfer.created";
+      else if (data.trigger === "update") {
+        eventType = "transfer.updated";
+        if (data.before) {
+          /*
+            for (const key in changedMapping) {
+              // eslint-disable-next-line
+              // @ts-ignore
+              if (data.before[key] !== data.after[key]) {
+                changed.push(key);
+              }
+            }
+
+            if (!changed.length) {
+              return;
+            }
+            */
+
+          logger.info(this.queueName, "update transfer");
+        }
       }
-    },
-    { connection: redis.duplicate(), concurrency: 80 }
-  );
 
-  worker.on("error", (error) => {
-    logger.error(QUEUE_NAME, `Worker errored. error=${JSON.stringify(error)}`);
-  });
+      await publishWebsocketEvent({
+        event: eventType,
+        tags: {
+          address: result.token.contract,
+          from: result.from,
+          to: result.to,
+        },
+        //changed,
+        data: result,
+        offset: data.offset,
+      });
+    } catch (error) {
+      logger.error(
+        this.queueName,
+        `Error processing websocket event. data=${JSON.stringify(data)}, error=${JSON.stringify(
+          error
+        )}`
+      );
+      throw error;
+    }
+  }
+
+  public async addToQueue(events: TransferWebsocketEventsTriggerQueueJobPayload[]) {
+    if (!config.doWebsocketServerWork) {
+      return;
+    }
+
+    await this.sendBatch(
+      events.map((event) => ({
+        payload: event,
+      }))
+    );
+  }
 }
 
 export type EventInfo = {
   data: TransferWebsocketEventInfo;
 };
 
-export const addToQueue = async (events: EventInfo[]) => {
-  if (!config.doWebsocketServerWork) {
-    return;
-  }
-
-  await queue.addBulk(
-    _.map(events, (event) => ({
-      name: randomUUID(),
-      data: event,
-    }))
-  );
-};
-
-export type TransferWebsocketEventInfo = {
+interface TransferInfo {
   address: string;
   block: string;
   tx_hash: string;
@@ -118,6 +121,13 @@ export type TransferWebsocketEventInfo = {
   amount: string;
   created_at: string;
   is_deleted: boolean;
+}
+
+export type TransferWebsocketEventInfo = {
+  before: TransferInfo;
+  after: TransferInfo;
   trigger: "insert" | "update" | "delete";
   offset: string;
 };
+
+export const transferWebsocketEventsTriggerQueueJob = new TransferWebsocketEventsTriggerQueueJob();

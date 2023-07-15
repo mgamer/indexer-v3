@@ -30,7 +30,6 @@ import * as backfillRefreshCollectionMetadata from "@/jobs/backfill/backfill-ref
 
 import * as askWebsocketEventsTriggerQueue from "@/jobs/websocket-events/ask-websocket-events-trigger-queue";
 import * as bidWebsocketEventsTriggerQueue from "@/jobs/websocket-events/bid-websocket-events-trigger-queue";
-import * as transferWebsocketEventsTriggerQueue from "@/jobs/websocket-events/transfer-websocket-events-trigger-queue";
 import * as saleWebsocketEventsTriggerQueue from "@/jobs/websocket-events/sale-websocket-events-trigger-queue";
 import * as tokenWebsocketEventsTriggerQueue from "@/jobs/websocket-events/token-websocket-events-trigger-queue";
 import * as topBidWebsocketEventsTriggerQueue from "@/jobs/websocket-events/top-bid-websocket-events-trigger-queue";
@@ -140,6 +139,7 @@ import { openseaOrdersProcessJob } from "@/jobs/opensea-orders/opensea-orders-pr
 import { openseaOrdersFetchJob } from "@/jobs/opensea-orders/opensea-orders-fetch-job";
 import { saveBidEventsJob } from "@/jobs/order-updates/save-bid-events-job";
 import { countApiUsageJob } from "@/jobs/metrics/count-api-usage-job";
+import { transferWebsocketEventsTriggerQueueJob } from "@/jobs/websocket-events/transfer-websocket-events-trigger-queue";
 
 export const allJobQueues = [
   backfillExpiredOrders.queue,
@@ -147,7 +147,6 @@ export const allJobQueues = [
 
   askWebsocketEventsTriggerQueue.queue,
   bidWebsocketEventsTriggerQueue.queue,
-  transferWebsocketEventsTriggerQueue.queue,
   saleWebsocketEventsTriggerQueue.queue,
   tokenWebsocketEventsTriggerQueue.queue,
   topBidWebsocketEventsTriggerQueue.queue,
@@ -264,6 +263,7 @@ export class RabbitMqJobsConsumer {
       openseaOrdersFetchJob,
       saveBidEventsJob,
       countApiUsageJob,
+      transferWebsocketEventsTriggerQueueJob,
     ];
   }
 
