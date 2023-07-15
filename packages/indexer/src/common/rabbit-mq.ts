@@ -52,16 +52,15 @@ export class RabbitMq {
 
   private static rabbitMqPublisherConnection: AmqpConnectionManager;
 
-  private static maxPublisherChannelsCount = 12;
+  private static maxPublisherChannelsCount = 10;
   private static rabbitMqPublisherChannels: ChannelWrapper[] = [];
 
   public static async connect() {
-    RabbitMq.rabbitMqPublisherConnection = await amqplibConnectionManager.connect(
-      config.rabbitMqUrl
-    );
+    RabbitMq.rabbitMqPublisherConnection = amqplibConnectionManager.connect(config.rabbitMqUrl);
 
     for (let index = 0; index < RabbitMq.maxPublisherChannelsCount; ++index) {
-      const channel = await this.rabbitMqPublisherConnection.createChannel();
+      const channel = this.rabbitMqPublisherConnection.createChannel();
+      await channel.waitForConnect();
       RabbitMq.rabbitMqPublisherChannels[index] = channel;
 
       channel.once("error", (error) => {
@@ -155,7 +154,7 @@ export class RabbitMq {
       priority?: number;
     }[]
   ) {
-    const limit = pLimit(40);
+    const limit = pLimit(50);
     await Promise.all(
       messages.map((message) =>
         limit(() => {
