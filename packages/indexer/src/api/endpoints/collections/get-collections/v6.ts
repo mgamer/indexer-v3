@@ -708,26 +708,27 @@ export const getCollectionsV6Options: RouteOptions = {
             topBid: {
               id: r.top_buy_id,
               sourceDomain: r.top_buy_id ? sources.get(r.top_buy_source_id_int)?.domain : null,
-              price: r.top_buy_id
-                ? await getJoiPriceObject(
-                    {
-                      net: {
-                        amount: query.normalizeRoyalties
-                          ? r.top_buy_currency_normalized_value ?? r.top_buy_value
-                          : r.top_buy_currency_value ?? r.top_buy_value,
-                        nativeAmount: query.normalizeRoyalties
-                          ? r.top_buy_normalized_value ?? r.top_buy_value
-                          : r.top_buy_value,
+              price:
+                r.top_buy_id && r.top_buy_value
+                  ? await getJoiPriceObject(
+                      {
+                        net: {
+                          amount: query.normalizeRoyalties
+                            ? r.top_buy_currency_normalized_value ?? r.top_buy_value
+                            : r.top_buy_currency_value ?? r.top_buy_value,
+                          nativeAmount: query.normalizeRoyalties
+                            ? r.top_buy_normalized_value ?? r.top_buy_value
+                            : r.top_buy_value,
+                        },
+                        gross: {
+                          amount: r.top_buy_currency_price ?? r.top_buy_price,
+                          nativeAmount: r.top_buy_price,
+                        },
                       },
-                      gross: {
-                        amount: r.top_buy_currency_price ?? r.top_buy_price,
-                        nativeAmount: r.top_buy_price,
-                      },
-                    },
-                    topBidCurrency,
-                    query.displayCurrency
-                  )
-                : null,
+                      topBidCurrency,
+                      query.displayCurrency
+                    )
+                  : null,
               maker: r.top_buy_maker ? fromBuffer(r.top_buy_maker) : null,
               validFrom: r.top_buy_valid_from,
               validUntil: r.top_buy_value ? r.top_buy_valid_until : null,
