@@ -145,7 +145,7 @@ export class RabbitMq {
           message: `failed to publish to ${queueName} error ${error} content=${JSON.stringify(
             content
           )}`,
-          queueName,
+          queueName: queueName.substring(_.indexOf(queueName, ".") + 1), // Remove chain name
         })
       );
     }
