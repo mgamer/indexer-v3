@@ -4,12 +4,15 @@ import * as bidWebsocketEventsTriggerQueue from "@/jobs/websocket-events/bid-web
 
 import * as transferWebsocketEventsTriggerQueue from "@/jobs/websocket-events/transfer-websocket-events-trigger-queue";
 import * as tokenWebsocketEventsTriggerQueue from "@/jobs/websocket-events/token-websocket-events-trigger-queue";
-import * as topBidWebsocketEventsTriggerQueue from "@/jobs/websocket-events/top-bid-websocket-events-trigger-queue";
 import * as askWebsocketEventsTriggerQueue from "@/jobs/websocket-events/ask-websocket-events-trigger-queue";
 import {
   collectionWebsocketEventsTriggerQueueJob,
   CollectionWebsocketEventInfo,
 } from "@/jobs/websocket-events/collection-websocket-events-trigger-job";
+import {
+  TopBidWebsocketEventInfo,
+  topBidWebSocketEventsTriggerJob,
+} from "@/jobs/websocket-events/top-bid-websocket-events-trigger-job";
 
 export const WebsocketEventRouter = async ({
   eventKind,
@@ -48,9 +51,9 @@ export const WebsocketEventRouter = async ({
       ]);
       break;
     case WebsocketEventKind.NewTopBid:
-      await topBidWebsocketEventsTriggerQueue.addToQueue([
+      await topBidWebSocketEventsTriggerJob.addToQueue([
         {
-          data: eventInfo as topBidWebsocketEventsTriggerQueue.TopBidWebsocketEventInfo,
+          data: eventInfo as TopBidWebsocketEventInfo,
         },
       ]);
       break;
@@ -84,7 +87,7 @@ export enum WebsocketEventKind {
 }
 
 export type EventInfo =
-  | topBidWebsocketEventsTriggerQueue.TopBidWebsocketEventInfo
+  | TopBidWebsocketEventInfo
   | askWebsocketEventsTriggerQueue.AskWebsocketEventInfo
   | bidWebsocketEventsTriggerQueue.BidWebsocketEventInfo
   | transferWebsocketEventsTriggerQueue.TransferWebsocketEventInfo
