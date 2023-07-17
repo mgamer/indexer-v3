@@ -14,7 +14,6 @@ import "@/jobs/websocket-events";
 import "@/jobs/metrics";
 import "@/jobs/opensea-orders";
 import "@/jobs/monitoring";
-import "@/jobs/token-set-updates";
 
 // Export all job queues for monitoring through the BullMQ UI
 
