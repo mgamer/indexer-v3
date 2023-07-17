@@ -14,7 +14,6 @@ import "@/jobs/websocket-events";
 import "@/jobs/metrics";
 import "@/jobs/opensea-orders";
 import "@/jobs/monitoring";
-import "@/jobs/token-set-updates";
 
 // Export all job queues for monitoring through the BullMQ UI
 
@@ -141,6 +140,7 @@ import { openseaOrdersProcessJob } from "@/jobs/opensea-orders/opensea-orders-pr
 import { openseaOrdersFetchJob } from "@/jobs/opensea-orders/opensea-orders-fetch-job";
 import { saveBidEventsJob } from "@/jobs/order-updates/save-bid-events-job";
 import { countApiUsageJob } from "@/jobs/metrics/count-api-usage-job";
+import { topBidWebSocketEventsTriggerJob } from "@/jobs/websocket-events/top-bid-websocket-events-trigger-job";
 
 export const allJobQueues = [
   backfillExpiredOrders.queue,
@@ -266,6 +266,7 @@ export class RabbitMqJobsConsumer {
       saveBidEventsJob,
       countApiUsageJob,
       saleWebsocketEventsTriggerQueueJob,
+      topBidWebSocketEventsTriggerJob,
     ];
   }
 
@@ -337,7 +338,7 @@ export class RabbitMqJobsConsumer {
       job.getQueue(),
       async (msg) => {
         if (!_.isNull(msg)) {
-          await job.consume(channel, msg);
+          await _.clone(job).consume(channel, msg);
         }
       },
       {
@@ -352,7 +353,7 @@ export class RabbitMqJobsConsumer {
       job.getRetryQueue(),
       async (msg) => {
         if (!_.isNull(msg)) {
-          await job.consume(channel, msg);
+          await _.clone(job).consume(channel, msg);
         }
       },
       {
