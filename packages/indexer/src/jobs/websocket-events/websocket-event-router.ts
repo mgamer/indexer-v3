@@ -1,7 +1,7 @@
 import {
   saleWebsocketEventsTriggerQueueJob,
   SaleWebsocketEventInfo,
-} from "@/jobs/websocket-events/sale-websocket-events-trigger-queue";
+} from "@/jobs/websocket-events/sale-websocket-events-trigger-job";
 
 import * as bidWebsocketEventsTriggerQueue from "@/jobs/websocket-events/bid-websocket-events-trigger-queue";
 
