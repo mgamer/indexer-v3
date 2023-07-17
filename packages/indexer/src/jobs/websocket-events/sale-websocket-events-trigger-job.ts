@@ -13,31 +13,12 @@ export type SaleWebsocketEventsTriggerQueueJobPayload = {
 };
 
 const changedMapping = {
-  maker: "maker",
-  taker: "taker",
-  amount: "amount",
-  fill_source_id: "fillSourceId",
-  block: "block",
-  tx_hash: "txHash",
-  timestamp: "timestamp",
-  price: "prices.gross.nativeAmount",
-  currency: "currencyAddress",
-  currency_price: "prices.gross.amount",
-  usd_price: "prices.gross.usdAmount",
-  log_index: "logIndex",
-  batch_index: "batchIndex",
   wash_trading_score: "washTradingScore",
   royalty_fee_bps: "fees.royaltyFeeBps",
   marketplace_fee_bps: "fees.marketplaceFeeBps",
   royalty_fee_breakdown: "fees.royaltyFeeBreakdown",
   marketplace_fee_breakdown: "fees.marketplaceFeeBreakdown",
   paid_full_royalty: "fees.paidFullRoyalty",
-  updated_at: "updatedAt",
-  created_at: "createdAt",
-  name: "name",
-  image: "image",
-  collection_id: "collectionId",
-  collection_name: "collectionName",
 };
 
 export class SaleWebsocketEventsTriggerQueueJob extends AbstractRabbitMqJobHandler {
