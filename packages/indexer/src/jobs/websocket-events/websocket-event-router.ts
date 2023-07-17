@@ -9,7 +9,7 @@ import * as askWebsocketEventsTriggerQueue from "@/jobs/websocket-events/ask-web
 import {
   collectionWebsocketEventsTriggerQueueJob,
   CollectionWebsocketEventInfo,
-} from "@/jobs/websocket-events/collection-websocket-events-trigger-queue";
+} from "@/jobs/websocket-events/collection-websocket-events-trigger-job";
 
 export const WebsocketEventRouter = async ({
   eventKind,
