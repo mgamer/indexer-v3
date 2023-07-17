@@ -1,6 +1,5 @@
 import { idb } from "@/common/db";
 import { AbstractRabbitMqJobHandler, BackoffStrategy } from "@/jobs/abstract-rabbit-mq-job-handler";
-import { config } from "@/config/index";
 import _ from "lodash";
 import { toBuffer } from "@/common/utils";
 
@@ -23,7 +22,7 @@ export class RecalcTokenCountQueueJob extends AbstractRabbitMqJobHandler {
 
   protected async process(payload: RecalcTokenCountQueueJobPayload) {
     const { collection, fromTokenId } = payload;
-    const limit = config.chainId === 137 ? 5000 : 20000;
+    const limit = 5000;
     const continuation = fromTokenId ? `AND token_id > $/fromTokenId/` : "";
 
     let { totalCurrentCount } = payload;
