@@ -77,7 +77,7 @@ export class RecalcTokenCountQueueJob extends AbstractRabbitMqJobHandler {
             fromTokenId: lastToken.token_id,
             totalCurrentCount,
           },
-          0
+          _.random(1, 10) * 1000
         );
       }
     } else {
