@@ -76,7 +76,6 @@ export class RecalcTokenCountQueueJob extends AbstractRabbitMqJobHandler {
           collection,
           fromTokenId: lastToken.token_id,
           totalCurrentCount,
-          force: true,
         });
       }
     } else {
@@ -101,7 +100,7 @@ export class RecalcTokenCountQueueJob extends AbstractRabbitMqJobHandler {
     await this.send(
       {
         payload: collection,
-        jobId: collection.force ? undefined : collection.collection,
+        jobId: collection.force ? undefined : `${collection.collection}:${collection.fromTokenId}`,
       },
       collection.force ? 0 : delay
     );
