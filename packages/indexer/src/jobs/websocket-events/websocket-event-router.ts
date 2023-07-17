@@ -10,7 +10,7 @@ import * as collectionWebsocketEventsTriggerQueue from "@/jobs/websocket-events/
 import {
   tokenAttributeWebsocketEventsTriggerQueueJob,
   TokenAttributeWebsocketEventInfo,
-} from "@/jobs/websocket-events/token-attribute-websocket-events-trigger-queue";
+} from "@/jobs/websocket-events/token-attribute-websocket-events-trigger-job";
 
 export const WebsocketEventRouter = async ({
   eventKind,

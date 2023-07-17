@@ -9,12 +9,8 @@ export type TokenAttributeWebsocketEventsTriggerQueueJobPayload = {
   data: TokenAttributeWebsocketEventInfo;
 };
 
-const changedMapping = {
-  collection_id: "collection.id",
-  key: "key",
-  value: "value",
-  updated_at: "updatedAt",
-};
+// TODO - populate mapping based on update logs
+const changedMapping = {};
 
 export class TokenAttributeWebsocketEventsTriggerQueueJob extends AbstractRabbitMqJobHandler {
   queueName = "token-attribute-websocket-events-trigger-queue";
@@ -92,7 +88,14 @@ export class TokenAttributeWebsocketEventsTriggerQueueJob extends AbstractRabbit
               }
               */
 
-            logger.info(this.queueName, "update token attributes");
+            logger.info(
+              this.queueName,
+              JSON.stringify({
+                message: "Token attribute updated",
+                before: data.before,
+                after: data.after,
+              })
+            );
           }
           break;
         case "delete":
