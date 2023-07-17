@@ -72,11 +72,14 @@ export class RecalcTokenCountQueueJob extends AbstractRabbitMqJobHandler {
 
       if (lastToken) {
         // Trigger the next count job from the last token_id of the current batch
-        await this.addToQueue({
-          collection,
-          fromTokenId: lastToken.token_id,
-          totalCurrentCount,
-        });
+        await this.addToQueue(
+          {
+            collection,
+            fromTokenId: lastToken.token_id,
+            totalCurrentCount,
+          },
+          0
+        );
       }
     } else {
       // No more tokens to count, update collections table
