@@ -846,6 +846,14 @@ export const getTokensV5Options: RouteOptions = {
       if (query.collectionsSetId) {
         const collectionsSetQueries = [];
         const collections = await CollectionSets.getCollectionsIds(query.collectionsSetId);
+
+        if (collections.length === 0) {
+          return {
+            tokens: [],
+            continuation: null,
+          };
+        }
+
         const collectionsSetSort = getSort(query.sortBy, true);
 
         for (const i in collections) {

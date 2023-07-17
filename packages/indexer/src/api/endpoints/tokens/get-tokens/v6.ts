@@ -839,6 +839,13 @@ export const getTokensV6Options: RouteOptions = {
 
       // Break query into UNION of results for each collectionId for sets up to 20 collections
       if (query.collectionsSetId && collections.length <= 20) {
+        if (collections.length === 0) {
+          return {
+            tokens: [],
+            continuation: null,
+          };
+        }
+
         const collectionsSetQueries = [];
         const collectionsSetSort = getSort(query.sortBy, true);
 
