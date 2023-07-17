@@ -5,7 +5,7 @@ import * as bidWebsocketEventsTriggerQueue from "@/jobs/websocket-events/bid-web
 import {
   transferWebsocketEventsTriggerQueueJob,
   TransferWebsocketEventInfo,
-} from "@/jobs/websocket-events/transfer-websocket-events-trigger-queue";
+} from "@/jobs/websocket-events/transfer-websocket-events-trigger-job";
 import * as tokenWebsocketEventsTriggerQueue from "@/jobs/websocket-events/token-websocket-events-trigger-queue";
 import * as askWebsocketEventsTriggerQueue from "@/jobs/websocket-events/ask-websocket-events-trigger-queue";
 import * as collectionWebsocketEventsTriggerQueue from "@/jobs/websocket-events/collection-websocket-events-trigger-queue";
