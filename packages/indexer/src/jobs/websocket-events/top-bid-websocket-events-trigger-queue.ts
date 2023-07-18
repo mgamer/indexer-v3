@@ -42,6 +42,13 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
           );
 
           return;
+        } else {
+          logger.info(
+            QUEUE_NAME,
+            `Top bid on collection is lower than current bid. data=${JSON.stringify(
+              data
+            )}, topBidOnCollection=${topBidOnCollection}`
+          );
         }
       }
 
