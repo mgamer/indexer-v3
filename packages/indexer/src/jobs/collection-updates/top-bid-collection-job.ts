@@ -159,7 +159,7 @@ export class TopBidCollectionJob extends AbstractRabbitMqJobHandler {
             orderId: collectionTopBid?.order_id,
             orderValue: collectionTopBid?.top_buy_value,
             collectionId: payload.collectionId,
-            skipCollectionTopBidCheck: false,
+            skipCollectionTopBidCheck: true,
           },
         });
       }
