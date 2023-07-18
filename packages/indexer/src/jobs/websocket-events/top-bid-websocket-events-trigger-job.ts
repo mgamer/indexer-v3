@@ -12,6 +12,9 @@ import { redis } from "@/common/redis";
 
 export type TopBidWebsocketEventInfo = {
   orderId: string;
+  orderValue: string;
+  collectionId: string;
+  skipCollectionTopBidCheck: boolean;
 };
 
 export type TopBidWebSocketEventsTriggerJobPayload = {
@@ -26,6 +29,19 @@ export class TopBidWebSocketEventsTriggerJob extends AbstractRabbitMqJobHandler 
 
   protected async process(payload: TopBidWebSocketEventsTriggerJobPayload) {
     const { data } = payload;
+
+    if (!data.skipCollectionTopBidCheck) {
+      // if its a single token top bid, check if its lower than the top bid on the collection and skip if it is
+      const topBidOnCollection = await redis.get(`collection-top-bid:${data.collectionId}`);
+      if (topBidOnCollection && Number(topBidOnCollection) > Number(data.orderValue)) {
+        logger.warn(
+          this.queueName,
+          `Top bid on collection is higher than current bid. data=${JSON.stringify(data)}`
+        );
+
+        return;
+      }
+    }
 
     try {
       const criteriaBuildQuery = Orders.buildCriteriaQuery("orders", "token_set_id", false);
