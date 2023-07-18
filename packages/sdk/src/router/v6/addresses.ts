@@ -41,6 +41,15 @@ export const ApprovalProxy: ChainIdToAddress = {
   [Network.Zora]: "0x224ecb4eae96d31372d1090c3b0233c8310dbbab",
 };
 
+// Permit proxy
+
+export const PermitProxy: ChainIdToAddress = {
+  [Network.Ethereum]: "0x104ff9a0e2a62aa531ef0cc9d19f948bde7062de",
+  [Network.EthereumGoerli]: "0x104ff9a0e2a62aa531ef0cc9d19f948bde7062de",
+  [Network.Polygon]: "0x104ff9a0e2a62aa531ef0cc9d19f948bde7062de",
+  [Network.Mumbai]: "0x104ff9a0e2a62aa531ef0cc9d19f948bde7062de",
+};
+
 // Utility modules
 
 export const SwapModule: ChainIdToAddress = {
@@ -92,19 +101,19 @@ export const SeaportV14Module: ChainIdToAddress = {
 };
 
 export const SeaportV15Module: ChainIdToAddress = {
-  [Network.Ethereum]: "0xf645877ab54e5856f39dc90425ae21748f52b5d4",
-  [Network.EthereumGoerli]: "0xf645877ab54e5856f39dc90425ae21748f52b5d4",
-  [Network.EthereumSepolia]: "0x0df8a66ba3010af4f86ca4db6a6da9e367385a03",
-  [Network.Polygon]: "0xf645877ab54e5856f39dc90425ae21748f52b5d4",
-  [Network.Optimism]: "0xf645877ab54e5856f39dc90425ae21748f52b5d4",
-  [Network.Arbitrum]: "0xf645877ab54e5856f39dc90425ae21748f52b5d4",
-  [Network.ZoraTestnet]: "0x0df8a66ba3010af4f86ca4db6a6da9e367385a03",
-  [Network.ScrollAlpha]: "0xf645877ab54e5856f39dc90425ae21748f52b5d4",
-  [Network.Mumbai]: "0xf645877ab54e5856f39dc90425ae21748f52b5d4",
-  [Network.BaseGoerli]: "0x0df8a66ba3010af4f86ca4db6a6da9e367385a03",
-  [Network.ArbitrumNova]: "0xf645877ab54e5856f39dc90425ae21748f52b5d4",
-  [Network.Bsc]: "0xf645877ab54e5856f39dc90425ae21748f52b5d4",
-  [Network.Zora]: "0x0df8a66ba3010af4f86ca4db6a6da9e367385a03",
+  [Network.Ethereum]: "0x00ca04c45da318d5b7e7b14d5381ca59f09c73f0",
+  [Network.EthereumGoerli]: "0x00ca04c45da318d5b7e7b14d5381ca59f09c73f0",
+  [Network.EthereumSepolia]: "0x00ca04c45da318d5b7e7b14d5381ca59f09c73f0",
+  [Network.Polygon]: "0x00ca04c45da318d5b7e7b14d5381ca59f09c73f0",
+  [Network.Mumbai]: "0x00ca04c45da318d5b7e7b14d5381ca59f09c73f0",
+  [Network.Optimism]: "0x00ca04c45da318d5b7e7b14d5381ca59f09c73f0",
+  [Network.Arbitrum]: "0x00ca04c45da318d5b7e7b14d5381ca59f09c73f0",
+  [Network.ArbitrumNova]: "0x00ca04c45da318d5b7e7b14d5381ca59f09c73f0",
+  [Network.Bsc]: "0x00ca04c45da318d5b7e7b14d5381ca59f09c73f0",
+  [Network.Zora]: "0x4e9aaa72727a2f5aa5d2bef80ab5642661e29ef6",
+  [Network.ZoraTestnet]: "0x4e9aaa72727a2f5aa5d2bef80ab5642661e29ef6",
+  [Network.ScrollAlpha]: "0x00ca04c45da318d5b7e7b14d5381ca59f09c73f0",
+  [Network.BaseGoerli]: "0x4e9aaa72727a2f5aa5d2bef80ab5642661e29ef6",
 };
 
 export const AlienswapModule: ChainIdToAddress = {
@@ -122,6 +131,11 @@ export const SudoswapModule: ChainIdToAddress = {
 export const SudoswapV2Module: ChainIdToAddress = {
   [Network.Ethereum]: "0xe2840826c43c25e88a5ef43ff790d7105889dd6e",
   [Network.EthereumGoerli]: "0xe2840826c43c25e88a5ef43ff790d7105889dd6e",
+};
+
+export const CaviarV1Module: ChainIdToAddress = {
+  [Network.Ethereum]: "0x14e29b2de5cbb86fc8bad483e6dff38d58057e80",
+  [Network.EthereumGoerli]: "0x14e29b2de5cbb86fc8bad483e6dff38d58057e80",
 };
 
 export const X2Y2Module: ChainIdToAddress = {
@@ -153,6 +167,7 @@ export const NFTXZeroExModule: ChainIdToAddress = {
 
 export const RaribleModule: ChainIdToAddress = {
   [Network.Ethereum]: "0x428a6be88fc0d25778e3c3f6e09fcfdc9a526fad",
+  [Network.EthereumGoerli]: "0x428a6be88fc0d25778e3c3f6e09fcfdc9a526fad",
 };
 
 export const SuperRareModule: ChainIdToAddress = {
@@ -161,4 +176,10 @@ export const SuperRareModule: ChainIdToAddress = {
 
 export const CryptoPunksModule: ChainIdToAddress = {
   [Network.Ethereum]: "0x8be240e8689547f1068a835d14f1d943958095dc",
+};
+
+export const PaymentProcessorModule: ChainIdToAddress = {
+  [Network.Ethereum]: "0x929adee14d57019bfd4d092889abe3e2a647e706",
+  [Network.EthereumGoerli]: "0x929adee14d57019bfd4d092889abe3e2a647e706",
+  [Network.EthereumSepolia]: "0x929adee14d57019bfd4d092889abe3e2a647e706",
 };

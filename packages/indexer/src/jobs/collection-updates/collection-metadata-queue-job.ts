@@ -21,7 +21,7 @@ export type MetadataQueueJobPayload = {
 export class CollectionMetadataQueueJob extends AbstractRabbitMqJobHandler {
   queueName = "collections-metadata-queue";
   maxRetries = 10;
-  concurrency = 20;
+  concurrency = 1;
   lazyMode = true;
   useSharedChannel = true;
 
@@ -43,7 +43,7 @@ export class CollectionMetadataQueueJob extends AbstractRabbitMqJobHandler {
           logger.error(
             this.queueName,
             JSON.stringify({
-              message: "updateCollectionCache error",
+              message: `updateCollectionCache error ${JSON.stringify(error)}`,
               jobData: payload,
               error,
             })

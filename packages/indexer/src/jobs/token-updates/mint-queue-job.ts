@@ -7,10 +7,10 @@ import { redis } from "@/common/redis";
 import * as tokenSets from "@/orderbook/token-sets";
 import { config } from "@/config/index";
 import { getNetworkSettings } from "@/config/network";
-import * as metadataIndexFetch from "@/jobs/metadata-index/fetch-queue";
 import { tokenRefreshCacheJob } from "@/jobs/token-updates/token-refresh-cache-job";
 import _ from "lodash";
 import { fetchCollectionMetadataJob } from "@/jobs/token-updates/fetch-collection-metadata-job";
+import { metadataIndexFetchJob } from "@/jobs/metadata-index/metadata-fetch-job";
 
 export type MintQueueJobPayload = {
   contract: string;
@@ -36,12 +36,14 @@ export class MintQueueJob extends AbstractRabbitMqJobHandler {
         id: string;
         token_set_id: string | null;
         community: string | null;
+        token_count: number;
       } | null = await idb.oneOrNone(
         `
             SELECT
               collections.id,
               collections.token_set_id,
-              collections.community
+              collections.community,
+              token_count
             FROM collections
             WHERE collections.contract = $/contract/
               AND collections.token_id_range @> $/tokenId/::NUMERIC(78, 0)
@@ -108,8 +110,15 @@ export class MintQueueJob extends AbstractRabbitMqJobHandler {
         // Trigger the queries
         await idb.none(pgp.helpers.concat(queries));
 
-        // Schedule a job to re-count tokens in the collection
-        await recalcTokenCountQueueJob.addToQueue({ collection: collection.id });
+        // Schedule a job to re-count tokens in the collection with different delays based on the amount of tokens
+        let delay = 5 * 60 * 1000;
+        if (collection.token_count > 200000) {
+          delay = 24 * 60 * 60 * 1000;
+        } else if (collection.token_count > 25000) {
+          delay = 60 * 60 * 1000;
+        }
+
+        await recalcTokenCountQueueJob.addToQueue({ collection: collection.id }, delay);
 
         // Refresh any dynamic token set
         const cacheKey = `refresh-collection-non-flagged-token-set:${collection.id}`;
@@ -119,9 +128,9 @@ export class MintQueueJob extends AbstractRabbitMqJobHandler {
           });
           const tokenSetResult = await idb.oneOrNone(
             `
-                SELECT 1 FROM token_sets
-                WHERE token_sets.id = $/id/
-              `,
+              SELECT 1 FROM token_sets
+              WHERE token_sets.id = $/id/
+            `,
             {
               id: tokenSet.id,
             }
@@ -140,9 +149,9 @@ export class MintQueueJob extends AbstractRabbitMqJobHandler {
         // Refresh the metadata for the new token
         if (!config.disableRealtimeMetadataRefresh) {
           const delay = getNetworkSettings().metadataMintDelay;
-          const method = metadataIndexFetch.getIndexingMethod(collection.community);
+          const method = metadataIndexFetchJob.getIndexingMethod(collection.community);
 
-          await metadataIndexFetch.addToQueue(
+          await metadataIndexFetchJob.addToQueue(
             [
               {
                 kind: "single-token",

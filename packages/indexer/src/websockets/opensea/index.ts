@@ -20,9 +20,7 @@ import { now } from "lodash";
 import { config } from "@/config/index";
 import { OpenseaOrderParams } from "@/orderbook/orders/seaport-v1.1";
 import { generateHash, getSupportedChainName } from "@/websockets/opensea/utils";
-import * as orderbookOrders from "@/jobs/orderbook/orders-queue";
-import { GenericOrderInfo } from "@/jobs/orderbook/orders-queue";
-import * as orderbookOpenseaListings from "@/jobs/orderbook/opensea-listings-queue";
+import { GenericOrderInfo } from "@/jobs/orderbook/utils";
 import { handleEvent as handleItemListedEvent } from "@/websockets/opensea/handlers/item_listed";
 import { handleEvent as handleItemReceivedBidEvent } from "@/websockets/opensea/handlers/item_received_bid";
 import { handleEvent as handleCollectionOfferEvent } from "@/websockets/opensea/handlers/collection_offer";
@@ -30,7 +28,10 @@ import { handleEvent as handleItemCancelled } from "@/websockets/opensea/handler
 import { handleEvent as handleOrderRevalidate } from "@/websockets/opensea/handlers/order_revalidate";
 import { handleEvent as handleTraitOfferEvent } from "@/websockets/opensea/handlers/trait_offer";
 import MetadataApi from "@/utils/metadata-api";
-import * as metadataIndexWrite from "@/jobs/metadata-index/write-queue";
+
+import { openseaBidsQueueJob } from "@/jobs/orderbook/opensea-bids-queue-job";
+import { metadataIndexWriteJob } from "@/jobs/metadata-index/metadata-write-job";
+import { openseaListingsJob } from "@/jobs/orderbook/opensea-listings-job";
 
 if (config.doWebsocketWork && config.openSeaApiKey) {
   const network = config.chainId === 5 ? Network.TESTNET : Network.MAINNET;
@@ -81,7 +82,7 @@ if (config.doWebsocketWork && config.openSeaApiKey) {
         if (openSeaOrderParams) {
           const protocolData = parseProtocolData(event.payload);
 
-          let orderInfo: orderbookOrders.GenericOrderInfo;
+          let orderInfo: GenericOrderInfo;
           if (protocolData) {
             orderInfo = {
               kind: protocolData.kind,
@@ -98,13 +99,14 @@ if (config.doWebsocketWork && config.openSeaApiKey) {
             } as GenericOrderInfo;
 
             if (eventType === EventType.ITEM_LISTED) {
-              await orderbookOpenseaListings.addToQueue([orderInfo]);
+              await openseaListingsJob.addToQueue([orderInfo]);
             } else {
               bidsEvents.push(orderInfo);
 
               if (bidsEvents.length >= maxBidsSize) {
                 const orderInfoBatch = bidsEvents.splice(0, bidsEvents.length);
-                await orderbookOrders.addToQueue(orderInfoBatch);
+
+                await openseaBidsQueueJob.addToQueue(orderInfoBatch);
               }
             }
           }
@@ -148,7 +150,7 @@ if (config.doWebsocketWork && config.openSeaApiKey) {
       const parsedMetadata = await MetadataApi.parseTokenMetadata(metadata, "opensea");
 
       if (parsedMetadata) {
-        await metadataIndexWrite.addToQueue([parsedMetadata]);
+        await metadataIndexWriteJob.addToQueue([parsedMetadata]);
       }
     } catch (error) {
       logger.error(

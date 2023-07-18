@@ -66,6 +66,28 @@ jobs:
       #   if: steps.semantic.outputs.new_release_version != ''
       #   uses: cycjimmy/semantic-release-action@v3
 
+      - name: Post to Slack
+        if: ${{ always() }}
+        id: slack
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          channel-id: "ci"
+          payload: |
+            {
+              "text": "GitHub build result: ${{ job.status }}\nAuthor: ${{ github.actor }}\n${{ github.event.pull_request.html_url || github.event.head_commit.url }}",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "GitHub build result: ${{ job.status }}\nAuthor: ${{ github.actor }}\n${{ github.event.pull_request.html_url || github.event.head_commit.url }}"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+
   deploy-dev:
     name: Deploy to Development
     runs-on: ubuntu-latest
@@ -97,6 +119,10 @@ jobs:
             ./dev/platform/indexer-websocket-goerli.yaml \
             ${{ github.sha }} \
             indexer-websocket-goerli
+          ./utils/version_update.sh \
+            ./dev/platform/indexer-kafka-worker-goerli.yaml \
+            ${{ github.sha }} \
+            indexer-kafka-worker-goerli
 
   deploy-prod:
     name: Deploy to Production
@@ -170,6 +196,14 @@ jobs:
             ${{ github.sha }} \
             indexer-api-zora
           ./utils/version_update.sh \
+            ./prod/platform/indexer-api-avalanche.yaml \
+            ${{ github.sha }} \
+            indexer-api-avalanche
+          ./utils/version_update.sh \
+            ./prod/platform/indexer-api-base.yaml \
+            ${{ github.sha }} \
+            indexer-api-base
+          ./utils/version_update.sh \
             ./prod/platform/indexer-worker.yaml \
             ${{ github.sha }} \
             indexer-worker
@@ -238,6 +272,14 @@ jobs:
             ${{ github.sha }} \
             indexer-worker-zora
           ./utils/version_update.sh \
+            ./prod/platform/indexer-worker-avalanche.yaml \
+            ${{ github.sha }} \
+            indexer-worker-avalanche
+          ./utils/version_update.sh \
+            ./prod/platform/indexer-worker-base.yaml \
+            ${{ github.sha }} \
+            indexer-worker-base
+          ./utils/version_update.sh \
             ./prod/platform/indexer-websocket-ethereum.yaml \
             ${{ github.sha }} \
             indexer-websocket-ethereum
@@ -261,3 +303,11 @@ jobs:
             ./prod/platform/indexer-kafka-worker-polygon.yaml \
             ${{ github.sha }} \
             indexer-kafka-worker-polygon
+          ./utils/version_update.sh \
+            ./prod/platform/indexer-kafka-worker-arbitrum.yaml \
+            ${{ github.sha }} \
+            indexer-kafka-worker-arbitrum
+          ./utils/version_update.sh \
+            ./prod/platform/indexer-kafka-worker-optimism.yaml \
+            ${{ github.sha }} \
+            indexer-kafka-worker-optimism

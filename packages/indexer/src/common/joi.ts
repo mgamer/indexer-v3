@@ -252,6 +252,9 @@ export const JoiOrderCriteria = Joi.alternatives(
   }),
   Joi.object({
     kind: "custom",
+    data: Joi.object({
+      collection: JoiOrderCriteriaCollection,
+    }),
   })
 );
 
@@ -272,6 +275,7 @@ export const JoiOrder = Joi.object({
   tokenSetId: Joi.string().required(),
   tokenSetSchemaHash: Joi.string().lowercase().pattern(regex.bytes32).required(),
   contract: Joi.string().lowercase().pattern(regex.address),
+  contractKind: Joi.string().lowercase(),
   maker: Joi.string().lowercase().pattern(regex.address).required(),
   taker: Joi.string().lowercase().pattern(regex.address).required(),
   price: JoiPrice.description("Return native currency unless displayCurrency contract was passed."),
@@ -299,6 +303,7 @@ export const JoiOrder = Joi.object({
   isDynamic: Joi.boolean(),
   createdAt: Joi.string().required().description("Time when added to indexer"),
   updatedAt: Joi.string().required().description("Time when updated in indexer"),
+  originatedAt: Joi.string().allow(null).description("Time when created by maker"),
   rawData: Joi.object().optional().allow(null),
   isNativeOffChainCancellable: Joi.boolean().optional(),
   depth: JoiOrderDepth,
@@ -318,8 +323,7 @@ export const getJoiDynamicPricingObject = async (
   raw_data:
     | Sdk.SeaportBase.Types.OrderComponents
     | Sdk.Sudoswap.OrderParams
-    | Sdk.Nftx.Types.OrderParams
-    | Sdk.CollectionXyz.Types.OrderParams,
+    | Sdk.Nftx.Types.OrderParams,
   currency?: string,
   missing_royalties?: []
 ) => {
@@ -390,28 +394,7 @@ export const getJoiDynamicPricingObject = async (
         ),
       },
     };
-  } else if (kind === "collectionxyz") {
-    // Pool orders
-    return {
-      kind: "pool",
-      data: {
-        pool: (raw_data as Sdk.CollectionXyz.Types.OrderParams).pool,
-        prices: await Promise.all(
-          ((raw_data as Sdk.CollectionXyz.Types.OrderParams).extra.prices as string[]).map(
-            (price) =>
-              getJoiPriceObject(
-                {
-                  gross: {
-                    amount: bn(price).add(missingRoyalties).toString(),
-                  },
-                },
-                floorAskCurrency
-              )
-          )
-        ),
-      },
-    };
-  } else if (kind === "nftx") {
+  } else if (kind === "collectionxyz" || kind === "nftx" || kind === "caviar-v1") {
     // Pool orders
     return {
       kind: "pool",
@@ -472,6 +455,8 @@ export const getJoiOrderDepthObject = async (
       );
     }
 
+    case "caviar-v1":
+    case "collectionxyz":
     case "nftx": {
       const order = rawData as Sdk.Nftx.Types.OrderParams;
       return Promise.all(
@@ -542,6 +527,7 @@ export const getJoiOrderObject = async (order: {
   tokenSetId: string;
   tokenSetSchemaHash: Buffer;
   contract: Buffer;
+  contractKind: string;
   maker: Buffer;
   taker: Buffer;
   prices: {
@@ -569,6 +555,7 @@ export const getJoiOrderObject = async (order: {
   isReservoir: boolean;
   createdAt: number;
   updatedAt: number;
+  originatedAt: number | null;
   includeRawData: boolean;
   rawData:
     | Sdk.SeaportBase.Types.OrderComponents
@@ -632,6 +619,7 @@ export const getJoiOrderObject = async (order: {
     tokenSetId: order.tokenSetId,
     tokenSetSchemaHash: fromBuffer(order.tokenSetSchemaHash),
     contract: fromBuffer(order.contract),
+    contractKind: order.contractKind,
     maker: fromBuffer(order.maker),
     taker: fromBuffer(order.taker),
     price: await getJoiPriceObject(
@@ -654,19 +642,18 @@ export const getJoiOrderObject = async (order: {
     validUntil: Number(order.validUntil),
     quantityFilled: Number(order.quantityFilled),
     quantityRemaining: Number(order.quantityRemaining),
-    dynamicPricing:
-      order.includeDynamicPricing && order.dynamic
-        ? await getJoiDynamicPricingObject(
-            order.dynamic,
-            order.kind,
-            order.normalizeRoyalties,
-            order.rawData,
-            currency,
-            order.missingRoyalties ? order.missingRoyalties : undefined
-          )
-        : order.dynamic !== undefined
-        ? null
-        : undefined,
+    dynamicPricing: order.includeDynamicPricing
+      ? await getJoiDynamicPricingObject(
+          Boolean(order.dynamic),
+          order.kind,
+          order.normalizeRoyalties,
+          order.rawData,
+          currency,
+          order.missingRoyalties ? order.missingRoyalties : undefined
+        )
+      : order.dynamic !== undefined
+      ? null
+      : undefined,
     criteria: order.criteria,
     source: {
       id: source?.address,
@@ -683,6 +670,7 @@ export const getJoiOrderObject = async (order: {
       order.dynamic !== undefined ? Boolean(order.dynamic || order.kind === "sudoswap") : undefined,
     createdAt: new Date(order.createdAt * 1000).toISOString(),
     updatedAt: new Date(order.updatedAt * 1000).toISOString(),
+    originatedAt: order.originatedAt ? new Date(order.originatedAt).toISOString() : null,
     rawData: order.includeRawData ? order.rawData : undefined,
     isNativeOffChainCancellable: order.includeRawData
       ? (order.rawData as any)?.zone ===

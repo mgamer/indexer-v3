@@ -1,12 +1,11 @@
 import cron from "node-cron";
 
 import { logger } from "@/common/logger";
-import { safeWebSocketSubscription } from "@/common/provider";
+import { baseProvider, safeWebSocketSubscription } from "@/common/provider";
 import { redlock } from "@/common/redis";
 import { config } from "@/config/index";
 import { getNetworkSettings } from "@/config/network";
-import * as realtimeEventsSync from "@/jobs/events-sync/realtime-queue";
-import * as realtimeEventsSyncV2 from "@/jobs/events-sync/realtime-queue-v2";
+import { eventsSyncRealtimeJob } from "@/jobs/events-sync/events-sync-realtime-job";
 
 // For syncing events we have two separate job queues. One is for
 // handling backfilling of past event while the other one handles
@@ -19,13 +18,6 @@ import * as realtimeEventsSyncV2 from "@/jobs/events-sync/realtime-queue-v2";
 // and nft transfer events writes which can run into deadlocks on
 // concurrent upserts of the balances):
 // https://stackoverflow.com/questions/46366324/postgres-deadlocks-on-concurrent-upserts
-
-import "@/jobs/events-sync/backfill-queue";
-import "@/jobs/events-sync/block-check-queue";
-import "@/jobs/events-sync/process/backfill";
-import "@/jobs/events-sync/process/realtime";
-import "@/jobs/events-sync/realtime-queue";
-import "@/jobs/events-sync/realtime-queue-v2";
 
 // BACKGROUND WORKER ONLY
 if (config.doBackgroundWork && config.catchup) {
@@ -42,7 +34,10 @@ if (config.doBackgroundWork && config.catchup) {
         )
         .then(async () => {
           try {
-            await realtimeEventsSync.addToQueue();
+            if (!config.master || !networkSettings.enableWebSocket) {
+              const block = await baseProvider.getBlockNumber();
+              await eventsSyncRealtimeJob.addToQueue({ block });
+            }
             logger.info("events-sync-catchup", "Catching up events");
           } catch (error) {
             logger.error("events-sync-catchup", `Failed to catch up events: ${error}`);
@@ -65,10 +60,7 @@ if (config.doBackgroundWork && config.catchup) {
         logger.info("events-sync-catchup", `Detected new block ${block}`);
 
         try {
-          await realtimeEventsSync.addToQueue();
-          if (config.enableRealtimeV2BlockQueue) {
-            await realtimeEventsSyncV2.addToQueue({ block });
-          }
+          await eventsSyncRealtimeJob.addToQueue({ block });
         } catch (error) {
           logger.error("events-sync-catchup", `Failed to catch up events: ${error}`);
         }

@@ -15,4 +15,6 @@ export const Exchange: ChainIdToAddress = {
   [Network.BaseGoerli]: "0x00000000000000adc04c56bf30ac9d3c0aaf14dc",
   [Network.ArbitrumNova]: "0x00000000000000adc04c56bf30ac9d3c0aaf14dc",
   [Network.Zora]: "0x00000000000000adc04c56bf30ac9d3c0aaf14dc",
+  [Network.Avalanche]: "0x00000000000000adc04c56bf30ac9d3c0aaf14dc",
+  [Network.Base]: "0x00000000000000adc04c56bf30ac9d3c0aaf14dc",
 };

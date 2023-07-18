@@ -3,7 +3,7 @@ import { toBuffer } from "@/common/utils";
 import { AbstractRabbitMqJobHandler, BackoffStrategy } from "@/jobs/abstract-rabbit-mq-job-handler";
 import { logger } from "@/common/logger";
 import { Collections } from "@/models/collections";
-import * as metadataIndexFetch from "@/jobs/metadata-index/fetch-queue";
+import { metadataIndexFetchJob } from "@/jobs/metadata-index/metadata-fetch-job";
 
 export type NonFlaggedFloorQueueJobPayload = {
   kind: string;
@@ -17,6 +17,7 @@ export class NonFlaggedFloorQueueJob extends AbstractRabbitMqJobHandler {
   queueName = "collection-updates-non-flagged-floor-ask-queue";
   maxRetries = 10;
   concurrency = 5;
+  consumerTimeout = 60000;
   backoff = {
     type: "exponential",
     delay: 20000,
@@ -153,12 +154,12 @@ export class NonFlaggedFloorQueueJob extends AbstractRabbitMqJobHandler {
       if (nonFlaggedCollectionFloorAsk?.token_id) {
         const collection = await Collections.getById(collectionResult.collection_id);
 
-        await metadataIndexFetch.addToQueue(
+        await metadataIndexFetchJob.addToQueue(
           [
             {
               kind: "single-token",
               data: {
-                method: metadataIndexFetch.getIndexingMethod(collection?.community || null),
+                method: metadataIndexFetchJob.getIndexingMethod(collection?.community || null),
                 contract: payload.contract,
                 tokenId: payload.tokenId,
                 collection: collectionResult.collection_id,
