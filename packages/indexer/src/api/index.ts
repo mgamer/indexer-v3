@@ -208,7 +208,7 @@ export const start = async (): Promise<void> => {
             .response(blockedRouteResponse)
             .type("application/json")
             .code(429)
-            .header("tier", `${tier}`)
+            .header("api-key-tier", `${tier}`)
             .takeover();
         }
       }
@@ -289,7 +289,7 @@ export const start = async (): Promise<void> => {
               .response(tooManyRequestsResponse)
               .type("application/json")
               .code(429)
-              .header("tier", `${tier}`)
+              .header("api-key-tier", `${tier}`)
               .takeover();
           } else {
             logger.warn("rate-limiter", `Rate limit error ${error}`);
@@ -340,7 +340,7 @@ export const start = async (): Promise<void> => {
       }
 
       if (!(response instanceof Boom)) {
-        typedResponse.header("tier", request.headers["tier"]);
+        typedResponse.header("api-key-tier", request.headers["tier"]);
         typedResponse.header("X-RateLimit-Limit", request.headers["X-RateLimit-Limit"]);
         typedResponse.header("X-RateLimit-Remaining", request.headers["X-RateLimit-Remaining"]);
         typedResponse.header("X-RateLimit-Reset", request.headers["X-RateLimit-Reset"]);
