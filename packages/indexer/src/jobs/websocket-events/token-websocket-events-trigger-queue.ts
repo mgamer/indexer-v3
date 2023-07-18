@@ -242,6 +242,12 @@ if (config.doBackgroundWork && config.doWebsocketServerWork && config.kafkaBroke
             }
 
             if (!changed.length) {
+              logger.info(
+                QUEUE_NAME,
+                `No changes detected for event. before=${JSON.stringify(
+                  data.before
+                )}, after=${JSON.stringify(data.after)}`
+              );
               return;
             }
           }
