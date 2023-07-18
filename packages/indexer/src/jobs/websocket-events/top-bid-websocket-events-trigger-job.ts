@@ -40,6 +40,13 @@ export class TopBidWebSocketEventsTriggerJob extends AbstractRabbitMqJobHandler 
         );
 
         return;
+      } else {
+        logger.info(
+          this.queueName,
+          `Top bid on collection is lower than current bid. data=${JSON.stringify(
+            data
+          )}, topBidOnCollection=${topBidOnCollection}`
+        );
       }
     }
 
