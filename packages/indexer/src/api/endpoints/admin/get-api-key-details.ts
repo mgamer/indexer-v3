@@ -15,7 +15,7 @@ export const getApiKeyDetails: RouteOptions = {
       "x-admin-api-key": Joi.string().required(),
     }).options({ allowUnknown: true }),
     params: Joi.object({
-      key: Joi.string().description("The API key"),
+      key: Joi.string().description("The API key").required(),
     }),
   },
   response: {
