@@ -63,7 +63,7 @@ export const getApiKeyDetails: RouteOptions = {
         createdAt: new Date(apiKey.createdAt).toISOString(),
       };
     } catch (error) {
-      logger.error("get-api-key-details-handler", `Handler failure: ${error}`);
+      logger.error("get-api-key-details-handler", `Handler failure: ${error} key ${params.key}`);
       throw error;
     }
   },
