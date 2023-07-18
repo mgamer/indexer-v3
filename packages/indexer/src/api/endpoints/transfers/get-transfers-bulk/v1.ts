@@ -62,6 +62,13 @@ export const getTransfersBulkV1Options: RouteOptions = {
         .description(
           "Order the items are returned in the response. Options are `timestamp`, and `updated_at`. Default is `timestamp`."
         ),
+      sortDirection: Joi.string()
+        .lowercase()
+        .when("orderBy", {
+          is: Joi.valid("updated_at"),
+          then: Joi.valid("asc", "desc").default("desc"),
+          otherwise: Joi.valid("desc").default("desc"),
+        }),
       continuation: Joi.string()
         .pattern(regex.base64)
         .description("Use continuation token to request next offset of items."),
@@ -201,12 +208,21 @@ export const getTransfersBulkV1Options: RouteOptions = {
             nft_transfer_events.batch_index DESC
         `;
       } else if (query.orderBy == "updated_at") {
-        baseQuery += `
+        if (query.sortDirection === "asc") {
+          baseQuery += `
+          ORDER BY
+            nft_transfer_events.updated_at ASC,
+            nft_transfer_events.address ASC,
+            nft_transfer_events.token_id ASC
+        `;
+        } else {
+          baseQuery += `
           ORDER BY
             nft_transfer_events.updated_at DESC,
             nft_transfer_events.address DESC,
             nft_transfer_events.token_id DESC
         `;
+        }
       }
 
       // Pagination
