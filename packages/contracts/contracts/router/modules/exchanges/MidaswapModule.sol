@@ -74,7 +74,6 @@ contract MidaswapModule is BaseExchangeModule {
     chargeERC20Fees(fees, params.token, params.amount)
   {
     // Approve the router if needed
-    // _approveERC20IfNeeded(params.token, address(this), params.amount);
     uint256 _length = nfts.length;
     for (uint i; i < _length; ) {
       // Execute fill

@@ -109,14 +109,6 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
             (item, index) => binLower + index * binstep
           );
 
-          // const price = ethers.utils
-          //   .parseEther(Sdk.Midaswap.Order.binToPriceFixed(tmpPriceList[0]))
-          //   .add(
-          //     ethers.utils
-          //       .parseEther(Sdk.Midaswap.Order.binToPriceFixed(tmpPriceList[0]))
-          //       .mul(+pool.roralty + +pool.freeRate)
-          //       .div(10000)
-          //   );
           const price = ethers.utils
             .parseEther(
               new Decimal(Sdk.Midaswap.Order.binToPriceFixed(tmpPriceList[0]))
@@ -531,8 +523,6 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
           const cancelledToTillableOrders = cancelledOrders.filter(
             (item) => item.raw_data.extra.prices[0].bin <= floorPriceBin
           );
-
-          // console.log(id, nftId, lpTokenId, tradeBin, floorPriceBin, "id");
 
           // Update the sell order with the same lpTokenId
           if (sellOrders.length) {

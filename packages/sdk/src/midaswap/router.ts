@@ -7,7 +7,7 @@ import { TxData, generateSourceBytes } from "../utils";
 
 import RouterAbi from "./abis/Router.json";
 
-// Sudoswap:
+// Midaswap:
 // - fully on-chain
 // - pooled liquidity
 

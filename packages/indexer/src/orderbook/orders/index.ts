@@ -158,6 +158,8 @@ export const getOrderSourceByOrderKind = async (
       case "sudoswap":
       case "sudoswap-v2":
         return sources.getOrInsert("sudoswap.xyz");
+      case "midaswap":
+        return sources.getOrInsert("midaswap.org");
       case "nftx":
         return sources.getOrInsert("nftx.io");
       case "blur":

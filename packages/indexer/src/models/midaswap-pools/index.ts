@@ -3,15 +3,10 @@ import { fromBuffer, toBuffer } from "@/common/utils";
 
 export type MidaswapPool = {
   address: string;
-  // lpTokenAddress: string;
   nft: string;
   token: string;
   freeRate: string;
   roralty: string;
-  // bondingCurve: string;
-  // pairKind: number;
-  // propertyChecker: string;
-  // tokenId?: string;
 };
 
 export const saveMidaswapPool = async (midaswapPool: MidaswapPool) => {
@@ -38,11 +33,6 @@ export const saveMidaswapPool = async (midaswapPool: MidaswapPool) => {
       token: toBuffer(midaswapPool.token),
       freeRate: toBuffer(midaswapPool.freeRate),
       roralty: toBuffer(midaswapPool.roralty),
-      // bondingCurve: toBuffer(midaswapPool.bondingCurve),
-      // poolKind: midaswapPool.poolKind,
-      // pairKind: midaswapPool.pairKind,
-      // propertyChecker: toBuffer(midaswapPool.propertyChecker),
-      // tokenId: midaswapPool.tokenId,
     }
   );
 
@@ -70,10 +60,5 @@ export const getMidaswapPool = async (address: string) => {
     token: fromBuffer(result.token),
     freeRate: fromBuffer(result.free_rate),
     roralty: fromBuffer(result.roralty),
-    // bondingCurve: fromBuffer(result.bonding_curve),
-    // poolKind: result.pool_kind,
-    // pairKind: result.pair_kind,
-    // propertyChecker: fromBuffer(result.property_checker),
-    // tokenId: result.token_id,
   };
 };

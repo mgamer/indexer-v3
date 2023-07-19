@@ -5,12 +5,6 @@ import * as midaswapUtils from "@/utils/midaswap";
 import { BigNumber } from "ethers";
 
 export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChainData) => {
-  // For keeping track of all individual trades per transaction
-  // const trades = {
-  //   buy: new Map<string, number>(),
-  //   sell: new Map<string, number>(),
-  // };
-
   logger.info("midaswap-debug", JSON.stringify(events));
   // Handle the events
   for (const { subKind, baseEventParams, log } of events) {

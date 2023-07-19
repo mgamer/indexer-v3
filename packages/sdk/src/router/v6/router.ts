@@ -3541,7 +3541,6 @@ export class Router {
           break;
         }
 
-        // todo
         case "midaswap": {
           const order = detail.order as Sdk.Midaswap.Order;
           const module = this.contracts.midaswapModule;
@@ -3553,10 +3552,7 @@ export class Router {
               data: module.interface.encodeFunctionData("sell", [
                 order.params.tokenX,
                 detail.contractKind === "erc721" ? detail.tokenId : detail.amount ?? 1,
-                bn(order.params.extra.prices[0].price).sub(
-                  // Take into account the protocol fee of 0.5%
-                  bn(order.params.extra.prices[0].price).mul(50).div(10000)
-                ),
+                bn(order.params.extra.prices[0].price),
                 {
                   fillTo: taker,
                   refundTo: taker,
