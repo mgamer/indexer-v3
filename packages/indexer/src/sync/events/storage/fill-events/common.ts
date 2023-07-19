@@ -180,9 +180,8 @@ export const removeEvents = async (block: number, blockHash: string) => {
         events.map((event) =>
           WebsocketEventRouter({
             eventInfo: {
-              tx_hash: event.tx_hash,
-              log_index: event.log_index,
-              batch_index: event.batch_index,
+              before: event,
+              after: event,
               trigger: "update",
               offset: "",
             },

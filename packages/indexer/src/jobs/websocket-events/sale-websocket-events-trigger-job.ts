@@ -222,7 +222,7 @@ interface SaleInfo {
 }
 
 export type SaleWebsocketEventInfo = {
-  before: SaleInfo;
+  before: SaleInfo | undefined;
   after: SaleInfo;
   trigger: "insert" | "update" | "delete";
   offset: string;

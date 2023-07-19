@@ -158,9 +158,12 @@ export const processOnChainData = async (data: OnChainData, backfill?: boolean) 
         ...allFillEventsForWebsocket.map((event) =>
           WebsocketEventRouter({
             eventInfo: {
-              tx_hash: event.baseEventParams.txHash,
-              log_index: event.baseEventParams.logIndex,
-              batch_index: event.baseEventParams.batchIndex,
+              before: undefined,
+              after: {
+                tx_hash: event.baseEventParams.txHash,
+                log_index: event.baseEventParams.logIndex,
+                batch_index: event.baseEventParams.batchIndex,
+              },
               trigger: "insert",
               offset: "",
             },
