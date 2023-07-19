@@ -18,7 +18,6 @@ export type topBidPayload = {
   tokenSetId: string;
   txHash: string | null;
   txTimestamp: number | null;
-  collectionId: string | null;
 };
 
 export async function processTopBid(payload: topBidPayload, queueName: string) {

@@ -101,14 +101,10 @@ export class OrderUpdatesByIdJob extends AbstractRabbitMqJobHandler {
                 orders.originated_at AS "originatedAt",
                 orders.created_at AS "createdAt",
                 token_sets_tokens.contract,
-                token_sets_tokens.token_id AS "tokenId",
-                tokens.collection_id AS "collectionId",
+                token_sets_tokens.token_id AS "tokenId"
               FROM orders
               JOIN token_sets_tokens
                 ON orders.token_set_id = token_sets_tokens.token_set_id
-              JOIN tokens
-                ON token_sets_tokens.contract = tokens.contract
-                AND token_sets_tokens.token_id = tokens.token_id
               WHERE orders.id = $/id/
               LIMIT 1
             `,
@@ -126,7 +122,6 @@ export class OrderUpdatesByIdJob extends AbstractRabbitMqJobHandler {
             kind: trigger.kind,
             txHash: trigger.txHash || null,
             txTimestamp: trigger.txTimestamp || null,
-            collectionId: order?.collectionId,
           };
 
           if (tokenSetId.startsWith("token")) {
