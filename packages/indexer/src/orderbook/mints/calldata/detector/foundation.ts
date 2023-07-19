@@ -1,13 +1,7 @@
 import { Interface } from "@ethersproject/abi";
 import { AddressZero } from "@ethersproject/constants";
-// import { HashZero, MaxUint256 } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
-// import { keccak256 } from "@ethersproject/keccak256";
-// import { keccak256 as solidityKeccak256 } from "@ethersproject/solidity";
-// import { parseEther } from "@ethersproject/units";
 import * as Sdk from "@reservoir0x/sdk";
-// import axios from "axios";
-// import MerkleTree from "merkletreejs";
 
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
@@ -18,12 +12,6 @@ import {
   getCollectionMints,
   simulateAndUpsertCollectionMint,
 } from "@/orderbook/mints";
-// import {
-//   AllowlistItem,
-//   allowlistExists,
-//   createAllowlist,
-//   getAllowlist,
-// } from "@/orderbook/mints/allowlists";
 import { getStatus, toSafeTimestamp } from "@/orderbook/mints/calldata/helpers";
 
 const STANDARD = "foundation";
@@ -177,39 +165,3 @@ export const refreshByCollection = async (collection: string) => {
     }
   }
 };
-
-// const hashFn = (item: AllowlistItem) =>
-//   solidityKeccak256(
-//     ["address", "uint256", "uint256"],
-//     [item.address, item.maxMints ?? 0, item.price ?? MaxUint256]
-//   );
-
-// const generateMerkleTree = (
-//   items: AllowlistItem[]
-// ): {
-//   root: string;
-//   tree: MerkleTree;
-// } => {
-//   // Reference:
-//   // https://docs.decent.xyz/docs/editions#deploy
-
-//   const tree = new MerkleTree(items.map(hashFn), keccak256, {
-//     sortPairs: true,
-//   });
-
-//   return {
-//     root: tree.getHexRoot(),
-//     tree,
-//   };
-// };
-
-// type ProofValue = string[];
-
-// export const generateProofValue = async (
-//   collectionMint: CollectionMint,
-//   address: string
-// ): Promise<ProofValue> => {
-//   const items = await getAllowlist(collectionMint.allowlistId!);
-//   const item = items.find((i) => i.address === address)!;
-//   return generateMerkleTree(items).tree.getHexProof(hashFn(item));
-// };
