@@ -73,9 +73,8 @@ export const getExecuteBuyV7Options: RouteOptions = {
                   "sudoswap",
                   "nftx",
                   "alienswap"
-                )
-                .required(),
-              data: Joi.object().required(),
+                ),
+              data: Joi.object(),
             }).description("Optional raw order to fill."),
             fillType: Joi.string()
               .valid("trade", "mint", "preferMint")
