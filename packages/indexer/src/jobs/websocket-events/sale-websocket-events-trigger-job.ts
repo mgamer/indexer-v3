@@ -168,11 +168,9 @@ export class SaleWebsocketEventsTriggerQueueJob extends AbstractRabbitMqJobHandl
             if (!changed.length) {
               logger.info(
                 this.queueName,
-                JSON.stringify({
-                  message: "Sale updated for value not in mapping",
-                  before: data.before,
-                  after: data.after,
-                })
+                `No changes detected for event. before=${JSON.stringify(
+                  data.before
+                )}, after=${JSON.stringify(data.after)}`
               );
               return;
             }
