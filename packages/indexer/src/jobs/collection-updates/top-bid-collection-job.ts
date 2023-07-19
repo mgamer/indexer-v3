@@ -157,9 +157,6 @@ export class TopBidCollectionJob extends AbstractRabbitMqJobHandler {
           eventKind: WebsocketEventKind.NewTopBid,
           eventInfo: {
             orderId: collectionTopBid?.order_id,
-            orderValue: collectionTopBid?.top_buy_value,
-            collectionId: payload.collectionId,
-            skipCollectionTopBidCheck: true,
           },
         });
       }
