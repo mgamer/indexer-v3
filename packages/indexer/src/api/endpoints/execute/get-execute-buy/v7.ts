@@ -689,7 +689,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
         if (item.collection) {
           let mintAvailable = false;
           if (item.fillType === "mint" || item.fillType === "preferMint") {
-            const collectionData = await idb.one(
+            const collectionData = await idb.oneOrNone(
               `
                 SELECT
                   contracts.kind AS token_kind
@@ -763,7 +763,11 @@ export const getExecuteBuyV7Options: RouteOptions = {
                       // The max quantity is the amount mintable on the collection
                       maxQuantities.push({
                         itemIndex,
-                        maxQuantity: amountMintable ? amountMintable.toString() : null,
+                        maxQuantity: mint.tokenId
+                          ? quantityToMint.toString()
+                          : amountMintable
+                          ? amountMintable.toString()
+                          : null,
                       });
                     }
 
@@ -871,7 +875,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
 
           let mintAvailable = false;
           if (item.fillType === "mint" || item.fillType === "preferMint") {
-            const collectionData = await idb.one(
+            const collectionData = await idb.oneOrNone(
               `
                 SELECT
                   collections.id,
