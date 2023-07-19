@@ -75,10 +75,11 @@ export class TokenAttributeWebsocketEventsTriggerQueueJob extends AbstractRabbit
           eventType = "token-attributes.updated";
           if (data.before) {
             for (const key in changedMapping) {
-              // eslint-disable-next-line
-              // @ts-ignore
-              if (data.before[key] !== data.after[key]) {
-                changed.push(key);
+              if (
+                data.before[key as keyof TokenAttributeInfo] !==
+                data.after[key as keyof TokenAttributeInfo]
+              ) {
+                changed.push(changedMapping[key as keyof typeof changedMapping]);
               }
             }
 
