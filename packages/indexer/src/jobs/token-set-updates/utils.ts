@@ -12,6 +12,7 @@ import {
   topBidCollectionJob,
   TopBidCollectionJobPayload,
 } from "@/jobs/collection-updates/top-bid-collection-job";
+import { topBidsCache } from "@/models/top-bids-caching";
 
 export type topBidPayload = {
   kind: string;
@@ -100,13 +101,22 @@ export async function processTopBid(payload: topBidPayload, queueName: string) {
         tokenSetTopBid[0].topBuyId &&
         _.isNull(tokenSetTopBid[0].collectionId)
       ) {
+        const [, contract, tokenId] = payload.tokenSetId.split(":");
+
+        let collectionTopBidValue = null;
+        if (contract && tokenId) {
+          collectionTopBidValue = await topBidsCache.getCollectionTopBidValue(
+            contract,
+            parseInt(tokenId)
+          );
+        }
         //  Only trigger websocket event for non collection offers.
         await WebsocketEventRouter({
           eventKind: WebsocketEventKind.NewTopBid,
           eventInfo: {
             orderId: tokenSetTopBid[0].topBuyId,
             orderValue: tokenSetTopBid[0].topBuyValue,
-            collectionId: tokenSetTopBid[0].collectionId,
+            collectionTopBidValue,
             skipCollectionTopBidCheck: false,
           },
         });
