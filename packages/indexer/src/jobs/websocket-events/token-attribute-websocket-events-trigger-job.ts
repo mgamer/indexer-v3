@@ -74,28 +74,22 @@ export class TokenAttributeWebsocketEventsTriggerQueueJob extends AbstractRabbit
         case "update":
           eventType = "token-attributes.updated";
           if (data.before) {
-            /*
-              for (const key in changedMapping) {
-                // eslint-disable-next-line
-                // @ts-ignore
-                if (data.before[key] !== data.after[key]) {
-                  changed.push(key);
-                }
+            for (const key in changedMapping) {
+              // eslint-disable-next-line
+              // @ts-ignore
+              if (data.before[key] !== data.after[key]) {
+                changed.push(key);
               }
+            }
 
-              if (!changed.length) {
-                return;
-              }
-              */
-
-            logger.info(
-              this.queueName,
-              JSON.stringify({
-                message: "Token attribute updated",
-                before: data.before,
-                after: data.after,
-              })
-            );
+            if (!changed.length) {
+              logger.info(
+                this.queueName,
+                `No changes detected for event. before=${JSON.stringify(
+                  data.before
+                )}, after=${JSON.stringify(data.after)}`
+              );
+            }
           }
           break;
         case "delete":
