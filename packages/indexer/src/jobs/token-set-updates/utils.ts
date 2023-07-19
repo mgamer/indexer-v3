@@ -102,12 +102,15 @@ export async function processTopBid(payload: topBidPayload, queueName: string) {
         _.isNull(tokenSetTopBid[0].collectionId)
       ) {
         const [, contract, tokenId] = payload.tokenSetId.split(":");
-
+        logger.info(
+          queueName,
+          `Triggering websocket event for token set top-bid. contract=${contract}, tokenId=${tokenId}, topBuyId=${tokenSetTopBid[0].topBuyId}, topBuyValue=${tokenSetTopBid[0].topBuyValue}`
+        );
         let collectionTopBidValue = null;
         if (contract && tokenId) {
           collectionTopBidValue = await topBidsCache.getCollectionTopBidValue(
             contract,
-            parseInt(tokenId)
+            Number(tokenId)
           );
         }
         //  Only trigger websocket event for non collection offers.
