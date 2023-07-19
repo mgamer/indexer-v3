@@ -4,6 +4,7 @@ import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
 import Joi from "joi";
 import _ from "lodash";
+import * as Boom from "@hapi/boom";
 
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
@@ -555,6 +556,10 @@ export const getTokensV6Options: RouteOptions = {
       if (query.collectionsSetId) {
         collections = await CollectionSets.getCollectionsIds(query.collectionsSetId);
 
+        if (_.isEmpty(collections)) {
+          throw Boom.badRequest(`No collections for collection set ${query.collectionsSetId}`);
+        }
+
         if (collections.length > 20) {
           baseQuery += `
             JOIN collections_sets_collections csc
@@ -839,13 +844,6 @@ export const getTokensV6Options: RouteOptions = {
 
       // Break query into UNION of results for each collectionId for sets up to 20 collections
       if (query.collectionsSetId && collections.length <= 20) {
-        if (collections.length === 0) {
-          return {
-            tokens: [],
-            continuation: null,
-          };
-        }
-
         const collectionsSetQueries = [];
         const collectionsSetSort = getSort(query.sortBy, true);
 

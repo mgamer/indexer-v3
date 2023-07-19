@@ -4,6 +4,7 @@ import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
 import Joi from "joi";
 import _ from "lodash";
+import * as Boom from "@hapi/boom";
 
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
@@ -847,11 +848,8 @@ export const getTokensV5Options: RouteOptions = {
         const collectionsSetQueries = [];
         const collections = await CollectionSets.getCollectionsIds(query.collectionsSetId);
 
-        if (collections.length === 0) {
-          return {
-            tokens: [],
-            continuation: null,
-          };
+        if (_.isEmpty(collections)) {
+          throw Boom.badRequest(`No collections for collection set ${query.collectionsSetId}`);
         }
 
         const collectionsSetSort = getSort(query.sortBy, true);
