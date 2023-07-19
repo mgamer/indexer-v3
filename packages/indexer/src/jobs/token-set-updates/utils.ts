@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { idb, ridb } from "@/common/db";
-import _, { now } from "lodash";
+import _ from "lodash";
 import {
   WebsocketEventKind,
   WebsocketEventRouter,
@@ -12,15 +12,13 @@ import {
   topBidCollectionJob,
   TopBidCollectionJobPayload,
 } from "@/jobs/collection-updates/top-bid-collection-job";
-import { getNetworkSettings } from "@/config/network";
-import { Collections } from "@/models/collections";
-import { redis } from "@/common/redis";
 
 export type topBidPayload = {
   kind: string;
   tokenSetId: string;
   txHash: string | null;
   txTimestamp: number | null;
+  collectionId: string | null;
 };
 
 export async function processTopBid(payload: topBidPayload, queueName: string) {
@@ -103,37 +101,11 @@ export async function processTopBid(payload: topBidPayload, queueName: string) {
         tokenSetTopBid[0].topBuyId &&
         _.isNull(tokenSetTopBid[0].collectionId)
       ) {
-        const collectionTopBidValue = await getTopBidValue(payload.tokenSetId);
-
-        // if its a single token top bid, check if its lower than the top bid on the collection and skip if it is
-        if (
-          collectionTopBidValue &&
-          Number(collectionTopBidValue) > Number(tokenSetTopBid[0].topBuyValue)
-        ) {
-          logger.info(
-            queueName,
-            `Top bid on collection is higher than current bid, no event trigger. data=${JSON.stringify(
-              {
-                orderId: tokenSetTopBid[0].topBuyId,
-              }
-            )}`
-          );
-
-          return;
-        } else {
-          logger.info(
-            queueName,
-            `Top bid on collection is lower than current bid, trigger event. data=${JSON.stringify({
-              orderId: tokenSetTopBid[0].topBuyId,
-            })}, topBidOnCollection=${collectionTopBidValue}`
-          );
-        }
-
-        //  Only trigger websocket event for non collection offers.
         await WebsocketEventRouter({
           eventKind: WebsocketEventKind.NewTopBid,
           eventInfo: {
             orderId: tokenSetTopBid[0].topBuyId,
+            isSingleTokenBid: true,
           },
         });
       }
@@ -163,60 +135,3 @@ export async function processTopBid(payload: topBidPayload, queueName: string) {
     throw error;
   }
 }
-
-const getTopBidValue = async (tokenSetId: string): Promise<number | null> => {
-  const [, contract, tokenId] = tokenSetId.split(":");
-  if (!contract || !tokenId) {
-    return null;
-  }
-
-  let collection = null;
-  let collectionTopBidValue = null;
-
-  if (getNetworkSettings().multiCollectionContracts.includes(contract)) {
-    collection = await Collections.getByContractAndTokenId(contract, Number(tokenId));
-  } else {
-    collection = contract;
-  }
-
-  collectionTopBidValue = await redis.get(`collection-top-bid:${collection}`);
-  if (collectionTopBidValue) {
-    return Number(collectionTopBidValue);
-  }
-
-  // if not found in cache, get from db and set cache
-  const collectionTopBid = await ridb.oneOrNone(
-    `
-            SELECT
-              top_buy_value,
-              y.valid_until
-            FROM collections
-            LEFT JOIN LATERAL (
-              SELECT
-              coalesce(
-                nullif(date_part('epoch', upper(order_valid_between)), 'Infinity'),
-                0
-              ) AS valid_until
-              FROM orders
-              WHERE orders.id = collections.top_buy_id
-            ) y ON TRUE
-            WHERE id = $/collection/
-          `,
-    {
-      collection,
-    }
-  );
-
-  if (collectionTopBid) {
-    collectionTopBidValue = collectionTopBid?.top_buy_value;
-    const expiry = collectionTopBid?.valid_until - now();
-    await redis.set(
-      `collection-top-bid:${collection}`,
-      Number(collectionTopBidValue.toString()),
-      "EX",
-      expiry
-    );
-  }
-
-  return collectionTopBidValue;
-};
