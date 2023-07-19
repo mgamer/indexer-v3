@@ -8,7 +8,7 @@ export type TransferWebsocketEventsTriggerQueueJobPayload = {
   data: TransferWebsocketEventInfo;
 };
 
-//const changedMapping = {};
+const changedMapping = {};
 
 export class TransferWebsocketEventsTriggerQueueJob extends AbstractRabbitMqJobHandler {
   queueName = "transfer-websocket-events-trigger-queue";
@@ -44,34 +44,28 @@ export class TransferWebsocketEventsTriggerQueueJob extends AbstractRabbitMqJobH
       };
 
       let eventType = "";
-      //const changed = [];
+      const changed = [];
       if (data.after.is_deleted) eventType = "transfer.deleted";
       else if (data.trigger === "insert") eventType = "transfer.created";
       else if (data.trigger === "update") {
         eventType = "transfer.updated";
         if (data.before) {
-          /*
-            for (const key in changedMapping) {
-              // eslint-disable-next-line
-              // @ts-ignore
-              if (data.before[key] !== data.after[key]) {
-                changed.push(key);
-              }
+          for (const key in changedMapping) {
+            // eslint-disable-next-line
+            // @ts-ignore
+            if (data.before[key] !== data.after[key]) {
+              changed.push(key);
             }
+          }
 
-            if (!changed.length) {
-              return;
-            }
-            */
-
-          logger.info(
-            this.queueName,
-            JSON.stringify({
-              message: "Transfer updated",
-              before: data.before,
-              after: data.after,
-            })
-          );
+          if (!changed.length) {
+            logger.info(
+              this.queueName,
+              `No changes detected for event. before=${JSON.stringify(
+                data.before
+              )}, after=${JSON.stringify(data.after)}`
+            );
+          }
         }
       }
 
