@@ -35,12 +35,8 @@ export const getCollectionBidAskMidpointOracleV1Options: RouteOptions = {
       twapSeconds: Joi.number()
         .greater(0)
         .default(24 * 3600),
-      eip3668Calldata: Joi.string(),
       collection: Joi.string().lowercase(),
       token: Joi.string().pattern(regex.token).lowercase(),
-      //   useNonFlaggedFloorAsk: Joi.boolean()
-      //     .default(false)
-      //     .description("If true, will use the collection non flagged floor ask events."),
       signer: Joi.string().valid(Signers.V1, Signers.V2).default(Signers.V2),
     })
       .or("collection", "token")
@@ -56,7 +52,6 @@ export const getCollectionBidAskMidpointOracleV1Options: RouteOptions = {
         chainId: Joi.string().required(),
         signature: Joi.string().required(),
       }),
-      data: Joi.string(),
     }).label(`getCollectionBidAskMidpointOracle${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(
@@ -92,12 +87,6 @@ export const getCollectionBidAskMidpointOracleV1Options: RouteOptions = {
       }
     }
 
-    if (query.eip3668Calldata) {
-      const [currency, kind] = defaultAbiCoder.decode(["address", "string"], query.eip3668Calldata);
-      (query as any).currency = currency.toLowerCase();
-      (query as any).kind = kind;
-    }
-
     try {
       const eventsTableNameAsks = "collection_floor_sell_events";
       const eventsTableNameBids = "collection_top_bid_events";
@@ -125,69 +114,75 @@ export const getCollectionBidAskMidpointOracleV1Options: RouteOptions = {
       }
 
       const spotQuery = `
-      WITH asks AS (
-      SELECT
-        orders.value AS wta
-      FROM ${eventsTableNameAsks} events
-      LEFT JOIN orders orders ON orders.id = events.order_id
-      WHERE events.collection_id = $/collection/
-      ORDER BY events.created_at DESC
-      LIMIT 1), 
-
-      bids as ( SELECT
-        orders.price AS wtp
-        FROM ${eventsTableNameBids} events
-        LEFT JOIN orders orders ON orders.id = events.order_id
-        WHERE events.collection_id = $/collection/
-        ORDER BY events.created_at DESC
-        LIMIT 1)
-
-      SELECT (0.5 * ((SELECT wta FROM asks)+(SELECT wtp FROM bids)))::NUMERIC(78, 0) as price
-    `;
+        WITH
+          asks AS (
+            SELECT
+              orders.value AS wta
+            FROM ${eventsTableNameAsks} events
+            LEFT JOIN orders orders
+              ON orders.id = events.order_id
+            WHERE events.collection_id = $/collection/
+            ORDER BY events.created_at DESC
+            LIMIT 1
+          ),
+          bids AS (
+            SELECT
+              orders.price AS wtp
+            FROM ${eventsTableNameBids} events
+            LEFT JOIN orders orders
+              ON orders.id = events.order_id
+            WHERE events.collection_id = $/collection/
+            ORDER BY events.created_at DESC
+            LIMIT 1
+          )
+        SELECT (0.5 * ((SELECT wta FROM asks) + (SELECT wtp FROM bids)))::NUMERIC(78, 0) AS price
+      `;
 
       const twapQuery = `
-          WITH ask_twap as (WITH
-            x AS (
-              SELECT
-                events.*,
-                orders.value AS wta
-              FROM  ${eventsTableNameAsks} events
-              LEFT JOIN orders orders ON orders.id = events.order_id
-              WHERE events.collection_id = $/collection/
-                AND events.created_at >= now() - interval '${query.twapSeconds} seconds'
-              ORDER BY events.created_at
-            ),
-            y AS (
-              SELECT
-                events.*,
-                orders.value AS wta
-              FROM  ${eventsTableNameAsks} events
-              LEFT JOIN orders orders ON orders.id = events.order_id
-              WHERE events.collection_id = $/collection/
-                AND events.created_at < (SELECT COALESCE(MIN(x.created_at), 'Infinity') FROM x)
-              ORDER BY events.created_at DESC
-              LIMIT 1
-            ),
-            z AS (
-              SELECT * FROM x
-              UNION ALL
-              SELECT * FROM y
-            ),
-            w AS (
-              SELECT
-                wta,
-                floor(extract('epoch' FROM greatest(z.created_at, now() - interval '${query.twapSeconds} seconds'))) AS start_time,
-                floor(extract('epoch' FROM coalesce(lead(z.created_at, 1) OVER (ORDER BY created_at), now()))) AS end_time
-              FROM z
-            )
+        WITH
+          ask_twap AS (
+            WITH
+              x AS (
+                SELECT
+                  events.*,
+                  orders.value AS wta
+                FROM ${eventsTableNameAsks} events
+                LEFT JOIN orders orders ON orders.id = events.order_id
+                WHERE events.collection_id = $/collection/
+                  AND events.created_at >= now() - interval '${query.twapSeconds} seconds'
+                ORDER BY events.created_at
+              ),
+              y AS (
+                SELECT
+                  events.*,
+                  orders.value AS wta
+                FROM ${eventsTableNameAsks} events
+                LEFT JOIN orders orders ON orders.id = events.order_id
+                WHERE events.collection_id = $/collection/
+                  AND events.created_at < (SELECT COALESCE(MIN(x.created_at), 'Infinity') FROM x)
+                ORDER BY events.created_at DESC
+                LIMIT 1
+              ),
+              z AS (
+                SELECT * FROM x
+                UNION ALL
+                SELECT * FROM y
+              ),
+              w AS (
+                SELECT
+                  wta,
+                  floor(extract('epoch' FROM greatest(z.created_at, now() - interval '${query.twapSeconds} seconds'))) AS start_time,
+                  floor(extract('epoch' FROM coalesce(lead(z.created_at, 1) OVER (ORDER BY created_at), now()))) AS end_time
+                FROM z
+              )
             SELECT
               floor(
                 SUM(w.wta * (w.end_time - w.start_time)) / (MAX(w.end_time) - MIN(w.start_time))
               )::NUMERIC(78, 0) AS wta
-            FROM w),
-  
-            bid_twap as (WITH
-            x AS (
+            FROM w
+          ),
+          bid_twap AS (
+            WITH x AS (
               SELECT
                 e.*,
                 orders.price AS wtp
@@ -224,9 +219,9 @@ export const getCollectionBidAskMidpointOracleV1Options: RouteOptions = {
               floor(
                 SUM(w.wtp * (w.end_time - w.start_time)) / (MAX(w.end_time) - MIN(w.start_time))
               )::NUMERIC(78, 0) AS wtp
-            FROM w)
-  
-            select (0.5 * ((select wta from ask_twap) + (select wtp from bid_twap)))::NUMERIC(78, 0) as price
+            FROM w
+          )
+        SELECT (0.5 * ((SELECT wta FROM ask_twap) + (SELECT wtp FROM bid_twap)))::NUMERIC(78, 0) AS price
       `;
 
       enum PriceKind {
@@ -320,7 +315,7 @@ export const getCollectionBidAskMidpointOracleV1Options: RouteOptions = {
             twapSeconds: kind === PriceKind.SPOT ? 0 : query.twapSeconds,
             token,
             tokenId,
-            onlyNonFlaggedTokens: Boolean(query.useNonFlaggedFloorAsk),
+            onlyNonFlaggedTokens: false,
           }
         );
       } else if (query.collection.includes(":")) {
@@ -334,7 +329,7 @@ export const getCollectionBidAskMidpointOracleV1Options: RouteOptions = {
             contract,
             startTokenId,
             endTokenId,
-            onlyNonFlaggedTokens: Boolean(query.useNonFlaggedFloorAsk),
+            onlyNonFlaggedTokens: false,
           }
         );
       } else {
@@ -345,7 +340,7 @@ export const getCollectionBidAskMidpointOracleV1Options: RouteOptions = {
             kind,
             twapSeconds: kind === PriceKind.SPOT ? 0 : query.twapSeconds,
             contract: query.collection,
-            onlyNonFlaggedTokens: Boolean(query.useNonFlaggedFloorAsk),
+            onlyNonFlaggedTokens: false,
           }
         );
       }
@@ -394,16 +389,11 @@ export const getCollectionBidAskMidpointOracleV1Options: RouteOptions = {
       return {
         price: formatPrice(price, decimals),
         message,
-        // For EIP-3668 compatibility
-        data: defaultAbiCoder.encode(
-          ["(bytes32 id, bytes payload, uint256 timestamp, bytes signature)"],
-          [message]
-        ),
       };
     } catch (error) {
       if (!(error instanceof Boom.Boom)) {
         logger.error(
-          `get-collection-floor-ask-oracle-${version}-handler`,
+          `get-collection-bid-ask-midpoint-oracle-${version}-handler`,
           `Handler failure: ${error}`
         );
       }

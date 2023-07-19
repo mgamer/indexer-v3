@@ -873,7 +873,7 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
-    path: "/oracle/status/v3",
+    path: "/oracle/tokens/status/v3",
     options: oracleEndpoints.getTokenStatusOracleV3Options,
   });
 
