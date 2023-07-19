@@ -240,11 +240,9 @@ export class CollectionWebsocketEventsTriggerQueueJob extends AbstractRabbitMqJo
         if (!changed.length) {
           logger.info(
             this.queueName,
-            JSON.stringify({
-              message: "Collection updated for value not in mapping",
-              before: data.before,
-              after: data.after,
-            })
+            `No changes detected for event. before=${JSON.stringify(
+              data.before
+            )}, after=${JSON.stringify(data.after)}`
           );
           return;
         }
