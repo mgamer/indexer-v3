@@ -51,10 +51,8 @@ export class TransferWebsocketEventsTriggerQueueJob extends AbstractRabbitMqJobH
         eventType = "transfer.updated";
         if (data.before) {
           for (const key in changedMapping) {
-            // eslint-disable-next-line
-            // @ts-ignore
-            if (data.before[key] !== data.after[key]) {
-              changed.push(key);
+            if (data.before[key as keyof TransferInfo] !== data.after[key as keyof TransferInfo]) {
+              changed.push(changedMapping[key as keyof typeof changedMapping]);
             }
           }
 
