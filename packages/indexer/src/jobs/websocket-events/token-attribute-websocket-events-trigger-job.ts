@@ -1,8 +1,6 @@
 import { logger } from "@/common/logger";
 import { config } from "@/config/index";
 import { publishWebsocketEvent } from "@/common/websocketPublisher";
-import { redb } from "@/common/db";
-import { fromBuffer, toBuffer } from "@/common/utils";
 import { AbstractRabbitMqJobHandler, BackoffStrategy } from "@/jobs/abstract-rabbit-mq-job-handler";
 
 export type TokenAttributeWebsocketEventsTriggerQueueJobPayload = {
@@ -26,45 +24,6 @@ export class TokenAttributeWebsocketEventsTriggerQueueJob extends AbstractRabbit
     const { data } = payload;
 
     try {
-      const baseQuery = `
-          SELECT
-            ta.contract,
-            ta.token_id,
-            ta.collection_id,
-            ta.key,
-            ta.value,
-            ta.created_at,
-            ta.updated_at           
-          FROM token_attributes ta
-          WHERE ta.contract = $/contract/
-            AND ta.token_id = $/tokenId/
-            AND ta.key != ''
-          LIMIT 1
-      `;
-
-      const result = await redb
-        .oneOrNone(baseQuery, {
-          contract: toBuffer(data.after.contract),
-          tokenId: data.after.token_id,
-        })
-        .then((r) =>
-          !r
-            ? null
-            : {
-                token: {
-                  contract: fromBuffer(r.contract),
-                  tokenId: r.token_id,
-                },
-                collection: {
-                  id: r.collection_id,
-                },
-                key: r.key,
-                value: r.value,
-                createdAt: r.created_at,
-                updatedAt: r.updated_at,
-              }
-        );
-
       let eventType = "";
       const changed = [];
       switch (data.trigger) {
@@ -110,7 +69,7 @@ export class TokenAttributeWebsocketEventsTriggerQueueJob extends AbstractRabbit
           contract: data.after.contract,
         },
         changed,
-        data: result,
+        data: data.after,
       });
     } catch (error) {
       logger.error(
