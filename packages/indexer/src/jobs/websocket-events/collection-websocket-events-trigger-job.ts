@@ -229,10 +229,10 @@ export class CollectionWebsocketEventsTriggerQueueJob extends AbstractRabbitMqJo
         eventType = "collection.updated";
         if (data.before) {
           for (const key in changedMapping) {
-            // eslint-disable-next-line
-            // @ts-ignore
-            if (data.before[key] !== data.after[key]) {
-              changed.push(key);
+            if (
+              data.before[key as keyof CollectionInfo] !== data.after[key as keyof CollectionInfo]
+            ) {
+              changed.push(changedMapping[key as keyof typeof changedMapping]);
             }
           }
         }
