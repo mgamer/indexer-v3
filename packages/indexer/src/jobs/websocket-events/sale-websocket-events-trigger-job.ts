@@ -158,10 +158,8 @@ export class SaleWebsocketEventsTriggerQueueJob extends AbstractRabbitMqJobHandl
           eventType = "sale.updated";
           if (data.before) {
             for (const key in changedMapping) {
-              // eslint-disable-next-line
-              // @ts-ignore
-              if (data.before[key] !== data.after[key]) {
-                changed.push(key);
+              if (data.before[key as keyof SaleInfo] !== data.after[key as keyof SaleInfo]) {
+                changed.push(changedMapping[key as keyof typeof changedMapping]);
               }
             }
 
