@@ -396,11 +396,12 @@ export const getJoiDynamicPricingObject = async (
       },
     };
   } else if (kind === "midaswap") {
-    // Pool orders
     return {
       kind: "pool",
       data: {
-        pool: (raw_data as Sdk.Midaswap.OrderParams).pair,
+        pool: `${(raw_data as Sdk.Midaswap.OrderParams).pair}_${
+          (raw_data as Sdk.Midaswap.OrderParams).lpTokenId
+        }`,
         prices: await Promise.all(
           (raw_data as Sdk.Midaswap.OrderParams).extra.prices.map((item) =>
             getJoiPriceObject(
