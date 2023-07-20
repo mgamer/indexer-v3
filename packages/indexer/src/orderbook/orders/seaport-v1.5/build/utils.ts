@@ -44,10 +44,16 @@ export const getBuildInfo = async (
   // - requested one
   // - OpenSea conduit
   // - Reservoir conduit
-  const conduitKey =
+  let conduitKey =
     options.conduitKey ??
     Sdk.SeaportBase.Addresses.OpenseaConduitKey[config.chainId] ??
     Sdk.SeaportBase.Addresses.ReservoirConduitKey[config.chainId];
+  if (options.orderbook === "opensea") {
+    conduitKey = Sdk.SeaportBase.Addresses.OpenseaConduitKey[config.chainId];
+  }
+  if (options.orderbook === "looks-rare") {
+    conduitKey = Sdk.SeaportBase.Addresses.LooksRareConduitKey[config.chainId];
+  }
 
   // Generate the salt
   let salt = padSourceToSalt(options.salt ?? getRandomBytes(16).toString(), options.source);
