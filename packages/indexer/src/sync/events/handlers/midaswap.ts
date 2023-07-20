@@ -3,6 +3,10 @@ import { getEventData } from "@/events-sync/data";
 import { EnhancedEvent, OnChainData } from "@/events-sync/handlers/utils";
 import * as midaswapUtils from "@/utils/midaswap";
 import { BigNumber } from "ethers";
+import * as Sdk from "@reservoir0x/sdk";
+import { getSellOrderId } from "@/orderbook/orders/midaswap";
+import * as utils from "@/events-sync/utils";
+import { getUSDAndNativePrices } from "@/utils/prices";
 
 export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChainData) => {
   logger.info("midaswap-debug", JSON.stringify(events));
@@ -116,9 +120,71 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
 
         const pool = await midaswapUtils.getPoolDetails(baseEventParams.address);
 
+        const isUserSell = subKind === "midaswap-sell-erc721";
+
         if (!pool) {
           break;
         }
+
+        const orderKind = "midaswap";
+        const taker = (await utils.fetchTransaction(baseEventParams.txHash)).from;
+        const price = Sdk.Midaswap.Order.binToPriceFixed(tradeBin);
+        const priceData = await getUSDAndNativePrices(pool.token, price, baseEventParams.timestamp);
+
+        if (!priceData.nativePrice) {
+          break;
+        }
+
+        const attributionData = await utils.extractAttributionData(
+          baseEventParams.txHash,
+          orderKind
+        );
+
+        const orderId = !isUserSell
+          ? getSellOrderId(pool.address, tokenId.toString(), lpTokenId.toString())
+          : undefined;
+        onChainData.fillEventsOnChain.push({
+          orderKind,
+          orderSide: isUserSell ? "buy" : "sell",
+          orderId,
+          maker: baseEventParams.address,
+          taker,
+          price: priceData.nativePrice,
+          currencyPrice: price,
+          usdPrice: priceData.usdPrice,
+          currency: pool.token,
+          contract: pool.nft,
+          tokenId: tokenId.toString(),
+          amount: "1",
+          orderSourceId: attributionData.orderSource?.id,
+          aggregatorSourceId: attributionData.aggregatorSource?.id,
+          fillSourceId: attributionData.fillSource?.id,
+          baseEventParams: {
+            ...baseEventParams,
+          },
+        });
+
+        onChainData.fillInfos.push({
+          context: `midaswap-${pool.nft}-${tokenId}-${baseEventParams.txHash}`,
+          orderSide: isUserSell ? "buy" : "sell",
+          contract: pool.nft,
+          tokenId: tokenId.toString(),
+          amount: "1",
+          price: priceData.nativePrice,
+          timestamp: baseEventParams.timestamp,
+          maker: baseEventParams.address,
+          taker,
+        });
+
+        onChainData.orderInfos.push({
+          context: `filled-${orderId || ""}-${baseEventParams.txHash}`,
+          id: orderId,
+          trigger: {
+            kind: "sale",
+            txHash: baseEventParams.txHash,
+            txTimestamp: baseEventParams.timestamp,
+          },
+        });
 
         onChainData.orders.push({
           kind: "midaswap",
