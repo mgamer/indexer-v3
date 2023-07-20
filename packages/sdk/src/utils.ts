@@ -58,7 +58,7 @@ export const getSourceHash = (source?: string) =>
 
 export const generateSourceBytes = (source?: string) =>
   source === "reservoir.tools"
-    ? getSourceHash(source)
+    ? getSourceHash(source) + "00000000"
     : getSourceHash("reservoir.tools") + getSourceHash(source);
 
 export const getSourceV1 = (calldata: string) => {
