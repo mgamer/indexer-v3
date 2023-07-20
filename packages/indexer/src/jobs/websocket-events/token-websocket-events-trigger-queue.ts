@@ -272,7 +272,7 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
         throw error;
       }
     },
-    { connection: redis.duplicate(), concurrency: 10 }
+    { connection: redis.duplicate(), concurrency: 30 }
   );
 
   worker.on("error", (error) => {
