@@ -3,6 +3,7 @@ import { Provider } from "@ethersproject/abstract-provider";
 import { AddressZero, HashZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import axios from "axios";
+import _ from "lodash";
 
 // Needed for `collectionxyz`
 import { TokenIDs } from "fummpel";
@@ -1798,26 +1799,22 @@ export class Router {
       const module = this.contracts.midaswapModule;
 
       const fees = getFees(midaswapDetails);
-      const price = orders
-        .map(({ order, amount, contractKind }) =>
-          bn(
-            // Handle multiple listings from the same pool
-            contractKind === "erc721"
-              ? // For ERC721, each order from the same pool gets a different price
-                order.params.extra.prices[
-                  orders
-                    .map(({ order }) => order)
-                    .filter((o) => o.params.pair === order.params.pair)
-                    .findIndex((o) => o.params.tokenId === order.params.tokenId)
-                ].price
-              : // For ERC1155, each amount from the same pool gets a different price
-                order.params.extra.prices
-                  .map((item) => item.price)
-                  .slice(0, Number(amount ?? 1))
-                  .reduce((a, b) => a.add(b), bn(0))
-          )
-        )
-        .reduce((a, b) => a.add(b), bn(0));
+
+      // group orders by lpTokenId
+      const lpTokenIdsMap = _.groupBy(
+        orders.map((item) => item.order),
+        "params.lpTokenId"
+      );
+
+      // group sum accumulates
+      let price = bn(0);
+      _.keys(lpTokenIdsMap).forEach((lpTokenId) => {
+        price = lpTokenIdsMap[lpTokenId][0].params.extra.prices
+          .slice(0, lpTokenIdsMap[lpTokenId].length)
+          .map((priceItem) => priceItem.price)
+          .reduce((a, b) => bn(a).add(bn(b)), bn(0))
+          .add(price);
+      });
       const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
       const totalPrice = price.add(feeAmount);
 
@@ -1825,7 +1822,7 @@ export class Router {
         module: module.address,
         data: module.interface.encodeFunctionData("buyWithETH", [
           midaswapDetails.map((d) => (d.order as Sdk.Midaswap.Order).params.tokenX),
-          midaswapDetails.map((d) => (d.contractKind === "erc721" ? d.tokenId : d.amount ?? 1)),
+          midaswapDetails.map((d) => d.tokenId),
           {
             fillTo: taker,
             refundTo: relayer,
@@ -3623,7 +3620,8 @@ export class Router {
               module: module.address,
               data: module.interface.encodeFunctionData("sell", [
                 order.params.tokenX,
-                detail.contractKind === "erc721" ? detail.tokenId : detail.amount ?? 1,
+                order.params.tokenY,
+                detail.tokenId,
                 bn(order.params.extra.prices[0].price),
                 {
                   fillTo: taker,

@@ -8,6 +8,7 @@ export type OrderParams = {
   pair: string;
   // Only relevant for listings
   tokenX: string; // nft collection address
+  tokenY: string; // ft address
   tokenId?: string;
   lpTokenId: string;
   amount?: string;

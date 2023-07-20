@@ -121,6 +121,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
           const sdkOrder: Sdk.Midaswap.Order = new Sdk.Midaswap.Order(config.chainId, {
             pair: orderParams.pool,
             tokenX: pool.nft,
+            tokenY: pool.token,
             tokenId: nftId,
             lpTokenId,
             extra: {
@@ -250,6 +251,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
           const sdkOrder: Sdk.Midaswap.Order = new Sdk.Midaswap.Order(config.chainId, {
             pair: orderParams.pool,
             tokenX: pool.nft,
+            tokenY: pool.token,
             // tokenId: nftId,
             lpTokenId,
             extra: {
@@ -379,7 +381,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         case "midaswap-position-burned": {
           const orderResult = await redb.manyOrNone(
             `
-                      SELECT id,side,raw_data FROM orders
+                      SELECT id,side,fillability_status,raw_data FROM orders
                       WHERE orders.maker = $/maker/
                     `,
             {
@@ -388,7 +390,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
           );
 
           if (orderResult.length) {
-            // remove orders by pool && lp token id
+            // remove sell/buy orders by pool && lp token id
             const ids = orderResult
               .filter((item) => item.raw_data.lpTokenId === lpTokenId)
               .map((item) => item.id);
@@ -398,7 +400,10 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
               });
             }
 
-            const firstBuyOrder = orderResult.find((item) => item.side === "buy");
+            // update the rest fillable buy orders price
+            const firstBuyOrder = orderResult.find(
+              (item) => item.side === "buy" && item.fillability_status === "fillable"
+            );
 
             if (!firstBuyOrder) {
               return;
@@ -416,9 +421,8 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
             const price = prices[0].price;
             const value = prices[0].price;
 
-            // update buy orders price
             orderResult
-              .filter((item) => item.side === "buy")
+              .filter((item) => item.side === "buy" && item.fillability_status === "fillable")
               .forEach(async (item) => {
                 await idb.none(
                   `
@@ -481,8 +485,6 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
               maker: toBuffer(pool.address),
             }
           );
-
-          // console.log(orderResult, "orderResult");
 
           const sellOrders = orderResult.filter(
             (item) => item.side === "sell" && item.raw_data.lpTokenId === lpTokenId
@@ -589,6 +591,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
             const sdkOrder: Sdk.Midaswap.Order = new Sdk.Midaswap.Order(config.chainId, {
               pair: orderParams.pool,
               tokenX: pool.nft,
+              tokenY: pool.token,
               // tokenId: nftId,
               lpTokenId,
               extra: {
@@ -881,6 +884,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
             const sdkOrder: Sdk.Midaswap.Order = new Sdk.Midaswap.Order(config.chainId, {
               pair: orderParams.pool,
               tokenX: pool.nft,
+              tokenY: pool.token,
               tokenId: nftId,
               lpTokenId,
               extra: {

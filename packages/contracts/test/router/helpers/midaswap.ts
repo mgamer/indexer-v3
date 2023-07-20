@@ -91,6 +91,7 @@ export const setupMidaswapListings = async (listings: MidaswapListing[]) => {
     listing.order = new Sdk.Midaswap.Order(chainId, {
       pair: pair,
       tokenX: nft.contract.address,
+      tokenY: Sdk.Common.Addresses.Weth[chainId],
       lpTokenId: lptokenId.toString(),
       extra: {
         prices: [
@@ -179,6 +180,7 @@ export const setupMidaswapOffers = async (offers: MidaswapOffer[]) => {
     listing.order = new Sdk.Midaswap.Order(chainId, {
       pair: pair,
       tokenX: nft.contract.address,
+      tokenY: Sdk.Common.Addresses.Weth[chainId],
       lpTokenId: lptokenId.toString(),
       extra: {
         prices: [
