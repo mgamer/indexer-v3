@@ -150,9 +150,8 @@ export const setupRouterWithModules = async (chainId: number, deployer: SignerWi
     )) as any;
   Sdk.RouterV6.Addresses.SwapModule[chainId] = swapModule.address.toLowerCase();
 
-
-  const swap1inchModule = (await ethers
-    .getContractFactory("Swap1inchModule", deployer)
+  const oneInchSwapModule = (await ethers
+    .getContractFactory("OneInchSwapModule", deployer)
     .then((factory) =>
       factory.deploy(
         deployer.address,
@@ -161,7 +160,7 @@ export const setupRouterWithModules = async (chainId: number, deployer: SignerWi
         Sdk.Common.Addresses.AggregationRouterV5[chainId]
       )
     )) as any;
-  Sdk.RouterV6.Addresses.Swap1inchModule[chainId] = swap1inchModule.address.toLowerCase();
+  Sdk.RouterV6.Addresses.OneInchSwapModule[chainId] = oneInchSwapModule.address.toLowerCase();
 
   const approvalProxy = await ethers
     .getContractFactory("ReservoirApprovalProxy", deployer)

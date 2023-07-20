@@ -1,11 +1,11 @@
 import { BigNumberish } from "@ethersproject/bignumber";
 import { Contract } from "@ethersproject/contracts";
 import { Provider } from "@ethersproject/abstract-provider";
+
 import { ExecutionInfo } from "../types";
 import { isETH, isWETH } from "../utils";
-
-import * as uniswap from "./uniswap";
 import * as oneInch from "./1inch";
+import * as uniswap from "./uniswap";
 
 export type SwapInfo = {
   amountIn: BigNumberish;
@@ -26,8 +26,7 @@ export const generateSwapExecutions = async (
   toTokenAddress: string,
   toTokenAmount: BigNumberish,
   options: {
-    swapModule: Contract;
-    swap1inchModule: Contract;
+    module: Contract;
     transfers: TransferDetail[];
     refundTo: string;
   }
@@ -38,8 +37,8 @@ export const generateSwapExecutions = async (
       amountIn: toTokenAmount,
       executions: [
         {
-          module: options.swapModule.address,
-          data: options.swapModule.interface.encodeFunctionData("wrap", [options.transfers]),
+          module: options.module.address,
+          data: options.module.interface.encodeFunctionData("wrap", [options.transfers]),
           value: toTokenAmount,
         },
       ],
@@ -50,8 +49,8 @@ export const generateSwapExecutions = async (
       amountIn: toTokenAmount,
       executions: [
         {
-          module: options.swapModule.address,
-          data: options.swapModule.interface.encodeFunctionData("unwrap", [options.transfers]),
+          module: options.module.address,
+          data: options.module.interface.encodeFunctionData("unwrap", [options.transfers]),
           value: 0,
         },
       ],
@@ -65,7 +64,7 @@ export const generateSwapExecutions = async (
           toTokenAddress,
           toTokenAmount,
           {
-            swapModule: options.swapModule,
+            module: options.module,
             transfers: options.transfers,
             refundTo: options.refundTo,
           }
@@ -76,8 +75,7 @@ export const generateSwapExecutions = async (
           toTokenAddress,
           toTokenAmount,
           {
-            swap1inchModule: options.swap1inchModule,
-            baseSwapModule: options.swapModule,
+            module: options.module,
             transfers: options.transfers,
             refundTo: options.refundTo,
           }

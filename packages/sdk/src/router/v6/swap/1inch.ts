@@ -4,7 +4,7 @@ import axios from "axios";
 
 import { ExecutionInfo } from "../types";
 import { isETH } from "../utils";
-import { Weth } from "../../../common/addresses";
+import { Common, ZeroExV4 } from "../../../index";
 import { bn } from "../../../utils";
 import { TransferDetail, SwapInfo } from "./index";
 
@@ -16,15 +16,15 @@ export const generateSwapExecutions = async (
   toTokenAddress: string,
   toTokenAmount: BigNumberish,
   options: {
-    swap1inchModule: Contract;
-    baseSwapModule: Contract;
+    module: Contract;
     transfers: TransferDetail[];
     refundTo: string;
   }
 ): Promise<SwapInfo> => {
-  // We need to swap
-  const fromToken = isETH(chainId, fromTokenAddress) ? Weth[chainId] : fromTokenAddress;
-  const toToken = isETH(chainId, toTokenAddress) ? Weth[chainId] : toTokenAddress;
+  const fromToken = isETH(chainId, fromTokenAddress)
+    ? ZeroExV4.Addresses.Eth[chainId]
+    : fromTokenAddress;
+  const toToken = isETH(chainId, toTokenAddress) ? Common.Addresses.Weth[chainId] : toTokenAddress;
 
   const slippage = 10; // 0.01%
   const { data: quoteData } = await axios.get(`${API_1INCH_ENDPOINT}/v5.0/${chainId}/quote`, {
@@ -43,47 +43,35 @@ export const generateSwapExecutions = async (
       toTokenAddress: toToken,
       amount: quoteData.toTokenAmount,
       disableEstimate: true,
-      fromAddress: options.swap1inchModule.address,
+      fromAddress: options.module.address,
       slippage: slippage / 10,
     },
   });
 
-  const fromETH = isETH(chainId, fromTokenAddress);
+  const fromETH = isETH(chainId, fromToken);
+
   const executions: ExecutionInfo[] = [];
-
-  if (fromETH) {
-    // wrap ETH to ETH
-    executions.push({
-      module: options.baseSwapModule.address,
-      data: options.baseSwapModule.interface.encodeFunctionData("wrap", [
-        [
-          {
-            recipient: options.swap1inchModule.address,
-            amount: swapData.fromTokenAmount,
-          },
-        ],
-      ]),
-      value: swapData.fromTokenAmount,
-    });
-  }
-
   executions.push({
-    module: options.swap1inchModule.address,
-    data: options.swap1inchModule.interface.encodeFunctionData("erc20ToExactOutput", [
-      {
-        params: {
-          tokenIn: swapData.fromToken.address,
-          tokenOut: swapData.toToken.address,
-          amountOut: swapData.toTokenAmount,
-          amountInMaximum: swapData.fromTokenAmount,
-          data: swapData.tx.data,
+    module: options.module.address,
+    data: options.module.interface.encodeFunctionData(
+      fromETH ? "ethToExactOutput" : "erc20ToExactOutput",
+      [
+        {
+          params: {
+            tokenIn: fromToken,
+            tokenOut: toToken,
+            amountOut: swapData.toTokenAmount,
+            amountInMaximum: swapData.fromTokenAmount,
+            data: swapData.tx.data,
+          },
+          transfers: options.transfers,
         },
-        transfers: options.transfers,
-      },
-      options.refundTo,
-    ]),
-    value: 0,
+        options.refundTo,
+      ]
+    ),
+    value: fromETH ? swapData.fromTokenAmount : 0,
   });
+
   return {
     amountIn: swapData.fromTokenAmount.toString(),
     executions,

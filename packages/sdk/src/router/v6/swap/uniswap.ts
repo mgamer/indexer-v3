@@ -35,7 +35,7 @@ export const generateSwapExecutions = async (
   toTokenAddress: string,
   toTokenAmount: BigNumberish,
   options: {
-    swapModule: Contract;
+    module: Contract;
     transfers: TransferDetail[];
     refundTo: string;
   }
@@ -61,7 +61,7 @@ export const generateSwapExecutions = async (
     TradeType.EXACT_OUTPUT,
     {
       type: SwapType.SWAP_ROUTER_02,
-      recipient: options.swapModule.address,
+      recipient: options.module.address,
       slippageTolerance: new Percent(5, 100),
       deadline: Math.floor(Date.now() / 1000 + 1800),
     },
@@ -117,8 +117,8 @@ export const generateSwapExecutions = async (
 
   const executions: ExecutionInfo[] = [];
   executions.push({
-    module: options.swapModule.address,
-    data: options.swapModule.interface.encodeFunctionData(
+    module: options.module.address,
+    data: options.module.interface.encodeFunctionData(
       fromETH ? "ethToExactOutput" : "erc20ToExactOutput",
       [
         {
@@ -126,7 +126,7 @@ export const generateSwapExecutions = async (
             tokenIn: params.params.tokenIn,
             tokenOut: params.params.tokenOut,
             fee: params.params.fee,
-            recipient: options.swapModule.address,
+            recipient: options.module.address,
             amountOut: params.params.amountOut,
             amountInMaximum: params.params.amountInMaximum,
             sqrtPriceLimitX96: params.params.sqrtPriceLimitX96,

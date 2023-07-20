@@ -59,9 +59,7 @@ export const SwapModule: ChainIdToAddress = {
   [Network.Bsc]: "0x5cf0a457d2b6c003232184178e87c91248f73477",
 };
 
-export const Swap1inchModule: ChainIdToAddress = {
-  [Network.Ethereum]: "",
-};
+export const OneInchSwapModule: ChainIdToAddress = {};
 
 // Exchange modules
 

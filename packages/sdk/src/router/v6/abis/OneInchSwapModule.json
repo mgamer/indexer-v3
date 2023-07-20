@@ -18,7 +18,7 @@
       },
       {
         "internalType": "address",
-        "name": "swapRouter",
+        "name": "aggregationRouter",
         "type": "address"
       }
     ],
@@ -101,7 +101,7 @@
   },
   {
     "inputs": [],
-    "name": "SWAP_ROUTER",
+    "name": "AGGREGATION_ROUTER",
     "outputs": [
       {
         "internalType": "address",
@@ -164,7 +164,7 @@
                 "type": "bytes"
               }
             ],
-            "internalType": "struct Swap1inchModule.SwapDetail",
+            "internalType": "struct OneInchSwapModule.SwapDetail",
             "name": "params",
             "type": "tuple"
           },
@@ -186,12 +186,12 @@
                 "type": "bool"
               }
             ],
-            "internalType": "struct Swap1inchModule.TransferDetail[]",
+            "internalType": "struct OneInchSwapModule.TransferDetail[]",
             "name": "transfers",
             "type": "tuple[]"
           }
         ],
-        "internalType": "struct Swap1inchModule.Swap",
+        "internalType": "struct OneInchSwapModule.Swap",
         "name": "swap",
         "type": "tuple"
       },
@@ -238,7 +238,7 @@
                 "type": "bytes"
               }
             ],
-            "internalType": "struct Swap1inchModule.SwapDetail",
+            "internalType": "struct OneInchSwapModule.SwapDetail",
             "name": "params",
             "type": "tuple"
           },
@@ -260,12 +260,12 @@
                 "type": "bool"
               }
             ],
-            "internalType": "struct Swap1inchModule.TransferDetail[]",
+            "internalType": "struct OneInchSwapModule.TransferDetail[]",
             "name": "transfers",
             "type": "tuple[]"
           }
         ],
-        "internalType": "struct Swap1inchModule.Swap",
+        "internalType": "struct OneInchSwapModule.Swap",
         "name": "swap",
         "type": "tuple"
       },
@@ -375,7 +375,7 @@
             "type": "bool"
           }
         ],
-        "internalType": "struct Swap1inchModule.TransferDetail[]",
+        "internalType": "struct OneInchSwapModule.TransferDetail[]",
         "name": "targets",
         "type": "tuple[]"
       }
@@ -405,7 +405,7 @@
             "type": "bool"
           }
         ],
-        "internalType": "struct Swap1inchModule.TransferDetail[]",
+        "internalType": "struct OneInchSwapModule.TransferDetail[]",
         "name": "targets",
         "type": "tuple[]"
       }

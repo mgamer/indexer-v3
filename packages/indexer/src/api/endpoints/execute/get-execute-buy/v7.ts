@@ -174,7 +174,9 @@ export const getExecuteBuyV7Options: RouteOptions = {
       swapProvider: Joi.string()
         .valid("uniswap", "1inch")
         .default("uniswap")
-        .description("Use different provider when do the currency swapping"),
+        .description(
+          "Choose a specific swapping provider when buying in a different currency (defaults to `uniswap`)"
+        ),
       // Various authorization keys
       x2y2ApiKey: Joi.string().description("Optional X2Y2 API key used for filling."),
       openseaApiKey: Joi.string().description(

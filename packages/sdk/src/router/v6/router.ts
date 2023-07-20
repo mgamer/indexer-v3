@@ -54,7 +54,7 @@ import AlienswapModuleAbi from "./abis/AlienswapModule.json";
 import SudoswapModuleAbi from "./abis/SudoswapModule.json";
 import SuperRareModuleAbi from "./abis/SuperRareModule.json";
 import SwapModuleAbi from "./abis/SwapModule.json";
-import Swap1inchModuleAbi from "./abis/Swap1inchModule.json";
+import OneInchSwapModuleAbi from "./abis/OneInchSwapModule.json";
 import X2Y2ModuleAbi from "./abis/X2Y2Module.json";
 import ZeroExV4ModuleAbi from "./abis/ZeroExV4Module.json";
 import ZoraModuleAbi from "./abis/ZoraModule.json";
@@ -180,9 +180,9 @@ export class Router {
         SwapModuleAbi,
         provider
       ),
-      swap1inchModule: new Contract(
-        Addresses.Swap1inchModule[chainId] ?? AddressZero,
-        Swap1inchModuleAbi,
+      oneInchSwapModule: new Contract(
+        Addresses.OneInchSwapModule[chainId] ?? AddressZero,
+        OneInchSwapModuleAbi,
         provider
       ),
       alienswapModule: new Contract(
@@ -2627,10 +2627,8 @@ export class Router {
           .reduce((a, b) => a.add(b), bn(0));
 
         const swapProvider = options?.swapProvider ?? "uniswap";
-        const swapRecipient =
-          swapProvider === "uniswap"
-            ? this.contracts.swapModule.address
-            : this.contracts.swap1inchModule.address;
+        const swapModule =
+          swapProvider === "uniswap" ? this.contracts.swapModule : this.contracts.oneInchSwapModule;
 
         try {
           // Only generate a swap if the in token is different from the out token
@@ -2644,8 +2642,7 @@ export class Router {
               tokenOut,
               totalAmountOut,
               {
-                swapModule: this.contracts.swapModule,
-                swap1inchModule: this.contracts.swap1inchModule,
+                module: swapModule,
                 transfers,
                 refundTo: relayer,
               }
@@ -2682,7 +2679,7 @@ export class Router {
                     amount: inAmount,
                   },
                 ],
-                recipient: swapRecipient,
+                recipient: swapModule.address,
               });
             } else {
               // Split based on the individual transfers
