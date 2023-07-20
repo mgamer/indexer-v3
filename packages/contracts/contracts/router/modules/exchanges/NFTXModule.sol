@@ -10,6 +10,8 @@ import {BaseExchangeModule} from "./BaseExchangeModule.sol";
 import {BaseModule} from "../BaseModule.sol";
 
 import {INFTXMarketplaceZap} from "../../../interfaces/INFTX.sol";
+import {INFTXVault} from "../../../interfaces/INFTXVault.sol";
+import {INFTXVaultFactory} from "../../../interfaces/INFTXVaultFactory.sol";
 
 contract NFTXModule is BaseExchangeModule {
   // --- Fields ---
@@ -109,8 +111,10 @@ contract NFTXModule is BaseExchangeModule {
   ) internal {
     IERC165 collection = sellOrder.collection;
 
+    INFTXVault vault = INFTXVault(NFTX_MARKETPLACE.nftxFactory().vault(sellOrder.vaultId));
+
     // Execute the sell
-    if (collection.supportsInterface(ERC721_INTERFACE)) {
+    if (!vault.is1155()) {
       _approveERC721IfNeeded(IERC721(address(collection)), address(NFTX_MARKETPLACE));
 
       try
@@ -150,7 +154,7 @@ contract NFTXModule is BaseExchangeModule {
           ++i;
         }
       }
-    } else if (collection.supportsInterface(ERC1155_INTERFACE)) {
+    } else {
       _approveERC1155IfNeeded(IERC1155(address(collection)), address(NFTX_MARKETPLACE));
 
       try

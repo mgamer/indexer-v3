@@ -3,8 +3,12 @@ pragma solidity ^0.8.9;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+import {INFTXVaultFactory} from "./INFTXVaultFactory.sol";
 
 interface INFTXMarketplaceZap {
+
+  function nftxFactory() external view returns (INFTXVaultFactory);
+  
   struct BuyOrder {
     uint256 vaultId;
     IERC165 collection;
