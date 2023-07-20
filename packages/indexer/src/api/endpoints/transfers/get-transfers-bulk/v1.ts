@@ -8,6 +8,7 @@ import _ from "lodash";
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { buildContinuation, fromBuffer, regex, splitContinuation, toBuffer } from "@/common/utils";
+import * as Boom from "@hapi/boom";
 
 const version = "v1";
 
@@ -161,10 +162,7 @@ export const getTransfersBulkV1Options: RouteOptions = {
 
           // If no address most likely the continuation is wrong
           if (!address) {
-            return {
-              transfers: [],
-              continuation: null,
-            };
+            throw Boom.badRequest("Invalid continuation string used");
           }
 
           (query as any).updatedAt = updateAt;
