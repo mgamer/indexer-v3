@@ -4,9 +4,10 @@ import crypto from "crypto";
 import { getJoiSaleObject } from "@/common/joi";
 
 import { idb } from "@/common/db";
-import { fromBuffer, toBuffer } from "@/common/utils";
+import { fromBuffer } from "@/common/utils";
 import { publishWebsocketEvent } from "@/common/websocketPublisher";
 import { AbstractRabbitMqJobHandler, BackoffStrategy } from "@/jobs/abstract-rabbit-mq-job-handler";
+import { OrderKind } from "@/orderbook/orders";
 
 export type SaleWebsocketEventsTriggerQueueJobPayload = {
   data: SaleWebsocketEventInfo;
@@ -44,36 +45,8 @@ export class SaleWebsocketEventsTriggerQueueJob extends AbstractRabbitMqJobHandl
           tokens_data.collection_id,
           tokens_data.collection_name
       FROM (
-        SELECT
-          fill_events_2.contract,
-          fill_events_2.token_id,
-          fill_events_2.order_id,
-          fill_events_2.order_side,
-          fill_events_2.order_kind,
-          fill_events_2.order_source_id_int,
-          fill_events_2.maker,
-          fill_events_2.taker,
-          fill_events_2.amount,
-          fill_events_2.fill_source_id,
-          fill_events_2.block,
-          fill_events_2.tx_hash,
-          fill_events_2.timestamp,
-          fill_events_2.price,
-          fill_events_2.currency,
-          TRUNC(fill_events_2.currency_price, 0) AS currency_price,
-          currencies.decimals,
-          fill_events_2.usd_price,
-          fill_events_2.log_index,
-          fill_events_2.batch_index,
-          fill_events_2.wash_trading_score,
-          fill_events_2.royalty_fee_bps,
-          fill_events_2.marketplace_fee_bps,
-          fill_events_2.royalty_fee_breakdown,
-          fill_events_2.marketplace_fee_breakdown,
-          fill_events_2.paid_full_royalty,
-          fill_events_2.is_deleted,
-          fill_events_2.updated_at,
-          fill_events_2.created_at
+        SELECT          
+          currencies.decimals          
         FROM fill_events_2
         LEFT JOIN currencies
           ON fill_events_2.currency = currencies.contract
@@ -97,53 +70,57 @@ export class SaleWebsocketEventsTriggerQueueJob extends AbstractRabbitMqJobHandl
         {
           log_index: data.after.log_index,
           batch_index: data.after.batch_index,
-          txHash: toBuffer(data.after.tx_hash),
+          txHash: data.after.tx_hash,
         }
       );
 
       const result = await getJoiSaleObject({
         prices: {
           gross: {
-            amount: r.currency_price ?? r.price,
-            nativeAmount: r.price,
-            usdAmount: r.usd_price,
+            amount: data.after.currency_price ?? data.after.price,
+            nativeAmount: data.after.price,
+            usdAmount: data.after.usd_price,
           },
         },
         fees: {
-          royaltyFeeBps: r.royalty_fee_bps,
-          marketplaceFeeBps: r.marketplace_fee_bps,
-          paidFullRoyalty: r.paid_full_royalty,
-          royaltyFeeBreakdown: r.royalty_fee_breakdown,
-          marketplaceFeeBreakdown: r.marketplace_fee_breakdown,
+          royaltyFeeBps: data.after.royalty_fee_bps,
+          marketplaceFeeBps: data.after.marketplace_fee_bps,
+          paidFullRoyalty: data.after.paid_full_royalty,
+          royaltyFeeBreakdown: data.after.royalty_fee_breakdown,
+          marketplaceFeeBreakdown: data.after.marketplace_fee_breakdown,
         },
-        currencyAddress: r.currency,
-        timestamp: r.timestamp,
-        contract: r.contract,
-        tokenId: r.token_id,
+        currencyAddress: data.after.currency,
+        timestamp: data.after.timestamp,
+        contract: data.after.contract,
+        tokenId: data.after.token_id,
         name: r.name,
         image: r.image,
         collectionId: r.collection_id,
         collectionName: r.collection_name,
-        washTradingScore: r.wash_trading_score,
-        orderId: r.order_id,
-        orderSourceId: r.order_source_id_int,
-        orderSide: r.order_side,
-        orderKind: r.order_kind,
-        maker: r.maker,
-        taker: r.taker,
-        amount: r.amount,
-        fillSourceId: r.fill_source_id,
-        block: r.block,
-        txHash: r.tx_hash,
-        logIndex: r.log_index,
-        batchIndex: r.batch_index,
-        createdAt: new Date(r.created_at).toISOString(),
-        updatedAt: new Date(r.updated_at).toISOString(),
+        washTradingScore: data.after.wash_trading_score,
+        orderId: data.after.order_id,
+        orderSourceId: data.after.order_source_id_int,
+        orderSide: data.after.order_side,
+        orderKind: data.after.order_kind,
+        maker: data.after.maker,
+        taker: data.after.taker,
+        amount: data.after.amount,
+        fillSourceId: data.after.fill_source_id,
+        block: data.after.block,
+        txHash: data.after.tx_hash,
+        logIndex: data.after.log_index,
+        batchIndex: data.after.batch_index,
+        createdAt: new Date(data.after.created_at).toISOString(),
+        updatedAt: new Date(data.after.updated_at).toISOString(),
       });
 
       result.id = crypto
         .createHash("sha256")
-        .update(`${fromBuffer(r.tx_hash)}${r.maker}${r.taker}${r.contract}${r.token_id}${r.price}`)
+        .update(
+          `${fromBuffer(data.after.tx_hash)}${data.after.maker}${data.after.taker}${
+            data.after.contract
+          }${data.after.token_id}${data.after.price}`
+        )
         .digest("hex");
 
       delete result.saleId;
@@ -179,9 +156,9 @@ export class SaleWebsocketEventsTriggerQueueJob extends AbstractRabbitMqJobHandl
       await publishWebsocketEvent({
         event: eventType,
         tags: {
-          contract: fromBuffer(r.contract),
-          maker: fromBuffer(r.maker),
-          taker: fromBuffer(r.taker),
+          contract: fromBuffer(data.after.contract),
+          maker: fromBuffer(data.after.maker),
+          taker: fromBuffer(data.after.taker),
         },
         changed,
         data: result,
@@ -216,9 +193,34 @@ export type EventInfo = {
 };
 
 interface SaleInfo {
-  tx_hash: string;
+  contract: Buffer;
+  token_id: string;
+  order_id: string;
+  order_side: string;
+  order_kind: OrderKind;
+  order_source_id_int: number;
+  maker: Buffer;
+  taker: Buffer;
+  amount: number;
+  fill_source_id: number;
+  block: number;
+  tx_hash: Buffer;
+  timestamp: number;
+  price: string;
+  currency: Buffer;
+  currency_price: string;
+  usd_price: string;
   log_index: number;
   batch_index: number;
+  wash_trading_score: number;
+  royalty_fee_bps: number;
+  marketplace_fee_bps: number;
+  royalty_fee_breakdown: string;
+  marketplace_fee_breakdown: string;
+  paid_full_royalty: boolean;
+  is_deleted: boolean;
+  updated_at: number;
+  created_at: number;
 }
 
 export type SaleWebsocketEventInfo = {
