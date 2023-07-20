@@ -159,6 +159,11 @@ export const getTransfersBulkV1Options: RouteOptions = {
             /^(.+)_0x[a-fA-F0-9]{40}_(\d+)$/
           );
 
+          // If no address most likely the continuation is wrong
+          if (!address) {
+            return [];
+          }
+
           (query as any).updatedAt = updateAt;
           (query as any).address = toBuffer(address);
           (query as any).tokenId = tokenId;
