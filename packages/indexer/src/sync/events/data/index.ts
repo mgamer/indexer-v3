@@ -38,6 +38,7 @@ import * as looksRareV2 from "@/events-sync/data/looks-rare-v2";
 import * as blend from "@/events-sync/data/blend";
 import * as sudoswapV2 from "@/events-sync/data/sudoswap-v2";
 import * as midaswap from "@/events-sync/data/midaswap";
+import * as caviarV1 from "@/events-sync/data/caviar-v1";
 import * as paymentProcessor from "@/events-sync/data/payment-processor";
 import * as thirdweb from "@/events-sync/data/thirdweb";
 import * as blurV2 from "@/events-sync/data/blur-v2";
@@ -83,6 +84,7 @@ export type EventKind =
   | "blend"
   | "sudoswap-v2"
   | "midaswap"
+  | "caviar-v1"
   | "payment-processor"
   | "thirdweb"
   | "seadrop"
@@ -160,6 +162,7 @@ export type EventSubKind =
   | "zora-ask-cancelled"
   | "zora-auction-ended"
   | "zora-sales-config-changed"
+  | "zora-updated-token"
   | "nouns-auction-settled"
   | "cryptopunks-punk-offered"
   | "cryptopunks-punk-no-longer-for-sale"
@@ -263,6 +266,13 @@ export type EventSubKind =
   | "midaswap-sell-erc721"
   | "midaswap-buy-erc721"
   | "midaswap-position-burned"
+  | "caviar-v1-create"
+  | "caviar-v1-add"
+  | "caviar-v1-remove"
+  | "caviar-v1-buy"
+  | "caviar-v1-sell"
+  | "caviar-v1-wrap"
+  | "caviar-v1-unwrap"
   | "payment-processor-buy-single-listing"
   | "payment-processor-master-nonce-invalidated"
   | "payment-processor-nonce-invalidated"
@@ -361,6 +371,7 @@ const allEventData = [
   zora.askPriceUpdated,
   zora.auctionEnded,
   zora.salesConfigChanged,
+  zora.updatedToken,
   nouns.auctionSettled,
   cryptoPunks.punkOffered,
   cryptoPunks.punkNoLongerForSale,
@@ -457,6 +468,13 @@ const allEventData = [
   midaswap.sellERC721,
   midaswap.positionBurned,
   treasure.bidAccepted,
+  caviarV1.create,
+  caviarV1.add,
+  caviarV1.remove,
+  caviarV1.buy,
+  caviarV1.sell,
+  caviarV1.wrap,
+  caviarV1.unwrap,
   paymentProcessor.buySingleListing,
   paymentProcessor.masterNonceInvalidated,
   paymentProcessor.nonceInvalidated,

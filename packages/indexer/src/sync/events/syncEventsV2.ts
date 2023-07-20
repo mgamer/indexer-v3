@@ -234,6 +234,10 @@ export const extractEventsBatches = (enhancedEvents: EnhancedEvent[]): EventsBat
         kind: "blur-v2",
         data: kindToEvents.get("blur-v2") ?? [],
       },
+      {
+        kind: "caviar-v1",
+        data: kindToEvents.get("caviar-v1") ?? [],
+      },
     ];
 
     txHashToEventsBatch.set(txHash, {
@@ -274,8 +278,6 @@ const _saveBlockTransactions = async (blockData: BlockWithTransactions) => {
 
 export const syncEvents = async (block: number) => {
   try {
-    logger.info("sync-events-v2", `Events realtime syncing block ${block}`);
-
     const startSyncTime = Date.now();
 
     const startGetBlockTime = Date.now();
@@ -291,13 +293,6 @@ export const syncEvents = async (block: number) => {
       fromBlock: block,
       toBlock: block,
     };
-
-    logger.info(
-      "sync-events-v2",
-      `Events realtime syncing block ${block} - getLogs using filter: ${JSON.stringify(
-        eventFilter
-      )}`
-    );
 
     const availableEventData = getEventData();
 
@@ -341,17 +336,8 @@ export const syncEvents = async (block: number) => {
 
     enhancedEvents = enhancedEvents.filter((e) => e) as EnhancedEvent[];
 
-    logger.info(
-      "sync-events-v2",
-      `Events realtime syncing block ${block} - ${enhancedEvents.length} events`
-    );
     // Process the retrieved events
     const eventsBatches = extractEventsBatches(enhancedEvents as EnhancedEvent[]);
-
-    logger.info(
-      "sync-events-v2",
-      `Events realtime syncing block ${block} - ${eventsBatches.length} batches`
-    );
 
     const startProcessLogs = Date.now();
 

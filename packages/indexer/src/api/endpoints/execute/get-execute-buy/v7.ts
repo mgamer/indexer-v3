@@ -73,9 +73,8 @@ export const getExecuteBuyV7Options: RouteOptions = {
                   "sudoswap",
                   "nftx",
                   "alienswap"
-                )
-                .required(),
-              data: Joi.object().required(),
+                ),
+              data: Joi.object(),
             }).description("Optional raw order to fill."),
             fillType: Joi.string()
               .valid("trade", "mint", "preferMint")
@@ -319,7 +318,9 @@ export const getExecuteBuyV7Options: RouteOptions = {
         }
       ) => {
         // Handle dynamically-priced orders
-        if (["sudoswap", "sudoswap-v2", "collectionxyz", "nftx"].includes(order.kind)) {
+        if (
+          ["sudoswap", "sudoswap-v2", "collectionxyz", "nftx", "caviar-v1"].includes(order.kind)
+        ) {
           let poolId: string;
           let priceList: string[];
 
@@ -487,7 +488,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
 
         if (!item.quantity) {
           if (preview) {
-            item.quantity = 20;
+            item.quantity = 30;
           } else {
             item.quantity = 1;
           }
@@ -687,26 +688,26 @@ export const getExecuteBuyV7Options: RouteOptions = {
         if (item.collection) {
           let mintAvailable = false;
           if (item.fillType === "mint" || item.fillType === "preferMint") {
-            // Fetch any open mints on the collection which the taker is elligible for
-            const openMints = await mints.getCollectionMints(item.collection, {
-              status: "open",
-            });
-            for (const mint of openMints) {
-              if (!payload.currency || mint.currency === payload.currency) {
-                const collectionData = await idb.one(
-                  `
-                    SELECT
-                      contracts.kind AS token_kind
-                    FROM collections
-                    JOIN contracts
-                      ON collections.contract = contracts.address
-                    WHERE collections.id = $/id/
-                  `,
-                  {
-                    id: item.collection,
-                  }
-                );
-                if (collectionData) {
+            const collectionData = await idb.oneOrNone(
+              `
+                SELECT
+                  contracts.kind AS token_kind
+                FROM collections
+                JOIN contracts
+                  ON collections.contract = contracts.address
+                WHERE collections.id = $/id/
+              `,
+              {
+                id: item.collection,
+              }
+            );
+            if (collectionData) {
+              // Fetch any open mints on the collection which the taker is elligible for
+              const openMints = await mints.getCollectionMints(item.collection, {
+                status: "open",
+              });
+              for (const mint of openMints) {
+                if (!payload.currency || mint.currency === payload.currency) {
                   const amountMintable = await mints.getAmountMintableByWallet(mint, payload.taker);
 
                   let quantityToMint = bn(
@@ -761,7 +762,11 @@ export const getExecuteBuyV7Options: RouteOptions = {
                       // The max quantity is the amount mintable on the collection
                       maxQuantities.push({
                         itemIndex,
-                        maxQuantity: amountMintable ? amountMintable.toString() : null,
+                        maxQuantity: mint.tokenId
+                          ? quantityToMint.toString()
+                          : amountMintable
+                          ? amountMintable.toString()
+                          : null,
                       });
                     }
 
@@ -869,27 +874,32 @@ export const getExecuteBuyV7Options: RouteOptions = {
 
           let mintAvailable = false;
           if (item.fillType === "mint" || item.fillType === "preferMint") {
-            // Fetch any open mints on the token which the taker is elligible for
-            const openMints = await mints.getCollectionMints(contract, {
-              status: "open",
-              tokenId,
-            });
-            for (const mint of openMints) {
-              if (!payload.currency || mint.currency === payload.currency) {
-                const collectionData = await idb.one(
-                  `
-                    SELECT
-                      contracts.kind AS token_kind
-                    FROM collections
-                    JOIN contracts
-                      ON collections.contract = contracts.address
-                    WHERE collections.id = $/id/
-                  `,
-                  {
-                    id: item.collection,
-                  }
-                );
-                if (collectionData) {
+            const collectionData = await idb.oneOrNone(
+              `
+                SELECT
+                  collections.id,
+                  contracts.kind AS token_kind
+                FROM tokens
+                JOIN collections
+                  ON tokens.collection_id = collections.id
+                JOIN contracts
+                  ON collections.contract = contracts.address
+                WHERE tokens.contract = $/contract/
+                  AND tokens.token_id = $/tokenId/
+              `,
+              {
+                contract: toBuffer(contract),
+                tokenId,
+              }
+            );
+            if (collectionData) {
+              // Fetch any open mints on the token which the taker is elligible for
+              const openMints = await mints.getCollectionMints(collectionData.id, {
+                status: "open",
+                tokenId,
+              });
+              for (const mint of openMints) {
+                if (!payload.currency || mint.currency === payload.currency) {
                   const amountMintable = await mints.getAmountMintableByWallet(mint, payload.taker);
 
                   const quantityToMint = bn(
@@ -907,7 +917,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
                       quantityToMint
                     );
 
-                    const orderId = `mint:${item.collection}`;
+                    const orderId = `mint:${collectionData.id}`;
                     mintTxs.push({
                       orderId,
                       txData,
@@ -1168,12 +1178,11 @@ export const getExecuteBuyV7Options: RouteOptions = {
         .map((b) => b.orderId);
 
       const addGlobalFee = async (item: (typeof path)[0], fee: Sdk.RouterV6.Types.Fee) => {
+        // The fees should be relative to a single quantity
+        fee.amount = bn(fee.amount).div(item.quantity).toString();
+
         // Global fees get split across all eligible orders
         const adjustedFeeAmount = bn(fee.amount).div(ordersEligibleForGlobalFees.length).toString();
-
-        const itemNetPrice = bn(item.rawQuote).sub(
-          item.feesOnTop.map((f) => bn(f.rawAmount)).reduce((a, b) => a.add(b), bn(0))
-        );
 
         const amount = formatPrice(
           adjustedFeeAmount,
@@ -1184,7 +1193,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
 
         item.feesOnTop.push({
           recipient: fee.recipient,
-          bps: bn(itemNetPrice).mul(10000).div(item.rawQuote).toNumber(),
+          bps: bn(fee.amount).mul(10000).div(item.rawQuote).toNumber(),
           amount,
           rawAmount,
         });

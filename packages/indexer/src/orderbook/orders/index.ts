@@ -22,6 +22,7 @@ export * as looksRareV2 from "@/orderbook/orders/looks-rare-v2";
 export * as collectionxyz from "@/orderbook/orders/collectionxyz";
 export * as sudoswapV2 from "@/orderbook/orders/sudoswap-v2";
 export * as midaswap from "@/orderbook/orders/midaswap";
+export * as caviarV1 from "@/orderbook/orders/caviar-v1";
 export * as paymentProcessor from "@/orderbook/orders/payment-processor";
 
 // Imports
@@ -30,11 +31,13 @@ import * as Sdk from "@reservoir0x/sdk";
 import * as SdkTypesV5 from "@reservoir0x/sdk/dist/router/v5/types";
 import * as SdkTypesV6 from "@reservoir0x/sdk/dist/router/v6/types";
 
+import { inject } from "@/api/index";
 import { idb } from "@/common/db";
 import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
 import { SourcesEntity } from "@/models/sources/sources-entity";
 import { checkMarketplaceIsFiltered } from "@/utils/marketplace-blacklists";
+import { getRoyalties } from "@/utils/royalties";
 
 // Whenever a new order kind is added, make sure to also include an
 // entry/implementation in the below types/methods in order to have
@@ -78,6 +81,7 @@ export type OrderKind =
   | "collectionxyz"
   | "sudoswap-v2"
   | "midaswap"
+  | "caviar-v1"
   | "payment-processor"
   | "blur-v2";
 
@@ -160,6 +164,8 @@ export const getOrderSourceByOrderKind = async (
         return sources.getOrInsert("sudoswap.xyz");
       case "midaswap":
         return sources.getOrInsert("midaswap.org");
+      case "caviar-v1":
+        return sources.getOrInsert("caviar.sh");
       case "nftx":
         return sources.getOrInsert("nftx.io");
       case "blur":
@@ -413,6 +419,14 @@ export const generateListingDetailsV6 = (
         kind: "midaswap",
         ...common,
         order: new Sdk.Midaswap.Order(config.chainId, order.rawData),
+      };
+    }
+
+    case "caviar-v1": {
+      return {
+        kind: "caviar-v1",
+        ...common,
+        order: new Sdk.CaviarV1.Order(config.chainId, order.rawData),
       };
     }
 
@@ -744,12 +758,40 @@ export const generateBidDetailsV6 = async (
       };
     }
 
+    case "caviar-v1": {
+      const sdkOrder = new Sdk.CaviarV1.Order(config.chainId, order.rawData);
+
+      const response = await inject({
+        method: "GET",
+        url: `/oracle/tokens/status/v2?tokens=${token.contract}:${token.tokenId}`,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      const { messages } = JSON.parse(response.payload);
+
+      return {
+        kind: "caviar-v1",
+        ...common,
+        order: sdkOrder,
+        extraArgs: {
+          stolenProof: messages[0].message,
+        },
+      };
+    }
+
     case "payment-processor": {
       const sdkOrder = new Sdk.PaymentProcessor.Order(config.chainId, order.rawData);
       return {
         kind: "payment-processor",
         ...common,
         order: sdkOrder,
+        extraArgs: {
+          maxRoyaltyFeeNumerator: await getRoyalties(token.contract, undefined, "onchain").then(
+            (royalties) => royalties.map((r) => r.bps).reduce((a, b) => a + b, 0)
+          ),
+        },
       };
     }
 
@@ -974,7 +1016,6 @@ export const checkBlacklistAndFallback = async (
     ]);
     if (blocked) {
       params.orderKind = "seaport-v1.5";
-      params.orderbook = "reservoir";
     }
   }
 

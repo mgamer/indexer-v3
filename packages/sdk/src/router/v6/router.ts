@@ -60,6 +60,7 @@ import ZoraModuleAbi from "./abis/ZoraModule.json";
 import PermitProxyAbi from "./abis/PermitProxy.json";
 import SudoswapV2ModuleAbi from "./abis/SudoswapV2Module.json";
 import MidaswapModuleAbi from "./abis/MidaswapModule.json";
+import CaviarV1ModuleAbi from "./abis/CaviarV1Module.json";
 import CryptoPunksModuleAbi from "./abis/CryptoPunksModule.json";
 import PaymentProcessorModuleAbi from "./abis/PaymentProcessorModule.json";
 // Exchanges
@@ -142,7 +143,11 @@ export class Router {
       ),
       midaswapModule: new Contract(
         Addresses.MidaswapModule[chainId] ?? AddressZero,
-        MidaswapModuleAbi,
+        MidaswapModuleAbi
+      ),
+      caviarV1Module: new Contract(
+        Addresses.CaviarV1Module[chainId] ?? AddressZero,
+        CaviarV1ModuleAbi,
         provider
       ),
       superRareModule: new Contract(
@@ -688,6 +693,7 @@ export class Router {
     const sudoswapDetails: ListingDetails[] = [];
     const sudoswapV2Details: ListingDetails[] = [];
     const midaswapDetails: ListingDetails[] = [];
+    const caviarV1Details: ListingDetails[] = [];
     const collectionXyzDetails: ListingDetails[] = [];
     const x2y2Details: ListingDetails[] = [];
     const zeroexV4Erc721Details: ListingDetails[] = [];
@@ -769,6 +775,9 @@ export class Router {
 
         case "midaswap":
           detailsRef = midaswapDetails;
+          break;
+        case "caviar-v1":
+          detailsRef = caviarV1Details;
           break;
 
         case "x2y2":
@@ -1779,8 +1788,7 @@ export class Router {
       }
     }
 
-    // todo
-    // Handle midaswap listings
+    // Handle Midaswap listings
     if (midaswapDetails.length) {
       const orders = midaswapDetails.map((d) => ({
         order: d.order as Sdk.Midaswap.Order,
@@ -1842,6 +1850,66 @@ export class Router {
 
       // Mark the listings as successfully handled
       for (const { orderId } of midaswapDetails) {
+        success[orderId] = true;
+        orderIds.push(orderId);
+      }
+    }
+
+    // Handle Caviar V1 listings
+    if (caviarV1Details.length) {
+      const orders = caviarV1Details.map((d) => ({
+        order: d.order as Sdk.CaviarV1.Order,
+        amount: d.amount,
+        contractKind: d.contractKind,
+      }));
+
+      const module = this.contracts.caviarV1Module;
+      const fees = getFees(caviarV1Details);
+      const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
+      const price = orders
+        .map(({ order }) =>
+          bn(
+            order.params.extra.prices[
+              orders
+                .map(({ order }) => order)
+                .filter((o) => o.params.pool === order.params.pool)
+                .findIndex((o) => o.params.tokenId === order.params.tokenId)
+            ]
+          )
+        )
+        .reduce((a, b) => a.add(b), bn(0));
+
+      const totalPrice = price.add(feeAmount);
+
+      executions.push({
+        module: module.address,
+        data: module.interface.encodeFunctionData("buyWithETH", [
+          caviarV1Details.map((d) => (d.order as Sdk.CaviarV1.Order).params.pool),
+          caviarV1Details.map((d) => d.tokenId),
+          {
+            fillTo: taker,
+            refundTo: relayer,
+            revertIfIncomplete: Boolean(!options?.partial),
+            amount: price,
+          },
+          fees,
+        ]),
+        value: totalPrice,
+      });
+
+      // Track any possibly required swap
+      swapDetails.push({
+        tokenIn: buyInCurrency,
+        tokenOut: Sdk.Common.Addresses.Eth[this.chainId],
+        tokenOutAmount: totalPrice,
+        recipient: module.address,
+        refundTo: relayer,
+        details: caviarV1Details,
+        executionIndex: executions.length - 1,
+      });
+
+      // Mark the listings as successfully handled
+      for (const { orderId } of caviarV1Details) {
         success[orderId] = true;
         orderIds.push(orderId);
       }
@@ -2491,7 +2559,7 @@ export class Router {
         data: module.interface.encodeFunctionData("batchBuyPunksWithETH", [
           orders.map((order) => ({
             buyer: taker,
-            price: price,
+            price: order.params.price,
             punkIndex: order.params.tokenId,
           })),
           {
@@ -3034,6 +3102,10 @@ export class Router {
           module = this.contracts.midaswapModule;
           break;
         }
+        case "caviar-v1": {
+          module = this.contracts.caviarV1Module;
+          break;
+        }
 
         case "collectionxyz": {
           module = this.contracts.collectionXyzModule;
@@ -3569,6 +3641,35 @@ export class Router {
           break;
         }
 
+        case "caviar-v1": {
+          const order = detail.order as Sdk.CaviarV1.Order;
+          const module = this.contracts.caviarV1Module;
+
+          executionsWithDetails.push({
+            detail,
+            execution: {
+              module: module.address,
+              data: module.interface.encodeFunctionData("sell", [
+                order.params.pool,
+                detail.tokenId,
+                bn(order.params.extra.prices[0]),
+                detail.extraArgs.stolenProof,
+                {
+                  fillTo: taker,
+                  refundTo: taker,
+                  revertIfIncomplete: Boolean(!options?.partial),
+                },
+                fees,
+              ]),
+              value: 0,
+            },
+          });
+
+          success[detail.orderId] = true;
+
+          break;
+        }
+
         case "collectionxyz": {
           const order = detail.order as Sdk.CollectionXyz.Order;
           const module = this.contracts.collectionXyzModule;
@@ -3880,6 +3981,7 @@ export class Router {
             taker: module.address,
             takerMasterNonce: "0",
             tokenId: order.params.collectionLevelOffer ? detail.tokenId : undefined,
+            maxRoyaltyFeeNumerator: detail.extraArgs?.maxRoyaltyFeeNumerator ?? "0",
           });
           const matchedOrder = order.getMatchedOrder(takerOrder);
 

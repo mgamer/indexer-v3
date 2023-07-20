@@ -40,6 +40,7 @@ import * as blend from "@/events-sync/handlers/blend";
 import * as collectionxyz from "@/events-sync/handlers/collectionxyz";
 import * as sudoswapV2 from "@/events-sync/handlers/sudoswap-v2";
 import * as midaswap from "@/events-sync/handlers/midaswap";
+import * as caviarV1 from "@/events-sync/handlers/caviar-v1";
 import * as paymentProcessor from "@/events-sync/handlers/payment-processor";
 import * as thirdweb from "@/events-sync/handlers/thirdweb";
 import * as seadrop from "@/events-sync/handlers/seadrop";
@@ -100,6 +101,7 @@ export const eventKindToHandler = new Map<
   ["sudoswap-v2", (e, d) => sudoswapV2.handleEvents(e, d)],
   ["midaswap", (e, d) => midaswap.handleEvents(e, d)],
   ["blend", (e, d) => blend.handleEvents(e, d)],
+  ["caviar-v1", (e, d) => caviarV1.handleEvents(e, d)],
   ["payment-processor", (e, d) => paymentProcessor.handleEvents(e, d)],
   ["thirdweb", (e, d) => thirdweb.handleEvents(e, d)],
   ["seadrop", (e, d) => seadrop.handleEvents(e, d)],

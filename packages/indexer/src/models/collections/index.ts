@@ -21,6 +21,10 @@ import { recalcOwnerCountQueueJob } from "@/jobs/collection-updates/recalc-owner
 import { fetchCollectionMetadataJob } from "@/jobs/token-updates/fetch-collection-metadata-job";
 import { refreshActivitiesCollectionMetadataJob } from "@/jobs/activities/refresh-activities-collection-metadata-job";
 import { orderUpdatesByIdJob } from "@/jobs/order-updates/order-updates-by-id-job";
+import {
+  topBidCollectionJob,
+  TopBidCollectionJobPayload,
+} from "@/jobs/collection-updates/top-bid-collection-job";
 
 export class Collections {
   public static async getById(collectionId: string, readReplica = false) {
@@ -115,6 +119,7 @@ export class Collections {
           context: "updateCollectionCache",
         },
       ]);
+
       return;
     }
 
@@ -165,6 +170,7 @@ export class Collections {
         slug = $/slug/,
         token_count = $/tokenCount/,
         payment_tokens = $/paymentTokens/,
+        creator = $/creator/,
         updated_at = now()
       WHERE id = $/id/
       RETURNING (
@@ -185,6 +191,7 @@ export class Collections {
       slug: collection.slug,
       tokenCount,
       paymentTokens: collection.paymentTokens ? { opensea: collection.paymentTokens } : {},
+      creator: collection.creator ? toBuffer(collection.creator) : null,
     };
 
     const result = await idb.oneOrNone(query, values);
@@ -392,6 +399,23 @@ export class Collections {
           trigger: { kind: "revalidation" },
         }))
       );
+    } else {
+      logger.info(
+        "revalidateCollectionTopBuy",
+        JSON.stringify({
+          message: "No token sets with top bid found for collection",
+          collection,
+        })
+      );
+
+      await topBidCollectionJob.addToQueue([
+        {
+          collectionId: collection,
+          kind: "revalidation",
+          txHash: null,
+          txTimestamp: null,
+        } as TopBidCollectionJobPayload,
+      ]);
     }
   }
 

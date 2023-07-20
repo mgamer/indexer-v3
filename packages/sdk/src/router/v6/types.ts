@@ -151,6 +151,10 @@ export type GenericOrder =
       order: Sdk.Midaswap.Order;
     }
   | {
+      kind: "caviar-v1";
+      order: Sdk.CaviarV1.Order;
+    }
+  | {
       kind: "payment-processor";
       order: Sdk.PaymentProcessor.Order;
     };

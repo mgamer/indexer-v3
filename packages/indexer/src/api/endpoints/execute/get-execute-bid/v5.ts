@@ -105,7 +105,9 @@ export const getExecuteBidV5Options: RouteOptions = {
           quantity: Joi.number().description("Quantity of tokens to bid on."),
           weiPrice: Joi.string()
             .pattern(regex.number)
-            .description("Amount bidder is willing to offer in wei. Example: `1000000000000000000`")
+            .description(
+              "Amount bidder is willing to offer in the smallest denomination for the specific currency. Example: `1000000000000000000`"
+            )
             .required(),
           orderKind: Joi.string()
             .valid(
@@ -436,6 +438,9 @@ export const getExecuteBidV5Options: RouteOptions = {
           // Blacklist checks
           if (collectionId) {
             await checkBlacklistAndFallback(collectionId, params);
+          }
+          if (token) {
+            await checkBlacklistAndFallback(token.split(":")[0], params);
           }
 
           // Only single-contract token sets are biddable

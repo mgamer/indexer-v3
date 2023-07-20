@@ -42,7 +42,6 @@ export const config = {
   rateLimitRedisUrl: String(process.env.RATE_LIMIT_REDIS_URL || process.env.REDIS_URL),
   redisWebsocketUrl: String(process.env.REDIS_WEBSOCKET_URL || process.env.REDIS_URL),
   metricsRedisUrl: String(process.env.METRICS_REDIS_URL || process.env.REDIS_URL),
-  orderbookRedisUrl: String(process.env.ORDERSBOOK_REDIS_URL || process.env.REDIS_URL),
   allChainsSyncRedisUrl: String(process.env.ALL_CHAINS_SYNC_REDIS_URL || process.env.REDIS_URL),
   redshiftUrl: String(process.env.REDSHIFT_URL),
 
@@ -124,10 +123,6 @@ export const config = {
   // Elasticsearch
   elasticsearchUrl: String(process.env.ELASTICSEARCH_URL || ""),
   doElasticsearchWork: Boolean(Number(process.env.DO_ELASTICSEARCH_WORK)),
-
-  // realtime v2
-  enableRealtimeProcessing: Boolean(process.env.ENABLE_REALTIME_PROCESSING),
-  enableRealtimeV2BlockQueue: Boolean(process.env.ENABLE_REALTIME_V2_BLOCK_QUEUE),
 
   // RabbitMq
   rabbitMqUrl: `amqp://${String(process.env.RABBIT_URL)}:5672`,

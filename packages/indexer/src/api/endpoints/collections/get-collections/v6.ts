@@ -159,6 +159,7 @@ export const getCollectionsV6Options: RouteOptions = {
           onSaleCount: Joi.string().description("Total tokens currently on sale."),
           primaryContract: Joi.string().lowercase().pattern(regex.address),
           tokenSetId: Joi.string().allow(null),
+          creator: Joi.string().allow(null),
           royalties: Joi.object({
             recipient: Joi.string().allow("", null),
             breakdown: Joi.array().items(
@@ -253,6 +254,7 @@ export const getCollectionsV6Options: RouteOptions = {
           mintStages: Joi.array().items(
             Joi.object({
               stage: Joi.string().required(),
+              tokenId: Joi.string().pattern(regex.number).allow(null),
               kind: Joi.string().required(),
               price: JoiPrice.required(),
               startTime: Joi.number().allow(null),
@@ -306,11 +308,12 @@ export const getCollectionsV6Options: RouteOptions = {
               array_agg(
                 json_build_object(
                   'stage', collection_mints.stage,
+                  'tokenId', collection_mints.token_id::TEXT,
                   'kind', collection_mints.kind,
                   'currency', concat('0x', encode(collection_mints.currency, 'hex')),
                   'price', collection_mints.price::TEXT,
-                  'startTime', collection_mints.start_time,
-                  'endTime', collection_mints.end_time,
+                  'startTime', floor(extract(epoch from collection_mints.start_time)),
+                  'endTime', floor(extract(epoch from collection_mints.end_time)),
                   'maxMintsPerWallet', collection_mints.max_mints_per_wallet
                 )
               ) AS mint_stages
@@ -400,6 +403,7 @@ export const getCollectionsV6Options: RouteOptions = {
           collections.contract,
           collections.token_id_range,
           collections.token_set_id,
+          collections.creator,
           collections.day1_rank,
           collections.day1_volume,
           collections.day7_rank,
@@ -445,8 +449,6 @@ export const getCollectionsV6Options: RouteOptions = {
       // Filtering
 
       const conditions: string[] = [];
-
-      conditions.push("collections.token_count > 0");
 
       if (query.id) {
         conditions.push("collections.id = $/id/");
@@ -662,6 +664,7 @@ export const getCollectionsV6Options: RouteOptions = {
             onSaleCount: String(r.on_sale_count),
             primaryContract: fromBuffer(r.contract),
             tokenSetId: r.token_set_id,
+            creator: r.creator ? fromBuffer(r.creator) : null,
             royalties: r.royalties
               ? {
                   // Main recipient, kept for backwards-compatibility only
@@ -703,26 +706,27 @@ export const getCollectionsV6Options: RouteOptions = {
             topBid: {
               id: r.top_buy_id,
               sourceDomain: r.top_buy_id ? sources.get(r.top_buy_source_id_int)?.domain : null,
-              price: r.top_buy_id
-                ? await getJoiPriceObject(
-                    {
-                      net: {
-                        amount: query.normalizeRoyalties
-                          ? r.top_buy_currency_normalized_value ?? r.top_buy_value
-                          : r.top_buy_currency_value ?? r.top_buy_value,
-                        nativeAmount: query.normalizeRoyalties
-                          ? r.top_buy_normalized_value ?? r.top_buy_value
-                          : r.top_buy_value,
+              price:
+                r.top_buy_id && r.top_buy_value
+                  ? await getJoiPriceObject(
+                      {
+                        net: {
+                          amount: query.normalizeRoyalties
+                            ? r.top_buy_currency_normalized_value ?? r.top_buy_value
+                            : r.top_buy_currency_value ?? r.top_buy_value,
+                          nativeAmount: query.normalizeRoyalties
+                            ? r.top_buy_normalized_value ?? r.top_buy_value
+                            : r.top_buy_value,
+                        },
+                        gross: {
+                          amount: r.top_buy_currency_price ?? r.top_buy_price,
+                          nativeAmount: r.top_buy_price,
+                        },
                       },
-                      gross: {
-                        amount: r.top_buy_currency_price ?? r.top_buy_price,
-                        nativeAmount: r.top_buy_price,
-                      },
-                    },
-                    topBidCurrency,
-                    query.displayCurrency
-                  )
-                : null,
+                      topBidCurrency,
+                      query.displayCurrency
+                    )
+                  : null,
               maker: r.top_buy_maker ? fromBuffer(r.top_buy_maker) : null,
               validFrom: r.top_buy_valid_from,
               validUntil: r.top_buy_value ? r.top_buy_valid_until : null,

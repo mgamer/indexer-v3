@@ -142,6 +142,10 @@ export const extractEventsBatches = async (
             data: kindToEvents.get("midaswap") ?? [],
           },
           {
+            kind: "caviar-v1",
+            data: kindToEvents.get("caviar-v1") ?? [],
+          },
+          {
             kind: "wyvern",
             data: kindToEvents.has("wyvern")
               ? [
