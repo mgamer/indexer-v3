@@ -161,7 +161,10 @@ export const getTransfersBulkV1Options: RouteOptions = {
 
           // If no address most likely the continuation is wrong
           if (!address) {
-            return [];
+            return {
+              transfers: [],
+              continuation: null,
+            };
           }
 
           (query as any).updatedAt = updateAt;
