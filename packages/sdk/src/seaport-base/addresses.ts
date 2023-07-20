@@ -30,11 +30,6 @@ export const ReservoirConduitKey: ChainIdToAddress = {
   [Network.Base]: "0xf3d63166f0ca56c3c1a3508fce03ff0cf3fb691e000000000000000000000000",
 };
 
-export const LooksRareConduitKey: ChainIdToAddress = {
-  [Network.Ethereum]: "0x0000007b02230091a7ed01230072f7006a004d60a8d4e71d599b8104250f0000",
-  [Network.EthereumGoerli]: "0x0000007b02230091a7ed01230072f7006a004d60a8d4e71d599b8104250f0000",
-};
-
 export const ConduitController: ChainIdToAddress = {
   [Network.Ethereum]: "0x00000000f9490004c11cef243f5400493c00ad63",
   [Network.Bsc]: "0x00000000f9490004c11cef243f5400493c00ad63",
