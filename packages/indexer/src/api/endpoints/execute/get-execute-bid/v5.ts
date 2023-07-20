@@ -571,10 +571,10 @@ export const getExecuteBidV5Options: RouteOptions = {
                     authToken: blurAuth!.accessToken,
                   });
 
-                  const id = new Sdk.BlurV2.Order(config.chainId, {
-                    ...signData.value,
-                    nonce: signData.value.nonce.hex ?? signData.value.nonce,
-                  }).hash();
+                  // Blur returns the nonce as a BigNumber object
+                  signData.value.nonce = signData.value.nonce.hex ?? signData.value.nonce;
+
+                  const id = new Sdk.BlurV2.Order(config.chainId, signData.value).hash();
 
                   steps[3].items.push({
                     status: "incomplete",
