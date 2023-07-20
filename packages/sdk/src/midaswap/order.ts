@@ -1,6 +1,7 @@
 import * as Types from "./types";
 import { lc, s } from "../utils";
 import Decimal from "decimal.js";
+import { ethers } from "ethers";
 
 export class Order {
   public chainId: number;
@@ -21,6 +22,30 @@ export class Order {
     const b = new Decimal(10).pow(18 - decimal);
     const price = new Decimal(1.0001).pow(powValue).times(b).toFixed(toFixedNumber);
     return String(price);
+  };
+
+  public static getSellPrice = (bin: number, freeRate = 0, roralty = 0) => {
+    const price = Order.binToPriceFixed(bin);
+    return ethers.utils
+      .parseEther(
+        new Decimal(price)
+          .mul(1 + (freeRate + roralty) / 10000)
+          .toFixed(18)
+          .toString()
+      )
+      .toString();
+  };
+
+  public static getBuyPrice = (bin: number, freeRate = 0, roralty = 0) => {
+    const price = Order.binToPriceFixed(bin);
+    return ethers.utils
+      .parseEther(
+        new Decimal(price)
+          .div(1 + (freeRate + roralty) / 10000)
+          .toFixed(18)
+          .toString()
+      )
+      .toString();
   };
 }
 

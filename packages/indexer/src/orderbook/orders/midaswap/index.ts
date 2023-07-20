@@ -13,8 +13,6 @@ import { Sources } from "@/models/sources";
 import { DbOrder, OrderMetadata, generateSchemaHash } from "@/orderbook/orders/utils";
 import * as tokenSet from "@/orderbook/token-sets";
 import * as midaswap from "@/utils/midaswap";
-import { ethers } from "ethers";
-import Decimal from "decimal.js";
 import { baseProvider } from "@/common/provider";
 import { Contract } from "@ethersproject/contracts";
 
@@ -109,14 +107,11 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
             (item, index) => binLower + index * binstep
           );
 
-          const price = ethers.utils
-            .parseEther(
-              new Decimal(Sdk.Midaswap.Order.binToPriceFixed(tmpPriceList[0]))
-                .mul(1 + (+pool.freeRate + +pool.roralty) / 10000)
-                .toFixed(18)
-                .toString()
-            )
-            .toString();
+          const price = Sdk.Midaswap.Order.getSellPrice(
+            tmpPriceList[0],
+            +pool.freeRate,
+            +pool.roralty
+          );
           const value = price;
 
           // Handle: core sdk order
@@ -127,14 +122,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
             lpTokenId,
             extra: {
               prices: tmpPriceList.map((bin) => ({
-                price: ethers.utils
-                  .parseEther(
-                    new Decimal(Sdk.Midaswap.Order.binToPriceFixed(bin))
-                      .mul(1 + (+pool.freeRate + +pool.roralty) / 10000)
-                      .toFixed(18)
-                      .toString()
-                  )
-                  .toString(),
+                price: Sdk.Midaswap.Order.getSellPrice(bin, +pool.freeRate, +pool.roralty),
                 bin: bin.toString(),
                 lpTokenId,
               })),
@@ -242,26 +230,15 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
             .map((item, index) => binLower + index * binstep)
             .reverse();
 
-          const price = ethers.utils
-            .parseEther(
-              new Decimal(Sdk.Midaswap.Order.binToPriceFixed(tmpPriceList[0]))
-                .div(1 + (+pool.freeRate + +pool.roralty) / 10000)
-                .toFixed(18)
-                .toString()
-            )
-            .toString();
-
+          const price = Sdk.Midaswap.Order.getBuyPrice(
+            tmpPriceList[0],
+            +pool.freeRate,
+            +pool.roralty
+          );
           const value = price;
 
           const prices = tmpPriceList.map((bin) => ({
-            price: ethers.utils
-              .parseEther(
-                new Decimal(Sdk.Midaswap.Order.binToPriceFixed(bin))
-                  .div(1 + (+pool.freeRate + +pool.roralty) / 10000)
-                  .toFixed(18)
-                  .toString()
-              )
-              .toString(),
+            price: Sdk.Midaswap.Order.getBuyPrice(bin, +pool.freeRate, +pool.roralty),
             bin: bin.toString(),
             lpTokenId,
           }));
@@ -617,14 +594,11 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                     ? newBuyPrices
                     : [
                         {
-                          price: ethers.utils
-                            .parseEther(
-                              new Decimal(Sdk.Midaswap.Order.binToPriceFixed(tradeBin))
-                                .div(1 + (+pool.freeRate + +pool.roralty) / 10000)
-                                .toFixed(18)
-                                .toString()
-                            )
-                            .toString(),
+                          price: Sdk.Midaswap.Order.getBuyPrice(
+                            tradeBin,
+                            +pool.freeRate,
+                            +pool.roralty
+                          ),
                           bin: tradeBin.toString(),
                           lpTokenId,
                         },
@@ -687,14 +661,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
               // append new buy order bins
               +tradeBin <= +floorPriceBin
                 ? {
-                    price: ethers.utils
-                      .parseEther(
-                        new Decimal(Sdk.Midaswap.Order.binToPriceFixed(tradeBin))
-                          .div(1 + (+pool.freeRate + +pool.roralty) / 10000)
-                          .toFixed(18)
-                          .toString()
-                      )
-                      .toString(),
+                    price: Sdk.Midaswap.Order.getBuyPrice(tradeBin, +pool.freeRate, +pool.roralty),
                     bin: tradeBin.toString(),
                     lpTokenId,
                   }
@@ -800,14 +767,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                 [
                   ...cancelledToTillableOrders.map((item) => item.raw_data.extra.prices[0]),
                   {
-                    price: ethers.utils
-                      .parseEther(
-                        new Decimal(Sdk.Midaswap.Order.binToPriceFixed(tradeBin))
-                          .div(1 + (+pool.freeRate + +pool.roralty) / 10000)
-                          .toFixed(18)
-                          .toString()
-                      )
-                      .toString(),
+                    price: Sdk.Midaswap.Order.getBuyPrice(tradeBin, +pool.freeRate, +pool.roralty),
                     bin: tradeBin.toString(),
                     lpTokenId,
                   },
@@ -1004,14 +964,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
               [
                 ...sellOrders[0].raw_data.extra.prices,
                 {
-                  price: ethers.utils
-                    .parseEther(
-                      new Decimal(Sdk.Midaswap.Order.binToPriceFixed(tradeBin))
-                        .mul(1 + (+pool.freeRate + +pool.roralty) / 10000)
-                        .toFixed(18)
-                        .toString()
-                    )
-                    .toString(),
+                  price: Sdk.Midaswap.Order.getSellPrice(tradeBin, +pool.freeRate, +pool.roralty),
                   bin: tradeBin.toString(),
                   lpTokenId,
                 },
