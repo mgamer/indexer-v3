@@ -104,7 +104,7 @@ export async function processTopBid(payload: topBidPayload, queueName: string) {
           eventKind: WebsocketEventKind.NewTopBid,
           eventInfo: {
             orderId: tokenSetTopBid[0].topBuyId,
-            isSingleTokenBid: true,
+            validateCollectionTopBid: true,
           },
         });
       }

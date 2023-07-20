@@ -243,7 +243,7 @@ export type EventInfo = {
 
 export type TopBidWebsocketEventInfo = {
   orderId: string;
-  isSingleTokenBid: boolean;
+  validateCollectionTopBid: boolean;
 };
 
 export const addToQueue = async (events: EventInfo[]) => {

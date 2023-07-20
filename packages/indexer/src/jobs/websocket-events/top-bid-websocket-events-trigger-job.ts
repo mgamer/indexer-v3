@@ -12,7 +12,7 @@ import { redis } from "@/common/redis";
 
 export type TopBidWebsocketEventInfo = {
   orderId: string;
-  isSingleTokenBid?: boolean;
+  validateCollectionTopBid?: boolean;
 };
 
 export type TopBidWebSocketEventsTriggerJobPayload = {
@@ -92,15 +92,8 @@ export class TopBidWebSocketEventsTriggerJob extends AbstractRabbitMqJobHandler 
         return;
       }
 
-      if (data?.isSingleTokenBid) {
+      if (data?.validateCollectionTopBid) {
         if (Number(order.value) < Number(order.top_buy_value)) {
-          logger.warn(
-            this.queueName,
-            `Order value is less than top bid value. data=${JSON.stringify(data)}, value=${
-              order.value
-            }, topBuyValue=${order.top_buy_value}`
-          );
-
           return;
         }
       }
