@@ -116,11 +116,15 @@ export const getTokensV6Options: RouteOptions = {
       minRarityRank: Joi.number()
         .integer()
         .min(1)
-        .description("Get tokens with a min rarity rank (inclusive), no rarity rank for collections over 100k"),
+        .description(
+          "Get tokens with a min rarity rank (inclusive), no rarity rank for collections over 100k"
+        ),
       maxRarityRank: Joi.number()
         .integer()
         .min(1)
-        .description("Get tokens with a max rarity rank (inclusive), no rarity rank for collections over 100k"),
+        .description(
+          "Get tokens with a max rarity rank (inclusive), no rarity rank for collections over 100k"
+        ),
       minFloorAskPrice: Joi.number().description(
         "Get tokens with a min floor ask price (inclusive); use native currency"
       ),
@@ -221,8 +225,14 @@ export const getTokensV6Options: RouteOptions = {
               .allow(null)
               .description("Can be higher than 1 if erc1155"),
             remainingSupply: Joi.number().unsafe().allow(null),
-            rarity: Joi.number().unsafe().allow(null).description("No rarity for collections over 100k"),
-            rarityRank: Joi.number().unsafe().allow(null).description("No rarity rank for collections over 100k"),
+            rarity: Joi.number()
+              .unsafe()
+              .allow(null)
+              .description("No rarity for collections over 100k"),
+            rarityRank: Joi.number()
+              .unsafe()
+              .allow(null)
+              .description("No rarity rank for collections over 100k"),
             collection: Joi.object({
               id: Joi.string().allow(null),
               name: Joi.string().allow("", null),
