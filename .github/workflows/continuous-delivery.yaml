@@ -167,9 +167,9 @@ jobs:
         working-directory: k8s-configs
         run: |
           ./utils/version_update.sh \
-            ./prod/platform/indexer-api.yaml \
+            ./prod/platform/indexer-api-mainnet.yaml \
             ${{ github.sha }} \
-            indexer-api
+            indexer-api-mainnet
           ./utils/version_update.sh \
             ./prod/platform/indexer-api-arbitrum.yaml \
             ${{ github.sha }} \
@@ -227,17 +227,17 @@ jobs:
             ${{ github.sha }} \
             indexer-api-base
           ./utils/version_update.sh \
-            ./prod/platform/indexer-worker.yaml \
+            ./prod/platform/indexer-worker-mainnet.yaml \
             ${{ github.sha }} \
-            indexer-worker
+            indexer-worker-mainnet
           ./utils/version_update.sh \
             ./prod/platform/indexer-worker-arbitrum.yaml \
             ${{ github.sha }} \
             indexer-worker-arbitrum
           ./utils/version_update.sh \
-            ./prod/platform/indexer-worker-master.yaml \
+            ./prod/platform/indexer-worker-master-mainnet.yaml \
             ${{ github.sha }} \
-            indexer-worker-master
+            indexer-worker-master-mainnet
           ./utils/version_update.sh \
             ./prod/platform/indexer-worker-optimism.yaml \
             ${{ github.sha }} \
@@ -315,9 +315,9 @@ jobs:
             ${{ github.sha }} \
             indexer-websocket-goerli
           ./utils/version_update.sh \
-            ./prod/platform/indexer-kafka-worker.yaml \
+            ./prod/platform/indexer-kafka-worker-mainnet.yaml \
             ${{ github.sha }} \
-            indexer-kafka-worker
+            indexer-kafka-worker-mainnet
           ./utils/version_update.sh \
             ./prod/platform/indexer-worker-master-polygon.yaml \
             ${{ github.sha }} \
