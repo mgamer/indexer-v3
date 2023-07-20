@@ -69,7 +69,19 @@ export class TokenAttributeWebsocketEventsTriggerQueueJob extends AbstractRabbit
           contract: data.after.contract,
         },
         changed,
-        data: data.after,
+        data: {
+          token: {
+            contract: data.after.contract,
+            tokenId: data.after.token_id,
+          },
+          collection: {
+            id: data.after.collection_id,
+          },
+          key: data.after.key,
+          value: data.after.value,
+          createdAt: data.after.created_at,
+          updatedAt: data.after.updated_at,
+        },
       });
     } catch (error) {
       logger.error(
@@ -102,6 +114,11 @@ export type EventInfo = {
 interface TokenAttributeInfo {
   contract: string;
   token_id: string;
+  collection_id: string;
+  key: string;
+  value: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export type TokenAttributeWebsocketEventInfo = {
