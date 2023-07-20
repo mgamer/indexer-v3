@@ -123,7 +123,7 @@ interface TransferInfo {
 }
 
 export type TransferWebsocketEventInfo = {
-  before: TransferInfo;
+  before: TransferInfo | undefined;
   after: TransferInfo;
   trigger: "insert" | "update" | "delete";
   offset: string;
