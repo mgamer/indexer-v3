@@ -57,6 +57,13 @@ export const getTransfersV3Options: RouteOptions = {
         .description(
           "Order the items are returned in the response. Options are `timestamp`, and `updated_at`. Default is `timestamp`."
         ),
+      sortDirection: Joi.string()
+        .lowercase()
+        .when("orderBy", {
+          is: Joi.valid("updated_at"),
+          then: Joi.valid("asc", "desc").default("desc"),
+          otherwise: Joi.valid("desc").default("desc"),
+        }),
       limit: Joi.number().integer().min(1).max(100).default(20).description("Max limit is 100."),
       continuation: Joi.string().pattern(regex.base64),
       displayCurrency: Joi.string()
@@ -243,8 +250,10 @@ export const getTransfersV3Options: RouteOptions = {
           (query as any).address = toBuffer(address);
           (query as any).tokenId = tokenId;
 
+          const sign = query.sortDirection == "desc" ? "<" : ">";
+
           conditions.push(
-            `(extract(epoch from nft_transfer_events.updated_at), nft_transfer_events.address, nft_transfer_events.token_id) < ($/updatedAt/, $/address/, $/tokenId/)`
+            `(extract(epoch from nft_transfer_events.updated_at), nft_transfer_events.address, nft_transfer_events.token_id) ${sign} ($/updatedAt/, $/address/, $/tokenId/)`
           );
         }
       }
@@ -264,9 +273,9 @@ export const getTransfersV3Options: RouteOptions = {
       } else if (query.orderBy == "updated_at") {
         baseQuery += `
           ORDER BY
-            nft_transfer_events.updated_at DESC,
-            nft_transfer_events.address DESC,
-            nft_transfer_events.token_id DESC
+            nft_transfer_events.updated_at ${query.sortDirection},
+            nft_transfer_events.address ${query.sortDirection},
+            nft_transfer_events.token_id ${query.sortDirection}
         `;
       }
 
