@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { _TypedDataEncoder } from "@ethersproject/hash";
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
@@ -452,7 +453,13 @@ export const getExecuteListV5Options: RouteOptions = {
                 steps[2].items.push({
                   status: "incomplete",
                   data: {
-                    sign: signData,
+                    sign: {
+                      signatureKind: "eip712",
+                      domain: signData.domain,
+                      types: signData.types,
+                      value: signData.value,
+                      primaryType: _TypedDataEncoder.getPrimaryType(signData.types),
+                    },
                     post: {
                       endpoint: "/order/v4",
                       method: "POST",
