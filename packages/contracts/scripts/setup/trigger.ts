@@ -190,7 +190,7 @@ export const trigger = {
         Sdk.LooksRareV2.Addresses.Exchange[chainId],
       ]),
     NFTXModule: async (chainId: number) =>
-      dv("NFTXModule", "v1", [
+      dv("NFTXModule", "v2", [
         DEPLOYER,
         Sdk.RouterV6.Addresses.Router[chainId],
         Sdk.Nftx.Addresses.MarketplaceZap[chainId],
