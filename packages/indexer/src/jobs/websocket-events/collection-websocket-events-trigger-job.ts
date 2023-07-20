@@ -123,97 +123,97 @@ export class CollectionWebsocketEventsTriggerQueueJob extends AbstractRabbitMqJo
           logger.info(
             this.queueName,
             `No changes detected for event. before=${JSON.stringify(
-              before
-            )}, after=${JSON.stringify(after)}`
+              data.before
+            )}, after=${JSON.stringify(data.after)}`
           );
           return;
         }
       }
 
-      const a = data.after;
+      const r = data.after;
 
       await publishWebsocketEvent({
         event: eventType,
         tags: {
-          id: a.id,
+          id: r.id,
         },
         changed,
         data: {
-          id: a.id,
-          slug: a.slug,
-          name: a.name,
+          id: r.id,
+          slug: r.slug,
+          name: r.name,
           metadata: {
-            ...a.metadata,
-            imageUrl: Assets.getLocalAssetsLink(a.metadata?.imageUrl),
+            ...r.metadata,
+            imageUrl: Assets.getLocalAssetsLink(r.metadata?.imageUrl),
           },
-          tokenCount: String(a.token_count),
-          primaryContract: fromBuffer(a.contract),
-          tokenSetId: a.token_set_id,
-          royalties: a.royalties ? a.royalties[0] : null,
+          tokenCount: String(r.token_count),
+          primaryContract: fromBuffer(r.contract),
+          tokenSetId: r.token_set_id,
+          royalties: r.royalties ? r.royalties[0] : null,
           topBid: {
-            id: a.top_buy_id,
-            value: a.top_buy_value ? formatEth(a.top_buy_value) : null,
-            maker: a.top_buy_maker ? fromBuffer(a.top_buy_maker) : null,
-            validFrom: a.top_buy_valid_between[0],
-            validUntil: a.top_buy_value ? a.top_buy_valid_between[1] : null,
+            id: r.top_buy_id,
+            value: r.top_buy_value ? formatEth(r.top_buy_value) : null,
+            maker: r.top_buy_maker ? fromBuffer(r.top_buy_maker) : null,
+            validFrom: r.top_buy_valid_between[0],
+            validUntil: r.top_buy_value ? r.top_buy_valid_between[1] : null,
           },
           rank: {
-            "1day": a.day1_rank,
-            "7day": a.day7_rank,
-            "30day": a.day30_rank,
-            allTime: a.all_time_rank,
+            "1day": r.day1_rank,
+            "7day": r.day7_rank,
+            "30day": r.day30_rank,
+            allTime: r.all_time_rank,
           },
           volume: {
-            "1day": a.day1_volume ? formatEth(a.day1_volume) : null,
-            "7day": a.day7_volume ? formatEth(a.day7_volume) : null,
-            "30day": a.day30_volume ? formatEth(a.day30_volume) : null,
-            allTime: a.all_time_volume ? formatEth(a.all_time_volume) : null,
+            "1day": r.day1_volume ? formatEth(r.day1_volume) : null,
+            "7day": r.day7_volume ? formatEth(r.day7_volume) : null,
+            "30day": r.day30_volume ? formatEth(r.day30_volume) : null,
+            allTime: r.all_time_volume ? formatEth(r.all_time_volume) : null,
           },
           volumeChange: {
-            "1day": a.day1_volume_change,
-            "7day": a.day7_volume_change,
-            "30day": a.day30_volume_change,
+            "1day": r.day1_volume_change,
+            "7day": r.day7_volume_change,
+            "30day": r.day30_volume_change,
           },
           floorSale: {
-            "1day": a.day1_floor_sell_value ? formatEth(a.day1_floor_sell_value) : null,
-            "7day": a.day7_floor_sell_value ? formatEth(a.day7_floor_sell_value) : null,
-            "30day": a.day30_floor_sell_value ? formatEth(a.day30_floor_sell_value) : null,
+            "1day": r.day1_floor_sell_value ? formatEth(r.day1_floor_sell_value) : null,
+            "7day": r.day7_floor_sell_value ? formatEth(r.day7_floor_sell_value) : null,
+            "30day": r.day30_floor_sell_value ? formatEth(r.day30_floor_sell_value) : null,
           },
           floorSaleChange: {
-            "1day": Number(a.day1_floor_sell_value)
-              ? Number(a.floor_sell_value) / Number(a.day1_floor_sell_value)
+            "1day": Number(r.day1_floor_sell_value)
+              ? Number(r.floor_sell_value) / Number(r.day1_floor_sell_value)
               : null,
-            "7day": Number(a.day7_floor_sell_value)
-              ? Number(a.floor_sell_value) / Number(a.day7_floor_sell_value)
+            "7day": Number(r.day7_floor_sell_value)
+              ? Number(r.floor_sell_value) / Number(r.day7_floor_sell_value)
               : null,
-            "30day": Number(a.day30_floor_sell_value)
-              ? Number(a.floor_sell_value) / Number(a.day30_floor_sell_value)
+            "30day": Number(r.day30_floor_sell_value)
+              ? Number(r.floor_sell_value) / Number(r.day30_floor_sell_value)
               : null,
           },
-          ownerCount: Number(a.owner_count),
+          ownerCount: Number(r.owner_count),
           floorAsk: {
-            id: a.floor_sell_id,
-            price: a.floor_sell_id ? formatEth(a.floor_sell_value) : null,
-            maker: a.floor_sell_id ? fromBuffer(a.floor_sell_maker) : null,
-            validFrom: a.floor_sell_valid_between[0],
-            validUntil: a.floor_sell_id ? a.floor_sell_valid_between[1] : null,
+            id: r.floor_sell_id,
+            price: r.floor_sell_id ? formatEth(r.floor_sell_value) : null,
+            maker: r.floor_sell_id ? fromBuffer(r.floor_sell_maker) : null,
+            validFrom: r.floor_sell_valid_between[0],
+            validUntil: r.floor_sell_id ? r.floor_sell_valid_between[1] : null,
           },
           floorAskNormalized: {
-            id: a.normalized_floor_sell_id,
-            price: a.normalized_floor_sell_id ? formatEth(a.normalized_floor_sell_value) : null,
-            maker: a.normalized_floor_sell_id ? fromBuffer(a.normalized_floor_sell_maker) : null,
-            validFrom: a.normalized_floor_sell_valid_between[0],
-            validUntil: a.normalized_floor_sell_id
-              ? a.normalized_floor_sell_valid_between[1]
+            id: r.normalized_floor_sell_id,
+            price: r.normalized_floor_sell_id ? formatEth(r.normalized_floor_sell_value) : null,
+            maker: r.normalized_floor_sell_id ? fromBuffer(r.normalized_floor_sell_maker) : null,
+            validFrom: r.normalized_floor_sell_valid_between[0],
+            validUntil: r.normalized_floor_sell_id
+              ? r.normalized_floor_sell_valid_between[1]
               : null,
           },
           floorAskNonFlagged: {
-            id: a.non_flagged_floor_sell_id,
-            price: a.non_flagged_floor_sell_id ? formatEth(a.non_flagged_floor_sell_value) : null,
-            maker: a.non_flagged_floor_sell_id ? fromBuffer(a.non_flagged_floor_sell_maker) : null,
-            validFrom: a.non_flagged_floor_sell_valid_between[0],
-            validUntil: a.non_flagged_floor_sell_id
-              ? a.non_flagged_floor_sell_valid_between[1]
+            id: r.non_flagged_floor_sell_id,
+            price: r.non_flagged_floor_sell_id ? formatEth(r.non_flagged_floor_sell_value) : null,
+            maker: r.non_flagged_floor_sell_id ? fromBuffer(r.non_flagged_floor_sell_maker) : null,
+            validFrom: r.non_flagged_floor_sell_valid_between[0],
+            validUntil: r.non_flagged_floor_sell_id
+              ? r.non_flagged_floor_sell_valid_between[1]
               : null,
           },
         },
