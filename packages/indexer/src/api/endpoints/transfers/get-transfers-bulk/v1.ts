@@ -119,7 +119,9 @@ export const getTransfersBulkV1Options: RouteOptions = {
 
       // Filters
       const conditions: string[] = [];
-      conditions.push(`nft_transfer_events.is_deleted = 0`);
+      if (!(query.orderBy === "updated_at")) {
+        conditions.push(`nft_transfer_events.is_deleted = 0`);
+      }
 
       if (query.contract) {
         (query as any).contract = toBuffer(query.contract);
