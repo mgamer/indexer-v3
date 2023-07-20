@@ -346,7 +346,7 @@ export const getCollectionsV5Options: RouteOptions = {
               array_agg(
                 json_build_object(
                   'stage', collection_mints.stage,
-                  'tokenId', collection_mints.token_id,
+                  'tokenId', collection_mints.token_id::TEXT,
                   'kind', collection_mints.kind,
                   'currency', concat('0x', encode(collection_mints.currency, 'hex')),
                   'price', collection_mints.price::TEXT,
@@ -484,8 +484,6 @@ export const getCollectionsV5Options: RouteOptions = {
       // Filtering
 
       const conditions: string[] = [];
-
-      conditions.push("collections.token_count > 0");
 
       if (query.id) {
         conditions.push("collections.id = $/id/");
