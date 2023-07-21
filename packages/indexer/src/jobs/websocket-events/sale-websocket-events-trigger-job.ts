@@ -4,7 +4,7 @@ import crypto from "crypto";
 import { getJoiSaleObject } from "@/common/joi";
 
 import { idb } from "@/common/db";
-import { fromBuffer } from "@/common/utils";
+import { toBuffer } from "@/common/utils";
 import { publishWebsocketEvent } from "@/common/websocketPublisher";
 import { AbstractRabbitMqJobHandler, BackoffStrategy } from "@/jobs/abstract-rabbit-mq-job-handler";
 import { OrderKind } from "@/orderbook/orders";
@@ -39,38 +39,16 @@ export class SaleWebsocketEventsTriggerQueueJob extends AbstractRabbitMqJobHandl
       const r = await idb.oneOrNone(
         `
         SELECT
-          fill_events_2_data.*,
-          tokens_data.name,
-          tokens_data.image,
-          tokens_data.collection_id,
-          tokens_data.collection_name
-      FROM (
-        SELECT          
-          currencies.decimals          
-        FROM fill_events_2
-        LEFT JOIN currencies
-          ON fill_events_2.currency = currencies.contract
-        WHERE
-          fill_events_2.tx_hash = $/txHash/ AND fill_events_2.log_index = $/log_index/ AND fill_events_2.batch_index = $/batch_index/
-      ) AS fill_events_2_data
-        LEFT JOIN LATERAL (
-          SELECT
-            tokens.name,
-            tokens.image,
-            tokens.collection_id,
-            collections.name AS collection_name
-          FROM tokens
-          LEFT JOIN collections 
-            ON tokens.collection_id = collections.id
-          WHERE fill_events_2_data.token_id = tokens.token_id
-            AND fill_events_2_data.contract = tokens.contract
-        ) tokens_data ON TRUE
-       
+          tokens.name,
+          tokens.image,
+          tokens.collection_id,
+          collections.name AS collection_name
+        FROM tokens
+        WHERE contract = $/contract/ AND token_id = $/token_id/
       `,
         {
-          log_index: data.after.log_index,
-          batch_index: data.after.batch_index,
-          txHash: data.after.tx_hash,
+          token_id: data.after.token_id,
+          contract: toBuffer(data.after.contract),
         }
       );
 
@@ -89,9 +67,9 @@ export class SaleWebsocketEventsTriggerQueueJob extends AbstractRabbitMqJobHandl
           royaltyFeeBreakdown: data.after.royalty_fee_breakdown,
           marketplaceFeeBreakdown: data.after.marketplace_fee_breakdown,
         },
-        currencyAddress: data.after.currency,
+        currencyAddress: toBuffer(data.after.currency),
         timestamp: data.after.timestamp,
-        contract: data.after.contract,
+        contract: toBuffer(data.after.contract),
         tokenId: data.after.token_id,
         name: r.name,
         image: r.image,
@@ -102,12 +80,12 @@ export class SaleWebsocketEventsTriggerQueueJob extends AbstractRabbitMqJobHandl
         orderSourceId: data.after.order_source_id_int,
         orderSide: data.after.order_side,
         orderKind: data.after.order_kind,
-        maker: data.after.maker,
-        taker: data.after.taker,
+        maker: toBuffer(data.after.maker),
+        taker: toBuffer(data.after.taker),
         amount: data.after.amount,
         fillSourceId: data.after.fill_source_id,
         block: data.after.block,
-        txHash: data.after.tx_hash,
+        txHash: toBuffer(data.after.tx_hash),
         logIndex: data.after.log_index,
         batchIndex: data.after.batch_index,
         createdAt: new Date(data.after.created_at).toISOString(),
@@ -117,9 +95,7 @@ export class SaleWebsocketEventsTriggerQueueJob extends AbstractRabbitMqJobHandl
       result.id = crypto
         .createHash("sha256")
         .update(
-          `${fromBuffer(data.after.tx_hash)}${data.after.maker}${data.after.taker}${
-            data.after.contract
-          }${data.after.token_id}${data.after.price}`
+          `${data.after.tx_hash}${data.after.maker}${data.after.taker}${data.after.contract}${data.after.token_id}${data.after.price}`
         )
         .digest("hex");
 
@@ -156,9 +132,9 @@ export class SaleWebsocketEventsTriggerQueueJob extends AbstractRabbitMqJobHandl
       await publishWebsocketEvent({
         event: eventType,
         tags: {
-          contract: fromBuffer(data.after.contract),
-          maker: fromBuffer(data.after.maker),
-          taker: fromBuffer(data.after.taker),
+          contract: data.after.contract,
+          maker: data.after.maker,
+          taker: data.after.taker,
         },
         changed,
         data: result,
@@ -193,21 +169,21 @@ export type EventInfo = {
 };
 
 interface SaleInfo {
-  contract: Buffer;
+  contract: string;
   token_id: string;
   order_id: string;
   order_side: string;
   order_kind: OrderKind;
   order_source_id_int: number;
-  maker: Buffer;
-  taker: Buffer;
+  maker: string;
+  taker: string;
   amount: number;
   fill_source_id: number;
   block: number;
-  tx_hash: Buffer;
+  tx_hash: string;
   timestamp: number;
   price: string;
-  currency: Buffer;
+  currency: string;
   currency_price: string;
   usd_price: string;
   log_index: number;
@@ -219,8 +195,8 @@ interface SaleInfo {
   marketplace_fee_breakdown: string;
   paid_full_royalty: boolean;
   is_deleted: boolean;
-  updated_at: number;
-  created_at: number;
+  updated_at: string;
+  created_at: string;
 }
 
 export type SaleWebsocketEventInfo = {
