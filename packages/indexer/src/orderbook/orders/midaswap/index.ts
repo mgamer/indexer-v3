@@ -158,7 +158,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
             // Handle: source
             const sources = await Sources.getInstance();
-            const source = await sources.getOrInsert("midaswap");
+            const source = await sources.getOrInsert("midaswap.org");
 
             const validFrom = `date_trunc('seconds', to_timestamp(${orderParams.txTimestamp}))`;
             const validTo = `'Infinity'`;
@@ -279,7 +279,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
             // Handle: source
             const sources = await Sources.getInstance();
-            const source = await sources.getOrInsert("midaswap");
+            const source = await sources.getOrInsert("midaswap.org");
 
             const validFrom = `date_trunc('seconds', to_timestamp(${orderParams.txTimestamp}))`;
             const validTo = `'Infinity'`;
@@ -582,7 +582,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
             // Handle: source
             const sources = await Sources.getInstance();
-            const source = await sources.getOrInsert("midaswap");
+            const source = await sources.getOrInsert("midaswap.org");
 
             const price = newBuyPrices[0].price;
             const value = newBuyPrices[0].price;
@@ -917,7 +917,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
               // Handle: source
               const sources = await Sources.getInstance();
-              const source = await sources.getOrInsert("midaswap");
+              const source = await sources.getOrInsert("midaswap.org");
 
               const validFrom = `date_trunc('seconds', to_timestamp(${orderParams.txTimestamp}))`;
               const validTo = `'Infinity'`;

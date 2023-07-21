@@ -3620,7 +3620,7 @@ export class Router {
               module: module.address,
               data: module.interface.encodeFunctionData("sell", [
                 order.params.tokenX,
-                order.params.tokenY,
+                Sdk.Common.Addresses.Eth[this.chainId],
                 detail.tokenId,
                 bn(order.params.extra.prices[0].price),
                 {
