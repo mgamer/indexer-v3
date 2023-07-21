@@ -1,9 +1,5 @@
-import { Interface } from "@ethersproject/abi";
-import { Contract } from "@ethersproject/contracts";
-
 import { idb } from "@/common/db";
 import { logger } from "@/common/logger";
-import { baseProvider } from "@/common/provider";
 import { fromBuffer, toBuffer } from "@/common/utils";
 import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handler";
 import { mintsRefreshJob } from "@/jobs/mints/mints-refresh-job";
@@ -15,6 +11,8 @@ import {
 import * as detector from "@/orderbook/mints/calldata/detector";
 import { getContractKind } from "@/orderbook/mints/calldata/helpers";
 import MetadataApi from "@/utils/metadata-api";
+
+import { manifold } from "@/orderbook/mints/calldata/detector";
 
 export type MintsProcessJobPayload =
   | {
@@ -187,36 +185,13 @@ export class MintsProcessJob extends AbstractRabbitMqJobHandler {
                 data.additionalInfo.extension
               );
             } else if (kind === "erc1155") {
-              const c = new Contract(
-                data.additionalInfo.extension,
-                new Interface([
-                  `
-                    function getClaim(address creatorContractAddress, uint256 instanceId) external view returns (
-                      (
-                        uint32 total,
-                        uint32 totalMax,
-                        uint32 walletMax,
-                        uint48 startDate,
-                        uint48 endDate,
-                        uint8 storageProtocol,
-                        bytes32 merkleRoot,
-                        string location,
-                        uint256 tokenId,
-                        uint256 cost,
-                        address payable paymentReceiver,
-                        address erc20
-                      )
-                    )
-                  `,
-                ]),
-                baseProvider
-              );
-
               collectionMints = await detector.manifold.extractByCollectionERC1155(
                 data.collection,
-                (
-                  await c.getClaim(data.collection, data.additionalInfo.instanceId)
-                ).tokenId.toString(),
+                await manifold.getTokenIdForERC1155Mint(
+                  data.collection,
+                  data.additionalInfo.instanceId,
+                  data.additionalInfo.extension
+                ),
                 data.additionalInfo.extension
               );
             }

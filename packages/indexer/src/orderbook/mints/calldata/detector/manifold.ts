@@ -530,7 +530,6 @@ export const extractByCollectionERC1155 = async (
 
 export const extractByTx = async (
   collection: string,
-  tokenId: string,
   tx: Transaction
 ): Promise<CollectionMint[]> => {
   if (
@@ -541,15 +540,18 @@ export const extractByTx = async (
   ) {
     const contractKind =
       (await commonHelpers.getContractKind(collection)) ?? (await getContractKind(collection));
+
+    const instanceId = new Interface([
+      "function mint(address creatorContractAddress, uint256 instanceId, uint32 mintIndex, bytes32[] calldata merkleProof, address mintFor)",
+      "function mintBatch(address creatorContractAddress, uint256 instanceId, uint16 mintCount, uint32[] calldata mintIndices, bytes32[][] calldata merkleProofs, address mintFor)",
+    ])
+      .decodeFunctionData(tx.data.startsWith("0xfa2b068f") ? "mint" : "mintBatch", tx.data)
+      .instanceId.toString();
+
     if (contractKind === "erc721") {
-      const instanceId = new Interface([
-        "function mint(address creatorContractAddress, uint256 instanceId, uint32 mintIndex, bytes32[] calldata merkleProof, address mintFor)",
-        "function mintBatch(address creatorContractAddress, uint256 instanceId, uint16 mintCount, uint32[] calldata mintIndices, bytes32[][] calldata merkleProofs, address mintFor)",
-      ])
-        .decodeFunctionData(tx.data.startsWith("0xfa2b068f") ? "mint" : "mintBatch", tx.data)
-        .instanceId.toString();
       return extractByCollectionERC721(collection, instanceId, tx.to);
     } else if (contractKind === "erc1155") {
+      const tokenId = await getTokenIdForERC1155Mint(collection, instanceId, tx.to);
       return extractByCollectionERC1155(collection, tokenId, tx.to);
     }
   }
@@ -614,4 +616,37 @@ export const generateProofValue = async (
   }
 
   return result;
+};
+
+export const getTokenIdForERC1155Mint = async (
+  collection: string,
+  instanceId: string,
+  extension: string
+): Promise<string> => {
+  const c = new Contract(
+    extension,
+    new Interface([
+      `
+        function getClaim(address creatorContractAddress, uint256 instanceId) external view returns (
+          (
+            uint32 total,
+            uint32 totalMax,
+            uint32 walletMax,
+            uint48 startDate,
+            uint48 endDate,
+            uint8 storageProtocol,
+            bytes32 merkleRoot,
+            string location,
+            uint256 tokenId,
+            uint256 cost,
+            address payable paymentReceiver,
+            address erc20
+          )
+        )
+      `,
+    ]),
+    baseProvider
+  );
+
+  return (await c.getClaim(collection, instanceId)).tokenId.toString();
 };
