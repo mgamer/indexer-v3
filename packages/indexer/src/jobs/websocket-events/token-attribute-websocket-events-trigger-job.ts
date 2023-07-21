@@ -28,10 +28,10 @@ export class TokenAttributeWebsocketEventsTriggerQueueJob extends AbstractRabbit
       const changed = [];
       switch (data.trigger) {
         case "insert":
-          eventType = "token-attributes.created";
+          eventType = "token-attribute.created";
           break;
         case "update":
-          eventType = "token-attributes.updated";
+          eventType = "token-attribute.updated";
           if (data.before) {
             for (const key in changedMapping) {
               if (
@@ -53,7 +53,7 @@ export class TokenAttributeWebsocketEventsTriggerQueueJob extends AbstractRabbit
           }
           break;
         case "delete":
-          eventType = "token-attributes.deleted";
+          eventType = "token-attribute.deleted";
           if (data.before) {
             for (const key in changedMapping) {
               changed.push(key);
