@@ -117,13 +117,15 @@ export const processOnChainData = async (data: OnChainData, backfill?: boolean) 
 
   const allFillEvents = concat(data.fillEvents, data.fillEventsPartial, data.fillEventsOnChain);
   const nonFillTransferEvents = _.filter(data.nftTransferEvents, (transfer) => {
-    return !_.some(
-      allFillEvents,
-      (fillEvent) =>
-        fillEvent.maker === AddressZero ||
-        (fillEvent.baseEventParams.txHash === transfer.baseEventParams.txHash &&
+    return (
+      transfer.from === AddressZero ||
+      !_.some(
+        allFillEvents,
+        (fillEvent) =>
+          fillEvent.baseEventParams.txHash === transfer.baseEventParams.txHash &&
           fillEvent.baseEventParams.logIndex === transfer.baseEventParams.logIndex &&
-          fillEvent.baseEventParams.batchIndex === transfer.baseEventParams.batchIndex)
+          fillEvent.baseEventParams.batchIndex === transfer.baseEventParams.batchIndex
+      )
     );
   });
 
