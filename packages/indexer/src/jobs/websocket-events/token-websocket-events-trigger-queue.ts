@@ -10,7 +10,7 @@ import _ from "lodash";
 import { publishWebsocketEvent } from "@/common/websocketPublisher";
 import { idb } from "@/common/db";
 import { getJoiPriceObject } from "@/common/joi";
-import { fromBuffer } from "@/common/utils";
+import { toBuffer } from "@/common/utils";
 import { Assets } from "@/utils/assets";
 
 import * as Sdk from "@reservoir0x/sdk";
@@ -60,37 +60,25 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
       const { data } = job.data as EventInfo;
 
       try {
-        let baseQuery = `
-        SELECT
-          c.name AS collection_name,
-          con.kind,
-          c.slug,
-          (c.metadata ->> 'imageUrl')::TEXT AS collection_image,
-        FROM tokens t
-        LEFT JOIN collections c ON t.collection_id = c.id
-        JOIN contracts con ON t.contract = con.address
+        const baseQuery = `
+          SELECT
+            con.kind,
+            c.name AS collection_name,
+            c.slug,
+            (c.metadata ->> 'imageUrl')::TEXT AS collection_image,
+          FROM contracts con
+          LEFT JOIN collections c ON con.address = c.contract
+          WHERE con.address = $/contract/
+          LIMIT 1
       `;
 
-        // Filters
-
-        const conditions: string[] = [];
-        conditions.push(`t.contract = $/contract/`);
-        conditions.push(`t.token_id = $/tokenId/`);
-
-        if (conditions.length) {
-          baseQuery += " WHERE " + conditions.map((c) => `(${c})`).join(" AND ");
-        }
-
-        baseQuery += ` LIMIT 1`;
-
         const rawResult = await idb.manyOrNone(baseQuery, {
-          contract: data.after.contract,
-          tokenId: data.after.token_id,
+          contract: toBuffer(data.after.contract),
         });
 
         const r = rawResult[0];
 
-        const contract = fromBuffer(data.after.contract);
+        const contract = data.after.contract;
         const tokenId = data.after.token_id;
         const sources = await Sources.getInstance();
 
@@ -101,7 +89,7 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
         // Use default currencies for backwards compatibility with entries
         // that don't have the currencies cached in the tokens table
         const floorAskCurrency = data.after.floor_sell_currency
-          ? fromBuffer(data.after.floor_sell_currency)
+          ? data.after.floor_sell_currency
           : Sdk.Common.Addresses.Eth[config.chainId];
 
         const normalizedFloorSellSource = data.after.normalized_floor_sell_value
@@ -111,7 +99,7 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
         // Use default currencies for backwards compatibility with entries
         // that don't have the currencies cached in the tokens table
         const normalizedFloorAskCurrency = data.after.normalized_floor_sell_currency
-          ? fromBuffer(data.after.normalized_floor_sell_currency)
+          ? data.after.normalized_floor_sell_currency
           : Sdk.Common.Addresses.Eth[config.chainId];
 
         const result = {
@@ -158,7 +146,7 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
                     undefined
                   )
                 : null,
-              maker: data.after.floor_sell_maker ? fromBuffer(data.after.floor_sell_maker) : null,
+              maker: data.after.floor_sell_maker ? data.after.floor_sell_maker : null,
               validFrom: data.after.floor_sell_value ? data.after.floor_sell_valid_from : null,
               validUntil: data.after.floor_sell_value ? data.after.floor_sell_valid_to : null,
 
@@ -187,7 +175,7 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
                   )
                 : null,
               maker: data.after.normalized_floor_sell_maker
-                ? fromBuffer(data.after.normalized_floor_sell_maker)
+                ? data.after.normalized_floor_sell_maker
                 : null,
               validFrom: data.after.normalized_floor_sell_value
                 ? data.after.normalized_floor_sell_valid_from
@@ -275,7 +263,7 @@ export const addToQueue = async (events: EventInfo[]) => {
 };
 
 interface TokenInfo {
-  contract: Buffer;
+  contract: string;
   token_id: string;
   name: string;
   description: string;
@@ -285,7 +273,7 @@ interface TokenInfo {
   attributes?: string;
   floor_sell_id: string;
   floor_sell_value: string;
-  floor_sell_maker: Buffer;
+  floor_sell_maker: string;
   floor_sell_valid_from: string;
   floor_sell_valid_to: string;
   floor_sell_source_id: string;
@@ -305,17 +293,17 @@ interface TokenInfo {
   rarity_rank: string;
   is_flagged: string;
   last_flag_update: string;
-  floor_sell_currency: Buffer;
+  floor_sell_currency: string;
   floor_sell_currency_value: string;
   minted_timestamp?: number;
   normalized_floor_sell_id: string;
   normalized_floor_sell_value?: string;
-  normalized_floor_sell_maker: Buffer;
+  normalized_floor_sell_maker: string;
   normalized_floor_sell_valid_from: string;
   normalized_floor_sell_valid_to: string;
   normalized_floor_sell_source_id_int: string;
   normalized_floor_sell_is_reservoir?: string;
-  normalized_floor_sell_currency: Buffer;
+  normalized_floor_sell_currency: string;
   normalized_floor_sell_currency_value: string;
   last_flag_change: string;
   supply: string;
