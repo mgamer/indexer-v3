@@ -2,7 +2,7 @@
 import { logger } from "@/common/logger";
 import { config } from "@/config/index";
 import { publishWebsocketEvent } from "@/common/websocketPublisher";
-import { fromBuffer, formatEth } from "@/common/utils";
+import { formatEth } from "@/common/utils";
 import { Assets } from "@/utils/assets";
 import { AbstractRabbitMqJobHandler, BackoffStrategy } from "@/jobs/abstract-rabbit-mq-job-handler";
 
@@ -10,9 +10,9 @@ interface CollectionInfo {
   id: string;
   slug: string;
   name: string;
-  metadata: any;
-  royalties: any[];
-  contract: Buffer;
+  metadata: string;
+  royalties: string;
+  contract: string;
   token_set_id: string;
   day1_rank: number;
   day1_volume: number;
@@ -32,20 +32,20 @@ interface CollectionInfo {
   owner_count: number;
   floor_sell_id: string;
   floor_sell_value: string;
-  floor_sell_maker: Buffer;
-  floor_sell_valid_between: string[];
+  floor_sell_maker: string;
+  floor_sell_valid_between: string;
   normalized_floor_sell_id: string;
   normalized_floor_sell_value: string;
-  normalized_floor_sell_maker: Buffer;
-  normalized_floor_sell_valid_between: string[];
+  normalized_floor_sell_maker: string;
+  normalized_floor_sell_valid_between: string;
   non_flagged_floor_sell_id: string;
   non_flagged_floor_sell_value: string;
-  non_flagged_floor_sell_maker: Buffer;
-  non_flagged_floor_sell_valid_between: string[];
+  non_flagged_floor_sell_maker: string;
+  non_flagged_floor_sell_valid_between: string;
   top_buy_id: string;
   top_buy_value: string;
-  top_buy_maker: Buffer;
-  top_buy_valid_between: string[];
+  top_buy_maker: string;
+  top_buy_valid_between: string;
 }
 
 export type CollectionWebsocketEventInfo = {
@@ -131,6 +131,13 @@ export class CollectionWebsocketEventsTriggerQueueJob extends AbstractRabbitMqJo
       }
 
       const r = data.after;
+      const metadata = JSON.parse(r.metadata);
+      const top_buy_valid_between = JSON.parse(r.top_buy_valid_between);
+      const floor_sell_valid_between = JSON.parse(r.floor_sell_valid_between);
+      const normalized_floor_sell_valid_between = JSON.parse(r.normalized_floor_sell_valid_between);
+      const non_flagged_floor_sell_valid_between = JSON.parse(
+        r.non_flagged_floor_sell_valid_between
+      );
 
       await publishWebsocketEvent({
         event: eventType,
@@ -143,19 +150,19 @@ export class CollectionWebsocketEventsTriggerQueueJob extends AbstractRabbitMqJo
           slug: r.slug,
           name: r.name,
           metadata: {
-            ...r.metadata,
-            imageUrl: Assets.getLocalAssetsLink(r.metadata?.imageUrl),
+            ...metadata,
+            imageUrl: Assets.getLocalAssetsLink(metadata?.imageUrl),
           },
           tokenCount: String(r.token_count),
-          primaryContract: fromBuffer(r.contract),
+          primaryContract: r.contract,
           tokenSetId: r.token_set_id,
-          royalties: r.royalties ? r.royalties[0] : null,
+          royalties: r.royalties ? JSON.parse(r.royalties)[0] : null,
           topBid: {
             id: r.top_buy_id,
             value: r.top_buy_value ? formatEth(r.top_buy_value) : null,
-            maker: r.top_buy_maker ? fromBuffer(r.top_buy_maker) : null,
-            validFrom: r.top_buy_valid_between[0],
-            validUntil: r.top_buy_value ? r.top_buy_valid_between[1] : null,
+            maker: r.top_buy_maker ? r.top_buy_maker : null,
+            validFrom: top_buy_valid_between[0],
+            validUntil: r.top_buy_value ? top_buy_valid_between[1] : null,
           },
           rank: {
             "1day": r.day1_rank,
@@ -194,26 +201,24 @@ export class CollectionWebsocketEventsTriggerQueueJob extends AbstractRabbitMqJo
           floorAsk: {
             id: r.floor_sell_id,
             price: r.floor_sell_id ? formatEth(r.floor_sell_value) : null,
-            maker: r.floor_sell_id ? fromBuffer(r.floor_sell_maker) : null,
-            validFrom: r.floor_sell_valid_between[0],
-            validUntil: r.floor_sell_id ? r.floor_sell_valid_between[1] : null,
+            maker: r.floor_sell_id ? r.floor_sell_maker : null,
+            validFrom: floor_sell_valid_between[0],
+            validUntil: r.floor_sell_id ? floor_sell_valid_between[1] : null,
           },
           floorAskNormalized: {
             id: r.normalized_floor_sell_id,
             price: r.normalized_floor_sell_id ? formatEth(r.normalized_floor_sell_value) : null,
-            maker: r.normalized_floor_sell_id ? fromBuffer(r.normalized_floor_sell_maker) : null,
-            validFrom: r.normalized_floor_sell_valid_between[0],
-            validUntil: r.normalized_floor_sell_id
-              ? r.normalized_floor_sell_valid_between[1]
-              : null,
+            maker: r.normalized_floor_sell_id ? r.normalized_floor_sell_maker : null,
+            validFrom: normalized_floor_sell_valid_between[0],
+            validUntil: r.normalized_floor_sell_id ? normalized_floor_sell_valid_between[1] : null,
           },
           floorAskNonFlagged: {
             id: r.non_flagged_floor_sell_id,
             price: r.non_flagged_floor_sell_id ? formatEth(r.non_flagged_floor_sell_value) : null,
-            maker: r.non_flagged_floor_sell_id ? fromBuffer(r.non_flagged_floor_sell_maker) : null,
-            validFrom: r.non_flagged_floor_sell_valid_between[0],
+            maker: r.non_flagged_floor_sell_id ? r.non_flagged_floor_sell_maker : null,
+            validFrom: non_flagged_floor_sell_valid_between[0],
             validUntil: r.non_flagged_floor_sell_id
-              ? r.non_flagged_floor_sell_valid_between[1]
+              ? non_flagged_floor_sell_valid_between[1]
               : null,
           },
         },
