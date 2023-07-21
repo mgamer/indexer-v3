@@ -118,7 +118,7 @@ export const processOnChainData = async (data: OnChainData, backfill?: boolean) 
   const allFillEvents = concat(data.fillEvents, data.fillEventsPartial, data.fillEventsOnChain);
   const nonFillTransferEvents = _.filter(data.nftTransferEvents, (transfer) => {
     return (
-      transfer.from === AddressZero ||
+      transfer.from !== AddressZero &&
       !_.some(
         allFillEvents,
         (fillEvent) =>
