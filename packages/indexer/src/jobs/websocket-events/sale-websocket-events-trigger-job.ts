@@ -46,7 +46,7 @@ export class SaleWebsocketEventsTriggerQueueJob extends AbstractRabbitMqJobHandl
         FROM tokens
         LEFT JOIN collections 
           ON tokens.collection_id = collections.id
-        WHERE contract = $/contract/ AND token_id = $/token_id/
+        WHERE tokens.contract = $/contract/ AND tokens.token_id = $/token_id/
       `,
         {
           token_id: data.after.token_id,
