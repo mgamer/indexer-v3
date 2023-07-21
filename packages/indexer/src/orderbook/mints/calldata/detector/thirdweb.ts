@@ -189,8 +189,8 @@ export const extractByCollection = async (
               (e: { address: string; maxClaimable: string; price: string }) => ({
                 address: e.address,
                 maxMints: String(e.maxClaimable),
-                price: e.price ?? price,
-                actualPrice: e.price ?? price,
+                price: e.price,
+                actualPrice: e.price,
               })
             );
 
