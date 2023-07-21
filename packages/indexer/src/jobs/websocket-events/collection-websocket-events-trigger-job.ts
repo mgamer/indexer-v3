@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { logger } from "@/common/logger";
 import { config } from "@/config/index";
 import { publishWebsocketEvent } from "@/common/websocketPublisher";
