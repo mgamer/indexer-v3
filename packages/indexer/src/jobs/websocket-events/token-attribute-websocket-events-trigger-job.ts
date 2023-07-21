@@ -62,25 +62,27 @@ export class TokenAttributeWebsocketEventsTriggerQueueJob extends AbstractRabbit
           break;
       }
 
+      const result = data.trigger === "delete" ? data.before : data.after;
+
       await publishWebsocketEvent({
         event: eventType,
         tags: {
-          token_id: data.after.token_id,
-          contract: data.after.contract,
+          token_id: result.token_id,
+          contract: result.contract,
         },
         changed,
         data: {
           token: {
-            contract: data.after.contract,
-            tokenId: data.after.token_id,
+            contract: result.contract,
+            tokenId: result.token_id,
           },
           collection: {
-            id: data.after.collection_id,
+            id: result.collection_id,
           },
-          key: data.after.key,
-          value: data.after.value,
-          createdAt: data.after.created_at,
-          updatedAt: data.after.updated_at,
+          key: result.key,
+          value: result.value,
+          createdAt: result.created_at,
+          updatedAt: result.updated_at,
         },
       });
     } catch (error) {
