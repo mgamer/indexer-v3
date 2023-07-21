@@ -72,6 +72,7 @@ export const RoyaltyEngine: ChainIdToAddress = {
   [Network.BaseGoerli]: "0x8755310f937528173e7c5a106131d79a3601c9d9",
   [Network.ArbitrumNova]: "0x60b433ee91680189deb2c94b0b062ea283f6b4dd",
   [Network.Zora]: "0x8755310f937528173e7c5a106131d79a3601c9d9",
+  [Network.Base]: "0x8755310f937528173e7c5a106131d79a3601c9d9",
 };
 
 export const SwapRouter: ChainIdToAddress = {
@@ -83,11 +84,21 @@ export const SwapRouter: ChainIdToAddress = {
   [Network.Bsc]: "0xb971ef87ede563556b2ed4b1c0b0019111dd85d2",
 };
 
+export const AggregationRouterV5: ChainIdToAddress = {
+  [Network.Ethereum]: "0x1111111254eeb25477b68fb85ed929f73a960582",
+  [Network.EthereumGoerli]: "0x1111111254eeb25477b68fb85ed929f73a960582",
+  [Network.Optimism]: "0x1111111254eeb25477b68fb85ed929f73a960582",
+  [Network.Polygon]: "0x1111111254eeb25477b68fb85ed929f73a960582",
+  [Network.Arbitrum]: "0x1111111254eeb25477b68fb85ed929f73a960582",
+  [Network.Bsc]: "0x1111111254eeb25477b68fb85ed929f73a960582",
+};
+
 export const Create3Factory: ChainIdToAddress = {
   [Network.EthereumSepolia]: "0x0000000000000a9efe52e741bcb25da0e4438e71",
   [Network.ZoraTestnet]: "0x0000000000000a9efe52e741bcb25da0e4438e71",
   [Network.BaseGoerli]: "0x0000000000000a9efe52e741bcb25da0e4438e71",
   [Network.Zora]: "0x0000000000000a9efe52e741bcb25da0e4438e71",
+  [Network.Base]: "0x0000000000000a9efe52e741bcb25da0e4438e71",
 };
 
 export const GelatoRelay1BalanceERC2771: ChainIdToAddress = {

@@ -151,8 +151,12 @@ export const getUserTokensV7Options: RouteOptions = {
               .allow(null)
               .description("Can be higher than one if erc1155."),
             remainingSupply: Joi.number().unsafe().allow(null),
-            rarityScore: Joi.number().allow(null),
-            rarityRank: Joi.number().allow(null),
+            rarityScore: Joi.number()
+              .allow(null)
+              .description("No rarity for collections over 100k"),
+            rarityRank: Joi.number()
+              .allow(null)
+              .description("No rarity rank for collections over 100k"),
             media: Joi.string().allow(null),
             collection: Joi.object({
               id: Joi.string().allow(null),
@@ -161,12 +165,14 @@ export const getUserTokensV7Options: RouteOptions = {
               openseaVerificationStatus: Joi.string().allow("", null),
               floorAskPrice: JoiPrice.allow(null).description("Can be null if no active asks."),
               royaltiesBps: Joi.number().allow(null),
-              royalties: Joi.array().items(
-                Joi.object({
-                  bps: Joi.number().allow(null),
-                  recipient: Joi.string().allow(null),
-                })
-              ),
+              royalties: Joi.array()
+                .items(
+                  Joi.object({
+                    bps: Joi.number().allow(null),
+                    recipient: Joi.string().allow(null),
+                  })
+                )
+                .allow(null),
             }),
             lastSale: JoiSale.optional(),
             topBid: Joi.object({
