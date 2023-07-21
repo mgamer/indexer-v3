@@ -240,5 +240,15 @@
       "1": "0x104ff9a0e2a62aa531ef0cc9d19f948bde7062de",
       "5": "0x104ff9a0e2a62aa531ef0cc9d19f948bde7062de"
     }
+  },
+  "OneInchSwapModule": {
+    "v1": {
+      "1": "0xd0fe0a4528cd95ac447cd9afd51c581b1a390b1d",
+      "5": "0xd0fe0a4528cd95ac447cd9afd51c581b1a390b1d",
+      "10": "0xd0fe0a4528cd95ac447cd9afd51c581b1a390b1d",
+      "56": "0xd0fe0a4528cd95ac447cd9afd51c581b1a390b1d",
+      "137": "0xd0fe0a4528cd95ac447cd9afd51c581b1a390b1d",
+      "42161": "0xd0fe0a4528cd95ac447cd9afd51c581b1a390b1d"
+    }
   }
 }
