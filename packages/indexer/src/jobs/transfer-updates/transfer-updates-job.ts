@@ -30,6 +30,7 @@ export class TransferUpdatesJob extends AbstractRabbitMqJobHandler {
           WHERE contract = $/contract/
           AND token_id = $/tokenId/
           AND owner = $/to/
+          AND x.last_token_appraisal_value IS NOT NULL
         `,
         {
           contract: toBuffer(address),

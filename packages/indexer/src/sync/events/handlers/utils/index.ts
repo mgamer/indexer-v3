@@ -120,9 +120,10 @@ export const processOnChainData = async (data: OnChainData, backfill?: boolean) 
     return !_.some(
       allFillEvents,
       (fillEvent) =>
-        fillEvent.baseEventParams.txHash === transfer.baseEventParams.txHash &&
-        fillEvent.baseEventParams.logIndex === transfer.baseEventParams.logIndex &&
-        fillEvent.baseEventParams.batchIndex === transfer.baseEventParams.batchIndex
+        fillEvent.maker === AddressZero ||
+        (fillEvent.baseEventParams.txHash === transfer.baseEventParams.txHash &&
+          fillEvent.baseEventParams.logIndex === transfer.baseEventParams.logIndex &&
+          fillEvent.baseEventParams.batchIndex === transfer.baseEventParams.batchIndex)
     );
   });
 
