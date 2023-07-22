@@ -14,7 +14,7 @@ describe("Mints - Foundation", () => {
   });
 
   it("allowlist-sale", async () => {
-    const collection = `0xb1ffe7c1a26c71a1c19549fcaa6dd6e42bc202bd`;
+    const collection = `0xb951d97f3122f0423b8b5082e1101e94f38e6`;
     const info = await Foundation.extractByCollectionERC721(collection);
     expect(info.length).not.toBe(0);
   });
