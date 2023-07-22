@@ -7,6 +7,7 @@ import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { config } from "@/config/index";
 import { Transaction } from "@/models/transactions";
+import { utils } from "ethers";
 import {
   CollectionMint,
   getCollectionMints,
@@ -36,6 +37,53 @@ export const extractByCollectionERC721 = async (collection: string): Promise<Col
     ]),
     baseProvider
   );
+
+  const face = new Interface([
+    `event CreateFixedPriceSale(
+      address indexed nftContract,
+      address indexed seller,
+      uint256 price,
+      uint256 limitPerAccount,
+      uint256 generalAvailabilityStartTime,
+      uint256 earlyAccessStartTime,
+      bytes32 merkleRoot,
+      string merkleTreeUri
+    );`,
+  ]);
+
+  const blockNumber = await baseProvider.getBlockNumber();
+  const addressTopic = utils.hexZeroPad(collection, 32);
+  const topics = [face.getEventTopic("CreateFixedPriceSale"), addressTopic];
+
+  const maxInterval = 10000;
+  const createFixedPriceSaleLogs = await baseProvider.getLogs({
+    fromBlock: blockNumber - maxInterval,
+    toBlock: blockNumber,
+    topics,
+  });
+
+  let merkleRoot: string | undefined;
+  let merkleTreeUri: string | undefined;
+
+  if (createFixedPriceSaleLogs.length) {
+    const firstLog = createFixedPriceSaleLogs[0];
+    const createFixedPriceSaleEvent = face.decodeEventLog(
+      "CreateFixedPriceSale",
+      firstLog.data,
+      firstLog.topics
+    );
+    merkleTreeUri = createFixedPriceSaleEvent.merkleTreeUri;
+    merkleRoot = createFixedPriceSaleEvent.merkleRoot;
+  }
+
+  // console.log({
+  //   merkleTreeUri,
+  //   merkleRoot
+  // })
+
+  if (merkleRoot && merkleTreeUri) {
+    // save presale
+  }
 
   try {
     const result = await contract.getFixedPriceSale(collection);
