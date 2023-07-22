@@ -256,7 +256,7 @@ export const getCollectionsV6Options: RouteOptions = {
               stage: Joi.string().required(),
               tokenId: Joi.string().pattern(regex.number).allow(null),
               kind: Joi.string().required(),
-              price: JoiPrice.required(),
+              price: JoiPrice.allow(null),
               startTime: Joi.number().allow(null),
               endTime: Joi.number().allow(null),
               maxMintsPerWallet: Joi.number().unsafe().allow(null),
@@ -449,8 +449,6 @@ export const getCollectionsV6Options: RouteOptions = {
       // Filtering
 
       const conditions: string[] = [];
-
-      conditions.push("collections.token_count > 0");
 
       if (query.id) {
         conditions.push("collections.id = $/id/");
@@ -790,7 +788,9 @@ export const getCollectionsV6Options: RouteOptions = {
                   r.mint_stages.map(async (m: any) => ({
                     stage: m.stage,
                     kind: m.kind,
-                    price: await getJoiPriceObject({ gross: { amount: m.price } }, m.currency),
+                    price: m.price
+                      ? await getJoiPriceObject({ gross: { amount: m.price } }, m.currency)
+                      : m.price,
                     startTime: m.startTime,
                     endTime: m.endTime,
                     maxMintsPerWallet: m.maxMintsPerWallet,

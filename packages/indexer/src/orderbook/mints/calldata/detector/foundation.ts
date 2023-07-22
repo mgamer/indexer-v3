@@ -16,25 +16,24 @@ import { getStatus, toSafeTimestamp } from "@/orderbook/mints/calldata/helpers";
 
 const STANDARD = "foundation";
 
-export const extractByCollection = async (collection: string): Promise<CollectionMint[]> => {
+export const extractByCollectionERC721 = async (collection: string): Promise<CollectionMint[]> => {
   const results: CollectionMint[] = [];
-
-  // NFTDropMarketFixedPriceSale
-  const iface = new Interface([
-    `function getFixedPriceSale(address nftContract) external view returns (
-        address payable seller,
-        uint256 price,
-        uint256 limitPerAccount,
-        uint256 numberOfTokensAvailableToMint,
-        bool marketCanMint,
-        uint256 generalAvailabilityStartTime,
-        uint256 earlyAccessStartTime
-    )`,
-  ]);
 
   const contract = new Contract(
     Sdk.Foundation.Addresses.DropMarket[config.chainId],
-    iface,
+    new Interface([
+      `
+        function getFixedPriceSale(address nftContract) view returns (
+          address seller,
+          uint256 price,
+          uint256 limitPerAccount,
+          uint256 numberOfTokensAvailableToMint,
+          bool marketCanMint,
+          uint256 generalAvailabilityStartTime,
+          uint256 earlyAccessStartTime
+        )
+      `,
+    ]),
     baseProvider
   );
 
@@ -57,6 +56,7 @@ export const extractByCollection = async (collection: string): Promise<Collectio
       generalAvailabilityStartTime: result.generalAvailabilityStartTime.toString(),
       earlyAccessStartTime: result.earlyAccessStartTime.toString(),
     };
+
     // Public sale
     results.push({
       collection,
@@ -67,15 +67,14 @@ export const extractByCollection = async (collection: string): Promise<Collectio
       standard: STANDARD,
       details: {
         tx: {
-          to: collection,
+          to: Sdk.Foundation.Addresses.DropMarket[config.chainId],
           data: {
             // `mintFromFixedPriceSale`
             signature: "0xecbc9554",
             params: [
               {
-                kind: "unknown",
+                kind: "contract",
                 abiType: "address",
-                abiValue: collection,
               },
               {
                 kind: "quantity",
@@ -104,18 +103,14 @@ export const extractByCollection = async (collection: string): Promise<Collectio
   }
 
   // Update the status of each collection mint
-  try {
-    await Promise.all(
-      results.map(async (cm) => {
-        await getStatus(cm).then(({ status, reason }) => {
-          cm.status = status;
-          cm.statusReason = reason;
-        });
-      })
-    );
-  } catch {
-    // Skip errors
-  }
+  await Promise.all(
+    results.map(async (cm) => {
+      await getStatus(cm).then(({ status, reason }) => {
+        cm.status = status;
+        cm.statusReason = reason;
+      });
+    })
+  );
 
   return results;
 };
@@ -130,7 +125,7 @@ export const extractByTx = async (
       "0xd782d491", // `mintFromFixedPriceSaleWithEarlyAccessAllowlist`
     ].some((bytes4) => tx.data.startsWith(bytes4))
   ) {
-    return extractByCollection(collection);
+    return extractByCollectionERC721(collection);
   }
 
   return [];
@@ -139,29 +134,27 @@ export const extractByTx = async (
 export const refreshByCollection = async (collection: string) => {
   const existingCollectionMints = await getCollectionMints(collection, { standard: STANDARD });
 
-  for (const { collection } of existingCollectionMints.filter((cm) => cm.tokenId)) {
-    // Fetch and save/update the currently available mints
-    const latestCollectionMints = await extractByCollection(collection);
-    for (const collectionMint of latestCollectionMints) {
-      await simulateAndUpsertCollectionMint(collectionMint);
-    }
+  // Fetch and save/update the currently available mints
+  const latestCollectionMints = await extractByCollectionERC721(collection);
+  for (const collectionMint of latestCollectionMints) {
+    await simulateAndUpsertCollectionMint(collectionMint);
+  }
 
-    // Assume anything that exists in our system but was not returned
-    // in the above call is not available anymore so we can close
-    for (const existing of existingCollectionMints) {
-      if (
-        !latestCollectionMints.find(
-          (latest) =>
-            latest.collection === existing.collection &&
-            latest.stage === existing.stage &&
-            latest.tokenId === existing.tokenId
-        )
-      ) {
-        await simulateAndUpsertCollectionMint({
-          ...existing,
-          status: "closed",
-        });
-      }
+  // Assume anything that exists in our system but was not returned
+  // in the above call is not available anymore so we can close
+  for (const existing of existingCollectionMints) {
+    if (
+      !latestCollectionMints.find(
+        (latest) =>
+          latest.collection === existing.collection &&
+          latest.stage === existing.stage &&
+          latest.tokenId === existing.tokenId
+      )
+    ) {
+      await simulateAndUpsertCollectionMint({
+        ...existing,
+        status: "closed",
+      });
     }
   }
 };
