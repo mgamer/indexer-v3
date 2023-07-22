@@ -19,6 +19,7 @@ import { bn, formatPrice, fromBuffer, now, regex, toBuffer } from "@/common/util
 import { config } from "@/config/index";
 import { ApiKeyManager } from "@/models/api-keys";
 import { Sources } from "@/models/sources";
+import { FeeRecipient } from "@/models/fee-recipient";
 import { OrderKind, generateListingDetailsV6 } from "@/orderbook/orders";
 import { fillErrorCallback, getExecuteError } from "@/orderbook/orders/errors";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
@@ -291,6 +292,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
       // TODO: Also keep track of the maker's allowance per exchange
 
       const sources = await Sources.getInstance();
+      const feeRecipient = await FeeRecipient.getInstance();
 
       // Save the fill source if it doesn't exist yet
       if (payload.source) {
@@ -1168,6 +1170,12 @@ export const getExecuteBuyV7Options: RouteOptions = {
         const [recipient, amount] = fee.split(":");
         return { recipient, amount };
       });
+
+      if (payload.source) {
+        for (const globalFee of globalFees) {
+          await feeRecipient.getOrInsert(globalFee.recipient, payload.source);
+        }
+      }
 
       const hasBlurListings = listingDetails.some((b) => b.source === "blur.io");
       const ordersEligibleForGlobalFees = listingDetails

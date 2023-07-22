@@ -14,7 +14,7 @@ import { OrderKind } from "@/orderbook/orders";
 import { Assets } from "@/utils/assets";
 import { Currency, getCurrency } from "@/utils/currencies";
 import { getUSDAndCurrencyPrices, getUSDAndNativePrices } from "@/utils/prices";
-
+import { FeeRecipient } from "@/models/fee-recipient";
 // --- Prices ---
 
 const JoiPriceAmount = Joi.object({
@@ -719,6 +719,8 @@ export const JoiFeeBreakdown = Joi.object({
   kind: Joi.string(),
   bps: Joi.number(),
   recipient: Joi.string(),
+  source: Joi.string().optional(),
+  rawAmount: Joi.string(),
 });
 
 export const JoiSale = Joi.object({
@@ -772,27 +774,41 @@ export const getFeeValue = (feeValue: any, validFees: boolean) => {
   return feeValue !== null && validFees ? feeValue : undefined;
 };
 
-export const getFeeBreakdown = (
+export const getFeeBreakdown = async (
   royaltyFeeBreakdown: any,
   marketplaceFeeBreakdown: any,
-  validFees: boolean
+  validFees: boolean,
+  totalAmount: string
 ) => {
-  return (royaltyFeeBreakdown !== null || marketplaceFeeBreakdown !== null) && validFees
-    ? [].concat(
-        (royaltyFeeBreakdown ?? []).map((detail: any) => {
-          return {
-            kind: "royalty",
-            ...detail,
-          };
-        }),
-        (marketplaceFeeBreakdown ?? []).map((detail: any) => {
-          return {
-            kind: "marketplace",
-            ...detail,
-          };
-        })
-      )
-    : undefined;
+  const feeRecipient = await FeeRecipient.getInstance();
+  const feeBreakdown: undefined | any[] =
+    (royaltyFeeBreakdown !== null || marketplaceFeeBreakdown !== null) && validFees
+      ? [].concat(
+          (royaltyFeeBreakdown ?? []).map((detail: any) => {
+            return {
+              kind: "royalty",
+              ...detail,
+            };
+          }),
+          (marketplaceFeeBreakdown ?? []).map((detail: any) => {
+            return {
+              kind: "marketplace",
+              ...detail,
+            };
+          })
+        )
+      : undefined;
+
+  if (feeBreakdown) {
+    for (let index = 0; index < feeBreakdown.length; index++) {
+      const feeBreak = feeBreakdown[index];
+      const feeEntity = await feeRecipient.getByAddress(feeBreak.recipient);
+      feeBreak.rawAmount = bn(totalAmount).mul(feeBreak.bps).div(bn(10000)).toString();
+      feeBreak.source = feeEntity?.domain ?? undefined;
+    }
+  }
+
+  return feeBreakdown;
 };
 
 export const getJoiSaleObject = async (sale: {
@@ -935,10 +951,11 @@ export const getJoiSaleObject = async (sale: {
     royaltyFeeBps: getFeeValue(sale.fees.royaltyFeeBps, lastSaleFeeInfoIsValid),
     marketplaceFeeBps: getFeeValue(sale.fees.marketplaceFeeBps, lastSaleFeeInfoIsValid),
     paidFullRoyalty: getFeeValue(sale.fees.paidFullRoyalty, lastSaleFeeInfoIsValid),
-    feeBreakdown: getFeeBreakdown(
+    feeBreakdown: await getFeeBreakdown(
       sale.fees.royaltyFeeBreakdown,
       sale.fees.marketplaceFeeBreakdown,
-      lastSaleFeeInfoIsValid
+      lastSaleFeeInfoIsValid,
+      sale.prices.gross.amount
     ),
     isDeleted: sale.isDeleted,
     createdAt: sale.createdAt,

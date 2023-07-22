@@ -12,6 +12,7 @@ import { initIndexes } from "@/elasticsearch/indexes";
 import { startKafkaConsumer } from "@/jobs/cdc";
 import { RabbitMqJobsConsumer } from "@/jobs/index";
 import { Sources } from "@/models/sources";
+import { FeeRecipient } from "@/models/fee-recipient";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 process.on("unhandledRejection", (error: any) => {
@@ -22,6 +23,8 @@ process.on("unhandledRejection", (error: any) => {
 });
 
 const setup = async () => {
+  await FeeRecipient.syncSources();
+  await FeeRecipient.forceDataReload();
   if (process.env.LOCAL_TESTING) {
     return;
   }
