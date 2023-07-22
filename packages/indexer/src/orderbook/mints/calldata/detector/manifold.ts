@@ -562,7 +562,7 @@ export const extractByTx = async (
 export const refreshByCollection = async (collection: string) => {
   const existingCollectionMints = await getCollectionMints(collection, { standard: STANDARD });
 
-  for (const { tokenId, details } of existingCollectionMints.filter((cm) => cm.tokenId)) {
+  for (const { tokenId, details } of existingCollectionMints) {
     // Fetch and save/update the currently available mints
     const latestCollectionMints = tokenId
       ? await extractByCollectionERC1155(collection, tokenId)

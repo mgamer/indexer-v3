@@ -218,6 +218,21 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
 
         break;
       }
+
+      case "foundation-created-fixed-price-sale": {
+        const parsedLog = eventData.abi.parseLog(log);
+        const collection = parsedLog.args["nftContract"].toLowerCase();
+
+        onChainData.mints.push({
+          by: "collection",
+          data: {
+            standard: "foundation",
+            collection,
+          },
+        });
+
+        break;
+      }
     }
   }
 };

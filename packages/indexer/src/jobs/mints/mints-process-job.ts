@@ -177,6 +177,12 @@ export class MintsProcessJob extends AbstractRabbitMqJobHandler {
         switch (data.standard) {
           // TODO: Add support for `decent`
 
+          case "foundation": {
+            collectionMints = await detector.foundation.extractByCollectionERC721(data.collection);
+
+            break;
+          }
+
           case "manifold": {
             if (kind === "erc721") {
               collectionMints = await detector.manifold.extractByCollectionERC721(
