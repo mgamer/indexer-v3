@@ -191,9 +191,9 @@ export const getExecuteBidV2Options: RouteOptions = {
         },
       ];
 
-      // Check the maker's Weth/Eth balance
+      // Check the maker's Native/WNative balance
       let wrapEthTx: TxData | undefined;
-      const weth = new Sdk.Common.Helpers.Weth(baseProvider, config.chainId);
+      const weth = new Sdk.Common.Helpers.WNative(baseProvider, config.chainId);
       const wethBalance = await weth.getBalance(query.maker);
       if (bn(wethBalance).lt(query.weiPrice)) {
         const ethBalance = await baseProvider.getBalance(query.maker);

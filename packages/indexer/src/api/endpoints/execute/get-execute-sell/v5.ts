@@ -225,7 +225,7 @@ export const getExecuteSellV5Options: RouteOptions = {
           quantity: payload.quantity ?? 1,
           source,
           // TODO: Add support for multiple currencies
-          currency: Sdk.Common.Addresses.Weth[config.chainId],
+          currency: Sdk.Common.Addresses.WNative[config.chainId],
           quote: formatEth(orderResult.price),
           rawQuote: orderResult.price,
         },

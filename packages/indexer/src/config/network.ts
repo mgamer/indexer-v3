@@ -176,7 +176,7 @@ export const getNetworkSettings = (): NetworkSettings => {
     burnAddresses: [AddressZero, "0x000000000000000000000000000000000000dead"],
     reorgCheckFrequency: [1, 5, 10, 30, 60], // In minutes
     whitelistedCurrencies: new Map<string, Currency>(),
-    supportedBidCurrencies: { [Sdk.Common.Addresses.Weth[config.chainId]?.toLowerCase()]: true },
+    supportedBidCurrencies: { [Sdk.Common.Addresses.WNative[config.chainId]?.toLowerCase()]: true },
     subDomain: "api",
     elasticsearch: {
       numberOfShards: 2,
