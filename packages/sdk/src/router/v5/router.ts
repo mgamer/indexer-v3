@@ -131,7 +131,7 @@ export class Router {
     }
 
     // Ensure all listings are in ETH
-    if (!details.every((d) => d.currency === Sdk.Common.Addresses.Eth[this.chainId])) {
+    if (!details.every((d) => d.currency === Sdk.Common.Addresses.Native[this.chainId])) {
       throw new Error("Only ETH listings are fillable through the router");
     }
 

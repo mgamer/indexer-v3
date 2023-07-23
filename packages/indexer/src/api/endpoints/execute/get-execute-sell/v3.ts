@@ -152,7 +152,7 @@ export const getExecuteSellV3Options: RouteOptions = {
           quantity: 1,
           source: sourceId ? sources.get(sourceId)?.domain ?? null : null,
           // TODO: Add support for multiple currencies
-          currency: Sdk.Common.Addresses.Weth[config.chainId],
+          currency: Sdk.Common.Addresses.WNative[config.chainId],
           quote: formatEth(bestOrderResult.price),
           rawQuote: bestOrderResult.price,
         },

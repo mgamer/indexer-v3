@@ -200,7 +200,7 @@ export const getExecuteSellV4Options: RouteOptions = {
           quantity: payload.quantity ?? 1,
           source: sourceId ? sources.get(sourceId)?.domain ?? null : null,
           // TODO: Add support for multiple currencies
-          currency: Sdk.Common.Addresses.Weth[config.chainId],
+          currency: Sdk.Common.Addresses.WNative[config.chainId],
           quote: formatEth(orderResult.price),
           rawQuote: orderResult.price,
         },

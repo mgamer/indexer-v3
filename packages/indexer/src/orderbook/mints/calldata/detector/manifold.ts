@@ -103,7 +103,7 @@ export const extractByCollectionERC721 = async (
           location: claim.location,
           cost: claim.cost.toString(),
           paymentReceiver: claim.paymentReceiver,
-          erc20: Sdk.Common.Addresses.Eth[config.chainId],
+          erc20: Sdk.Common.Addresses.Native[config.chainId],
           mintFee: "0",
           mintFeeMerkle: "0",
         };
@@ -222,7 +222,7 @@ export const extractByCollectionERC721 = async (
                   instanceId,
                 },
               },
-              currency: Sdk.Common.Addresses.Eth[config.chainId],
+              currency: Sdk.Common.Addresses.Native[config.chainId],
               price,
               maxMintsPerWallet: bn(claimConfig.walletMax).gt(0)
                 ? claimConfig.walletMax.toString()
@@ -293,7 +293,7 @@ export const extractByCollectionERC721 = async (
                   instanceId,
                 },
               },
-              currency: Sdk.Common.Addresses.Eth[config.chainId],
+              currency: Sdk.Common.Addresses.Native[config.chainId],
               price,
               maxMintsPerWallet: bn(claimConfig.walletMax).gt(0)
                 ? claimConfig.walletMax.toString()
@@ -376,7 +376,7 @@ export const extractByCollectionERC1155 = async (
 
       if (
         instanceId !== "0" &&
-        claim.erc20.toLowerCase() === Sdk.Common.Addresses.Eth[config.chainId]
+        claim.erc20.toLowerCase() === Sdk.Common.Addresses.Native[config.chainId]
       ) {
         // Public sale
         if (claim.merkleRoot === HashZero) {
@@ -430,7 +430,7 @@ export const extractByCollectionERC1155 = async (
                   },
                 },
               },
-              currency: Sdk.Common.Addresses.Eth[config.chainId],
+              currency: Sdk.Common.Addresses.Native[config.chainId],
               price,
               tokenId,
               maxMintsPerWallet: bn(claim.walletMax).gt(0) ? claim.walletMax.toString() : undefined,
@@ -498,7 +498,7 @@ export const extractByCollectionERC1155 = async (
                   merkleTreeId,
                 },
               },
-              currency: Sdk.Common.Addresses.Eth[config.chainId],
+              currency: Sdk.Common.Addresses.Native[config.chainId],
               price,
               tokenId,
               maxMintsPerWallet: bn(claim.walletMax).gt(0) ? claim.walletMax.toString() : undefined,
