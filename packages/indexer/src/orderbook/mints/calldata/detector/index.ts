@@ -7,6 +7,7 @@ import { bn, fromBuffer, toBuffer } from "@/common/utils";
 import { getNetworkSettings } from "@/config/network";
 import { fetchTransaction } from "@/events-sync/utils";
 import { mintsCheckJob } from "@/jobs/mints/mints-check-job";
+import { mintsRefreshJob } from "@/jobs/mints/mints-refresh-job";
 import { Sources } from "@/models/sources";
 
 import * as decent from "@/orderbook/mints/calldata/detector/decent";
@@ -86,7 +87,8 @@ export const extractByTx = async (txHash: string, skipCache = false) => {
     return [];
   }
 
-  await mintsCheckJob.addToQueue({ collection });
+  await mintsCheckJob.addToQueue({ collection }, 10 * 60);
+  await mintsRefreshJob.addToQueue({ collection }, 10 * 60);
 
   // For performance reasons, do at most one attempt per collection per 5 minutes
   if (!skipCache) {
