@@ -136,7 +136,7 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
         // that don't have the currencies cached in the tokens table
         const floorAskCurrency = r.floor_sell_currency
           ? fromBuffer(r.floor_sell_currency)
-          : Sdk.Common.Addresses.Eth[config.chainId];
+          : Sdk.Common.Addresses.Native[config.chainId];
 
         const normalizedFloorSellSource = r.normalized_floor_sell_value
           ? sources.get(Number(r.normalized_floor_sell_source_id_int), contract, tokenId)
@@ -146,7 +146,7 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
         // that don't have the currencies cached in the tokens table
         const normalizedFloorAskCurrency = r.normalized_floor_sell_currency
           ? fromBuffer(r.normalized_floor_sell_currency)
-          : Sdk.Common.Addresses.Eth[config.chainId];
+          : Sdk.Common.Addresses.Native[config.chainId];
 
         const result = {
           token: {
@@ -236,20 +236,18 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
           eventType = "token.updated";
           if (data.before) {
             for (const key in changedMapping) {
-              // eslint-disable-next-line
-              // @ts-ignore
-              if (data.before[key] !== data.after[key]) {
-                changed.push(key);
+              if (data.before[key as keyof TokenInfo] !== data.after[key as keyof TokenInfo]) {
+                changed.push(changedMapping[key as keyof typeof changedMapping]);
               }
             }
 
             if (!changed.length) {
-              logger.info(
-                QUEUE_NAME,
-                `No changes detected for event. before=${JSON.stringify(
-                  data.before
-                )}, after=${JSON.stringify(data.after)}`
-              );
+              // logger.info(
+              //   QUEUE_NAME,
+              //   `No changes detected for event. before=${JSON.stringify(
+              //     data.before
+              //   )}, after=${JSON.stringify(data.after)}`
+              // );
               return;
             }
           }
@@ -274,7 +272,7 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
         throw error;
       }
     },
-    { connection: redis.duplicate(), concurrency: 10 }
+    { connection: redis.duplicate(), concurrency: 30 }
   );
 
   worker.on("error", (error) => {
