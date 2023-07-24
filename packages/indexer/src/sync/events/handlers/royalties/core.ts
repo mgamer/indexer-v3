@@ -492,7 +492,7 @@ export async function extractRoyalties(
   // const creatorRoyaltyFeeBps = getTotalRoyaltyBps(creatorRoyaltyFeeBreakdown);
   const royaltyFeeBps = getTotalRoyaltyBps(royaltyFeeBreakdown);
   const creatorBps = Math.min(...royalties.map(getTotalRoyaltyBps));
-  const paidFullRoyalty = royaltyFeeBps >= creatorBps;
+  const paidFullRoyalty = royaltyFeeBreakdown.length ? royaltyFeeBps >= creatorBps : false;
 
   return {
     royaltyFeeOnTop,
