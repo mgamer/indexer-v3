@@ -16,60 +16,79 @@ export const getNetworkName = () => {
   switch (config.chainId) {
     case 1:
       network = "mainnet";
+      break;
 
     case 5:
       network = "goerli";
+      break;
 
     case 10:
       network = "optimism";
+      break;
 
     case 56:
       network = "bsc";
+      break;
 
     case 137:
       network = "polygon";
+      break;
 
     case 42161:
       network = "arbitrum";
+      break;
 
     case 534353:
       network = "scroll-alpha";
+      break;
 
     case 5001:
       network = "mantle-testnet";
+      break;
 
     case 59140:
       network = "linea-testnet";
+      break;
 
     case 11155111:
       network = "sepolia";
+      break;
 
     case 80001:
       network = "mumbai";
+      break;
 
     case 84531:
       network = "base-goerli";
+      break;
 
     case 42170:
       network = "arbitrum-nova";
+      break;
 
     case 999:
       network = "zora-testnet";
+      break;
 
     case 7777777:
       network = "zora";
+      break;
 
     case 43114:
       network = "avalanche";
+      break;
 
     case 8453:
       network = "base";
+      break;
 
     case 59144:
       network = "linea";
+      break;
 
     default:
       network = "unknown";
+      break;
   }
 
   return `${network}${config.environment === "dev" ? ".dev" : ""}`;
