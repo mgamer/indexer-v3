@@ -89,7 +89,7 @@ export class MetadataApi {
 
       let networkName = getNetworkName();
 
-      if (networkName === "prod-goerli") {
+      if (networkName === "goerli.dev") {
         networkName = "goerli";
       }
 
@@ -142,7 +142,7 @@ export class MetadataApi {
 
     let networkName = getNetworkName();
 
-    if (networkName === "prod-goerli") {
+    if (networkName === "goerli.dev") {
       networkName = "goerli";
     }
 

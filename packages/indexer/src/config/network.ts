@@ -11,64 +11,68 @@ import { config } from "@/config/index";
 import { Currency } from "@/utils/currencies";
 
 export const getNetworkName = () => {
+  let network;
+
   switch (config.chainId) {
     case 1:
-      return "mainnet";
+      network = "mainnet";
 
     case 5:
-      return config.environment === "prod" ? "prod-goerli" : "goerli";
+      network = "goerli";
 
     case 10:
-      return "optimism";
+      network = "optimism";
 
     case 56:
-      return "bsc";
+      network = "bsc";
 
     case 137:
-      return "polygon";
+      network = "polygon";
 
     case 42161:
-      return "arbitrum";
+      network = "arbitrum";
 
     case 534353:
-      return "scroll-alpha";
+      network = "scroll-alpha";
 
     case 5001:
-      return "mantle-testnet";
+      network = "mantle-testnet";
 
     case 59140:
-      return "linea-testnet";
+      network = "linea-testnet";
 
     case 11155111:
-      return "sepolia";
+      network = "sepolia";
 
     case 80001:
-      return "mumbai";
+      network = "mumbai";
 
     case 84531:
-      return "base-goerli";
+      network = "base-goerli";
 
     case 42170:
-      return "arbitrum-nova";
+      network = "arbitrum-nova";
 
     case 999:
-      return "zora-testnet";
+      network = "zora-testnet";
 
     case 7777777:
-      return "zora";
+      network = "zora";
 
     case 43114:
-      return "avalanche";
+      network = "avalanche";
 
     case 8453:
-      return "base";
+      network = "base";
 
     case 59144:
-      return "linea";
+      network = "linea";
 
     default:
-      return "unknown";
+      network = "unknown";
   }
+
+  return `${network}${config.environment === "dev" ? ".dev" : ""}`;
 };
 
 export const getOpenseaNetworkName = () => {
