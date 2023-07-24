@@ -62,11 +62,7 @@ export type EventsBatch = {
 // Map each high-level event kind to its corresponding handler
 export const eventKindToHandler = new Map<
   EventKind,
-  (
-    e: EnhancedEvent[],
-    d: OnChainData,
-    backfill?: boolean
-  ) => Promise<void> | Promise<OnChainData | undefined>
+  (e: EnhancedEvent[], d: OnChainData, backfill?: boolean) => Promise<void>
 >([
   ["erc20", (e, d) => erc20.handleEvents(e, d)],
   ["erc721", (e, d) => erc721.handleEvents(e, d)],

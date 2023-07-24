@@ -38,16 +38,14 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
                 txTimestamp: baseEventParams.timestamp,
                 txBlock: baseEventParams.block,
                 logIndex: baseEventParams.logIndex,
-              },
-              metadata: {
                 eventName: subKind,
-                fromOnChain: true,
                 lpTokenId: lpTokenId.toString(),
                 nftId: nftId.toString(),
                 binLower: binLower,
                 binstep: binStep,
                 binAmount: nftIds.length,
               },
+              metadata: {},
             },
           });
         });
@@ -72,15 +70,13 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
               txTimestamp: baseEventParams.timestamp,
               txBlock: baseEventParams.block,
               logIndex: baseEventParams.logIndex,
-            },
-            metadata: {
               eventName: subKind,
-              fromOnChain: true,
               lpTokenId: lpTokenId.toString(),
               binLower: binLower,
               binstep: binStep,
               binAmount: binAmount.toNumber(),
             },
+            metadata: {},
           },
         });
 
@@ -100,12 +96,10 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
               txTimestamp: baseEventParams.timestamp,
               txBlock: baseEventParams.block,
               logIndex: baseEventParams.logIndex,
-            },
-            metadata: {
               eventName: subKind,
-              fromOnChain: true,
               lpTokenId: lpTokenId.toString(),
             },
+            metadata: {},
           },
         });
 
@@ -195,16 +189,12 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
               txTimestamp: baseEventParams.timestamp,
               txBlock: baseEventParams.block,
               logIndex: baseEventParams.logIndex,
-            },
-            metadata: {
-              source: subKind,
-              fromOnChain: true,
               nftId: tokenId.toString(),
               eventName: subKind,
               tradeBin,
               lpTokenId: lpTokenId.toString(),
             },
-            // },
+            metadata: {},
           },
         });
         break;

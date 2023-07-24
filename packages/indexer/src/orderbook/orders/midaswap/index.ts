@@ -29,7 +29,14 @@ export type OrderInfo = {
     logIndex: number;
     // Misc options
     forceRecheck?: boolean;
-    // tokenX: string;
+
+    eventName?: string;
+    lpTokenId?: string;
+    nftId?: string;
+    binLower?: number;
+    binstep?: number;
+    binAmount?: number;
+    tradeBin?: number;
   };
   metadata: OrderMetadata;
 };
@@ -58,7 +65,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
   const results: SaveResult[] = [];
   const orderValues: DbOrder[] = [];
 
-  const handleOrder = async ({ orderParams, metadata }: OrderInfo) => {
+  const handleOrder = async ({ orderParams }: OrderInfo) => {
     try {
       const pool = await midaswap.getPoolDetails(orderParams.pool);
 
@@ -70,7 +77,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         throw new Error("Unsupported currency");
       }
 
-      const { binAmount, binLower, binstep, nftId, lpTokenId, tradeBin } = metadata;
+      const { binAmount, binLower, binstep, nftId, lpTokenId, tradeBin } = orderParams;
 
       // Force recheck at most once per hour
       // const recheckCondition = orderParams.forceRecheck
@@ -91,7 +98,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         },
       ];
 
-      switch (metadata.eventName) {
+      switch (orderParams.eventName) {
         // Handle sell orders
         case "midaswap-erc721-deposit": {
           if (
