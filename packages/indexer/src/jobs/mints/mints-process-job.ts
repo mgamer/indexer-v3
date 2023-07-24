@@ -155,7 +155,7 @@ export class MintsProcessJob extends AbstractRabbitMqJobHandler {
           );
         }
 
-        const { kind } = await idb
+        const kind = await idb
           .one(
             `
               SELECT
@@ -169,10 +169,7 @@ export class MintsProcessJob extends AbstractRabbitMqJobHandler {
               collection: data.collection,
             }
           )
-          .then((r) => ({
-            contract: fromBuffer(r.contract),
-            kind: r.kind,
-          }));
+          .then((r) => r.kind);
 
         switch (data.standard) {
           // TODO: Add support for `decent`
