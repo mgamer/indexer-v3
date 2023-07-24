@@ -1,7 +1,10 @@
 import { Interface } from "@ethersproject/abi";
-import { AddressZero } from "@ethersproject/constants";
+import { AddressZero, HashZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import * as Sdk from "@reservoir0x/sdk";
+import { MerkleTree } from "merkletreejs";
+import { keccak256 } from "@ethersproject/keccak256";
+import { keccak256 as solidityKeccak256 } from "@ethersproject/solidity";
 
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
@@ -13,7 +16,13 @@ import {
   getCollectionMints,
   simulateAndUpsertCollectionMint,
 } from "@/orderbook/mints";
-import { getStatus, toSafeTimestamp } from "@/orderbook/mints/calldata/helpers";
+import { fetchMetadata, getStatus, toSafeTimestamp } from "@/orderbook/mints/calldata/helpers";
+import {
+  AllowlistItem,
+  getAllowlist,
+  allowlistExists,
+  createAllowlist,
+} from "@/orderbook/mints/allowlists";
 
 const STANDARD = "foundation";
 
@@ -76,17 +85,9 @@ export const extractByCollectionERC721 = async (collection: string): Promise<Col
     merkleRoot = createFixedPriceSaleEvent.merkleRoot;
   }
 
-  // console.log({
-  //   merkleTreeUri,
-  //   merkleRoot
-  // })
-
-  if (merkleRoot && merkleTreeUri) {
-    // save presale
-  }
-
   try {
     const result = await contract.getFixedPriceSale(collection);
+
     const editionConfig: {
       seller: string;
       price: string;
@@ -104,6 +105,80 @@ export const extractByCollectionERC721 = async (collection: string): Promise<Col
       generalAvailabilityStartTime: result.generalAvailabilityStartTime.toString(),
       earlyAccessStartTime: result.earlyAccessStartTime.toString(),
     };
+
+    if (merkleRoot && merkleRoot != HashZero && merkleTreeUri) {
+      let allowlistCreated = true;
+      if (!(await allowlistExists(merkleRoot))) {
+        try {
+          const contractMetadata: { unhashedLeaves: string[] } = await fetchMetadata(merkleTreeUri);
+          const items: AllowlistItem[] = contractMetadata.unhashedLeaves.map(
+            (e) =>
+              ({
+                address: e,
+                price: editionConfig.price,
+                actualPrice: editionConfig.price,
+              } as AllowlistItem)
+          );
+
+          if (generateMerkleTree(items).tree.getHexRoot() === merkleRoot) {
+            await createAllowlist(merkleRoot!, items);
+          } else {
+            allowlistCreated = false;
+          }
+        } catch {
+          // Fetch allowlist failed
+        }
+      }
+
+      if (allowlistCreated) {
+        results.push({
+          collection,
+          contract: collection,
+          stage: "presale",
+          kind: "allowlist",
+          status: "open",
+          standard: STANDARD,
+          details: {
+            tx: {
+              to: Sdk.Foundation.Addresses.DropMarket[config.chainId],
+              data: {
+                // `mintFromFixedPriceSaleWithEarlyAccessAllowlist`
+                signature: "0xd782d491",
+                params: [
+                  {
+                    kind: "contract",
+                    abiType: "address",
+                  },
+                  {
+                    kind: "quantity",
+                    abiType: "uint256",
+                  },
+                  {
+                    kind: "unknown",
+                    abiType: "address",
+                    abiValue: AddressZero,
+                  },
+                  {
+                    kind: "allowlist",
+                    abiType: "bytes32[]",
+                  },
+                ],
+              },
+            },
+          },
+          currency: Sdk.Common.Addresses.Eth[config.chainId],
+          price: editionConfig.price,
+          maxMintsPerWallet: editionConfig.limitPerAccount,
+          maxSupply: editionConfig.numberOfTokensAvailableToMint,
+          startTime:
+            editionConfig.earlyAccessStartTime != "0"
+              ? toSafeTimestamp(editionConfig.earlyAccessStartTime)
+              : undefined,
+
+          allowlistId: merkleRoot,
+        });
+      }
+    }
 
     // Public sale
     results.push({
@@ -205,4 +280,32 @@ export const refreshByCollection = async (collection: string) => {
       });
     }
   }
+};
+
+const hashFn = (item: AllowlistItem) => solidityKeccak256(["address"], [item.address]);
+
+const generateMerkleTree = (
+  items: AllowlistItem[]
+): {
+  root: string;
+  tree: MerkleTree;
+} => {
+  const tree = new MerkleTree(items.map(hashFn), keccak256, {
+    sortPairs: true,
+  });
+  return {
+    root: tree.getHexRoot(),
+    tree,
+  };
+};
+
+type ProofValue = string[];
+
+export const generateProofValue = async (
+  collectionMint: CollectionMint,
+  address: string
+): Promise<ProofValue> => {
+  const items = await getAllowlist(collectionMint.allowlistId!);
+  const item = items.find((i) => i.address === address)!;
+  return generateMerkleTree(items).tree.getHexProof(hashFn(item));
 };
