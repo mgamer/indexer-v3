@@ -799,12 +799,15 @@ export const getFeeBreakdown = async (
         )
       : undefined;
 
+  const sources = await Sources.getInstance();
+
   if (feeBreakdown) {
     for (let index = 0; index < feeBreakdown.length; index++) {
       const feeBreak = feeBreakdown[index];
-      const feeEntity = await feeRecipient.getByAddress(feeBreak.recipient);
+      const feeEntity = await feeRecipient.getByAddress(feeBreak.recipient, feeBreak.kind);
       feeBreak.rawAmount = bn(totalAmount).mul(feeBreak.bps).div(bn(10000)).toString();
-      feeBreak.source = feeEntity?.domain ?? undefined;
+      const orderSource = feeEntity?.sourceId ? sources.get(Number(feeEntity.sourceId)) : undefined;
+      feeBreak.source = orderSource?.domain ?? undefined;
     }
   }
 

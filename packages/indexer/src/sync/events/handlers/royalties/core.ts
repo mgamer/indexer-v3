@@ -391,7 +391,7 @@ export async function extractRoyalties(
         bps: bpsOfPrice.toNumber(),
       };
 
-      const feeRecipientPlatform = await feeRecipient.getByAddress(address);
+      const feeRecipientPlatform = await feeRecipient.getByAddress(address, "marketplace");
       // const feeRecipientPlatform = knownPlatformFeeRecipients.includes(address)
 
       if (feeRecipientPlatform) {
@@ -440,7 +440,7 @@ export async function extractRoyalties(
         );
 
         const excludeOtherRecipients = shareSameRecipient ? true : notInOtherDef;
-        const matchFee = await feeRecipient.getByAddress(address);
+        const matchFee = await feeRecipient.getByAddress(address, "marketplace");
         // const matchFee = allPlatformFeeRecipients.has(address);
         const recipientIsEligible =
           bps > 0 &&

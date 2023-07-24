@@ -1,20 +1,22 @@
+export type FeeKind = "royalty" | "marketplace";
+
 export type FeeRecipientEntityParams = {
-  id: number;
-  domain: string | null;
+  source_id: number | null;
   address: string;
+  kind: FeeKind;
   createdAt: string;
 };
 
 export class FeeRecipientEntity {
-  id: number;
-  domain: string | null;
+  sourceId: number | null;
   address: string;
+  kind: FeeKind;
   createdAt: string;
 
   constructor(params: FeeRecipientEntityParams) {
-    this.id = params.id;
-    this.domain = params.domain;
+    this.sourceId = params.source_id;
     this.address = params.address;
+    this.kind = params.kind;
     this.createdAt = params.createdAt;
   }
 }

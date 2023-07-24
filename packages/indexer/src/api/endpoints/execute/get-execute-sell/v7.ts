@@ -862,7 +862,7 @@ export const getExecuteSellV7Options: RouteOptions = {
 
       if (payload.source) {
         for (const globalFee of globalFees) {
-          await feeRecipient.getOrInsert(globalFee.recipient, payload.source);
+          await feeRecipient.getOrInsert(globalFee.recipient, payload.source, "marketplace");
         }
       }
 

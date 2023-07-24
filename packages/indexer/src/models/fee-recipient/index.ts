@@ -3,10 +3,13 @@ import _ from "lodash";
 import { idb, redb } from "@/common/db";
 import { redis } from "@/common/redis";
 import {
+  FeeKind,
   FeeRecipientEntity,
   FeeRecipientEntityParams,
 } from "@/models/fee-recipient/fee-recipient-entity";
 import { default as entitiesFromJson } from "./feeRecipient.json";
+import { Sources } from "@/models/sources";
+import { fromBuffer, toBuffer } from "@/common/utils";
 
 export class FeeRecipient {
   private static instance: FeeRecipient;
@@ -24,15 +27,23 @@ export class FeeRecipient {
 
     if (_.isNull(entitiesCache) || forceDbLoad) {
       // If no cache is available, then load from the database
-      entities = await idb.manyOrNone(
-        `
+      entities = (
+        await idb.manyOrNone(
+          `
           SELECT
-            fee_recipients.id,
-            fee_recipients.domain,
+            fee_recipients.source_id,
+            fee_recipients.kind,
             fee_recipients.address
           FROM fee_recipients
         `
-      );
+        )
+      ).map((c) => {
+        return {
+          ...c,
+          address: fromBuffer(c.address),
+        };
+      });
+
       await redis.set(FeeRecipient.getCacheKey(), JSON.stringify(entities), "EX", 60 * 60 * 24);
     } else {
       // Parse the data
@@ -40,12 +51,13 @@ export class FeeRecipient {
     }
 
     for (const entity of entities) {
-      this.feeRecipientsByAddress[_.toLower(entity.address)] = new FeeRecipientEntity(entity);
+      const keyId = `${_.toLower(entity.address)}:${entity.kind}`;
+      this.feeRecipientsByAddress[keyId] = new FeeRecipientEntity(entity);
     }
   }
 
   public static getCacheKey() {
-    return "fee_recipients";
+    return "fee_recipients_v4";
   }
 
   public static async getInstance() {
@@ -64,31 +76,38 @@ export class FeeRecipient {
   }
 
   public static async syncSources() {
-    _.forEach(entitiesFromJson, (item, id) => {
-      FeeRecipient.addFromJson(Number(id), item.domain, item.address);
+    // Make surce the source is loaded
+    Sources.getInstance();
+    await Sources.syncSources();
+    await Sources.forceDataReload();
+
+    _.forEach(entitiesFromJson, (item) => {
+      FeeRecipient.addFromJson(item.domain, item.address, item.kind as FeeKind);
     });
   }
 
-  public static async addFromJson(id: number, domain: string | null, address: string) {
+  public static async addFromJson(domain: string | null, address: string, kind: FeeKind) {
     try {
+      const source = await Sources.getInstance();
+      const sourceId = domain ? source.getByDomain(domain)?.id : undefined;
       await idb.none(
         `
         INSERT INTO fee_recipients(
-          id,
-          domain,
-          address
+          address,
+          source_id,
+          kind
         ) VALUES (
-          $/id/,
-          $/domain/,
-          $/address/
+          $/address/,
+          $/sourceId/,
+          $/kind/
         )
-        ON CONFLICT (id) DO UPDATE SET
-          domain = $/domain/
+        ON CONFLICT (kind, address) DO UPDATE SET
+          source_id = $/sourceId/
       `,
         {
-          id,
-          domain,
-          address,
+          sourceId,
+          kind,
+          address: toBuffer(address),
         }
       );
     } catch (error) {
@@ -96,17 +115,17 @@ export class FeeRecipient {
     }
   }
 
-  public async create(address: string, domain: string | null) {
+  public async create(address: string, kind: FeeKind, domain: string | null) {
     // It could be the entity already exist
     let entity = await redb.oneOrNone(
       `
       SELECT *
       FROM fee_recipients
-      WHERE address = $/address/ AND domain = $/domain/
+      WHERE address = $/address/ AND kind = $/kind/
     `,
       {
-        address,
-        domain,
+        address: toBuffer(address),
+        kind,
       }
     );
 
@@ -114,21 +133,27 @@ export class FeeRecipient {
       return new FeeRecipientEntity(entity);
     }
 
+    const source = await Sources.getInstance();
+    const sourceId = domain ? source.getByDomain(domain)?.id : undefined;
+
     entity = await idb.oneOrNone(
       `
         INSERT INTO fee_recipients(
-          domain,
-          address
+          address,
+          source_id,
+          kind
         ) VALUES (
-          $/domain/,
-          $/address/
+          $/address/,
+          $/sourceId/,
+          $/kind/
         )
-        ON CONFLICT (domain) DO UPDATE SET domain = EXCLUDED.domain
+        ON CONFLICT (kind, address) DO UPDATE SET source_id = EXCLUDED.source_id
         RETURNING *
       `,
       {
-        domain,
-        address,
+        kind,
+        address: toBuffer(address),
+        sourceId,
       }
     );
 
@@ -137,23 +162,27 @@ export class FeeRecipient {
     return new FeeRecipientEntity(entity);
   }
 
-  public getByAddress(address: string): FeeRecipientEntity | undefined {
+  public getByAddress(address: string, kind: FeeKind): FeeRecipientEntity | undefined {
     let entity: FeeRecipientEntity | undefined;
 
     address = _.toLower(address);
-    if (address in this.feeRecipientsByAddress) {
-      entity = this.feeRecipientsByAddress[address];
+    const keyId = `${address}:${kind}`;
+    if (keyId in this.feeRecipientsByAddress) {
+      entity = this.feeRecipientsByAddress[keyId];
     }
     return entity;
   }
 
-  public async getOrInsert(address: string, domain: string): Promise<FeeRecipientEntity> {
+  public async getOrInsert(
+    address: string,
+    domain: string,
+    kind: FeeKind
+  ): Promise<FeeRecipientEntity> {
     let entity: FeeRecipientEntity | undefined;
-    entity = this.getByAddress(address);
+    entity = this.getByAddress(address, kind);
     if (!entity) {
-      entity = await this.create(address, domain);
+      entity = await this.create(address, kind, domain);
     }
-
     return entity;
   }
 }

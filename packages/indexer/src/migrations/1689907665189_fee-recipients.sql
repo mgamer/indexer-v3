@@ -1,17 +1,21 @@
 -- Up Migration
 
-CREATE TABLE "fee_recipients" (
-  "id" SERIAL PRIMARY KEY,
-  "address" TEXT NOT NULL,
-  "domain" TEXT
+CREATE TYPE "fee_kind_t" AS ENUM (
+  'marketplace',
+  'royalty'
 );
 
-CREATE INDEX "fee_recipients_address_index"
-  ON "fee_recipients" ("address");
+CREATE TABLE "fee_recipients" (
+  "address" BYTEA NOT NULL,
+  "kind" "fee_kind_t" NOT NULL,
+  "source_id" INT
+);
 
-CREATE UNIQUE INDEX "fee_recipients_address_domain_unique_index"
-  ON "fee_recipients" ("address", "domain");
+ALTER TABLE "fee_recipients"
+  ADD CONSTRAINT "fee_recipients_pk"
+  PRIMARY KEY ("address", "kind");
 
 -- Down Migration
 
 DROP TABLE "fee_recipients";
+DROP TYPE "fee_kind_t";

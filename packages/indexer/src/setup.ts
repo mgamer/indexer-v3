@@ -24,7 +24,7 @@ process.on("unhandledRejection", (error: any) => {
 
 const setup = async () => {
   await FeeRecipient.syncSources();
-  await FeeRecipient.forceDataReload();
+
   if (process.env.LOCAL_TESTING) {
     return;
   }
