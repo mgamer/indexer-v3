@@ -281,11 +281,17 @@ export class RabbitMqJobsConsumer {
       const connection = amqplibConnectionManager.connect(config.rabbitMqUrl);
       RabbitMqJobsConsumer.rabbitMqConsumerConnections.push(connection);
 
+      const sharedChannel = connection.createChannel({ confirm: false });
+
       // Create a shared channel for each connection
       RabbitMqJobsConsumer.sharedChannels.set(
         RabbitMqJobsConsumer.getSharedChannelName(i),
-        connection.createChannel({ confirm: false })
+        sharedChannel
       );
+
+      sharedChannel.once("error", (error) => {
+        logger.error("rabbit-error", `Consumer channel error ${error}`);
+      });
 
       connection.once("error", (error) => {
         logger.error("rabbit-error", `Consumer connection error ${error}`);
