@@ -12,7 +12,6 @@
   "dependencies": {
     "@tenderly/hardhat-tenderly": "^1.6.1",
     "@uniswap/permit2-sdk": "^1.2.0",
-    "decimal.js": "^10.4.3",
     "hardhat-tracer": "^1.2.1",
     "solmate": "^6.7.0"
   },

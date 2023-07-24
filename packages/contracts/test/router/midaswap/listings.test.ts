@@ -19,7 +19,6 @@ import {
 } from "../../utils";
 import RouterAbi from "@reservoir0x/sdk/src/midaswap/abis/Router.json";
 import LPTokenAbi from "@reservoir0x/sdk/src/midaswap/abis/LPToken.json";
-import Decimal from "decimal.js";
 
 describe("[ReservoirV6_0_1] Midaswap listings", () => {
   const chainId = getChainId();
@@ -83,12 +82,6 @@ describe("[ReservoirV6_0_1] Midaswap listings", () => {
       };
     }
   };
-  const binToPriceFixed = (bin: number, decimal = 18, toFixedNumber = 18) => {
-    const powValue = bin - 8388608;
-    const b = new Decimal(10).pow(18 - decimal);
-    const price = new Decimal(1.0001).pow(powValue).times(b).toFixed(toFixedNumber);
-    return String(price);
-  };
 
   afterEach(reset);
 
@@ -111,7 +104,7 @@ describe("[ReservoirV6_0_1] Midaswap listings", () => {
     const listings: MidaswapListing[] = [];
     const feesOnTop: BigNumber[] = [];
     const bin = getRandomInteger(8298609, 8395540);
-    const swapPrice = binToPriceFixed(bin);
+    const swapPrice = Sdk.Midaswap.Order.binToPriceFixed(bin);
     for (let i = 0; i < listingsCount; i++) {
       const isCancelled = partial && getRandomBoolean();
       if (!isCancelled) {

@@ -1,6 +1,5 @@
 import * as Types from "./types";
 import { lc, s } from "../utils";
-import Decimal from "decimal.js";
 import { ethers } from "ethers";
 
 export class Order {
@@ -19,32 +18,22 @@ export class Order {
 
   public static binToPriceFixed = (bin: number, decimal = 18, toFixedNumber = 18) => {
     const powValue = bin - 8388608;
-    const b = new Decimal(10).pow(18 - decimal);
-    const price = new Decimal(1.0001).pow(powValue).times(b).toFixed(toFixedNumber);
+    const b = Math.pow(10, 18 - decimal);
+    const price = (Math.pow(1.0001, powValue) * b).toFixed(toFixedNumber);
     return String(price);
   };
 
   public static getSellPrice = (bin: number, freeRate = 0, royalty = 0) => {
     const price = Order.binToPriceFixed(bin);
     return ethers.utils
-      .parseEther(
-        new Decimal(price)
-          .mul(1 + (freeRate + royalty) / 10000)
-          .toFixed(18)
-          .toString()
-      )
+      .parseEther((+price * (1 + (freeRate + royalty) / 10000)).toFixed(18).toString())
       .toString();
   };
 
   public static getBuyPrice = (bin: number, freeRate = 0, royalty = 0) => {
     const price = Order.binToPriceFixed(bin);
     return ethers.utils
-      .parseEther(
-        new Decimal(price)
-          .div(1 + (freeRate + royalty) / 10000)
-          .toFixed(18)
-          .toString()
-      )
+      .parseEther((+price / (1 + (freeRate + royalty) / 10000)).toFixed(18).toString())
       .toString();
   };
 }
