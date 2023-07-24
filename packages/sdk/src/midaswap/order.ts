@@ -24,24 +24,24 @@ export class Order {
     return String(price);
   };
 
-  public static getSellPrice = (bin: number, freeRate = 0, roralty = 0) => {
+  public static getSellPrice = (bin: number, freeRate = 0, royalty = 0) => {
     const price = Order.binToPriceFixed(bin);
     return ethers.utils
       .parseEther(
         new Decimal(price)
-          .mul(1 + (freeRate + roralty) / 10000)
+          .mul(1 + (freeRate + royalty) / 10000)
           .toFixed(18)
           .toString()
       )
       .toString();
   };
 
-  public static getBuyPrice = (bin: number, freeRate = 0, roralty = 0) => {
+  public static getBuyPrice = (bin: number, freeRate = 0, royalty = 0) => {
     const price = Order.binToPriceFixed(bin);
     return ethers.utils
       .parseEther(
         new Decimal(price)
-          .div(1 + (freeRate + roralty) / 10000)
+          .div(1 + (freeRate + royalty) / 10000)
           .toFixed(18)
           .toString()
       )
@@ -59,9 +59,10 @@ const normalize = (order: Types.OrderParams): Types.OrderParams => {
     pair: lc(order.pair),
     tokenX: lc(order.tokenX),
     tokenY: lc(order.tokenY),
+    lpTokenId: order.lpTokenId,
+    pool: `${lc(order.pair)}_${order.lpTokenId}`,
     tokenId: order.tokenId ? s(order.tokenId) : undefined,
     amount: order.amount ? s(order.amount) : undefined,
-    lpTokenId: order.lpTokenId ? s(order.lpTokenId) : undefined,
     extra: {
       prices: order.extra.prices,
     },

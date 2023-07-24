@@ -120,7 +120,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
           const price = Sdk.Midaswap.Order.getSellPrice(
             tmpPriceList[0],
             +pool.freeRate,
-            +pool.roralty
+            +pool.royalty
           );
           const value = price;
 
@@ -131,9 +131,10 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
             tokenY: pool.token,
             tokenId: nftId,
             lpTokenId,
+            pool: `${orderParams.pool}_${lpTokenId}`,
             extra: {
               prices: tmpPriceList.map((bin) => ({
-                price: Sdk.Midaswap.Order.getSellPrice(bin, +pool.freeRate, +pool.roralty),
+                price: Sdk.Midaswap.Order.getSellPrice(bin, +pool.freeRate, +pool.royalty),
                 bin: bin.toString(),
                 lpTokenId,
               })),
@@ -244,12 +245,12 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
           const price = Sdk.Midaswap.Order.getBuyPrice(
             tmpPriceList[0],
             +pool.freeRate,
-            +pool.roralty
+            +pool.royalty
           );
           const value = price;
 
           const prices = tmpPriceList.map((bin) => ({
-            price: Sdk.Midaswap.Order.getBuyPrice(bin, +pool.freeRate, +pool.roralty),
+            price: Sdk.Midaswap.Order.getBuyPrice(bin, +pool.freeRate, +pool.royalty),
             bin: bin.toString(),
             lpTokenId,
           }));
@@ -259,8 +260,8 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
             pair: orderParams.pool,
             tokenX: pool.nft,
             tokenY: pool.token,
-            // tokenId: nftId,
             lpTokenId,
+            pool: `${orderParams.pool}_${lpTokenId}`,
             extra: {
               prices: !orderResult.length
                 ? prices
@@ -599,8 +600,8 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
               pair: orderParams.pool,
               tokenX: pool.nft,
               tokenY: pool.token,
-              // tokenId: nftId,
               lpTokenId,
+              pool: `${orderParams.pool}_${lpTokenId}`,
               extra: {
                 prices:
                   +tradeBin <= +floorPriceBin
@@ -610,7 +611,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                           price: Sdk.Midaswap.Order.getBuyPrice(
                             tradeBin,
                             +pool.freeRate,
-                            +pool.roralty
+                            +pool.royalty
                           ),
                           bin: tradeBin.toString(),
                           lpTokenId,
@@ -674,7 +675,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
               // append new buy order bins
               +tradeBin <= +floorPriceBin
                 ? {
-                    price: Sdk.Midaswap.Order.getBuyPrice(tradeBin, +pool.freeRate, +pool.roralty),
+                    price: Sdk.Midaswap.Order.getBuyPrice(tradeBin, +pool.freeRate, +pool.royalty),
                     bin: tradeBin.toString(),
                     lpTokenId,
                   }
@@ -780,7 +781,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                 [
                   ...cancelledToTillableOrders.map((item) => item.raw_data.extra.prices[0]),
                   {
-                    price: Sdk.Midaswap.Order.getBuyPrice(tradeBin, +pool.freeRate, +pool.roralty),
+                    price: Sdk.Midaswap.Order.getBuyPrice(tradeBin, +pool.freeRate, +pool.royalty),
                     bin: tradeBin.toString(),
                     lpTokenId,
                   },
@@ -894,6 +895,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
               tokenY: pool.token,
               tokenId: nftId,
               lpTokenId,
+              pool: `${orderParams.pool}_${lpTokenId}`,
               extra: {
                 prices: newSellPrices,
               },
@@ -978,7 +980,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
               [
                 ...sellOrders[0].raw_data.extra.prices,
                 {
-                  price: Sdk.Midaswap.Order.getSellPrice(tradeBin, +pool.freeRate, +pool.roralty),
+                  price: Sdk.Midaswap.Order.getSellPrice(tradeBin, +pool.freeRate, +pool.royalty),
                   bin: tradeBin.toString(),
                   lpTokenId,
                 },

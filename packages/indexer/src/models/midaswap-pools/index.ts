@@ -6,7 +6,7 @@ export type MidaswapPool = {
   nft: string;
   token: string;
   freeRate: string;
-  roralty: string;
+  royalty: string;
 };
 
 export const saveMidaswapPool = async (midaswapPool: MidaswapPool) => {
@@ -17,13 +17,13 @@ export const saveMidaswapPool = async (midaswapPool: MidaswapPool) => {
         nft,
         token,
         free_rate_bps,
-        roralty_bps
+        royalty_bps
       ) VALUES (
         $/address/,
         $/nft/,
         $/token/,
         $/freeRate/,
-        $/roralty/
+        $/royalty/
       )
       ON CONFLICT DO NOTHING
     `,
@@ -32,7 +32,7 @@ export const saveMidaswapPool = async (midaswapPool: MidaswapPool) => {
       nft: toBuffer(midaswapPool.nft),
       token: toBuffer(midaswapPool.token),
       freeRate: toBuffer(midaswapPool.freeRate),
-      roralty: toBuffer(midaswapPool.roralty),
+      royalty: toBuffer(midaswapPool.royalty),
     }
   );
 
@@ -47,7 +47,7 @@ export const getMidaswapPool = async (address: string) => {
         midaswap_pools.nft,
         midaswap_pools.token,
         midaswap_pools.free_rate_bps,
-        midaswap_pools.roralty_bps
+        midaswap_pools.royalty_bps
       FROM midaswap_pools
       WHERE midaswap_pools.address = $/address/
     `,
@@ -59,6 +59,6 @@ export const getMidaswapPool = async (address: string) => {
     nft: fromBuffer(result.nft),
     token: fromBuffer(result.token),
     freeRate: fromBuffer(result.free_rate),
-    roralty: fromBuffer(result.roralty),
+    royalty: fromBuffer(result.royalty),
   };
 };

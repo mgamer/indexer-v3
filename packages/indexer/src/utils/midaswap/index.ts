@@ -20,7 +20,7 @@ export const getPoolDetails = async (address: string) =>
           nft,
           token,
           freeRate: (+freeRate.toString() / Math.pow(10, 14)).toString(),
-          roralty: (+royaltyRate.toString() / Math.pow(10, 14)).toString(),
+          royalty: (+royaltyRate.toString() / Math.pow(10, 14)).toString(),
         });
       } catch {
         // Skip any errors

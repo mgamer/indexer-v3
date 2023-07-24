@@ -9,8 +9,9 @@ export type OrderParams = {
   // Only relevant for listings
   tokenX: string; // nft collection address
   tokenY: string; // ft address
-  tokenId?: string;
   lpTokenId: string;
+  pool: string; // ${pair}_${lpTokenId}
+  tokenId?: string;
   amount?: string;
   extra: {
     // Array of prices the pool will sell/buy at

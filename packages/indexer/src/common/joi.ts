@@ -14,6 +14,7 @@ import { OrderKind } from "@/orderbook/orders";
 import { Assets } from "@/utils/assets";
 import { Currency, getCurrency } from "@/utils/currencies";
 import { getUSDAndCurrencyPrices, getUSDAndNativePrices } from "@/utils/prices";
+import _ from "lodash";
 
 // --- Prices ---
 
@@ -396,39 +397,27 @@ export const getJoiDynamicPricingObject = async (
         ),
       },
     };
-  } else if (kind === "midaswap") {
-    return {
-      kind: "pool",
-      data: {
-        pool: `${(raw_data as Sdk.Midaswap.OrderParams).pair}_${
-          (raw_data as Sdk.Midaswap.OrderParams).lpTokenId
-        }`,
-        prices: await Promise.all(
-          (raw_data as Sdk.Midaswap.OrderParams).extra.prices.map((item) =>
-            getJoiPriceObject(
-              {
-                gross: {
-                  amount: bn(item.price).add(missingRoyalties).toString(),
-                },
-              },
-              floorAskCurrency
-            )
-          )
-        ),
-      },
-    };
-  } else if (kind === "collectionxyz" || kind === "nftx" || kind === "caviar-v1") {
+  } else if (
+    kind === "collectionxyz" ||
+    kind === "nftx" ||
+    kind === "caviar-v1" ||
+    kind === "midaswap"
+  ) {
     // Pool orders
     return {
       kind: "pool",
       data: {
         pool: (raw_data as Sdk.Nftx.Types.OrderParams).pool,
         prices: await Promise.all(
-          ((raw_data as Sdk.Nftx.Types.OrderParams).extra.prices as string[]).map((price) =>
+          (
+            (raw_data as Sdk.Nftx.Types.OrderParams).extra.prices as Sdk.Midaswap.Price[] | string[]
+          ).map((price) =>
             getJoiPriceObject(
               {
                 gross: {
-                  amount: bn(price).add(missingRoyalties).toString(),
+                  amount: bn(_.isString(price) ? price : price.price)
+                    .add(missingRoyalties)
+                    .toString(),
                 },
               },
               floorAskCurrency
