@@ -182,6 +182,12 @@ export enum TopSellingFillOptions {
   any = "any",
 }
 
+const trendingBlocklist = [
+  "0x57f1887a8bf19b14fc0df6fd9b2acc9af147ea85", // ens
+  "0xd4416b13d2b3a9abae7acd5d6c2bbdbe25686401", // ens
+  "0xc36442b4a4522e871399cd717abdd847ab11fe88", // uniswap positions
+];
+
 const mapBucketToCollection = (bucket: any, includeRecentSales: boolean) => {
   const collectionData = bucket?.top_collection_hits?.hits?.hits[0]?._source.collection;
 
@@ -201,7 +207,7 @@ const mapBucketToCollection = (bucket: any, includeRecentSales: boolean) => {
 
   return {
     volume: bucket?.total_volume?.value,
-    count: bucket?.total_transactions?.value,
+    count: bucket?.total_sales.value,
     id: collectionData?.id,
     name: collectionData?.name,
     image: collectionData?.image,
@@ -236,6 +242,13 @@ export const getTopSellingCollections = async (params: {
           },
         },
       ],
+      must_not: [
+        {
+          terms: {
+            "collection.id": trendingBlocklist,
+          },
+        },
+      ],
     },
   } as any;
 
@@ -247,9 +260,14 @@ export const getTopSellingCollections = async (params: {
         order: { total_transactions: "desc" },
       },
       aggs: {
-        total_transactions: {
+        total_sales: {
           value_count: {
             field: "id",
+          },
+        },
+        total_transactions: {
+          cardinality: {
+            field: "event.txHash",
           },
         },
 
