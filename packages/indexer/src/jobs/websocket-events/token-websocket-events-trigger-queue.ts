@@ -90,7 +90,7 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
         // that don't have the currencies cached in the tokens table
         const floorAskCurrency = data.after.floor_sell_currency
           ? data.after.floor_sell_currency
-          : Sdk.Common.Addresses.Eth[config.chainId];
+          : Sdk.Common.Addresses.Native[config.chainId];
 
         const normalizedFloorSellSource = data.after.normalized_floor_sell_value
           ? sources.get(Number(data.after.normalized_floor_sell_source_id_int), contract, tokenId)
@@ -100,7 +100,7 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
         // that don't have the currencies cached in the tokens table
         const normalizedFloorAskCurrency = data.after.normalized_floor_sell_currency
           ? data.after.normalized_floor_sell_currency
-          : Sdk.Common.Addresses.Eth[config.chainId];
+          : Sdk.Common.Addresses.Native[config.chainId];
 
         const result = {
           token: {
