@@ -112,7 +112,7 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
           status: rawResult.status,
           tokenSetId: rawResult.token_set_id,
           tokenSetSchemaHash: fromBuffer(rawResult.token_set_schema_hash),
-          nonce: Number(rawResult.nonce),
+          nonce: rawResult.nonce,
           contract: fromBuffer(rawResult.contract),
           maker: fromBuffer(rawResult.maker),
           taker: fromBuffer(rawResult.taker),
@@ -133,8 +133,8 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
             rawResult.currency
               ? fromBuffer(rawResult.currency)
               : rawResult.side === "sell"
-              ? Sdk.Common.Addresses.Eth[config.chainId]
-              : Sdk.Common.Addresses.Weth[config.chainId],
+              ? Sdk.Common.Addresses.Native[config.chainId]
+              : Sdk.Common.Addresses.WNative[config.chainId],
             undefined
           ),
           validFrom: Number(rawResult.valid_from),

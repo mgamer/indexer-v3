@@ -35,13 +35,6 @@ import * as tokenWebsocketEventsTriggerQueue from "@/jobs/websocket-events/token
 import * as topBidWebsocketEventsTriggerQueue from "@/jobs/websocket-events/top-bid-websocket-events-trigger-queue";
 import * as collectionWebsocketEventsTriggerQueue from "@/jobs/websocket-events/collection-websocket-events-trigger-queue";
 
-import * as backfillTransferActivitiesElasticsearch from "@/jobs/activities/backfill/backfill-transfer-activities-elasticsearch";
-import * as backfillSaleActivitiesElasticsearch from "@/jobs/activities/backfill/backfill-sale-activities-elasticsearch";
-import * as backfillAskActivitiesElasticsearch from "@/jobs/activities/backfill/backfill-ask-activities-elasticsearch";
-import * as backfillBidActivitiesElasticsearch from "@/jobs/activities/backfill/backfill-bid-activities-elasticsearch";
-import * as backfillAskCancelActivitiesElasticsearch from "@/jobs/activities/backfill/backfill-ask-cancel-activities-elasticsearch";
-import * as backfillBidCancelActivitiesElasticsearch from "@/jobs/activities/backfill/backfill-bid-cancel-activities-elasticsearch";
-import * as backfillActivitiesElasticsearch from "@/jobs/activities/backfill/backfill-activities-elasticsearch";
 import * as backfillDeleteExpiredBidsElasticsearch from "@/jobs/activities/backfill/backfill-delete-expired-bids-elasticsearch";
 import * as backfillSalePricingDecimalElasticsearch from "@/jobs/activities/backfill/backfill-sales-pricing-decimal-elasticsearch";
 
@@ -90,6 +83,13 @@ import { exportDataJob } from "@/jobs/data-export/export-data-job";
 import { processActivityEventJob } from "@/jobs/activities/process-activity-event-job";
 import { savePendingActivitiesJob } from "@/jobs/activities/save-pending-activities-job";
 import { deleteArchivedExpiredBidActivitiesJob } from "@/jobs/activities/delete-archived-expired-bid-activities-job";
+import { backfillActivitiesElasticsearchJob } from "@/jobs/activities/backfill/backfill-activities-elasticsearch-job";
+import { backfillTransferActivitiesElasticsearchJob } from "@/jobs/activities/backfill/backfill-transfer-activities-elasticsearch-job";
+import { backfillSaleActivitiesElasticsearchJob } from "@/jobs/activities/backfill/backfill-sale-activities-elasticsearch-job";
+import { backfillAskActivitiesElasticsearchJob } from "@/jobs/activities/backfill/backfill-ask-activities-elasticsearch-job";
+import { backfillAskCancelActivitiesElasticsearchJob } from "@/jobs/activities/backfill/backfill-ask-cancel-activities-elasticsearch-job";
+import { backfillBidActivitiesElasticsearchJob } from "@/jobs/activities/backfill/backfill-bid-activities-elasticsearch-job";
+import { backfillBidCancelActivitiesElasticsearchJob } from "@/jobs/activities/backfill/backfill-bid-cancel-activities-elasticsearch-job";
 import { eventsSyncFtTransfersWriteBufferJob } from "@/jobs/events-sync/write-buffers/ft-transfers-job";
 import { eventsSyncNftTransfersWriteBufferJob } from "@/jobs/events-sync/write-buffers/nft-transfers-job";
 import { eventsSyncProcessBackfillJob } from "@/jobs/events-sync/process/events-sync-process-backfill";
@@ -140,7 +140,9 @@ import { openseaOrdersFetchJob } from "@/jobs/opensea-orders/opensea-orders-fetc
 import { saveBidEventsJob } from "@/jobs/order-updates/save-bid-events-job";
 import { countApiUsageJob } from "@/jobs/metrics/count-api-usage-job";
 import { transferWebsocketEventsTriggerQueueJob } from "@/jobs/websocket-events/transfer-websocket-events-trigger-job";
+import { tokenAttributeWebsocketEventsTriggerQueueJob } from "@/jobs/websocket-events/token-attribute-websocket-events-trigger-job";
 import { topBidWebSocketEventsTriggerJob } from "@/jobs/websocket-events/top-bid-websocket-events-trigger-job";
+import { backfillDeleteExpiredBidsElasticsearchJob } from "@/jobs/activities/backfill/backfill-delete-expired-bids-elasticsearch-job";
 
 export const allJobQueues = [
   backfillExpiredOrders.queue,
@@ -154,13 +156,6 @@ export const allJobQueues = [
   topBidWebsocketEventsTriggerQueue.queue,
   collectionWebsocketEventsTriggerQueue.queue,
 
-  backfillTransferActivitiesElasticsearch.queue,
-  backfillSaleActivitiesElasticsearch.queue,
-  backfillAskActivitiesElasticsearch.queue,
-  backfillBidActivitiesElasticsearch.queue,
-  backfillAskCancelActivitiesElasticsearch.queue,
-  backfillBidCancelActivitiesElasticsearch.queue,
-  backfillActivitiesElasticsearch.queue,
   backfillDeleteExpiredBidsElasticsearch.queue,
   backfillSalePricingDecimalElasticsearch.queue,
 ];
@@ -266,7 +261,16 @@ export class RabbitMqJobsConsumer {
       saveBidEventsJob,
       countApiUsageJob,
       transferWebsocketEventsTriggerQueueJob,
+      tokenAttributeWebsocketEventsTriggerQueueJob,
       topBidWebSocketEventsTriggerJob,
+      backfillDeleteExpiredBidsElasticsearchJob,
+      backfillActivitiesElasticsearchJob,
+      backfillTransferActivitiesElasticsearchJob,
+      backfillSaleActivitiesElasticsearchJob,
+      backfillAskActivitiesElasticsearchJob,
+      backfillAskCancelActivitiesElasticsearchJob,
+      backfillBidActivitiesElasticsearchJob,
+      backfillBidCancelActivitiesElasticsearchJob,
     ];
   }
 
@@ -279,10 +283,12 @@ export class RabbitMqJobsConsumer {
       const connection = amqplibConnectionManager.connect(config.rabbitMqUrl);
       RabbitMqJobsConsumer.rabbitMqConsumerConnections.push(connection);
 
+      const sharedChannel = connection.createChannel({ confirm: false });
+
       // Create a shared channel for each connection
       RabbitMqJobsConsumer.sharedChannels.set(
         RabbitMqJobsConsumer.getSharedChannelName(i),
-        connection.createChannel({ confirm: false })
+        sharedChannel
       );
 
       connection.once("error", (error) => {

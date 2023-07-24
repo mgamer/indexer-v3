@@ -112,10 +112,10 @@ export class MintQueueJob extends AbstractRabbitMqJobHandler {
 
         // Schedule a job to re-count tokens in the collection with different delays based on the amount of tokens
         let delay = 5 * 60 * 1000;
-        if (collection.token_count > 25000) {
-          delay = 60 * 60 * 1000;
-        } else if (collection.token_count > 200000) {
+        if (collection.token_count > 200000) {
           delay = 24 * 60 * 60 * 1000;
+        } else if (collection.token_count > 25000) {
+          delay = 60 * 60 * 1000;
         }
 
         await recalcTokenCountQueueJob.addToQueue({ collection: collection.id }, delay);

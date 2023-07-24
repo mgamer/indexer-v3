@@ -151,8 +151,12 @@ export const getUserTokensV7Options: RouteOptions = {
               .allow(null)
               .description("Can be higher than one if erc1155."),
             remainingSupply: Joi.number().unsafe().allow(null),
-            rarityScore: Joi.number().allow(null),
-            rarityRank: Joi.number().allow(null),
+            rarityScore: Joi.number()
+              .allow(null)
+              .description("No rarity for collections over 100k"),
+            rarityRank: Joi.number()
+              .allow(null)
+              .description("No rarity rank for collections over 100k"),
             media: Joi.string().allow(null),
             collection: Joi.object({
               id: Joi.string().allow(null),
@@ -161,12 +165,14 @@ export const getUserTokensV7Options: RouteOptions = {
               openseaVerificationStatus: Joi.string().allow("", null),
               floorAskPrice: JoiPrice.allow(null).description("Can be null if no active asks."),
               royaltiesBps: Joi.number().allow(null),
-              royalties: Joi.array().items(
-                Joi.object({
-                  bps: Joi.number().allow(null),
-                  recipient: Joi.string().allow(null),
-                })
-              ),
+              royalties: Joi.array()
+                .items(
+                  Joi.object({
+                    bps: Joi.number().allow(null),
+                    recipient: Joi.string().allow(null),
+                  })
+                )
+                .allow(null),
             }),
             lastSale: JoiSale.optional(),
             topBid: Joi.object({
@@ -630,13 +636,13 @@ export const getUserTokensV7Options: RouteOptions = {
         // that don't have the currencies cached in the tokens table
         const floorAskCurrency = r.floor_sell_currency
           ? fromBuffer(r.floor_sell_currency)
-          : Sdk.Common.Addresses.Eth[config.chainId];
+          : Sdk.Common.Addresses.Native[config.chainId];
         const topBidCurrency = r.top_bid_currency
           ? fromBuffer(r.top_bid_currency)
-          : Sdk.Common.Addresses.Weth[config.chainId];
+          : Sdk.Common.Addresses.WNative[config.chainId];
         const collectionFloorSellCurrency = r.collection_floor_sell_currency
           ? fromBuffer(r.collection_floor_sell_currency)
-          : Sdk.Common.Addresses.Eth[config.chainId];
+          : Sdk.Common.Addresses.Native[config.chainId];
         const floorSellSource = r.floor_sell_value
           ? sources.get(Number(r.floor_sell_source_id_int), contract, tokenId)
           : undefined;

@@ -115,6 +115,7 @@ export type EventSubKind =
   | "foundation-buy-price-invalidated"
   | "foundation-buy-price-cancelled"
   | "foundation-buy-price-accepted"
+  | "foundation-created-fixed-price-sale"
   | "foundation-offer-accepted"
   | "x2y2-order-cancelled"
   | "x2y2-order-inventory"
@@ -160,6 +161,7 @@ export type EventSubKind =
   | "zora-ask-cancelled"
   | "zora-auction-ended"
   | "zora-sales-config-changed"
+  | "zora-updated-token"
   | "nouns-auction-settled"
   | "cryptopunks-punk-offered"
   | "cryptopunks-punk-no-longer-for-sale"
@@ -303,6 +305,7 @@ const allEventData = [
   foundation.buyPriceInvalidated,
   foundation.buyPriceSet,
   foundation.offerAccepted,
+  foundation.createFixedPriceSale,
   looksRare.cancelAllOrders,
   looksRare.cancelMultipleOrders,
   looksRare.takerAsk,
@@ -362,6 +365,7 @@ const allEventData = [
   zora.askPriceUpdated,
   zora.auctionEnded,
   zora.salesConfigChanged,
+  zora.updatedToken,
   nouns.auctionSettled,
   cryptoPunks.punkOffered,
   cryptoPunks.punkNoLongerForSale,
