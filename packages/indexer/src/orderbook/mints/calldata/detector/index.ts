@@ -17,6 +17,7 @@ import * as manifold from "@/orderbook/mints/calldata/detector/manifold";
 import * as seadrop from "@/orderbook/mints/calldata/detector/seadrop";
 import * as thirdweb from "@/orderbook/mints/calldata/detector/thirdweb";
 import * as zora from "@/orderbook/mints/calldata/detector/zora";
+import { getCollectionMints } from "@/orderbook/mints";
 
 export { decent, foundation, generic, manifold, seadrop, thirdweb, zora };
 
@@ -88,7 +89,14 @@ export const extractByTx = async (txHash: string, skipCache = false) => {
   }
 
   await mintsCheckJob.addToQueue({ collection }, 10 * 60);
-  await mintsRefreshJob.addToQueue({ collection }, 10 * 60);
+
+  // If there are any open collection mints trigger a refresh with a delay
+  const hasOpenMints = await getCollectionMints(collection, { status: "open" }).then(
+    (mints) => mints.length > 0
+  );
+  if (hasOpenMints) {
+    await mintsRefreshJob.addToQueue({ collection }, 10 * 60);
+  }
 
   // For performance reasons, do at most one attempt per collection per 5 minutes
   if (!skipCache) {
