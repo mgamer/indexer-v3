@@ -4,6 +4,7 @@ import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
 import Joi from "joi";
 import _ from "lodash";
+import * as Boom from "@hapi/boom";
 
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
@@ -116,11 +117,15 @@ export const getTokensV6Options: RouteOptions = {
       minRarityRank: Joi.number()
         .integer()
         .min(1)
-        .description("Get tokens with a min rarity rank (inclusive)"),
+        .description(
+          "Get tokens with a min rarity rank (inclusive), no rarity rank for collections over 100k"
+        ),
       maxRarityRank: Joi.number()
         .integer()
         .min(1)
-        .description("Get tokens with a max rarity rank (inclusive)"),
+        .description(
+          "Get tokens with a max rarity rank (inclusive), no rarity rank for collections over 100k"
+        ),
       minFloorAskPrice: Joi.number().description(
         "Get tokens with a min floor ask price (inclusive); use native currency"
       ),
@@ -136,7 +141,7 @@ export const getTokensV6Options: RouteOptions = {
         .valid("floorAskPrice", "tokenId", "rarity")
         .default("floorAskPrice")
         .description(
-          "Order the items are returned in the response. Options are `floorAskPrice`, `tokenId`, and `rarity`."
+          "Order the items are returned in the response. Options are `floorAskPrice`, `tokenId`, and `rarity`. No rarity rank for collections over 100k."
         ),
       sortDirection: Joi.string().lowercase().valid("asc", "desc"),
       currencies: Joi.alternatives().try(
@@ -162,6 +167,9 @@ export const getTokensV6Options: RouteOptions = {
       includeTopBid: Joi.boolean()
         .default(false)
         .description("If true, top bid will be returned in the response."),
+      excludeEoa: Joi.boolean()
+        .default(false)
+        .description("If true, blur bids will be excluded from top bid / asks."),
       includeAttributes: Joi.boolean()
         .default(false)
         .description("If true, attributes will be returned in the response."),
@@ -218,8 +226,14 @@ export const getTokensV6Options: RouteOptions = {
               .allow(null)
               .description("Can be higher than 1 if erc1155"),
             remainingSupply: Joi.number().unsafe().allow(null),
-            rarity: Joi.number().unsafe().allow(null),
-            rarityRank: Joi.number().unsafe().allow(null),
+            rarity: Joi.number()
+              .unsafe()
+              .allow(null)
+              .description("No rarity for collections over 100k"),
+            rarityRank: Joi.number()
+              .unsafe()
+              .allow(null)
+              .description("No rarity rank for collections over 100k"),
             collection: Joi.object({
               id: Joi.string().allow(null),
               name: Joi.string().allow("", null),
@@ -403,31 +417,40 @@ export const getTokensV6Options: RouteOptions = {
     }
 
     let sourceCte = "";
-    if (query.nativeSource) {
-      const sources = await Sources.getInstance();
-      let nativeSource = sources.getByName(query.nativeSource, false);
-      if (!nativeSource) {
-        nativeSource = sources.getByDomain(query.nativeSource, false);
+    if (query.nativeSource || query.excludeEoa) {
+      const sourceConditions: string[] = [];
+
+      if (query.nativeSource) {
+        const sources = await Sources.getInstance();
+        let nativeSource = sources.getByName(query.nativeSource, false);
+        if (!nativeSource) {
+          nativeSource = sources.getByDomain(query.nativeSource, false);
+        }
+
+        if (!nativeSource) {
+          return {
+            tokens: [],
+            continuation: null,
+          };
+        }
+
+        (query as any).nativeSource = nativeSource?.id;
+        sourceConditions.push(`source_id_int = $/nativeSource/`);
       }
 
-      if (!nativeSource) {
-        return {
-          tokens: [],
-          continuation: null,
-        };
-      }
-
-      (query as any).nativeSource = nativeSource?.id;
       selectFloorData = "s.*";
 
-      const sourceConditions: string[] = [];
       sourceConditions.push(`side = 'sell'`);
       sourceConditions.push(`fillability_status = 'fillable'`);
       sourceConditions.push(`approval_status = 'approved'`);
-      sourceConditions.push(`source_id_int = $/nativeSource/`);
       sourceConditions.push(
         `taker = '\\x0000000000000000000000000000000000000000' OR taker IS NULL`
       );
+
+      if (query.excludeEoa) {
+        sourceConditions.push(`kind NOT IN ('blur')`);
+      }
+
       if (query.currencies) {
         sourceConditions.push(`currency IN ($/currenciesFilter:raw/)`);
       }
@@ -519,7 +542,9 @@ export const getTokensV6Options: RouteOptions = {
         FROM tokens t
         ${
           sourceCte !== ""
-            ? "JOIN filtered_orders s ON s.contract = t.contract AND s.token_id = t.token_id"
+            ? `${
+                query.excludeEoa ? "LEFT" : ""
+              } JOIN filtered_orders s ON s.contract = t.contract AND s.token_id = t.token_id`
             : ""
         }
         ${includeQuantityQuery}
@@ -540,6 +565,10 @@ export const getTokensV6Options: RouteOptions = {
       let collections: any[] = [];
       if (query.collectionsSetId) {
         collections = await CollectionSets.getCollectionsIds(query.collectionsSetId);
+
+        if (_.isEmpty(collections)) {
+          throw Boom.badRequest(`No collections for collection set ${query.collectionsSetId}`);
+        }
 
         if (collections.length > 20) {
           baseQuery += `
@@ -885,6 +914,7 @@ export const getTokensV6Options: RouteOptions = {
               AND o.side = 'buy'
               AND o.fillability_status = 'fillable'
               AND o.approval_status = 'approved'
+              ${query.excludeEoa ? `AND o.kind NOT IN ('blur')` : ""}
               AND EXISTS(
                 SELECT FROM nft_balances nb
                   WHERE nb.contract = x.t_contract
@@ -988,10 +1018,10 @@ export const getTokensV6Options: RouteOptions = {
         // that don't have the currencies cached in the tokens table
         const floorAskCurrency = r.floor_sell_currency
           ? fromBuffer(r.floor_sell_currency)
-          : Sdk.Common.Addresses.Eth[config.chainId];
+          : Sdk.Common.Addresses.Native[config.chainId];
         const topBidCurrency = r.top_buy_currency
           ? fromBuffer(r.top_buy_currency)
-          : Sdk.Common.Addresses.Weth[config.chainId];
+          : Sdk.Common.Addresses.WNative[config.chainId];
 
         let dynamicPricing = undefined;
         if (query.includeDynamicPricing) {
