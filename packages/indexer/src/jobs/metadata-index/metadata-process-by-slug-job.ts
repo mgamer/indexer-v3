@@ -131,7 +131,7 @@ export class MetadataIndexProcessBySlugJob extends AbstractRabbitMqJobHandler {
 
     // If there are potentially more tokens to process trigger another job
     if (rateLimitExpiredIn || _.size(refreshTokensBySlug) == countTotal || retry) {
-      return rateLimitExpiredIn;
+      return rateLimitExpiredIn || 1;
     }
 
     return 0;

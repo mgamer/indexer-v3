@@ -98,7 +98,7 @@ export class MetadataIndexProcessJob extends AbstractRabbitMqJobHandler {
 
     // If there are potentially more tokens to process trigger another job
     if (rateLimitExpiredIn || _.size(refreshTokens) == countTotal) {
-      return rateLimitExpiredIn;
+      return rateLimitExpiredIn || 1;
     }
 
     return 0;
