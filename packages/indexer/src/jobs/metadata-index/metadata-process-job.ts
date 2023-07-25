@@ -104,16 +104,18 @@ export class MetadataIndexProcessJob extends AbstractRabbitMqJobHandler {
     return 0;
   }
 
+  public events() {
+    this.once("onCompleted", async (rabbitMqMessage, processResult) => {
+      if (processResult) {
+        const { method } = rabbitMqMessage.payload;
+        await this.addToQueue({ method }, processResult * 1000);
+      }
+    });
+  }
+
   public async addToQueue(params: MetadataIndexProcessJobPayload, delay = 0) {
     await this.send({ payload: params, jobId: params.method }, delay);
   }
 }
 
 export const metadataIndexProcessJob = new MetadataIndexProcessJob();
-
-metadataIndexProcessJob.on("onCompleted", async (rabbitMqMessage, processResult) => {
-  if (processResult) {
-    const { method } = rabbitMqMessage.payload;
-    await metadataIndexProcessJob.addToQueue({ method }, processResult * 1000);
-  }
-});

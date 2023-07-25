@@ -56,6 +56,7 @@ export abstract class AbstractRabbitMqJobHandler extends (EventEmitter as new ()
     this.rabbitMqMessage.retryCount = this.rabbitMqMessage.retryCount ?? 0;
 
     try {
+      this.events(); // Subscribe to any events
       const processResult = await this.process(this.rabbitMqMessage.payload); // Process the message
 
       await channel.ack(consumeMessage); // Ack the message with rabbit
@@ -94,6 +95,11 @@ export abstract class AbstractRabbitMqJobHandler extends (EventEmitter as new ()
       await channel.ack(consumeMessage); // Ack the message with rabbit
       await RabbitMq.send(queueName, this.rabbitMqMessage, delay); // Trigger the retry / or send to dead letter queue
     }
+  }
+
+  // Function to subscribe to the object EventEmitter events
+  public events() {
+    return;
   }
 
   public getBackoffDelay(message: RabbitMQMessage) {

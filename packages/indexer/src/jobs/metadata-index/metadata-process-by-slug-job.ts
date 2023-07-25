@@ -178,6 +178,15 @@ export class MetadataIndexProcessBySlugJob extends AbstractRabbitMqJobHandler {
     }
   }
 
+  public events() {
+    this.once("onCompleted", async (rabbitMqMessage, processResult) => {
+      if (processResult) {
+        const { method } = rabbitMqMessage.payload;
+        await this.addToQueue({ method }, processResult * 1000);
+      }
+    });
+  }
+
   public async addToQueue(
     params: MetadataIndexProcessBySlugJobPayload = { method: "opensea" },
     delay = 0
@@ -187,10 +196,3 @@ export class MetadataIndexProcessBySlugJob extends AbstractRabbitMqJobHandler {
 }
 
 export const metadataIndexProcessBySlugJob = new MetadataIndexProcessBySlugJob();
-
-metadataIndexProcessBySlugJob.on("onCompleted", async (rabbitMqMessage, processResult) => {
-  if (processResult) {
-    const { method } = rabbitMqMessage.payload;
-    await metadataIndexProcessBySlugJob.addToQueue({ method }, processResult * 1000);
-  }
-});
