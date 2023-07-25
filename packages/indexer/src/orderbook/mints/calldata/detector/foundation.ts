@@ -26,6 +26,52 @@ import {
 
 const STANDARD = "foundation";
 
+async function traceCreateSaleEvent(collection: string, maxRetry = 5, blockInterval = 10000) {
+  const face = new Interface([
+    `event CreateFixedPriceSale(
+      address indexed nftContract,
+      address indexed seller,
+      uint256 price,
+      uint256 limitPerAccount,
+      uint256 generalAvailabilityStartTime,
+      uint256 earlyAccessStartTime,
+      bytes32 merkleRoot,
+      string merkleTreeUri
+    )`,
+  ]);
+
+  const blockNumber = await baseProvider.getBlockNumber();
+  const addressTopic = utils.hexZeroPad(collection, 32);
+  const topics = [face.getEventTopic("CreateFixedPriceSale"), addressTopic];
+
+  let merkleRoot: string | undefined;
+  let merkleTreeUri: string | undefined;
+
+  for (let index = 0; index < maxRetry; index++) {
+    const createFixedPriceSaleLogs = await baseProvider.getLogs({
+      fromBlock: blockNumber - blockInterval * (index + 1),
+      toBlock: blockNumber - blockInterval * index,
+      topics,
+    });
+    if (createFixedPriceSaleLogs.length) {
+      const firstLog = createFixedPriceSaleLogs[0];
+      const createFixedPriceSaleEvent = face.decodeEventLog(
+        "CreateFixedPriceSale",
+        firstLog.data,
+        firstLog.topics
+      );
+      merkleTreeUri = createFixedPriceSaleEvent.merkleTreeUri;
+      merkleRoot = createFixedPriceSaleEvent.merkleRoot;
+      break;
+    }
+  }
+
+  return {
+    merkleTreeUri,
+    merkleRoot,
+  };
+}
+
 export const extractByCollectionERC721 = async (collection: string): Promise<CollectionMint[]> => {
   const results: CollectionMint[] = [];
 
@@ -46,44 +92,6 @@ export const extractByCollectionERC721 = async (collection: string): Promise<Col
     ]),
     baseProvider
   );
-
-  const face = new Interface([
-    `event CreateFixedPriceSale(
-      address indexed nftContract,
-      address indexed seller,
-      uint256 price,
-      uint256 limitPerAccount,
-      uint256 generalAvailabilityStartTime,
-      uint256 earlyAccessStartTime,
-      bytes32 merkleRoot,
-      string merkleTreeUri
-    );`,
-  ]);
-
-  const blockNumber = await baseProvider.getBlockNumber();
-  const addressTopic = utils.hexZeroPad(collection, 32);
-  const topics = [face.getEventTopic("CreateFixedPriceSale"), addressTopic];
-
-  const maxInterval = 10000;
-  const createFixedPriceSaleLogs = await baseProvider.getLogs({
-    fromBlock: blockNumber - maxInterval,
-    toBlock: blockNumber,
-    topics,
-  });
-
-  let merkleRoot: string | undefined;
-  let merkleTreeUri: string | undefined;
-
-  if (createFixedPriceSaleLogs.length) {
-    const firstLog = createFixedPriceSaleLogs[0];
-    const createFixedPriceSaleEvent = face.decodeEventLog(
-      "CreateFixedPriceSale",
-      firstLog.data,
-      firstLog.topics
-    );
-    merkleTreeUri = createFixedPriceSaleEvent.merkleTreeUri;
-    merkleRoot = createFixedPriceSaleEvent.merkleRoot;
-  }
 
   try {
     const result = await contract.getFixedPriceSale(collection);
@@ -106,77 +114,83 @@ export const extractByCollectionERC721 = async (collection: string): Promise<Col
       earlyAccessStartTime: result.earlyAccessStartTime.toString(),
     };
 
-    if (merkleRoot && merkleRoot != HashZero && merkleTreeUri) {
-      let allowlistCreated = true;
-      if (!(await allowlistExists(merkleRoot))) {
-        try {
-          const contractMetadata: { unhashedLeaves: string[] } = await fetchMetadata(merkleTreeUri);
-          const items: AllowlistItem[] = contractMetadata.unhashedLeaves.map(
-            (e) =>
-              ({
-                address: e,
-                price: editionConfig.price,
-                actualPrice: editionConfig.price,
-              } as AllowlistItem)
-          );
+    // Allowlist mint
+    if (result.earlyAccessStartTime != "0") {
+      const { merkleRoot, merkleTreeUri } = await traceCreateSaleEvent(collection);
+      if (merkleRoot && merkleRoot != HashZero && merkleTreeUri) {
+        let allowlistCreated = true;
+        if (!(await allowlistExists(merkleRoot))) {
+          try {
+            const contractMetadata: { unhashedLeaves: string[] } = await fetchMetadata(
+              merkleTreeUri
+            );
+            const items: AllowlistItem[] = contractMetadata.unhashedLeaves.map(
+              (e) =>
+                ({
+                  address: e,
+                  price: editionConfig.price,
+                  actualPrice: editionConfig.price,
+                } as AllowlistItem)
+            );
 
-          if (generateMerkleTree(items).tree.getHexRoot() === merkleRoot) {
-            await createAllowlist(merkleRoot!, items);
-          } else {
-            allowlistCreated = false;
+            if (generateMerkleTree(items).tree.getHexRoot() === merkleRoot) {
+              await createAllowlist(merkleRoot!, items);
+            } else {
+              allowlistCreated = false;
+            }
+          } catch {
+            // Fetch allowlist failed
           }
-        } catch {
-          // Fetch allowlist failed
         }
-      }
 
-      if (allowlistCreated) {
-        results.push({
-          collection,
-          contract: collection,
-          stage: "presale",
-          kind: "allowlist",
-          status: "open",
-          standard: STANDARD,
-          details: {
-            tx: {
-              to: Sdk.Foundation.Addresses.DropMarket[config.chainId],
-              data: {
-                // `mintFromFixedPriceSaleWithEarlyAccessAllowlist`
-                signature: "0xd782d491",
-                params: [
-                  {
-                    kind: "contract",
-                    abiType: "address",
-                  },
-                  {
-                    kind: "quantity",
-                    abiType: "uint256",
-                  },
-                  {
-                    kind: "unknown",
-                    abiType: "address",
-                    abiValue: AddressZero,
-                  },
-                  {
-                    kind: "allowlist",
-                    abiType: "bytes32[]",
-                  },
-                ],
+        if (allowlistCreated) {
+          results.push({
+            collection,
+            contract: collection,
+            stage: "presale",
+            kind: "allowlist",
+            status: "open",
+            standard: STANDARD,
+            details: {
+              tx: {
+                to: Sdk.Foundation.Addresses.DropMarket[config.chainId],
+                data: {
+                  // `mintFromFixedPriceSaleWithEarlyAccessAllowlist`
+                  signature: "0xd782d491",
+                  params: [
+                    {
+                      kind: "contract",
+                      abiType: "address",
+                    },
+                    {
+                      kind: "quantity",
+                      abiType: "uint256",
+                    },
+                    {
+                      kind: "unknown",
+                      abiType: "address",
+                      abiValue: AddressZero,
+                    },
+                    {
+                      kind: "allowlist",
+                      abiType: "bytes32[]",
+                    },
+                  ],
+                },
               },
             },
-          },
-          currency: Sdk.Common.Addresses.Eth[config.chainId],
-          price: editionConfig.price,
-          maxMintsPerWallet: editionConfig.limitPerAccount,
-          maxSupply: editionConfig.numberOfTokensAvailableToMint,
-          startTime:
-            editionConfig.earlyAccessStartTime != "0"
-              ? toSafeTimestamp(editionConfig.earlyAccessStartTime)
-              : undefined,
+            currency: Sdk.Common.Addresses.Eth[config.chainId],
+            price: editionConfig.price,
+            maxMintsPerWallet: editionConfig.limitPerAccount,
+            maxSupply: editionConfig.numberOfTokensAvailableToMint,
+            startTime:
+              editionConfig.earlyAccessStartTime != "0"
+                ? toSafeTimestamp(editionConfig.earlyAccessStartTime)
+                : undefined,
 
-          allowlistId: merkleRoot,
-        });
+            allowlistId: merkleRoot,
+          });
+        }
       }
     }
 
