@@ -81,7 +81,7 @@ const dv = async (contractName: string, version: string, args: any[]) => {
     await new Promise((resolve) => setTimeout(resolve, 30000));
     await verify(contractName, version, args);
   } catch (error) {
-    console.log(`Failed to deploy ${contractName}: ${error}`);
+    console.log(`Failed to deploy/verify ${contractName}: ${error}`);
   }
 };
 
@@ -256,8 +256,15 @@ export const trigger = {
       dv("SwapModule", "v1", [
         DEPLOYER,
         Sdk.RouterV6.Addresses.Router[chainId],
-        Sdk.Common.Addresses.Weth[chainId],
+        Sdk.Common.Addresses.WNative[chainId],
         Sdk.Common.Addresses.SwapRouter[chainId],
+      ]),
+    OneInchSwapModule: async (chainId: number) =>
+      dv("OneInchSwapModule", "v1", [
+        DEPLOYER,
+        Sdk.RouterV6.Addresses.Router[chainId],
+        Sdk.Common.Addresses.WNative[chainId],
+        Sdk.Common.Addresses.AggregationRouterV5[chainId],
       ]),
     X2Y2Module: async (chainId: number) =>
       dv("X2Y2Module", "v1", [

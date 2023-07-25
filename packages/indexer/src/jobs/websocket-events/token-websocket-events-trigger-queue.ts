@@ -136,7 +136,7 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
         // that don't have the currencies cached in the tokens table
         const floorAskCurrency = r.floor_sell_currency
           ? fromBuffer(r.floor_sell_currency)
-          : Sdk.Common.Addresses.Eth[config.chainId];
+          : Sdk.Common.Addresses.Native[config.chainId];
 
         const normalizedFloorSellSource = r.normalized_floor_sell_value
           ? sources.get(Number(r.normalized_floor_sell_source_id_int), contract, tokenId)
@@ -146,7 +146,7 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
         // that don't have the currencies cached in the tokens table
         const normalizedFloorAskCurrency = r.normalized_floor_sell_currency
           ? fromBuffer(r.normalized_floor_sell_currency)
-          : Sdk.Common.Addresses.Eth[config.chainId];
+          : Sdk.Common.Addresses.Native[config.chainId];
 
         const result = {
           token: {
@@ -242,12 +242,12 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
             }
 
             if (!changed.length) {
-              logger.info(
-                QUEUE_NAME,
-                `No changes detected for event. before=${JSON.stringify(
-                  data.before
-                )}, after=${JSON.stringify(data.after)}`
-              );
+              // logger.info(
+              //   QUEUE_NAME,
+              //   `No changes detected for event. before=${JSON.stringify(
+              //     data.before
+              //   )}, after=${JSON.stringify(data.after)}`
+              // );
               return;
             }
           }
