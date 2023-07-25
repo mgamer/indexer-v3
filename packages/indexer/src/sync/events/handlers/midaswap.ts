@@ -7,6 +7,7 @@ import * as Sdk from "@reservoir0x/sdk";
 import { getSellOrderId } from "@/orderbook/orders/midaswap";
 import * as utils from "@/events-sync/utils";
 import { getUSDAndNativePrices } from "@/utils/prices";
+import { redb } from "@/common/db";
 
 export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChainData) => {
   logger.info("midaswap-debug", JSON.stringify(events));
@@ -134,9 +135,29 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           orderKind
         );
 
-        const orderId = !isUserSell
+        let orderId = "";
+        let orderResult;
+        if (isUserSell) {
+          orderResult = await redb.oneOrNone(
+            `
+                SELECT id FROM orders
+                WHERE orders.kind = 'midaswap'
+                AND orders.side === 'buy'
+                AND orders.fillability_status = 'fillable'
+                AND orders.data->>'lpTokenId' = $/lpTokenId/
+              `,
+            {
+              lpTokenId: lpTokenId.toString(),
+            }
+          );
+          if (!orderResult) {
+            break;
+          }
+        }
+
+        orderId = !isUserSell
           ? getSellOrderId(pool.address, tokenId.toString(), lpTokenId.toString())
-          : undefined;
+          : orderResult.id;
         onChainData.fillEventsOnChain.push({
           orderKind,
           orderSide: isUserSell ? "buy" : "sell",
@@ -160,6 +181,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
 
         onChainData.fillInfos.push({
           context: `midaswap-${pool.nft}-${tokenId}-${baseEventParams.txHash}`,
+          orderId,
           orderSide: isUserSell ? "buy" : "sell",
           contract: pool.nft,
           tokenId: tokenId.toString(),
