@@ -482,12 +482,14 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
           const id = getSellOrderId(orderParams.pool, nftId, lpTokenId);
 
           // delete sell order
-          await idb.none(`DELETE FROM orders WHERE orders.id = $/id/`, { id });
+          // await idb.none(`DELETE FROM orders WHERE orders.id = $/id/`, { id });
 
           const orderResult = await redb.manyOrNone(
             `
                       SELECT id,side,fillability_status,raw_data FROM orders
                       WHERE orders.maker = $/maker/
+                      AND orders.fillability_status = 'fillable'
+                      OR orders.fillability_status = 'cancelled'
                     `,
             {
               maker: toBuffer(pool.address),
@@ -495,7 +497,8 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
           );
 
           const sellOrders = orderResult.filter(
-            (item) => item.side === "sell" && item.raw_data.lpTokenId === lpTokenId
+            (item) =>
+              item.side === "sell" && item.raw_data.lpTokenId === lpTokenId && item.id !== id
           );
           const buyOrders = orderResult.filter((item) => item.side === "buy");
 
@@ -801,7 +804,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
           const orderResult = await redb.manyOrNone(
             `
-                      SELECT id,side,raw_data FROM orders
+                      SELECT id,side,fillability_status,raw_data FROM orders
                       WHERE orders.maker = $/maker/
                     `,
             {
@@ -810,7 +813,10 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
           );
 
           const sellOrders = orderResult.filter(
-            (item) => item.side === "sell" && item.raw_data.lpTokenId === lpTokenId
+            (item) =>
+              item.side === "sell" &&
+              item.raw_data.lpTokenId === lpTokenId &&
+              item.fillability_status === "fillable"
           );
           const buyOrders = orderResult.filter((item) => item.side === "buy");
 
@@ -819,13 +825,13 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
             if (targetOrder) {
               // delete one order by lp token id
-              await idb.none(
-                `DELETE FROM orders WHERE orders.maker = $/maker/ AND orders.id = $/id/`,
-                {
-                  maker: toBuffer(pool.address),
-                  id: targetOrder.id,
-                }
-              );
+              // await idb.none(
+              //   `DELETE FROM orders WHERE orders.maker = $/maker/ AND orders.id = $/id/`,
+              //   {
+              //     maker: toBuffer(pool.address),
+              //     id: targetOrder.id,
+              //   }
+              // );
 
               const targetPrice = buyOrders[0].raw_data.extra.prices.find(
                 (item: Sdk.Midaswap.Price) =>
@@ -993,7 +999,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
             const price = newSellPrices[0].price;
             const value = newSellPrices[0].price;
 
-            // update buy orders price
+            // update sell orders price
             sellOrders.forEach(async (item) => {
               await idb.none(
                 `
