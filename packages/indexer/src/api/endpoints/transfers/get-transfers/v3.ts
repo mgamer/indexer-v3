@@ -270,7 +270,7 @@ export const getTransfersV3Options: RouteOptions = {
 
       // Sorting
       if (query.orderBy === "timestamp") {
-        baseQuery += `f
+        baseQuery += `
           ORDER BY
             nft_transfer_events.timestamp DESC,
             nft_transfer_events.log_index DESC,
