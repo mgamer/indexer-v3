@@ -169,9 +169,15 @@ export const getTransfersBulkV1Options: RouteOptions = {
           (query as any).tokenId = tokenId;
           const sign = query.sortDirection == "desc" ? "<" : ">";
 
-          conditions.push(
-            `(extract(epoch from nft_transfer_events.updated_at), nft_transfer_events.address, nft_transfer_events.token_id) ${sign} ($/updatedAt/, $/address/, $/tokenId/)`
-          );
+          if (query.contract || query.token) {
+            conditions.push(
+              `(nft_transfer_events.address, nft_transfer_events.token_id, extract(epoch from nft_transfer_events.updated_at)) ${sign} ($/address/, $/tokenId/, $/updatedAt/)`
+            );
+          } else {
+            conditions.push(
+              `(extract(epoch from nft_transfer_events.updated_at), nft_transfer_events.address, nft_transfer_events.token_id) ${sign} ($/updatedAt/, $/address/, $/tokenId/)`
+            );
+          }
         }
       }
 
@@ -209,12 +215,21 @@ export const getTransfersBulkV1Options: RouteOptions = {
             nft_transfer_events.batch_index DESC
         `;
       } else if (query.orderBy == "updated_at") {
-        baseQuery += `
+        if (query.contract || query.token) {
+          baseQuery += `
+          ORDER BY
+            nft_transfer_events.address ${query.sortDirection},
+            nft_transfer_events.token_id ${query.sortDirection}
+            nft_transfer_events.updated_at ${query.sortDirection},
+        `;
+        } else {
+          baseQuery += `
           ORDER BY
             nft_transfer_events.updated_at ${query.sortDirection},
             nft_transfer_events.address ${query.sortDirection},
             nft_transfer_events.token_id ${query.sortDirection}
         `;
+        }
       }
 
       // Pagination
