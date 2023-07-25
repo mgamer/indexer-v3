@@ -488,8 +488,8 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
             `
                       SELECT id,side,fillability_status,raw_data FROM orders
                       WHERE orders.maker = $/maker/
-                      AND orders.fillability_status = 'fillable'
-                      OR orders.fillability_status = 'cancelled'
+                      AND (orders.fillability_status = 'fillable'
+                      OR orders.fillability_status = 'cancelled')
                     `,
             {
               maker: toBuffer(pool.address),
