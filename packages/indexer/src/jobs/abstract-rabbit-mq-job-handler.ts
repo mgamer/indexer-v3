@@ -61,12 +61,13 @@ export abstract class AbstractRabbitMqJobHandler extends (EventEmitter as new ()
 
       await channel.ack(consumeMessage); // Ack the message with rabbit
       this.rabbitMqMessage.completeTime = _.now(); // Set the complete time
-      this.emit("onCompleted", this.rabbitMqMessage, processResult); // Emit on Completed event
 
       // Release lock if there's a job id with no delay
       if (this.rabbitMqMessage.jobId && !this.rabbitMqMessage.delay) {
         await releaseLock(this.rabbitMqMessage.jobId).catch();
       }
+
+      this.emit("onCompleted", this.rabbitMqMessage, processResult); // Emit on Completed event
     } catch (error) {
       this.emit("onError", this.rabbitMqMessage, error); // Emit error event
 
