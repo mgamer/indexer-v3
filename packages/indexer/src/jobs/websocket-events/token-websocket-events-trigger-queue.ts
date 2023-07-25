@@ -69,11 +69,13 @@ if (config.doBackgroundWork && config.doWebsocketServerWork) {
           FROM contracts con
           LEFT JOIN collections c ON con.address = c.contract
           WHERE con.address = $/contract/
+          ${data.after.collection_id ? "AND c.id = $/collectionId/" : ""}
           LIMIT 1
       `;
 
         const rawResult = await idb.manyOrNone(baseQuery, {
           contract: toBuffer(data.after.contract),
+          collectionId: data.after.collection_id,
         });
 
         const r = rawResult[0];
