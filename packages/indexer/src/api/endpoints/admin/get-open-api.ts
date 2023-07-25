@@ -94,16 +94,17 @@ export const getOpenApiOptions: RouteOptions = {
 
       // Preset list of tags.
       const tagOrder = [
+        "Tokens",
         "Collections",
-        "Events",
-        "Orders",
-        "Owners",
-        "Sales",
-        "Sources",
         "Attributes",
-        "Chain",
         "Activity",
+        "Orders",
+        "Sales",
         "Transfers",
+        "Owners",
+        "Stats",
+        "Sources",
+        "Chain",
       ];
 
       data.openapi["paths"] = Object.fromEntries(
