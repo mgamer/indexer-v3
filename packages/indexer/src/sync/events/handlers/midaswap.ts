@@ -144,7 +144,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
                 WHERE orders.kind = 'midaswap'
                 AND orders.side === 'buy'
                 AND orders.fillability_status = 'fillable'
-                AND orders.data->>'lpTokenId' = $/lpTokenId/
+                AND orders.raw_data->>'lpTokenId' = $/lpTokenId/
               `,
             {
               lpTokenId: lpTokenId.toString(),
