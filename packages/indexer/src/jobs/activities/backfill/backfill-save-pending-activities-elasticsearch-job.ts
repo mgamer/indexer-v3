@@ -18,7 +18,6 @@ export class BackillSavePendingActivitiesElasticsearchJob extends AbstractRabbit
   concurrency = 1;
   persistent = true;
   lazyMode = true;
-  singleActiveConsumer = true;
 
   protected async process(payload: BackillSavePendingActivitiesElasticsearchJobPayload) {
     let addToQueue = false;
@@ -58,11 +57,7 @@ export class BackillSavePendingActivitiesElasticsearchJob extends AbstractRabbit
         await pendingActivitiesQueue.add(pendingActivities);
       }
 
-      const pendingActivitiesCount = await pendingActivitiesQueue.count();
-
-      if (pendingActivitiesCount > 0) {
-        addToQueue = true;
-      }
+      addToQueue = true;
     }
 
     return { addToQueue };
