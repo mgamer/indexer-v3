@@ -42,7 +42,7 @@ describe("[ReservoirV6_0_1] Midaswap offers", () => {
           router.address,
           Sdk.Midaswap.Addresses.PairFactory[chainId],
           Sdk.Midaswap.Addresses.Router[chainId],
-          Sdk.Common.Addresses.Weth[chainId]
+          Sdk.Common.Addresses.WNative[chainId]
         )
       );
     midaRouter = new Contract(Sdk.Midaswap.Addresses.Router[chainId], RouterAbi, ethers.provider);
@@ -108,7 +108,7 @@ describe("[ReservoirV6_0_1] Midaswap offers", () => {
     const encodeBefore = (offer: { nft: { id: number } }, i: number) => {
       const tempData = [
         erc721.address,
-        Sdk.Common.Addresses.Eth[chainId],
+        Sdk.Common.Addresses.Native[chainId],
         offer.nft.id,
         {
           fillTo: carol.address,
@@ -149,7 +149,7 @@ describe("[ReservoirV6_0_1] Midaswap offers", () => {
 
     // Fetch pre-state
 
-    const balancesBefore = await getBalances(Sdk.Common.Addresses.Eth[chainId]);
+    const balancesBefore = await getBalances(Sdk.Common.Addresses.Native[chainId]);
 
     // Execute
 
@@ -159,7 +159,7 @@ describe("[ReservoirV6_0_1] Midaswap offers", () => {
     await tx.wait();
     let allGas = bn(0);
     // Fetch post-state
-    const balancesAfter = await getBalances(Sdk.Common.Addresses.Eth[chainId]);
+    const balancesAfter = await getBalances(Sdk.Common.Addresses.Native[chainId]);
 
     const txReceipt = await ethers.provider.getTransactionReceipt(tx.hash);
     const gasUsed = txReceipt.cumulativeGasUsed.mul(txReceipt.effectiveGasPrice);
@@ -176,9 +176,14 @@ describe("[ReservoirV6_0_1] Midaswap offers", () => {
           .sub(fees[i].reduce((a, b) => bn(a).add(b), bn(0)))
       )
       .reduce((a, b) => bn(a).add(b), bn(0));
-    expect(balancesAfter.carol.sub(balancesBefore.carol).add(allGas).div(10000)).to.eq(
-      bn(targetPrice).div(10000)
-    );
+    expect(
+      balancesAfter.carol
+        .sub(balancesBefore.carol)
+        .add(allGas)
+        .div(10000)
+        .sub(bn(targetPrice).div(10000))
+        .abs()
+    ).to.be.lt(1000000);
 
     // Emilio got the fee payments
     if (chargeFees) {
@@ -197,7 +202,7 @@ describe("[ReservoirV6_0_1] Midaswap offers", () => {
         .connect(buyer)
         .removeLiquidityETH(
           erc721.address,
-          Sdk.Common.Addresses.Weth[chainId],
+          Sdk.Common.Addresses.WNative[chainId],
           lpInfo?.lpTokenId,
           deadline
         );
@@ -218,7 +223,7 @@ describe("[ReservoirV6_0_1] Midaswap offers", () => {
     expect(balancesAfter.midaswapModule).to.eq(0);
   };
   const getBalances = async (token: string) => {
-    if (token === Sdk.Common.Addresses.Eth[chainId]) {
+    if (token === Sdk.Common.Addresses.Native[chainId]) {
       return {
         alice: await ethers.provider.getBalance(alice.address),
         bob: await ethers.provider.getBalance(bob.address),

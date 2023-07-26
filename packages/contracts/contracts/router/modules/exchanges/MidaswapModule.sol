@@ -112,7 +112,7 @@ contract MidaswapModule is BaseExchangeModule {
       _sendAllETH(params.fillTo);
     } else {
       // Execute fill
-      _sellItem(nft, token, address(this), nftId, params.revertIfIncomplete);
+      _sellItem(nft, token, nftId, params.revertIfIncomplete);
 
       // Pay fees
       uint256 feesLength = fees.length;
@@ -223,7 +223,6 @@ contract MidaswapModule is BaseExchangeModule {
   function _sellItem(
     address tokenX,
     address tokenY,
-    address to,
     uint256 tokenId,
     bool revertIfIncomplete
   ) internal {
@@ -232,7 +231,7 @@ contract MidaswapModule is BaseExchangeModule {
     IERC721(tokenX).safeTransferFrom(address(this), pair, tokenId);
 
     // Execute the fill
-    try IMidasPair(pair).sellNFT(tokenId, to) {} catch {
+    try IMidasPair(pair).sellNFT(tokenId, address(this)) {} catch {
       // Revert if specified
       if (revertIfIncomplete) {
         revert UnsuccessfulFill();
