@@ -8,13 +8,14 @@ import Joi from "joi";
 
 import { bn, formatEth, formatPrice, formatUsd, fromBuffer, now, regex } from "@/common/utils";
 import { config } from "@/config/index";
+import { FeeRecipients } from "@/models/fee-recipients";
 import { Sources } from "@/models/sources";
 import { SourcesEntity } from "@/models/sources/sources-entity";
 import { OrderKind } from "@/orderbook/orders";
 import { Assets } from "@/utils/assets";
 import { Currency, getCurrency } from "@/utils/currencies";
 import { getUSDAndCurrencyPrices, getUSDAndNativePrices } from "@/utils/prices";
-import { FeeRecipient } from "@/models/fee-recipient";
+
 // --- Prices ---
 
 const JoiPriceAmount = Joi.object({
@@ -780,7 +781,7 @@ export const getFeeBreakdown = async (
   validFees: boolean,
   totalAmount: string
 ) => {
-  const feeRecipient = await FeeRecipient.getInstance();
+  const feeRecipients = await FeeRecipients.getInstance();
   const feeBreakdown: undefined | any[] =
     (royaltyFeeBreakdown !== null || marketplaceFeeBreakdown !== null) && validFees
       ? [].concat(
@@ -802,10 +803,12 @@ export const getFeeBreakdown = async (
   const sources = await Sources.getInstance();
 
   if (feeBreakdown) {
-    for (let index = 0; index < feeBreakdown.length; index++) {
-      const feeBreak = feeBreakdown[index];
-      const feeEntity = await feeRecipient.getByAddress(feeBreak.recipient, feeBreak.kind);
+    for (let i = 0; i < feeBreakdown.length; i++) {
+      const feeBreak = feeBreakdown[i];
+
+      const feeEntity = feeRecipients.getByAddress(feeBreak.recipient, feeBreak.kind);
       feeBreak.rawAmount = bn(totalAmount).mul(feeBreak.bps).div(bn(10000)).toString();
+
       const orderSource = feeEntity?.sourceId ? sources.get(Number(feeEntity.sourceId)) : undefined;
       feeBreak.source = orderSource?.domain ?? undefined;
     }

@@ -1,6 +1,7 @@
 import { getStateChange, getPayments, searchForCall } from "@georgeroman/evm-tx-simulator";
 import { Payment } from "@georgeroman/evm-tx-simulator/dist/types";
 import * as Sdk from "@reservoir0x/sdk";
+
 import { redis } from "@/common/redis";
 import { bn } from "@/common/utils";
 import { config } from "@/config/index";
@@ -11,13 +12,13 @@ import {
   getOrderInfos,
 } from "@/events-sync/handlers/royalties";
 import { supportedExchanges } from "@/events-sync/handlers/royalties/config";
+import { splitPayments } from "@/events-sync/handlers/royalties/payments";
 import { getFillEventsFromTxOnChain } from "@/events-sync/handlers/royalties/utils";
 import * as es from "@/events-sync/storage";
 import * as utils from "@/events-sync/utils";
+import { FeeRecipients } from "@/models/fee-recipients";
 import { TransactionTrace } from "@/models/transaction-traces";
 import { Royalty, getRoyalties } from "@/utils/royalties";
-import { splitPayments } from "./payments";
-import { FeeRecipient } from "@/models/fee-recipient";
 
 const findMatchingPayment = (payments: Payment[], fillEvent: PartialFillEvent) =>
   payments.find((payment) => paymentMatches(payment, fillEvent));
@@ -88,7 +89,7 @@ export async function extractRoyalties(
     fillEvents = (await getFillEventsFromTxOnChain(txHash)).fillEvents;
   }
 
-  const feeRecipient = await FeeRecipient.getInstance();
+  const feeRecipient = await FeeRecipients.getInstance();
 
   // Extract the orders associated to the current fill events
   const orderIds: string[] = [];
@@ -301,9 +302,6 @@ export async function extractRoyalties(
     return c.contract != contract;
   });
 
-  // Get the know platform fee recipients for the current fill order kind
-  // const knownPlatformFeeRecipients = platformFeeRecipientsRegistry.get(fillEvent.orderKind) ?? [];
-
   // Iterate through all of the state changes of the (sub)call associated to the current fill event
   const state = getStateChange(subcallToAnalyze);
 
@@ -440,8 +438,7 @@ export async function extractRoyalties(
         );
 
         const excludeOtherRecipients = shareSameRecipient ? true : notInOtherDef;
-        const matchFee = await feeRecipient.getByAddress(address, "marketplace");
-        // const matchFee = allPlatformFeeRecipients.has(address);
+        const matchFee = feeRecipient.getByAddress(address, "marketplace");
         const recipientIsEligible =
           bps > 0 &&
           bps < 1500 &&
@@ -489,7 +486,6 @@ export async function extractRoyalties(
     });
   }
 
-  // const creatorRoyaltyFeeBps = getTotalRoyaltyBps(creatorRoyaltyFeeBreakdown);
   const royaltyFeeBps = getTotalRoyaltyBps(royaltyFeeBreakdown);
   const creatorBps = Math.min(...royalties.map(getTotalRoyaltyBps));
   const paidFullRoyalty = royaltyFeeBreakdown.length ? royaltyFeeBps >= creatorBps : false;

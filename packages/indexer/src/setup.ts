@@ -11,8 +11,8 @@ import { getNetworkSettings } from "@/config/network";
 import { initIndexes } from "@/elasticsearch/indexes";
 import { startKafkaConsumer } from "@/jobs/cdc";
 import { RabbitMqJobsConsumer } from "@/jobs/index";
+import { FeeRecipients } from "@/models/fee-recipients";
 import { Sources } from "@/models/sources";
-import { FeeRecipient } from "@/models/fee-recipient";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 process.on("unhandledRejection", (error: any) => {
@@ -23,14 +23,13 @@ process.on("unhandledRejection", (error: any) => {
 });
 
 const setup = async () => {
-  await FeeRecipient.syncSources();
-
   if (process.env.LOCAL_TESTING) {
     return;
   }
 
   if (config.doBackgroundWork) {
     await Sources.syncSources();
+    await FeeRecipients.syncFeeRecipients();
     await RabbitMqJobsConsumer.startRabbitJobsConsumer();
 
     const networkSettings = getNetworkSettings();

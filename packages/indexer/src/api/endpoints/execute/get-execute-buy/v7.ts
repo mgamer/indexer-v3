@@ -18,8 +18,8 @@ import { baseProvider } from "@/common/provider";
 import { bn, formatPrice, fromBuffer, now, regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { ApiKeyManager } from "@/models/api-keys";
+import { FeeRecipients } from "@/models/fee-recipients";
 import { Sources } from "@/models/sources";
-import { FeeRecipient } from "@/models/fee-recipient";
 import { OrderKind, generateListingDetailsV6 } from "@/orderbook/orders";
 import { fillErrorCallback, getExecuteError } from "@/orderbook/orders/errors";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
@@ -292,7 +292,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
       // TODO: Also keep track of the maker's allowance per exchange
 
       const sources = await Sources.getInstance();
-      const feeRecipient = await FeeRecipient.getInstance();
+      const feeRecipients = await FeeRecipients.getInstance();
 
       // Save the fill source if it doesn't exist yet
       if (payload.source) {
@@ -1173,7 +1173,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
 
       if (payload.source) {
         for (const globalFee of globalFees) {
-          await feeRecipient.getOrInsert(globalFee.recipient, payload.source, "marketplace");
+          await feeRecipients.getOrInsert(globalFee.recipient, payload.source, "marketplace");
         }
       }
 
