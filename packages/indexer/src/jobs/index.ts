@@ -144,7 +144,7 @@ import { countApiUsageJob } from "@/jobs/metrics/count-api-usage-job";
 import { tokenAttributeWebsocketEventsTriggerQueueJob } from "@/jobs/websocket-events/token-attribute-websocket-events-trigger-job";
 import { topBidWebSocketEventsTriggerJob } from "@/jobs/websocket-events/top-bid-websocket-events-trigger-job";
 import { backfillDeleteExpiredBidsElasticsearchJob } from "@/jobs/activities/backfill/backfill-delete-expired-bids-elasticsearch-job";
-import { backillSavePendingActivitiesElasticsearchJob } from "@/jobs/activities/backfill/backfill-save-pending-activities-elasticsearch-job";
+import { backfillSavePendingActivitiesElasticsearchJob } from "@/jobs/activities/backfill/backfill-save-pending-activities-elasticsearch-job";
 
 export const allJobQueues = [
   backfillExpiredOrders.queue,
@@ -274,7 +274,7 @@ export class RabbitMqJobsConsumer {
       backfillAskCancelActivitiesElasticsearchJob,
       backfillBidActivitiesElasticsearchJob,
       backfillBidCancelActivitiesElasticsearchJob,
-      backillSavePendingActivitiesElasticsearchJob,
+      backfillSavePendingActivitiesElasticsearchJob,
     ];
   }
 
