@@ -12,7 +12,6 @@ export class EventsSyncRealtimeJob extends AbstractRabbitMqJobHandler {
   queueName = "events-sync-realtime";
   maxRetries = 30;
   concurrency = config.chainId === 11155111 ? 1 : 5;
-  useSharedChannel = true;
   backoff = {
     type: "fixed",
     delay: 100,
