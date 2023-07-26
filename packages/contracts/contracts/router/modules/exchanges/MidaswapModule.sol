@@ -163,7 +163,7 @@ contract MidaswapModule is BaseExchangeModule {
 
     uint256 amount = MIDAS_ROUTER.getMinAmountIn(pair, tokenIds);
     WETH.deposit{value: amount}();
-    WETH.transfer(to, amount);
+    WETH.transfer(pair, amount);
 
     // Execute the fill
     try IMidasPair(pair).buyNFT(tokenId, to) {} catch {
