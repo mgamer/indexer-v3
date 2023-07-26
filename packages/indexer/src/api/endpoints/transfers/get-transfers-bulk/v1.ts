@@ -248,13 +248,23 @@ export const getTransfersBulkV1Options: RouteOptions = {
               rawResult[rawResult.length - 1].batch_index
           );
         } else if (query.orderBy == "updated_at") {
-          continuation = buildContinuation(
-            rawResult[rawResult.length - 1].updated_ts +
-              "_" +
-              fromBuffer(rawResult[rawResult.length - 1].address) +
-              "_" +
-              rawResult[rawResult.length - 1].token_id
-          );
+          if (query.contract || query.token) {
+            continuation = buildContinuation(
+              rawResult[rawResult.length - 1].address +
+                "_" +
+                fromBuffer(rawResult[rawResult.length - 1].token_id) +
+                "_" +
+                rawResult[rawResult.length - 1].updated_ts
+            );
+          } else {
+            continuation = buildContinuation(
+              rawResult[rawResult.length - 1].updated_ts +
+                "_" +
+                fromBuffer(rawResult[rawResult.length - 1].address) +
+                "_" +
+                rawResult[rawResult.length - 1].token_id
+            );
+          }
         }
       }
 
