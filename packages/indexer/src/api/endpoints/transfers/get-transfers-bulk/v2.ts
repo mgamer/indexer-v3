@@ -9,9 +9,9 @@ import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { buildContinuation, fromBuffer, regex, splitContinuation, toBuffer } from "@/common/utils";
 
-const version = "v1";
+const version = "v2";
 
-export const getTransfersBulkV1Options: RouteOptions = {
+export const getTransfersBulkV2Options: RouteOptions = {
   cache: {
     privacy: "public",
     expiresIn: 5000,
@@ -19,7 +19,7 @@ export const getTransfersBulkV1Options: RouteOptions = {
   description: "Bulk historical transfers",
   notes:
     "Note: this API is optimized for bulk access, and offers minimal filters/metadata. If you need more flexibility, try the `NFT API > Transfers` endpoint",
-  tags: ["api", "x-deprecated"],
+  tags: ["api", "Transfers"],
   plugins: {
     "hapi-swagger": {
       order: 10,
@@ -111,11 +111,11 @@ export const getTransfersBulkV1Options: RouteOptions = {
         SELECT
           nft_transfer_events.address,
           nft_transfer_events.token_id,
-          nft_transfer_events.from,
-          nft_transfer_events.to,
+          nft_transfer_events."from",
+          nft_transfer_events."to",
           nft_transfer_events.amount,
           nft_transfer_events.tx_hash,
-          nft_transfer_events.timestamp,
+          nft_transfer_events."timestamp",
           nft_transfer_events.block,
           nft_transfer_events.log_index,
           nft_transfer_events.batch_index,
@@ -159,23 +159,26 @@ export const getTransfersBulkV1Options: RouteOptions = {
             `(nft_transfer_events.timestamp, nft_transfer_events.log_index, nft_transfer_events.batch_index) < ($/timestamp/, $/logIndex/, $/batchIndex/)`
           );
         } else if (query.orderBy == "updated_at") {
-          const [updateAt, address, tokenId] = splitContinuation(
+          const [updateAt, address, tokenId, txHash, logIndex, batchIndex] = splitContinuation(
             query.continuation,
-            /^(.+)_0x[a-fA-F0-9]{40}_(\d+)$/
+            /^(.+)_0x[a-fA-F0-9]{40}_(\d+)_0x[a-fA-F0-9]{64}_(\d+)_(\d+)$/
           );
 
           (query as any).updatedAt = updateAt;
           (query as any).address = toBuffer(address);
           (query as any).tokenId = tokenId;
+          (query as any).txHash = toBuffer(txHash);
+          (query as any).logIndex = logIndex;
+          (query as any).batchIndex = batchIndex;
           const sign = query.sortDirection == "desc" ? "<" : ">";
 
           if (query.contract || query.token) {
             conditions.push(
-              `(nft_transfer_events.address, nft_transfer_events.token_id, extract(epoch from nft_transfer_events.updated_at)) ${sign} ($/address/, $/tokenId/, $/updatedAt/)`
+              `(nft_transfer_events.address, nft_transfer_events.token_id, extract(epoch from nft_transfer_events.updated_at), tx_hash, log_index, batch_index) ${sign} ($/address/, $/tokenId/, $/updatedAt/, $/txHash/, $/logIndex/, $/batchIndex/)`
             );
           } else {
             conditions.push(
-              `(extract(epoch from nft_transfer_events.updated_at), nft_transfer_events.address, nft_transfer_events.token_id) ${sign} ($/updatedAt/, $/address/, $/tokenId/)`
+              `(extract(epoch from nft_transfer_events.updated_at), nft_transfer_events.address, nft_transfer_events.token_id, tx_hash, log_index, batch_index) ${sign} ($/updatedAt/, $/address/, $/tokenId/, $/txHash/, $/logIndex/, $/batchIndex/)`
             );
           }
         }
@@ -220,14 +223,20 @@ export const getTransfersBulkV1Options: RouteOptions = {
           ORDER BY
             nft_transfer_events.address ${query.sortDirection},
             nft_transfer_events.token_id ${query.sortDirection},
-            nft_transfer_events.updated_at ${query.sortDirection}
+            nft_transfer_events.updated_at ${query.sortDirection},
+            nft_transfer_events.tx_hash ${query.sortDirection},
+            nft_transfer_events.log_index ${query.sortDirection},
+            nft_transfer_events.batch_index ${query.sortDirection}
         `;
         } else {
           baseQuery += `
           ORDER BY
             nft_transfer_events.updated_at ${query.sortDirection},
             nft_transfer_events.address ${query.sortDirection},
-            nft_transfer_events.token_id ${query.sortDirection}
+            nft_transfer_events.token_id ${query.sortDirection},
+            nft_transfer_events.tx_hash ${query.sortDirection},
+            nft_transfer_events.log_index ${query.sortDirection},
+            nft_transfer_events.batch_index ${query.sortDirection}
         `;
         }
       }
@@ -253,7 +262,13 @@ export const getTransfersBulkV1Options: RouteOptions = {
               "_" +
               fromBuffer(rawResult[rawResult.length - 1].address) +
               "_" +
-              rawResult[rawResult.length - 1].token_id
+              rawResult[rawResult.length - 1].token_id +
+              "_" +
+              fromBuffer(rawResult[rawResult.length - 1].tx_hash) +
+              "_" +
+              rawResult[rawResult.length - 1].log_index +
+              "_" +
+              rawResult[rawResult.length - 1].batch_index
           );
         }
       }
