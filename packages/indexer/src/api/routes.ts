@@ -1403,6 +1403,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
+    path: "/transfers/v4",
+    options: transfersEndpoints.getTransfersV4Options,
+  });
+
+  server.route({
+    method: "GET",
     path: "/transfers/bulk/v1",
     options: transfersEndpoints.getTransfersBulkV1Options,
   });
@@ -1410,7 +1416,7 @@ export const setupRoutes = (server: Server) => {
   server.route({
     method: "GET",
     path: "/transfers/bulk/v2",
-    options: transfersEndpoints.getTransfersBulkV1Options,
+    options: transfersEndpoints.getTransfersBulkV2Options,
   });
 
   // sync
