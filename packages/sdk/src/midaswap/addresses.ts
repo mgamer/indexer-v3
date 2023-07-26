@@ -1,9 +1,9 @@
 import { ChainIdToAddress, Network } from "../utils";
 
 export const PairFactory: ChainIdToAddress = {
-  [Network.EthereumGoerli]: "0x1A2A2E817F1aD8B17311A01a4996fcD89773D1E0",
+  [Network.EthereumGoerli]: "0x1a2a2e817f1ad8b17311a01a4996fcd89773d1e0",
 };
 
 export const Router: ChainIdToAddress = {
-  [Network.EthereumGoerli]: "0xC6A1a2738cFA91C5205Bb57E21820B38b65C09A9",
+  [Network.EthereumGoerli]: "0xc6a1a2738cfa91c5205bb57e21820b38b65c09a9",
 };

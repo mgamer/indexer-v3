@@ -17,6 +17,7 @@ import {
   reset,
   setupNFTs,
 } from "../../utils";
+
 import RouterAbi from "@reservoir0x/sdk/src/midaswap/abis/Router.json";
 import LPTokenAbi from "@reservoir0x/sdk/src/midaswap/abis/LPToken.json";
 
@@ -34,6 +35,7 @@ describe("[ReservoirV6_0_1] Midaswap listings", () => {
   let router: Contract;
   let midaRouter: Contract;
   let midaswapModule: Contract;
+
   const deadline = Date.now() + 100 * 24 * 60 * 60 * 1000;
 
   beforeEach(async () => {
@@ -52,14 +54,15 @@ describe("[ReservoirV6_0_1] Midaswap listings", () => {
           router.address,
           Sdk.Midaswap.Addresses.PairFactory[chainId],
           Sdk.Midaswap.Addresses.Router[chainId],
-          Sdk.Common.Addresses.Weth[chainId]
+          Sdk.Common.Addresses.WNative[chainId]
         )
       );
+
     midaRouter = new Contract(Sdk.Midaswap.Addresses.Router[chainId], RouterAbi, ethers.provider);
   });
 
   const getBalances = async (token: string) => {
-    if (token === Sdk.Common.Addresses.Eth[chainId]) {
+    if (token === Sdk.Common.Addresses.Native[chainId]) {
       return {
         alice: await ethers.provider.getBalance(alice.address),
         bob: await ethers.provider.getBalance(bob.address),
@@ -194,7 +197,7 @@ describe("[ReservoirV6_0_1] Midaswap listings", () => {
     const boxApprove = await lpContract.connect(bob).setApprovalForAll(midaRouter.address, true);
     await boxApprove.wait();
 
-    const ethBalancesBefore = await getBalances(Sdk.Common.Addresses.Eth[chainId]);
+    const ethBalancesBefore = await getBalances(Sdk.Common.Addresses.Native[chainId]);
 
     // Execute
 
@@ -208,7 +211,7 @@ describe("[ReservoirV6_0_1] Midaswap listings", () => {
         .connect(seller)
         .removeLiquidityETH(
           erc721.address,
-          Sdk.Common.Addresses.Weth[chainId],
+          Sdk.Common.Addresses.WNative[chainId],
           lpInfo.lpTokenId,
           deadline
         );
@@ -225,7 +228,7 @@ describe("[ReservoirV6_0_1] Midaswap listings", () => {
 
     // Fetch post-state
 
-    const ethBalancesAfter = await getBalances(Sdk.Common.Addresses.Eth[chainId]);
+    const ethBalancesAfter = await getBalances(Sdk.Common.Addresses.Native[chainId]);
 
     // Checks
 

@@ -244,7 +244,13 @@ export const trigger = {
         : undefined,
     MidaswapModule: async (chainId: number) =>
       [1, 5].includes(chainId)
-        ? dv("MidaswapModule", "v1", [DEPLOYER, Sdk.RouterV6.Addresses.Router[chainId]])
+        ? dv("MidaswapModule", "v1", [
+            DEPLOYER,
+            Sdk.RouterV6.Addresses.Router[chainId],
+            Sdk.Midaswap.Addresses.PairFactory[chainId],
+            Sdk.Midaswap.Addresses.Router[chainId],
+            Sdk.Common.Addresses.WNative[chainId],
+          ])
         : undefined,
     CaviarV1Module: async (chainId: number) =>
       [1, 5].includes(chainId)
