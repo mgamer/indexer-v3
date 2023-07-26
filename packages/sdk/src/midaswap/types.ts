@@ -1,20 +1,16 @@
-export type Price = {
-  bin: string;
-  price: string;
-  lpTokenId: string;
-};
-
 export type OrderParams = {
   pair: string;
   // Only relevant for listings
-  tokenX: string; // nft collection address
-  tokenY: string; // ft address
+  tokenX: string; // NFT
+  tokenY: string; // Token
   lpTokenId: string;
-  pool: string; // ${pair}_${lpTokenId}
+  pool: string; // `${pair}_${lpTokenId}`
   tokenId?: string;
   amount?: string;
   extra: {
     // Array of prices the pool will sell/buy at
-    prices: Price[];
+    prices: string[];
+    bins: string[];
+    lpTokenIds: string[];
   };
 };

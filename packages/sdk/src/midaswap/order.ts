@@ -1,6 +1,7 @@
+import { parseEther } from "@ethersproject/units";
+
 import * as Types from "./types";
 import { lc, s } from "../utils";
-import { ethers } from "ethers";
 
 export class Order {
   public chainId: number;
@@ -25,16 +26,16 @@ export class Order {
 
   public static getSellPrice = (bin: number, freeRate = 0, royalty = 0) => {
     const price = Order.binToPriceFixed(bin);
-    return ethers.utils
-      .parseEther((+price * (1 + (freeRate + royalty) / 10000)).toFixed(18).toString())
-      .toString();
+    return parseEther(
+      (+price * (1 + (freeRate + royalty) / 10000)).toFixed(18).toString()
+    ).toString();
   };
 
   public static getBuyPrice = (bin: number, freeRate = 0, royalty = 0) => {
     const price = Order.binToPriceFixed(bin);
-    return ethers.utils
-      .parseEther((+price / (1 + (freeRate + royalty) / 10000)).toFixed(18).toString())
-      .toString();
+    return parseEther(
+      (+price / (1 + (freeRate + royalty) / 10000)).toFixed(18).toString()
+    ).toString();
   };
 }
 
@@ -48,12 +49,14 @@ const normalize = (order: Types.OrderParams): Types.OrderParams => {
     pair: lc(order.pair),
     tokenX: lc(order.tokenX),
     tokenY: lc(order.tokenY),
-    lpTokenId: order.lpTokenId,
-    pool: `${lc(order.pair)}_${order.lpTokenId}`,
+    lpTokenId: s(order.lpTokenId),
+    pool: `${lc(order.pair)}_${s(order.lpTokenId)}`,
     tokenId: order.tokenId ? s(order.tokenId) : undefined,
     amount: order.amount ? s(order.amount) : undefined,
     extra: {
-      prices: order.extra.prices,
+      prices: order.extra.prices.map(s),
+      bins: order.extra.bins.map(s),
+      lpTokenIds: order.extra.lpTokenIds.map(s),
     },
   };
 };

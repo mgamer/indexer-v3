@@ -3,7 +3,6 @@ import { Provider } from "@ethersproject/abstract-provider";
 import { AddressZero, HashZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import axios from "axios";
-import _ from "lodash";
 
 // Needed for `collectionxyz`
 import { TokenIDs } from "fummpel";
@@ -1807,18 +1806,20 @@ export class Router {
 
       const fees = getFees(midaswapDetails);
 
-      // group orders by lpTokenId
-      const lpTokenIdsMap = _.groupBy(
-        orders.map((item) => item.order),
-        "params.lpTokenId"
-      );
+      // Group orders by LP token id
+      const lpTokenIdsMap: { [lpTokenId: string]: Sdk.Midaswap.Order[] } = {};
+      for (const { order } of orders) {
+        if (!lpTokenIdsMap[order.params.lpTokenId]) {
+          lpTokenIdsMap[order.params.lpTokenId] = [];
+        }
+        lpTokenIdsMap[order.params.lpTokenId].push(order);
+      }
 
-      // group sum accumulates
+      // Accumulate
       let price = bn(0);
-      _.keys(lpTokenIdsMap).forEach((lpTokenId) => {
+      Object.keys(lpTokenIdsMap).forEach((lpTokenId) => {
         price = lpTokenIdsMap[lpTokenId][0].params.extra.prices
           .slice(0, lpTokenIdsMap[lpTokenId].length)
-          .map((priceItem) => priceItem.price)
           .reduce((a, b) => bn(a).add(bn(b)), bn(0))
           .add(price);
       });
@@ -1844,7 +1845,7 @@ export class Router {
       // Track any possibly required swap
       swapDetails.push({
         tokenIn: buyInCurrency,
-        tokenOut: Sdk.Common.Addresses.Eth[this.chainId],
+        tokenOut: Sdk.Common.Addresses.Native[this.chainId],
         tokenOutAmount: totalPrice,
         recipient: module.address,
         refundTo: relayer,
@@ -3632,9 +3633,9 @@ export class Router {
               module: module.address,
               data: module.interface.encodeFunctionData("sell", [
                 order.params.tokenX,
-                Sdk.Common.Addresses.Eth[this.chainId],
+                Sdk.Common.Addresses.Native[this.chainId],
                 detail.tokenId,
-                bn(order.params.extra.prices[0].price),
+                bn(order.params.extra.prices[0]),
                 {
                   fillTo: taker,
                   refundTo: taker,
