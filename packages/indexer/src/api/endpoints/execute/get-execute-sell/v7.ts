@@ -19,6 +19,7 @@ import { bn, formatPrice, fromBuffer, now, regex, toBuffer } from "@/common/util
 import { config } from "@/config/index";
 import { getNetworkSettings } from "@/config/network";
 import { ApiKeyManager } from "@/models/api-keys";
+import { FeeRecipients } from "@/models/fee-recipients";
 import { Sources } from "@/models/sources";
 import { OrderKind, generateBidDetailsV6 } from "@/orderbook/orders";
 import { fillErrorCallback, getExecuteError } from "@/orderbook/orders/errors";
@@ -76,9 +77,8 @@ export const getExecuteSellV7Options: RouteOptions = {
                   "rarible",
                   "sudoswap",
                   "nftx"
-                )
-                .required(),
-              data: Joi.object().required(),
+                ),
+              data: Joi.object(),
             }).description("Optional raw order to sell into."),
             exactOrderSource: Joi.string()
               .lowercase()
@@ -256,6 +256,7 @@ export const getExecuteSellV7Options: RouteOptions = {
       // TODO: Also keep track of the maker's allowance per exchange
 
       const sources = await Sources.getInstance();
+      const feeRecipients = await FeeRecipients.getInstance();
 
       // Save the fill source if it doesn't exist yet
       if (payload.source) {
@@ -858,6 +859,12 @@ export const getExecuteSellV7Options: RouteOptions = {
         const [recipient, amount] = fee.split(":");
         return { recipient, amount };
       });
+
+      if (payload.source) {
+        for (const globalFee of globalFees) {
+          await feeRecipients.getOrInsert(globalFee.recipient, payload.source, "marketplace");
+        }
+      }
 
       const ordersEligibleForGlobalFees = bidDetails
         .filter((b) => !b.isProtected && b.source !== "blur.io")
