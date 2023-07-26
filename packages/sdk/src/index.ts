@@ -1,6 +1,5 @@
 import * as Common from "./common";
 
-import * as RouterV5 from "./router/v5";
 import * as RouterV6 from "./router/v6";
 
 import * as Beeple from "./beeple";
@@ -73,7 +72,6 @@ export {
   // Common
   Common,
   // Routers
-  RouterV5,
   RouterV6,
   // Contracts / Protocols
   Beeple,

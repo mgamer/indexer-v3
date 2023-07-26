@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { _TypedDataEncoder } from "@ethersproject/hash";
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
@@ -168,7 +169,7 @@ export const getExecuteListV5Options: RouteOptions = {
           nonce: Joi.string().pattern(regex.number).description("Optional. Set a custom nonce"),
           currency: Joi.string()
             .pattern(regex.address)
-            .default(Sdk.Common.Addresses.Eth[config.chainId]),
+            .default(Sdk.Common.Addresses.Native[config.chainId]),
         })
       ),
     }),
@@ -393,7 +394,7 @@ export const getExecuteListV5Options: RouteOptions = {
           // For now, ERC20 listings are only supported on Seaport
           if (
             params.orderKind !== "seaport-v1.5" &&
-            params.currency !== Sdk.Common.Addresses.Eth[config.chainId]
+            params.currency !== Sdk.Common.Addresses.Native[config.chainId]
           ) {
             return errors.push({ message: "Unsupported currency", orderIndex: i });
           }
@@ -439,10 +440,10 @@ export const getExecuteListV5Options: RouteOptions = {
                       Sdk.BlurV2.Addresses.Delegate[config.chainId]
                     );
 
-                const id = new Sdk.BlurV2.Order(config.chainId, {
-                  ...signData.value,
-                  nonce: signData.value.nonce.hex ?? signData.value.nonce,
-                }).hash();
+                // Blur returns the nonce as a BigNumber object
+                signData.value.nonce = signData.value.nonce.hex ?? signData.value.nonce;
+
+                const id = new Sdk.BlurV2.Order(config.chainId, signData.value).hash();
 
                 steps[1].items.push({
                   status: approvalTx ? "incomplete" : "complete",
@@ -452,7 +453,13 @@ export const getExecuteListV5Options: RouteOptions = {
                 steps[2].items.push({
                   status: "incomplete",
                   data: {
-                    sign: signData,
+                    sign: {
+                      signatureKind: "eip712",
+                      domain: signData.domain,
+                      types: signData.types,
+                      value: signData.value,
+                      primaryType: _TypedDataEncoder.getPrimaryType(signData.types),
+                    },
                     post: {
                       endpoint: "/order/v4",
                       method: "POST",
@@ -558,7 +565,7 @@ export const getExecuteListV5Options: RouteOptions = {
               }
 
               case "seaport-v1.5": {
-                if (!["reservoir", "opensea"].includes(params.orderbook)) {
+                if (!["reservoir", "opensea", "looks-rare"].includes(params.orderbook)) {
                   return errors.push({ message: "Unsupported orderbook", orderIndex: i });
                 }
 
