@@ -4,6 +4,7 @@ import { publishWebsocketEvent } from "@/common/websocketPublisher";
 import { formatEth } from "@/common/utils";
 import { Assets } from "@/utils/assets";
 import { AbstractRabbitMqJobHandler, BackoffStrategy } from "@/jobs/abstract-rabbit-mq-job-handler";
+import { Sources } from "@/models/sources";
 
 interface CollectionInfo {
   id: string;
@@ -33,18 +34,22 @@ interface CollectionInfo {
   floor_sell_value: string;
   floor_sell_maker: string;
   floor_sell_valid_between: string;
+  floor_sell_source_id_int: number;
   normalized_floor_sell_id: string;
   normalized_floor_sell_value: string;
   normalized_floor_sell_maker: string;
   normalized_floor_sell_valid_between: string;
+  normalized_floor_sell_source_id_int: number;
   non_flagged_floor_sell_id: string;
   non_flagged_floor_sell_value: string;
   non_flagged_floor_sell_maker: string;
   non_flagged_floor_sell_valid_between: string;
+  non_flagged_floor_sell_source_id_int: number;
   top_buy_id: string;
   top_buy_value: string;
   top_buy_maker: string;
   top_buy_valid_between: string;
+  top_buy_source_id_int: number;
 }
 
 export type CollectionWebsocketEventInfo = {
@@ -129,6 +134,7 @@ export class CollectionWebsocketEventsTriggerQueueJob extends AbstractRabbitMqJo
         }
       }
 
+      const sources = await Sources.getInstance();
       const r = data.after;
       const metadata = JSON.parse(r.metadata);
       const top_buy_valid_between = JSON.parse(r.top_buy_valid_between);
@@ -162,6 +168,7 @@ export class CollectionWebsocketEventsTriggerQueueJob extends AbstractRabbitMqJo
             maker: r.top_buy_maker ? r.top_buy_maker : null,
             validFrom: r.top_buy_value ? top_buy_valid_between[0] : null,
             validUntil: r.top_buy_value ? top_buy_valid_between[1] : null,
+            sourceDomain: r.top_buy_value ? sources.get(r.top_buy_source_id_int)?.domain : null,
           },
           rank: {
             "1day": r.day1_rank,
@@ -203,6 +210,7 @@ export class CollectionWebsocketEventsTriggerQueueJob extends AbstractRabbitMqJo
             maker: r.floor_sell_id ? r.floor_sell_maker : null,
             validFrom: r.floor_sell_id ? floor_sell_valid_between[0] : null,
             validUntil: r.floor_sell_id ? floor_sell_valid_between[1] : null,
+            sourceDomain: r.floor_sell_id ? sources.get(r.floor_sell_source_id_int)?.domain : null,
           },
           floorAskNormalized: {
             id: r.normalized_floor_sell_id,
@@ -210,6 +218,9 @@ export class CollectionWebsocketEventsTriggerQueueJob extends AbstractRabbitMqJo
             maker: r.normalized_floor_sell_id ? r.normalized_floor_sell_maker : null,
             validFrom: r.normalized_floor_sell_id ? normalized_floor_sell_valid_between[0] : null,
             validUntil: r.normalized_floor_sell_id ? normalized_floor_sell_valid_between[1] : null,
+            sourceDomain: r.normalized_floor_sell_id
+              ? sources.get(r.normalized_floor_sell_source_id_int)?.domain
+              : null,
           },
           floorAskNonFlagged: {
             id: r.non_flagged_floor_sell_id,
@@ -218,6 +229,9 @@ export class CollectionWebsocketEventsTriggerQueueJob extends AbstractRabbitMqJo
             validFrom: r.non_flagged_floor_sell_id ? non_flagged_floor_sell_valid_between[0] : null,
             validUntil: r.non_flagged_floor_sell_id
               ? non_flagged_floor_sell_valid_between[1]
+              : null,
+            sourceDomain: r.non_flagged_floor_sell_id
+              ? sources.get(r.non_flagged_floor_sell_source_id_int)?.domain
               : null,
           },
         },
