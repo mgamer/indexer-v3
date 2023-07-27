@@ -48,7 +48,7 @@ export abstract class AbstractRabbitMqJobHandler extends (EventEmitter as new ()
   protected lazyMode = false;
   protected queueType: QueueType = "classic";
   protected consumerTimeout = 0;
-  protected disableConsuming = config.rabbitDisableConsuming;
+  protected disableConsuming = config.rabbitDisableQueuesConsuming;
 
   public async consume(channel: ChannelWrapper, consumeMessage: ConsumeMessage): Promise<void> {
     this.rabbitMqMessage = JSON.parse(consumeMessage.content.toString()) as RabbitMQMessage;
