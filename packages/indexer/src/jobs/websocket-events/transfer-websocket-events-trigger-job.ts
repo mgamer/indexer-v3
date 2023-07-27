@@ -63,6 +63,8 @@ export class TransferWebsocketEventsTriggerQueueJob extends AbstractRabbitMqJobH
                 data.before
               )}, after=${JSON.stringify(data.after)}`
             );
+
+            return;
           }
         }
       }
