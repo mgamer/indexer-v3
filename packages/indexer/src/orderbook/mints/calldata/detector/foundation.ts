@@ -38,6 +38,7 @@ async function traceCreateSaleEvent(collection: string, maxRetry = 5, blockInter
       bytes32 merkleRoot,
       string merkleTreeUri
     )`,
+    `event AddMerkleRootToFixedPriceSale(address indexed nftContract, bytes32 merkleRoot, string merkleTreeUri)`,
   ]);
 
   const blockNumber = await baseProvider.getBlockNumber();
@@ -54,15 +55,38 @@ async function traceCreateSaleEvent(collection: string, maxRetry = 5, blockInter
       topics,
     });
     if (createFixedPriceSaleLogs.length) {
-      const firstLog = createFixedPriceSaleLogs[0];
+      const lastLog = createFixedPriceSaleLogs[createFixedPriceSaleLogs.length - 1];
       const createFixedPriceSaleEvent = face.decodeEventLog(
         "CreateFixedPriceSale",
-        firstLog.data,
-        firstLog.topics
+        lastLog.data,
+        lastLog.topics
       );
       merkleTreeUri = createFixedPriceSaleEvent.merkleTreeUri;
       merkleRoot = createFixedPriceSaleEvent.merkleRoot;
       break;
+    }
+  }
+
+  // Try another event
+  if (!merkleTreeUri) {
+    const topics = [face.getEventTopic("AddMerkleRootToFixedPriceSale"), addressTopic];
+    for (let index = 0; index < maxRetry; index++) {
+      const logs = await baseProvider.getLogs({
+        fromBlock: blockNumber - blockInterval * (index + 1),
+        toBlock: blockNumber - blockInterval * index,
+        topics,
+      });
+      if (logs.length) {
+        const lastLog = logs[logs.length - 1];
+        const addMerkleRootToFixedPriceSaleEvent = face.decodeEventLog(
+          "AddMerkleRootToFixedPriceSale",
+          lastLog.data,
+          lastLog.topics
+        );
+        merkleTreeUri = addMerkleRootToFixedPriceSaleEvent.merkleTreeUri;
+        merkleRoot = addMerkleRootToFixedPriceSaleEvent.merkleRoot;
+        break;
+      }
     }
   }
 
