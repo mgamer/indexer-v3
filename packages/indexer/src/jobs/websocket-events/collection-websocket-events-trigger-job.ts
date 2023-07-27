@@ -1,9 +1,11 @@
 import { logger } from "@/common/logger";
 import { config } from "@/config/index";
 import { publishWebsocketEvent } from "@/common/websocketPublisher";
-import { formatEth } from "@/common/utils";
+import { formatEth, toBuffer } from "@/common/utils";
 import { Assets } from "@/utils/assets";
 import { AbstractRabbitMqJobHandler, BackoffStrategy } from "@/jobs/abstract-rabbit-mq-job-handler";
+import { idb } from "@/common/db";
+import { redis } from "@/common/redis";
 
 interface CollectionInfo {
   id: string;
@@ -103,6 +105,32 @@ export class CollectionWebsocketEventsTriggerQueueJob extends AbstractRabbitMqJo
     const { data } = payload;
 
     try {
+      let contractKind = await redis.get(`collection-contract-kind:${data.after.contract}`);
+
+      if (!contractKind) {
+        const result = await idb.oneOrNone(
+          `
+          SELECT
+            con.kind
+          FROM contracts con
+          WHERE con.address = $/contract/
+        `,
+          {
+            contract: toBuffer(data.after.contract),
+          }
+        );
+
+        contractKind = result?.kind;
+        if (contractKind) {
+          await redis.set(
+            `collection-contract-kind:${data.after.contract}`,
+            contractKind,
+            "EX",
+            3600
+          );
+        }
+      }
+
       let eventType = "";
       const changed = [];
       if (data.trigger === "insert") eventType = "collection.created";
@@ -149,12 +177,18 @@ export class CollectionWebsocketEventsTriggerQueueJob extends AbstractRabbitMqJo
           slug: r.slug,
           name: r.name,
           metadata: {
-            ...metadata,
-            imageUrl: Assets.getLocalAssetsLink(metadata?.imageUrl),
+            image: Assets.getLocalAssetsLink(metadata?.imageUrl),
+            banner: metadata?.bannerImageUrl,
+            discordUrl: metadata?.discordUrl,
+            externalUrl: metadata?.externalUrl,
+            twitterUsername: metadata?.twitterUsername,
+            openseaVerificationStatus: metadata?.safelistRequestStatus,
+            description: metadata?.description,
           },
           tokenCount: String(r.token_count),
           primaryContract: r.contract,
           tokenSetId: r.token_set_id,
+          contractKind,
           royalties: r.royalties ? JSON.parse(r.royalties)[0] : null,
           topBid: {
             id: r.top_buy_id,
