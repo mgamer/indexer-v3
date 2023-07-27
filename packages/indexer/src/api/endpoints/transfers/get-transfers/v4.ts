@@ -52,15 +52,15 @@ export const getTransfersV4Options: RouteOptions = {
         .description(
           "Filter to a particular transaction. Example: `0x04654cc4c81882ed4d20b958e0eeb107915d75730110cce65333221439de6afc`"
         ),
-      orderBy: Joi.string()
-        .valid("timestamp", "updated_at")
+      sortBy: Joi.string()
+        .valid("timestamp", "updatedAt")
         .description(
-          "Order the items are returned in the response. Options are `timestamp`, and `updated_at`. Default is `timestamp`."
+          "Order the items are returned in the response. Options are `timestamp`, and `updatedAt`. Default is `timestamp`."
         ),
       sortDirection: Joi.string()
         .lowercase()
-        .when("orderBy", {
-          is: Joi.valid("updated_at"),
+        .when("sortBy", {
+          is: Joi.valid("updatedAt"),
           then: Joi.valid("asc", "desc").default("desc"),
           otherwise: Joi.valid("desc").default("desc"),
         }),
@@ -111,7 +111,7 @@ export const getTransfersV4Options: RouteOptions = {
   },
   handler: async (request: Request) => {
     const query = request.query as any;
-    query.orderBy = query.orderBy ?? "timestamp"; // Default order by is by timestamp
+    query.sortBy = query.sortBy ?? "timestamp"; // Default order by is by timestamp
 
     try {
       // Associating sales to transfers is done by searching for transfer
@@ -163,7 +163,7 @@ export const getTransfersV4Options: RouteOptions = {
       // Filters
       const conditions: string[] = [];
 
-      if (!(query.orderBy === "updated_at")) {
+      if (!(query.sortBy === "updatedAt")) {
         conditions.push(`nft_transfer_events.is_deleted = 0`);
       }
 
@@ -228,7 +228,7 @@ export const getTransfersV4Options: RouteOptions = {
       }
 
       if (query.continuation) {
-        if (query.orderBy === "timestamp") {
+        if (query.sortBy === "timestamp") {
           const [timestamp, logIndex, batchIndex] = splitContinuation(
             query.continuation,
             /^(\d+)_(\d+)_(\d+)$/
@@ -240,7 +240,7 @@ export const getTransfersV4Options: RouteOptions = {
           conditions.push(
             `(nft_transfer_events.timestamp, nft_transfer_events.log_index, nft_transfer_events.batch_index) < ($/timestamp/, $/logIndex/, $/batchIndex/)`
           );
-        } else if (query.orderBy == "updated_at") {
+        } else if (query.sortBy == "updatedAt") {
           const [updateAt, address, tokenId, txHash, logIndex, batchIndex] = splitContinuation(
             query.continuation,
             /^(.+)_0x[a-fA-F0-9]{40}_(\d+)_0x[a-fA-F0-9]{64}_(\d+)_(\d+)$/
@@ -272,14 +272,14 @@ export const getTransfersV4Options: RouteOptions = {
       }
 
       // Sorting
-      if (query.orderBy === "timestamp") {
+      if (query.sortBy === "timestamp") {
         baseQuery += `
           ORDER BY
             nft_transfer_events.timestamp DESC,
             nft_transfer_events.log_index DESC,
             nft_transfer_events.batch_index DESC
         `;
-      } else if (query.orderBy == "updated_at") {
+      } else if (query.sortBy == "updatedAt") {
         if (query.contract || query.token) {
           baseQuery += `
           ORDER BY
@@ -310,7 +310,7 @@ export const getTransfersV4Options: RouteOptions = {
 
       let continuation = null;
       if (rawResult.length === query.limit) {
-        if (query.orderBy === "timestamp") {
+        if (query.sortBy === "timestamp") {
           continuation = buildContinuation(
             rawResult[rawResult.length - 1].timestamp +
               "_" +
@@ -318,7 +318,7 @@ export const getTransfersV4Options: RouteOptions = {
               "_" +
               rawResult[rawResult.length - 1].batch_index
           );
-        } else if (query.orderBy == "updated_at") {
+        } else if (query.sortBy == "updatedAt") {
           continuation = buildContinuation(
             rawResult[rawResult.length - 1].updated_ts +
               "_" +

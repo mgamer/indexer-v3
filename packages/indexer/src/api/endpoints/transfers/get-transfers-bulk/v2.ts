@@ -57,15 +57,15 @@ export const getTransfersBulkV2Options: RouteOptions = {
         .max(1000)
         .default(100)
         .description("Amount of items returned in response. Max limit is 1000."),
-      orderBy: Joi.string()
-        .valid("timestamp", "updated_at")
+      sortBy: Joi.string()
+        .valid("timestamp", "updatedAt")
         .description(
-          "Order the items are returned in the response. Options are `timestamp`, and `updated_at`. Default is `timestamp`."
+          "Order the items are returned in the response. Options are `timestamp`, and `updatedAt`. Default is `timestamp`."
         ),
       sortDirection: Joi.string()
         .lowercase()
-        .when("orderBy", {
-          is: Joi.valid("updated_at"),
+        .when("sortBy", {
+          is: Joi.valid("updatedAt"),
           then: Joi.valid("asc", "desc").default("desc"),
           otherwise: Joi.valid("desc").default("desc"),
         }),
@@ -104,7 +104,7 @@ export const getTransfersBulkV2Options: RouteOptions = {
   },
   handler: async (request: Request) => {
     const query = request.query as any;
-    query.orderBy = query.orderBy ?? "timestamp"; // Default order by is by timestamp
+    query.sortBy = query.sortBy ?? "timestamp"; // Default order by is by timestamp
 
     try {
       let baseQuery = `
@@ -146,7 +146,7 @@ export const getTransfersBulkV2Options: RouteOptions = {
       }
 
       if (query.continuation) {
-        if (query.orderBy === "timestamp") {
+        if (query.sortBy === "timestamp") {
           const [timestamp, logIndex, batchIndex] = splitContinuation(
             query.continuation,
             /^(\d+)_(\d+)_(\d+)$/
@@ -158,7 +158,7 @@ export const getTransfersBulkV2Options: RouteOptions = {
           conditions.push(
             `(nft_transfer_events.timestamp, nft_transfer_events.log_index, nft_transfer_events.batch_index) < ($/timestamp/, $/logIndex/, $/batchIndex/)`
           );
-        } else if (query.orderBy == "updated_at") {
+        } else if (query.sortBy == "updatedAt") {
           const [updateAt, address, tokenId, txHash, logIndex, batchIndex] = splitContinuation(
             query.continuation,
             /^(.+)_0x[a-fA-F0-9]{40}_(\d+)_0x[a-fA-F0-9]{64}_(\d+)_(\d+)$/
@@ -193,12 +193,12 @@ export const getTransfersBulkV2Options: RouteOptions = {
         query.endTimestamp = 9999999999;
       }
 
-      if (query.orderBy === "timestamp") {
+      if (query.sortBy === "timestamp") {
         conditions.push(`
           (nft_transfer_events.timestamp >= $/startTimestamp/ AND
           nft_transfer_events.timestamp <= $/endTimestamp/)
         `);
-      } else if (query.orderBy == "updated_at") {
+      } else if (query.sortBy == "updatedAt") {
         conditions.push(`
           (nft_transfer_events.updated_at >= to_timestamp($/startTimestamp/) AND
           nft_transfer_events.updated_at <= to_timestamp($/endTimestamp/))
@@ -210,14 +210,14 @@ export const getTransfersBulkV2Options: RouteOptions = {
       }
 
       // Sorting
-      if (query.orderBy === "timestamp") {
+      if (query.sortBy === "timestamp") {
         baseQuery += `
           ORDER BY
             nft_transfer_events.timestamp DESC,
             nft_transfer_events.log_index DESC,
             nft_transfer_events.batch_index DESC
         `;
-      } else if (query.orderBy == "updated_at") {
+      } else if (query.sortBy == "updatedAt") {
         if (query.contract || query.token) {
           baseQuery += `
           ORDER BY
@@ -248,7 +248,7 @@ export const getTransfersBulkV2Options: RouteOptions = {
 
       let continuation = null;
       if (rawResult.length === query.limit) {
-        if (query.orderBy === "timestamp") {
+        if (query.sortBy === "timestamp") {
           continuation = buildContinuation(
             rawResult[rawResult.length - 1].timestamp +
               "_" +
@@ -256,7 +256,7 @@ export const getTransfersBulkV2Options: RouteOptions = {
               "_" +
               rawResult[rawResult.length - 1].batch_index
           );
-        } else if (query.orderBy == "updated_at") {
+        } else if (query.sortBy == "updatedAt") {
           continuation = buildContinuation(
             rawResult[rawResult.length - 1].updated_ts +
               "_" +
