@@ -101,6 +101,7 @@ export const getOpenApiOptions: RouteOptions = {
         "Orders",
         "Sales",
         "Transfers",
+        "Events",
         "Owners",
         "Stats",
         "Sources",
