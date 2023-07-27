@@ -86,7 +86,7 @@ export class RabbitMq {
 
     // For deduplication messages use redis lock, setting lock only if jobId is passed
     try {
-      if (content.jobId && delay && !(await acquireLock(content.jobId, lockTime))) {
+      if (content.jobId && lockTime && !(await acquireLock(content.jobId, lockTime))) {
         return;
       }
     } catch (error) {
