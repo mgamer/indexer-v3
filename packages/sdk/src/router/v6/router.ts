@@ -430,6 +430,52 @@ export class Router {
       }
     }
 
+    if (
+      details.every(
+        ({ kind, fees, currency }) =>
+          kind === "payment-processor" &&
+          buyInCurrency === currency &&
+          // All orders must have the same currency
+          currency === details[0].currency &&
+          !fees?.length
+      ) &&
+      !options?.globalFees?.length &&
+      !options?.forceRouter &&
+      !options?.relayer &&
+      !options?.usePermit
+    ) {
+      const exchange = new Sdk.PaymentProcessor.Exchange(this.chainId);
+      const operator = exchange.contract.address;
+      let approval: FTApproval | undefined;
+      if (!isETH(this.chainId, details[0].currency)) {
+        approval = {
+          currency: details[0].currency,
+          amount: details[0].price,
+          owner: taker,
+          operator,
+          txData: generateFTApprovalTxData(details[0].currency, taker, operator),
+        };
+      }
+
+      for (const detail of details) {
+        const order = details[0].order as Sdk.PaymentProcessor.Order;
+        const takerMasterNonce = await exchange.getMasterNonce(this.provider, taker);
+        const takerOrder = order.buildMatching({
+          taker,
+          takerMasterNonce,
+        });
+
+        // const signData = takerOrder.getSignatureData();
+        txs.push({
+          approvals: approval ? [approval] : [],
+          permits: [],
+          txData: await exchange.fillOrderTx(taker, order, takerOrder),
+          orderIds: [details[0].orderId],
+        });
+        success[detail.orderId] = true;
+      }
+    }
+
     // Return early if all listings were covered by Blur
     if (details.every((d) => success[d.orderId])) {
       return {
