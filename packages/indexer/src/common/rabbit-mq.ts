@@ -142,7 +142,7 @@ export class RabbitMq {
       logger.error(
         `rabbit-publish-error`,
         JSON.stringify({
-          message: `failed to publish to ${queueName} error ${error} content=${JSON.stringify(
+          message: `failed to publish to ${queueName} error ${error} lockTime ${lockTime} content=${JSON.stringify(
             content
           )}`,
           queueName: queueName.substring(_.indexOf(queueName, ".") + 1), // Remove chain name
