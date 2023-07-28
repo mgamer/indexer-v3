@@ -21,8 +21,8 @@ export const getPoolDetails = async (address: string) =>
           address,
           nft,
           token,
-          freeRateBps: freeRate.div(Math.pow(10, 14)).toString(),
-          royaltyBps: royaltyRate.div(Math.pow(10, 14)).toString(),
+          freeRateBps: freeRate.div(Math.pow(10, 14)).toNumber(),
+          royaltyBps: royaltyRate.div(Math.pow(10, 14)).toNumber(),
         });
       } catch {
         // Skip any errors

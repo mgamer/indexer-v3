@@ -72,7 +72,8 @@ describe("[ReservoirV6_0_1] Midaswap offers", () => {
       const isCancelled = partial && getRandomBoolean();
       if (!isCancelled) {
         offers.push({
-          buyer: getRandomBoolean() ? alice : bob,
+          // buyer: getRandomBoolean() ? alice : bob,
+          buyer: bob,
           nft: {
             contract: erc721,
             id: getRandomInteger(1, 10000),

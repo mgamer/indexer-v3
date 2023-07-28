@@ -18,6 +18,13 @@ import { Sources } from "@/models/sources";
 import { DbOrder, OrderMetadata, generateSchemaHash } from "@/orderbook/orders/utils";
 import * as tokenSet from "@/orderbook/token-sets";
 import * as midaswap from "@/utils/midaswap";
+import PairAbi from "@reservoir0x/sdk/dist/midaswap/abis/Pair.json";
+
+type Price = {
+  price: string;
+  bin: number;
+  lpTokenId: string;
+};
 
 export type OrderInfo = {
   orderParams: {
@@ -78,6 +85,8 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       }
 
       const { binAmount, binLower, binstep, nftId, lpTokenId, tradeBin } = orderParams;
+      const pairContract = new Contract(pool.address, PairAbi, baseProvider);
+      const [, floorPriceBin] = await pairContract.getIDs();
 
       // Force recheck at most once per hour
       // const recheckCondition = orderParams.forceRecheck
@@ -113,15 +122,11 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
           const id = getSellOrderId(orderParams.pool, nftId, lpTokenId);
 
-          const tmpPriceList = Array.from({ length: binAmount }).map(
+          const bins = Array.from({ length: binAmount }).map(
             (_, index) => binLower + index * binstep
           );
 
-          const price = Sdk.Midaswap.Order.getSellPrice(
-            tmpPriceList[0],
-            pool.freeRateBps,
-            pool.royaltyBps
-          );
+          const price = Sdk.Midaswap.Order.getSellPrice(bins[0], pool.freeRateBps, pool.royaltyBps);
           const value = price;
 
           // Handle: core sdk order
@@ -133,11 +138,12 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
             lpTokenId,
             pool: `${orderParams.pool}_${lpTokenId}`,
             extra: {
-              prices: tmpPriceList.map((bin) =>
+              prices: bins.map((bin) =>
                 Sdk.Midaswap.Order.getSellPrice(bin, pool.freeRateBps, pool.royaltyBps)
               ),
-              bins: tmpPriceList.map((bin) => String(bin)),
-              lpTokenIds: tmpPriceList.map(() => lpTokenId),
+              bins,
+              lpTokenIds: bins.map(() => lpTokenId),
+              floorPriceBin: floorPriceBin,
             },
           });
 
@@ -238,20 +244,16 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
             }
           );
 
-          const tmpPriceList = Array.from({ length: binAmount })
+          const bins = Array.from({ length: binAmount })
             .map((_, index) => binLower + index * binstep)
             .reverse();
 
-          const price = Sdk.Midaswap.Order.getBuyPrice(
-            tmpPriceList[0],
-            pool.freeRateBps,
-            pool.royaltyBps
-          );
+          const price = Sdk.Midaswap.Order.getBuyPrice(bins[0], pool.freeRateBps, pool.royaltyBps);
           const value = price;
 
-          const prices = tmpPriceList.map((bin) => ({
+          const prices = bins.map((bin) => ({
             price: Sdk.Midaswap.Order.getBuyPrice(bin, pool.freeRateBps, pool.royaltyBps),
-            bin: bin.toString(),
+            bin,
             lpTokenId,
           }));
 
@@ -267,6 +269,9 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
             pool: `${orderParams.pool}_${lpTokenId}`,
             extra: {
               prices: fullPrices.map((fp) => fp.price),
+              bins: fullPrices.map((fp) => fp.bin),
+              lpTokenIds: fullPrices.map((fp) => fp.lpTokenId),
+              floorPriceBin,
             },
           });
 
@@ -292,8 +297,8 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
             const validFrom = `date_trunc('seconds', to_timestamp(${orderParams.txTimestamp}))`;
             const validTo = `'Infinity'`;
-            tmpPriceList.forEach(() => {
-              const id = getBuyOrderId(pool.address, lpTokenId, randomUUID());
+            bins.forEach(() => {
+              const id = getBuyOrderId(pool.address, lpTokenId);
               orderValues.push({
                 id,
                 kind: "midaswap",
@@ -420,7 +425,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
             const prices = _.remove(
               firstBuyOrder.raw_data.extra.prices,
-              (item: Sdk.Midaswap.Price) => item.lpTokenId !== lpTokenId
+              (item: Price) => item.lpTokenId !== lpTokenId
             );
 
             if (!prices.length) {
@@ -510,9 +515,6 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
             (item) => item.fillability_status === "cancelled"
           );
 
-          const pairContract = new Contract(pool.address, Sdk.Midaswap.PairAbi, baseProvider);
-          const [, floorPriceBin] = await pairContract.getIDs();
-
           // fillability_status need to change
           const cancelledToTillableOrders = cancelledOrders.filter(
             (item) => item.raw_data.extra.prices[0].bin <= floorPriceBin
@@ -521,10 +523,10 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
           // Update the sell order with the same lpTokenId
           if (sellOrders.length) {
             const targetPrice = sellOrders[0].raw_data.extra.prices.find(
-              (item: Sdk.Midaswap.Price) => item.bin !== tradeBin.toString()
+              (item: Price) => item.bin !== tradeBin
             );
 
-            const newSellPrices: Sdk.Midaswap.Price[] = _.remove(
+            const newSellPrices: Price[] = _.remove(
               sellOrders[0].raw_data.extra.prices,
               (price) => price !== targetPrice
             );
@@ -577,7 +579,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
           // handler buy orders
 
           // create buy orders
-          const newBuyOrders = async (newBuyPrices: Sdk.Midaswap.Price[]) => {
+          const newBuyOrders = async (newBuyPrices: Price[]) => {
             // Handle: token set
             const schemaHash = generateSchemaHash();
             const [{ id: tokenSetId }] = await tokenSet.contractWide.save([
@@ -606,27 +608,27 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
               tokenY: pool.token,
               lpTokenId,
               pool: `${orderParams.pool}_${lpTokenId}`,
-              extra: {
-                prices:
-                  +tradeBin <= +floorPriceBin
-                    ? newBuyPrices
-                    : [
-                        {
-                          price: Sdk.Midaswap.Order.getBuyPrice(
-                            tradeBin,
-                            pool.freeRateBps,
-                            pool.royaltybps
-                          ),
-                          bin: tradeBin.toString(),
-                          lpTokenId,
-                        },
+              extra:
+                +tradeBin <= +floorPriceBin
+                  ? {
+                      prices: newBuyPrices.map((item) => item.price),
+                      bins: newBuyPrices.map((item) => item.bin),
+                      lpTokenIds: newBuyPrices.map((item) => item.lpTokenId),
+                      floorPriceBin,
+                    }
+                  : {
+                      prices: [
+                        Sdk.Midaswap.Order.getBuyPrice(tradeBin, pool.freeRateBps, pool.royaltyBps),
                       ],
-              },
+                      bins: [tradeBin],
+                      lpTokenIds: [lpTokenId],
+                      floorPriceBin,
+                    },
             });
 
             const validFrom = `date_trunc('seconds', to_timestamp(${orderParams.txTimestamp}))`;
             const validTo = `'Infinity'`;
-            const id = getBuyOrderId(pool.address, lpTokenId, randomUUID());
+            const id = getBuyOrderId(pool.address, lpTokenId);
 
             orderValues.push({
               id,
@@ -672,7 +674,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
             });
           };
 
-          const newBuyPrices: Sdk.Midaswap.Price[] = _.sortBy(
+          const newBuyPrices: Price[] = _.sortBy(
             [
               ...(fillableBuyOrders[0]?.raw_data.extra.prices || []), // exist fillable buy order bins
               ...cancelledToTillableOrders.map((item) => item.raw_data.extra.prices[0]), // append cancelled to fillable order bins
@@ -682,7 +684,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                     price: Sdk.Midaswap.Order.getBuyPrice(
                       tradeBin,
                       pool.freeRateBps,
-                      pool.royaltybps
+                      pool.royaltyBps
                     ),
                     bin: tradeBin.toString(),
                     lpTokenId,
@@ -792,7 +794,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                     price: Sdk.Midaswap.Order.getBuyPrice(
                       tradeBin,
                       pool.freeRateBps,
-                      pool.royaltybps
+                      pool.royaltyBps
                     ),
                     bin: tradeBin.toString(),
                     lpTokenId,
@@ -843,10 +845,9 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
               // );
 
               const targetPrice = buyOrders[0].raw_data.extra.prices.find(
-                (item: Sdk.Midaswap.Price) =>
-                  item.lpTokenId === lpTokenId && item.bin === tradeBin.toString()
+                (item: Price) => item.lpTokenId === lpTokenId && item.bin === tradeBin
               );
-              const newBuyPrices: Sdk.Midaswap.Price[] = _.remove(
+              const newBuyPrices: Price[] = _.remove(
                 buyOrders[0].raw_data.extra.prices,
                 (item) => item !== targetPrice
               );
@@ -898,7 +899,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
             }
           }
 
-          const newSellOrder = async (newSellPrices: Sdk.Midaswap.Price[]) => {
+          const newSellOrder = async (newSellPrices: Price[]) => {
             const id = getSellOrderId(orderParams.pool, nftId, lpTokenId);
             const price = newSellPrices[0].price;
             const value = newSellPrices[0].price;
@@ -912,7 +913,10 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
               lpTokenId,
               pool: `${orderParams.pool}_${lpTokenId}`,
               extra: {
-                prices: newSellPrices,
+                prices: newSellPrices.map((item) => item.price),
+                bins: newSellPrices.map((item) => item.bin),
+                lpTokenIds: newSellPrices.map((item) => item.lpTokenId),
+                floorPriceBin,
               },
             });
 
@@ -991,14 +995,14 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
           };
 
           if (sellOrders.length) {
-            const newSellPrices: Sdk.Midaswap.Price[] = _.sortBy(
+            const newSellPrices: Price[] = _.sortBy(
               [
                 ...sellOrders[0].raw_data.extra.prices,
                 {
                   price: Sdk.Midaswap.Order.getSellPrice(
                     tradeBin,
                     pool.freeRateBps,
-                    pool.royaltybps
+                    pool.royaltyBps
                   ),
                   bin: tradeBin.toString(),
                   lpTokenId,
@@ -1056,7 +1060,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
           } else {
             await newSellOrder([
               {
-                bin: tradeBin.toString(),
+                bin: tradeBin,
                 price: tradeBin.toString(),
                 lpTokenId,
               },

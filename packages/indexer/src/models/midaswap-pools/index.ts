@@ -5,11 +5,11 @@ export type MidaswapPool = {
   address: string;
   nft: string;
   token: string;
-  freeRateBps: string;
-  royaltyBps: string;
+  freeRateBps: number;
+  royaltyBps: number;
 };
 
-export const saveMidaswapPool = async (midaswapPool: MidaswapPool) => {
+export const saveMidaswapPool = async (midaswapPool: MidaswapPool): Promise<MidaswapPool> => {
   await idb.none(
     `
       INSERT INTO midaswap_pools (
@@ -39,7 +39,7 @@ export const saveMidaswapPool = async (midaswapPool: MidaswapPool) => {
   return midaswapPool;
 };
 
-export const getMidaswapPool = async (address: string) => {
+export const getMidaswapPool = async (address: string): Promise<MidaswapPool> => {
   const result = await idb.oneOrNone(
     `
       SELECT
@@ -58,7 +58,7 @@ export const getMidaswapPool = async (address: string) => {
     address,
     nft: fromBuffer(result.nft),
     token: fromBuffer(result.token),
-    freeRateBps: result.free_rate_bps,
-    royaltyBps: result.royalty_bps,
+    freeRateBps: Number(result.free_rate_bps),
+    royaltyBps: Number(result.royalty_bps),
   };
 };
