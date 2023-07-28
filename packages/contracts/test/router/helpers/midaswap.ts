@@ -100,13 +100,10 @@ export const setupMidaswapListings = async (listings: MidaswapListing[]) => {
       lpTokenId: lpTokenId.toString(),
       pool: `${pair}_${lpTokenId.toString()}`,
       extra: {
-        prices: [
-          {
-            price: price.toString(),
-            bin: bin.toString(),
-            lpTokenId: lpTokenId.toString(),
-          },
-        ],
+        prices: [price.toString()],
+        bins: [bin],
+        lpTokenIds: [lpTokenId.toString()],
+        floorPriceBin: Number.MAX_SAFE_INTEGER,
       },
     });
   }
@@ -197,13 +194,10 @@ export const setupMidaswapOffers = async (offers: MidaswapOffer[]) => {
       lpTokenId: addTxResult.toString(),
       pool: `${pair}_${lpTokenId.toString()}`,
       extra: {
-        prices: [
-          {
-            price: price.toString(),
-            bin: bin.toString(),
-            lpTokenId: lpTokenId.toString(),
-          },
-        ],
+        prices: [price.toString()],
+        bins: [bin],
+        lpTokenIds: [lpTokenId.toString()],
+        floorPriceBin: Number.MAX_SAFE_INTEGER,
       },
     });
   }

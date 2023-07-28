@@ -58,6 +58,7 @@ const normalize = (order: Types.OrderParams): Types.OrderParams => {
       prices: order.extra.prices.map(s),
       bins: order.extra.bins.map(s),
       lpTokenIds: order.extra.lpTokenIds.map(s),
+      floorPriceBin: order.extra.floorPriceBin,
     },
   };
 };

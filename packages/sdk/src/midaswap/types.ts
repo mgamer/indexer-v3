@@ -10,7 +10,8 @@ export type OrderParams = {
   extra: {
     // Array of prices the pool will sell/buy at
     prices: string[];
-    bins: string[];
+    bins: number[];
     lpTokenIds: string[];
+    floorPriceBin: number;
   };
 };
