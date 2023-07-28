@@ -4,6 +4,7 @@ import { publishWebsocketEvent } from "@/common/websocketPublisher";
 import { formatEth } from "@/common/utils";
 import { Assets } from "@/utils/assets";
 import { AbstractRabbitMqJobHandler, BackoffStrategy } from "@/jobs/abstract-rabbit-mq-job-handler";
+import { Sources } from "@/models/sources";
 
 interface CollectionInfo {
   id: string;
@@ -33,18 +34,22 @@ interface CollectionInfo {
   floor_sell_value: string;
   floor_sell_maker: string;
   floor_sell_valid_between: string;
+  floor_sell_source_id_int: number;
   normalized_floor_sell_id: string;
   normalized_floor_sell_value: string;
   normalized_floor_sell_maker: string;
   normalized_floor_sell_valid_between: string;
+  normalized_floor_sell_source_id_int: number;
   non_flagged_floor_sell_id: string;
   non_flagged_floor_sell_value: string;
   non_flagged_floor_sell_maker: string;
   non_flagged_floor_sell_valid_between: string;
+  non_flagged_floor_sell_source_id_int: number;
   top_buy_id: string;
   top_buy_value: string;
   top_buy_maker: string;
   top_buy_valid_between: string;
+  top_buy_source_id_int: number;
 }
 
 export type CollectionWebsocketEventInfo = {
@@ -146,6 +151,16 @@ export class CollectionWebsocketEventsTriggerQueueJob extends AbstractRabbitMqJo
 
       const r = data.after;
       const metadata = JSON.parse(r.metadata);
+      const sources = await Sources.getInstance();
+
+      const top_buy_source = r.top_buy_id ? sources.get(r.top_buy_source_id_int) : null;
+      const floor_sell_source = r.floor_sell_id ? sources.get(r.floor_sell_source_id_int) : null;
+      const normalized_floor_sell_source = r.normalized_floor_sell_id
+        ? sources.get(r.normalized_floor_sell_source_id_int)
+        : null;
+      const non_flagged_floor_sell_source = r.non_flagged_floor_sell_id
+        ? sources.get(r.non_flagged_floor_sell_source_id_int)
+        : null;
 
       await publishWebsocketEvent({
         event: eventType,
@@ -170,6 +185,15 @@ export class CollectionWebsocketEventsTriggerQueueJob extends AbstractRabbitMqJo
             value: r.top_buy_value ? formatEth(r.top_buy_value) : null,
             maker: r.top_buy_maker ? r.top_buy_maker : null,
             ...formatValidBetween(r.top_buy_valid_between),
+            source: top_buy_source
+              ? {
+                  id: top_buy_source.address,
+                  domain: top_buy_source.domain,
+                  name: top_buy_source.getTitle(),
+                  icon: top_buy_source.getIcon(),
+                  url: top_buy_source.metadata.url,
+                }
+              : null,
           },
           rank: {
             "1day": r.day1_rank,
@@ -210,18 +234,45 @@ export class CollectionWebsocketEventsTriggerQueueJob extends AbstractRabbitMqJo
             price: r.floor_sell_id ? formatEth(r.floor_sell_value) : null,
             maker: r.floor_sell_id ? r.floor_sell_maker : null,
             ...formatValidBetween(r.floor_sell_valid_between),
+            source: floor_sell_source
+              ? {
+                  id: floor_sell_source.address,
+                  domain: floor_sell_source.domain,
+                  name: floor_sell_source.getTitle(),
+                  icon: floor_sell_source.getIcon(),
+                  url: floor_sell_source.metadata.url,
+                }
+              : null,
           },
           floorAskNormalized: {
             id: r.normalized_floor_sell_id,
             price: r.normalized_floor_sell_id ? formatEth(r.normalized_floor_sell_value) : null,
             maker: r.normalized_floor_sell_id ? r.normalized_floor_sell_maker : null,
             ...formatValidBetween(r.normalized_floor_sell_valid_between),
+            source: normalized_floor_sell_source
+              ? {
+                  id: normalized_floor_sell_source.address,
+                  domain: normalized_floor_sell_source.domain,
+                  name: normalized_floor_sell_source.getTitle(),
+                  icon: normalized_floor_sell_source.getIcon(),
+                  url: normalized_floor_sell_source.metadata.url,
+                }
+              : null,
           },
           floorAskNonFlagged: {
             id: r.non_flagged_floor_sell_id,
             price: r.non_flagged_floor_sell_id ? formatEth(r.non_flagged_floor_sell_value) : null,
             maker: r.non_flagged_floor_sell_id ? r.non_flagged_floor_sell_maker : null,
             ...formatValidBetween(r.non_flagged_floor_sell_valid_between),
+            source: non_flagged_floor_sell_source
+              ? {
+                  id: non_flagged_floor_sell_source.address,
+                  domain: non_flagged_floor_sell_source.domain,
+                  name: non_flagged_floor_sell_source.getTitle(),
+                  icon: non_flagged_floor_sell_source.getIcon(),
+                  url: non_flagged_floor_sell_source.metadata.url,
+                }
+              : null,
           },
         },
       });
