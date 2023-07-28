@@ -14,7 +14,7 @@ export type RefreshActivitiesTokenMetadataJobPayload = {
 export class RefreshActivitiesTokenMetadataJob extends AbstractRabbitMqJobHandler {
   queueName = "refresh-activities-token-metadata-queue";
   maxRetries = 10;
-  concurrency = 5;
+  concurrency = 1;
   persistent = true;
   lazyMode = true;
 
@@ -46,7 +46,11 @@ export class RefreshActivitiesTokenMetadataJob extends AbstractRabbitMqJobHandle
       ? undefined
       : crypto
           .createHash("sha256")
-          .update(`${payload.contract}${payload.tokenId}${JSON.stringify(payload.tokenUpdateData)}`)
+          .update(
+            `${payload.contract.toLowerCase()}${payload.tokenId}${JSON.stringify(
+              payload.tokenUpdateData
+            )}`
+          )
           .digest("hex");
 
     await this.send({ payload, jobId });
