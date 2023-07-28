@@ -2,15 +2,12 @@ import { config } from "@/config/index";
 import { logger } from "@/common/logger";
 import { ridb } from "@/common/db";
 import { elasticsearch } from "@/common/elasticsearch";
+import { redlock } from "@/common/redis";
 
+import * as ActivitiesIndex from "@/elasticsearch/indexes/activities";
 import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handler";
 
-import { backfillTransferActivitiesElasticsearchJob } from "@/jobs/activities/backfill/backfill-transfer-activities-elasticsearch-job";
-import { backfillSaleActivitiesElasticsearchJob } from "@/jobs/activities/backfill/backfill-sale-activities-elasticsearch-job";
-import { backfillAskActivitiesElasticsearchJob } from "@/jobs/activities/backfill/backfill-ask-activities-elasticsearch-job";
-import { backfillAskCancelActivitiesElasticsearchJob } from "@/jobs/activities/backfill/backfill-ask-cancel-activities-elasticsearch-job";
-import { backfillBidActivitiesElasticsearchJob } from "@/jobs/activities/backfill/backfill-bid-activities-elasticsearch-job";
-import { backfillBidCancelActivitiesElasticsearchJob } from "@/jobs/activities/backfill/backfill-bid-cancel-activities-elasticsearch-job";
+import { backfillSaveActivitiesElasticsearchJob } from "@/jobs/activities/backfill/backfill-save-activities-elasticsearch-job";
 
 import * as CONFIG from "@/elasticsearch/indexes/activities/config";
 
@@ -39,7 +36,6 @@ export class BackfillActivitiesElasticsearchJob extends AbstractRabbitMqJobHandl
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
         ...CONFIG[indexConfig!],
-        refresh_interval: "-1",
       };
 
       const createIndexResponse = await elasticsearch.indices.create(params);
@@ -73,7 +69,8 @@ export class BackfillActivitiesElasticsearchJob extends AbstractRabbitMqJobHandl
         const newDate = loop.setDate(loop.getDate() + 1);
         const toTimestamp = Math.floor(newDate / 1000);
 
-        await backfillTransferActivitiesElasticsearchJob.addToQueue(
+        await backfillSaveActivitiesElasticsearchJob.addToQueue(
+          "transfer",
           undefined,
           fromTimestamp,
           toTimestamp,
@@ -86,7 +83,8 @@ export class BackfillActivitiesElasticsearchJob extends AbstractRabbitMqJobHandl
       if (keepGoing) {
         const fromTimestamp = Math.floor(end.getTime() / 1000);
 
-        await backfillTransferActivitiesElasticsearchJob.addToQueue(
+        await backfillSaveActivitiesElasticsearchJob.addToQueue(
+          "transfer",
           undefined,
           fromTimestamp,
           undefined,
@@ -112,7 +110,8 @@ export class BackfillActivitiesElasticsearchJob extends AbstractRabbitMqJobHandl
         const newDate = loop.setDate(loop.getDate() + 1);
         const toTimestamp = Math.floor(newDate / 1000);
 
-        await backfillSaleActivitiesElasticsearchJob.addToQueue(
+        await backfillSaveActivitiesElasticsearchJob.addToQueue(
+          "sale",
           undefined,
           fromTimestamp,
           toTimestamp,
@@ -125,7 +124,8 @@ export class BackfillActivitiesElasticsearchJob extends AbstractRabbitMqJobHandl
       if (keepGoing) {
         const fromTimestamp = Math.floor(end.getTime() / 1000);
 
-        await backfillSaleActivitiesElasticsearchJob.addToQueue(
+        await backfillSaveActivitiesElasticsearchJob.addToQueue(
+          "sale",
           undefined,
           fromTimestamp,
           undefined,
@@ -151,7 +151,8 @@ export class BackfillActivitiesElasticsearchJob extends AbstractRabbitMqJobHandl
         const newDate = loop.setDate(loop.getDate() + 1);
         const toTimestamp = Math.floor(newDate / 1000);
 
-        await backfillAskActivitiesElasticsearchJob.addToQueue(
+        await backfillSaveActivitiesElasticsearchJob.addToQueue(
+          "ask",
           undefined,
           fromTimestamp,
           toTimestamp,
@@ -164,7 +165,8 @@ export class BackfillActivitiesElasticsearchJob extends AbstractRabbitMqJobHandl
       if (keepGoing) {
         const fromTimestamp = Math.floor(end.getTime() / 1000);
 
-        await backfillAskActivitiesElasticsearchJob.addToQueue(
+        await backfillSaveActivitiesElasticsearchJob.addToQueue(
+          "ask",
           undefined,
           fromTimestamp,
           undefined,
@@ -190,7 +192,8 @@ export class BackfillActivitiesElasticsearchJob extends AbstractRabbitMqJobHandl
         const newDate = loop.setDate(loop.getDate() + 1);
         const toTimestamp = Math.floor(newDate / 1000);
 
-        await backfillAskCancelActivitiesElasticsearchJob.addToQueue(
+        await backfillSaveActivitiesElasticsearchJob.addToQueue(
+          "ask-cancel",
           undefined,
           fromTimestamp,
           toTimestamp,
@@ -203,7 +206,8 @@ export class BackfillActivitiesElasticsearchJob extends AbstractRabbitMqJobHandl
       if (keepGoing) {
         const fromTimestamp = Math.floor(end.getTime() / 1000);
 
-        await backfillAskCancelActivitiesElasticsearchJob.addToQueue(
+        await backfillSaveActivitiesElasticsearchJob.addToQueue(
+          "ask-cancel",
           undefined,
           fromTimestamp,
           undefined,
@@ -229,7 +233,8 @@ export class BackfillActivitiesElasticsearchJob extends AbstractRabbitMqJobHandl
         const newDate = loop.setDate(loop.getDate() + 1);
         const toTimestamp = Math.floor(newDate / 1000);
 
-        await backfillBidActivitiesElasticsearchJob.addToQueue(
+        await backfillSaveActivitiesElasticsearchJob.addToQueue(
+          "bid",
           undefined,
           fromTimestamp,
           toTimestamp,
@@ -242,7 +247,8 @@ export class BackfillActivitiesElasticsearchJob extends AbstractRabbitMqJobHandl
       if (keepGoing) {
         const fromTimestamp = Math.floor(end.getTime() / 1000);
 
-        await backfillBidActivitiesElasticsearchJob.addToQueue(
+        await backfillSaveActivitiesElasticsearchJob.addToQueue(
+          "bid",
           undefined,
           fromTimestamp,
           undefined,
@@ -268,7 +274,8 @@ export class BackfillActivitiesElasticsearchJob extends AbstractRabbitMqJobHandl
         const newDate = loop.setDate(loop.getDate() + 1);
         const toTimestamp = Math.floor(newDate / 1000);
 
-        await backfillBidCancelActivitiesElasticsearchJob.addToQueue(
+        await backfillSaveActivitiesElasticsearchJob.addToQueue(
+          "bid-cancel",
           undefined,
           fromTimestamp,
           toTimestamp,
@@ -281,7 +288,8 @@ export class BackfillActivitiesElasticsearchJob extends AbstractRabbitMqJobHandl
       if (keepGoing) {
         const fromTimestamp = Math.floor(end.getTime() / 1000);
 
-        await backfillBidCancelActivitiesElasticsearchJob.addToQueue(
+        await backfillSaveActivitiesElasticsearchJob.addToQueue(
+          "bid-cancel",
           undefined,
           fromTimestamp,
           undefined,
@@ -324,7 +332,8 @@ export class BackfillActivitiesElasticsearchJob extends AbstractRabbitMqJobHandl
 
   public async addToQueue(
     createIndex = false,
-    indexName = undefined,
+    indexName = "",
+    indexConfig = "",
     keepGoing = false,
     backfillTransferActivities = true,
     backfillSaleActivities = true,
@@ -340,6 +349,7 @@ export class BackfillActivitiesElasticsearchJob extends AbstractRabbitMqJobHandl
       payload: {
         createIndex,
         indexName,
+        indexConfig,
         keepGoing,
         backfillTransferActivities,
         backfillSaleActivities,
@@ -385,4 +395,26 @@ export interface EventCursorInfo {
   txHash: string;
   logIndex: number;
   batchIndex: string;
+}
+
+if (config.doBackgroundWork && config.doElasticsearchWork) {
+  redlock
+    .acquire([`${backfillActivitiesElasticsearchJob}-lock`], 60 * 60 * 24 * 30 * 1000)
+    .then(async () => {
+      await backfillActivitiesElasticsearchJob.addToQueue(
+        true,
+        `${ActivitiesIndex.getIndexName()}-1690489670764`,
+        "CONFIG_1689873821",
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      );
+    })
+    .catch(() => {
+      // Skip on any errors
+    });
 }
