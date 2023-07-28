@@ -2,7 +2,7 @@ import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
 import { keccak256 } from "@ethersproject/keccak256";
 import { randomBytes } from "@ethersproject/random";
 import { toUtf8Bytes, toUtf8String } from "@ethersproject/strings";
-
+import { verifyTypedData } from "@ethersproject/wallet";
 // Constants
 
 export const BytesEmpty = "0x";
@@ -50,6 +50,15 @@ export const getErrorMessage = (error: any) => {
   const errorMessage = error.response?.data ? JSON.stringify(error.response.data) : error.message;
   return errorMessage;
 };
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function checkEIP721Signature(data: any, signature: string, signer: string) {
+  const recoverSinger = verifyTypedData(data.domain, data.types, data.value, signature);
+  if (lc(signer) !== lc(recoverSinger)) {
+    return false;
+  }
+  return true;
+}
 
 // Misc
 

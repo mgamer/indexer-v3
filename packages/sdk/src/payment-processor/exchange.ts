@@ -3,6 +3,7 @@ import { Signer } from "@ethersproject/abstract-signer";
 import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
 import { Contract, ContractTransaction } from "@ethersproject/contracts";
+import { splitSignature } from "@ethersproject/bytes";
 
 import * as Addresses from "./addresses";
 import { Order } from "./order";
@@ -71,6 +72,59 @@ export class Exchange {
   ): Promise<ContractTransaction> {
     const tx = this.fillOrderTx(await taker.getAddress(), order, matchOrder, options);
     return taker.sendTransaction(tx);
+  }
+
+  // Attch the taker's signature to the calldata
+  public attchPostSignature(txData: string, signature: string) {
+    const { signedListing, signedOffer, saleDetails } = this.contract.interface.decodeFunctionData(
+      "buySingleListing",
+      txData
+    );
+
+    const rawCalldata = this.contract.interface.encodeFunctionData("buySingleListing", [
+      saleDetails,
+      signedListing,
+      signedOffer,
+    ]);
+
+    const sourceBytes = txData.substring(rawCalldata.length, txData.length);
+
+    let newSignedListing = {
+      r: signedListing.r,
+      s: signedListing.s,
+      v: signedListing.v,
+    };
+
+    let newSignedOffer = {
+      r: signedOffer.r,
+      s: signedOffer.s,
+      v: signedOffer.v,
+    };
+
+    const { r, s, v } = splitSignature(signature);
+    if (signedOffer.v === 0) {
+      newSignedOffer = {
+        r,
+        s,
+        v,
+      };
+    }
+
+    if (signedListing.v === 0) {
+      newSignedListing = {
+        r,
+        s,
+        v,
+      };
+    }
+
+    return (
+      this.contract.interface.encodeFunctionData("buySingleListing", [
+        saleDetails,
+        newSignedListing,
+        newSignedOffer,
+      ]) + sourceBytes
+    );
   }
 
   public fillOrderTx(

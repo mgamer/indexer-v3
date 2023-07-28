@@ -7,6 +7,8 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 import { constants } from "ethers";
 import * as Sdk from "@reservoir0x/sdk/src";
+import { checkEIP721Signature } from "@reservoir0x/sdk/src/utils";
+
 import { getChainId, getCurrentTimestamp, reset, setupNFTs } from "../../../utils";
 
 describe("PaymentProcessor - SingleToken", () => {
@@ -77,6 +79,9 @@ describe("PaymentProcessor - SingleToken", () => {
   //   sellOrder.checkSignature();
   //   await sellOrder.checkFillability(ethers.provider);
 
+  //   console.log("sellOrder", sellOrder.params.kind)
+  //   console.log("buyOrder", buyOrder.params.kind)
+
   //   const sellerBalanceBefore = await ethers.provider.getBalance(seller.address);
 
   //   await exchange.fillOrder(buyer, sellOrder, buyOrder);
@@ -145,6 +150,9 @@ describe("PaymentProcessor - SingleToken", () => {
   //   buyOrder.checkSignature();
   //   sellOrder.checkSignature();
   //   await buyOrder.checkFillability(ethers.provider);
+
+  //   console.log("sellOrder", sellOrder.params.kind)
+  //   console.log("buyOrder", buyOrder.params.kind)
 
   //   const sellerBalanceBefore = await weth.getBalance(seller.address);
 
@@ -233,10 +241,30 @@ describe("PaymentProcessor - SingleToken", () => {
       }
     );
 
-    // await exchange.fillOrder(buyer, sellOrder, buyOrder);
     for (const tx of nonPartialTx.txs) {
-      console.log(tx)
-      await buyer.sendTransaction(tx.txData);
+      const { preSignatures } = tx;
+      for(const { data: preSignature, kind, signer } of preSignatures) {
+        const signature = await buyer._signTypedData(
+          preSignature.domain,
+          preSignature.types,
+          preSignature.value
+        );
+        if (kind === "payment-processor-take-order") {
+          const exchange = new Sdk.PaymentProcessor.Exchange(chainId);
+          preSignature.signature = signature;
+          const signatureValid = checkEIP721Signature(preSignature, signature, signer);
+          if (!signatureValid) {
+            throw new Error("signature not valid")
+          }
+          const newTxData = exchange.attchPostSignature(tx.txData.data, signature);
+          tx.txData.data = newTxData;
+        }
+      }
+
+      await buyer.sendTransaction({
+        ...tx.txData,
+        gasLimit: 1000000
+      });
     }
   
     const sellerBalanceAfter = await ethers.provider.getBalance(seller.address);

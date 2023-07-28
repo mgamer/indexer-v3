@@ -178,12 +178,22 @@ export type PerCurrencyListingDetails = {
   [currency: string]: ListingDetails[];
 };
 
+export type PreSignature = {
+  kind: "payment-processor-take-order";
+  // Signature Data
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  data: any;
+  signer: string;
+  signature?: string;
+};
+
 export type FillListingsResult = {
   txs: {
     approvals: FTApproval[];
     txData: TxData;
     orderIds: string[];
     permits: Permit[];
+    preSignatures: PreSignature[];
   }[];
   success: { [orderId: string]: boolean };
 };

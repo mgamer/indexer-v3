@@ -28,6 +28,7 @@ import {
   PerCurrencyListingDetails,
   PerPoolSwapDetails,
   SwapDetail,
+  PreSignature,
 } from "./types";
 import { generateSwapExecutions } from "./swap/index";
 import { generateFTApprovalTxData, generateNFTApprovalTxData, isETH, isWETH } from "./utils";
@@ -254,6 +255,7 @@ export class Router {
     const txs: {
       approvals: FTApproval[];
       permits: { kind: "erc20"; data: PermitWithTransfers }[];
+      preSignatures: PreSignature[];
       txData: TxData;
       orderIds: string[];
     }[] = [];
@@ -283,6 +285,7 @@ export class Router {
         txs.push({
           approvals: [],
           permits: [],
+          preSignatures: [],
           txData: exchange.fillOrderTx(
             taker,
             Number(order.params.id),
@@ -395,6 +398,7 @@ export class Router {
             txs.push({
               approvals: [],
               permits: [],
+              preSignatures: [],
               txData: {
                 from: data.from,
                 to: data.to,
@@ -465,10 +469,17 @@ export class Router {
           takerMasterNonce,
         });
 
-        // const signData = takerOrder.getSignatureData();
+        const signData = takerOrder.getSignatureData();
         txs.push({
           approvals: approval ? [approval] : [],
           permits: [],
+          preSignatures: [
+            {
+              kind: "payment-processor-take-order",
+              data: signData,
+              signer: taker,
+            },
+          ],
           txData: await exchange.fillOrderTx(taker, order, takerOrder),
           orderIds: [details[0].orderId],
         });
@@ -584,6 +595,7 @@ export class Router {
             {
               approvals: approval ? [approval] : [],
               permits: [],
+              preSignatures: [],
               txData: await exchange.fillOrderTx(
                 taker,
                 order,
@@ -605,6 +617,7 @@ export class Router {
             {
               approvals: approval ? [approval] : [],
               permits: [],
+              preSignatures: [],
               txData: await exchange.fillOrdersTx(
                 taker,
                 orders,
@@ -662,6 +675,7 @@ export class Router {
             {
               approvals: approval ? [approval] : [],
               permits: [],
+              preSignatures: [],
               txData: await exchange.fillOrderTx(
                 taker,
                 order,
@@ -683,6 +697,7 @@ export class Router {
             {
               approvals: approval ? [approval] : [],
               permits: [],
+              preSignatures: [],
               txData: await exchange.fillOrdersTx(
                 taker,
                 orders,
@@ -2791,6 +2806,7 @@ export class Router {
 
         txs.push({
           approvals: [],
+          preSignatures: [],
           permits: await new PermitHandler(this.chainId, this.provider)
             .generate(relayer, ftTransferItems)
             .then((permits) =>
@@ -2818,6 +2834,7 @@ export class Router {
         txs.push({
           approvals,
           permits: [],
+          preSignatures: [],
           txData: {
             from: relayer,
             ...(ftTransferItems.length
