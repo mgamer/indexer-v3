@@ -105,7 +105,7 @@ export class CollectionWebsocketEventsTriggerQueueJob extends AbstractRabbitMqJo
     const { data } = payload;
 
     try {
-      let contractKind = await redis.get(`collection-contract-kind:${data.after.contract}`);
+      let contractKind = await redis.get(`contract-kind:${data.after.contract}`);
 
       if (!contractKind) {
         const result = await idb.oneOrNone(
@@ -122,12 +122,7 @@ export class CollectionWebsocketEventsTriggerQueueJob extends AbstractRabbitMqJo
 
         contractKind = result?.kind;
         if (contractKind) {
-          await redis.set(
-            `collection-contract-kind:${data.after.contract}`,
-            contractKind,
-            "EX",
-            3600
-          );
+          await redis.set(`contract-kind:${data.after.contract}`, contractKind, "EX", 3600);
         }
       }
 
