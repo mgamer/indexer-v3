@@ -23,7 +23,9 @@ import {
   FTApproval,
   FillBidsResult,
   FillListingsResult,
+  FillMintsResult,
   ListingDetails,
+  MintDetails,
   NFTApproval,
   PerCurrencyListingDetails,
   PerPoolSwapDetails,
@@ -63,6 +65,8 @@ import SudoswapV2ModuleAbi from "./abis/SudoswapV2Module.json";
 import CaviarV1ModuleAbi from "./abis/CaviarV1Module.json";
 import CryptoPunksModuleAbi from "./abis/CryptoPunksModule.json";
 import PaymentProcessorModuleAbi from "./abis/PaymentProcessorModule.json";
+import MintModuleAbi from "./abis/MintModule.json";
+import MintProxyAbi from "./abis/MintProxy.json";
 // Exchanges
 import SeaportV15Abi from "../../seaport-v1.5/abis/Exchange.json";
 
@@ -211,7 +215,110 @@ export class Router {
         PermitProxyAbi,
         provider
       ),
+      mintModule: new Contract(
+        Addresses.MintModule[chainId] ?? AddressZero,
+        MintModuleAbi,
+        provider
+      ),
     };
+  }
+
+  public async fillMintsTx(
+    details: MintDetails[],
+    taker: string,
+    options?: {
+      source?: string;
+      // Will be split among all mints to get filled
+      globalFees?: Fee[];
+      // Skip any errors (either off-chain or on-chain)
+      partial?: boolean;
+      // Force direct filling
+      forceDirectFilling?: boolean;
+    }
+  ): Promise<FillMintsResult> {
+    const txs: {
+      txData: TxData;
+      orderIds: string[];
+    }[] = [];
+    const success: { [orderId: string]: boolean } = {};
+
+    if (
+      !Addresses.MintModule[this.chainId] ||
+      options?.forceDirectFilling ||
+      (details.length === 1 && !options?.globalFees?.length)
+    ) {
+      // Under some conditions, we simply return that transaction data back to the caller
+
+      for (const { txData, orderId } of details) {
+        txs.push({
+          txData: {
+            ...txData,
+            data: txData.data + generateSourceBytes(options?.source),
+          },
+          orderIds: [orderId],
+        });
+
+        success[orderId] = true;
+      }
+    } else {
+      // Otherwise, we wrap the mint transactions within a router execution
+
+      const proxyCalldata = new Interface(MintProxyAbi).encodeFunctionData("mintMultiple", [
+        details.map((d) => ({
+          to: d.txData.to,
+          data: d.txData.data,
+          value: d.txData.value ?? 0,
+          // Split the fees evenly across all mints
+          fees:
+            options?.globalFees?.map((f) => ({
+              amount: bn(f.amount).div(details.length),
+              recipient: f.recipient,
+            })) ?? [],
+        })),
+        {
+          refundTo: taker,
+          revertIfIncomplete: Boolean(!options?.partial),
+        },
+      ]);
+      const moduleCalldata = this.contracts.mintModule.interface.encodeFunctionData("mint", [
+        taker,
+        proxyCalldata,
+      ]);
+
+      const value = details
+        .map((d) => bn(d.txData.value ?? 0))
+        .reduce((a, b) => a.add(b), bn(0))
+        .add(
+          options?.globalFees?.length
+            ? options.globalFees.map((f) => bn(f.amount)).reduce((a, b) => a.add(b), bn(0))
+            : 0
+        )
+        .toHexString();
+      txs.push({
+        txData: {
+          from: taker,
+          to: this.contracts.router.address,
+          data:
+            this.contracts.router.interface.encodeFunctionData("execute", [
+              [
+                {
+                  module: this.contracts.mintModule.address,
+                  data: moduleCalldata,
+                  value,
+                },
+              ],
+            ]) + generateSourceBytes(options?.source),
+          value,
+        },
+        orderIds: details.map((d) => d.orderId),
+      });
+
+      for (const { orderId } of details) {
+        success[orderId] = true;
+      }
+    }
+
+    return { txs, success };
   }
 
   public async fillListingsTx(
