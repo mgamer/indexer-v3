@@ -31,6 +31,7 @@ import { ExecutionsBuffer } from "@/utils/executions";
 import * as onChainData from "@/utils/on-chain-data";
 import * as mints from "@/orderbook/mints";
 import { generateCollectionMintTxData } from "@/orderbook/mints/calldata";
+import { getNFTTransferEvents } from "@/orderbook/mints/simulation";
 import { getPermitId, getPermit, savePermit } from "@/utils/permits";
 import { getUSDAndCurrencyPrices } from "@/utils/prices";
 
@@ -1384,14 +1385,58 @@ export const getExecuteBuyV7Options: RouteOptions = {
       const { txs, success } = result;
 
       // Add any mint transactions
-      for (const { orderId, txData } of mintTxs) {
-        txs.push({
-          approvals: [],
-          permits: [],
-          txData,
-          orderIds: [orderId],
+      if (mintTxs.length) {
+        let mintsResult = await router.fillMintsTx(mintTxs, payload.taker, {
+          source: payload.source,
+          partial: payload.partial,
+          // The global fees will only be applied to the fills or the mints (but not both)
+          globalFees: result.txs.length ? [] : globalFees,
         });
-        success[orderId] = true;
+
+        // Minting via a smart contract proxy is complicated.
+        // There are a lot of things that could go wrong:
+        // - collection disallows minting from a smart contract
+        // - the mint method is not standard (eg. not calling the standard ERC721/1155 hooks)
+
+        // For this reason, before returning the router module calldata
+        // we simulate it and make sure that a few conditions are met:
+        // - there is at least one successful mint
+        // - all minted tokens have the taker as the final owner (eg. nothing gets stuck in the router / module)
+
+        let safeToUse = true;
+        for (const { txData } of mintsResult.txs) {
+          const events = await getNFTTransferEvents(txData);
+          if (!events.length) {
+            safeToUse = false;
+          } else {
+            const tokenIdToFinalOwner: { [tokenId: string]: string } = {};
+            for (const event of events) {
+              tokenIdToFinalOwner[event.tokenId] = event.to;
+            }
+
+            if (!Object.values(tokenIdToFinalOwner).every((owner) => owner === payload.taker)) {
+              safeToUse = false;
+            }
+          }
+        }
+
+        if (!safeToUse) {
+          mintsResult = await router.fillMintsTx(mintTxs, payload.taker, {
+            source: payload.source,
+            forceDirectFilling: true,
+          });
+        }
+
+        txs.push(
+          ...mintsResult.txs.map(({ txData, orderIds }) => ({
+            txData,
+            orderIds,
+            approvals: [],
+            permits: [],
+          }))
+        );
+
+        Object.assign(success, mintsResult.success);
       }
 
       // Filter out any non-fillable orders from the path
