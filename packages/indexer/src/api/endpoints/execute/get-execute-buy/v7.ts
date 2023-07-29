@@ -1407,15 +1407,22 @@ export const getExecuteBuyV7Options: RouteOptions = {
         for (const { txData } of mintsResult.txs) {
           const events = await getNFTTransferEvents(txData);
           if (!events.length) {
+            // At least one successful mint
             safeToUse = false;
           } else {
-            const tokenIdToFinalOwner: { [tokenId: string]: string } = {};
-            for (const event of events) {
-              tokenIdToFinalOwner[event.tokenId] = event.to;
-            }
-
-            if (!Object.values(tokenIdToFinalOwner).every((owner) => owner === payload.taker)) {
-              safeToUse = false;
+            // Every token landed in the taker's wallet
+            const uniqueTokens = [
+              ...new Set(events.map((e) => `${e.contract}:${e.tokenId}`)).values(),
+            ].map((t) => t.split(":"));
+            for (const [contract, tokenId] of uniqueTokens) {
+              if (
+                !events.find(
+                  (e) => e.contract === contract && e.tokenId === tokenId && e.to === payload.taker
+                )
+              ) {
+                safeToUse = false;
+                break;
+              }
             }
           }
         }
