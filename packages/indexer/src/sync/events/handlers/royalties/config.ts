@@ -51,6 +51,11 @@ addPlatformAddress("godid", ["0xe89b80d335a643495cfcf004037a381565edc130"]);
 
 addPlatformAddress("jungle", ["0x143ed32cd8c609a13dd73b3803d39e7a7544b1a4"]);
 
+addPlatformAddress("fabrica", [
+  "0xe35450f17229010f416355c3acb5cd1d19bebeb6",
+  "0xc888f5e3dd4fbeb37f6e1ba6fa68c83ab0cf7b2c",
+]);
+
 // List of supported exchanges
 export const supportedExchanges: Map<OrderKind, string> = new Map();
 supportedExchanges.set("blur", Sdk.Blur.Addresses.Exchange[config.chainId]);
