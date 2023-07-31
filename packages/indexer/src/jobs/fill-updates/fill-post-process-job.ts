@@ -10,6 +10,8 @@ import {
   WebsocketEventKind,
   WebsocketEventRouter,
 } from "@/jobs/websocket-events/websocket-event-router";
+import { acquireLock } from "@/common/redis";
+import pLimit from "p-limit";
 
 export class FillPostProcessJob extends AbstractRabbitMqJobHandler {
   queueName = "fill-post-process";
@@ -30,7 +32,28 @@ export class FillPostProcessJob extends AbstractRabbitMqJobHandler {
       assignWashTradingScoreToFillEvents(allFillEvents),
     ]);
 
-    const queries: PgPromiseQuery[] = allFillEvents.map((event) => {
+    const freeFillEvents: es.fills.Event[] = [];
+    const limit = pLimit(10);
+
+    await Promise.all(
+      allFillEvents.map((fillEvent: es.fills.Event) =>
+        limit(async () => {
+          const baseEventParams = fillEvent.baseEventParams;
+          const lockId = `fill-event-${baseEventParams.txHash}-${baseEventParams.logIndex}-${baseEventParams.batchIndex}`;
+          try {
+            if (await acquireLock(lockId, 30)) {
+              freeFillEvents.push(fillEvent);
+            } else {
+              logger.warn("fill-post-process", `Acquire lock failed ${lockId}`);
+            }
+          } catch {
+            // Skip erros
+          }
+        })
+      )
+    );
+
+    const queries: PgPromiseQuery[] = freeFillEvents.map((event) => {
       return {
         query: `
             UPDATE fill_events_2 SET
