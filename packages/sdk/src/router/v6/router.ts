@@ -30,6 +30,7 @@ import {
   PerCurrencyListingDetails,
   PerPoolSwapDetails,
   SwapDetail,
+  PreSignature,
 } from "./types";
 import { generateSwapExecutions } from "./swap/index";
 import { generateFTApprovalTxData, generateNFTApprovalTxData, isETH, isWETH } from "./utils";
@@ -361,6 +362,7 @@ export class Router {
     const txs: {
       approvals: FTApproval[];
       permits: { kind: "erc20"; data: PermitWithTransfers }[];
+      preSignatures: PreSignature[];
       txData: TxData;
       orderIds: string[];
     }[] = [];
@@ -390,6 +392,7 @@ export class Router {
         txs.push({
           approvals: [],
           permits: [],
+          preSignatures: [],
           txData: exchange.fillOrderTx(
             taker,
             Number(order.params.id),
@@ -502,6 +505,7 @@ export class Router {
             txs.push({
               approvals: [],
               permits: [],
+              preSignatures: [],
               txData: {
                 from: data.from,
                 to: data.to,
@@ -602,8 +606,10 @@ export class Router {
 
     const relayer = options?.relayer ?? taker;
 
-    // If all orders are Seaport, then fill on Seaport directly
-    // TODO: Directly fill for other exchanges as well
+    // Direct filling for:
+    // - seaport-1.5
+    // - alienswap
+    // - payment-processor
 
     if (
       details.every(
@@ -645,6 +651,7 @@ export class Router {
             {
               approvals: approval ? [approval] : [],
               permits: [],
+              preSignatures: [],
               txData: await exchange.fillOrderTx(
                 taker,
                 order,
@@ -666,6 +673,7 @@ export class Router {
             {
               approvals: approval ? [approval] : [],
               permits: [],
+              preSignatures: [],
               txData: await exchange.fillOrdersTx(
                 taker,
                 orders,
@@ -723,6 +731,7 @@ export class Router {
             {
               approvals: approval ? [approval] : [],
               permits: [],
+              preSignatures: [],
               txData: await exchange.fillOrderTx(
                 taker,
                 order,
@@ -744,6 +753,7 @@ export class Router {
             {
               approvals: approval ? [approval] : [],
               permits: [],
+              preSignatures: [],
               txData: await exchange.fillOrdersTx(
                 taker,
                 orders,
@@ -759,6 +769,71 @@ export class Router {
           success: Object.fromEntries(details.map((d) => [d.orderId, true])),
         };
       }
+    }
+
+    if (
+      details.every(
+        ({ kind, fees, currency }) =>
+          kind === "payment-processor" &&
+          buyInCurrency === currency &&
+          // All orders must have the same currency
+          currency === details[0].currency &&
+          !fees?.length
+      ) &&
+      !options?.globalFees?.length &&
+      !options?.forceRouter &&
+      !options?.relayer &&
+      !options?.usePermit
+    ) {
+      const exchange = new Sdk.PaymentProcessor.Exchange(this.chainId);
+      const operator = exchange.contract.address;
+
+      let approval: FTApproval | undefined;
+      if (!isETH(this.chainId, details[0].currency)) {
+        approval = {
+          currency: details[0].currency,
+          amount: details[0].price,
+          owner: taker,
+          operator,
+          txData: generateFTApprovalTxData(details[0].currency, taker, operator),
+        };
+      }
+
+      const orders: Sdk.PaymentProcessor.Order[] = [];
+      const takeOrders: Sdk.PaymentProcessor.Order[] = [];
+      const preSignatures: PreSignature[] = [];
+      for (const detail of details) {
+        const order = detail.order as Sdk.PaymentProcessor.Order;
+
+        const takerOrder = order.buildMatching({
+          taker,
+          takerMasterNonce: await exchange.getMasterNonce(this.provider, taker),
+        });
+
+        orders.push(order);
+        takeOrders.push(takerOrder);
+
+        const signData = takerOrder.getSignatureData();
+        preSignatures.push({
+          kind: "payment-processor-take-order",
+          signer: taker,
+          data: signData,
+          uniqueId: `${takerOrder.params.tokenAddress}-${takerOrder.params.tokenId}-${takerOrder.params.price}`,
+        });
+      }
+
+      return {
+        txs: [
+          {
+            approvals: approval ? [approval] : [],
+            permits: [],
+            preSignatures: preSignatures,
+            txData: exchange.fillOrdersTx(taker, orders, takeOrders),
+            orderIds: details.map((d) => d.orderId),
+          },
+        ],
+        success: Object.fromEntries(details.map((d) => [d.orderId, true])),
+      };
     }
 
     const numDetailsToConsider = details.filter((d) => !success[d.orderId]).length;
@@ -2852,6 +2927,7 @@ export class Router {
 
         txs.push({
           approvals: [],
+          preSignatures: [],
           permits: await new PermitHandler(this.chainId, this.provider)
             .generate(relayer, ftTransferItems)
             .then((permits) =>
@@ -2879,6 +2955,7 @@ export class Router {
         txs.push({
           approvals,
           permits: [],
+          preSignatures: [],
           txData: {
             from: relayer,
             ...(ftTransferItems.length

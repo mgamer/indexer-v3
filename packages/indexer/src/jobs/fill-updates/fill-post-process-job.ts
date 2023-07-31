@@ -1,17 +1,18 @@
+import pLimit from "p-limit";
+
 import { AbstractRabbitMqJobHandler, BackoffStrategy } from "@/jobs/abstract-rabbit-mq-job-handler";
 import { idb, pgp, PgPromiseQuery } from "@/common/db";
-import { toBuffer } from "@/common/utils";
 import { logger } from "@/common/logger";
+import { acquireLock } from "@/common/redis";
+import { toBuffer } from "@/common/utils";
+import { config } from "@/config/index";
 import * as es from "@/events-sync/storage";
 import { assignRoyaltiesToFillEvents } from "@/events-sync/handlers/royalties";
 import { assignWashTradingScoreToFillEvents } from "@/events-sync/handlers/utils/fills";
-import { config } from "@/config/index";
 import {
   WebsocketEventKind,
   WebsocketEventRouter,
 } from "@/jobs/websocket-events/websocket-event-router";
-import { acquireLock } from "@/common/redis";
-import pLimit from "p-limit";
 
 export class FillPostProcessJob extends AbstractRabbitMqJobHandler {
   queueName = "fill-post-process";
@@ -43,8 +44,6 @@ export class FillPostProcessJob extends AbstractRabbitMqJobHandler {
           try {
             if (await acquireLock(lockId, 30)) {
               freeFillEvents.push(fillEvent);
-            } else {
-              logger.warn("fill-post-process", `Acquire lock failed ${lockId}`);
             }
           } catch {
             // Skip erros

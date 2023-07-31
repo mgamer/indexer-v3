@@ -33,6 +33,7 @@ import * as mints from "@/orderbook/mints";
 import { generateCollectionMintTxData } from "@/orderbook/mints/calldata";
 import { getNFTTransferEvents } from "@/orderbook/mints/simulation";
 import { getPermitId, getPermit, savePermit } from "@/utils/permits";
+import { getPreSignatureId, getPreSignature, savePreSignature } from "@/utils/pre-signatures";
 import { getUSDAndCurrencyPrices } from "@/utils/prices";
 
 const version = "v7";
@@ -1275,6 +1276,13 @@ export const getExecuteBuyV7Options: RouteOptions = {
           items: [],
         },
         {
+          id: "pre-signatures",
+          action: "Sign orders",
+          description: "Some marketplaces require signing additional orders before filling",
+          kind: "signature",
+          items: [],
+        },
+        {
           id: "sale",
           action: "Confirm transaction in your wallet",
           description: "To purchase this item you must confirm the transaction and pay the gas fee",
@@ -1440,6 +1448,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
             orderIds,
             approvals: [],
             permits: [],
+            preSignatures: [],
           }))
         );
 
@@ -1461,7 +1470,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
         ? bn(payload.maxPriorityFeePerGas).toHexString()
         : undefined;
 
-      for (const { txData, approvals, permits, orderIds } of txs) {
+      for (const { txData, approvals, permits, orderIds, preSignatures } of txs) {
         // Handle approvals
         for (const approval of approvals) {
           const approvedAmount = await onChainData
@@ -1519,6 +1528,47 @@ export const getExecuteBuyV7Options: RouteOptions = {
           });
         }
 
+        // Handle pre-signatures
+        const signaturesPaymentProcessor: string[] = [];
+        for (const preSignature of preSignatures) {
+          if (preSignature.kind === "payment-processor-take-order") {
+            const id = getPreSignatureId(request.payload as object, {
+              uniqueId: preSignature.uniqueId,
+            });
+
+            const cachedSignature = await getPreSignature(id);
+            if (cachedSignature) {
+              preSignature.signature = cachedSignature.signature;
+            } else {
+              await savePreSignature(id, preSignature);
+            }
+
+            const hasSignature = preSignature.signature;
+            if (hasSignature) {
+              signaturesPaymentProcessor.push(preSignature.signature!);
+              continue;
+            }
+
+            steps[3].items.push({
+              status: "incomplete",
+              data: {
+                sign: preSignature.data,
+                post: {
+                  endpoint: "/execute/pre-signature/v1",
+                  method: "POST",
+                  body: {
+                    id,
+                  },
+                },
+              },
+            });
+          }
+        }
+        if (signaturesPaymentProcessor.length && !steps[3].items.length) {
+          const exchange = new Sdk.PaymentProcessor.Exchange(config.chainId);
+          txData.data = exchange.attachTakerSignatures(txData.data, signaturesPaymentProcessor);
+        }
+
         // Cannot skip balance checking when filling Blur orders
         if (payload.skipBalanceCheck && path.some((p) => p.source === "blur.io")) {
           payload.skipBalanceCheck = false;
@@ -1547,20 +1597,21 @@ export const getExecuteBuyV7Options: RouteOptions = {
           }
         }
 
-        steps[3].items.push({
+        steps[4].items.push({
           status: "incomplete",
           orderIds,
-          // Do not return the final step unless all permits have a signature attached
-          data: !steps[2].items.length
-            ? {
-                ...permitHandler.attachToRouterExecution(
-                  txData,
-                  permits.map((p) => p.data)
-                ),
-                maxFeePerGas,
-                maxPriorityFeePerGas,
-              }
-            : undefined,
+          // Do not return the final step unless all previous steps are completed
+          data:
+            !steps[2].items.length && !steps[3].items.length
+              ? {
+                  ...permitHandler.attachToRouterExecution(
+                    txData,
+                    permits.map((p) => p.data)
+                  ),
+                  maxFeePerGas,
+                  maxPriorityFeePerGas,
+                }
+              : undefined,
         });
       }
 
