@@ -342,34 +342,42 @@ export class RabbitMqJobsConsumer {
       : RabbitMqJobsConsumer.channelsToJobs.set(channel, [job]);
 
     // Subscribe to the queue
-    await channel.consume(
-      job.getQueue(),
-      async (msg) => {
-        if (!_.isNull(msg)) {
-          await _.clone(job).consume(channel, msg);
+    await channel
+      .consume(
+        job.getQueue(),
+        async (msg) => {
+          if (!_.isNull(msg)) {
+            await _.clone(job).consume(channel, msg);
+          }
+        },
+        {
+          consumerTag: RabbitMqJobsConsumer.getConsumerTag(job.getQueue()),
+          prefetch: job.getConcurrency(),
+          noAck: false,
         }
-      },
-      {
-        consumerTag: RabbitMqJobsConsumer.getConsumerTag(job.getQueue()),
-        prefetch: job.getConcurrency(),
-        noAck: false,
-      }
-    );
+      )
+      .catch((error) => {
+        logger.error("rabbit-consume", `error consuming from ${job.queueName} error ${error}`);
+      });
 
     // Subscribe to the retry queue
-    await channel.consume(
-      job.getRetryQueue(),
-      async (msg) => {
-        if (!_.isNull(msg)) {
-          await _.clone(job).consume(channel, msg);
+    await channel
+      .consume(
+        job.getRetryQueue(),
+        async (msg) => {
+          if (!_.isNull(msg)) {
+            await _.clone(job).consume(channel, msg);
+          }
+        },
+        {
+          consumerTag: RabbitMqJobsConsumer.getConsumerTag(job.getRetryQueue()),
+          prefetch: _.max([_.toInteger(job.getConcurrency() / 4), 1]) ?? 1,
+          noAck: false,
         }
-      },
-      {
-        consumerTag: RabbitMqJobsConsumer.getConsumerTag(job.getRetryQueue()),
-        prefetch: _.max([_.toInteger(job.getConcurrency() / 4), 1]) ?? 1,
-        noAck: false,
-      }
-    );
+      )
+      .catch((error) => {
+        logger.error("rabbit-consume", `error consuming from ${job.queueName} error ${error}`);
+      });
   }
 
   /**
