@@ -184,6 +184,7 @@ export class SaleWebsocketEventsTriggerQueueJob extends AbstractRabbitMqJobHandl
           maker: fromBuffer(r.maker),
           taker: fromBuffer(r.taker),
         },
+        changed,
         data: result,
         offset: data.offset,
       });
