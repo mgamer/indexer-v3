@@ -8,7 +8,7 @@ import { getSellOrderId } from "@/orderbook/orders/midaswap";
 import * as utils from "@/events-sync/utils";
 import { getUSDAndNativePrices } from "@/utils/prices";
 import { redb } from "@/common/db";
-import { save } from "@/orderbook/orders/midaswap/new";
+import { save, getOrderId } from "@/orderbook/orders/midaswap/new";
 
 export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChainData) => {
   logger.info("midaswap-debug", JSON.stringify(events));
@@ -124,20 +124,39 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         const parsedLog = eventData.abi.parseLog(log);
         const lpTokenId = parsedLog.args["lpTokenId"] as BigNumber;
 
-        onChainData.orders.push({
-          kind: "midaswap",
-          info: {
-            orderParams: {
-              pool: baseEventParams.address,
+        const buyOrderId = getOrderId(baseEventParams.address, lpTokenId.toString());
+        const ids = await redb.manyOrNone(
+          `
+                SELECT id FROM orders
+                WHERE orders.kind = 'midaswap'
+                AND orders.side = 'sell'
+                AND orders.fillability_status = 'fillable'
+                AND orders.raw_data->>'lpTokenId' = $/lpTokenId/
+              `,
+          {
+            lpTokenId: lpTokenId.toString(),
+          }
+        );
+
+        [...ids.map((item) => item.id), buyOrderId].forEach((id) => {
+          onChainData.cancelEvents.push({
+            orderKind: "midaswap",
+            orderId: id,
+            baseEventParams,
+          });
+
+          onChainData.orderInfos.push({
+            context: `cancelled-${id}-${baseEventParams.txHash}`,
+            id,
+            trigger: {
+              kind: "cancel",
               txHash: baseEventParams.txHash,
               txTimestamp: baseEventParams.timestamp,
-              txBlock: baseEventParams.block,
               logIndex: baseEventParams.logIndex,
-              eventName: subKind,
-              lpTokenId: lpTokenId.toString(),
+              batchIndex: baseEventParams.batchIndex,
+              blockHash: baseEventParams.blockHash,
             },
-            metadata: {},
-          },
+          });
         });
 
         break;
