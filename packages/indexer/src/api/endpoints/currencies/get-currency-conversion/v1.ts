@@ -5,7 +5,7 @@ import Joi from "joi";
 
 import { logger } from "@/common/logger";
 import { formatPrice, now, regex, bn, formatUsd } from "@/common/utils";
-import { getUSDAndCurrencyPrices } from "@/utils/prices";
+import { getAvailableUSDPrice, getUSDAndCurrencyPrices } from "@/utils/prices";
 import { getCurrency } from "@/utils/currencies";
 import * as Boom from "@hapi/boom";
 
@@ -26,14 +26,8 @@ export const getCurrencyConversionV1Options: RouteOptions = {
   },
   validate: {
     query: Joi.object({
-      from: Joi.string()
-        .lowercase()
-        .pattern(regex.address)
-        .description("Currency address to convert from"),
-      to: Joi.string()
-        .lowercase()
-        .pattern(regex.address)
-        .description("Currency address to convert to"),
+      from: Joi.string().lowercase().description("Currency address or fiat symbol to convert from"),
+      to: Joi.string().lowercase().description("Currency address or fiat symbol to convert to"),
     }),
   },
   response: {
@@ -50,29 +44,47 @@ export const getCurrencyConversionV1Options: RouteOptions = {
     const query = request.query as any;
 
     try {
-      const currencies = await Promise.allSettled([getCurrency(query.from), getCurrency(query.to)]);
-      const fromCurrency = currencies[0].status === "fulfilled" ? currencies[0].value : undefined;
-      const toCurrency = currencies[1].status === "fulfilled" ? currencies[1].value : undefined;
-
-      if (!fromCurrency || !toCurrency) {
-        throw Boom.badRequest(!fromCurrency ? "From currency missing" : "To currency missing");
-      }
-
+      let conversion: string | undefined;
+      let usd: string | undefined;
       const currentTime = now();
-      const prices = await getUSDAndCurrencyPrices(
-        query.from,
-        query.to,
-        `${bn(10).pow(fromCurrency.decimals!)}`,
-        currentTime
-      );
-      const conversion: string | undefined = prices.currencyPrice
-        ? `${formatPrice(prices.currencyPrice, toCurrency.decimals)}`
-        : undefined;
-      const usd: string | undefined = prices.usdPrice ? `${formatUsd(prices.usdPrice)}` : undefined;
+
+      if (query.from.match(regex.address) && query.to.match(regex.address)) {
+        const currencies = await Promise.allSettled([
+          getCurrency(query.from),
+          getCurrency(query.to),
+        ]);
+        const fromCurrency = currencies[0].status === "fulfilled" ? currencies[0].value : undefined;
+        const toCurrency = currencies[1].status === "fulfilled" ? currencies[1].value : undefined;
+
+        if (!fromCurrency || !toCurrency) {
+          throw Boom.badRequest(!fromCurrency ? "From currency missing" : "To currency missing");
+        }
+        const price = `${bn(10).pow(fromCurrency.decimals!)}`;
+        const prices = await getUSDAndCurrencyPrices(query.from, query.to, price, currentTime);
+        conversion = prices.currencyPrice
+          ? `${formatPrice(prices.currencyPrice, toCurrency.decimals)}`
+          : undefined;
+        usd = prices.usdPrice;
+      } else {
+        if (query.from !== "usd" && query.to !== "usd") {
+          throw Boom.badRequest("Fiat currency not supported");
+        }
+        const cryptoCurrency = query.from.match(regex.address) ? query.from : query.to;
+        const currency = await getCurrency(cryptoCurrency);
+        const currencyUSDPrice = await getAvailableUSDPrice(cryptoCurrency, currentTime, false);
+        usd = currencyUSDPrice?.value || "0";
+        const currencyUnit = bn(10).pow(currency.decimals!);
+        const usdUnit = bn(10).pow(6);
+        const usdToEthereumWei = usdUnit.mul(currencyUnit).div(usd);
+        conversion =
+          query.to === currency.contract
+            ? `${formatPrice(usdToEthereumWei, currency.decimals)}`
+            : `${formatUsd(usd)}`;
+      }
 
       return {
         conversion,
-        usd,
+        usd: usd ? `${formatUsd(usd)}` : undefined,
       };
     } catch (error) {
       logger.error(`get-currency-conversion-${version}-handler`, `Handler failure: ${error}`);
