@@ -141,6 +141,7 @@ import { countApiUsageJob } from "@/jobs/metrics/count-api-usage-job";
 import { transferWebsocketEventsTriggerQueueJob } from "@/jobs/websocket-events/transfer-websocket-events-trigger-job";
 import { tokenAttributeWebsocketEventsTriggerQueueJob } from "@/jobs/websocket-events/token-attribute-websocket-events-trigger-job";
 import { topBidWebSocketEventsTriggerJob } from "@/jobs/websocket-events/top-bid-websocket-events-trigger-job";
+import { collectionWebsocketEventsTriggerQueueJob } from "@/jobs/websocket-events/collection-websocket-events-trigger-job";
 import { backfillDeleteExpiredBidsElasticsearchJob } from "@/jobs/activities/backfill/backfill-delete-expired-bids-elasticsearch-job";
 import { transferUpdatesJob } from "@/jobs/transfer-updates/transfer-updates-job";
 import { backfillSaveActivitiesElasticsearchJob } from "@/jobs/activities/backfill/backfill-save-activities-elasticsearch-job";
@@ -266,6 +267,7 @@ export class RabbitMqJobsConsumer {
       openseaOrdersFetchJob,
       saveBidEventsJob,
       countApiUsageJob,
+      collectionWebsocketEventsTriggerQueueJob,
       saleWebsocketEventsTriggerQueueJob,
       transferWebsocketEventsTriggerQueueJob,
       tokenAttributeWebsocketEventsTriggerQueueJob,
