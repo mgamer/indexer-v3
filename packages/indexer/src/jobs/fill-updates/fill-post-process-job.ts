@@ -83,7 +83,9 @@ export class FillPostProcessJob extends AbstractRabbitMqJobHandler {
       };
     });
 
-    await idb.none(pgp.helpers.concat(queries));
+    if (queries.length) {
+      await idb.none(pgp.helpers.concat(queries));
+    }
 
     try {
       if (config.doOldOrderWebsocketWork) {
