@@ -229,6 +229,22 @@ export type FillBidsResult = {
   success: { [orderId: string]: boolean };
 };
 
+// Mints
+
+// Basic details for filling mints
+export type MintDetails = {
+  orderId: string;
+  txData: TxData;
+};
+
+export type FillMintsResult = {
+  txs: {
+    txData: TxData;
+    orderIds: string[];
+  }[];
+  success: { [orderId: string]: boolean };
+};
+
 // Swaps
 
 export type PerPoolSwapDetails = {

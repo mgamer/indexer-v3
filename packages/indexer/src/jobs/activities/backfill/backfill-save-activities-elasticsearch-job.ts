@@ -16,7 +16,7 @@ import { AskCancelledEventHandler } from "@/elasticsearch/indexes/activities/eve
 import { BidCreatedEventHandler } from "@/elasticsearch/indexes/activities/event-handlers/bid-created";
 import { BidCancelledEventHandler } from "@/elasticsearch/indexes/activities/event-handlers/bid-cancelled";
 import { FillEventCreatedEventHandler } from "@/elasticsearch/indexes/activities/event-handlers/fill-event-created";
-import { toBuffer } from "@/common/utils";
+import { fromBuffer, toBuffer } from "@/common/utils";
 import { NftTransferEventCreatedEventHandler } from "@/elasticsearch/indexes/activities/event-handlers/nft-transfer-event-created";
 
 export type BackfillSaveActivitiesElasticsearchJobPayload = {
@@ -83,6 +83,8 @@ export class BackfillSaveActivitiesElasticsearchJob extends AbstractRabbitMqJobH
             cursor,
             indexName,
             keepGoing,
+            nextCursor,
+            hasNextCursor: !!nextCursor,
             hasErrors: bulkResponse.errors,
             errors: bulkResponse.items.filter((item) => item.index?.error),
           })
@@ -92,7 +94,7 @@ export class BackfillSaveActivitiesElasticsearchJob extends AbstractRabbitMqJobH
           this.queueName,
           JSON.stringify({
             topic: "backfill-activities",
-            message: `KeepGoing. type=${type}, fromTimestamp=${fromTimestampISO}, toTimestamp=${toTimestampISO}, keepGoing=${keepGoing}`,
+            message: `KeepGoing. type=${type}, fromTimestamp=${fromTimestampISO}, toTimestamp=${toTimestampISO}`,
             type,
             fromTimestamp,
             toTimestamp,
@@ -145,7 +147,7 @@ export class BackfillSaveActivitiesElasticsearchJob extends AbstractRabbitMqJobH
       "onCompleted",
       async (
         message: RabbitMQMessage,
-        processResult: { addToQueue: boolean; nextCursor?: OrderCursorInfo }
+        processResult: { addToQueue: boolean; nextCursor?: OrderCursorInfo | EventCursorInfo }
       ) => {
         if (processResult.addToQueue) {
           await this.addToQueue(
@@ -163,7 +165,7 @@ export class BackfillSaveActivitiesElasticsearchJob extends AbstractRabbitMqJobH
 
   public async addToQueue(
     type: "ask" | "ask-cancel" | "bid" | "bid-cancel" | "sale" | "transfer",
-    cursor?: OrderCursorInfo,
+    cursor?: OrderCursorInfo | EventCursorInfo,
     fromTimestamp?: number,
     toTimestamp?: number,
     indexName?: string,
@@ -178,7 +180,7 @@ export class BackfillSaveActivitiesElasticsearchJob extends AbstractRabbitMqJobH
         payload: { type, cursor, fromTimestamp, toTimestamp, indexName, keepGoing },
         jobId: `${type}:${fromTimestamp}:${toTimestamp}:${keepGoing}:${indexName}`,
       },
-      1000
+      keepGoing ? 5000 : 1000
     );
   }
 }
@@ -359,7 +361,7 @@ const getBidActivities = async (
 
   if (results.length) {
     for (const result of results) {
-      const eventHandler = new AskCreatedEventHandler(
+      const eventHandler = new BidCreatedEventHandler(
         result.order_id,
         result.event_tx_hash,
         result.event_log_index,
@@ -417,7 +419,7 @@ const getBidCancelActivities = async (
 
   if (results.length) {
     for (const result of results) {
-      const eventHandler = new AskCreatedEventHandler(
+      const eventHandler = new BidCancelledEventHandler(
         result.order_id,
         result.event_tx_hash,
         result.event_log_index,
@@ -446,7 +448,7 @@ const getSaleActivities = async (
   cursor?: EventCursorInfo
 ) => {
   const activities = [];
-  let nextCursor: OrderCursorInfo | undefined;
+  let nextCursor: EventCursorInfo | undefined;
 
   let continuationFilter = "";
 
@@ -489,8 +491,10 @@ const getSaleActivities = async (
     const lastResult = results[results.length - 1];
 
     nextCursor = {
-      updatedAt: lastResult.updated_ts,
-      id: lastResult.order_id,
+      timestamp: lastResult.event_timestamp,
+      txHash: fromBuffer(lastResult.event_tx_hash),
+      logIndex: lastResult.event_log_index,
+      batchIndex: lastResult.event_batch_index,
     };
   }
 
@@ -503,7 +507,7 @@ const getTransferActivities = async (
   cursor?: EventCursorInfo
 ) => {
   const activities = [];
-  let nextCursor: OrderCursorInfo | undefined;
+  let nextCursor: EventCursorInfo | undefined;
 
   let continuationFilter = "";
 
@@ -513,7 +517,7 @@ const getTransferActivities = async (
 
   const query = `
             ${NftTransferEventCreatedEventHandler.buildBaseQuery()}
-            WHERE  NOT EXISTS (
+            WHERE NOT EXISTS (
              SELECT 1
              FROM   fill_events_2 fe
              WHERE  fe.tx_hash = nft_transfer_events.tx_hash
@@ -539,7 +543,7 @@ const getTransferActivities = async (
 
   if (results.length) {
     for (const result of results) {
-      const eventHandler = new FillEventCreatedEventHandler(
+      const eventHandler = new NftTransferEventCreatedEventHandler(
         result.event_tx_hash,
         result.event_log_index,
         result.event_batch_index
@@ -553,8 +557,10 @@ const getTransferActivities = async (
     const lastResult = results[results.length - 1];
 
     nextCursor = {
-      updatedAt: lastResult.updated_ts,
-      id: lastResult.order_id,
+      timestamp: lastResult.event_timestamp,
+      txHash: fromBuffer(lastResult.event_tx_hash),
+      logIndex: lastResult.event_log_index,
+      batchIndex: lastResult.event_batch_index,
     };
   }
 
