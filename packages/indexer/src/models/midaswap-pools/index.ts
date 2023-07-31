@@ -22,8 +22,8 @@ export const saveMidaswapPool = async (midaswapPool: MidaswapPool): Promise<Mida
         $/address/,
         $/nft/,
         $/token/,
-        $/freeRate/,
-        $/royalty/
+        $/freeRateBps/,
+        $/royaltyBps/
       )
       ON CONFLICT DO NOTHING
     `,

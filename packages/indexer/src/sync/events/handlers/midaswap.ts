@@ -8,6 +8,7 @@ import { getSellOrderId } from "@/orderbook/orders/midaswap";
 import * as utils from "@/events-sync/utils";
 import { getUSDAndNativePrices } from "@/utils/prices";
 import { redb } from "@/common/db";
+import { save } from "@/orderbook/orders/midaswap/new";
 
 export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChainData) => {
   logger.info("midaswap-debug", JSON.stringify(events));
@@ -18,7 +19,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
     switch (subKind) {
       // create pool
       case "midaswap-new-erc721-pair": {
-        midaswapUtils.getPoolDetails(baseEventParams.address);
+        await midaswapUtils.getPoolDetails(baseEventParams.address);
         break;
       }
 
@@ -49,6 +50,24 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
               metadata: {},
             },
           });
+          save([
+            {
+              orderParams: {
+                pool: baseEventParams.address,
+                txHash: baseEventParams.txHash,
+                txTimestamp: baseEventParams.timestamp,
+                txBlock: baseEventParams.block,
+                logIndex: baseEventParams.logIndex,
+                eventName: subKind,
+                lpTokenId: lpTokenId.toString(),
+                nftId: nftId.toString(),
+                binLower: binLower,
+                binstep: binStep,
+                binAmount: nftIds.length,
+              },
+              metadata: {},
+            },
+          ]);
         });
 
         break;
@@ -80,6 +99,23 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
             metadata: {},
           },
         });
+        save([
+          {
+            orderParams: {
+              pool: baseEventParams.address,
+              txHash: baseEventParams.txHash,
+              txTimestamp: baseEventParams.timestamp,
+              txBlock: baseEventParams.block,
+              logIndex: baseEventParams.logIndex,
+              eventName: subKind,
+              lpTokenId: lpTokenId.toString(),
+              binLower: binLower,
+              binstep: binStep,
+              binAmount: binAmount.toNumber(),
+            },
+            metadata: {},
+          },
+        ]);
 
         break;
       }

@@ -12,10 +12,10 @@ export const getPoolDetails = async (address: string) =>
   getMidaswapPool(address).catch(async () => {
     if (Sdk.Midaswap.Addresses.PairFactory[config.chainId]) {
       try {
-        const pool = new Contract(address, PairAbi, baseProvider);
-        const nft = (await pool.getTokenX()).toLowerCase();
-        const token = (await pool.getTokenY()).toLowerCase();
-        const [freeRate, , royaltyRate] = (await pool.feeParameters()) as BigNumber[];
+        const poolContract = new Contract(address, PairAbi, baseProvider);
+        const nft = (await poolContract.getTokenX()).toLowerCase();
+        const token = (await poolContract.getTokenY()).toLowerCase();
+        const [freeRate, , royaltyRate] = (await poolContract.feeParameters()) as BigNumber[];
 
         return saveMidaswapPool({
           address,
