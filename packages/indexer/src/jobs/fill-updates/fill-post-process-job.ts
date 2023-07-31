@@ -13,7 +13,7 @@ import {
 
 export class FillPostProcessJob extends AbstractRabbitMqJobHandler {
   queueName = "fill-post-process";
-  maxRetries = 10;
+  maxRetries = 5;
   concurrency = 10;
   lazyMode = true;
   consumerTimeout = 60000;
