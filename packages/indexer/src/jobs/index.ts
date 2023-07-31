@@ -348,7 +348,14 @@ export class RabbitMqJobsConsumer {
       job.getQueue(),
       async (msg) => {
         if (!_.isNull(msg)) {
-          await _.clone(job).consume(channel, msg);
+          await _.clone(job)
+            .consume(channel, msg)
+            .catch((error) => {
+              logger.error(
+                "rabbit-consume",
+                `error consuming from ${job.queueName} error ${error}`
+              );
+            });
         }
       },
       {
@@ -363,7 +370,14 @@ export class RabbitMqJobsConsumer {
       job.getRetryQueue(),
       async (msg) => {
         if (!_.isNull(msg)) {
-          await _.clone(job).consume(channel, msg);
+          await _.clone(job)
+            .consume(channel, msg)
+            .catch((error) => {
+              logger.error(
+                "rabbit-consume",
+                `error consuming from ${job.queueName} error ${error}`
+              );
+            });
         }
       },
       {
