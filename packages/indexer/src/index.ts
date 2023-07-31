@@ -29,6 +29,6 @@ if (process.env.LOCAL_TESTING) {
       }
     })
     .catch((error) => {
-      logger.error("rabbit-publisher-connect", `Failed to connect to rabbit ${error}`);
+      logger.error("rabbit-publisher-connect", `Error connecting to rabbit ${error}`);
     });
 }
