@@ -1,4 +1,4 @@
-import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handler";
+import { AbstractRabbitMqJobHandler, BackoffStrategy } from "@/jobs/abstract-rabbit-mq-job-handler";
 import { idb, pgp, PgPromiseQuery } from "@/common/db";
 import { toBuffer } from "@/common/utils";
 import { logger } from "@/common/logger";
@@ -17,6 +17,10 @@ export class FillPostProcessJob extends AbstractRabbitMqJobHandler {
   concurrency = 10;
   lazyMode = true;
   consumerTimeout = 60000;
+  backoff = {
+    type: "exponential",
+    delay: 1000,
+  } as BackoffStrategy;
 
   protected async process(payload: es.fills.Event[]) {
     const allFillEvents = payload;
