@@ -1476,6 +1476,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
           });
         }
 
+        const paymentProcessorSignatures: string[] = [];
         for (const preSignature of preSignatures) {
           const id = getPreSignatureId(request.payload as object, preSignature.data);
           const cachedSignature = await getPreSignature(id);
@@ -1489,9 +1490,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
           if (hasSignature) {
             // Attch the signature
             if (preSignature.kind === "payment-processor-take-order") {
-              const exchange = new Sdk.PaymentProcessor.Exchange(config.chainId);
-              const newTxData = exchange.attchPostSignature(txData.data, preSignature.signature!);
-              txData.data = newTxData;
+              paymentProcessorSignatures.push(preSignature.signature!);
             }
             continue;
           }
@@ -1509,6 +1508,13 @@ export const getExecuteBuyV7Options: RouteOptions = {
               },
             },
           });
+        }
+
+        // Attach the post signatures
+        if (paymentProcessorSignatures.length && !steps[3].items.length) {
+          const exchange = new Sdk.PaymentProcessor.Exchange(config.chainId);
+          const newTxData = exchange.attchPostSignature(txData.data, paymentProcessorSignatures);
+          txData.data = newTxData;
         }
 
         // Cannot skip balance checking when filling Blur orders

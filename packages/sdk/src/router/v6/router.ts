@@ -461,6 +461,10 @@ export class Router {
         };
       }
 
+      const orders: Sdk.PaymentProcessor.Order[] = [];
+      const takeOrders: Sdk.PaymentProcessor.Order[] = [];
+      const preSignatures: PreSignature[] = [];
+
       for (const detail of details) {
         const order = details[0].order as Sdk.PaymentProcessor.Order;
         const takerMasterNonce = await exchange.getMasterNonce(this.provider, taker);
@@ -469,22 +473,25 @@ export class Router {
           takerMasterNonce,
         });
 
+        orders.push(order);
+        takeOrders.push(takerOrder);
+
         const signData = takerOrder.getSignatureData();
-        txs.push({
-          approvals: approval ? [approval] : [],
-          permits: [],
-          preSignatures: [
-            {
-              kind: "payment-processor-take-order",
-              data: signData,
-              signer: taker,
-            },
-          ],
-          txData: await exchange.fillOrderTx(taker, order, takerOrder),
-          orderIds: [details[0].orderId],
+        preSignatures.push({
+          kind: "payment-processor-take-order",
+          data: signData,
+          signer: taker,
         });
         success[detail.orderId] = true;
       }
+
+      txs.push({
+        approvals: approval ? [approval] : [],
+        permits: [],
+        preSignatures: preSignatures,
+        txData: await exchange.fillOrdersTx(taker, orders, takeOrders),
+        orderIds: [details[0].orderId],
+      });
     }
 
     // Return early if all listings were covered by Blur
