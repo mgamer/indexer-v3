@@ -1,13 +1,12 @@
 import { Contract } from "@ethersproject/contracts";
 import { parseEther } from "@ethersproject/units";
+import * as Sdk from "@reservoir0x/sdk/src";
 import * as Common from "@reservoir0x/sdk/src/common";
 import * as PaymentProcessor from "@reservoir0x/sdk/src/payment-processor";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import { constants } from "ethers";
-import * as Sdk from "@reservoir0x/sdk/src";
-import { checkEIP721Signature } from "@reservoir0x/sdk/src/utils";
 
 import { getChainId, getCurrentTimestamp, reset, setupNFTs } from "../../../utils";
 
@@ -160,7 +159,7 @@ describe("PaymentProcessor - SingleToken", () => {
     expect(ownerAfter).to.eq(buyer.address);
   });
 
-  it("Build and fill sell order with router", async () => {
+  it("Build and direct fill sell order", async () => {
     const buyer = alice;
     const seller = bob;
     const price = parseEther("1");
@@ -210,6 +209,7 @@ describe("PaymentProcessor - SingleToken", () => {
 
     buyOrder.checkSignature();
     sellOrder.checkSignature();
+
     await sellOrder.checkFillability(ethers.provider);
 
     const sellerBalanceBefore = await ethers.provider.getBalance(seller.address);
@@ -226,7 +226,7 @@ describe("PaymentProcessor - SingleToken", () => {
           order: sellOrder,
           currency: Sdk.Common.Addresses.Native[chainId],
           price: price.toString(),
-        }
+        },
       ],
       buyer.address,
       Sdk.Common.Addresses.Native[chainId],
@@ -236,35 +236,24 @@ describe("PaymentProcessor - SingleToken", () => {
     );
 
     for (const tx of nonPartialTx.txs) {
-      const { preSignatures } = tx;
-
-      const preSignatureArr: string[] =  [];
-
-      for(const { data: preSignature, kind, signer } of preSignatures) {
-        const signature = await buyer._signTypedData(
-          preSignature.domain,
-          preSignature.types,
-          preSignature.value
-        );
+      const preSignatures: string[] = [];
+      for (const { data: preSignature, kind } of tx.preSignatures) {
         if (kind === "payment-processor-take-order") {
-          preSignature.signature = signature;
-          const signatureValid = checkEIP721Signature(preSignature, signature, signer);
-          if (!signatureValid) {
-            throw new Error("signature not valid")
-          }
-          preSignatureArr.push(signature);
+          const signature = await buyer._signTypedData(
+            preSignature.domain,
+            preSignature.types,
+            preSignature.value
+          );
+          preSignatures.push(signature);
         }
       }
 
-      const newTxData = exchange.attchPostSignature(tx.txData.data, preSignatureArr);
+      const newTxData = exchange.attachTakerSignatures(tx.txData.data, preSignatures);
       tx.txData.data = newTxData;
 
-      await buyer.sendTransaction({
-        ...tx.txData,
-        gasLimit: 1000000
-      });
+      await buyer.sendTransaction(tx.txData);
     }
-  
+
     const sellerBalanceAfter = await ethers.provider.getBalance(seller.address);
     const ownerAfter = await nft.getOwner(soldTokenId);
     const receiveAmount = sellerBalanceAfter.sub(sellerBalanceBefore);

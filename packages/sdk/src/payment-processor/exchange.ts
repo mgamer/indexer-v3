@@ -1,14 +1,14 @@
+import { Result } from "@ethersproject/abi";
 import { Provider } from "@ethersproject/abstract-provider";
 import { Signer } from "@ethersproject/abstract-signer";
 import { BigNumber } from "@ethersproject/bignumber";
+import { splitSignature } from "@ethersproject/bytes";
 import { AddressZero } from "@ethersproject/constants";
 import { Contract, ContractTransaction } from "@ethersproject/contracts";
-import { splitSignature } from "@ethersproject/bytes";
-import { Result } from "@ethersproject/abi";
 
 import * as Addresses from "./addresses";
 import { Order } from "./order";
-import { TxData, generateSourceBytes, bn } from "../utils";
+import { TxData, bn, generateSourceBytes } from "../utils";
 
 import ExchangeAbi from "./abis/PaymentProcessor.json";
 
@@ -61,7 +61,7 @@ export class Exchange {
     };
   }
 
-  // --- Fill order ---
+  // --- Fill single order ---
 
   public async fillOrder(
     taker: Signer,
@@ -75,9 +75,78 @@ export class Exchange {
     return taker.sendTransaction(tx);
   }
 
-  // Attch the taker's signature to the calldata
-  public attchPostSignature(txData: string, signatures: string[]) {
+  public fillOrderTx(
+    taker: string,
+    order: Order,
+    matchOrder: Order,
+    options?: {
+      source?: string;
+    }
+  ): TxData {
+    const matchedOrder = order.getMatchedOrder(matchOrder);
+
+    const data = this.contract.interface.encodeFunctionData("buySingleListing", [
+      matchedOrder,
+      matchedOrder.listingSignature,
+      matchedOrder.offerSignature,
+    ]);
+    const passValue =
+      matchedOrder.buyer === taker.toLowerCase() && matchedOrder.paymentCoin === AddressZero;
+
+    return {
+      from: taker,
+      to: this.contract.address,
+      value: passValue ? order.params.price.toString() : "0",
+      data: data + generateSourceBytes(options?.source),
+    };
+  }
+
+  // --- Fill multiple orders ---
+
+  public fillOrdersTx(
+    taker: string,
+    orders: Order[],
+    matchOrders: Order[],
+    options?: {
+      source?: string;
+    }
+  ): TxData {
+    if (orders.length === 1) {
+      return this.fillOrderTx(taker, orders[0], matchOrders[0], options);
+    }
+
+    let price = bn(0);
+    const saleDetails = orders.map((c, i) => {
+      const matchedOrder = c.getMatchedOrder(matchOrders[i]);
+
+      const passValue =
+        matchedOrder.buyer === taker.toLowerCase() && matchedOrder.paymentCoin === AddressZero;
+      if (passValue) {
+        price = price.add(c.params.price);
+      }
+
+      return matchedOrder;
+    });
+
+    const data = this.contract.interface.encodeFunctionData("buyBatchOfListings", [
+      saleDetails,
+      saleDetails.map((c) => c.listingSignature),
+      saleDetails.map((c) => c.offerSignature),
+    ]);
+
+    return {
+      from: taker,
+      to: this.contract.address,
+      value: price.toString(),
+      data: data + generateSourceBytes(options?.source),
+    };
+  }
+
+  // --- Attach signatures ---
+
+  public attachTakerSignatures(txData: string, signatures: string[]) {
     const iface = this.contract.interface;
+
     const isBatch = txData.startsWith("0x5ed1f9bb");
     const inputs = isBatch
       ? iface.decodeFunctionData("buyBatchOfListings", txData)
@@ -101,32 +170,32 @@ export class Exchange {
     const signedListings = isBatch ? inputs.signedListings : [inputs.signedListing];
     const signedOffers = isBatch ? inputs.signedOffers : [inputs.signedOffer];
 
-    const newSaleDetails = saleDetailsArray.map((c: Result, index: number) => {
-      const signedListing = signedListings[index];
-      const signedOffer = signedOffers[index];
+    const newSaleDetails = saleDetailsArray.map((c: Result, i: number) => {
+      const signedListing = signedListings[i];
+      const signedOffer = signedOffers[i];
+
+      const { r, s, v } = splitSignature(signatures[i]);
+
       let newSignedListing = {
         r: signedListing.r,
         s: signedListing.s,
         v: signedListing.v,
       };
-
-      let newSignedOffer = {
-        r: signedOffer.r,
-        s: signedOffer.s,
-        v: signedOffer.v,
-      };
-
-      const { r, s, v } = splitSignature(signatures[index]);
-      if (signedOffer.v === 0) {
-        newSignedOffer = {
+      if (signedListing.v === 0) {
+        newSignedListing = {
           r,
           s,
           v,
         };
       }
 
-      if (signedListing.v === 0) {
-        newSignedListing = {
+      let newSignedOffer = {
+        r: signedOffer.r,
+        s: signedOffer.s,
+        v: signedOffer.v,
+      };
+      if (signedOffer.v === 0) {
+        newSignedOffer = {
           r,
           s,
           v,
@@ -140,74 +209,18 @@ export class Exchange {
       };
     });
 
-    return isBatch
-      ? iface.encodeFunctionData("buyBatchOfListings", [
-          newSaleDetails.map((c: Result) => c.saleDetail),
-          newSaleDetails.map((c: Result) => c.signedListing),
-          newSaleDetails.map((c: Result) => c.signedOffer),
-        ])
-      : iface.encodeFunctionData("buySingleListing", [
-          newSaleDetails[0].saleDetail,
-          newSaleDetails[0].signedListing,
-          newSaleDetails[0].signedOffer,
-        ]) + sourceBytes;
-  }
-
-  public fillOrderTx(
-    taker: string,
-    order: Order,
-    matchOrder: Order,
-    options?: {
-      source?: string;
-    }
-  ): TxData {
-    const macthOrder = order.getMatchedOrder(matchOrder);
-    const data = this.contract.interface.encodeFunctionData("buySingleListing", [
-      macthOrder,
-      macthOrder.listingSignature,
-      macthOrder.offerSignature,
-    ]);
-
-    const passValue =
-      macthOrder.buyer === taker.toLowerCase() && macthOrder.paymentCoin === AddressZero;
-    return {
-      from: taker,
-      to: this.contract.address,
-      value: passValue ? order.params.price.toString() : "0",
-      data: data + generateSourceBytes(options?.source),
-    };
-  }
-
-  public fillOrdersTx(
-    taker: string,
-    orders: Order[],
-    matchOrders: Order[],
-    options?: {
-      source?: string;
-    }
-  ): TxData {
-    let price = bn(0);
-    const saleDetails = orders.map((c, index) => {
-      const matchOrder = c.getMatchedOrder(matchOrders[index]);
-      const passValue =
-        matchOrder.buyer === taker.toLowerCase() && matchOrder.paymentCoin === AddressZero;
-      if (passValue) {
-        price = price.add(c.params.price);
-      }
-      return matchOrder;
-    });
-
-    const data = this.contract.interface.encodeFunctionData("buyBatchOfListings", [
-      saleDetails,
-      saleDetails.map((c) => c.listingSignature),
-      saleDetails.map((c) => c.offerSignature),
-    ]);
-
-    return {
-      from: taker,
-      to: this.contract.address,
-      value: price.toString(),
-      data: data + generateSourceBytes(options?.source),
-    };
+    return (
+      (isBatch
+        ? iface.encodeFunctionData("buyBatchOfListings", [
+            newSaleDetails.map((c: Result) => c.saleDetail),
+            newSaleDetails.map((c: Result) => c.signedListing),
+            newSaleDetails.map((c: Result) => c.signedOffer),
+          ])
+        : iface.encodeFunctionData("buySingleListing", [
+            newSaleDetails[0].saleDetail,
+            newSaleDetails[0].signedListing,
+            newSaleDetails[0].signedOffer,
+          ])) + sourceBytes
+    );
   }
 }

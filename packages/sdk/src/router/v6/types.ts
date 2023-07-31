@@ -180,11 +180,11 @@ export type PerCurrencyListingDetails = {
 
 export type PreSignature = {
   kind: "payment-processor-take-order";
-  // Signature Data
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  data: any;
   signer: string;
   signature?: string;
+  uniqueId: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  data: any;
 };
 
 export type FillListingsResult = {

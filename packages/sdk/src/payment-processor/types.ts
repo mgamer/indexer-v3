@@ -52,7 +52,7 @@ export type BaseOrder = {
   coin: string;
   privateBuyerOrDelegatedPurchaser: string;
   sellerOrBuyer: string;
-  sellerAcceptedOffer?: boolean;
+  sellerAcceptedOffer: boolean;
   maxRoyaltyFeeNumerator: string;
   collectionLevelOffer: boolean;
 

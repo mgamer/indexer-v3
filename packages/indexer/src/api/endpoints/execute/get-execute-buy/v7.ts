@@ -1276,9 +1276,9 @@ export const getExecuteBuyV7Options: RouteOptions = {
           items: [],
         },
         {
-          id: "taker-order",
-          action: "Sign Payment Processor",
-          description: "Some marketplaces require sign the taker order to filling",
+          id: "pre-signatures",
+          action: "Sign orders",
+          description: "Some marketplaces require signing additional orders before filling",
           kind: "signature",
           items: [],
         },
@@ -1528,45 +1528,45 @@ export const getExecuteBuyV7Options: RouteOptions = {
           });
         }
 
-        const paymentProcessorSignatures: string[] = [];
+        // Handle pre-signatures
+        const signaturesPaymentProcessor: string[] = [];
         for (const preSignature of preSignatures) {
-          const id = getPreSignatureId(request.payload as object, preSignature.data);
-          const cachedSignature = await getPreSignature(id);
-          if (cachedSignature) {
-            preSignature.signature = cachedSignature.signature;
-          } else {
-            await savePreSignature(id, preSignature);
-          }
+          if (preSignature.kind === "payment-processor-take-order") {
+            const id = getPreSignatureId(request.payload as object, {
+              uniqueId: preSignature.uniqueId,
+            });
 
-          const hasSignature = preSignature.signature;
-          if (hasSignature) {
-            // Attch the signature
-            if (preSignature.kind === "payment-processor-take-order") {
-              paymentProcessorSignatures.push(preSignature.signature!);
+            const cachedSignature = await getPreSignature(id);
+            if (cachedSignature) {
+              preSignature.signature = cachedSignature.signature;
+            } else {
+              await savePreSignature(id, preSignature);
             }
-            continue;
-          }
 
-          steps[3].items.push({
-            status: "incomplete",
-            data: {
-              sign: preSignature.data,
-              post: {
-                endpoint: "/execute/pre-signature/v1",
-                method: "POST",
-                body: {
-                  id,
+            const hasSignature = preSignature.signature;
+            if (hasSignature) {
+              signaturesPaymentProcessor.push(preSignature.signature!);
+              continue;
+            }
+
+            steps[3].items.push({
+              status: "incomplete",
+              data: {
+                sign: preSignature.data,
+                post: {
+                  endpoint: "/execute/pre-signature/v1",
+                  method: "POST",
+                  body: {
+                    id,
+                  },
                 },
               },
-            },
-          });
+            });
+          }
         }
-
-        // Attach the post signatures
-        if (paymentProcessorSignatures.length && !steps[3].items.length) {
+        if (signaturesPaymentProcessor.length && !steps[3].items.length) {
           const exchange = new Sdk.PaymentProcessor.Exchange(config.chainId);
-          const newTxData = exchange.attchPostSignature(txData.data, paymentProcessorSignatures);
-          txData.data = newTxData;
+          txData.data = exchange.attachTakerSignatures(txData.data, signaturesPaymentProcessor);
         }
 
         // Cannot skip balance checking when filling Blur orders
@@ -1600,7 +1600,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
         steps[4].items.push({
           status: "incomplete",
           orderIds,
-          // Do not return the final step unless all permits have a signature attached
+          // Do not return the final step unless all previous steps are completed
           data:
             !steps[2].items.length && !steps[3].items.length
               ? {

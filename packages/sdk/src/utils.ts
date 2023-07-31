@@ -3,6 +3,8 @@ import { keccak256 } from "@ethersproject/keccak256";
 import { randomBytes } from "@ethersproject/random";
 import { toUtf8Bytes, toUtf8String } from "@ethersproject/strings";
 import { verifyTypedData } from "@ethersproject/wallet";
+import { TypedDataDomain, TypedDataField } from "ethers";
+
 // Constants
 
 export const BytesEmpty = "0x";
@@ -51,13 +53,26 @@ export const getErrorMessage = (error: any) => {
   return errorMessage;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function checkEIP721Signature(data: any, signature: string, signer: string) {
-  const recoverSinger = verifyTypedData(data.domain, data.types, data.value, signature);
-  if (lc(signer) !== lc(recoverSinger)) {
-    return false;
+export function checkEIP721Signature(
+  data: {
+    domain: TypedDataDomain;
+    types: Record<string, TypedDataField[]>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    value: Record<string, any>;
+  },
+  signature: string,
+  signer: string
+) {
+  try {
+    const recoveredSigner = verifyTypedData(data.domain, data.types, data.value, signature);
+    if (lc(signer) === lc(recoveredSigner)) {
+      return true;
+    }
+  } catch {
+    // Skip errors
   }
-  return true;
+
+  return false;
 }
 
 // Misc
