@@ -143,6 +143,17 @@ export const savePartialListings = async (
 
       const id = getBlurListingId(orderParams, owner);
 
+      const isFiltered = await checkMarketplaceIsFiltered(orderParams.collection, [
+        Sdk.Blur.Addresses.ExecutionDelegate[config.chainId],
+      ]);
+
+      if (isFiltered) {
+        return results.push({
+          id,
+          status: "filtered",
+        });
+      }
+
       // Handle: royalties
       let feeBps = 0;
       const feeBreakdown: { kind: string; recipient: string; bps: number }[] = [];
