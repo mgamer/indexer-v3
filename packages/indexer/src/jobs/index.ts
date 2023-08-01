@@ -286,7 +286,10 @@ export class RabbitMqJobsConsumer {
 
   public static async connect() {
     for (let i = 0; i < RabbitMqJobsConsumer.maxConsumerConnectionsCount; ++i) {
-      const connection = amqplibConnectionManager.connect(config.rabbitMqUrl);
+      const connection = amqplibConnectionManager.connect(config.rabbitMqUrl, {
+        reconnectTimeInSeconds: 1,
+      });
+
       RabbitMqJobsConsumer.rabbitMqConsumerConnections.push(connection);
 
       const sharedChannel = connection.createChannel({ confirm: false });
