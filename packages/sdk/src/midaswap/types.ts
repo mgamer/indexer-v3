@@ -12,6 +12,6 @@ export type OrderParams = {
     prices: string[];
     bins: number[];
     lpTokenIds: string[];
-    floorPriceBin: number;
+    floorPrice?: string;
   };
 };

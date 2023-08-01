@@ -1,5 +1,5 @@
 import { BigNumberish } from "@ethersproject/bignumber";
-import { AddressZero } from "@ethersproject/constants";
+import { AddressZero, MaxUint256 } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import * as Sdk from "@reservoir0x/sdk/src";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
@@ -103,7 +103,7 @@ export const setupMidaswapListings = async (listings: MidaswapListing[]) => {
         prices: [price.toString()],
         bins: [bin],
         lpTokenIds: [lpTokenId.toString()],
-        floorPriceBin: Number.MAX_SAFE_INTEGER,
+        floorPrice: MaxUint256.toString(),
       },
     });
   }
@@ -197,7 +197,7 @@ export const setupMidaswapOffers = async (offers: MidaswapOffer[]) => {
         prices: [price.toString()],
         bins: [bin],
         lpTokenIds: [lpTokenId.toString()],
-        floorPriceBin: Number.MAX_SAFE_INTEGER,
+        floorPrice: Number.MAX_SAFE_INTEGER,
       },
     });
   }
