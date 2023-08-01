@@ -112,7 +112,7 @@ export class SaleWebsocketEventsTriggerQueueJob extends AbstractRabbitMqJobHandl
       if (data.trigger === "insert") eventType = "sale.created";
       else if (data.trigger === "update") {
         // if isDeleted is true, then it's a delete event
-        if (r.is_deleted) eventType = "sale.deleted";
+        if (data.after.is_deleted) eventType = "sale.deleted";
         else {
           eventType = "sale.updated";
           if (data.before) {
