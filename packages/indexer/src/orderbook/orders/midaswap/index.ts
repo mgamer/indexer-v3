@@ -44,6 +44,7 @@ export type OrderInfo = {
     binstep?: number;
     binAmount?: number;
     tradeBin?: number;
+    orderId?: string;
   };
   metadata: OrderMetadata;
 };

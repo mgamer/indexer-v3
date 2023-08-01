@@ -4,7 +4,6 @@ import { EnhancedEvent, OnChainData } from "@/events-sync/handlers/utils";
 import * as midaswapUtils from "@/utils/midaswap";
 import { BigNumber } from "ethers";
 import * as Sdk from "@reservoir0x/sdk";
-import { getSellOrderId } from "@/orderbook/orders/midaswap";
 import * as utils from "@/events-sync/utils";
 import { getUSDAndNativePrices } from "@/utils/prices";
 import { redb } from "@/common/db";
@@ -161,7 +160,6 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
 
         break;
       }
-      case "midaswap-sell-erc721":
       case "midaswap-buy-erc721": {
         const parsedLog = eventData.abi.parseLog(log);
         const tradeBin = parsedLog.args["tradeBin"] as number;
@@ -170,15 +168,14 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
 
         const pool = await midaswapUtils.getPoolDetails(baseEventParams.address);
 
-        const isUserSell = subKind === "midaswap-sell-erc721";
-
         if (!pool) {
           break;
         }
+        const orderId = getOrderId(pool.address, lpTokenId.toString(), tokenId.toString());
 
         const orderKind = "midaswap";
         const taker = (await utils.fetchTransaction(baseEventParams.txHash)).from;
-        const price = Sdk.Midaswap.Order.binToPriceFixed(tradeBin);
+        const price = Sdk.Midaswap.Order.getSellPrice(tradeBin);
         const priceData = await getUSDAndNativePrices(pool.token, price, baseEventParams.timestamp);
 
         if (!priceData.nativePrice) {
@@ -189,33 +186,9 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           baseEventParams.txHash,
           orderKind
         );
-
-        let orderId = "";
-        let orderResult;
-        if (isUserSell) {
-          orderResult = await redb.oneOrNone(
-            `
-                SELECT id FROM orders
-                WHERE orders.kind = 'midaswap'
-                AND orders.side === 'buy'
-                AND orders.fillability_status = 'fillable'
-                AND orders.raw_data->>'lpTokenId' = $/lpTokenId/
-              `,
-            {
-              lpTokenId: lpTokenId.toString(),
-            }
-          );
-          if (!orderResult) {
-            break;
-          }
-        }
-
-        orderId = !isUserSell
-          ? getSellOrderId(pool.address, tokenId.toString(), lpTokenId.toString())
-          : orderResult.id;
         onChainData.fillEventsOnChain.push({
           orderKind,
-          orderSide: isUserSell ? "buy" : "sell",
+          orderSide: "sell",
           orderId,
           maker: baseEventParams.address,
           taker,
@@ -229,15 +202,13 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           orderSourceId: attributionData.orderSource?.id,
           aggregatorSourceId: attributionData.aggregatorSource?.id,
           fillSourceId: attributionData.fillSource?.id,
-          baseEventParams: {
-            ...baseEventParams,
-          },
+          baseEventParams,
         });
 
         onChainData.fillInfos.push({
           context: `midaswap-${pool.nft}-${tokenId}-${baseEventParams.txHash}`,
           orderId,
-          orderSide: isUserSell ? "buy" : "sell",
+          orderSide: "sell",
           contract: pool.nft,
           tokenId: tokenId.toString(),
           amount: "1",
@@ -248,7 +219,114 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         });
 
         onChainData.orderInfos.push({
-          context: `filled-${orderId || ""}-${baseEventParams.txHash}`,
+          context: `filled-${orderId}-${baseEventParams.txHash}`,
+          id: orderId,
+          trigger: {
+            kind: "sale",
+            txHash: baseEventParams.txHash,
+            txTimestamp: baseEventParams.timestamp,
+          },
+        });
+
+        onChainData.orders.push({
+          kind: "midaswap",
+          info: {
+            orderParams: {
+              pool: baseEventParams.address,
+              txHash: baseEventParams.txHash,
+              txTimestamp: baseEventParams.timestamp,
+              txBlock: baseEventParams.block,
+              logIndex: baseEventParams.logIndex,
+              nftId: tokenId.toString(),
+              eventName: subKind,
+              tradeBin,
+              lpTokenId: lpTokenId.toString(),
+              orderId,
+            },
+            metadata: {},
+          },
+        });
+
+        save([
+          {
+            orderParams: {
+              pool: baseEventParams.address,
+              txHash: baseEventParams.txHash,
+              txTimestamp: baseEventParams.timestamp,
+              txBlock: baseEventParams.block,
+              logIndex: baseEventParams.logIndex,
+              nftId: tokenId.toString(),
+              eventName: subKind,
+              tradeBin,
+              lpTokenId: lpTokenId.toString(),
+              orderId,
+            },
+            metadata: {},
+          },
+        ]);
+        break;
+      }
+      case "midaswap-sell-erc721": {
+        const parsedLog = eventData.abi.parseLog(log);
+        const tradeBin = parsedLog.args["tradeBin"] as number;
+        const tokenId = parsedLog.args["nftTokenId"] as BigNumber;
+        const lpTokenId = parsedLog.args["lpTokenID"] as BigNumber;
+
+        const pool = await midaswapUtils.getPoolDetails(baseEventParams.address);
+
+        if (!pool) {
+          break;
+        }
+        const orderId = getOrderId(pool.address, lpTokenId.toString());
+
+        const orderKind = "midaswap";
+        const taker = (await utils.fetchTransaction(baseEventParams.txHash)).from;
+        const price = Sdk.Midaswap.Order.getBuyPrice(tradeBin);
+        const priceData = await getUSDAndNativePrices(pool.token, price, baseEventParams.timestamp);
+
+        if (!priceData.nativePrice) {
+          break;
+        }
+
+        const attributionData = await utils.extractAttributionData(
+          baseEventParams.txHash,
+          orderKind
+        );
+
+        onChainData.fillEventsPartial.push({
+          orderKind,
+          orderSide: "buy",
+          orderId,
+          maker: baseEventParams.address,
+          taker,
+          price: priceData.nativePrice,
+          currencyPrice: price,
+          usdPrice: priceData.usdPrice,
+          currency: pool.token,
+          contract: pool.nft,
+          tokenId: tokenId.toString(),
+          amount: "1",
+          orderSourceId: attributionData.orderSource?.id,
+          aggregatorSourceId: attributionData.aggregatorSource?.id,
+          fillSourceId: attributionData.fillSource?.id,
+          baseEventParams,
+        });
+
+        onChainData.fillInfos.push({
+          context: `midaswap-${pool.nft}-${tokenId}-${baseEventParams.txHash}`,
+          orderId,
+          orderSide: "buy",
+          contract: pool.nft,
+          tokenId: tokenId.toString(),
+          amount: "1",
+          price: priceData.nativePrice,
+          timestamp: baseEventParams.timestamp,
+          maker: baseEventParams.address,
+          taker,
+        });
+
+        onChainData.orderInfos.push({
+          context: `filled-${orderId}-${baseEventParams.txHash}`,
           id: orderId,
           trigger: {
             kind: "sale",
