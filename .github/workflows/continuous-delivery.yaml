@@ -167,9 +167,9 @@ jobs:
         working-directory: k8s-configs
         run: |
           ./utils/version_update.sh \
-            ./prod/platform/indexer-api.yaml \
+            ./prod/platform/indexer-api-mainnet.yaml \
             ${{ github.sha }} \
-            indexer-api
+            indexer-api-mainnet
           ./utils/version_update.sh \
             ./prod/platform/indexer-api-arbitrum.yaml \
             ${{ github.sha }} \
@@ -227,17 +227,17 @@ jobs:
             ${{ github.sha }} \
             indexer-api-base
           ./utils/version_update.sh \
-            ./prod/platform/indexer-worker.yaml \
+            ./prod/platform/indexer-worker-mainnet.yaml \
             ${{ github.sha }} \
-            indexer-worker
+            indexer-worker-mainnet
           ./utils/version_update.sh \
             ./prod/platform/indexer-worker-arbitrum.yaml \
             ${{ github.sha }} \
             indexer-worker-arbitrum
           ./utils/version_update.sh \
-            ./prod/platform/indexer-worker-master.yaml \
+            ./prod/platform/indexer-worker-master-mainnet.yaml \
             ${{ github.sha }} \
-            indexer-worker-master
+            indexer-worker-master-mainnet
           ./utils/version_update.sh \
             ./prod/platform/indexer-worker-optimism.yaml \
             ${{ github.sha }} \
@@ -315,13 +315,13 @@ jobs:
             ${{ github.sha }} \
             indexer-websocket-goerli
           ./utils/version_update.sh \
-            ./prod/platform/indexer-kafka-worker.yaml \
+            ./prod/platform/indexer-kafka-worker-mainnet.yaml \
             ${{ github.sha }} \
-            indexer-kafka-worker
+            indexer-kafka-worker-mainnet
           ./utils/version_update.sh \
-            ./prod/platform/indexer-worker-polygon-master.yaml \
+            ./prod/platform/indexer-worker-master-polygon.yaml \
             ${{ github.sha }} \
-            indexer-worker-polygon-master
+            indexer-worker-master-polygon
           ./utils/version_update.sh \
             ./prod/platform/indexer-kafka-worker-polygon.yaml \
             ${{ github.sha }} \
@@ -334,7 +334,66 @@ jobs:
             ./prod/platform/indexer-kafka-worker-optimism.yaml \
             ${{ github.sha }} \
             indexer-kafka-worker-optimism
-
+          ./utils/version_update.sh \
+            ./prod/platform/indexer-worker-master-optimism.yaml \
+            ${{ github.sha }} \
+            indexer-worker-master-optimism
+          ./utils/version_update.sh \
+            ./prod/platform/indexer-worker-master-arbitrum.yaml \
+            ${{ github.sha }} \
+            indexer-worker-master-arbitrum
+          ./utils/version_update.sh \
+            ./prod/platform/indexer-worker-master-arbitrum-nova.yaml \
+            ${{ github.sha }} \
+            indexer-worker-master-arbitrum-nova
+          ./utils/version_update.sh \
+            ./prod/platform/indexer-worker-master-bsc.yaml \
+            ${{ github.sha }} \
+            indexer-worker-master-bsc
+          ./utils/version_update.sh \
+            ./prod/platform/indexer-worker-master-base.yaml \
+            ${{ github.sha }} \
+            indexer-worker-master-base
+          ./utils/version_update.sh \
+            ./prod/platform/indexer-worker-master-base-goerli.yaml \
+            ${{ github.sha }} \
+            indexer-worker-master-base-goerli
+          ./utils/version_update.sh \
+            ./prod/platform/indexer-worker-master-avalanche.yaml \
+            ${{ github.sha }} \
+            indexer-worker-master-avalanche
+          ./utils/version_update.sh \
+            ./prod/platform/indexer-worker-master-sepolia.yaml \
+            ${{ github.sha }} \
+            indexer-worker-master-sepolia
+          ./utils/version_update.sh \
+            ./prod/platform/indexer-worker-master-goerli.yaml \
+            ${{ github.sha }} \
+            indexer-worker-master-goerli
+          ./utils/version_update.sh \
+            ./prod/platform/indexer-worker-master-mumbai.yaml \
+            ${{ github.sha }} \
+            indexer-worker-master-mumbai
+          ./utils/version_update.sh \
+            ./prod/platform/indexer-worker-master-scroll-alpha.yaml \
+            ${{ github.sha }} \
+            indexer-worker-master-scroll-alpha
+          ./utils/version_update.sh \
+            ./prod/platform/indexer-worker-master-zora.yaml \
+            ${{ github.sha }} \
+            indexer-worker-master-zora
+          ./utils/version_update.sh \
+            ./prod/platform/indexer-worker-master-zora-testnet.yaml \
+            ${{ github.sha }} \
+            indexer-worker-master-zora-testnet
+          ./utils/version_update.sh \
+            ./prod/platform/indexer-api-linea.yaml \
+            ${{ github.sha }} \
+            indexer-api-linea
+          ./utils/version_update.sh \
+            ./prod/platform/indexer-worker-linea.yaml \
+            ${{ github.sha }} \
+            indexer-worker-linea
       - name: Post to Slack
         if: ${{ always() }}
         id: slack-deploy-prod

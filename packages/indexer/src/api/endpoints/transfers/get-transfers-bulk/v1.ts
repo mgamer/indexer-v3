@@ -8,6 +8,7 @@ import _ from "lodash";
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { buildContinuation, fromBuffer, regex, splitContinuation, toBuffer } from "@/common/utils";
+import * as Boom from "@hapi/boom";
 
 const version = "v1";
 
@@ -19,7 +20,7 @@ export const getTransfersBulkV1Options: RouteOptions = {
   description: "Bulk historical transfers",
   notes:
     "Note: this API is optimized for bulk access, and offers minimal filters/metadata. If you need more flexibility, try the `NFT API > Transfers` endpoint",
-  tags: ["api", "Transfers"],
+  tags: ["api", "x-deprecated"],
   plugins: {
     "hapi-swagger": {
       order: 10,
@@ -119,7 +120,9 @@ export const getTransfersBulkV1Options: RouteOptions = {
 
       // Filters
       const conditions: string[] = [];
-      conditions.push(`nft_transfer_events.is_deleted = 0`);
+      if (!(query.orderBy === "updated_at")) {
+        conditions.push(`nft_transfer_events.is_deleted = 0`);
+      }
 
       if (query.contract) {
         (query as any).contract = toBuffer(query.contract);
@@ -156,6 +159,11 @@ export const getTransfersBulkV1Options: RouteOptions = {
             query.continuation,
             /^(.+)_0x[a-fA-F0-9]{40}_(\d+)$/
           );
+
+          // If no address most likely the continuation is wrong
+          if (!address) {
+            throw Boom.badRequest("Invalid continuation string used");
+          }
 
           (query as any).updatedAt = updateAt;
           (query as any).address = toBuffer(address);

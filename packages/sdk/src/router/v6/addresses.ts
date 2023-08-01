@@ -20,6 +20,7 @@ export const Router: ChainIdToAddress = {
   [Network.Bsc]: "0xc2c862322e9c97d6244a3506655da95f05246fd8",
   [Network.Zora]: "0x1aed60a97192157fda7fb26267a439d523d09c5e",
   [Network.Base]: "0x1aed60a97192157fda7fb26267a439d523d09c5e",
+  [Network.Linea]: "0x1aed60a97192157fda7fb26267a439d523d09c5e",
 };
 
 // Approval proxy
@@ -41,6 +42,7 @@ export const ApprovalProxy: ChainIdToAddress = {
   [Network.Bsc]: "0x79ce8f93063f8be4573a58f250b003859ebb7a24",
   [Network.Zora]: "0x224ecb4eae96d31372d1090c3b0233c8310dbbab",
   [Network.Base]: "0x224ecb4eae96d31372d1090c3b0233c8310dbbab",
+  [Network.Linea]: "0x224ecb4eae96d31372d1090c3b0233c8310dbbab",
 };
 
 // Permit proxy
@@ -63,7 +65,28 @@ export const SwapModule: ChainIdToAddress = {
   [Network.Bsc]: "0x5cf0a457d2b6c003232184178e87c91248f73477",
 };
 
+export const OneInchSwapModule: ChainIdToAddress = {
+  [Network.Ethereum]: "0xd0fe0a4528cd95ac447cd9afd51c581b1a390b1d",
+  [Network.EthereumGoerli]: "0xd0fe0a4528cd95ac447cd9afd51c581b1a390b1d",
+  [Network.Polygon]: "0xd0fe0a4528cd95ac447cd9afd51c581b1a390b1d",
+  [Network.Optimism]: "0xd0fe0a4528cd95ac447cd9afd51c581b1a390b1d",
+  [Network.Arbitrum]: "0xd0fe0a4528cd95ac447cd9afd51c581b1a390b1d",
+  [Network.Bsc]: "0xd0fe0a4528cd95ac447cd9afd51c581b1a390b1d",
+};
+
 // Exchange modules
+
+export const MintModule: ChainIdToAddress = {
+  [Network.Ethereum]: "0x0b85f4e399fc69044bd9ee604a59e9663f1ea292",
+  [Network.EthereumGoerli]: "0x0b85f4e399fc69044bd9ee604a59e9663f1ea292",
+  [Network.EthereumSepolia]: "0x0b85f4e399fc69044bd9ee604a59e9663f1ea292",
+  [Network.Optimism]: "0x0b85f4e399fc69044bd9ee604a59e9663f1ea292",
+  [Network.Bsc]: "0x0b85f4e399fc69044bd9ee604a59e9663f1ea292",
+  [Network.Base]: "0x3a65a4875be880552ecd27de4084799b65b40065",
+  [Network.BaseGoerli]: "0x3a65a4875be880552ecd27de4084799b65b40065",
+  [Network.Zora]: "0x3a65a4875be880552ecd27de4084799b65b40065",
+  [Network.ZoraTestnet]: "0x3a65a4875be880552ecd27de4084799b65b40065",
+};
 
 export const CollectionXyzModule: ChainIdToAddress = {
   [Network.Ethereum]: "0x22097b493ea4c202d5b85cc9faf6d116830aa8a3",
@@ -117,6 +140,7 @@ export const SeaportV15Module: ChainIdToAddress = {
   [Network.ScrollAlpha]: "0x00ca04c45da318d5b7e7b14d5381ca59f09c73f0",
   [Network.BaseGoerli]: "0x4e9aaa72727a2f5aa5d2bef80ab5642661e29ef6",
   [Network.Base]: "0x4e9aaa72727a2f5aa5d2bef80ab5642661e29ef6",
+  [Network.Linea]: "0x4e9aaa72727a2f5aa5d2bef80ab5642661e29ef6",
 };
 
 export const AlienswapModule: ChainIdToAddress = {
@@ -161,7 +185,7 @@ export const ElementModule: ChainIdToAddress = {
 };
 
 export const NFTXModule: ChainIdToAddress = {
-  [Network.Ethereum]: "0x716d13135f6a5bdb3fbc6beeb8dea35776d20da7",
+  [Network.Ethereum]: "0xfcd5b37fb64c06646c390d0376e8aad9bf5e1163",
 };
 
 export const NFTXZeroExModule: ChainIdToAddress = {

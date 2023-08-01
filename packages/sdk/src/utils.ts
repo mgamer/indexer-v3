@@ -3,6 +3,8 @@ import { keccak256 } from "@ethersproject/keccak256";
 import { randomBytes } from "@ethersproject/random";
 import { toUtf8Bytes, toUtf8String } from "@ethersproject/strings";
 import * as Global from "./global";
+import { verifyTypedData } from "@ethersproject/wallet";
+import { TypedDataDomain, TypedDataField } from "ethers";
 
 // Constants
 
@@ -51,6 +53,28 @@ export const getErrorMessage = (error: any) => {
   const errorMessage = error.response?.data ? JSON.stringify(error.response.data) : error.message;
   return errorMessage;
 };
+
+export function checkEIP721Signature(
+  data: {
+    domain: TypedDataDomain;
+    types: Record<string, TypedDataField[]>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    value: Record<string, any>;
+  },
+  signature: string,
+  signer: string
+) {
+  try {
+    const recoveredSigner = verifyTypedData(data.domain, data.types, data.value, signature);
+    if (lc(signer) === lc(recoveredSigner)) {
+      return true;
+    }
+  } catch {
+    // Skip errors
+  }
+
+  return false;
+}
 
 // Misc
 
@@ -106,12 +130,12 @@ export enum Network {
   Ethereum = 1,
   Optimism = 10,
   Bsc = 56,
-  Gnosis = 100,
   Polygon = 137,
   Base = 8453,
   Arbitrum = 42161,
   ArbitrumNova = 42170,
   Avalanche = 43114,
+  Linea = 59144,
   Zora = 7777777,
   // Testnets
   EthereumGoerli = 5,

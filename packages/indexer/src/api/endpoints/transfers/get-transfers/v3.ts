@@ -16,7 +16,7 @@ const version = "v3";
 export const getTransfersV3Options: RouteOptions = {
   description: "Historical token transfers",
   notes: "Get recent transfers for a contract or token.",
-  tags: ["api", "Transfers"],
+  tags: ["api", "x-deprecated"],
   plugins: {
     "hapi-swagger": {
       order: 10,
@@ -230,9 +230,15 @@ export const getTransfersV3Options: RouteOptions = {
           (query as any).logIndex = logIndex;
           (query as any).batchIndex = batchIndex;
 
-          conditions.push(
-            `(nft_transfer_events.timestamp, nft_transfer_events.log_index, nft_transfer_events.batch_index) < ($/timestamp/, $/logIndex/, $/batchIndex/)`
-          );
+          if (query.txHash) {
+            conditions.push(
+              `(nft_transfer_events.log_index, nft_transfer_events.batch_index) < ($/logIndex/, $/batchIndex/)`
+            );
+          } else {
+            conditions.push(
+              `(nft_transfer_events.timestamp, nft_transfer_events.log_index, nft_transfer_events.batch_index) < ($/timestamp/, $/logIndex/, $/batchIndex/)`
+            );
+          }
         } else if (query.orderBy == "updated_at") {
           const [updateAt, address, tokenId] = splitContinuation(
             query.continuation,
@@ -257,7 +263,7 @@ export const getTransfersV3Options: RouteOptions = {
       if (query.orderBy === "timestamp") {
         baseQuery += `
           ORDER BY
-            nft_transfer_events.timestamp DESC,
+            ${query.txHash ? "" : `nft_transfer_events.timestamp DESC,`}
             nft_transfer_events.log_index DESC,
             nft_transfer_events.batch_index DESC
         `;
@@ -325,7 +331,7 @@ export const getTransfersV3Options: RouteOptions = {
                   nativeAmount: String(r.price),
                 },
               },
-              r.currency ? fromBuffer(r.currency) : Sdk.Common.Addresses.Eth[config.chainId],
+              r.currency ? fromBuffer(r.currency) : Sdk.Common.Addresses.Native[config.chainId],
               query.displayCurrency
             )
           : null,
