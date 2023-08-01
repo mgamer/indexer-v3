@@ -66,8 +66,10 @@ export class SaleWebsocketEventsTriggerQueueJob extends AbstractRabbitMqJobHandl
           royaltyFeeBps: data.after.royalty_fee_bps,
           marketplaceFeeBps: data.after.marketplace_fee_bps,
           paidFullRoyalty: data.after.paid_full_royalty,
-          royaltyFeeBreakdown: data.after.royalty_fee_breakdown,
-          marketplaceFeeBreakdown: data.after.marketplace_fee_breakdown,
+          royaltyFeeBreakdown: r.royalty_fee_breakdown ? JSON.parse(r.royalty_fee_breakdown) : [],
+          marketplaceFeeBreakdown: r.marketplace_fee_breakdown
+            ? JSON.parse(r.marketplace_fee_breakdown)
+            : [],
         },
         currencyAddress: toBuffer(data.after.currency),
         timestamp: data.after.timestamp,
