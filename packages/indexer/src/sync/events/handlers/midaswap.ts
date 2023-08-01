@@ -352,6 +352,22 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
             metadata: {},
           },
         });
+        save([
+          {
+            orderParams: {
+              pool: baseEventParams.address,
+              txHash: baseEventParams.txHash,
+              txTimestamp: baseEventParams.timestamp,
+              txBlock: baseEventParams.block,
+              logIndex: baseEventParams.logIndex,
+              nftId: tokenId.toString(),
+              eventName: subKind,
+              tradeBin,
+              lpTokenId: lpTokenId.toString(),
+            },
+            metadata: {},
+          },
+        ]);
         break;
       }
     }
