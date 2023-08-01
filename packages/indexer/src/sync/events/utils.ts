@@ -255,9 +255,9 @@ export const extractAttributionData = async (
     }
     fillSource = await sources.getOrInsert(source);
   } else if (router?.domain === "reservoir.tools") {
-    aggregatorSource = router;
+    // aggregatorSource = router;
   } else if (router) {
-    aggregatorSource = router;
+    // aggregatorSource = router;
     fillSource = router;
   } else {
     fillSource = orderSource;

@@ -45,6 +45,7 @@ import * as CaviarV1 from "./caviar-v1";
 import * as PaymentProcessor from "./payment-processor";
 import * as Seadrop from "./seadrop";
 import * as BlurV2 from "./blur-v2";
+import * as Global from "./global";
 
 // Overrides (shouldn't belong here)
 if (process.env.SEAPORT_V15_OVERRIDE) {
@@ -117,4 +118,5 @@ export {
   PaymentProcessor,
   Seadrop,
   BlurV2,
+  Global,
 };

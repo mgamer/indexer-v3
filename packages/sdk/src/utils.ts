@@ -2,6 +2,7 @@ import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
 import { keccak256 } from "@ethersproject/keccak256";
 import { randomBytes } from "@ethersproject/random";
 import { toUtf8Bytes, toUtf8String } from "@ethersproject/strings";
+import * as Global from "./global";
 
 // Constants
 
@@ -56,10 +57,12 @@ export const getErrorMessage = (error: any) => {
 export const getSourceHash = (source?: string) =>
   source ? keccak256(toUtf8Bytes(source)).slice(2, 10) : "";
 
-export const generateSourceBytes = (source?: string) =>
-  source === "reservoir.tools"
+export const generateSourceBytes = (source?: string) => {
+  const aggregatorSource = Global.Config.aggregatorSource;
+  return source === "reservoir.tools"
     ? getSourceHash(source) + "00000000"
-    : getSourceHash("reservoir.tools") + getSourceHash(source);
+    : getSourceHash(aggregatorSource) + getSourceHash(source);
+};
 
 export const getSourceV1 = (calldata: string) => {
   // Use the ASCII US (unit separator) character (code = 31) as a delimiter

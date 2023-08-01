@@ -12,6 +12,7 @@ import { initIndexes } from "@/elasticsearch/indexes";
 import { startKafkaConsumer } from "@/jobs/cdc";
 import { RabbitMqJobsConsumer } from "@/jobs/index";
 import { Sources } from "@/models/sources";
+import * as Sdk from "@reservoir0x/sdk";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 process.on("unhandledRejection", (error: any) => {
@@ -22,6 +23,9 @@ process.on("unhandledRejection", (error: any) => {
 });
 
 const setup = async () => {
+  // Initialize SDK's aggregator source
+  Sdk.Global.Config.aggregatorSource = "reservoir.tools";
+
   if (process.env.LOCAL_TESTING) {
     return;
   }
