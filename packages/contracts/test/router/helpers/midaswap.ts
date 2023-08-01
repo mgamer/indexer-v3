@@ -197,7 +197,7 @@ export const setupMidaswapOffers = async (offers: MidaswapOffer[]) => {
         prices: [price.toString()],
         bins: [bin],
         lpTokenIds: [lpTokenId.toString()],
-        floorPrice: Number.MAX_SAFE_INTEGER,
+        floorPrice: MaxUint256.toString(),
       },
     });
   }
