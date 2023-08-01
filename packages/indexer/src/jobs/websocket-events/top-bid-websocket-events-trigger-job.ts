@@ -48,6 +48,7 @@ export class TopBidWebSocketEventsTriggerJob extends AbstractRabbitMqJobHandler 
                 orders.normalized_value,
                 orders.currency_normalized_value,               
                 orders.created_at,
+                orders.updated_at,
                 DATE_PART('epoch', LOWER(orders.valid_between)) AS "valid_from",
                 COALESCE(
                      NULLIF(DATE_PART('epoch', UPPER(orders.valid_between)), 'Infinity'),
@@ -139,6 +140,7 @@ export class TopBidWebSocketEventsTriggerJob extends AbstractRabbitMqJobHandler 
             contract: fromBuffer(order.contract),
             maker: fromBuffer(order.maker),
             createdAt: new Date(order.created_at).toISOString(),
+            updatedAt: new Date(order.updated_at).toISOString(),
             validFrom: order.valid_from,
             validUntil: order.valid_until,
             source: {
