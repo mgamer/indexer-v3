@@ -288,7 +288,7 @@ export class RabbitMqJobsConsumer {
     for (let i = 0; i < RabbitMqJobsConsumer.maxConsumerConnectionsCount; ++i) {
       const connection = amqplibConnectionManager.connect(config.rabbitMqUrl, {
         reconnectTimeInSeconds: 5,
-        heartbeatIntervalInSeconds: 60,
+        heartbeatIntervalInSeconds: 30,
       });
 
       RabbitMqJobsConsumer.rabbitMqConsumerConnections.push(connection);
