@@ -10,17 +10,16 @@ export function extractOrdersFromCalldata(callData: string) {
     });
 
     let orders = [];
-    if (funcName === "fulfillAvailableAdvancedOrders") {
+    if (
+      [
+        "fulfillAvailableAdvancedOrders",
+        "fulfillAvailableOrders",
+        "matchOrders",
+        "matchAdvancedOrders",
+      ].includes(funcName)
+    ) {
       orders = args[0];
-    } else if (funcName === "fulfillAvailableOrders") {
-      orders = args[0];
-    } else if (funcName === "fulfillAdvancedOrder") {
-      orders = [args[0]];
-    } else if (funcName === "matchOrders") {
-      orders = args[0];
-    } else if (funcName === "matchAdvancedOrders") {
-      orders = args[0];
-    } else if (funcName === "fulfillOrder") {
+    } else if (["fulfillAdvancedOrder", "fulfillOrder"].includes(funcName)) {
       orders = [args[0]];
     }
 
