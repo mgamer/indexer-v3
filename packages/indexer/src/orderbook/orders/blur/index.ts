@@ -98,6 +98,13 @@ export const savePartialListings = async (
       const sources = await Sources.getInstance();
       const source = await sources.getOrInsert("blur.io");
 
+      const isFiltered = await checkMarketplaceIsFiltered(orderParams.collection, [
+        Sdk.BlurV2.Addresses.Delegate[config.chainId],
+      ]);
+      if (isFiltered) {
+        orderParams.price = undefined;
+      }
+
       // Invalidate any old orders
       const anyActiveOrders = orderParams.price;
       const invalidatedOrderIds = await idb.manyOrNone(
@@ -142,6 +149,13 @@ export const savePartialListings = async (
       }
 
       const id = getBlurListingId(orderParams, owner);
+
+      if (isFiltered) {
+        return results.push({
+          id,
+          status: "filtered",
+        });
+      }
 
       // Handle: royalties
       let feeBps = 0;
@@ -366,7 +380,7 @@ export const savePartialBids = async (
 
     const id = getBlurBidId(orderParams.collection);
     const isFiltered = await checkMarketplaceIsFiltered(orderParams.collection, [
-      Sdk.Blur.Addresses.ExecutionDelegate[config.chainId],
+      Sdk.BlurV2.Addresses.Delegate[config.chainId],
     ]);
 
     try {
