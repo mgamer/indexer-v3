@@ -34,6 +34,8 @@ type PartialListingOrderParams = {
   // If empty then no Blur listing is available anymore
   price?: string;
   createdAt?: string;
+  // Additional metadata
+  fromWebsocket?: boolean;
 };
 
 export type PartialListingOrderInfo = {
@@ -250,6 +252,10 @@ export const savePartialListings = async (
           status: "success",
           triggerKind: "new-order",
         });
+
+        if (!orderParams.fromWebsocket) {
+          logger.info("blur-debug", JSON.stringify(orderParams));
+        }
       } else {
         // Order already exists
         const wasUpdated = await idb.oneOrNone(
