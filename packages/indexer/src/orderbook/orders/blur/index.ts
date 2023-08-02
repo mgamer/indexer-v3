@@ -98,6 +98,13 @@ export const savePartialListings = async (
       const sources = await Sources.getInstance();
       const source = await sources.getOrInsert("blur.io");
 
+      const isFiltered = await checkMarketplaceIsFiltered(orderParams.collection, [
+        Sdk.BlurV2.Addresses.Delegate[config.chainId],
+      ]);
+      if (isFiltered) {
+        orderParams.price = undefined;
+      }
+
       // Invalidate any old orders
       const anyActiveOrders = orderParams.price;
       const invalidatedOrderIds = await idb.manyOrNone(
@@ -143,9 +150,6 @@ export const savePartialListings = async (
 
       const id = getBlurListingId(orderParams, owner);
 
-      const isFiltered = await checkMarketplaceIsFiltered(orderParams.collection, [
-        Sdk.BlurV2.Addresses.Delegate[config.chainId],
-      ]);
       if (isFiltered) {
         return results.push({
           id,
