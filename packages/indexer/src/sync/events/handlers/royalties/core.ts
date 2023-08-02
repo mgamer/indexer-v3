@@ -239,9 +239,11 @@ export async function extractRoyalties(
     // Make sure to sort
     .sort((a, b) => a.index - b.index);
   // Compute total price for all above same-protocol fills
-  const sameProtocolTotalPrice = sameProtocolFills.reduce((total, item) => {
-    return total.add(bn(item.event.currencyPrice ?? item.event.price).mul(bn(item.event.amount)));
-  }, bn(0));
+  const sameProtocolTotalPrice = sameProtocolFills.reduce(
+    (total, item) =>
+      total.add(bn(item.event.currencyPrice ?? item.event.price).mul(bn(item.event.amount))),
+    bn(0)
+  );
 
   // Keep track of some details for every same-protocol sale
   const sameProtocolDetails: {
