@@ -453,6 +453,7 @@ export async function extractRoyalties(
           }
         }
 
+        // Re-calculate the bps based on the fee amount in the order
         if (linkedOrder) {
           const feeItem = linkedOrder.fees.find(
             (c) => c.recipient.toLowerCase() === address.toLowerCase()
@@ -462,9 +463,6 @@ export async function extractRoyalties(
               .mul(10000)
               .div(fillEvent.currencyPrice ?? fillEvent.price)
               .toNumber();
-          } else {
-            // Skip this if not in
-            continue;
           }
         }
 
