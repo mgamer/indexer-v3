@@ -13,7 +13,7 @@ import Joi from "joi";
 import { inject } from "@/api/index";
 import { idb } from "@/common/db";
 import { logger } from "@/common/logger";
-import { JoiExecuteFee, JoiOrderDepth } from "@/common/joi";
+import { JoiExecuteFee } from "@/common/joi";
 import { baseProvider } from "@/common/provider";
 import { bn, formatPrice, fromBuffer, now, regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
@@ -236,13 +236,6 @@ export const getExecuteBuyV7Options: RouteOptions = {
         Joi.object({
           itemIndex: Joi.number().required(),
           maxQuantity: Joi.string().pattern(regex.number).allow(null),
-        })
-      ),
-      // TODO: Remove
-      preview: Joi.array().items(
-        Joi.object({
-          itemIndex: Joi.number().required(),
-          depth: JoiOrderDepth,
         })
       ),
     }).label(`getExecuteBuy${version.toUpperCase()}Response`),
@@ -1098,7 +1091,9 @@ export const getExecuteBuyV7Options: RouteOptions = {
                   kind: result.token_kind,
                   contract,
                   tokenId,
-                  quantity: Math.min(quantityToFill, availableQuantity),
+                  quantity: preview
+                    ? availableQuantity
+                    : Math.min(quantityToFill, availableQuantity),
                 }
               );
               maxQuantity = maxQuantity.add(availableQuantity);
