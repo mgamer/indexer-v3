@@ -92,13 +92,7 @@ export class MetadataApi {
         indexingMethod = "simplehash";
       }
 
-      let networkName = getNetworkName();
-
-      if (networkName === "prod-goerli") {
-        networkName = "goerli";
-      }
-
-      let url = `${config.metadataApiBaseUrl}/v4/${networkName}/metadata/collection?method=${indexingMethod}&token=${contract}:${tokenId}`;
+      let url = `${config.metadataApiBaseUrl}/v4/${getNetworkName()}/metadata/collection?method=${indexingMethod}&token=${contract}:${tokenId}`;
       if (options?.additionalQueryParams) {
         for (const [key, value] of Object.entries(options.additionalQueryParams)) {
           url += `&${key}=${value}`;
@@ -145,15 +139,9 @@ export class MetadataApi {
 
     method = method === "" ? config.metadataIndexingMethod : method;
 
-    let networkName = getNetworkName();
-
-    if (networkName === "prod-goerli") {
-      networkName = "goerli";
-    }
-
     const url = `${
       config.metadataApiBaseUrl
-    }/v4/${networkName}/metadata/token?method=${method}&${queryParams.toString()}`;
+    }/v4/${getNetworkName()}/metadata/token?method=${method}&${queryParams.toString()}`;
 
     const { data } = await axios.get(url);
 
