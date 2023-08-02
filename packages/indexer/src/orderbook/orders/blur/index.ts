@@ -144,9 +144,8 @@ export const savePartialListings = async (
       const id = getBlurListingId(orderParams, owner);
 
       const isFiltered = await checkMarketplaceIsFiltered(orderParams.collection, [
-        Sdk.Blur.Addresses.ExecutionDelegate[config.chainId],
+        Sdk.BlurV2.Addresses.Delegate[config.chainId],
       ]);
-
       if (isFiltered) {
         return results.push({
           id,
@@ -377,7 +376,7 @@ export const savePartialBids = async (
 
     const id = getBlurBidId(orderParams.collection);
     const isFiltered = await checkMarketplaceIsFiltered(orderParams.collection, [
-      Sdk.Blur.Addresses.ExecutionDelegate[config.chainId],
+      Sdk.BlurV2.Addresses.Delegate[config.chainId],
     ]);
 
     try {
