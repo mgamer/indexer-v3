@@ -1,13 +1,13 @@
 import { Contract } from "@ethersproject/contracts";
 import { parseEther } from "@ethersproject/units";
-import * as Common from "@reservoir0x/sdk/src/common";
-import * as SDK from "@reservoir0x/sdk";
-
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
-import { ethers } from "hardhat";
-import { constants } from "ethers";
-import { getSourceHash } from "@reservoir0x/sdk/dist/utils";
+import * as Sdk from "@reservoir0x/sdk";
+import * as Common from "@reservoir0x/sdk/src/common";
+import { getSourceHash } from "@reservoir0x/sdk/src/utils";
 import { expect } from "chai";
+import { constants } from "ethers";
+import { ethers } from "hardhat";
+
 import { getChainId, getCurrentTimestamp, reset, setupNFTs } from "../utils";
 
 describe("Global Config", () => {
@@ -26,7 +26,7 @@ describe("Global Config", () => {
 
   afterEach(reset);
 
-  it("config global aggregator source", async () => {
+  it("Config global aggregator source", async () => {
     const buyer = alice;
     const seller = bob;
     const price = parseEther("1");
@@ -37,15 +37,15 @@ describe("Global Config", () => {
     const nft = new Common.Helpers.Erc721(ethers.provider, erc721.address);
 
     // Approve the exchange
-    await nft.approve(seller, SDK.PaymentProcessor.Addresses.Exchange[chainId]);
+    await nft.approve(seller, Sdk.PaymentProcessor.Addresses.Exchange[chainId]);
 
-    const exchange = new SDK.PaymentProcessor.Exchange(chainId);
+    const exchange = new Sdk.PaymentProcessor.Exchange(chainId);
 
     const sellerMasterNonce = await exchange.getMasterNonce(ethers.provider, seller.address);
     const takerMasterNonce = await exchange.getMasterNonce(ethers.provider, buyer.address);
     const blockTime = await getCurrentTimestamp(ethers.provider);
 
-    const builder = new SDK.PaymentProcessor.Builders.SingleToken(chainId);
+    const builder = new Sdk.PaymentProcessor.Builders.SingleToken(chainId);
     const orderParameters = {
       protocol: 0,
       sellerAcceptedOffer: false,
@@ -78,22 +78,21 @@ describe("Global Config", () => {
     sellOrder.checkSignature();
     await sellOrder.checkFillability(ethers.provider);
 
-    const testSource = "test.xyz";
-    SDK.Global.Config.aggregatorSource = testSource;
-
     // Set source
-    const currentSource = SDK.Global.Config.aggregatorSource;
+    const testSource = "test.xyz";
+    Sdk.Global.Config.aggregatorSource = testSource;
+    const currentSource = Sdk.Global.Config.aggregatorSource;
 
-    const tx = await exchange.fillOrderTx(await buyer.getAddress(), sellOrder, buyOrder);
+    const tx = exchange.fillOrderTx(await buyer.getAddress(), sellOrder, buyOrder);
     const source = getSourceHash(currentSource);
     expect(tx.data.endsWith(source)).to.eq(true);
     expect(testSource).to.eq(currentSource);
 
-    // Clear
-    SDK.Global.Config.aggregatorSource = "";
-    const tx2 = await exchange.fillOrderTx(await buyer.getAddress(), sellOrder, buyOrder);
+    // Clear source
+    Sdk.Global.Config.aggregatorSource = undefined;
+
+    const tx2 = exchange.fillOrderTx(await buyer.getAddress(), sellOrder, buyOrder);
     const source2 = getSourceHash("");
     expect(tx2.data.endsWith(source2)).to.eq(true);
   });
-
 });
