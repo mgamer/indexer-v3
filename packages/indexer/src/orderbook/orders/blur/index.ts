@@ -34,6 +34,8 @@ type PartialListingOrderParams = {
   // If empty then no Blur listing is available anymore
   price?: string;
   createdAt?: string;
+  // Additional metadata
+  fromWebsocket?: boolean;
 };
 
 export type PartialListingOrderInfo = {
@@ -98,6 +100,13 @@ export const savePartialListings = async (
       const sources = await Sources.getInstance();
       const source = await sources.getOrInsert("blur.io");
 
+      const isFiltered = await checkMarketplaceIsFiltered(orderParams.collection, [
+        Sdk.BlurV2.Addresses.Delegate[config.chainId],
+      ]);
+      if (isFiltered) {
+        orderParams.price = undefined;
+      }
+
       // Invalidate any old orders
       const anyActiveOrders = orderParams.price;
       const invalidatedOrderIds = await idb.manyOrNone(
@@ -142,6 +151,13 @@ export const savePartialListings = async (
       }
 
       const id = getBlurListingId(orderParams, owner);
+
+      if (isFiltered) {
+        return results.push({
+          id,
+          status: "filtered",
+        });
+      }
 
       // Handle: royalties
       let feeBps = 0;
@@ -236,6 +252,10 @@ export const savePartialListings = async (
           status: "success",
           triggerKind: "new-order",
         });
+
+        if (!orderParams.fromWebsocket) {
+          logger.info("blur-debug", JSON.stringify(orderParams));
+        }
       } else {
         // Order already exists
         const wasUpdated = await idb.oneOrNone(
@@ -366,7 +386,7 @@ export const savePartialBids = async (
 
     const id = getBlurBidId(orderParams.collection);
     const isFiltered = await checkMarketplaceIsFiltered(orderParams.collection, [
-      Sdk.Blur.Addresses.ExecutionDelegate[config.chainId],
+      Sdk.BlurV2.Addresses.Delegate[config.chainId],
     ]);
 
     try {

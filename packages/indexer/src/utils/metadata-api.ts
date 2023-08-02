@@ -84,12 +84,15 @@ export class MetadataApi {
         creator: null,
       };
     } else {
-      const indexingMethod =
+      let indexingMethod =
         options?.indexingMethod ?? MetadataApi.getCollectionIndexingMethod(community);
 
-      let url = `${
-        config.metadataApiBaseUrl
-      }/v4/${getNetworkName()}/metadata/collection?method=${indexingMethod}&token=${contract}:${tokenId}`;
+      //TODO: Remove when adding proper support for overriding indexing method
+      if (config.chainId === 1 && contract === "0xd532b88607b1877fe20c181cba2550e3bbd6b31c") {
+        indexingMethod = "simplehash";
+      }
+
+      let url = `${config.metadataApiBaseUrl}/v4/${getNetworkName()}/metadata/collection?method=${indexingMethod}&token=${contract}:${tokenId}`;
       if (options?.additionalQueryParams) {
         for (const [key, value] of Object.entries(options.additionalQueryParams)) {
           url += `&${key}=${value}`;
