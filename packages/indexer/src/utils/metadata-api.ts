@@ -92,7 +92,9 @@ export class MetadataApi {
         indexingMethod = "simplehash";
       }
 
-      let url = `${config.metadataApiBaseUrl}/v4/${getNetworkName()}/metadata/collection?method=${indexingMethod}&token=${contract}:${tokenId}`;
+      let url = `${
+        config.metadataApiBaseUrl
+      }/v4/${getNetworkName()}/metadata/collection?method=${indexingMethod}&token=${contract}:${tokenId}`;
       if (options?.additionalQueryParams) {
         for (const [key, value] of Object.entries(options.additionalQueryParams)) {
           url += `&${key}=${value}`;
