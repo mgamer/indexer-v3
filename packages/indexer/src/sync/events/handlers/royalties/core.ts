@@ -19,6 +19,7 @@ import * as utils from "@/events-sync/utils";
 import { FeeRecipients } from "@/models/fee-recipients";
 import { TransactionTrace } from "@/models/transaction-traces";
 import { Royalty, getRoyalties } from "@/utils/royalties";
+import { extractOrdersFromCalldata } from "./calldata";
 
 const findMatchingPayment = (payments: Payment[], fillEvent: PartialFillEvent) =>
   payments.find((payment) => paymentMatches(payment, fillEvent));
@@ -202,6 +203,14 @@ export async function extractRoyalties(
   // Extract the payments from the (sub)call we just found
   const paymentsToAnalyze = getPayments(subcallToAnalyze);
 
+  // Extract the orders from calldata when there have multiple fill events
+  const parsedOrders =
+    fillEvents.length > 1 ? extractOrdersFromCalldata(subcallToAnalyze.input) : [];
+
+  const linkedOrder = parsedOrders.find(
+    (c) => c.contract === fillEvent.contract && c.tokenId === fillEvent.tokenId
+  );
+
   // Extract any fill events that have the same contract and currency
   const sameContractFills = fillEvents.filter((e) => {
     const isMatch = e.contract === contract && e.currency === fillEvent.currency;
@@ -230,11 +239,9 @@ export async function extractRoyalties(
     // Make sure to sort
     .sort((a, b) => a.index - b.index);
   // Compute total price for all above same-protocol fills
-  const sameProtocolTotalPrice = sameProtocolFills.reduce(
-    (total, item) =>
-      total.add(bn(item.event.currencyPrice ?? item.event.price).mul(bn(item.event.amount))),
-    bn(0)
-  );
+  const sameProtocolTotalPrice = sameProtocolFills.reduce((total, item) => {
+    return total.add(bn(item.event.currencyPrice ?? item.event.price).mul(bn(item.event.amount)));
+  }, bn(0));
 
   // Keep track of some details for every same-protocol sale
   const sameProtocolDetails: {
@@ -393,9 +400,29 @@ export async function extractRoyalties(
       // const feeRecipientPlatform = knownPlatformFeeRecipients.includes(address)
 
       if (feeRecipientPlatform) {
+        // Make sure current fee address in every order
+        let ptotocolFeeSum = sameProtocolTotalPrice;
+        if (linkedOrder) {
+          ptotocolFeeSum = sameProtocolFills.reduce((total, item) => {
+            const matchOrder = parsedOrders.find(
+              (c) => c.contract === item.event.contract && c.tokenId === item.event.tokenId
+            );
+            if (
+              matchOrder &&
+              matchOrder.fees.find((c) => c.recipient.toLowerCase() === address.toLowerCase())
+            ) {
+              return total.add(
+                bn(item.event.currencyPrice ?? item.event.price).mul(bn(item.event.amount))
+              );
+            } else {
+              return total;
+            }
+          }, bn(0));
+        }
+
         // This is a marketplace fee payment
         // Reset the bps
-        royalty.bps = bn(balanceChange).mul(10000).div(sameProtocolTotalPrice).toNumber();
+        royalty.bps = bn(balanceChange).mul(10000).div(ptotocolFeeSum).toNumber();
 
         // Calculate by matched payment amount in split payments
         if (matchRangePayment && isReliable && hasMultiple) {
@@ -411,6 +438,7 @@ export async function extractRoyalties(
         const sameRecipientDetails = sameProtocolDetails.filter((d) => d.recipient === address);
         const shareSameRecipient = sameRecipientDetails.length === sameProtocolFills.length;
 
+        // Make sure current fee address in every order
         let bps: number = bn(balanceChange).mul(10000).div(sameContractTotalPrice).toNumber();
 
         if (shareSameRecipient) {
@@ -420,6 +448,21 @@ export async function extractRoyalties(
           const isValid = configBPS === newBps;
           if (isValid) {
             bps = newBps;
+          }
+        }
+
+        if (linkedOrder) {
+          const feeItem = linkedOrder.fees.find(
+            (c) => c.recipient.toLowerCase() === address.toLowerCase()
+          );
+          if (feeItem) {
+            bps = bn(feeItem.amount)
+              .mul(10000)
+              .div(fillEvent.currencyPrice ?? fillEvent.price)
+              .toNumber();
+          } else {
+            // Skip this if not in
+            continue;
           }
         }
 
