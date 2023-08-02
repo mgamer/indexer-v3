@@ -41,6 +41,7 @@ import * as collectionWebsocketEventsTriggerQueue from "@/jobs/websocket-events/
 
 import * as backfillDeleteExpiredBidsElasticsearch from "@/jobs/activities/backfill/backfill-delete-expired-bids-elasticsearch";
 import * as backfillSalePricingDecimalElasticsearch from "@/jobs/activities/backfill/backfill-sales-pricing-decimal-elasticsearch";
+import * as blockGapCheck from "@/jobs/events-sync/block-gap-check";
 
 import amqplib from "amqplib";
 import { config } from "@/config/index";
@@ -95,7 +96,6 @@ import { eventsSyncProcessBackfillJob } from "@/jobs/events-sync/process/events-
 import { openseaBidsQueueJob } from "@/jobs/orderbook/opensea-bids-queue-job";
 import { processResyncRequestJob } from "@/jobs/events-sync/process-resync-request-queue-job";
 import { eventsSyncBackfillJob } from "@/jobs/events-sync/events-sync-backfill-job";
-import { blockGapCheckJob } from "@/jobs/events-sync/block-gap-check";
 import { blockCheckJob } from "@/jobs/events-sync/block-check-queue-job";
 import { collectionNormalizedJob } from "@/jobs/collection-updates/collection-normalized-floor-queue-job";
 import { replaceActivitiesCollectionJob } from "@/jobs/activities/replace-activities-collection-job";
@@ -166,6 +166,7 @@ export const allJobQueues = [
 
   backfillDeleteExpiredBidsElasticsearch.queue,
   backfillSalePricingDecimalElasticsearch.queue,
+  blockGapCheck.queue,
 ];
 
 export class RabbitMqJobsConsumer {
@@ -225,7 +226,6 @@ export class RabbitMqJobsConsumer {
       openseaBidsQueueJob,
       processResyncRequestJob,
       eventsSyncBackfillJob,
-      blockGapCheckJob,
       blockCheckJob,
       collectionNormalizedJob,
       replaceActivitiesCollectionJob,
