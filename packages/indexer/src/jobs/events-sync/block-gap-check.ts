@@ -45,7 +45,9 @@ export class BlockGapCheckJob extends AbstractRabbitMqJobHandler {
             this.queueName,
             `Found missing block: ${missingBlocks[i].missing_block_number}`
           );
-          await eventsSyncRealtimeJob.addToQueue(missingBlocks[i].missing_block_number);
+          await eventsSyncRealtimeJob.addToQueue({
+            block: missingBlocks[i].missing_block_number,
+          });
         }
       }
     } catch (error) {
