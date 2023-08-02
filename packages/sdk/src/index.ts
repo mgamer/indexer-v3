@@ -1,4 +1,5 @@
 import * as Common from "./common";
+import * as Global from "./global";
 
 import * as RouterV6 from "./router/v6";
 
@@ -44,7 +45,6 @@ import * as CaviarV1 from "./caviar-v1";
 import * as PaymentProcessor from "./payment-processor";
 import * as Seadrop from "./seadrop";
 import * as BlurV2 from "./blur-v2";
-import * as Global from "./global";
 
 // Overrides (shouldn't belong here)
 if (process.env.SEAPORT_V15_OVERRIDE) {
@@ -71,6 +71,8 @@ if (process.env.APPROVAL_PROXY_OVERRIDE) {
 export {
   // Common
   Common,
+  // Global
+  Global,
   // Routers
   RouterV6,
   // Contracts / Protocols
@@ -116,5 +118,4 @@ export {
   PaymentProcessor,
   Seadrop,
   BlurV2,
-  Global,
 };

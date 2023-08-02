@@ -2,9 +2,10 @@ import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
 import { keccak256 } from "@ethersproject/keccak256";
 import { randomBytes } from "@ethersproject/random";
 import { toUtf8Bytes, toUtf8String } from "@ethersproject/strings";
-import * as Global from "./global";
 import { verifyTypedData } from "@ethersproject/wallet";
 import { TypedDataDomain, TypedDataField } from "ethers";
+
+import * as Global from "./global";
 
 // Constants
 
@@ -78,14 +79,11 @@ export function checkEIP721Signature(
 
 // Misc
 
-export const getSourceHash = (source?: string) =>
-  source ? keccak256(toUtf8Bytes(source)).slice(2, 10) : "";
+export const getSourceHash = (source?: string, defaultValue = "") =>
+  source ? keccak256(toUtf8Bytes(source)).slice(2, 10) : defaultValue;
 
 export const generateSourceBytes = (source?: string) => {
-  const aggregatorSource = Global.Config.aggregatorSource;
-  return source === "reservoir.tools"
-    ? getSourceHash(source) + "00000000"
-    : getSourceHash(aggregatorSource) + getSourceHash(source);
+  return getSourceHash(Global.Config.aggregatorSource) + getSourceHash(source, "00000000");
 };
 
 export const getSourceV1 = (calldata: string) => {
