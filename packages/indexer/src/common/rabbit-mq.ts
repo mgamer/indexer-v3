@@ -159,11 +159,11 @@ export class RabbitMq {
         }
       });
     } catch (error) {
-      if (lockAcquired && content.jobId) {
-        await releaseLock(content.jobId).catch();
-      }
-
       if (`${error}`.includes("nacked")) {
+        if (lockAcquired && content.jobId) {
+          await releaseLock(content.jobId).catch();
+        }
+
         logger.error(
           `rabbit-publish-error`,
           JSON.stringify({
