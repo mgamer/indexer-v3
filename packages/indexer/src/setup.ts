@@ -18,9 +18,7 @@ import { Sources } from "@/models/sources";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 process.on("unhandledRejection", (error: any) => {
-  if (config.chainId !== 324) {
-    logger.error("process", `Unhandled rejection: ${error} (${error.stack})`);
-  }
+  logger.error("process", `Unhandled rejection: ${error} (${error.stack})`);
 
   // For now, just skip any unhandled errors
   // process.exit(1);
