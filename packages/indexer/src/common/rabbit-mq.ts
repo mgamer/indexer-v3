@@ -158,6 +158,16 @@ export class RabbitMq {
           );
         }
       });
+
+      if (content.publishRetryCount > 0) {
+        logger.info(
+          `rabbit-message-republish`,
+          JSON.stringify({
+            message: `republish to ${queueName} content=${JSON.stringify(content)}`,
+            queueName: queueName.substring(_.indexOf(queueName, ".") + 1), // Remove chain name
+          })
+        );
+      }
     } catch (error) {
       if (`${error}`.includes("nacked")) {
         if (lockAcquired && content.jobId) {
