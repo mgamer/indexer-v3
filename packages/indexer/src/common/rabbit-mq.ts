@@ -163,7 +163,7 @@ export class RabbitMq {
         logger.info(
           `rabbit-message-republish`,
           JSON.stringify({
-            message: `republish to ${queueName} content=${JSON.stringify(content)}`,
+            message: `successfully republished to ${queueName} content=${JSON.stringify(content)}`,
             queueName: queueName.substring(_.indexOf(queueName, ".") + 1), // Remove chain name
           })
         );
