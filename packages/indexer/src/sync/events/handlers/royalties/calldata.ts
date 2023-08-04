@@ -1,7 +1,6 @@
 import * as Sdk from "@reservoir0x/sdk";
 
 import { config } from "@/config/index";
-import { getMinNonce } from "@/orderbook/orders/common/helpers";
 
 export const extractOrdersFromCalldata = async (calldata: string) => {
   const exchange = new Sdk.SeaportV15.Exchange(config.chainId);
@@ -30,7 +29,11 @@ export const extractOrdersFromCalldata = async (calldata: string) => {
       try {
         const order = new Sdk.SeaportV15.Order(config.chainId, {
           ...orders[i].parameters,
-          counter: await getMinNonce("seaport-v1.5", orders[i].parameters.offerer),
+          // Not important
+          counter: 0,
+          // counter: await exchange
+          //   .getCounter(baseProvider, offerer, block)
+          //   .catch(() => getMinNonce("seaport-v1.5", offerer)),
         });
         basicOrders.push(order.getInfo()!);
       } catch {
