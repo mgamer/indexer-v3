@@ -11,6 +11,7 @@ import {
   getFillEventsFromTx,
   getOrderInfos,
 } from "@/events-sync/handlers/royalties";
+import { extractOrdersFromCalldata } from "@/events-sync/handlers/royalties/calldata";
 import { supportedExchanges } from "@/events-sync/handlers/royalties/config";
 import { splitPayments } from "@/events-sync/handlers/royalties/payments";
 import { getFillEventsFromTxOnChain } from "@/events-sync/handlers/royalties/utils";
@@ -19,7 +20,6 @@ import * as utils from "@/events-sync/utils";
 import { FeeRecipients } from "@/models/fee-recipients";
 import { TransactionTrace } from "@/models/transaction-traces";
 import { Royalty, getRoyalties } from "@/utils/royalties";
-import { extractOrdersFromCalldata } from "./calldata";
 
 const findMatchingPayment = (payments: Payment[], fillEvent: PartialFillEvent) =>
   payments.find((payment) => paymentMatches(payment, fillEvent));
@@ -205,7 +205,7 @@ export async function extractRoyalties(
 
   // Extract the orders from calldata when there have multiple fill events
   const parsedOrders =
-    fillEvents.length > 1 ? extractOrdersFromCalldata(subcallToAnalyze.input) : [];
+    fillEvents.length > 1 ? await extractOrdersFromCalldata(subcallToAnalyze.input) : [];
 
   const linkedOrder = parsedOrders.find(
     (c) => c.contract === fillEvent.contract && c.tokenId === fillEvent.tokenId
@@ -398,14 +398,12 @@ export async function extractRoyalties(
         bps: bpsOfPrice.toNumber(),
       };
 
-      const feeRecipientPlatform = await feeRecipient.getByAddress(address, "marketplace");
-      // const feeRecipientPlatform = knownPlatformFeeRecipients.includes(address)
-
+      const feeRecipientPlatform = feeRecipient.getByAddress(address, "marketplace");
       if (feeRecipientPlatform) {
         // Make sure current fee address in every order
-        let ptotocolFeeSum = sameProtocolTotalPrice;
+        let protocolFeeSum = sameProtocolTotalPrice;
         if (linkedOrder) {
-          ptotocolFeeSum = sameProtocolFills.reduce((total, item) => {
+          protocolFeeSum = sameProtocolFills.reduce((total, item) => {
             const matchOrder = parsedOrders.find(
               (c) => c.contract === item.event.contract && c.tokenId === item.event.tokenId
             );
@@ -424,7 +422,7 @@ export async function extractRoyalties(
 
         // This is a marketplace fee payment
         // Reset the bps
-        royalty.bps = bn(balanceChange).mul(10000).div(ptotocolFeeSum).toNumber();
+        royalty.bps = bn(balanceChange).mul(10000).div(protocolFeeSum).toNumber();
 
         // Calculate by matched payment amount in split payments
         if (matchRangePayment && isReliable && hasMultiple) {
