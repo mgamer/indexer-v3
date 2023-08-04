@@ -369,10 +369,6 @@ export class Order {
         return new Builders.ContractWide(this.chainId);
       }
 
-      case "bundled-offer-approval": {
-        return new Builders.ContractWide(this.chainId);
-      }
-
       case "offer-approval":
       case "sale-approval": {
         return new Builders.SingleToken(this.chainId);
