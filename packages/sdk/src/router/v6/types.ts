@@ -236,6 +236,7 @@ export type FillBidsResult = {
 export type MintDetails = {
   orderId: string;
   txData: TxData;
+  fees?: Fee[];
 };
 
 export type FillMintsResult = {
