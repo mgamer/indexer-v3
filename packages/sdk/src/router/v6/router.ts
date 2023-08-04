@@ -787,6 +787,8 @@ export class Router {
     ) {
       const exchange = new Sdk.PaymentProcessor.Exchange(this.chainId);
       const operator = exchange.contract.address;
+      // use seep when all orders from the same collection
+      const useSweepCollection = details.every((c) => c.contract === details[0].contract);
 
       let approval: FTApproval | undefined;
       if (!isETH(this.chainId, details[0].currency)) {
@@ -799,18 +801,47 @@ export class Router {
         };
       }
 
-      const orders: Sdk.PaymentProcessor.Order[] = [];
-      const takeOrders: Sdk.PaymentProcessor.Order[] = [];
       const preSignatures: PreSignature[] = [];
-      for (const detail of details) {
-        const order = detail.order as Sdk.PaymentProcessor.Order;
+      const orders: Sdk.PaymentProcessor.Order[] = details.map(
+        (c) => c.order as Sdk.PaymentProcessor.Order
+      );
 
+      if (useSweepCollection) {
+        const bundledOrder = Sdk.PaymentProcessor.Order.createBundledOfferOrder(orders, {
+          taker,
+          takerMasterNonce: await exchange.getMasterNonce(this.provider, taker),
+        });
+        const signData = bundledOrder.getSignatureData();
+        preSignatures.push({
+          kind: "payment-processor-take-order",
+          signer: taker,
+          data: signData,
+          uniqueId: `${bundledOrder.params.tokenAddress}-${bundledOrder.params.tokenIds?.join(
+            "-"
+          )}-${bundledOrder.params.price}`,
+        });
+
+        return {
+          txs: [
+            {
+              approvals: approval ? [approval] : [],
+              permits: [],
+              preSignatures: preSignatures,
+              txData: exchange.sweepCollectionTx(taker, bundledOrder, orders),
+              orderIds: details.map((d) => d.orderId),
+            },
+          ],
+          success: Object.fromEntries(details.map((d) => [d.orderId, true])),
+        };
+      }
+
+      const takeOrders: Sdk.PaymentProcessor.Order[] = [];
+      for (const order of orders) {
         const takerOrder = order.buildMatching({
           taker,
           takerMasterNonce: await exchange.getMasterNonce(this.provider, taker),
         });
 
-        orders.push(order);
         takeOrders.push(takerOrder);
 
         const signData = takerOrder.getSignatureData();
@@ -3039,6 +3070,7 @@ export class Router {
       approvals: NFTApproval[];
       txData: TxData;
       orderIds: string[];
+      preSignatures: PreSignature[];
     }[] = [];
     const success: { [orderId: string]: boolean } = {};
 
@@ -3118,6 +3150,7 @@ export class Router {
                 data: data.data + generateSourceBytes(options?.source),
                 value: data.value,
               },
+              preSignatures: [],
               orderIds,
             });
           }
@@ -3158,6 +3191,58 @@ export class Router {
 
     // Keep track of any NFT transfers that need to be performed
     const nftTransferItems: ApprovalProxy.TransferItem[] = [];
+
+    if (details.every(({ kind }) => kind === "payment-processor") && !options?.globalFees?.length) {
+      const exchange = new Sdk.PaymentProcessor.Exchange(this.chainId);
+      const operator = exchange.contract.address;
+
+      const orders: Sdk.PaymentProcessor.Order[] = [];
+      const takeOrders: Sdk.PaymentProcessor.Order[] = [];
+      const preSignatures: PreSignature[] = [];
+
+      for (const detail of details) {
+        const order = detail.order as Sdk.PaymentProcessor.Order;
+        const takerOrder = order.buildMatching({
+          taker,
+          takerMasterNonce: await exchange.getMasterNonce(this.provider, taker),
+        });
+
+        orders.push(order);
+        takeOrders.push(takerOrder);
+
+        const signData = takerOrder.getSignatureData();
+        preSignatures.push({
+          kind: "payment-processor-take-order",
+          signer: taker,
+          data: signData,
+          uniqueId: `${takerOrder.params.tokenAddress}-${takerOrder.params.tokenId}-${takerOrder.params.price}`,
+        });
+
+        // Generate approval
+        approvals.push({
+          orderIds: [detail.orderId],
+          contract: takerOrder.params.tokenAddress,
+          owner: taker,
+          operator,
+          txData: generateNFTApprovalTxData(takerOrder.params.tokenAddress, taker, operator),
+        });
+      }
+
+      return {
+        txs: [
+          {
+            approvals: uniqBy(
+              approvals,
+              ({ txData: { from, to, data } }) => `${from}-${to}-${data}`
+            ),
+            preSignatures: preSignatures,
+            txData: exchange.fillOrdersTx(taker, orders, takeOrders),
+            orderIds: details.map((d) => d.orderId),
+          },
+        ],
+        success: Object.fromEntries(details.map((d) => [d.orderId, true])),
+      };
+    }
 
     for (let i = 0; i < details.length; i++) {
       const detail = details[i];
@@ -3565,6 +3650,7 @@ export class Router {
                     txData: generateNFTApprovalTxData(contract, owner, operator),
                   },
                 ],
+                preSignatures: [],
                 orderIds: [detail.orderId],
               });
             } else {
@@ -4117,6 +4203,7 @@ export class Router {
               ) + generateSourceBytes(options?.source),
           },
           approvals: [],
+          preSignatures: [],
           orderIds: [detail.orderId],
         });
       } else {
@@ -4131,6 +4218,7 @@ export class Router {
               ) + generateSourceBytes(options?.source),
           },
           approvals: [],
+          preSignatures: [],
           orderIds: [detail.orderId],
         });
       }
@@ -4152,6 +4240,7 @@ export class Router {
           approvals,
           ({ txData: { from, to, data } }) => `${from}-${to}-${data}`
         ),
+        preSignatures: [],
         orderIds: executionsWithDetails.map(({ detail }) => detail.orderId),
       });
     }
