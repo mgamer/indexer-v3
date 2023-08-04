@@ -4,6 +4,8 @@ import "@/config/polyfills";
 import "@/pubsub/index";
 import "@/websockets/index";
 
+import * as Sdk from "@reservoir0x/sdk";
+
 import { start } from "@/api/index";
 import { logger } from "@/common/logger";
 import { config } from "@/config/index";
@@ -23,6 +25,9 @@ process.on("unhandledRejection", (error: any) => {
 });
 
 const setup = async () => {
+  // Configure the SDK
+  Sdk.Global.Config.aggregatorSource = "reservoir.tools";
+
   if (process.env.LOCAL_TESTING) {
     return;
   }
