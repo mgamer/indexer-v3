@@ -291,7 +291,7 @@ export const savePartialListings = async (
           results.push({
             id,
             status: "success",
-            triggerKind: "reprice",
+            triggerKind: "revalidation",
           });
         }
       }
