@@ -51,6 +51,7 @@ import getUuidByString from "uuid-by-string";
 import { getMachineId } from "@/common/machine-id";
 import { PausedRabbitMqQueues } from "@/models/paused-rabbit-mq-queues";
 import { RabbitMq, RabbitMQMessage } from "@/common/rabbit-mq";
+import { getNetworkName } from "@/config/network";
 import { logger } from "@/common/logger";
 import { tokenReclacSupplyJob } from "@/jobs/token-updates/token-reclac-supply-job";
 import { tokenRefreshCacheJob } from "@/jobs/token-updates/token-refresh-cache-job";
@@ -148,7 +149,6 @@ import { backfillDeleteExpiredBidsElasticsearchJob } from "@/jobs/activities/bac
 import { transferUpdatesJob } from "@/jobs/transfer-updates/transfer-updates-job";
 import { backfillSaveActivitiesElasticsearchJob } from "@/jobs/activities/backfill/backfill-save-activities-elasticsearch-job";
 import { pendingExpiredOrdersCheckJob } from "@/jobs/orderbook/cron/pending-expired-orders-check-job";
-import { getNetworkName } from "@/config/network";
 
 export const allJobQueues = [
   backfillExpiredOrders.queue,
