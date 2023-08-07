@@ -22,7 +22,7 @@ export const postRetryRabbitQueue: RouteOptions = {
     }).options({ allowUnknown: true }),
     payload: Joi.object({
       queueName: Joi.string().description("The queue name to retry").required(),
-      vhost: Joi.string().default("%2F"),
+      vhost: Joi.string().default("/"),
     }),
   },
   handler: async (request: Request) => {
