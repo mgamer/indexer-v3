@@ -148,6 +148,7 @@ import { backfillDeleteExpiredBidsElasticsearchJob } from "@/jobs/activities/bac
 import { transferUpdatesJob } from "@/jobs/transfer-updates/transfer-updates-job";
 import { backfillSaveActivitiesElasticsearchJob } from "@/jobs/activities/backfill/backfill-save-activities-elasticsearch-job";
 import { pendingExpiredOrdersCheckJob } from "@/jobs/orderbook/cron/pending-expired-orders-check-job";
+import { getNetworkName } from "@/config/network";
 
 export const allJobQueues = [
   backfillExpiredOrders.queue,
@@ -174,10 +175,16 @@ export class RabbitMqJobsConsumer {
   private static maxConsumerConnectionsCount = 5;
 
   private static rabbitMqConsumerConnections: AmqpConnectionManager[] = [];
+
   private static queueToChannel: Map<string, ChannelWrapper> = new Map();
   private static sharedChannels: Map<string, ChannelWrapper> = new Map();
   private static channelsToJobs: Map<ChannelWrapper, AbstractRabbitMqJobHandler[]> = new Map();
   private static sharedChannelName = "shared-channel";
+
+  private static vhostQueueToChannel: Map<string, ChannelWrapper> = new Map();
+  private static sharedVhostChannels: Map<string, ChannelWrapper> = new Map();
+  private static rabbitMqConsumerVhostConnections: AmqpConnectionManager[] = [];
+  private static vhostChannelsToJobs: Map<ChannelWrapper, AbstractRabbitMqJobHandler[]> = new Map();
 
   /**
    * Return array of all jobs classes, any new job MUST be added here
@@ -310,6 +317,37 @@ export class RabbitMqJobsConsumer {
     }
   }
 
+  public static async connectToVhost() {
+    for (let i = 0; i < RabbitMqJobsConsumer.maxConsumerConnectionsCount; ++i) {
+      const connection = amqplibConnectionManager.connect(
+        {
+          hostname: config.rabbitHostname,
+          username: config.rabbitUsername,
+          password: config.rabbitPassword,
+          vhost: getNetworkName(),
+        },
+        {
+          reconnectTimeInSeconds: 5,
+          heartbeatIntervalInSeconds: 30,
+        }
+      );
+
+      RabbitMqJobsConsumer.rabbitMqConsumerVhostConnections.push(connection);
+
+      const sharedChannel = connection.createChannel({ confirm: false });
+
+      // Create a shared channel for each connection
+      RabbitMqJobsConsumer.sharedVhostChannels.set(
+        RabbitMqJobsConsumer.getSharedChannelName(i),
+        sharedChannel
+      );
+
+      connection.once("error", (error) => {
+        logger.error("rabbit-error", `Consumer connection error ${error}`);
+      });
+    }
+  }
+
   /**
    * Return unique consumer tag used to identify a specific consumer on each queue
    * @param queueName
@@ -351,6 +389,69 @@ export class RabbitMqJobsConsumer {
     RabbitMqJobsConsumer.channelsToJobs.get(channel)
       ? RabbitMqJobsConsumer.channelsToJobs.get(channel)?.push(job)
       : RabbitMqJobsConsumer.channelsToJobs.set(channel, [job]);
+
+    const queue = RabbitMq.vhostMigratingChains.includes(config.chainId)
+      ? `${getNetworkName()}.${job.queueName}`
+      : job.getQueue();
+
+    // Subscribe to the queue
+    await channel.consume(
+      queue,
+      async (msg) => {
+        if (!_.isNull(msg)) {
+          await _.clone(job)
+            .consume(channel, msg)
+            .catch((error) => {
+              logger.error(
+                "rabbit-consume",
+                `error consuming from ${job.queueName} error ${error}`
+              );
+            });
+        }
+      },
+      {
+        consumerTag: RabbitMqJobsConsumer.getConsumerTag(job.getQueue()),
+        prefetch: job.getConcurrency(),
+        noAck: false,
+      }
+    );
+  }
+
+  /**
+   * Subscribing to a given job
+   * @param job
+   */
+  public static async subscribeToVhost(job: AbstractRabbitMqJobHandler) {
+    // Check if the queue is paused
+    const pausedQueues = await PausedRabbitMqQueues.getPausedQueues();
+    if (_.indexOf(pausedQueues, job.getQueue()) !== -1) {
+      logger.warn("rabbit-subscribe", `${job.getQueue()} is paused`);
+      return;
+    }
+
+    let channel: ChannelWrapper;
+    const connectionIndex = _.random(0, RabbitMqJobsConsumer.maxConsumerConnectionsCount - 1);
+    const sharedChannel = RabbitMqJobsConsumer.sharedVhostChannels.get(
+      RabbitMqJobsConsumer.getSharedChannelName(connectionIndex)
+    );
+
+    // Some queues can use a shared channel as they are less important with low traffic
+    if (job.getUseSharedChannel() && sharedChannel) {
+      channel = sharedChannel;
+    } else {
+      channel = RabbitMqJobsConsumer.rabbitMqConsumerVhostConnections[
+        connectionIndex
+      ].createChannel({
+        confirm: false,
+      });
+      await channel.waitForConnect();
+    }
+
+    RabbitMqJobsConsumer.vhostQueueToChannel.set(job.getQueue(), channel);
+
+    RabbitMqJobsConsumer.vhostChannelsToJobs.get(channel)
+      ? RabbitMqJobsConsumer.vhostChannelsToJobs.get(channel)?.push(job)
+      : RabbitMqJobsConsumer.vhostChannelsToJobs.set(channel, [job]);
 
     // Subscribe to the queue
     await channel.consume(
@@ -394,10 +495,18 @@ export class RabbitMqJobsConsumer {
     try {
       await RabbitMqJobsConsumer.connect(); // Create a connection for the consumer
 
+      if (RabbitMq.vhostMigratingChains.includes(config.chainId)) {
+        await RabbitMqJobsConsumer.connectToVhost(); // Create a connection for the consumer
+      }
+
       for (const queue of RabbitMqJobsConsumer.getQueues()) {
         try {
           if (!queue.isDisableConsuming()) {
             await RabbitMqJobsConsumer.subscribe(queue);
+
+            if (RabbitMq.vhostMigratingChains.includes(config.chainId)) {
+              await RabbitMqJobsConsumer.subscribeToVhost(queue);
+            }
           }
         } catch (error) {
           logger.error(
