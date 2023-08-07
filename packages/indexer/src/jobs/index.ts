@@ -531,7 +531,7 @@ export class RabbitMqJobsConsumer {
       }
 
       const deadLetterQueueSize = await RabbitMq.getQueueSize(
-        `${queueName}-dead-letter`,
+        `${deadLetterQueue}`,
         vhost === "/" ? undefined : vhost
       );
 
@@ -555,7 +555,7 @@ export class RabbitMqJobsConsumer {
       // Subscribe to the dead letter queue
       await new Promise<void>((resolve) =>
         channel.consume(
-          `${deadLetterQueue}-dead-letter`,
+          `${deadLetterQueue}`,
           async (msg) => {
             if (!_.isNull(msg)) {
               await RabbitMq.send(queueName, JSON.parse(msg.content.toString()) as RabbitMQMessage);
