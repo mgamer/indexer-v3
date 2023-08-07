@@ -97,7 +97,10 @@ export class BlockCheckJob extends AbstractRabbitMqJobHandler {
         for (const { block_hash } of result) {
           const blockHash = fromBuffer(block_hash);
           if (blockHash.toLowerCase() !== upstreamBlockHash.toLowerCase()) {
-            logger.info(this.queueName, `Detected orphan block ${block} with hash ${blockHash}}`);
+            logger.info(
+              this.queueName,
+              `Detected orphan block ${block} with hash ${blockHash}}, upstream hash: ${upstreamBlockHash}, delay=${payload.delay}`
+            );
             await handleOrphanBlock({ number: block, hash: blockHash });
           }
         }
