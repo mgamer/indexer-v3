@@ -103,7 +103,10 @@ export class BlockCheckJob extends AbstractRabbitMqJobHandler {
         }
       } else {
         if (upstreamBlockHash.toLowerCase() !== blockHash.toLowerCase()) {
-          logger.info(this.queueName, `Detected orphan block ${block} with hash ${blockHash}}`);
+          logger.info(
+            this.queueName,
+            `Detected orphan block ${block} with hash ${blockHash}}, upstream hash: ${upstreamBlockHash}, delay=${payload.delay}`
+          );
           await handleOrphanBlock({ number: block, hash: blockHash });
         }
       }

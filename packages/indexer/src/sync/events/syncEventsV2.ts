@@ -380,6 +380,7 @@ export const syncEvents = async (block: number) => {
       })
     );
 
+    await blockCheckJob.addToQueue({ block: block, blockHash: blockData.hash, delay: 1 * 60 });
     await blockCheckJob.addToQueue({ block: block, blockHash: blockData.hash, delay: 5 * 60 });
   } catch (error) {
     logger.warn("sync-events-v2", `Events realtime syncing failed: ${error}, block: ${block}`);
