@@ -520,7 +520,7 @@ export class RabbitMqJobsConsumer {
     }
   }
 
-  static async retryQueue(queueName: string, vhost = "/") {
+  static async retryQueue(queueName: string, vhost: string) {
     const job = _.find(RabbitMqJobsConsumer.getQueues(), (queue) => queue.getQueue() === queueName);
 
     if (job) {

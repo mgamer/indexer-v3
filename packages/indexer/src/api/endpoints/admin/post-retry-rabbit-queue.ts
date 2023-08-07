@@ -22,7 +22,7 @@ export const postRetryRabbitQueue: RouteOptions = {
     }).options({ allowUnknown: true }),
     payload: Joi.object({
       queueName: Joi.string().description("The queue name to retry").required(),
-      vhost: Joi.string().default("/"),
+      vhost: Joi.string().default("%2F"),
     }),
   },
   handler: async (request: Request) => {
@@ -40,6 +40,7 @@ export const postRetryRabbitQueue: RouteOptions = {
         payload.queueName,
         payload.vhost
       );
+
       return {
         message: `${retriedMessagesCount} messages in ${payload.queueName} on vhost ${payload.vhost} sent to retry`,
       };
