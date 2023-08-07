@@ -520,7 +520,7 @@ export class RabbitMqJobsConsumer {
     }
   }
 
-  static async retryQueue(queueName: string) {
+  static async retryQueue(queueName: string, vhost = "/") {
     const job = _.find(RabbitMqJobsConsumer.getQueues(), (queue) => queue.getQueue() === queueName);
 
     if (job) {
@@ -531,7 +531,13 @@ export class RabbitMqJobsConsumer {
         return 0;
       }
 
-      const connection = await amqplib.connect(config.rabbitMqUrl);
+      const connection = await amqplib.connect({
+        hostname: config.rabbitHostname,
+        username: config.rabbitUsername,
+        password: config.rabbitPassword,
+        vhost,
+      });
+
       const channel = await connection.createChannel();
       let counter = 0;
 
