@@ -530,7 +530,10 @@ export class RabbitMqJobsConsumer {
         deadLetterQueue = `${getNetworkName()}.${deadLetterQueue}`;
       }
 
-      const deadLetterQueueSize = await RabbitMq.getQueueSize(`${queueName}-dead-letter`);
+      const deadLetterQueueSize = await RabbitMq.getQueueSize(
+        `${queueName}-dead-letter`,
+        vhost === "/" ? undefined : vhost
+      );
 
       // No messages in the dead letter queue
       if (deadLetterQueueSize === 0) {
