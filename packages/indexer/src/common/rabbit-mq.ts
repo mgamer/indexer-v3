@@ -49,7 +49,7 @@ export type DeletePolicyPayload = {
 
 export class RabbitMq {
   public static delayedExchangeName = `${getNetworkName()}.delayed`;
-  public static vhostMigratingChains = [324];
+  public static vhostMigratingChains = [5];
 
   private static rabbitMqPublisherConnection: AmqpConnectionManager;
 
@@ -269,8 +269,6 @@ export class RabbitMq {
   public static async assertQueuesAndExchanges() {
     const abstract = await import("@/jobs/abstract-rabbit-mq-job-handler");
     const jobsIndex = await import("@/jobs/index");
-
-    await this.createVhost();
 
     const connection = await amqplib.connect({
       hostname: config.rabbitHostname,
