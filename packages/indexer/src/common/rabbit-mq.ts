@@ -60,16 +60,12 @@ export class RabbitMq {
   private static rabbitMqPublisherChannels: ChannelWrapper[] = [];
 
   public static async connect() {
-    if (RabbitMq.vhostMigratingChains.includes(config.chainId)) {
-      RabbitMq.rabbitMqPublisherConnection = amqplibConnectionManager.connect({
-        hostname: config.rabbitHostname,
-        username: config.rabbitUsername,
-        password: config.rabbitPassword,
-        vhost: getNetworkName(),
-      });
-    } else {
-      RabbitMq.rabbitMqPublisherConnection = amqplibConnectionManager.connect(config.rabbitMqUrl);
-    }
+    RabbitMq.rabbitMqPublisherConnection = amqplibConnectionManager.connect({
+      hostname: config.rabbitHostname,
+      username: config.rabbitUsername,
+      password: config.rabbitPassword,
+      vhost: getNetworkName(),
+    });
 
     for (let index = 0; index < RabbitMq.maxPublisherChannelsCount; ++index) {
       const channel = this.rabbitMqPublisherConnection.createChannel();
