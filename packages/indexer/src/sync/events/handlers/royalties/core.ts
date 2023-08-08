@@ -317,6 +317,8 @@ export async function extractRoyalties(
   const ETH = Sdk.Common.Addresses.Native[config.chainId];
   const BETH = Sdk.Blur.Addresses.Beth[config.chainId];
 
+  const PRECISIIN_BASE = 100000;
+
   // Check Paid on top
   for (const address in globalState) {
     const globalChange = globalState[address];
@@ -332,7 +334,9 @@ export async function extractRoyalties(
 
         if (globalBalanceChange && !globalBalanceChange.startsWith("-") && !exchangeChange) {
           const paidOnTop = bn(globalBalanceChange);
-          const topFeeBps = paidOnTop.gt(0) ? paidOnTop.mul(10000).div(bn(currencyPrice)) : bn(0);
+          const topFeeBps = paidOnTop.gt(0)
+            ? paidOnTop.mul(PRECISIIN_BASE).div(bn(currencyPrice))
+            : bn(0);
 
           if (topFeeBps.gt(0)) {
             royaltyFeeOnTop.push({
@@ -370,7 +374,9 @@ export async function extractRoyalties(
           const balanceChangeAmount =
             balanceChange && !balanceChange.startsWith("-") ? bn(balanceChange) : bn(0);
           const paidOnTop = bn(globalBalanceChange).sub(balanceChangeAmount);
-          const topFeeBps = paidOnTop.gt(0) ? paidOnTop.mul(10000).div(bn(currencyPrice)) : bn(0);
+          const topFeeBps = paidOnTop.gt(0)
+            ? paidOnTop.mul(PRECISIIN_BASE).div(bn(currencyPrice))
+            : bn(0);
 
           if (topFeeBps.gt(0)) {
             royaltyFeeOnTop.push({
@@ -391,7 +397,7 @@ export async function extractRoyalties(
 
     // If the balance change is positive that means a payment was received
     if (balanceChange && !balanceChange.startsWith("-")) {
-      const bpsOfPrice = bn(balanceChange).mul(10000).div(bn(currencyPrice));
+      const bpsOfPrice = bn(balanceChange).mul(PRECISIIN_BASE).div(bn(currencyPrice));
       // Start with the assumption that this is a royalty/platform fee payment
       const royalty = {
         recipient: address,
@@ -422,12 +428,12 @@ export async function extractRoyalties(
 
         // This is a marketplace fee payment
         // Reset the bps
-        royalty.bps = bn(balanceChange).mul(10000).div(protocolFeeSum).toNumber();
+        royalty.bps = bn(balanceChange).mul(PRECISIIN_BASE).div(protocolFeeSum).toNumber();
 
         // Calculate by matched payment amount in split payments
         if (matchRangePayment && isReliable && hasMultiple) {
           royalty.bps = bn(matchRangePayment.amount)
-            .mul(10000)
+            .mul(PRECISIIN_BASE)
             .div(fillEvent.currencyPrice ?? fillEvent.price)
             .toNumber();
         }
@@ -439,11 +445,17 @@ export async function extractRoyalties(
         const shareSameRecipient = sameRecipientDetails.length === sameProtocolFills.length;
 
         // Make sure current fee address in every order
-        let bps: number = bn(balanceChange).mul(10000).div(sameContractTotalPrice).toNumber();
+        let bps: number = bn(balanceChange)
+          .mul(PRECISIIN_BASE)
+          .div(sameContractTotalPrice)
+          .toNumber();
 
         if (shareSameRecipient) {
           const configBPS = sameRecipientDetails[0].bps;
-          const newBps = bn(balanceChange).mul(10000).div(sameProtocolTotalPrice).toNumber();
+          const newBps = bn(balanceChange)
+            .mul(PRECISIIN_BASE)
+            .div(sameProtocolTotalPrice)
+            .toNumber();
           // Make sure the bps is same with the config
           const isValid = configBPS === newBps;
           if (isValid) {
@@ -458,7 +470,7 @@ export async function extractRoyalties(
           );
           if (feeItem) {
             bps = bn(feeItem.amount)
-              .mul(10000)
+              .mul(PRECISIIN_BASE)
               .div(fillEvent.currencyPrice ?? fillEvent.price)
               .toNumber();
           } else {
@@ -528,7 +540,7 @@ export async function extractRoyalties(
           const royalty = {
             recipient: missingInStateFee.recipient,
             bps: bn(missingInStateFee.amount)
-              .mul(10000)
+              .mul(PRECISIIN_BASE)
               .div(fillEvent.currencyPrice ?? fillEvent.price)
               .toNumber(),
           };
@@ -557,6 +569,18 @@ export async function extractRoyalties(
       }
     });
   }
+
+  const normalizeBps = (c: Royalty) => {
+    const newBps = c.bps / 10;
+    c.bps = Math.round(newBps);
+    return c;
+  };
+
+  // console.log(royaltyFeeBreakdown, linkedOrder)
+
+  royaltyFeeBreakdown.map(normalizeBps);
+  marketplaceFeeBreakdown.map(normalizeBps);
+  creatorRoyaltyFeeBreakdown.map(normalizeBps);
 
   const royaltyFeeBps = getTotalRoyaltyBps(royaltyFeeBreakdown);
   const creatorBps = Math.min(...royalties.map(getTotalRoyaltyBps));
