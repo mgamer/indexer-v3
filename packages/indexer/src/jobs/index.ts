@@ -528,7 +528,6 @@ export class RabbitMqJobsConsumer {
 
       if (vhost === "/") {
         deadLetterQueue = `${getNetworkName()}.${deadLetterQueue}`;
-        queueName = `${getNetworkName()}.${queueName}`;
       }
 
       const deadLetterQueueSize = await RabbitMq.getQueueSize(
