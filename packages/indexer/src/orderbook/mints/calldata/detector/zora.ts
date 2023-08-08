@@ -54,7 +54,6 @@ export const extractByCollectionERC721 = async (collection: string): Promise<Col
   try {
     const saleDetails = await c.saleDetails();
     const fee = await c.zoraFeeForAmount(1).then((f: { fee: BigNumber }) => f.fee);
-    // let mintReferral: string | null = null;
     let totalRewards;
     try {
       totalRewards = await c.computeTotalReward(1);
