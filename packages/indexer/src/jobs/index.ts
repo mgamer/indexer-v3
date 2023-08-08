@@ -384,13 +384,16 @@ export class RabbitMqJobsConsumer {
       await channel.waitForConnect();
     }
 
+    const queue = `${getNetworkName()}.${job.queueName}`;
+    if (!(await channel.checkQueue(queue))) {
+      return;
+    }
+
     RabbitMqJobsConsumer.queueToChannel.set(job.getQueue(), channel);
 
     RabbitMqJobsConsumer.channelsToJobs.get(channel)
       ? RabbitMqJobsConsumer.channelsToJobs.get(channel)?.push(job)
       : RabbitMqJobsConsumer.channelsToJobs.set(channel, [job]);
-
-    const queue = `${getNetworkName()}.${job.queueName}`;
 
     // Subscribe to the queue
     await channel.consume(
