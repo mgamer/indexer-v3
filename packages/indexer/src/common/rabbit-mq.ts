@@ -242,10 +242,8 @@ export class RabbitMq {
   }
 
   public static async createVhost() {
-    if (RabbitMq.vhostMigratingChains.includes(config.chainId)) {
-      const url = `${config.rabbitHttpUrl}/api/vhosts/${getNetworkName()}`;
-      await axios.put(url);
-    }
+    const url = `${config.rabbitHttpUrl}/api/vhosts/${getNetworkName()}`;
+    await axios.put(url);
   }
 
   public static async deletePolicy(policy: DeletePolicyPayload) {
