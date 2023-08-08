@@ -39,7 +39,7 @@ export async function extractRoyalties(
   useCache?: boolean,
   forceOnChain?: boolean
 ) {
-  const creatorRoyaltyFeeBreakdown: Royalty[] = [];
+  // const creatorRoyaltyFeeBreakdown: Royalty[] = [];
   const marketplaceFeeBreakdown: Royalty[] = [];
   const royaltyFeeBreakdown: Royalty[] = [];
   const royaltyFeeOnTop: Royalty[] = [];
@@ -318,6 +318,7 @@ export async function extractRoyalties(
   const BETH = Sdk.Blur.Addresses.Beth[config.chainId];
 
   const PRECISIIN_BASE = 100000;
+  const BPS_LIMIT = 15000;
 
   // Check Paid on top
   for (const address in globalState) {
@@ -482,7 +483,7 @@ export async function extractRoyalties(
         if (royaltyRecipients.includes(address)) {
           // Reset the bps
           royalty.bps = bps;
-          creatorRoyaltyFeeBreakdown.push(royalty);
+          // creatorRoyaltyFeeBreakdown.push(royalty);
         }
 
         // Conditions:
@@ -497,7 +498,7 @@ export async function extractRoyalties(
         const matchFee = feeRecipient.getByAddress(address, "marketplace");
         const recipientIsEligible =
           bps > 0 &&
-          bps < 1500 &&
+          bps < BPS_LIMIT &&
           !matchFee &&
           excludeOtherRecipients &&
           !notRoyaltyRecipients.has(address);
@@ -546,7 +547,7 @@ export async function extractRoyalties(
           };
 
           if (royaltyRecipients.includes(missingInStateFee.recipient)) {
-            creatorRoyaltyFeeBreakdown.push(royalty);
+            // creatorRoyaltyFeeBreakdown.push(royalty);
           }
 
           royaltyFeeBreakdown.push(royalty);
@@ -570,26 +571,29 @@ export async function extractRoyalties(
     });
   }
 
-  const normalizeBps = (c: Royalty) => {
-    const newBps = c.bps / 10;
-    c.bps = Math.round(newBps);
+  const normalizeBps = (c: number) => Math.round(c / 10);
+  const normalizeBreakdown = (c: Royalty) => {
+    const newBps = normalizeBps(c.bps);
+    c.bps = newBps;
     return c;
   };
 
-  // console.log(royaltyFeeBreakdown, linkedOrder)
+  const royaltyFeeBpsRaw = getTotalRoyaltyBps(royaltyFeeBreakdown);
+  const marketplaceFeeBpsRaw = getTotalRoyaltyBps(marketplaceFeeBreakdown);
 
-  royaltyFeeBreakdown.map(normalizeBps);
-  marketplaceFeeBreakdown.map(normalizeBps);
-  creatorRoyaltyFeeBreakdown.map(normalizeBps);
+  const royaltyFeeBps = normalizeBps(royaltyFeeBpsRaw);
+  const marketplaceFeeBps = normalizeBps(marketplaceFeeBpsRaw);
 
-  const royaltyFeeBps = getTotalRoyaltyBps(royaltyFeeBreakdown);
   const creatorBps = Math.min(...royalties.map(getTotalRoyaltyBps));
   const paidFullRoyalty = royaltyFeeBreakdown.length ? royaltyFeeBps >= creatorBps : false;
+
+  royaltyFeeBreakdown.map(normalizeBreakdown);
+  marketplaceFeeBreakdown.map(normalizeBreakdown);
 
   return {
     royaltyFeeOnTop,
     royaltyFeeBps,
-    marketplaceFeeBps: getTotalRoyaltyBps(marketplaceFeeBreakdown),
+    marketplaceFeeBps,
     royaltyFeeBreakdown,
     marketplaceFeeBreakdown,
     paidFullRoyalty,
