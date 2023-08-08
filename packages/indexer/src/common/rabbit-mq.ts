@@ -49,18 +49,27 @@ export type DeletePolicyPayload = {
 
 export class RabbitMq {
   public static delayedExchangeName = `${getNetworkName()}.delayed`;
+  public static vhostMigratingChains = [
+    5, 10, 56, 999, 42161, 534353, 11155111, 80001, 84531, 42170, 137, 1, 8453, 59144, 7777777,
+    43114,
+  ];
 
   private static rabbitMqPublisherConnection: AmqpConnectionManager;
+
   private static maxPublisherChannelsCount = 10;
   private static rabbitMqPublisherChannels: ChannelWrapper[] = [];
 
   public static async connect() {
-    RabbitMq.rabbitMqPublisherConnection = amqplibConnectionManager.connect({
-      hostname: config.rabbitHostname,
-      username: config.rabbitUsername,
-      password: config.rabbitPassword,
-      vhost: getNetworkName(),
-    });
+    if (RabbitMq.vhostMigratingChains.includes(config.chainId)) {
+      RabbitMq.rabbitMqPublisherConnection = amqplibConnectionManager.connect({
+        hostname: config.rabbitHostname,
+        username: config.rabbitUsername,
+        password: config.rabbitPassword,
+        vhost: getNetworkName(),
+      });
+    } else {
+      RabbitMq.rabbitMqPublisherConnection = amqplibConnectionManager.connect(config.rabbitMqUrl);
+    }
 
     for (let index = 0; index < RabbitMq.maxPublisherChannelsCount; ++index) {
       const channel = this.rabbitMqPublisherConnection.createChannel();
@@ -237,8 +246,10 @@ export class RabbitMq {
   }
 
   public static async createVhost() {
-    const url = `${config.rabbitHttpUrl}/api/vhosts/${getNetworkName()}`;
-    await axios.put(url);
+    if (RabbitMq.vhostMigratingChains.includes(config.chainId)) {
+      const url = `${config.rabbitHttpUrl}/api/vhosts/${getNetworkName()}`;
+      await axios.put(url);
+    }
   }
 
   public static async deletePolicy(policy: DeletePolicyPayload) {

@@ -4,6 +4,7 @@
 import { RabbitMq, RabbitMQMessage } from "@/common/rabbit-mq";
 import { logger } from "@/common/logger";
 import _ from "lodash";
+import { getNetworkName } from "@/config/network";
 import EventEmitter from "events";
 import TypedEmitter from "typed-emitter";
 import { ConsumeMessage } from "amqplib";
@@ -139,7 +140,9 @@ export abstract class AbstractRabbitMqJobHandler extends (EventEmitter as new ()
   }
 
   public getQueue(): string {
-    return this.queueName;
+    return RabbitMq.vhostMigratingChains.includes(config.chainId)
+      ? this.queueName
+      : `${getNetworkName()}.${this.queueName}`;
   }
 
   public getRetryQueue(queueName?: string): string {

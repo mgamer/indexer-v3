@@ -390,7 +390,9 @@ export class RabbitMqJobsConsumer {
       ? RabbitMqJobsConsumer.channelsToJobs.get(channel)?.push(job)
       : RabbitMqJobsConsumer.channelsToJobs.set(channel, [job]);
 
-    const queue = job.getQueue();
+    const queue = RabbitMq.vhostMigratingChains.includes(config.chainId)
+      ? `${getNetworkName()}.${job.queueName}`
+      : job.getQueue();
 
     // Subscribe to the queue
     await channel.consume(
@@ -492,13 +494,19 @@ export class RabbitMqJobsConsumer {
   static async startRabbitJobsConsumer(): Promise<void> {
     try {
       await RabbitMqJobsConsumer.connect(); // Create a connection for the consumer
-      await RabbitMqJobsConsumer.connectToVhost(); // Create a connection for the consumer
+
+      if (RabbitMq.vhostMigratingChains.includes(config.chainId)) {
+        await RabbitMqJobsConsumer.connectToVhost(); // Create a connection for the consumer
+      }
 
       for (const queue of RabbitMqJobsConsumer.getQueues()) {
         try {
           if (!queue.isDisableConsuming()) {
             await RabbitMqJobsConsumer.subscribe(queue);
-            await RabbitMqJobsConsumer.subscribeToVhost(queue);
+
+            if (RabbitMq.vhostMigratingChains.includes(config.chainId)) {
+              await RabbitMqJobsConsumer.subscribeToVhost(queue);
+            }
           }
         } catch (error) {
           logger.error(

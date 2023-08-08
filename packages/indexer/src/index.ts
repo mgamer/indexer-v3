@@ -16,7 +16,10 @@ if (process.env.LOCAL_TESTING) {
     .then(async () => {
       // Sync the pods so rabbit queues assertion will run only once per deployment by a single pod
       if (await acquireLock(config.imageTag, 75)) {
-        await RabbitMq.assertQueuesAndExchanges();
+        if (RabbitMq.vhostMigratingChains.includes(config.chainId)) {
+          await RabbitMq.assertQueuesAndExchanges();
+        }
+
         await redis.set(config.imageTag, "DONE", "EX", 60 * 60 * 24); // Update the lock ttl
         import("./setup");
       } else {
