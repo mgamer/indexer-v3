@@ -49,7 +49,7 @@ export type DeletePolicyPayload = {
 
 export class RabbitMq {
   public static delayedExchangeName = `${getNetworkName()}.delayed`;
-  public static vhostMigratingChains = [5, 10, 56, 999];
+  public static vhostMigratingChains = [5, 10, 56, 999, 42161, 534353];
 
   private static rabbitMqPublisherConnection: AmqpConnectionManager;
 
