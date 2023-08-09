@@ -75,7 +75,7 @@ export const isBlockedByCustomLogic = async (contract: string, operators: string
 
     // Positive case
     if (result) {
-      await redis.set(cacheKey, result ? "1" : "0", "EX", 24 * 3600);
+      await redis.set(cacheKey, "1", "EX", 24 * 3600);
       return result;
     }
 
@@ -96,12 +96,12 @@ export const isBlockedByCustomLogic = async (contract: string, operators: string
 
     // Positive case
     if (result) {
-      await redis.set(cacheKey, result ? "1" : "0", "EX", 24 * 3600);
+      await redis.set(cacheKey, "1", "EX", 24 * 3600);
       return result;
     }
 
     // Negative case
-    await redis.set(cacheKey, result ? "1" : "0", "EX", 24 * 3600);
+    await redis.set(cacheKey, "0", "EX", 24 * 3600);
   }
 
   return Boolean(Number(cache));
