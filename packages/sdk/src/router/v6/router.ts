@@ -773,7 +773,8 @@ export class Router {
     ) {
       const exchange = new Sdk.PaymentProcessor.Exchange(this.chainId);
       const operator = exchange.contract.address;
-      // use seep when all orders from the same collection
+
+      // Use the gas-efficient sweep method when all listings are from the same collection
       const useSweepCollection = details.every((c) => c.contract === details[0].contract);
 
       let approval: FTApproval | undefined;
@@ -797,6 +798,7 @@ export class Router {
           taker,
           takerMasterNonce: await exchange.getMasterNonce(this.provider, taker),
         });
+
         const signData = bundledOrder.getSignatureData();
         preSignatures.push({
           kind: "payment-processor-take-order",
@@ -819,38 +821,38 @@ export class Router {
           ],
           success: Object.fromEntries(details.map((d) => [d.orderId, true])),
         };
+      } else {
+        const takeOrders: Sdk.PaymentProcessor.Order[] = [];
+        for (const order of orders) {
+          const takerOrder = order.buildMatching({
+            taker,
+            takerMasterNonce: await exchange.getMasterNonce(this.provider, taker),
+          });
+
+          takeOrders.push(takerOrder);
+
+          const signData = takerOrder.getSignatureData();
+          preSignatures.push({
+            kind: "payment-processor-take-order",
+            signer: taker,
+            data: signData,
+            uniqueId: `${takerOrder.params.tokenAddress}-${takerOrder.params.tokenId}-${takerOrder.params.price}`,
+          });
+        }
+
+        return {
+          txs: [
+            {
+              approvals: approval ? [approval] : [],
+              permits: [],
+              preSignatures: preSignatures,
+              txData: exchange.fillOrdersTx(taker, orders, takeOrders),
+              orderIds: details.map((d) => d.orderId),
+            },
+          ],
+          success: Object.fromEntries(details.map((d) => [d.orderId, true])),
+        };
       }
-
-      const takeOrders: Sdk.PaymentProcessor.Order[] = [];
-      for (const order of orders) {
-        const takerOrder = order.buildMatching({
-          taker,
-          takerMasterNonce: await exchange.getMasterNonce(this.provider, taker),
-        });
-
-        takeOrders.push(takerOrder);
-
-        const signData = takerOrder.getSignatureData();
-        preSignatures.push({
-          kind: "payment-processor-take-order",
-          signer: taker,
-          data: signData,
-          uniqueId: `${takerOrder.params.tokenAddress}-${takerOrder.params.tokenId}-${takerOrder.params.price}`,
-        });
-      }
-
-      return {
-        txs: [
-          {
-            approvals: approval ? [approval] : [],
-            permits: [],
-            preSignatures: preSignatures,
-            txData: exchange.fillOrdersTx(taker, orders, takeOrders),
-            orderIds: details.map((d) => d.orderId),
-          },
-        ],
-        success: Object.fromEntries(details.map((d) => [d.orderId, true])),
-      };
     }
 
     const getFees = (ownDetails: ListingDetails[]) =>
@@ -3050,12 +3052,7 @@ export class Router {
     const success: { [orderId: string]: boolean } = {};
 
     // CASE 1
-    // Handle exchanges which don't have a router module implemented by filling directly
-
-    // Nothing here
-
-    // CASE 2
-    // Handle orders which require special handling such as direct filling
+    // Handle orders which require/support special handling such as direct filling
 
     const blurDetails = details.filter((d) => d.source === "blur.io");
     if (blurDetails.length) {
@@ -3155,19 +3152,9 @@ export class Router {
       }
     }
 
-    // CASE 3
-    // Handle exchanges which do have a router module implemented by filling through the router
-
-    // Step 1
-    // Handle approvals and permits
-
-    // Keep track of any approvals that might be needed
-    const approvals: NFTApproval[] = [];
-
-    // Keep track of any NFT transfers that need to be performed
-    const nftTransferItems: ApprovalProxy.TransferItem[] = [];
-
-    if (details.every(({ kind }) => kind === "payment-processor") && !options?.globalFees?.length) {
+    // Fill PaymentProcessor offers directly
+    const paymentProcessorDetails = details.filter((d) => d.kind === "payment-processor");
+    if (paymentProcessorDetails.length) {
       const exchange = new Sdk.PaymentProcessor.Exchange(this.chainId);
       const operator = exchange.contract.address;
 
@@ -3175,6 +3162,7 @@ export class Router {
       const takeOrders: Sdk.PaymentProcessor.Order[] = [];
       const preSignatures: PreSignature[] = [];
 
+      const approvals: NFTApproval[] = [];
       for (const detail of details) {
         const order = detail.order as Sdk.PaymentProcessor.Order;
         const takerOrder = order.buildMatching({
@@ -3201,26 +3189,35 @@ export class Router {
           operator,
           txData: generateNFTApprovalTxData(takerOrder.params.tokenAddress, taker, operator),
         });
+
+        success[detail.orderId] = true;
       }
 
-      return {
-        txs: [
-          {
-            approvals: uniqBy(
-              approvals,
-              ({ txData: { from, to, data } }) => `${from}-${to}-${data}`
-            ),
-            preSignatures: preSignatures,
-            txData: exchange.fillOrdersTx(taker, orders, takeOrders),
-            orderIds: details.map((d) => d.orderId),
-          },
-        ],
-        success: Object.fromEntries(details.map((d) => [d.orderId, true])),
-      };
+      txs.push({
+        approvals: uniqBy(approvals, ({ txData: { from, to, data } }) => `${from}-${to}-${data}`),
+        preSignatures,
+        txData: exchange.fillOrdersTx(taker, orders, takeOrders),
+        orderIds: details.map((d) => d.orderId),
+      });
     }
+
+    // CASE 2
+    // Handle exchanges which do have a router module implemented by filling through the router
+
+    // Step 1
+    // Handle approvals and permits
+
+    // Keep track of any approvals that might be needed
+    const approvals: NFTApproval[] = [];
+
+    // Keep track of any NFT transfers that need to be performed
+    const nftTransferItems: ApprovalProxy.TransferItem[] = [];
 
     for (let i = 0; i < details.length; i++) {
       const detail = details[i];
+      if (success[detail.orderId]) {
+        continue;
+      }
 
       const contract = detail.contract;
       const owner = taker;
@@ -3313,11 +3310,6 @@ export class Router {
           break;
         }
 
-        case "payment-processor": {
-          module = this.contracts.paymentProcessorModule;
-          break;
-        }
-
         default: {
           continue;
         }
@@ -3357,6 +3349,10 @@ export class Router {
 
     for (let i = 0; i < details.length; i++) {
       const detail = details[i];
+      if (success[detail.orderId]) {
+        continue;
+      }
+
       const fees = getFees(detail);
 
       switch (detail.kind) {

@@ -394,10 +394,7 @@ describe("PaymentProcessor - SingleToken", () => {
 
       const newTxData = exchange.attachTakerSignatures(tx.txData.data, preSignatures);
       tx.txData.data = newTxData;
-      await seller.sendTransaction({
-        ...tx.txData,
-        gasLimit: 1000000
-      });
+      await seller.sendTransaction(tx.txData);
     }
 
     const sellerBalanceAfter = await weth.getBalance(seller.address);

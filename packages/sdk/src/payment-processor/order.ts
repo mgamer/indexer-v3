@@ -1,11 +1,11 @@
 import { Provider } from "@ethersproject/abstract-provider";
 import { TypedDataSigner } from "@ethersproject/abstract-signer";
+import { BigNumberish } from "@ethersproject/bignumber";
 import { splitSignature } from "@ethersproject/bytes";
-import { HashZero, AddressZero } from "@ethersproject/constants";
+import { AddressZero, HashZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import { _TypedDataEncoder } from "@ethersproject/hash";
 import { verifyTypedData } from "@ethersproject/wallet";
-import { BigNumberish } from "@ethersproject/bignumber";
 
 import * as Addresses from "./addresses";
 import { Builders } from "./builders";
@@ -135,7 +135,6 @@ export class Order {
       privateBuyer: AddressZero,
       buyer: this.params.sellerOrBuyer,
       delegatedPurchaser: AddressZero,
-
       marketplace: this.params.marketplace,
       marketplaceFeeNumerator: this.params.marketplaceFeeNumerator,
       offerNonce: this.params.nonce,
@@ -150,24 +149,20 @@ export class Order {
         s: this.params.s!,
         v: this.params.v!,
       },
-      signedListings: orders.map((c) => {
-        return {
-          r: c.params.r!,
-          s: c.params.s!,
-          v: c.params.v!,
-        };
-      }),
-      bundleItems: orders.map((c) => {
-        return {
-          tokenId: c.params.tokenId!,
-          amount: c.params.amount,
-          maxRoyaltyFeeNumerator: c.params.maxRoyaltyFeeNumerator,
-          itemPrice: c.params.price,
-          listingNonce: c.params.nonce,
-          listingExpiration: c.params.expiration,
-          seller: c.params.sellerOrBuyer,
-        };
-      }),
+      signedListings: orders.map((c) => ({
+        r: c.params.r!,
+        s: c.params.s!,
+        v: c.params.v!,
+      })),
+      bundleItems: orders.map((c) => ({
+        tokenId: c.params.tokenId!,
+        amount: c.params.amount,
+        maxRoyaltyFeeNumerator: c.params.maxRoyaltyFeeNumerator,
+        itemPrice: c.params.price,
+        listingNonce: c.params.nonce,
+        listingExpiration: c.params.expiration,
+        seller: c.params.sellerOrBuyer,
+      })),
     };
   }
 
@@ -314,13 +309,11 @@ export class Order {
         delegatedPurchaser: AddressZero,
         buyer: this.params.sellerOrBuyer,
         tokenAddress: this.params.tokenAddress,
-
         price: this.params.price,
         expiration: this.params.expiration,
         nonce: this.params.nonce,
         masterNonce: this.params.masterNonce,
         coin: this.params.coin,
-
         tokenIds: this.params.tokenIds!,
         amounts: this.params.amounts!,
         itemSalePrices: this.params.itemSalePrices!,

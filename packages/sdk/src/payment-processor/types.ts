@@ -8,6 +8,7 @@ export type OrderKind =
   | "offer-approval"
   | "collection-offer-approval"
   | "bundled-offer-approval";
+
 export type Signature = {
   v: number;
   r: string;
@@ -89,7 +90,7 @@ export type BaseOrder = {
   maxRoyaltyFeeNumerator: string;
   collectionLevelOffer: boolean;
 
-  // Bundled offer
+  // For bundled offers only
   tokenIds?: string[];
   amounts?: string[];
   itemSalePrices?: string[];
@@ -156,13 +157,11 @@ export type BundledOfferApproval = {
   delegatedPurchaser: string;
   buyer: string;
   tokenAddress: string;
-
   price: string;
   expiration: string;
   nonce: string;
   masterNonce: string;
   coin: string;
-
   tokenIds: string[];
   amounts: string[];
   itemSalePrices: string[];

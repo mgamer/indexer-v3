@@ -142,7 +142,7 @@ export class Exchange {
     };
   }
 
-  // --- Fill multiple listing with same collection ---
+  // --- Fill multiple listings from the same collection ---
 
   public sweepCollectionTx(
     taker: string,
@@ -177,10 +177,8 @@ export class Exchange {
   // --- Attach signatures ---
 
   public attachTakerSignatures(txData: string, signatures: string[]) {
-    if (!signatures.length) {
-      throw new Error("signatures is empty");
-    }
     const iface = this.contract.interface;
+
     const { name: methodName, args: inputs } = iface.parseTransaction({
       data: txData,
     });
@@ -189,7 +187,6 @@ export class Exchange {
     const sourceBytes = txData.substring(rawCalldata.length, txData.length);
 
     let newInputs = [];
-
     if (["buyBatchOfListings", "buySingleListing"].includes(methodName)) {
       const isBatch = methodName === "buyBatchOfListings";
       const saleDetailsArray = isBatch ? inputs.saleDetailsArray : [inputs.saleDetails];
