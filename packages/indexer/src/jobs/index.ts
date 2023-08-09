@@ -385,7 +385,11 @@ export class RabbitMqJobsConsumer {
     }
 
     const queue = `${getNetworkName()}.${job.queueName}`;
-    if (!(await channel.checkQueue(queue))) {
+
+    // Check if the queue exist
+    try {
+      await channel.checkQueue(queue);
+    } catch (error) {
       return;
     }
 
