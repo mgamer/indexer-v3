@@ -3310,6 +3310,11 @@ export class Router {
           break;
         }
 
+        case "payment-processor": {
+          module = this.contracts.paymentProcessorModule;
+          break;
+        }
+
         default: {
           continue;
         }
