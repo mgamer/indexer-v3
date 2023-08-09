@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+
 export const fetchCollection = async (
   _chainId: number,
   {
