@@ -25,7 +25,6 @@ import * as mirageGalleryCurated from "./mirage-gallery-curated";
 import * as moonbirds from "./moonbirds";
 import * as mutantApeYachtClub from "./mutant-ape-yacht-club";
 import * as nouns from "./nouns";
-import * as openseaSharedContract from "./opensea-shared-contract";
 import * as quantumArt from "./quantum-art";
 import * as sharedContracts from "./shared-contracts";
 import * as shreddingSassy from "./shredding-sassy";
@@ -63,22 +62,47 @@ export const extendMetadata = async (chainId: number, metadata: any) => {
   }
 };
 
+class ExtendLogic {
+  public prefix: string;
+
+  constructor(prefix: string) {
+    this.prefix = prefix;
+  }
+
+  public async extendCollection(_chainId: number, metadata: any, _tokenId = null) {
+    metadata.id = `${metadata.contract}:${this.prefix}-${metadata.slug}`;
+    metadata.tokenIdRange = null;
+    metadata.tokenSetId = null;
+
+    return { ...metadata };
+  }
+  public async extend(_chainId: number, metadata: any) {
+    metadata.collection = `${metadata.contract}:${this.prefix}-${metadata.slug}`;
+    return { ...metadata };
+  }
+}
+
+const ExtendLogicClasses = {
+  opensea: new ExtendLogic("opensea"),
+  courtyard: new ExtendLogic("courtyard"),
+};
+
 // Opensea Shared Contract
-extendCollection["1,0x495f947276749ce646f68ac8c248420045cb7b5e"] = openseaSharedContract;
-extendCollection["1,0x503a3039e9ce236e9a12e4008aecbb1fd8b384a3"] = openseaSharedContract;
-extendCollection["1,0xd78afb925a21f87fa0e35abae2aead3f70ced96b"] = openseaSharedContract;
-extendCollection["1,0xb6329bd2741c4e5e91e26c4e653db643e74b2b19"] = openseaSharedContract;
-extendCollection["1,0xd8b7cc75e22031a72d7b8393113ef2536e17bde6"] = openseaSharedContract;
-extendCollection["1,0x2d820afb710681580a55ca8077b57fba6dd9fd72"] = openseaSharedContract;
-extendCollection["1,0x0faed6ddef3773f3ee5828383aaeeaca2a94564a"] = openseaSharedContract;
-extendCollection["1,0x13927739076014913a3a7c207ef84c5be4780014"] = openseaSharedContract;
-extendCollection["1,0x7a15b36cb834aea88553de69077d3777460d73ac"] = openseaSharedContract;
-extendCollection["1,0x68d0f6d1d99bb830e17ffaa8adb5bbed9d6eec2e"] = openseaSharedContract;
-extendCollection["1,0x33eecbf908478c10614626a9d304bfe18b78dd73"] = openseaSharedContract;
-extendCollection["1,0x495f947276749ce646f68ac8c248420045cb7b5e"] = openseaSharedContract;
+extendCollection["1,0x495f947276749ce646f68ac8c248420045cb7b5e"] = ExtendLogicClasses.opensea;
+extendCollection["1,0x503a3039e9ce236e9a12e4008aecbb1fd8b384a3"] = ExtendLogicClasses.opensea;
+extendCollection["1,0xd78afb925a21f87fa0e35abae2aead3f70ced96b"] = ExtendLogicClasses.opensea;
+extendCollection["1,0xb6329bd2741c4e5e91e26c4e653db643e74b2b19"] = ExtendLogicClasses.opensea;
+extendCollection["1,0xd8b7cc75e22031a72d7b8393113ef2536e17bde6"] = ExtendLogicClasses.opensea;
+extendCollection["1,0x2d820afb710681580a55ca8077b57fba6dd9fd72"] = ExtendLogicClasses.opensea;
+extendCollection["1,0x0faed6ddef3773f3ee5828383aaeeaca2a94564a"] = ExtendLogicClasses.opensea;
+extendCollection["1,0x13927739076014913a3a7c207ef84c5be4780014"] = ExtendLogicClasses.opensea;
+extendCollection["1,0x7a15b36cb834aea88553de69077d3777460d73ac"] = ExtendLogicClasses.opensea;
+extendCollection["1,0x68d0f6d1d99bb830e17ffaa8adb5bbed9d6eec2e"] = ExtendLogicClasses.opensea;
+extendCollection["1,0x33eecbf908478c10614626a9d304bfe18b78dd73"] = ExtendLogicClasses.opensea;
+extendCollection["1,0x495f947276749ce646f68ac8c248420045cb7b5e"] = ExtendLogicClasses.opensea;
 
 // Courtyard
-extendCollection["1,0xd4ac3ce8e1e14cd60666d49ac34ff2d2937cf6fa"] = courtyard;
+extendCollection["1,0xd4ac3ce8e1e14cd60666d49ac34ff2d2937cf6fa"] = ExtendLogicClasses.courtyard;
 
 // CyberKongz
 extendCollection["1,0x57a204aa1042f6e66dd7730813f4024114d74f37"] = cyberkongz;
@@ -155,18 +179,18 @@ soundxyz.SoundxyzReleaseContracts.forEach(
 extendCollection["5,0xbe8f3dfce2fcbb6dd08a7e8109958355785c968b"] = soundxyz;
 
 // Opensea Shared Contract
-extend["1,0x495f947276749ce646f68ac8c248420045cb7b5e"] = openseaSharedContract;
-extend["1,0x503a3039e9ce236e9a12e4008aecbb1fd8b384a3"] = openseaSharedContract;
-extend["1,0xd78afb925a21f87fa0e35abae2aead3f70ced96b"] = openseaSharedContract;
-extend["1,0xb6329bd2741c4e5e91e26c4e653db643e74b2b19"] = openseaSharedContract;
-extend["1,0xd8b7cc75e22031a72d7b8393113ef2536e17bde6"] = openseaSharedContract;
-extend["1,0x2d820afb710681580a55ca8077b57fba6dd9fd72"] = openseaSharedContract;
-extend["1,0x0faed6ddef3773f3ee5828383aaeeaca2a94564a"] = openseaSharedContract;
-extend["1,0x13927739076014913a3a7c207ef84c5be4780014"] = openseaSharedContract;
-extend["1,0x7a15b36cb834aea88553de69077d3777460d73ac"] = openseaSharedContract;
-extend["1,0x68d0f6d1d99bb830e17ffaa8adb5bbed9d6eec2e"] = openseaSharedContract;
-extend["1,0x33eecbf908478c10614626a9d304bfe18b78dd73"] = openseaSharedContract;
-extend["1,0x495f947276749ce646f68ac8c248420045cb7b5e"] = openseaSharedContract;
+extend["1,0x495f947276749ce646f68ac8c248420045cb7b5e"] = ExtendLogicClasses.opensea;
+extend["1,0x503a3039e9ce236e9a12e4008aecbb1fd8b384a3"] = ExtendLogicClasses.opensea;
+extend["1,0xd78afb925a21f87fa0e35abae2aead3f70ced96b"] = ExtendLogicClasses.opensea;
+extend["1,0xb6329bd2741c4e5e91e26c4e653db643e74b2b19"] = ExtendLogicClasses.opensea;
+extend["1,0xd8b7cc75e22031a72d7b8393113ef2536e17bde6"] = ExtendLogicClasses.opensea;
+extend["1,0x2d820afb710681580a55ca8077b57fba6dd9fd72"] = ExtendLogicClasses.opensea;
+extend["1,0x0faed6ddef3773f3ee5828383aaeeaca2a94564a"] = ExtendLogicClasses.opensea;
+extend["1,0x13927739076014913a3a7c207ef84c5be4780014"] = ExtendLogicClasses.opensea;
+extend["1,0x7a15b36cb834aea88553de69077d3777460d73ac"] = ExtendLogicClasses.opensea;
+extend["1,0x68d0f6d1d99bb830e17ffaa8adb5bbed9d6eec2e"] = ExtendLogicClasses.opensea;
+extend["1,0x33eecbf908478c10614626a9d304bfe18b78dd73"] = ExtendLogicClasses.opensea;
+extend["1,0x495f947276749ce646f68ac8c248420045cb7b5e"] = ExtendLogicClasses.opensea;
 
 // Courtyard
 extend["1,0xd4ac3ce8e1e14cd60666d49ac34ff2d2937cf6fa"] = courtyard;
