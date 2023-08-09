@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 const collectionsTokenIdRange = [
   [0, 665], // Grifters by XCOPY
   [666, 1289], // DecentralEyesMashup by Coldie

@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 export const extend = async (_chainId: number, metadata: any) => {
   const traitCount = metadata.attributes.length;
 

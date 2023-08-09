@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { logger } from "@/common/logger";
 import { getStakedAmountWei, stakedAmountWeiToAttributeBucket } from "../apecoin";
 

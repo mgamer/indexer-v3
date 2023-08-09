@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { baseProvider } from "@/common/provider";
 import { Interface } from "@ethersproject/abi";
 import { Contract } from "@ethersproject/contracts";

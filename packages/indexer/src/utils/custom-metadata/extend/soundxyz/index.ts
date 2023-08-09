@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import axios from "axios";
 import _ from "lodash";
 import ArtistContracts from "./ArtistContracts.json";

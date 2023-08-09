@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 const collectionsTokenIdRange = [
   [
     "Winslow Homer's Croquet Challenge by Mitchell F. Chan",

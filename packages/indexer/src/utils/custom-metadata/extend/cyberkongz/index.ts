@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import _ from "lodash";
 
 export const extendCollection = async (_chainId: number, metadata: any, _tokenId = null) => {

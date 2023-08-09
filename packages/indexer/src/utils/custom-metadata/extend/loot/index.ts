@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { BigNumber } from "@ethersproject/bignumber";
 import { id } from "@ethersproject/hash";
 import { lootRarity, rarityDescription } from "loot-rarity";

@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { Contract, utils } from "ethers";
 
 import axios from "axios";

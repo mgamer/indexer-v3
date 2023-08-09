@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import {
   APE_COIN_STAKING_ABI,
   NFT_ABI,

@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import CollectiblesContracts from "./contracts.json";
 
 export const CollectiblesCollections = CollectiblesContracts.map((c) => c.toLowerCase());

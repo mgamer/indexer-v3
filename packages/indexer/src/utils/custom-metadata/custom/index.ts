@@ -1,3 +1,5 @@
+// /* eslint-disable @typescript-eslint/no-explicit-any */
+
 import * as copyrightInfringement from "./copyright-infringement";
 
 const customCollection: { [key: string]: any } = {};

@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 export const extendCollection = async (_chainId: number, metadata: any, _tokenId = null) => {
   if (isNaN(Number(_tokenId)) || !_tokenId) {
     throw new Error(`Invalid tokenId ${_tokenId}`);

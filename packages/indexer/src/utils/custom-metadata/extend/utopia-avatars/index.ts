@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import avatars from "./avatars.json";
 
 export const extend = async (_chainId: number, metadata: any) => {
