@@ -16,7 +16,7 @@ export const getNetworkName = () => {
       return "mainnet";
 
     case 5:
-      return config.environment === "prod" ? "prod-goerli" : "goerli";
+      return "goerli";
 
     case 10:
       return "optimism";
@@ -26,6 +26,9 @@ export const getNetworkName = () => {
 
     case 137:
       return "polygon";
+
+    case 324:
+      return "zksync";
 
     case 42161:
       return "arbitrum";
@@ -84,6 +87,9 @@ export const getOpenseaNetworkName = () => {
 
     case 137:
       return "matic";
+
+    case 324:
+      return "zksync";
 
     case 42161:
       return "arbitrum";
@@ -327,6 +333,15 @@ export const getNetworkSettings = (): NetworkSettings => {
               contract: "0x45f93404AE1E4f0411a7F42BC6a5Dc395792738D",
               name: "DEGEN",
               symbol: "DGEN",
+              decimals: 18,
+            },
+          ],
+          [
+            "0x313408eb31939a9c33b40afe28dc378845d0992f",
+            {
+              contract: "0x313408eb31939A9c33B40AFE28Dc378845D0992F",
+              name: "BPX",
+              symbol: "BPX",
               decimals: 18,
             },
           ],
@@ -648,6 +663,39 @@ export const getNetworkSettings = (): NetworkSettings => {
                   'MATIC',
                   18,
                   '{"coingeckoCurrencyId": "matic-network"}'
+                ) ON CONFLICT DO NOTHING
+              `
+            ),
+          ]);
+        },
+      };
+    }
+    // ZKsync
+    case 324: {
+      return {
+        ...defaultNetworkSettings,
+        enableWebSocket: true,
+        realtimeSyncMaxBlockLag: 32,
+        realtimeSyncFrequencySeconds: 5,
+        lastBlockLatency: 5,
+        subDomain: "api-zksync",
+        onStartup: async () => {
+          // Insert the native currency
+          await Promise.all([
+            idb.none(
+              `
+                INSERT INTO currencies (
+                  contract,
+                  name,
+                  symbol,
+                  decimals,
+                  metadata
+                ) VALUES (
+                  '\\x0000000000000000000000000000000000000000',
+                  'Ether',
+                  'ETH',
+                  18,
+                  '{"coingeckoCurrencyId": "ethereum", "image": "https://assets.coingecko.com/coins/images/279/large/ethereum.png"}'
                 ) ON CONFLICT DO NOTHING
               `
             ),

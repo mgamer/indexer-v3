@@ -6,14 +6,14 @@ import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
 import { TxData } from "@reservoir0x/sdk/dist/utils";
 import { PermitHandler, PermitWithTransfers } from "@reservoir0x/sdk/dist/router/v6/permit";
-import { FillListingsResult, ListingDetails } from "@reservoir0x/sdk/dist/router/v6/types";
+import { Fee, FillListingsResult, ListingDetails } from "@reservoir0x/sdk/dist/router/v6/types";
 import axios from "axios";
 import Joi from "joi";
 
 import { inject } from "@/api/index";
 import { idb } from "@/common/db";
 import { logger } from "@/common/logger";
-import { JoiExecuteFee, JoiOrderDepth } from "@/common/joi";
+import { JoiExecuteFee } from "@/common/joi";
 import { baseProvider } from "@/common/provider";
 import { bn, formatPrice, fromBuffer, now, regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
@@ -31,7 +31,9 @@ import { ExecutionsBuffer } from "@/utils/executions";
 import * as onChainData from "@/utils/on-chain-data";
 import * as mints from "@/orderbook/mints";
 import { generateCollectionMintTxData } from "@/orderbook/mints/calldata";
+import { getNFTTransferEvents } from "@/orderbook/mints/simulation";
 import { getPermitId, getPermit, savePermit } from "@/utils/permits";
+import { getPreSignatureId, getPreSignature, savePreSignature } from "@/utils/pre-signatures";
 import { getUSDAndCurrencyPrices } from "@/utils/prices";
 
 const version = "v7";
@@ -115,11 +117,11 @@ export const getExecuteBuyV7Options: RouteOptions = {
         .lowercase()
         .pattern(regex.address)
         .required()
-        .description("Address of wallet filling."),
+        .description("Address of wallet filling (receiver of the NFT)."),
       relayer: Joi.string()
         .lowercase()
         .pattern(regex.address)
-        .description("Address of wallet relaying the fill transaction."),
+        .description("Address of wallet relaying the fill transaction (paying for the NFT)."),
       onlyPath: Joi.boolean()
         .default(false)
         .description("If true, only the path will be returned."),
@@ -234,13 +236,6 @@ export const getExecuteBuyV7Options: RouteOptions = {
         Joi.object({
           itemIndex: Joi.number().required(),
           maxQuantity: Joi.string().pattern(regex.number).allow(null),
-        })
-      ),
-      // TODO: Remove
-      preview: Joi.array().items(
-        Joi.object({
-          itemIndex: Joi.number().required(),
-          depth: JoiOrderDepth,
         })
       ),
     }).label(`getExecuteBuy${version.toUpperCase()}Response`),
@@ -479,6 +474,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
       const mintTxs: {
         orderId: string;
         txData: TxData;
+        fees: Fee[];
       }[] = [];
 
       // Keep track of the maximum quantity available per item
@@ -744,6 +740,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
                     mintTxs.push({
                       orderId,
                       txData,
+                      fees: [],
                     });
 
                     await addToPath(
@@ -929,6 +926,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
                     mintTxs.push({
                       orderId,
                       txData,
+                      fees: [],
                     });
 
                     await addToPath(
@@ -1096,7 +1094,9 @@ export const getExecuteBuyV7Options: RouteOptions = {
                   kind: result.token_kind,
                   contract,
                   tokenId,
-                  quantity: Math.min(quantityToFill, availableQuantity),
+                  quantity: preview
+                    ? availableQuantity
+                    : Math.min(quantityToFill, availableQuantity),
                 }
               );
               maxQuantity = maxQuantity.add(availableQuantity);
@@ -1146,30 +1146,6 @@ export const getExecuteBuyV7Options: RouteOptions = {
         }
       }
 
-      // Add the quotes in the "buy-in" currency to the path items
-      for (const item of path) {
-        if (item.currency !== buyInCurrency) {
-          const buyInPrices = await getUSDAndCurrencyPrices(
-            item.currency,
-            buyInCurrency,
-            item.rawQuote,
-            now(),
-            {
-              acceptStalePrice: true,
-            }
-          );
-
-          if (buyInPrices.currencyPrice) {
-            item.buyInQuote = formatPrice(
-              buyInPrices.currencyPrice,
-              (await getCurrency(buyInCurrency)).decimals,
-              true
-            );
-            item.buyInRawQuote = buyInPrices.currencyPrice;
-          }
-        }
-      }
-
       // Include the global fees in the path
 
       const globalFees = (payload.feesOnTop ?? []).map((fee: string) => {
@@ -1191,12 +1167,32 @@ export const getExecuteBuyV7Options: RouteOptions = {
         )
         .map((b) => b.orderId);
 
-      const addGlobalFee = async (item: (typeof path)[0], fee: Sdk.RouterV6.Types.Fee) => {
+      const addGlobalFee = async (
+        detail: ListingDetails,
+        item: (typeof path)[0],
+        fee: Sdk.RouterV6.Types.Fee
+      ) => {
         // The fees should be relative to a single quantity
         fee.amount = bn(fee.amount).div(item.quantity).toString();
 
         // Global fees get split across all eligible orders
-        const adjustedFeeAmount = bn(fee.amount).div(ordersEligibleForGlobalFees.length).toString();
+        let adjustedFeeAmount = bn(fee.amount).div(ordersEligibleForGlobalFees.length).toString();
+
+        // If the item's currency is not the same with the buy-in currency,
+        if (item.currency !== buyInCurrency) {
+          fee.amount = await getUSDAndCurrencyPrices(
+            buyInCurrency,
+            item.currency,
+            fee.amount,
+            now()
+          ).then((p) => p.currencyPrice!);
+          adjustedFeeAmount = await getUSDAndCurrencyPrices(
+            buyInCurrency,
+            item.currency,
+            adjustedFeeAmount,
+            now()
+          ).then((p) => p.currencyPrice!);
+        }
 
         const amount = formatPrice(
           adjustedFeeAmount,
@@ -1219,16 +1215,51 @@ export const getExecuteBuyV7Options: RouteOptions = {
 
         // item.quote += amount;
         // item.rawQuote = bn(item.rawQuote).add(rawAmount).toString();
+
+        if (!detail.fees) {
+          detail.fees = [];
+        }
+        detail.fees.push({
+          recipient: fee.recipient,
+          amount: rawAmount,
+        });
       };
 
       for (const item of path) {
         if (globalFees.length && ordersEligibleForGlobalFees.includes(item.orderId)) {
           for (const f of globalFees) {
-            await addGlobalFee(item, f);
+            const detail = listingDetails.find((d) => d.orderId === item.orderId);
+            if (detail) {
+              await addGlobalFee(detail, item, f);
+            }
           }
         } else {
           item.totalPrice = item.quote;
           item.totalRawPrice = item.rawQuote;
+        }
+      }
+
+      // Add the quotes in the "buy-in" currency to the path items
+      for (const item of path) {
+        if (item.currency !== buyInCurrency) {
+          const buyInPrices = await getUSDAndCurrencyPrices(
+            item.currency,
+            buyInCurrency,
+            item.rawQuote,
+            now(),
+            {
+              acceptStalePrice: true,
+            }
+          );
+
+          if (buyInPrices.currencyPrice) {
+            item.buyInQuote = formatPrice(
+              buyInPrices.currencyPrice,
+              (await getCurrency(buyInCurrency)).decimals,
+              true
+            );
+            item.buyInRawQuote = buyInPrices.currencyPrice;
+          }
         }
       }
 
@@ -1270,6 +1301,13 @@ export const getExecuteBuyV7Options: RouteOptions = {
           id: "currency-permit",
           action: "Sign permits",
           description: "Sign permits for accessing the tokens in your wallet",
+          kind: "signature",
+          items: [],
+        },
+        {
+          id: "pre-signatures",
+          action: "Sign orders",
+          description: "Some marketplaces require signing additional orders before filling",
           kind: "signature",
           items: [],
         },
@@ -1366,7 +1404,6 @@ export const getExecuteBuyV7Options: RouteOptions = {
           relayer: payload.relayer,
           usePermit: payload.usePermit,
           swapProvider: payload.swapProvider,
-          globalFees,
           blurAuth,
           onError: async (kind, error, data) => {
             errors.push({
@@ -1384,14 +1421,75 @@ export const getExecuteBuyV7Options: RouteOptions = {
       const { txs, success } = result;
 
       // Add any mint transactions
-      for (const { orderId, txData } of mintTxs) {
-        txs.push({
-          approvals: [],
-          permits: [],
-          txData,
-          orderIds: [orderId],
+      if (mintTxs.length) {
+        if (!result.txs.length) {
+          for (const tx of mintTxs) {
+            for (const fee of globalFees) {
+              tx.fees.push({
+                recipient: fee.recipient,
+                amount: bn(fee.amount).div(mintTxs.length).toString(),
+              });
+            }
+          }
+        }
+
+        let mintsResult = await router.fillMintsTx(mintTxs, payload.taker, {
+          source: payload.source,
+          partial: payload.partial,
         });
-        success[orderId] = true;
+
+        // Minting via a smart contract proxy is complicated.
+        // There are a lot of things that could go wrong:
+        // - collection disallows minting from a smart contract
+        // - the mint method is not standard (eg. not calling the standard ERC721/1155 hooks)
+
+        // For this reason, before returning the router module calldata
+        // we simulate it and make sure that a few conditions are met:
+        // - there is at least one successful mint
+        // - all minted tokens have the taker as the final owner (eg. nothing gets stuck in the router / module)
+
+        let safeToUse = true;
+        for (const { txData } of mintsResult.txs) {
+          const events = await getNFTTransferEvents(txData);
+          if (!events.length) {
+            // At least one successful mint
+            safeToUse = false;
+          } else {
+            // Every token landed in the taker's wallet
+            const uniqueTokens = [
+              ...new Set(events.map((e) => `${e.contract}:${e.tokenId}`)).values(),
+            ].map((t) => t.split(":"));
+            for (const [contract, tokenId] of uniqueTokens) {
+              if (
+                !events.find(
+                  (e) => e.contract === contract && e.tokenId === tokenId && e.to === payload.taker
+                )
+              ) {
+                safeToUse = false;
+                break;
+              }
+            }
+          }
+        }
+
+        if (!safeToUse) {
+          mintsResult = await router.fillMintsTx(mintTxs, payload.taker, {
+            source: payload.source,
+            forceDirectFilling: true,
+          });
+        }
+
+        txs.push(
+          ...mintsResult.txs.map(({ txData, orderIds }) => ({
+            txData,
+            orderIds,
+            approvals: [],
+            permits: [],
+            preSignatures: [],
+          }))
+        );
+
+        Object.assign(success, mintsResult.success);
       }
 
       // Filter out any non-fillable orders from the path
@@ -1409,7 +1507,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
         ? bn(payload.maxPriorityFeePerGas).toHexString()
         : undefined;
 
-      for (const { txData, approvals, permits, orderIds } of txs) {
+      for (const { txData, approvals, permits, orderIds, preSignatures } of txs) {
         // Handle approvals
         for (const approval of approvals) {
           const approvedAmount = await onChainData
@@ -1467,6 +1565,47 @@ export const getExecuteBuyV7Options: RouteOptions = {
           });
         }
 
+        // Handle pre-signatures
+        const signaturesPaymentProcessor: string[] = [];
+        for (const preSignature of preSignatures) {
+          if (preSignature.kind === "payment-processor-take-order") {
+            const id = getPreSignatureId(request.payload as object, {
+              uniqueId: preSignature.uniqueId,
+            });
+
+            const cachedSignature = await getPreSignature(id);
+            if (cachedSignature) {
+              preSignature.signature = cachedSignature.signature;
+            } else {
+              await savePreSignature(id, preSignature);
+            }
+
+            const hasSignature = preSignature.signature;
+            if (hasSignature) {
+              signaturesPaymentProcessor.push(preSignature.signature!);
+              continue;
+            }
+
+            steps[3].items.push({
+              status: "incomplete",
+              data: {
+                sign: preSignature.data,
+                post: {
+                  endpoint: "/execute/pre-signature/v1",
+                  method: "POST",
+                  body: {
+                    id,
+                  },
+                },
+              },
+            });
+          }
+        }
+        if (signaturesPaymentProcessor.length && !steps[3].items.length) {
+          const exchange = new Sdk.PaymentProcessor.Exchange(config.chainId);
+          txData.data = exchange.attachTakerSignatures(txData.data, signaturesPaymentProcessor);
+        }
+
         // Cannot skip balance checking when filling Blur orders
         if (payload.skipBalanceCheck && path.some((p) => p.source === "blur.io")) {
           payload.skipBalanceCheck = false;
@@ -1495,20 +1634,21 @@ export const getExecuteBuyV7Options: RouteOptions = {
           }
         }
 
-        steps[3].items.push({
+        steps[4].items.push({
           status: "incomplete",
           orderIds,
-          // Do not return the final step unless all permits have a signature attached
-          data: !steps[2].items.length
-            ? {
-                ...permitHandler.attachToRouterExecution(
-                  txData,
-                  permits.map((p) => p.data)
-                ),
-                maxFeePerGas,
-                maxPriorityFeePerGas,
-              }
-            : undefined,
+          // Do not return the final step unless all previous steps are completed
+          data:
+            !steps[2].items.length && !steps[3].items.length
+              ? {
+                  ...permitHandler.attachToRouterExecution(
+                    txData,
+                    permits.map((p) => p.data)
+                  ),
+                  maxFeePerGas,
+                  maxPriorityFeePerGas,
+                }
+              : undefined,
         });
       }
 

@@ -4,7 +4,6 @@
 import { RabbitMq, RabbitMQMessage } from "@/common/rabbit-mq";
 import { logger } from "@/common/logger";
 import _ from "lodash";
-import { getNetworkName } from "@/config/network";
 import EventEmitter from "events";
 import TypedEmitter from "typed-emitter";
 import { ConsumeMessage } from "amqplib";
@@ -63,8 +62,8 @@ export abstract class AbstractRabbitMqJobHandler extends (EventEmitter as new ()
       await channel.ack(consumeMessage); // Ack the message with rabbit
       this.rabbitMqMessage.completeTime = _.now(); // Set the complete time
 
-      // Release lock if there's a job id with no delay
-      if (this.rabbitMqMessage.jobId && !this.rabbitMqMessage.delay) {
+      // Release lock if there's a job id
+      if (this.rabbitMqMessage.jobId) {
         await releaseLock(this.rabbitMqMessage.jobId).catch();
       }
 
@@ -73,7 +72,7 @@ export abstract class AbstractRabbitMqJobHandler extends (EventEmitter as new ()
       this.emit("onError", this.rabbitMqMessage, error); // Emit error event
 
       this.rabbitMqMessage.retryCount += 1;
-      let queueName = this.getRetryQueue();
+      let queueName = this.getQueue();
 
       // Set the backoff strategy delay
       let delay = this.getBackoffDelay(this.rabbitMqMessage);
@@ -94,8 +93,26 @@ export abstract class AbstractRabbitMqJobHandler extends (EventEmitter as new ()
         }`
       );
 
-      await channel.ack(consumeMessage); // Ack the message with rabbit
-      await RabbitMq.send(queueName, this.rabbitMqMessage, delay); // Trigger the retry / or send to dead letter queue
+      try {
+        await channel.ack(consumeMessage); // Ack the message with rabbit
+
+        // Release lock if there's a job id
+        if (this.rabbitMqMessage.jobId) {
+          await releaseLock(this.rabbitMqMessage.jobId).catch();
+        }
+
+        await RabbitMq.send(queueName, this.rabbitMqMessage, delay); // Trigger the retry / or send to dead letter queue
+      } catch (error) {
+        // Log the error
+        logger.error(
+          this.queueName,
+          `Error handling catch: ${JSON.stringify(
+            error
+          )}, queueName=${queueName}, payload=${JSON.stringify(this.rabbitMqMessage)}, retryCount=${
+            this.rabbitMqMessage.retryCount
+          }`
+        );
+      }
     }
   }
 
@@ -122,7 +139,7 @@ export abstract class AbstractRabbitMqJobHandler extends (EventEmitter as new ()
   }
 
   public getQueue(): string {
-    return `${getNetworkName()}.${this.queueName}`;
+    return this.queueName;
   }
 
   public getRetryQueue(queueName?: string): string {

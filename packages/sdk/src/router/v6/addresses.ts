@@ -76,6 +76,18 @@ export const OneInchSwapModule: ChainIdToAddress = {
 
 // Exchange modules
 
+export const MintModule: ChainIdToAddress = {
+  [Network.Ethereum]: "0x0b85f4e399fc69044bd9ee604a59e9663f1ea292",
+  [Network.EthereumGoerli]: "0x0b85f4e399fc69044bd9ee604a59e9663f1ea292",
+  [Network.EthereumSepolia]: "0x0b85f4e399fc69044bd9ee604a59e9663f1ea292",
+  [Network.Optimism]: "0x0b85f4e399fc69044bd9ee604a59e9663f1ea292",
+  [Network.Bsc]: "0x0b85f4e399fc69044bd9ee604a59e9663f1ea292",
+  [Network.Base]: "0x3a65a4875be880552ecd27de4084799b65b40065",
+  [Network.BaseGoerli]: "0x3a65a4875be880552ecd27de4084799b65b40065",
+  [Network.Zora]: "0x3a65a4875be880552ecd27de4084799b65b40065",
+  [Network.ZoraTestnet]: "0x3a65a4875be880552ecd27de4084799b65b40065",
+};
+
 export const CollectionXyzModule: ChainIdToAddress = {
   [Network.Ethereum]: "0x22097b493ea4c202d5b85cc9faf6d116830aa8a3",
   [Network.EthereumGoerli]: "0x22097b493ea4c202d5b85cc9faf6d116830aa8a3",
@@ -137,6 +149,9 @@ export const AlienswapModule: ChainIdToAddress = {
   [Network.ScrollAlpha]: "0x60275b726b9ab1fdc6c2d3d8072f234fab5ddaeb",
   [Network.MantleTestnet]: "0xf94d47c742c97f37424db1c27817a0697d49f461",
   [Network.LineaTestnet]: "0xeb09b04d38d809c2dd5f33dda7208d0b299eda5a",
+  [Network.Linea]: "0x25210757f799423c908e4dbf8141dd10d51afbc6",
+  [Network.BaseGoerli]: "0x527534529577b57548a1dbc0d7fb0088705a1965",
+  [Network.Base]: "0x25210757f799423c908e4dbf8141dd10d51afbc6",
 };
 
 export const SudoswapModule: ChainIdToAddress = {
