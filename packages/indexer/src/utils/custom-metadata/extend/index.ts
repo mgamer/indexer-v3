@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import * as adidasOriginals from "./adidas-originals";
 import * as admitOne from "./admit-one";
 import * as artTennis from "./art-tennis";
