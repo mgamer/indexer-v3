@@ -13,12 +13,10 @@ import { getOrderId } from "@/orderbook/orders/midaswap";
 export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChainData) => {
   logger.info("midaswap-debug", JSON.stringify(events));
 
-  // Handle the events
   for (const { subKind, baseEventParams, log } of events) {
     const eventData = getEventData([subKind])[0];
 
     switch (subKind) {
-      // Create pool
       case "midaswap-new-erc721-pair": {
         await midaswapUtils.getPoolDetails(baseEventParams.address);
         break;
