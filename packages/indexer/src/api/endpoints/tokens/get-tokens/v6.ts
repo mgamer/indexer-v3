@@ -221,7 +221,6 @@ export const getTokensV6Options: RouteOptions = {
             metadata: Joi.object().allow(null),
             media: Joi.string().allow("", null),
             kind: Joi.string().allow("", null).description("Can be erc721, erc115, etc."),
-            creator: Joi.string().lowercase().pattern(regex.address).required(),
             isFlagged: Joi.boolean().default(false),
             lastFlagUpdate: Joi.string().allow("", null),
             lastFlagChange: Joi.string().allow("", null),
@@ -230,7 +229,6 @@ export const getTokensV6Options: RouteOptions = {
               .allow(null)
               .description("Can be higher than 1 if erc1155"),
             remainingSupply: Joi.number().unsafe().allow(null),
-            tokenCount: Joi.number(),
             rarity: Joi.number()
               .unsafe()
               .allow(null)
@@ -244,6 +242,8 @@ export const getTokensV6Options: RouteOptions = {
               name: Joi.string().allow("", null),
               image: Joi.string().allow("", null),
               slug: Joi.string().allow("", null),
+              creator: Joi.string().lowercase().pattern(regex.address).required(),
+              tokenCount: Joi.number(),
             }),
             lastSale: JoiSale.optional(),
             owner: Joi.string().allow(null),
@@ -1129,13 +1129,11 @@ export const getTokensV6Options: RouteOptions = {
               : undefined,
             media: r.media,
             kind: r.kind,
-            creator: r.creator ? fromBuffer(r.creator) : null,
             isFlagged: Boolean(Number(r.is_flagged)),
             lastFlagUpdate: r.last_flag_update ? new Date(r.last_flag_update).toISOString() : null,
             lastFlagChange: r.last_flag_change ? new Date(r.last_flag_change).toISOString() : null,
             supply: !_.isNull(r.supply) ? r.supply : null,
             remainingSupply: !_.isNull(r.remaining_supply) ? r.remaining_supply : null,
-            tokenCount: r.token_count,
             rarity: r.rarity_score,
             rarityRank: r.rarity_rank,
             collection: {
@@ -1143,6 +1141,8 @@ export const getTokensV6Options: RouteOptions = {
               name: r.collection_name,
               image: Assets.getLocalAssetsLink(r.collection_image),
               slug: r.slug,
+              creator: r.creator ? fromBuffer(r.creator) : null,
+              tokenCount: r.token_count,
             },
             lastSale:
               query.includeLastSale && r.last_sale_currency
