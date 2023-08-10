@@ -221,6 +221,7 @@ export const getTokensV6Options: RouteOptions = {
             metadata: Joi.object().allow(null),
             media: Joi.string().allow("", null),
             kind: Joi.string().allow("", null).description("Can be erc721, erc115, etc."),
+            creator: Joi.string().lowercase().pattern(regex.address).required(),
             isFlagged: Joi.boolean().default(false),
             lastFlagUpdate: Joi.string().allow("", null),
             lastFlagChange: Joi.string().allow("", null),
@@ -229,6 +230,7 @@ export const getTokensV6Options: RouteOptions = {
               .allow(null)
               .description("Can be higher than 1 if erc1155"),
             remainingSupply: Joi.number().unsafe().allow(null),
+            tokenCount: Joi.number(),
             rarity: Joi.number()
               .unsafe()
               .allow(null)
@@ -528,6 +530,8 @@ export const getTokensV6Options: RouteOptions = {
           t.supply,
           t.remaining_supply,
           c.slug,
+          c.creator,
+          c.token_count,
           (c.metadata ->> 'imageUrl')::TEXT AS collection_image,
           (
             SELECT
@@ -1125,11 +1129,13 @@ export const getTokensV6Options: RouteOptions = {
               : undefined,
             media: r.media,
             kind: r.kind,
+            creator: r.creator ? fromBuffer(r.creator) : null,
             isFlagged: Boolean(Number(r.is_flagged)),
             lastFlagUpdate: r.last_flag_update ? new Date(r.last_flag_update).toISOString() : null,
             lastFlagChange: r.last_flag_change ? new Date(r.last_flag_change).toISOString() : null,
             supply: !_.isNull(r.supply) ? r.supply : null,
             remainingSupply: !_.isNull(r.remaining_supply) ? r.remaining_supply : null,
+            tokenCount: r.token_count,
             rarity: r.rarity_score,
             rarityRank: r.rarity_rank,
             collection: {
