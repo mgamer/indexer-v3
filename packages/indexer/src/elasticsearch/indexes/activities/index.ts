@@ -11,7 +11,7 @@ import {
   ActivityType,
   CollectionAggregation,
 } from "@/elasticsearch/indexes/activities/base";
-import { getNetworkName } from "@/config/network";
+import { getNetworkName, getNetworkSettings } from "@/config/network";
 import _ from "lodash";
 import { buildContinuation, splitContinuation } from "@/common/utils";
 import { backfillActivitiesElasticsearchJob } from "@/jobs/activities/backfill/backfill-activities-elasticsearch-job";
@@ -182,12 +182,6 @@ export enum TopSellingFillOptions {
   any = "any",
 }
 
-const trendingBlocklist = [
-  "0x57f1887a8bf19b14fc0df6fd9b2acc9af147ea85", // ens
-  "0xd4416b13d2b3a9abae7acd5d6c2bbdbe25686401", // ens
-  "0xc36442b4a4522e871399cd717abdd847ab11fe88", // uniswap positions
-];
-
 const mapBucketToCollection = (bucket: any, includeRecentSales: boolean) => {
   const collectionData = bucket?.top_collection_hits?.hits?.hits[0]?._source.collection;
 
@@ -225,6 +219,8 @@ export const getTopSellingCollections = async (params: {
 }): Promise<CollectionAggregation[]> => {
   const { startTime, endTime, fillType, limit } = params;
 
+  const { trendingExcludedContracts } = getNetworkSettings();
+
   const salesQuery = {
     bool: {
       filter: [
@@ -242,13 +238,15 @@ export const getTopSellingCollections = async (params: {
           },
         },
       ],
-      must_not: [
-        {
-          terms: {
-            "collection.id": trendingBlocklist,
+      ...(trendingExcludedContracts && {
+        must_not: [
+          {
+            terms: {
+              "collection.id": trendingExcludedContracts,
+            },
           },
-        },
-      ],
+        ],
+      }),
     },
   } as any;
 
