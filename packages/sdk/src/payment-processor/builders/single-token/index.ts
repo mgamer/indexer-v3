@@ -69,12 +69,14 @@ export class SingleTokenBuilder extends BaseBuilder {
     const orderParams = order.params;
     if (orderParams.kind === "sale-approval") {
       return new Order(order.chainId, {
+        kind: "offer-approval",
         protocol: orderParams.protocol,
         collectionLevelOffer: false,
         sellerAcceptedOffer: false,
         marketplace: orderParams.marketplace,
         marketplaceFeeNumerator: orderParams.marketplaceFeeNumerator,
-        maxRoyaltyFeeNumerator: options?.maxRoyaltyFeeNumerator?.toString() ?? "0",
+        maxRoyaltyFeeNumerator:
+          options?.maxRoyaltyFeeNumerator?.toString() ?? order.params.maxRoyaltyFeeNumerator,
         privateBuyerOrDelegatedPurchaser: orderParams.privateBuyerOrDelegatedPurchaser,
         sellerOrBuyer: options.taker,
         tokenAddress: orderParams.tokenAddress,
@@ -88,12 +90,14 @@ export class SingleTokenBuilder extends BaseBuilder {
       });
     } else {
       return new Order(order.chainId, {
+        kind: "sale-approval",
         protocol: orderParams.protocol,
         collectionLevelOffer: false,
         sellerAcceptedOffer: true,
         marketplace: orderParams.marketplace,
         marketplaceFeeNumerator: orderParams.marketplaceFeeNumerator,
-        maxRoyaltyFeeNumerator: options?.maxRoyaltyFeeNumerator?.toString() ?? "0",
+        maxRoyaltyFeeNumerator:
+          options?.maxRoyaltyFeeNumerator?.toString() ?? order.params.maxRoyaltyFeeNumerator,
         privateBuyerOrDelegatedPurchaser: orderParams.privateBuyerOrDelegatedPurchaser,
         sellerOrBuyer: options.taker,
         tokenAddress: orderParams.tokenAddress,

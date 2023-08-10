@@ -14,6 +14,8 @@ export const getSupportedChainName = () => {
       return "optimism";
     case 42161:
       return "arbitrum";
+    case 42170:
+      return "arbitrum_nova";
     case 56:
       return "bsc";
     case 43114:
@@ -24,6 +26,10 @@ export const getSupportedChainName = () => {
       return "mumbai";
     case 8453:
       return "base";
+    case 324:
+      return "zksync";
+    case 7777777:
+      return "zora";
     default:
       return "unknown";
   }

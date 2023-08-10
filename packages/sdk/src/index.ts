@@ -1,4 +1,5 @@
 import * as Common from "./common";
+import * as Global from "./global";
 
 import * as RouterV6 from "./router/v6";
 
@@ -71,6 +72,8 @@ if (process.env.APPROVAL_PROXY_OVERRIDE) {
 export {
   // Common
   Common,
+  // Global
+  Global,
   // Routers
   RouterV6,
   // Contracts / Protocols
