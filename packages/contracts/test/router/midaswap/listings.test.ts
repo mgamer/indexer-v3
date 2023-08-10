@@ -17,8 +17,9 @@ import {
   reset,
   setupNFTs,
 } from "../../utils";
-import RouterAbi from "@reservoir0x/sdk/src/midaswap/abis/Router.json";
+
 import LPTokenAbi from "@reservoir0x/sdk/src/midaswap/abis/LPToken.json";
+import RouterAbi from "@reservoir0x/sdk/src/midaswap/abis/Router.json";
 
 describe("[ReservoirV6_0_1] Midaswap listings", () => {
   const chainId = getChainId();

@@ -5,11 +5,12 @@ import * as Sdk from "@reservoir0x/sdk/src";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import LPTokenAbi from "@reservoir0x/sdk/src/midaswap/abis/LPToken.json";
 
 import { ExecutionInfo } from "../helpers/router";
 import { MidaswapOffer, setupMidaswapOffers } from "../helpers/midaswap";
 import { bn, getChainId, getRandomBoolean, getRandomInteger, reset, setupNFTs } from "../../utils";
+
+import LPTokenAbi from "@reservoir0x/sdk/src/midaswap/abis/LPToken.json";
 import RouterAbi from "@reservoir0x/sdk/src/midaswap/abis/Router.json";
 
 describe("[ReservoirV6_0_1] Midaswap offers", () => {

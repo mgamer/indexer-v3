@@ -4,6 +4,7 @@ import { keccak256 } from "@ethersproject/solidity";
 import * as Sdk from "@reservoir0x/sdk";
 import pLimit from "p-limit";
 import _ from "lodash";
+
 import { idb, pgp, redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
@@ -17,6 +18,7 @@ import { Sources } from "@/models/sources";
 import { DbOrder, OrderMetadata, generateSchemaHash } from "@/orderbook/orders/utils";
 import * as tokenSet from "@/orderbook/token-sets";
 import * as midaswap from "@/utils/midaswap";
+
 import PairAbi from "@reservoir0x/sdk/dist/midaswap/abis/Pair.json";
 
 type Price = {
@@ -28,15 +30,6 @@ type Price = {
 export type OrderInfo = {
   orderParams: {
     pool: string;
-    // Validation parameters (for ensuring only the latest event is relevant)
-    txHash: string;
-    txTimestamp: number;
-    txBlock: number;
-    logIndex: number;
-    // Misc options
-    forceRecheck?: boolean;
-
-    eventName?: string;
     lpTokenId?: string;
     nftId?: string;
     binLower?: number;
@@ -44,6 +37,13 @@ export type OrderInfo = {
     binAmount?: number;
     tradeBin?: number;
     orderId?: string;
+    // Validation parameters (for ensuring only the latest event is relevant)
+    txHash: string;
+    txTimestamp: number;
+    txBlock: number;
+    logIndex: number;
+    // Misc options
+    forceRecheck?: boolean;
   };
   metadata: OrderMetadata;
 };
@@ -89,6 +89,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         tradeBin,
         orderId: sellOrderId,
       } = orderParams;
+
       const pairContract = new Contract(pool.address, PairAbi, baseProvider);
       const [, floorPriceBin] = await pairContract.getIDs();
 
@@ -110,9 +111,9 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         },
       ];
 
-      // create buy/sell orders
+      // Create buy/sell orders
       const createOrder = async (prices: Price[], tokenId?: string) => {
-        if (!lpTokenId || !prices.length) {
+        if (!prices.length) {
           return;
         }
 
@@ -158,7 +159,8 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
             lpTokenIds: prices.map((p) => p.lpTokenId),
             floorPrice: tokenId
               ? undefined
-              : Sdk.Midaswap.Order.getBuyPrice(floorPriceBin, pool.freeRateBps, pool.royaltyBps), // only buy orders need this field
+              : // Only buy orders need this field
+                Sdk.Midaswap.Order.getBuyPrice(floorPriceBin, pool.freeRateBps, pool.royaltyBps),
           },
         });
 
@@ -213,29 +215,27 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         });
       };
 
-      const rePriceOrder = async (id: string, order: Sdk.Midaswap.Order) => {
+      const repriceOrder = async (id: string, order: Sdk.Midaswap.Order) => {
         await idb.none(
           `
             UPDATE orders SET
-            fillability_status = 'fillable',
-            approval_status = 'approved',
-            price = $/price/,
-            currency_price = $/price/,
-            value = $/value/,
-            currency_value = $/value/,
-            valid_between = tstzrange(date_trunc('seconds', to_timestamp(${orderParams.txTimestamp})), 'Infinity', '[]'),
-            updated_at = now(),
-            raw_data = $/rawData:json/,
-            log_index = $/logIndex/
+              fillability_status = 'fillable',
+              approval_status = 'approved',
+              price = $/price/,
+              currency_price = $/price/,
+              value = $/value/,
+              currency_value = $/value/,
+              valid_between = tstzrange(date_trunc('seconds', to_timestamp(${orderParams.txTimestamp})), 'Infinity', '[]'),
+              updated_at = now(),
+              raw_data = $/rawData:json/,
+              log_index = $/logIndex/
             WHERE orders.id = $/id/
-        `,
+          `,
           {
             id,
             price: order.params.extra.prices[0],
             value: order.params.extra.prices[0],
-            rawData: {
-              ...order.params,
-            },
+            rawData: order.params,
             quantityRemaining: order.params.extra.prices.length.toString(),
             blockNumber: orderParams.txBlock,
             logIndex: orderParams.logIndex,
@@ -252,24 +252,28 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       };
 
       if (tradeBin) {
-        // Sell/Buy
-
         if (sellOrderId) {
-          // Buy
+          // Buy from pool
 
-          // handler sell orders
+          // Handle sell orders
           const sellOrders = await redb.manyOrNone(
             `
-                SELECT id,raw_data FROM orders
-                WHERE orders.kind = 'midaswap'
+              SELECT
+                orders.id,
+                orders.raw_data
+              FROM orders
+              WHERE orders.kind = 'midaswap'
                 AND orders.side = 'sell'
                 AND orders.fillability_status = 'fillable'
+                AND orders.approval_status = 'approved'
+                AND orders.contract IS NOT NULL
                 AND orders.raw_data->>'lpTokenId' = $/lpTokenId/
-              `,
+            `,
             {
               lpTokenId: lpTokenId.toString(),
             }
           );
+
           const otherSellOrders = sellOrders.filter((order) => order.id !== sellOrderId);
           if (otherSellOrders.length) {
             const originalPrices: Price[] = otherSellOrders[0].raw_data.extra.prices.map(
@@ -279,8 +283,9 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                 lpTokenId,
               })
             );
+
             const found = originalPrices.find((item) => item.bin === tradeBin);
-            const finallyPrices = _.remove(originalPrices, (item) => item !== found);
+            const finalPrices = _.remove(originalPrices, (item) => item !== found);
 
             const order = new Sdk.Midaswap.Order(config.chainId, {
               pair: pool.address,
@@ -289,24 +294,27 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
               lpTokenId,
               pool: `${pool.address}_${lpTokenId}`,
               extra: {
-                prices: finallyPrices.map((p) => p.price),
-                bins: finallyPrices.map((p) => p.bin),
-                lpTokenIds: finallyPrices.map((p) => p.lpTokenId),
+                prices: finalPrices.map((p) => p.price),
+                bins: finalPrices.map((p) => p.bin),
+                lpTokenIds: finalPrices.map((p) => p.lpTokenId),
               },
             });
             otherSellOrders.forEach(async (item) => {
-              await rePriceOrder(item.id, order);
+              await repriceOrder(item.id, order);
             });
           }
 
-          // handler buy orders
-          const buyId = getOrderId(pool.address, lpTokenId);
+          // Handler buy orders
+          const buyOrderId = getOrderId(pool.address, lpTokenId);
           const buyOrder = await redb.oneOrNone(
             `
-              SELECT id,raw_data FROM orders
-              WHERE orders.id = $/buyId/
+              SELECT
+                orders.id,
+                orders.raw_data
+              FROM orders
+              WHERE orders.id = $/buyOrderId/
             `,
-            { buyId }
+            { buyOrderId }
           );
           const newPrices: Price[] = [
             {
@@ -317,7 +325,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
           ];
 
           if (buyOrder) {
-            const finallyPrices: Price[] = _.sortBy(
+            const finalPrices: Price[] = _.sortBy(
               [
                 ...newPrices,
                 ...buyOrder.raw_data.extra.prices.map((item: string, index: number) => ({
@@ -335,9 +343,9 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
               lpTokenId,
               pool: `${pool.address}_${lpTokenId}`,
               extra: {
-                prices: finallyPrices.map((p) => p.price),
-                bins: finallyPrices.map((p) => p.bin),
-                lpTokenIds: finallyPrices.map((p) => p.lpTokenId),
+                prices: finalPrices.map((p) => p.price),
+                bins: finalPrices.map((p) => p.bin),
+                lpTokenIds: finalPrices.map((p) => p.lpTokenId),
                 floorPrice: Sdk.Midaswap.Order.getBuyPrice(
                   floorPriceBin,
                   pool.freeRateBps,
@@ -345,21 +353,24 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                 ),
               },
             });
-            await rePriceOrder(buyId, order);
+            await repriceOrder(buyOrderId, order);
           } else {
             await createOrder(newPrices);
           }
         } else {
-          // Sell
+          // Sell to pool
 
-          //   handler buy orders
-          const buyId = getOrderId(pool.address, lpTokenId);
+          // Handler buy orders
+          const buyOrderId = getOrderId(pool.address, lpTokenId);
           const buyOrder = await redb.oneOrNone(
             `
-              SELECT id,raw_data FROM orders
-              WHERE orders.id = $/buyId/
+              SELECT
+                orders.id,
+                orders.raw_data
+              FROM orders
+              WHERE orders.id = $/buyOrderId/
             `,
-            { buyId }
+            { buyOrderId }
           );
           if (buyOrder) {
             const originalPrices: Price[] = buyOrder.raw_data.extra.prices.map(
@@ -369,8 +380,10 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                 lpTokenId,
               })
             );
+
             const found = originalPrices.find((item) => item.bin === tradeBin);
-            const finallyPrices = _.remove(originalPrices, (item) => item !== found);
+            const finalPrices = _.remove(originalPrices, (item) => item !== found);
+
             const order = new Sdk.Midaswap.Order(config.chainId, {
               pair: pool.address,
               tokenX: pool.nft,
@@ -378,9 +391,9 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
               lpTokenId,
               pool: `${pool.address}_${lpTokenId}`,
               extra: {
-                prices: finallyPrices.map((p) => p.price),
-                bins: finallyPrices.map((p) => p.bin),
-                lpTokenIds: finallyPrices.map((p) => p.lpTokenId),
+                prices: finalPrices.map((p) => p.price),
+                bins: finalPrices.map((p) => p.bin),
+                lpTokenIds: finalPrices.map((p) => p.lpTokenId),
                 floorPrice: Sdk.Midaswap.Order.getBuyPrice(
                   floorPriceBin,
                   pool.freeRateBps,
@@ -388,24 +401,30 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                 ),
               },
             });
-            await rePriceOrder(buyId, order);
+            await repriceOrder(buyOrderId, order);
           }
 
-          // handler sell orders
-          const id = getOrderId(pool.address, lpTokenId, nftId);
+          // Handler sell orders
+          const sellOrderId = getOrderId(pool.address, lpTokenId, nftId);
           const sellOrders = await redb.manyOrNone(
             `
-                SELECT id,raw_data FROM orders
-                WHERE orders.kind = 'midaswap'
+              SELECT
+                orders.id,
+                orders.raw_data
+              FROM orders
+              WHERE orders.kind = 'midaswap'
                 AND orders.side = 'sell'
                 AND orders.fillability_status = 'fillable'
+                AND orders.approval_status = 'approved'
+                AND orders.contract IS NOT NULL
                 AND orders.raw_data->>'lpTokenId' = $/lpTokenId/
-              `,
+            `,
             {
               lpTokenId: lpTokenId.toString(),
             }
           );
-          let finallyPrices: Price[] = [
+
+          let finalPrices: Price[] = [
             {
               price: Sdk.Midaswap.Order.getSellPrice(tradeBin, pool.freeRateBps, pool.royaltyBps),
               bin: tradeBin,
@@ -413,7 +432,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
             },
           ];
 
-          const otherSellOrders = sellOrders.filter((order) => order.id !== id);
+          const otherSellOrders = sellOrders.filter((order) => order.id !== sellOrderId);
           if (otherSellOrders.length) {
             const originalPrices: Price[] = otherSellOrders[0].raw_data.extra.prices.map(
               (price: string, index: number) => ({
@@ -422,8 +441,9 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                 lpTokenId,
               })
             );
-            finallyPrices = _.sortBy([...originalPrices, ...finallyPrices], "bin");
+            finalPrices = _.sortBy([...originalPrices, ...finalPrices], "bin");
           }
+
           const order = new Sdk.Midaswap.Order(config.chainId, {
             pair: pool.address,
             tokenX: pool.nft,
@@ -431,32 +451,35 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
             lpTokenId,
             pool: `${pool.address}_${lpTokenId}`,
             extra: {
-              prices: finallyPrices.map((p) => p.price),
-              bins: finallyPrices.map((p) => p.bin),
-              lpTokenIds: finallyPrices.map((p) => p.lpTokenId),
+              prices: finalPrices.map((p) => p.price),
+              bins: finalPrices.map((p) => p.bin),
+              lpTokenIds: finalPrices.map((p) => p.lpTokenId),
             },
           });
           otherSellOrders.forEach(async (item) => {
-            await rePriceOrder(item.id, order);
+            await repriceOrder(item.id, order);
           });
 
-          const sellOrder = sellOrders.find((item) => item.id === id);
+          const sellOrder = sellOrders.find((item) => item.id === sellOrderId);
           if (sellOrder) {
-            await rePriceOrder(id, order);
+            await repriceOrder(sellOrderId, order);
           } else {
-            await createOrder(finallyPrices, nftId);
+            await createOrder(finalPrices, nftId);
           }
         }
       } else if (binAmount) {
-        // add nft/add ft
+        // Add NFT/FT liquidity
+
         if (!binLower || !binstep) {
           return;
         }
+
         const bins = nftId
-          ? Array.from({ length: binAmount }).map((item, index) => binLower + index * binstep)
+          ? Array.from({ length: binAmount }).map((_, index) => binLower + index * binstep)
           : Array.from({ length: binAmount })
-              .map((item, index) => binLower + index * binstep)
+              .map((_, index) => binLower + index * binstep)
               .reverse();
+
         const prices: Price[] = bins.map((bin) => ({
           price: nftId
             ? Sdk.Midaswap.Order.getSellPrice(bin, pool.freeRateBps, pool.royaltyBps)
@@ -464,6 +487,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
           bin,
           lpTokenId,
         }));
+
         await createOrder(prices, nftId);
       }
     } catch (error) {
