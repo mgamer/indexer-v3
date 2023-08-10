@@ -303,6 +303,9 @@
   "MidaswapModule": {
     "v1": {
       "5": "0x7de357d56eeb46a925e06483217df1b46a859e0e"
+    },
+    "v2": {
+      "5": "0xfe1aaded2702e7976ac6c2e7dca7708a04232396"
     }
   }
 }
