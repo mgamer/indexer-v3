@@ -8,7 +8,7 @@ import { redis } from "@/common/redis";
 import { toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { OrderKind } from "@/orderbook/orders";
-import * as creatorToken from "@/utils/creator-token";
+import * as erc721c from "@/utils/erc721c";
 
 export type Operator = {
   address: string;
@@ -46,9 +46,9 @@ export const checkMarketplaceIsFiltered = async (
     return customCheck;
   }
 
-  const blocked = await creatorToken.checkMarketplaceIsFiltered(contract, operators);
-  if (blocked) {
-    return blocked;
+  const erc721cCheck = await erc721c.checkMarketplaceIsFiltered(contract, operators);
+  if (erc721cCheck) {
+    return erc721cCheck;
   }
 
   return operators.some((c) => result!.includes(c));

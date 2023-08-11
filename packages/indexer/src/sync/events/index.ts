@@ -255,8 +255,8 @@ export const extractEventsBatches = async (
             data: kindToEvents.get("blur-v2") ?? [],
           },
           {
-            kind: "creator-token",
-            data: kindToEvents.get("creator-token") ?? [],
+            kind: "erc721c",
+            data: kindToEvents.get("erc721c") ?? [],
           },
         ];
 
