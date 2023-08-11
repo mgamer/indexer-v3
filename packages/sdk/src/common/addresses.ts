@@ -58,6 +58,7 @@ export const Usdc: ChainIdToAddress = {
   [Network.Arbitrum]: "0xff970a61a04b1ca14834a43f5de4533ebddb5cc8",
   [Network.Avalanche]: "0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e",
   [Network.Zksync]: "0x3355df6d4c9c3035724fd0e3914de96a5a83aaf4",
+  [Network.Base]: "0xd9aaec86b65d86f6a7b5b1b0c42ffa531710b6ca",
 };
 
 export const RoyaltyEngine: ChainIdToAddress = {
@@ -76,6 +77,7 @@ export const RoyaltyEngine: ChainIdToAddress = {
   [Network.Zora]: "0x8755310f937528173e7c5a106131d79a3601c9d9",
   [Network.Base]: "0x8755310f937528173e7c5a106131d79a3601c9d9",
   [Network.Linea]: "0x8755310f937528173e7c5a106131d79a3601c9d9",
+  [Network.Avalanche]: "0x60b433ee91680189deb2c94b0b062ea283f6b4dd",
 };
 
 // Uniswap SwapRouter

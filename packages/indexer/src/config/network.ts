@@ -76,32 +76,38 @@ export const getNetworkName = () => {
 
 export const getOpenseaNetworkName = () => {
   switch (config.chainId) {
+    case 1:
+      return "ethereum";
     case 5:
       return "goerli";
-
-    case 10:
-      return "optimism";
-
-    case 56:
-      return "bsc";
-
     case 137:
       return "matic";
-
-    case 324:
-      return "zksync";
-
+    case 10:
+      return "optimism";
     case 42161:
       return "arbitrum";
-
-    case 80001:
-      return "mumbai";
-
+    case 42170:
+      return "arbitrum_nova";
+    case 56:
+      return "bsc";
+    case 43114:
+      return "avalanche";
     case 11155111:
       return "sepolia";
-
+    case 80001:
+      return "mumbai";
+    case 8453:
+      return "base";
+    case 84531:
+      return "base_goerli";
+    case 324:
+      return "zksync";
+    case 7777777:
+      return "zora";
+    case 999:
+      return "zora_testnet";
     default:
-      return "ethereum";
+      return null;
   }
 };
 
@@ -468,8 +474,8 @@ export const getNetworkSettings = (): NetworkSettings => {
           indexes: {
             activities: {
               numberOfShards: 10,
-              disableMappingsUpdate: config.environment !== "prod",
-              configName: config.environment === "prod" ? "CONFIG_DEFAULT" : "CONFIG_1689873821",
+              disableMappingsUpdate: true,
+              configName: "CONFIG_1689873821",
             },
           },
         },
@@ -864,6 +870,11 @@ export const getNetworkSettings = (): NetworkSettings => {
         realtimeSyncMaxBlockLag: 32,
         realtimeSyncFrequencySeconds: 5,
         lastBlockLatency: 5,
+        supportedBidCurrencies: {
+          ...defaultNetworkSettings.supportedBidCurrencies,
+          // PaymentProcessor WETH
+          "0xfff9976782d46cc05630d1f6ebab18b2324d6b14": true,
+        },
         subDomain: "api-sepolia",
         onStartup: async () => {
           // Insert the native currency
@@ -1089,6 +1100,7 @@ export const getNetworkSettings = (): NetworkSettings => {
     case 43114: {
       return {
         ...defaultNetworkSettings,
+        metadataMintDelay: 240,
         enableWebSocket: false,
         realtimeSyncMaxBlockLag: 32,
         realtimeSyncFrequencySeconds: 5,

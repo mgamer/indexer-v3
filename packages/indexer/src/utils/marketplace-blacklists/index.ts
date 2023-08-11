@@ -34,9 +34,7 @@ export const checkMarketplaceIsFiltered = async (
     result = await updateMarketplaceBlacklist(contract);
   } else {
     const cacheKey = `marketplace-blacklist:${contract}`;
-    result = refresh
-      ? null
-      : await redis.get(cacheKey).then((r) => (r ? (JSON.parse(r) as string[]) : null));
+    result = await redis.get(cacheKey).then((r) => (r ? (JSON.parse(r) as string[]) : null));
     if (!result) {
       result = await getMarketplaceBlacklistFromDB(contract);
       await redis.set(cacheKey, JSON.stringify(result), "EX", 24 * 3600);
@@ -57,8 +55,6 @@ export const checkMarketplaceIsFiltered = async (
 };
 
 export const isBlockedByCustomLogic = async (contract: string, operators: string[]) => {
-  const cacheDuration = 24 * 3600;
-
   const cacheKey = `marketplace-blacklist-custom-logic:${contract}:${JSON.stringify(operators)}`;
   const cache = await redis.get(cacheKey);
   if (!cache) {
@@ -67,6 +63,7 @@ export const isBlockedByCustomLogic = async (contract: string, operators: string
       "function getWhitelistedOperators() view returns (address[])",
     ]);
     const nft = new Contract(contract, iface, baseProvider);
+    let result = false;
 
     // `registry()`
     try {
@@ -78,19 +75,25 @@ export const isBlockedByCustomLogic = async (contract: string, operators: string
         baseProvider
       );
       const allowed = await Promise.all(operators.map((c) => registry.isAllowedOperator(c)));
-      const result = allowed.some((c) => !c);
-
-      await redis.set(cacheKey, result ? "1" : "0", "EX", cacheDuration);
-      return result;
+      result = allowed.some((c) => !c);
     } catch {
       // Skip errors
     }
+
+    // Positive case
+    if (result) {
+      await redis.set(cacheKey, "1", "EX", 24 * 3600);
+      return result;
+    }
+
+    // Negative case
+    await redis.set(cacheKey, "0", "EX", 24 * 3600);
   }
 
   return Boolean(Number(cache));
 };
 
-export const getMarketplaceBlacklist = async (contract: string): Promise<string[]> => {
+const getMarketplaceBlacklist = async (contract: string): Promise<string[]> => {
   const iface = new Interface([
     "function filteredOperators(address registrant) external view returns (address[])",
   ]);
@@ -116,7 +119,7 @@ export const getMarketplaceBlacklist = async (contract: string): Promise<string[
   return Array.from(new Set(allOperatorsList));
 };
 
-export const getMarketplaceBlacklistFromDB = async (contract: string): Promise<string[]> => {
+const getMarketplaceBlacklistFromDB = async (contract: string): Promise<string[]> => {
   const result = await redb.oneOrNone(
     `
       SELECT
@@ -129,7 +132,7 @@ export const getMarketplaceBlacklistFromDB = async (contract: string): Promise<s
   return result?.filtered_operators || [];
 };
 
-export const updateMarketplaceBlacklist = async (contract: string) => {
+const updateMarketplaceBlacklist = async (contract: string) => {
   const blacklist = await getMarketplaceBlacklist(contract);
   await idb.none(
     `
