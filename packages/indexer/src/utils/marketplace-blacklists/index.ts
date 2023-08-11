@@ -8,6 +8,7 @@ import { redis } from "@/common/redis";
 import { toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { OrderKind } from "@/orderbook/orders";
+import * as creatorToken from "@/utils/creator-token";
 
 export type Operator = {
   address: string;
@@ -47,6 +48,11 @@ export const checkMarketplaceIsFiltered = async (
     return customCheck;
   }
 
+  const blocked = await creatorToken.checkMarketplaceIsFiltered(contract, operators);
+  if (blocked) {
+    return blocked;
+  }
+
   return operators.some((c) => result!.includes(c));
 };
 
@@ -61,19 +67,6 @@ export const isBlockedByCustomLogic = async (contract: string, operators: string
       "function getWhitelistedOperators() view returns (address[])",
     ]);
     const nft = new Contract(contract, iface, baseProvider);
-
-    // `getWhitelistedOperators()` (ERC721-C)
-    try {
-      const whitelistedOperators = await nft
-        .getWhitelistedOperators()
-        .then((ops: string[]) => ops.map((o) => o.toLowerCase()));
-      const result = operators.some((o) => !whitelistedOperators.includes(o));
-
-      await redis.set(cacheKey, result ? "1" : "0", "EX", cacheDuration);
-      return result;
-    } catch {
-      // Skip errors
-    }
 
     // `registry()`
     try {

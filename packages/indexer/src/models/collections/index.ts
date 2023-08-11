@@ -13,6 +13,7 @@ import {
 import { Tokens } from "@/models/tokens";
 import { updateBlurRoyalties } from "@/utils/blur";
 import * as marketplaceBlacklist from "@/utils/marketplace-blacklists";
+import * as creatorToken from "@/utils/creator-token";
 import * as marketplaceFees from "@/utils/marketplace-fees";
 import MetadataApi from "@/utils/metadata-api";
 import * as royalties from "@/utils/royalties";
@@ -226,6 +227,9 @@ export class Collections {
 
     // Refresh any contract blacklists
     await marketplaceBlacklist.updateMarketplaceBlacklist(collection.contract);
+
+    // Refresh Creator Token's config
+    await creatorToken.updateCreatorTokenConfig(collection.contract);
   }
 
   public static async update(collectionId: string, fields: CollectionsEntityUpdateParams) {

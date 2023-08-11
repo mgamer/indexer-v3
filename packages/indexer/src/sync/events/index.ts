@@ -250,6 +250,10 @@ export const extractEventsBatches = async (
             kind: "blur-v2",
             data: kindToEvents.get("blur-v2") ?? [],
           },
+          {
+            kind: "creator-token",
+            data: kindToEvents.get("creator-token") ?? [],
+          },
         ];
 
         txHashToEventsBatch.set(txHash, {
