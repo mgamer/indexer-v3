@@ -242,7 +242,7 @@ export const getTokensV6Options: RouteOptions = {
               name: Joi.string().allow("", null),
               image: Joi.string().allow("", null),
               slug: Joi.string().allow("", null),
-              creator: Joi.string().lowercase().pattern(regex.address).required(),
+              creator: Joi.string().lowercase().pattern(regex.address).allow("", null),
               tokenCount: Joi.number(),
             }),
             lastSale: JoiSale.optional(),
