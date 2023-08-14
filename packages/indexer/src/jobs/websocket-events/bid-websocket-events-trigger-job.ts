@@ -116,53 +116,64 @@ export class BidWebsocketEventsTriggerQueueJob extends AbstractRabbitMqJobHandle
 
       const sources = await Sources.getInstance();
 
-      const feeBreakdown = rawResult.fee_breakdown;
-      const feeBps = rawResult?.fee_bps;
-
       let source: SourcesEntity | undefined;
-      if (rawResult.token_set_id?.startsWith("token")) {
-        const [, contract, tokenId] = rawResult.token_set_id.split(":");
-        source = sources.get(Number(rawResult.source_id_int), contract, tokenId);
+      if (data.after.token_set_id?.startsWith("token")) {
+        const [, contract, tokenId] = data.after.token_set_id.split(":");
+        source = sources.get(Number(data.after.source_id_int), contract, tokenId);
       } else {
-        source = sources.get(Number(rawResult.source_id_int));
+        source = sources.get(Number(data.after.source_id_int));
       }
 
+      const formatValidBetween = (validBetween: string) => {
+        try {
+          const parsed = JSON.parse(validBetween.replace("infinity", "null"));
+          return {
+            validFrom: new Date(parsed[0]).getTime(),
+            validUntil: new Date(parsed[1]).getTime(),
+          };
+        } catch (error) {
+          return {
+            validFrom: null,
+            validUntil: null,
+          };
+        }
+      };
+
       const result = {
-        id: rawResult.id,
-        kind: rawResult.kind,
-        side: rawResult.side,
-        status: rawResult.status,
-        tokenSetId: rawResult.token_set_id,
-        tokenSetSchemaHash: fromBuffer(rawResult.token_set_schema_hash),
-        nonce: rawResult.nonce,
-        contract: fromBuffer(rawResult.contract),
-        maker: fromBuffer(rawResult.maker),
-        taker: fromBuffer(rawResult.taker),
+        id: data.after.id,
+        kind: data.after.kind,
+        side: data.after.side,
+        status: data.after.status,
+        tokenSetId: data.after.token_set_id,
+        tokenSetSchemaHash: data.after.token_set_schema_hash,
+        nonce: data.after.nonce,
+        contract: data.after.contract,
+        maker: data.after.maker,
+        taker: data.after.taker,
         price: await getJoiPriceObject(
           {
             gross: {
-              amount: rawResult.currency_price ?? rawResult.price,
-              nativeAmount: rawResult.price,
+              amount: data.after.currency_price ?? data.after.price,
+              nativeAmount: data.after.price,
             },
             net: {
               amount: getNetAmount(
-                rawResult.currency_price ?? rawResult.price,
-                _.min([rawResult.fee_bps, 10000])
+                data.after.currency_price ?? data.after.price,
+                _.min([data.after.fee_bps, 10000])
               ),
-              nativeAmount: getNetAmount(rawResult.price, _.min([rawResult.fee_bps, 10000])),
+              nativeAmount: getNetAmount(data.after.price, _.min([data.after.fee_bps, 10000])),
             },
           },
-          rawResult.currency
-            ? fromBuffer(rawResult.currency)
-            : rawResult.side === "sell"
+          data.after.currency
+            ? data.after.currency
+            : data.after.side === "sell"
             ? Sdk.Common.Addresses.Native[config.chainId]
             : Sdk.Common.Addresses.WNative[config.chainId],
           undefined
         ),
-        validFrom: Number(rawResult.valid_from),
-        validUntil: Number(rawResult.valid_until) || 0,
-        quantityFilled: Number(rawResult.quantity_filled),
-        quantityRemaining: Number(rawResult.quantity_remaining),
+        ...formatValidBetween(data.after.valid_between),
+        quantityFilled: data.after.quantity_filled,
+        quantityRemaining: data.after.quantity_remaining,
         criteria: rawResult.criteria,
         source: {
           id: source?.address,
@@ -171,13 +182,13 @@ export class BidWebsocketEventsTriggerQueueJob extends AbstractRabbitMqJobHandle
           icon: source?.getIcon(),
           url: source?.metadata.url,
         },
-        feeBps: Number(feeBps?.toString()) || 0,
-        feeBreakdown: feeBreakdown,
-        expiration: Number(rawResult.expiration),
-        isReservoir: rawResult.is_reservoir,
-        isDynamic: Boolean(rawResult.dynamic || rawResult.kind === "sudoswap"),
-        createdAt: new Date(rawResult.created_at).toISOString(),
-        updatedAt: new Date(rawResult.updated_at).toISOString(),
+        feeBps: data.after.fee_bps || 0,
+        feeBreakdown: data.after.fee_breakdown,
+        expiration: data.after.expiration,
+        isReservoir: data.after.is_reservoir,
+        isDynamic: Boolean(data.after.dynamic || rawResult.kind === "sudoswap"),
+        createdAt: new Date(data.after.created_at).toISOString(),
+        updatedAt: new Date(data.after.updated_at).toISOString(),
         originatedAt: new Date(rawResult.originated_at).toISOString(),
         rawData: rawResult.raw_data,
       };
@@ -242,13 +253,14 @@ interface OrderInfo {
   source_id_int: number;
   quantity_filled: string;
   quantity_remaining: string;
-  fee_bps: string;
+  fee_bps: number;
 
   fee_breakdown: string;
   expiration: string;
   is_reservoir: boolean | null;
   raw_data: string;
   created_at: string;
+  updated_at: string;
   originated_at: string;
   fillability_status: string;
   approval_status: string;

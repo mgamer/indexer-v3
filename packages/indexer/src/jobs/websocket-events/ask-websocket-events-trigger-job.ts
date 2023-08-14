@@ -225,6 +225,7 @@ export type EventInfo = {
 };
 
 interface OrderInfo {
+  updated_at: string;
   id: string;
   kind: string;
   side: string;
@@ -244,7 +245,7 @@ interface OrderInfo {
   source_id_int: number;
   quantity_filled: string;
   quantity_remaining: string;
-  fee_bps: string;
+  fee_bps: number;
 
   fee_breakdown: string;
   expiration: string;
