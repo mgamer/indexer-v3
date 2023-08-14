@@ -160,7 +160,7 @@ export class AskWebsocketEventsTriggerQueueJob extends AbstractRabbitMqJobHandle
         event: eventType,
         tags: {
           contract: data.after.contract,
-          source: result.source.domain || "unknown",
+          source: source?.domain || "unknown",
           maker: data.after.maker,
           taker: data.after.taker,
         },
