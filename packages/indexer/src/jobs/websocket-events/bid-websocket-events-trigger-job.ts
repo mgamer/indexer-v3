@@ -6,7 +6,7 @@ import { Orders } from "@/utils/orders";
 import { idb } from "@/common/db";
 import { Sources } from "@/models/sources";
 import { SourcesEntity } from "@/models/sources/sources-entity";
-import { fromBuffer, getNetAmount } from "@/common/utils";
+import { getNetAmount } from "@/common/utils";
 import { getJoiPriceObject } from "@/common/joi";
 import _ from "lodash";
 import * as Sdk from "@reservoir0x/sdk";
@@ -65,48 +65,7 @@ export class BidWebsocketEventsTriggerQueueJob extends AbstractRabbitMqJobHandle
 
       const rawResult = await idb.oneOrNone(
         `
-            SELECT
-              orders.id,
-              orders.kind,
-              orders.side,
-              orders.token_set_id,
-              orders.token_set_schema_hash,
-              orders.contract,
-              orders.maker,
-              orders.taker,
-              orders.currency,
-              orders.price,
-              orders.value,
-              orders.currency_price,
-              orders.currency_value,
-              orders.normalized_value,
-              orders.currency_normalized_value,
-              orders.missing_royalties,
-              orders.nonce,
-              orders.dynamic,
-              DATE_PART('epoch', LOWER(orders.valid_between)) AS valid_from,
-              COALESCE(NULLIF(DATE_PART('epoch', UPPER(orders.valid_between)), 'Infinity'), 0) AS valid_until,
-              orders.source_id_int,
-              orders.quantity_filled,
-              orders.quantity_remaining,
-              coalesce(orders.fee_bps, 0) AS fee_bps,
-              orders.fee_breakdown,
-              COALESCE(NULLIF(DATE_PART('epoch', orders.expiration), 'Infinity'), 0) AS expiration,
-              orders.is_reservoir,
-              orders.raw_data,
-              orders.created_at,
-              orders.updated_at,
-              orders.originated_at,
-              (
-                CASE
-                  WHEN orders.fillability_status = 'filled' THEN 'filled'
-                  WHEN orders.fillability_status = 'cancelled' THEN 'cancelled'
-                  WHEN orders.fillability_status = 'expired' THEN 'expired'
-                  WHEN orders.fillability_status = 'no-balance' THEN 'inactive'
-                  WHEN orders.approval_status = 'no-approval' THEN 'inactive'
-                  ELSE 'active'
-                END
-              ) AS status,
+            SELECT              
               (${criteriaBuildQuery}) AS criteria
             FROM orders
             WHERE orders.id = $/orderId/
@@ -159,9 +118,12 @@ export class BidWebsocketEventsTriggerQueueJob extends AbstractRabbitMqJobHandle
             net: {
               amount: getNetAmount(
                 data.after.currency_price ?? data.after.price,
-                _.min([data.after.fee_bps, 10000])
+                _.min([data.after.fee_bps, 10000]) ?? data.after.fee_bps
               ),
-              nativeAmount: getNetAmount(data.after.price, _.min([data.after.fee_bps, 10000])),
+              nativeAmount: getNetAmount(
+                data.after.price,
+                _.min([data.after.fee_bps, 10000]) ?? data.after.fee_bps
+              ),
             },
           },
           data.after.currency
@@ -183,23 +145,23 @@ export class BidWebsocketEventsTriggerQueueJob extends AbstractRabbitMqJobHandle
           url: source?.metadata.url,
         },
         feeBps: data.after.fee_bps || 0,
-        feeBreakdown: data.after.fee_breakdown,
+        feeBreakdown: data.after.fee_breakdown ? JSON.parse(data.after.fee_breakdown) : [],
         expiration: data.after.expiration,
         isReservoir: data.after.is_reservoir,
-        isDynamic: Boolean(data.after.dynamic || rawResult.kind === "sudoswap"),
+        isDynamic: Boolean(data.after.dynamic || data.after.kind === "sudoswap"),
         createdAt: new Date(data.after.created_at).toISOString(),
         updatedAt: new Date(data.after.updated_at).toISOString(),
-        originatedAt: new Date(rawResult.originated_at).toISOString(),
-        rawData: rawResult.raw_data,
+        originatedAt: new Date(data.after.originated_at).toISOString(),
+        rawData: data.after.raw_data ? JSON.parse(data.after.raw_data) : {},
       };
 
       await publishWebsocketEvent({
         event: eventType,
         tags: {
-          contract: fromBuffer(rawResult.contract),
-          source: result.source.domain || "unknown",
-          maker: fromBuffer(rawResult.maker),
-          taker: fromBuffer(rawResult.taker),
+          contract: data.after.contract,
+          source: source?.domain || "unknown",
+          maker: data.after.maker,
+          taker: data.after.taker,
         },
         changed,
         data: result,
