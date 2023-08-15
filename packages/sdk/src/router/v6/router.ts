@@ -2908,6 +2908,7 @@ export class Router {
                 module: swapModule,
                 transfers,
                 refundTo: relayer,
+                revertIfIncomplete: Boolean(!options?.partial),
               }
             );
 
