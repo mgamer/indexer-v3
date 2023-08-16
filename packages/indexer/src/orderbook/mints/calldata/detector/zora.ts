@@ -27,7 +27,6 @@ export const extractByCollectionERC721 = async (collection: string): Promise<Col
   const c = new Contract(
     collection,
     new Interface([
-      `function createReferral() view returns(address)`,
       `function computeTotalReward(uint256 numTokens) view returns(uint256)`,
       `
         function saleDetails() view returns (
@@ -54,7 +53,7 @@ export const extractByCollectionERC721 = async (collection: string): Promise<Col
   try {
     const saleDetails = await c.saleDetails();
     const fee = await c.zoraFeeForAmount(1).then((f: { fee: BigNumber }) => f.fee);
-    let totalRewards;
+    let totalRewards: BigNumber | undefined;
     try {
       totalRewards = await c.computeTotalReward(1);
     } catch {
@@ -226,18 +225,14 @@ export const extractByCollectionERC721 = async (collection: string): Promise<Col
   }
 
   // Update the status of each collection mint
-  try {
-    await Promise.all(
-      results.map(async (cm) => {
-        await getStatus(cm).then(({ status, reason }) => {
-          cm.status = status;
-          cm.statusReason = reason;
-        });
-      })
-    );
-  } catch {
-    // Skip errors
-  }
+  await Promise.all(
+    results.map(async (cm) => {
+      await getStatus(cm).then(({ status, reason }) => {
+        cm.status = status;
+        cm.statusReason = reason;
+      });
+    })
+  );
 
   return results;
 };

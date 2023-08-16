@@ -55,7 +55,7 @@ export const generateCollectionMintTxData = async (
   collectionMint: CollectionMint,
   minter: string,
   quantity: number,
-  mintReferral?: string
+  referrer?: string
 ): Promise<{ txData: TxData; price: string }> => {
   // For `allowlist` mints
   const allowlistData =
@@ -231,7 +231,7 @@ export const generateCollectionMintTxData = async (
       case "referrer": {
         abiData.push({
           abiType: p.abiType,
-          abiValue: mintReferral,
+          abiValue: referrer,
         });
         break;
       }

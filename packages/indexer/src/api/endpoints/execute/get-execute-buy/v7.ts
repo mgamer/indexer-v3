@@ -85,7 +85,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
               .description(
                 "Optionally specify a particular fill method. Only relevant when filling via `collection`."
               ),
-            mintReferral: Joi.string()
+            referrer: Joi.string()
               .pattern(regex.address)
               .optional()
               .description(
@@ -740,7 +740,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
                       mint,
                       payload.taker,
                       quantityToMint,
-                      payload.mintReferral
+                      payload.referrer
                     );
 
                     const orderId = `mint:${item.collection}`;
@@ -927,7 +927,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
                       mint,
                       payload.taker,
                       quantityToMint,
-                      payload.mintReferral
+                      payload.referrer
                     );
 
                     const orderId = `mint:${collectionData.id}`;
