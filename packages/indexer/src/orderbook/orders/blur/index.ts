@@ -140,7 +140,33 @@ export const savePartialListings = async (
         Sdk.BlurV2.Addresses.Delegate[config.chainId],
       ]);
       if (isFiltered) {
+        // Force remove any orders
         orderParams.price = undefined;
+      }
+
+      // Check if there is any transfer after the order's `createdAt`.
+      // If yes, then we treat the order as an `invalidation` message.
+      if (orderParams.createdAt) {
+        const existsNewerTransfer = await idb.oneOrNone(
+          `
+            SELECT
+              1
+            FROM nft_transfer_events
+            WHERE address = $/contract/
+              AND token_id = $/tokenId/
+              AND timestamp > $/createdAt/
+            LIMIT 1
+          `,
+          {
+            contract: toBuffer(orderParams.collection),
+            tokenId: orderParams.tokenId,
+            createdAt: Math.floor(new Date(orderParams.createdAt).getTime() / 1000),
+          }
+        );
+        if (existsNewerTransfer) {
+          // Force remove any older orders
+          orderParams.price = undefined;
+        }
       }
 
       // Invalidate any old orders
@@ -184,29 +210,6 @@ export const savePartialListings = async (
           id: HashZero,
           status: "no-active-orders",
         });
-      }
-
-      // Check if there is any transfer after the order's `createdAt`
-      if (orderParams.createdAt) {
-        const existsNewerTransfer = await idb.oneOrNone(
-          `
-            SELECT
-              1
-            FROM nft_transfer_events
-            WHERE address = $/contract/
-              AND token_id = $/tokenId/
-              AND timestamp > $/createdAt/
-            LIMIT 1
-          `,
-          {
-            contract: toBuffer(orderParams.collection),
-            tokenId: orderParams.tokenId,
-            createdAt: Math.floor(new Date(orderParams.createdAt).getTime() / 1000),
-          }
-        );
-        if (existsNewerTransfer) {
-          logger.info("blur-debug-log", `Old order: ${JSON.stringify(orderParams)}`);
-        }
       }
 
       const id = getBlurListingId(orderParams, owner);
