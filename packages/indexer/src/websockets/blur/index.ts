@@ -44,19 +44,22 @@ if (config.doWebsocketWork && config.blurWsUrl && config.blurWsApiKey) {
 
   // Listings
 
-  const clientListings = io(config.blurWsListingsUrl ?? config.blurWsUrl, {
+  const clientListings = io(config.blurWsListingsUrl!, {
     transports: ["websocket"],
   });
 
   clientListings.on("connect", () => {
     logger.info(
       COMPONENT,
-      `Connected to Blur listings via websocket (${config.blurWsListingsUrl ?? config.blurWsUrl})`
+      `Connected to Blur listings via websocket (${config.blurWsListingsUrl})`
     );
   });
 
   clientListings.on("connect_error", (error) => {
-    logger.error(COMPONENT, `Error from Blur listings websocket: ${error}`);
+    logger.error(
+      COMPONENT,
+      `Error from Blur listings websocket (${config.blurWsListingsUrl}): ${error}`
+    );
   });
 
   clientListings.on("newTopsOfBooks", async (message: string) => {
