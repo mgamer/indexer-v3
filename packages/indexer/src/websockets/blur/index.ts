@@ -20,7 +20,7 @@ if (config.doWebsocketWork && config.blurWsUrl && config.blurWsApiKey) {
   });
 
   clientBids.on("connect", () => {
-    logger.info(COMPONENT, "Connected to Blur bids via websocket");
+    logger.info(COMPONENT, `Connected to Blur bids via websocket (${config.blurWsUrl})`);
   });
 
   clientBids.on("connect_error", (error) => {
@@ -49,7 +49,10 @@ if (config.doWebsocketWork && config.blurWsUrl && config.blurWsApiKey) {
   });
 
   clientListings.on("connect", () => {
-    logger.info(COMPONENT, "Connected to Blur listings via websocket");
+    logger.info(
+      COMPONENT,
+      `Connected to Blur listings via websocket (${config.blurWsListingsUrl ?? config.blurWsUrl})`
+    );
   });
 
   clientListings.on("connect_error", (error) => {
