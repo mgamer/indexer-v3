@@ -10,22 +10,24 @@ import { orderbookOrdersJob } from "@/jobs/orderbook/orderbook-orders-job";
 const COMPONENT = "blur-websocket";
 
 if (config.doWebsocketWork && config.blurWsUrl && config.blurWsApiKey) {
-  const client = io(config.blurWsUrl, {
+  // Bids
+
+  const clientBids = io(config.blurWsUrl, {
     transports: ["websocket"],
     auth: {
       "api-key": config.blurWsApiKey,
     },
   });
 
-  client.on("connect", () => {
-    logger.info(COMPONENT, "Connected to Blur via websocket");
+  clientBids.on("connect", () => {
+    logger.info(COMPONENT, "Connected to Blur bids via websocket");
   });
 
-  client.on("connect_error", (error) => {
-    logger.error(COMPONENT, `Error from Blur websocket: ${error}`);
+  clientBids.on("connect_error", (error) => {
+    logger.error(COMPONENT, `Error from Blur bids websocket: ${error}`);
   });
 
-  client.on("CollectionBidsPrice", async (message: string) => {
+  clientBids.on("CollectionBidsPrice", async (message: string) => {
     try {
       const parsedMessage: {
         contractAddress: string;
@@ -40,7 +42,21 @@ if (config.doWebsocketWork && config.blurWsUrl && config.blurWsApiKey) {
     }
   });
 
-  client.on("newTopsOfBooks", async (message: string) => {
+  // Listings
+
+  const clientListings = io(config.blurWsListingsUrl ?? config.blurWsUrl, {
+    transports: ["websocket"],
+  });
+
+  clientListings.on("connect", () => {
+    logger.info(COMPONENT, "Connected to Blur listings via websocket");
+  });
+
+  clientListings.on("connect_error", (error) => {
+    logger.error(COMPONENT, `Error from Blur listings websocket: ${error}`);
+  });
+
+  clientListings.on("newTopsOfBooks", async (message: string) => {
     try {
       const parsedMessage: {
         contractAddress: string;
