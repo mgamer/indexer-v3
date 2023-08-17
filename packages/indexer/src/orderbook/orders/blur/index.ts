@@ -98,7 +98,6 @@ export const savePartialListings = async (
           }
         );
         if (existsMatchingOpenSeaOrder) {
-          logger.info("blur-debug-log", `OS order: ${JSON.stringify(orderParams)}`);
           return results.push({
             id: "unknown",
             status: "redundant",
@@ -168,7 +167,6 @@ export const savePartialListings = async (
           }
         );
         if (existsNewerTransfer) {
-          logger.info("blur-debug-log", `Old order: ${JSON.stringify(orderParams)}`);
           // Force remove any older orders
           orderParams.price = undefined;
         }
