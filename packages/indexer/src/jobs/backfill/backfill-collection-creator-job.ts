@@ -61,7 +61,7 @@ export class BackfillCollectionCreatorJob extends AbstractRabbitMqJobHandler {
   }
 
   public async addToQueue(events: BackfillCollectionCreatorJobPayload[]) {
-    if (!config.doWebsocketServerWork) {
+    if (!config.doBackgroundWork) {
       return;
     }
 
