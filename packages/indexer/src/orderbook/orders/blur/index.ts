@@ -98,7 +98,10 @@ export const savePartialListings = async (
           }
         );
         if (existsMatchingOpenSeaOrder) {
-          logger.info("blur-debug-log", `OpenSea order: ${JSON.stringify(orderParams)}`);
+          return results.push({
+            id: "unknown",
+            status: "redundant",
+          });
         }
       }
 
