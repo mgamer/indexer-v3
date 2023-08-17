@@ -4,11 +4,11 @@ import { config } from "@/config/index";
 import { fetchCollectionMetadataJob } from "@/jobs/token-updates/fetch-collection-metadata-job";
 import { AbstractRabbitMqJobHandler, BackoffStrategy } from "@/jobs/abstract-rabbit-mq-job-handler";
 
-export type BackfillCollectionCreatorJobPayload = {
+export type BackfillCollectionsCreatorJobPayload = {
   continuation?: string;
 };
 
-export class BackfillCollectionCreatorJob extends AbstractRabbitMqJobHandler {
+export class BackfillCollectionsCreatorJob extends AbstractRabbitMqJobHandler {
   queueName = "backfill-collection-creator";
   maxRetries = 1;
   concurrency = 1;
@@ -20,7 +20,7 @@ export class BackfillCollectionCreatorJob extends AbstractRabbitMqJobHandler {
   } as BackoffStrategy;
   intervalInSeconds = 5;
 
-  protected async process(payload: BackfillCollectionCreatorJobPayload) {
+  protected async process(payload: BackfillCollectionsCreatorJobPayload) {
     const limit = 100;
     const { continuation } = payload;
     const result = await idb.manyOrNone(
@@ -60,7 +60,7 @@ export class BackfillCollectionCreatorJob extends AbstractRabbitMqJobHandler {
     }
   }
 
-  public async addToQueue(events: BackfillCollectionCreatorJobPayload[]) {
+  public async addToQueue(events: BackfillCollectionsCreatorJobPayload[]) {
     if (!config.doBackgroundWork) {
       return;
     }
@@ -73,4 +73,4 @@ export class BackfillCollectionCreatorJob extends AbstractRabbitMqJobHandler {
   }
 }
 
-export const backfillCollectionCreatorJob = new BackfillCollectionCreatorJob();
+export const backfillCollectionsCreatorJob = new BackfillCollectionsCreatorJob();
