@@ -11,6 +11,49 @@ import { Royalty, updateRoyaltySpec } from "@/utils/royalties";
 const DEFAULT_PRICE = "1000000000000000000";
 
 // Assume there are no per-token royalties but everything is per-contract
+export const refreshRegistryRoyalties = async (collection: string) => {
+  // Fetch the collection's contract
+  const collectionResult = await idb.oneOrNone(
+    `
+      SELECT
+        collections.contract
+      FROM collections
+      WHERE collections.id = $/collection/
+    `,
+    { collection }
+  );
+  if (!collectionResult?.contract) {
+    return;
+  }
+
+  // Fetch a random token from the collection
+  const tokenResult = await idb.oneOrNone(
+    `
+      SELECT
+        tokens.token_id
+      FROM tokens
+      WHERE tokens.collection_id = $/collection/
+      LIMIT 1
+    `,
+    { collection }
+  );
+  if (!tokenResult?.token_id) {
+    return;
+  }
+
+  const token = fromBuffer(collectionResult.contract);
+  const tokenId = tokenResult.token_id;
+
+  const latestRoyalties = await getRegistryRoyalties(token, tokenId);
+
+  // Save the retrieved royalty spec
+  await updateRoyaltySpec(
+    collection,
+    "onchain",
+    latestRoyalties.length ? latestRoyalties : undefined
+  );
+};
+
 export const getRegistryRoyalties = async (token: string, tokenId: string) => {
   const latestRoyalties: Royalty[] = [];
   if (Sdk.Common.Addresses.RoyaltyEngine[config.chainId]) {
@@ -54,48 +97,4 @@ export const getRegistryRoyalties = async (token: string, tokenId: string) => {
   }
 
   return latestRoyalties;
-};
-
-// Assume there are no per-token royalties but everything is per-contract
-export const refreshRegistryRoyalties = async (collection: string) => {
-  // Fetch the collection's contract
-  const collectionResult = await idb.oneOrNone(
-    `
-      SELECT
-        collections.contract
-      FROM collections
-      WHERE collections.id = $/collection/
-    `,
-    { collection }
-  );
-  if (!collectionResult?.contract) {
-    return;
-  }
-
-  // Fetch a random token from the collection
-  const tokenResult = await idb.oneOrNone(
-    `
-      SELECT
-        tokens.token_id
-      FROM tokens
-      WHERE tokens.collection_id = $/collection/
-      LIMIT 1
-    `,
-    { collection }
-  );
-  if (!tokenResult?.token_id) {
-    return;
-  }
-
-  const token = fromBuffer(collectionResult.contract);
-  const tokenId = tokenResult.token_id;
-
-  const latestRoyalties = await getRegistryRoyalties(token, tokenId);
-
-  // Save the retrieved royalty spec
-  await updateRoyaltySpec(
-    collection,
-    "onchain",
-    latestRoyalties.length ? latestRoyalties : undefined
-  );
 };
