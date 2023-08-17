@@ -154,6 +154,29 @@ export const savePartialListings = async (
         });
       }
 
+      // Check if there is any transfer after the order's `createdAt`
+      if (orderParams.createdAt) {
+        const existsNewerTransfer = await idb.oneOrNone(
+          `
+            SELECT
+              1
+            FROM nft_transfer_events
+            WHERE address = $/contract/
+              AND token_id = $/tokenId/
+              AND timestamp > $/createdAt/
+            LIMIT 1
+          `,
+          {
+            contract: toBuffer(orderParams.collection),
+            tokenId: orderParams.tokenId,
+            createdAt: Math.floor(new Date(orderParams.createdAt).getTime() / 1000),
+          }
+        );
+        if (existsNewerTransfer) {
+          logger.info("blur-debug-log", `Old order: ${JSON.stringify(orderParams)}`);
+        }
+      }
+
       const id = getBlurListingId(orderParams, owner);
 
       if (isFiltered) {
