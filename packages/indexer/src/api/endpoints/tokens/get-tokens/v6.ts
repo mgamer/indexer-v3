@@ -525,7 +525,7 @@ export const getTokensV6Options: RouteOptions = {
           t.last_flag_change,
           t.supply,
           t.remaining_supply,
-          t.updated_at AS t_updated_at,
+          extract(epoch from t.updated_at) AS t_updated_at,
           c.slug,
           (c.metadata ->> 'imageUrl')::TEXT AS collection_image,
           (
@@ -765,7 +765,7 @@ export const getTokensV6Options: RouteOptions = {
               }
               const sign = query.sortDirection == "desc" ? "<" : ">";
               conditions.push(
-                `(t.updated_at, t.contract, t.token_id) ${sign} ($/contUpdatedAt/, $/contContract/, $/contTokenId/)`
+                `(t.updated_at, t.contract, t.token_id) ${sign} (to_timestamp($/contUpdatedAt/), $/contContract/, $/contTokenId/)`
               );
               (query as any).contUpdatedAt = contArr[0];
               (query as any).contContract = toBuffer(contArr[1]);
@@ -986,8 +986,7 @@ export const getTokensV6Options: RouteOptions = {
               break;
 
             case "updatedAt":
-              continuation =
-                new Date(rawResult[rawResult.length - 1].t_updated_at).toISOString() || "null";
+              continuation = rawResult[rawResult.length - 1].t_updated_at || "null";
               break;
 
             case "floorAskPrice":
@@ -1268,7 +1267,7 @@ export const getTokensV6Options: RouteOptions = {
                 }
               : undefined,
           },
-          updatedAt: new Date(r.t_updated_at).toISOString(),
+          updatedAt: new Date(r.t_updated_at * 1000).toISOString(),
         };
       });
 
