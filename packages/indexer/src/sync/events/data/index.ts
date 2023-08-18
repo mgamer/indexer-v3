@@ -44,6 +44,7 @@ import * as thirdweb from "@/events-sync/data/thirdweb";
 import * as blurV2 from "@/events-sync/data/blur-v2";
 import * as seadrop from "@/events-sync/data/seadrop";
 import * as erc721c from "@/events-sync/data/erc721c";
+import * as joepegs from "@/events-sync/data/joepegs";
 
 // All events we're syncing should have an associated `EventData`
 // entry which dictates the way the event will be parsed and then
@@ -90,7 +91,8 @@ export type EventKind =
   | "thirdweb"
   | "seadrop"
   | "blur-v2"
-  | "erc721c";
+  | "erc721c"
+  | "joepegs";
 
 // Event sub-kind in each of the above protocol/standard
 export type EventSubKind =
@@ -291,7 +293,9 @@ export type EventSubKind =
   | "blur-v2-execution-721-maker-fee-packed"
   | "erc721c-verified-eoa-signature"
   | "erc721c-added-to-allowlist"
-  | "erc721c-removed-from-allowlist";
+  | "erc721c-removed-from-allowlist"
+  | "joepegs-taker-ask"
+  | "joepegs-taker-bid";
 
 export type EventData = {
   kind: EventKind;
@@ -499,6 +503,8 @@ const allEventData = [
   erc721c.verifiedEOASignature,
   erc721c.addedToAllowlist,
   erc721c.removedFromAllowlist,
+  joepegs.takerAsk,
+  joepegs.takerBid,
 ];
 
 export const getEventData = (events?: string[]) => {
