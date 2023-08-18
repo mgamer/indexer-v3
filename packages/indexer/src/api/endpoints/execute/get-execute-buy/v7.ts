@@ -222,6 +222,9 @@ export const getExecuteBuyV7Options: RouteOptions = {
           currencyDecimals: Joi.number().optional().allow(null),
           quote: Joi.number().unsafe(),
           rawQuote: Joi.string().pattern(regex.number),
+          buyInCurrency: Joi.string().lowercase().pattern(regex.address),
+          buyInCurrencySymbol: Joi.string().optional().allow(null),
+          buyInCurrencyDecimals: Joi.number().optional().allow(null),
           buyInQuote: Joi.number().unsafe(),
           buyInRawQuote: Joi.string().pattern(regex.number),
           totalPrice: Joi.number().unsafe(),
@@ -273,6 +276,9 @@ export const getExecuteBuyV7Options: RouteOptions = {
         // Gross price (without fees on top) = price
         quote: number;
         rawQuote: string;
+        buyInCurrency?: string;
+        buyInCurrencySymbol?: string;
+        buyInCurrencyDecimals?: number;
         buyInQuote?: number;
         buyInRawQuote?: string;
         // Total price (with fees on top) = price + feesOnTop
@@ -1253,11 +1259,11 @@ export const getExecuteBuyV7Options: RouteOptions = {
           );
 
           if (buyInPrices.currencyPrice) {
-            item.buyInQuote = formatPrice(
-              buyInPrices.currencyPrice,
-              (await getCurrency(buyInCurrency)).decimals,
-              true
-            );
+            const c = await getCurrency(buyInCurrency);
+            item.buyInCurrency = c.contract;
+            item.buyInCurrencyDecimals = c.decimals;
+            item.buyInCurrencySymbol = c.symbol;
+            item.buyInQuote = formatPrice(buyInPrices.currencyPrice, c.decimals, true);
             item.buyInRawQuote = buyInPrices.currencyPrice;
           }
         }
@@ -1658,16 +1664,24 @@ export const getExecuteBuyV7Options: RouteOptions = {
       // same index.
       if (buyInCurrency === Sdk.Common.Addresses.Native[config.chainId]) {
         // Buying in ETH will never require an approval
-        steps = [steps[0], ...steps.slice(2)];
+        steps = steps.filter((s) => s.id !== "currency-approval");
+      }
+      if (!payload.usePermit) {
+        // Permits are only used when explicitly requested
+        steps = steps.filter((s) => s.id !== "currency-permit");
       }
       if (!blurAuth) {
         // If we reached this point and the Blur auth is missing then we
         // can be sure that no Blur orders were requested and it is safe
         // to remove the auth step
-        steps = steps.slice(1);
+        steps = steps.filter((s) => s.id !== "auth");
+      }
+      if (!listingDetails.some((d) => d.kind === "payment-processor")) {
+        // For now, pre-signatures are only needed for `payment-processor` orders
+        steps = steps.filter((s) => s.id !== "pre-signatures");
       }
 
-      if (steps.find((s) => s.id === "currency-permit")!.items.length) {
+      if (steps.find((s) => s.id === "currency-permit")?.items.length) {
         // Return early since any next steps are dependent on the permits
         return {
           steps,

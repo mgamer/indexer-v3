@@ -49,11 +49,6 @@ export type DeletePolicyPayload = {
 
 export class RabbitMq {
   public static delayedExchangeName = `${getNetworkName()}.delayed`;
-  public static vhostMigratingChains = [
-    5, 10, 56, 999, 42161, 534353, 11155111, 80001, 84531, 42170, 137, 1, 8453, 59144, 7777777,
-    43114,
-  ];
-
   private static rabbitMqPublisherConnection: AmqpConnectionManager;
 
   private static maxPublisherChannelsCount = 10;
@@ -100,6 +95,27 @@ export class RabbitMq {
     try {
       if (content.jobId && lockTime) {
         if (!(await acquireLock(content.jobId, lockTime + msgConsumingBuffer))) {
+          if (queueName === "backfill-save-activities-elasticsearch-queue") {
+            const fromTimestampISO = new Date(content.payload.fromTimestamp * 1000).toISOString();
+            const toTimestampISO = new Date(content.payload.toTimestamp * 1000).toISOString();
+
+            logger.info(
+              queueName,
+              JSON.stringify({
+                topic: "backfill-activities",
+                message: `Unable to acquire lock. type=${content.payload.type}, fromTimestamp=${fromTimestampISO}, toTimestamp=${toTimestampISO}, keepGoing=${content.payload.keepGoing}`,
+                type: content.payload.type,
+                fromTimestamp: content.payload.fromTimestamp,
+                fromTimestampISO,
+                toTimestamp: content.payload.toTimestamp,
+                toTimestampISO,
+                cursor: content.payload.cursor,
+                indexName: content.payload.indexName,
+                keepGoing: content.payload.keepGoing,
+              })
+            );
+          }
+
           return;
         }
 

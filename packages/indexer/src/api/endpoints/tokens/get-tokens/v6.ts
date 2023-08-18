@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { MaxUint256 } from "@ethersproject/constants";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
 import Joi from "joi";
@@ -169,7 +170,9 @@ export const getTokensV6Options: RouteOptions = {
         .description("If true, top bid will be returned in the response."),
       excludeEOA: Joi.boolean()
         .default(false)
-        .description("If true, blur bids will be excluded from top bid / asks."),
+        .description(
+          "Exclude orders that can only be filled by EOAs, to support filling with smart contracts. defaults to false"
+        ),
       includeAttributes: Joi.boolean()
         .default(false)
         .description("If true, attributes will be returned in the response."),
@@ -239,6 +242,8 @@ export const getTokensV6Options: RouteOptions = {
               name: Joi.string().allow("", null),
               image: Joi.string().allow("", null),
               slug: Joi.string().allow("", null),
+              creator: Joi.string().lowercase().pattern(regex.address).allow("", null),
+              tokenCount: Joi.number().allow(null),
             }),
             lastSale: JoiSale.optional(),
             owner: Joi.string().allow(null),
@@ -527,6 +532,8 @@ export const getTokensV6Options: RouteOptions = {
           t.remaining_supply,
           extract(epoch from t.updated_at) AS t_updated_at,
           c.slug,
+          c.creator,
+          c.token_count,
           (c.metadata ->> 'imageUrl')::TEXT AS collection_image,
           (
             SELECT
@@ -1095,9 +1102,14 @@ export const getTokensV6Options: RouteOptions = {
                 },
               };
             } else if (
-              ["sudoswap", "sudoswap-v2", "nftx", "collectionxyz", "caviar-v1"].includes(
-                r.floor_sell_order_kind
-              )
+              [
+                "sudoswap",
+                "sudoswap-v2",
+                "nftx",
+                "collectionxyz",
+                "caviar-v1",
+                "midaswap",
+              ].includes(r.floor_sell_order_kind)
             ) {
               // Pool orders
               dynamicPricing = {
@@ -1105,17 +1117,21 @@ export const getTokensV6Options: RouteOptions = {
                 data: {
                   pool: r.floor_sell_raw_data.pair ?? r.floor_sell_raw_data.pool,
                   prices: await Promise.all(
-                    (r.floor_sell_raw_data.extra.prices as string[]).map((price) =>
-                      getJoiPriceObject(
-                        {
-                          gross: {
-                            amount: bn(price).add(missingRoyalties).toString(),
-                          },
-                        },
-                        floorAskCurrency,
-                        query.displayCurrency
+                    (r.floor_sell_raw_data.extra.prices as string[])
+                      .filter((price) =>
+                        bn(price).lte(bn(r.floor_sell_raw_data.extra.floorPrice || MaxUint256))
                       )
-                    )
+                      .map((price) =>
+                        getJoiPriceObject(
+                          {
+                            gross: {
+                              amount: bn(price).add(missingRoyalties).toString(),
+                            },
+                          },
+                          floorAskCurrency,
+                          query.displayCurrency
+                        )
+                      )
                   ),
                 },
               };
@@ -1151,6 +1167,8 @@ export const getTokensV6Options: RouteOptions = {
               name: r.collection_name,
               image: Assets.getLocalAssetsLink(r.collection_image),
               slug: r.slug,
+              creator: r.creator ? fromBuffer(r.creator) : null,
+              tokenCount: r.token_count,
             },
             lastSale:
               query.includeLastSale && r.last_sale_currency

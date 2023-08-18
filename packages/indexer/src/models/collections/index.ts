@@ -5,6 +5,7 @@ import _ from "lodash";
 import { idb, redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { toBuffer, now } from "@/common/utils";
+import { config } from "@/config/index";
 import {
   CollectionsEntity,
   CollectionsEntityParams,
@@ -12,6 +13,7 @@ import {
 } from "@/models/collections/collections-entity";
 import { Tokens } from "@/models/tokens";
 import { updateBlurRoyalties } from "@/utils/blur";
+import * as erc721c from "@/utils/erc721c";
 import * as marketplaceBlacklist from "@/utils/marketplace-blacklists";
 import * as marketplaceFees from "@/utils/marketplace-fees";
 import MetadataApi from "@/utils/metadata-api";
@@ -125,6 +127,20 @@ export class Collections {
 
     const collection = await MetadataApi.getCollectionMetadata(contract, tokenId, community);
 
+    if (config.chainId === 43114) {
+      logger.info(
+        "updateCollectionCache",
+        JSON.stringify({
+          topic: "debugAvalancheCollectionMetadataMissing",
+          message: `Collection metadata debug. contract=${contract}, tokenId=${tokenId}, community=${community}`,
+          contract,
+          tokenId,
+          community,
+          collection,
+        })
+      );
+    }
+
     if (collection.isCopyrightInfringement) {
       collection.name = collection.id;
       collection.metadata = null;
@@ -226,6 +242,9 @@ export class Collections {
 
     // Refresh any contract blacklists
     await marketplaceBlacklist.checkMarketplaceIsFiltered(collection.contract, [], true);
+
+    // Refresh ERC721C config
+    await erc721c.refreshERC721CConfig(collection.contract);
   }
 
   public static async update(collectionId: string, fields: CollectionsEntityUpdateParams) {
