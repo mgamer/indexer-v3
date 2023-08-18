@@ -127,20 +127,6 @@ export class Collections {
 
     const collection = await MetadataApi.getCollectionMetadata(contract, tokenId, community);
 
-    if (config.chainId === 43114) {
-      logger.info(
-        "updateCollectionCache",
-        JSON.stringify({
-          topic: "debugAvalancheCollectionMetadataMissing",
-          message: `Collection metadata debug. contract=${contract}, tokenId=${tokenId}, community=${community}`,
-          contract,
-          tokenId,
-          community,
-          collection,
-        })
-      );
-    }
-
     if (collection.isCopyrightInfringement) {
       collection.name = collection.id;
       collection.metadata = null;
