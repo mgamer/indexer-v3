@@ -270,8 +270,6 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         break;
       }
 
-      // TODO: Add support for detecting the filled order ids
-      // (or else the filled listings will be stale)
       case "payment-processor-sweep-collection-erc721":
       case "payment-processor-sweep-collection-erc1155": {
         const txHash = baseEventParams.txHash;
@@ -358,7 +356,6 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
               maxRoyaltyFeeNumerator: bundleItem["maxRoyaltyFeeNumerator"],
               coin: bundleDetails["paymentCoin"],
               masterNonce: sellerMinNonce,
-
               trader: bundleItem["seller"],
               amount: bundleItem["amount"],
               tokenId: bundleItem["tokenId"],
