@@ -38,13 +38,15 @@ export const build = async (options: BuildOrderOptions) => {
   const builder: BaseBuilder = new Sdk.PaymentProcessor.Builders.SingleToken(config.chainId);
 
   const tokenRoyalties = await registry.getRegistryRoyalties(options.contract!, options.tokenId);
-  const tokenRoyaltiesBPS = tokenRoyalties.map((r) => r.bps).reduce((a, b) => a + b, 0);
+  const tokenRoyaltiesBps = tokenRoyalties.map((r) => r.bps).reduce((a, b) => a + b, 0);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (buildInfo.params as any).tokenId = options.tokenId;
-  if (tokenRoyaltiesBPS > 0 && tokenRoyaltiesBPS != buildInfo.params.maxRoyaltyFeeNumerator) {
+
+  // Override if token-level royalties are different from collection-level royalties
+  if (tokenRoyaltiesBps > 0 && tokenRoyaltiesBps != buildInfo.params.maxRoyaltyFeeNumerator) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (buildInfo.params as any).maxRoyaltyFeeNumerator = tokenRoyaltiesBPS;
+    (buildInfo.params as any).maxRoyaltyFeeNumerator = tokenRoyaltiesBps;
   }
 
   return builder?.build(buildInfo.params);
