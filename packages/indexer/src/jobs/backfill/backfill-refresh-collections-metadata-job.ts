@@ -46,13 +46,13 @@ export class BackfillRefreshCollectionsMetadataJob extends AbstractRabbitMqJobHa
       `
         SELECT id, all_time_volume
         FROM collections
-        $/conditions/
+        ${conditions}
         ORDER BY all_time_volume DESC
         LIMIT $/limit/
       `,
       {
         limit,
-        conditions,
+        continuation,
       }
     );
 
