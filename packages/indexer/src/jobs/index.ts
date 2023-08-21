@@ -142,7 +142,7 @@ import { backfillSaveActivitiesElasticsearchJob } from "@/jobs/activities/backfi
 import { pendingExpiredOrdersCheckJob } from "@/jobs/orderbook/cron/pending-expired-orders-check-job";
 import { askWebsocketEventsTriggerQueueJob } from "@/jobs/websocket-events/ask-websocket-events-trigger-job";
 import { bidWebsocketEventsTriggerQueueJob } from "@/jobs/websocket-events/bid-websocket-events-trigger-job";
-import { backfillRefreshCollectionMetadataJob } from "@/jobs/backfill/backfill-collections-creator-job";
+import { backfillRefreshCollectionMetadataJob } from "@/jobs/backfill/backfill-refresh-collections-metadata-job";
 
 export const allJobQueues = [
   backfillExpiredOrders.queue,
