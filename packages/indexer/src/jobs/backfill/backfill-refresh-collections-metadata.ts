@@ -39,13 +39,13 @@ if (config.doBackgroundWork) {
 
       const results = await idb.manyOrNone(
         `
-          SELECT collections.id
-          FROM collections
-          WHERE collections.id  = collections.name
-          ${continuationFilter}
-          ORDER BY all_time_volume DESC
-          LIMIT $/limit/
-        `,
+        SELECT collections.id
+        FROM collections
+        WHERE collections.id  = collections.name
+        ${continuationFilter}
+        ORDER BY all_time_volume DESC
+        LIMIT $/limit/
+          `,
         {
           collectionId: cursor?.collectionId,
           limit,

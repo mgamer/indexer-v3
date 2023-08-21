@@ -34,7 +34,7 @@ export class BackfillRefreshCollectionsMetadataJob extends AbstractRabbitMqJobHa
         ${collectionId ? `AND id > $/collectionId/` : ""}
         ORDER BY all_time_volume DESC
         LIMIT $/limit/
-          `,
+      `,
       {
         limit,
         backfillField,
