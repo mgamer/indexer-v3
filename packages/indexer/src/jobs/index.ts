@@ -34,6 +34,7 @@ import * as backfillSaleRoyalties from "@/jobs/backfill/backfill-sale-royalties"
 import * as tokenWebsocketEventsTriggerQueue from "@/jobs/websocket-events/token-websocket-events-trigger-queue";
 import * as backfillSalePricingDecimalElasticsearch from "@/jobs/activities/backfill/backfill-sales-pricing-decimal-elasticsearch";
 import * as blockGapCheck from "@/jobs/events-sync/block-gap-check";
+import * as backfillRefreshCollectionsCreator from "@/jobs/backfill/backfill-refresh-collections-creator";
 
 import amqplib from "amqplib";
 import { config } from "@/config/index";
@@ -142,7 +143,6 @@ import { backfillSaveActivitiesElasticsearchJob } from "@/jobs/activities/backfi
 import { pendingExpiredOrdersCheckJob } from "@/jobs/orderbook/cron/pending-expired-orders-check-job";
 import { askWebsocketEventsTriggerQueueJob } from "@/jobs/websocket-events/ask-websocket-events-trigger-job";
 import { bidWebsocketEventsTriggerQueueJob } from "@/jobs/websocket-events/bid-websocket-events-trigger-job";
-import { backfillRefreshCollectionMetadataJob } from "@/jobs/backfill/backfill-refresh-collections-metadata-job";
 
 export const allJobQueues = [
   backfillExpiredOrders.queue,
@@ -154,6 +154,7 @@ export const allJobQueues = [
   tokenWebsocketEventsTriggerQueue.queue,
   backfillSalePricingDecimalElasticsearch.queue,
   blockGapCheck.queue,
+  backfillRefreshCollectionsCreator.queue,
 ];
 
 export class RabbitMqJobsConsumer {
@@ -274,7 +275,6 @@ export class RabbitMqJobsConsumer {
       pendingExpiredOrdersCheckJob,
       askWebsocketEventsTriggerQueueJob,
       bidWebsocketEventsTriggerQueueJob,
-      backfillRefreshCollectionMetadataJob,
     ];
   }
 
