@@ -6,8 +6,8 @@ import _ from "lodash";
 import { Tokens } from "@/models/tokens";
 
 export type BackfillRefreshCollectionsMetadataJobPayload = {
-  backfillField: string;
-  collectionId?: string;
+  backfill: string;
+  continuation?: number;
 };
 
 export class BackfillRefreshCollectionsMetadataJob extends AbstractRabbitMqJobHandler {
@@ -24,21 +24,35 @@ export class BackfillRefreshCollectionsMetadataJob extends AbstractRabbitMqJobHa
 
   protected async process(payload: BackfillRefreshCollectionsMetadataJobPayload) {
     const limit = 1000;
-    const { backfillField, collectionId } = payload;
+    const { backfill, continuation } = payload;
+
+    let conditions;
+    switch (backfill) {
+      case "missing-creator":
+        conditions = `WHERE collections.creator IS NULL`;
+        break;
+      case "invalid-name":
+        conditions = `WHERE collections.id  = collections.name`;
+        break;
+    }
+
+    if (!conditions) {
+      conditions = continuation ? `WHERE all_time_volume < $/continuation/` : "";
+    } else {
+      conditions += continuation ? ` AND all_time_volume < $/continuation/` : "";
+    }
 
     const results = await idb.manyOrNone(
       `
-        SELECT id
+        SELECT id, all_time_volume
         FROM collections
-        WHERE $/backfillField/ IS NULL
-        ${collectionId ? `AND id > $/collectionId/` : ""}
+        $/conditions/
         ORDER BY all_time_volume DESC
         LIMIT $/limit/
       `,
       {
         limit,
-        backfillField,
-        collectionId,
+        conditions,
       }
     );
 
@@ -47,9 +61,9 @@ export class BackfillRefreshCollectionsMetadataJob extends AbstractRabbitMqJobHa
 
     logger.info(
       this.queueName,
-      `Worker debug. backfillField=${backfillField}, results=${
-        results.length
-      }, continuation=${JSON.stringify(collectionId)}`
+      `Worker debug. backfill=${backfill}, results=${results.length}, continuation=${JSON.stringify(
+        continuation
+      )}`
     );
 
     if (results.length) {
@@ -70,15 +84,15 @@ export class BackfillRefreshCollectionsMetadataJob extends AbstractRabbitMqJobHa
       const lastResult = _.last(results);
 
       nextContinuation = {
-        collectionId: lastResult.id ?? "",
-        backfillField,
+        continuation: lastResult.all_time_volume,
+        backfill,
       };
 
       logger.info(
         this.queueName,
-        `Worker debug.  backfillField=${backfillField}, results=${
+        `Worker debug.  backfill=${backfill}, results=${
           results.length
-        }, continuation=${JSON.stringify(collectionId)}, nextContinuation=${JSON.stringify(
+        }, continuation=${JSON.stringify(continuation)}, nextContinuation=${JSON.stringify(
           nextContinuation
         )}`
       );
