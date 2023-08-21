@@ -6,7 +6,7 @@ import _ from "lodash";
 import { Tokens } from "@/models/tokens";
 
 export type BackfillRefreshCollectionsMetadataJobPayload = {
-  backfill: string;
+  backfill?: string;
   continuation?: number;
 };
 
