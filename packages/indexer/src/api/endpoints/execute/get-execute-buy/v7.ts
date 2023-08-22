@@ -35,6 +35,7 @@ import { getNFTTransferEvents } from "@/orderbook/mints/simulation";
 import { getPermitId, getPermit, savePermit } from "@/utils/permits";
 import { getPreSignatureId, getPreSignature, savePreSignature } from "@/utils/pre-signatures";
 import { getUSDAndCurrencyPrices } from "@/utils/prices";
+import { MintComment } from "@/orderbook/mints/calldata";
 
 const version = "v7";
 
@@ -229,6 +230,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
           buyInRawQuote: Joi.string().pattern(regex.number),
           totalPrice: Joi.number().unsafe(),
           totalRawPrice: Joi.string().pattern(regex.number),
+          comment: Joi.string().optional(),
           builtInFees: Joi.array()
             .items(JoiExecuteFee)
             .description("Can be marketplace fees or royalties"),
@@ -481,6 +483,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
         orderId: string;
         txData: TxData;
         fees: Fee[];
+        mintComment?: MintComment;
       }[] = [];
 
       // Keep track of the maximum quantity available per item
@@ -736,16 +739,18 @@ export const getExecuteBuyV7Options: RouteOptions = {
                   }
 
                   if (quantityToMint > 0) {
-                    const { txData, price } = await generateCollectionMintTxData(
+                    const { txData, price, mintComment } = await generateCollectionMintTxData(
                       mint,
                       payload.taker,
-                      quantityToMint
+                      quantityToMint,
+                      payload.comment
                     );
 
                     const orderId = `mint:${item.collection}`;
                     mintTxs.push({
                       orderId,
                       txData,
+                      mintComment,
                       fees: [],
                     });
 
@@ -922,16 +927,18 @@ export const getExecuteBuyV7Options: RouteOptions = {
                   ).toNumber();
 
                   if (quantityToMint > 0) {
-                    const { txData, price } = await generateCollectionMintTxData(
+                    const { txData, price, mintComment } = await generateCollectionMintTxData(
                       mint,
                       payload.taker,
-                      quantityToMint
+                      quantityToMint,
+                      payload.comment
                     );
 
                     const orderId = `mint:${collectionData.id}`;
                     mintTxs.push({
                       orderId,
                       txData,
+                      mintComment,
                       fees: [],
                     });
 

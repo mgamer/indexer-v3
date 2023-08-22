@@ -45,13 +45,20 @@ export type MintTxSchema = {
   };
 };
 
+export type MintComment = {
+  tokenContract: string;
+  quantity: number;
+  comment: string;
+};
+
 export type CustomInfo = mints.manifold.Info;
 
 export const generateCollectionMintTxData = async (
   collectionMint: CollectionMint,
   minter: string,
-  quantity: number
-): Promise<{ txData: TxData; price: string }> => {
+  quantity: number,
+  comment?: string
+): Promise<{ txData: TxData; price: string; mintComment?: MintComment }> => {
   // For `allowlist` mints
   const allowlistData =
     collectionMint.kind === "allowlist"
@@ -81,6 +88,7 @@ export const generateCollectionMintTxData = async (
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const abiData: { abiType: string; abiValue: any }[] = [];
+  let mintComment: MintComment | undefined;
 
   const tx = collectionMint.details.tx;
   for (const p of tx.data.params) {
@@ -234,6 +242,38 @@ export const generateCollectionMintTxData = async (
     }
   }
 
+  if (comment) {
+    switch (collectionMint.standard) {
+      case "zora": {
+        const isPresale = tx.data.signature === "0x25024a2b";
+        if (isPresale) {
+          // purchasePresaleWithComment
+          tx.data.signature = "0x2e706b5a";
+        } else {
+          // purchaseWithComment
+          tx.data.signature = "0x03ee2733";
+        }
+
+        tx.data.params.push({
+          kind: "unknown",
+          abiType: "string",
+          abiValue: mintComment,
+        });
+
+        break;
+      }
+
+      default: {
+        mintComment = {
+          quantity,
+          tokenContract: collectionMint.contract,
+          comment,
+        };
+        break;
+      }
+    }
+  }
+
   const data =
     tx.data.signature +
     (abiData.length
@@ -259,6 +299,7 @@ export const generateCollectionMintTxData = async (
       value: bn(price!).mul(quantity).toHexString(),
     },
     price: price!,
+    mintComment,
   };
 };
 

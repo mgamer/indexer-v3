@@ -42,6 +42,13 @@ export type EnhancedEvent = {
   log: Log;
 };
 
+export type MintComment = {
+  tokenContract: string;
+  tokenId?: string;
+  comment: string;
+  baseEventParams: BaseEventParams;
+};
+
 // Data extracted from purely on-chain information
 export type OnChainData = {
   // Fills
@@ -70,6 +77,7 @@ export type OnChainData = {
   fillInfos: FillUpdatesJobPayload[];
   mintInfos: MintQueueJobPayload[];
   mints: MintsProcessJobPayload[];
+  mintComments: MintComment[];
 
   // For properly keeping orders validated on the go
   orderInfos: OrderUpdatesByIdJobPayload[];
@@ -97,12 +105,47 @@ export const initOnChainData = (): OnChainData => ({
   fillInfos: [],
   mintInfos: [],
   mints: [],
+  mintComments: [],
 
   orderInfos: [],
   makerInfos: [],
 
   orders: [],
 });
+
+export function assignMintComments(allFillEvents: es.fills.Event[], data: OnChainData) {
+  let lastCustomCommentIndex = -1;
+  allFillEvents.forEach((event) => {
+    const sameTxComments = data.mintComments.filter(
+      (c) => c.baseEventParams.txHash === event.baseEventParams.txHash
+    );
+    const fullMatchComment = sameTxComments.find(
+      (c) => c.tokenContract === event.contract && c.tokenId === event.tokenId
+    );
+    if (fullMatchComment) {
+      event.comment = fullMatchComment.comment;
+    } else {
+      let matchComment: MintComment | undefined;
+      for (let index = 0; index < sameTxComments.length; index++) {
+        const curComment = sameTxComments[index];
+        const curLogIndex = curComment.baseEventParams.logIndex;
+        if (
+          curComment.tokenContract === event.contract &&
+          curLogIndex > event.baseEventParams.logIndex &&
+          curLogIndex > lastCustomCommentIndex
+        ) {
+          matchComment = curComment;
+          lastCustomCommentIndex = curLogIndex;
+          break;
+        }
+      }
+
+      if (matchComment) {
+        event.comment = matchComment.comment;
+      }
+    }
+  });
+}
 
 // Process on-chain data (save to db, trigger any further processes, ...)
 export const processOnChainData = async (data: OnChainData, backfill?: boolean) => {
@@ -121,6 +164,11 @@ export const processOnChainData = async (data: OnChainData, backfill?: boolean) 
       )
     );
   });
+
+  if (data.mintComments.length) {
+    // Merge the mint comment with fillEvent
+    assignMintComments(allFillEvents, data);
+  }
 
   const startAssignSourceToFillEvents = Date.now();
   if (!backfill) {

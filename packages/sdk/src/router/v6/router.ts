@@ -271,6 +271,9 @@ export class Router {
           to: d.txData.to,
           data: d.txData.data,
           value: d.txData.value ?? 0,
+          quantity: d.mintComment?.quantity ?? 1,
+          tokenContract: d.mintComment?.tokenContract ?? AddressZero,
+          comment: d.mintComment?.comment ?? "",
           fees: d.fees ?? [],
         })),
         {

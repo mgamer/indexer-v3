@@ -62,7 +62,8 @@ describe("[ReservoirV6_0_1] Mints", () => {
     // Whether to include fees on top
     chargeFees: boolean,
     // Whether to revert or not in case of any failures
-    revertIfIncomplete: boolean
+    revertIfIncomplete: boolean,
+    mintComment = ""
   ) => {
     const iface = new Interface([
       `
@@ -71,6 +72,9 @@ describe("[ReservoirV6_0_1] Mints", () => {
             address to,
             bytes data,
             uint256 value,
+            address tokenContract,
+            string comment,
+            uint256 quantity,
             (
               address recipient,
               uint256 amount
@@ -83,6 +87,7 @@ describe("[ReservoirV6_0_1] Mints", () => {
         )
       `,
       "function mint(address minter, bytes data)",
+      "event MintComment(address tokenContract, uint256 quantity, string comment)"
     ]);
 
     const [tokenId1, amount1, price1, revert1, fees1] = [
@@ -116,6 +121,9 @@ describe("[ReservoirV6_0_1] Mints", () => {
               ? erc721.interface.encodeFunctionData("fail", [])
               : erc721.interface.encodeFunctionData("mintWithPrice", [price1]),
             value: price1,
+            tokenContract: erc721.address,
+            comment: mintComment,
+            quantity: 1,
             fees: fees1.map((fee) => ({
               recipient: bob.address,
               amount: fee,
@@ -127,6 +135,9 @@ describe("[ReservoirV6_0_1] Mints", () => {
               ? erc721.interface.encodeFunctionData("fail", [])
               : erc721.interface.encodeFunctionData("mintWithPrice", [price2]),
             value: price2,
+            tokenContract: erc721.address,
+            comment: mintComment,
+            quantity: 1,
             fees: fees2.map((fee) => ({
               recipient: bob.address,
               amount: fee,
@@ -147,6 +158,9 @@ describe("[ReservoirV6_0_1] Mints", () => {
               ? erc1155.interface.encodeFunctionData("fail", [])
               : erc1155.interface.encodeFunctionData("mintWithPrice", [amount1, price1]),
             value: price1.mul(amount1),
+            tokenContract: erc1155.address,
+            comment: mintComment,
+            quantity: 1,
             fees: fees1.map((fee) => ({
               recipient: bob.address,
               amount: fee,
@@ -158,6 +172,9 @@ describe("[ReservoirV6_0_1] Mints", () => {
               ? erc1155.interface.encodeFunctionData("fail", [])
               : erc1155.interface.encodeFunctionData("mintWithPrice", [amount2, price2]),
             value: price2.mul(amount2),
+            tokenContract: erc1155.address,
+            comment: mintComment,
+            quantity: 1,
             fees: fees2.map((fee) => ({
               recipient: bob.address,
               amount: fee,
@@ -197,7 +214,7 @@ describe("[ReservoirV6_0_1] Mints", () => {
 
     // Execute
 
-    await router.connect(alice).execute(
+    const tx = await router.connect(alice).execute(
       [
         {
           module: mintModule.address,
@@ -208,8 +225,21 @@ describe("[ReservoirV6_0_1] Mints", () => {
       { value: totalPrice }
     );
 
+    const txRecepiet = await tx.wait();
+    const mintCommentEvents = txRecepiet.logs.filter(c => c.topics.includes(iface.getEventTopic('MintComment')));
+    if (mintComment != "") {
+      const mintCommentEvent = mintCommentEvents[0];
+      if (mintCommentEvent) {
+        const parsedEvent = iface.parseLog(mintCommentEvent);
+        expect(parsedEvent.args['comment']).eq(mintComment);
+      }
+      console.log(mintCommentEvent)
+      if (chargeFees && !partial) {
+        expect(mintCommentEvents.length).gte(1);
+      }
+    }
+    
     // Fetch post-state
-
     const ethBalancesAfter = await getBalances(Sdk.Common.Addresses.Native[chainId]);
 
     // Alice for the minted NFTs
@@ -242,14 +272,17 @@ describe("[ReservoirV6_0_1] Mints", () => {
     for (const partial of [false, true]) {
       for (const chargeFees of [false, true]) {
         for (const revertIfIncomplete of [false, true]) {
-          it(
-            `[${standard}]` +
-              `${partial ? "[partial]" : "[full]"}` +
-              `${chargeFees ? "[fees]" : "[no-fees]"}` +
-              `${revertIfIncomplete ? "[reverts]" : "[skip-reverts]"}`,
-            async () =>
-              testMints(standard as "erc721" | "erc1155", partial, chargeFees, revertIfIncomplete)
-          );
+          for(const comment of ["", "mint comment"]) {
+            it(
+              `[${standard}]` +
+                `${partial ? "[partial]" : "[full]"}` +
+                `${chargeFees ? "[fees]" : "[no-fees]"}` +
+                `${revertIfIncomplete ? "[reverts]" : "[skip-reverts]"}` +
+                `${comment == "" ? "[no-comment]" : "[mint-comment]"}`,
+              async () =>
+                testMints(standard as "erc721" | "erc1155", partial, chargeFees, revertIfIncomplete, comment)
+            );
+          }
         }
       }
     }
