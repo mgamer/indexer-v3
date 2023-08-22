@@ -44,7 +44,7 @@ if (config.doBackgroundWork) {
         logger.info(
           QUEUE_NAME,
           `Worker debug. startTime=${new Date(startTime * 1000)}, endTime=${new Date(
-            (startTime + 900) * 1000
+            (startTime + 15 * 60) * 1000
           )}`
         );
 
