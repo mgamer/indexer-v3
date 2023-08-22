@@ -116,26 +116,30 @@ export const initOnChainData = (): OnChainData => ({
 export function assignMintComments(allFillEvents: es.fills.Event[], data: OnChainData) {
   let lastCustomCommentIndex = -1;
   allFillEvents.forEach((event) => {
-    const sameTxComments = data.mintComments.filter(
-      (c) => c.baseEventParams.txHash === event.baseEventParams.txHash
-    );
+    const sameTxComments = data.mintComments
+      .filter((c) => c.baseEventParams.txHash === event.baseEventParams.txHash)
+      .sort((c, b) => c.baseEventParams.logIndex - b.baseEventParams.logIndex);
+
     const fullMatchComment = sameTxComments.find(
       (c) => c.tokenContract === event.contract && c.tokenId === event.tokenId
     );
+
     if (fullMatchComment) {
       event.comment = fullMatchComment.comment;
     } else {
       let matchComment: MintComment | undefined;
+
       for (let index = 0; index < sameTxComments.length; index++) {
         const curComment = sameTxComments[index];
         const curLogIndex = curComment.baseEventParams.logIndex;
+
         if (
           curComment.tokenContract === event.contract &&
           curLogIndex > event.baseEventParams.logIndex &&
-          curLogIndex > lastCustomCommentIndex
+          index > lastCustomCommentIndex
         ) {
           matchComment = curComment;
-          lastCustomCommentIndex = curLogIndex;
+          lastCustomCommentIndex = index;
           break;
         }
       }
