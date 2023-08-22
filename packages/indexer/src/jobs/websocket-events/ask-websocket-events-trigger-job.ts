@@ -86,7 +86,7 @@ export class AskWebsocketEventsTriggerQueueJob extends AbstractRabbitMqJobHandle
       }
 
       // Debugging blur orders
-      if (data.after.kind == "blur") {
+      if (data.after.kind == "blur" && data.trigger === "update") {
         logger.info(
           this.queueName,
           JSON.stringify({
