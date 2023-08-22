@@ -64,6 +64,8 @@ if (config.doWebsocketWork && config.blurWsListingsUrl) {
 
   clientListings.on("newTopsOfBooks", async (message: string) => {
     try {
+      logger.info("blur-debug", message);
+
       const parsedMessage: {
         contractAddress: string;
         tops: {
