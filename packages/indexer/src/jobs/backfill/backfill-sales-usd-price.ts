@@ -122,9 +122,17 @@ if (config.doBackgroundWork) {
             table: "fill_events_2",
           }
         );
-        for (const { tx_hash, log_index, batch_index, currency, price, usd_price } of results) {
+        for (const {
+          tx_hash,
+          log_index,
+          batch_index,
+          currency,
+          price,
+          usd_price,
+          timestamp,
+        } of results) {
           if (!usd_price) {
-            const prices = await getUSDAndNativePrices(fromBuffer(currency), price, endTimestamp, {
+            const prices = await getUSDAndNativePrices(fromBuffer(currency), price, timestamp, {
               onlyUSD: true,
             });
             if (!prices.usdPrice && getNetworkSettings().coingecko) {
