@@ -160,10 +160,7 @@ export class FetchCollectionMetadataJob extends AbstractRabbitMqJobHandler {
             {
               kind: "single-token",
               data: {
-                method:
-                  config.chainId === 137 && contract == "0x2953399124f0cbb46d2cbacd8a89cf0599974963"
-                    ? "simplehash"
-                    : metadataIndexFetchJob.getIndexingMethod(collection.community),
+                method: metadataIndexFetchJob.getIndexingMethod(collection.community),
                 contract,
                 tokenId,
                 collection: collection.id,
