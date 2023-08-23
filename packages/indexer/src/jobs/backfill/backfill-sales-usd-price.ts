@@ -29,7 +29,7 @@ if (config.doBackgroundWork) {
   const worker = new Worker(
     QUEUE_NAME,
     async (job) => {
-      const { timestamp, txHash, logIndex, batchIndex } = job.data;
+      const { startTimestamp, endTimestamp, txHash, logIndex, batchIndex } = job.data;
       const limit = 1000;
 
       const results = await idb.manyOrNone(
@@ -51,11 +51,12 @@ if (config.doBackgroundWork) {
             fill_events_2.log_index,
             fill_events_2.batch_index
           ) < (
-            $/timestamp/,
+            $/endTimestamp/,
             $/txHash/,
             $/logIndex/,
             $/batchIndex/
           )
+          AND fill_events_2.timestamp >= $/startTimestamp/
           ORDER BY
             fill_events_2.timestamp DESC,
             fill_events_2.tx_hash DESC,
@@ -65,7 +66,7 @@ if (config.doBackgroundWork) {
         `,
         {
           limit,
-          timestamp,
+          endTimestamp,
           txHash: toBuffer(txHash),
           logIndex,
           batchIndex,
@@ -123,7 +124,7 @@ if (config.doBackgroundWork) {
         );
         for (const { tx_hash, log_index, batch_index, currency, price, usd_price } of results) {
           if (!usd_price) {
-            const prices = await getUSDAndNativePrices(fromBuffer(currency), price, timestamp, {
+            const prices = await getUSDAndNativePrices(fromBuffer(currency), price, endTimestamp, {
               onlyUSD: true,
             });
             if (!prices.usdPrice && getNetworkSettings().coingecko) {
@@ -160,6 +161,7 @@ if (config.doBackgroundWork) {
       if (results.length >= limit) {
         const lastResult = results[results.length - 1];
         await addToQueue(
+          startTimestamp,
           lastResult.timestamp,
           fromBuffer(lastResult.tx_hash),
           lastResult.log_index,
@@ -176,10 +178,11 @@ if (config.doBackgroundWork) {
 }
 
 export const addToQueue = async (
-  timestamp: number,
+  startTimestamp: number,
+  endTimestamp: number,
   txHash: string,
   logIndex: number,
   batchIndex: number
 ) => {
-  await queue.add(randomUUID(), { timestamp, txHash, logIndex, batchIndex });
+  await queue.add(randomUUID(), { startTimestamp, endTimestamp, txHash, logIndex, batchIndex });
 };
