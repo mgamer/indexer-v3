@@ -13,6 +13,7 @@ import {
 import { AbiParam } from "@/orderbook/mints/calldata";
 import { getMaxSupply } from "@/orderbook/mints/calldata/helpers";
 import { getMethodSignature } from "@/orderbook/mints/method-signatures";
+import * as mintdotfun from "@/orderbook/mints/calldata/detector/mintdotfun";
 
 const STANDARD = "unknown";
 
@@ -93,28 +94,36 @@ export const extractByTx = async (
     logger.error("mint-detector", JSON.stringify({ kind: STANDARD, error }));
   }
 
-  return [
-    {
-      collection,
-      contract: collection,
-      stage: "public-sale",
-      kind: "public",
-      status: "open",
-      standard: STANDARD,
-      details: {
-        tx: {
-          to: tx.to,
-          data: {
-            signature: methodSignature.signature,
-            params,
-          },
+  const proofParams = params.filter((c) => c.abiType.includes("bytes32[]"));
+  const collectionMint: CollectionMint = {
+    collection,
+    contract: collection,
+    stage: "public-sale",
+    kind: "public",
+    status: "open",
+    standard: STANDARD,
+    details: {
+      tx: {
+        to: tx.to,
+        data: {
+          signature: methodSignature.signature,
+          params,
         },
       },
-      currency: Sdk.Common.Addresses.Native[config.chainId],
-      price: pricePerAmountMinted.toString(),
-      maxSupply,
     },
-  ];
+    currency: Sdk.Common.Addresses.Native[config.chainId],
+    price: pricePerAmountMinted.toString(),
+    maxSupply,
+  };
+
+  if (proofParams.length === 1) {
+    const matched = await mintdotfun.extractByCollectionMint(collectionMint);
+    if (matched.length) {
+      return matched;
+    }
+  }
+
+  return [collectionMint];
 };
 
 export const refreshByCollection = async (collection: string) => {

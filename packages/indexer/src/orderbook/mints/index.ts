@@ -18,7 +18,8 @@ export type CollectionMintStandard =
   | "thirdweb"
   | "zora"
   | "decent"
-  | "foundation";
+  | "foundation"
+  | "mintdotfun";
 
 export type CollectionMintDetails = {
   tx: MintTxSchema;

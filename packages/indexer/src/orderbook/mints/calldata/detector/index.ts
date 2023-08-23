@@ -17,9 +17,11 @@ import * as manifold from "@/orderbook/mints/calldata/detector/manifold";
 import * as seadrop from "@/orderbook/mints/calldata/detector/seadrop";
 import * as thirdweb from "@/orderbook/mints/calldata/detector/thirdweb";
 import * as zora from "@/orderbook/mints/calldata/detector/zora";
+import * as mintdotfun from "@/orderbook/mints/calldata/detector/mintdotfun";
+
 import { getCollectionMints } from "@/orderbook/mints";
 
-export { decent, foundation, generic, manifold, seadrop, thirdweb, zora };
+export { decent, foundation, generic, manifold, seadrop, thirdweb, zora, mintdotfun };
 
 export const extractByTx = async (txHash: string, skipCache = false) => {
   // Fetch all transfers associated to the transaction
