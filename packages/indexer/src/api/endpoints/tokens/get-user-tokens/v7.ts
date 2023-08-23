@@ -158,6 +158,7 @@ export const getUserTokensV7Options: RouteOptions = {
               .allow(null)
               .description("No rarity rank for collections over 100k"),
             media: Joi.string().allow(null),
+            isFlagged: Joi.boolean().default(false),
             collection: Joi.object({
               id: Joi.string().allow(null),
               name: Joi.string().allow("", null),
@@ -402,6 +403,7 @@ export const getUserTokensV7Options: RouteOptions = {
           t.last_buy_value,
           t.last_sell_timestamp,
           t.last_buy_timestamp,
+          t.is_flagged,
           null AS top_bid_id,
           null AS top_bid_price,
           null AS top_bid_value,
@@ -439,6 +441,7 @@ export const getUserTokensV7Options: RouteOptions = {
             t.last_buy_value,
             t.last_sell_timestamp,
             t.last_buy_timestamp,
+            t.is_flagged,
             ${selectFloorData}
             ${selectRoyaltyBreakdown}
           FROM tokens t
@@ -672,6 +675,7 @@ export const getUserTokensV7Options: RouteOptions = {
             supply: !_.isNull(r.supply) ? r.supply : null,
             remainingSupply: !_.isNull(r.remaining_supply) ? r.remaining_supply : null,
             media: r.media,
+            isFlagged: Boolean(Number(r.is_flagged)),
             collection: {
               id: r.collection_id,
               name: r.collection_name,
