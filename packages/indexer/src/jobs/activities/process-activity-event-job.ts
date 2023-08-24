@@ -3,11 +3,13 @@ import { logger } from "@/common/logger";
 import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handler";
 import { PendingActivitiesQueue } from "@/elasticsearch/indexes/activities/pending-activities-queue";
 import { FillEventCreatedEventHandler } from "@/elasticsearch/indexes/activities/event-handlers/fill-event-created";
-import { NftTransferEventCreatedEventHandler } from "@/elasticsearch/indexes/activities/event-handlers/nft-transfer-event-created";
+import { NftTransferEventInfo } from "@/elasticsearch/indexes/activities/event-handlers/nft-transfer-event-created";
 import { AskCreatedEventHandler } from "@/elasticsearch/indexes/activities/event-handlers/ask-created";
 import { BidCreatedEventHandler } from "@/elasticsearch/indexes/activities/event-handlers/bid-created";
 import { BidCancelledEventHandler } from "@/elasticsearch/indexes/activities/event-handlers/bid-cancelled";
 import { AskCancelledEventHandler } from "@/elasticsearch/indexes/activities/event-handlers/ask-cancelled";
+import { PendingActivityEventsQueue } from "@/elasticsearch/indexes/activities/pending-activity-events-queue";
+import { config } from "@/config/index";
 
 export enum EventKind {
   fillEvent = "fillEvent",
@@ -101,12 +103,18 @@ export class ProcessActivityEventJob extends AbstractRabbitMqJobHandler {
         );
         break;
       case EventKind.nftTransferEvent:
-        eventHandler = new NftTransferEventCreatedEventHandler(
-          data.transactionHash,
-          data.logIndex,
-          data.batchIndex
-        );
-        break;
+        await new PendingActivityEventsQueue(EventKind.nftTransferEvent).add([
+          {
+            kind: EventKind.nftTransferEvent,
+            data: {
+              txHash: data.transactionHash,
+              logIndex: data.logIndex,
+              batchIndex: data.batchIndex,
+            } as NftTransferEventInfo,
+          },
+        ]);
+
+        return;
       case EventKind.newSellOrder:
         eventHandler = new AskCreatedEventHandler(
           data.orderId,
@@ -164,6 +172,10 @@ export class ProcessActivityEventJob extends AbstractRabbitMqJobHandler {
   }
 
   public async addToQueue(payloads: ProcessActivityEventJobPayload[]) {
+    if (!config.doElasticsearchWork) {
+      return;
+    }
+
     await this.sendBatch(payloads.map((payload) => ({ payload })));
   }
 }

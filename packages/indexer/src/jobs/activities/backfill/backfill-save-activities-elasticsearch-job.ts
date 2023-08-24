@@ -19,6 +19,7 @@ import { FillEventCreatedEventHandler } from "@/elasticsearch/indexes/activities
 import { fromBuffer, toBuffer } from "@/common/utils";
 import { NftTransferEventCreatedEventHandler } from "@/elasticsearch/indexes/activities/event-handlers/nft-transfer-event-created";
 import { redis } from "@/common/redis";
+import crypto from "crypto";
 
 export type BackfillSaveActivitiesElasticsearchJobPayload = {
   type: "ask" | "ask-cancel" | "bid" | "bid-cancel" | "sale" | "transfer";
@@ -51,6 +52,8 @@ export class BackfillSaveActivitiesElasticsearchJob extends AbstractRabbitMqJobH
     const fromTimestampISO = new Date(fromTimestamp * 1000).toISOString();
     const toTimestampISO = new Date(toTimestamp * 1000).toISOString();
 
+    const limit = Number(await redis.get(`${this.queueName}-limit`)) || 1000;
+
     let addToQueue = false;
     let addToQueueCursor: OrderCursorInfo | EventCursorInfo | undefined;
 
@@ -59,7 +62,8 @@ export class BackfillSaveActivitiesElasticsearchJob extends AbstractRabbitMqJobH
         type,
         fromTimestamp,
         toTimestamp,
-        cursor
+        cursor,
+        limit
       );
 
       if (activities.length) {
@@ -73,11 +77,19 @@ export class BackfillSaveActivitiesElasticsearchJob extends AbstractRabbitMqJobH
           ]),
         });
 
+        if (!keepGoing) {
+          await redis.hset(
+            `backfill-activities-elasticsearch-job:${type}`,
+            `${fromTimestamp}:${toTimestamp}`,
+            JSON.stringify({ fromTimestamp, toTimestamp, cursor: nextCursor })
+          );
+        }
+
         logger.info(
           this.queueName,
           JSON.stringify({
             topic: "backfill-activities",
-            message: `Backfilled ${activities.length} activities. type=${type}, fromTimestamp=${fromTimestampISO}, toTimestamp=${toTimestampISO}, keepGoing=${keepGoing}`,
+            message: `Backfilled ${activities.length} activities. type=${type}, fromTimestamp=${fromTimestampISO}, toTimestamp=${toTimestampISO}, keepGoing=${keepGoing}, limit=${limit}`,
             type,
             fromTimestamp,
             fromTimestampISO,
@@ -97,7 +109,7 @@ export class BackfillSaveActivitiesElasticsearchJob extends AbstractRabbitMqJobH
           this.queueName,
           JSON.stringify({
             topic: "backfill-activities",
-            message: `KeepGoing. type=${type}, fromTimestamp=${fromTimestampISO}, toTimestamp=${toTimestampISO}`,
+            message: `KeepGoing. type=${type}, fromTimestamp=${fromTimestampISO}, toTimestamp=${toTimestampISO}, limit=${limit}`,
             type,
             fromTimestamp,
             fromTimestampISO,
@@ -116,7 +128,7 @@ export class BackfillSaveActivitiesElasticsearchJob extends AbstractRabbitMqJobH
           this.queueName,
           JSON.stringify({
             topic: "backfill-activities",
-            message: `End. type=${type}, fromTimestamp=${fromTimestampISO}, toTimestamp=${toTimestampISO}, keepGoing=${keepGoing}`,
+            message: `End. type=${type}, fromTimestamp=${fromTimestampISO}, toTimestamp=${toTimestampISO}, keepGoing=${keepGoing}, limit=${limit}`,
             type,
             fromTimestamp,
             fromTimestampISO,
@@ -128,6 +140,10 @@ export class BackfillSaveActivitiesElasticsearchJob extends AbstractRabbitMqJobH
           })
         );
 
+        await redis.hdel(
+          `backfill-activities-elasticsearch-job:${type}`,
+          `${fromTimestamp}:${toTimestamp}`
+        );
         await redis.decr(`backfill-activities-elasticsearch-job-count:${type}`);
       }
     } catch (error) {
@@ -169,6 +185,25 @@ export class BackfillSaveActivitiesElasticsearchJob extends AbstractRabbitMqJobH
             message.payload.indexName,
             message.payload.keepGoing
           );
+        } else {
+          const fromTimestampISO = new Date(message.payload.fromTimestamp * 1000).toISOString();
+          const toTimestampISO = new Date(message.payload.toTimestamp * 1000).toISOString();
+
+          logger.info(
+            this.queueName,
+            JSON.stringify({
+              topic: "backfill-activities",
+              message: `onCompleted - Skip addToQueue. type=${message.payload.type}, fromTimestamp=${fromTimestampISO}, toTimestamp=${toTimestampISO}, keepGoing=${message.payload.keepGoing}`,
+              type: message.payload.type,
+              fromTimestamp: message.payload.fromTimestamp,
+              fromTimestampISO,
+              toTimestamp: message.payload.toTimestamp,
+              toTimestampISO,
+              cursor: message.payload.cursor,
+              indexName: message.payload.indexName,
+              keepGoing: message.payload.keepGoing,
+            })
+          );
         }
       }
     );
@@ -183,29 +218,20 @@ export class BackfillSaveActivitiesElasticsearchJob extends AbstractRabbitMqJobH
     keepGoing?: boolean
   ) {
     if (!config.doElasticsearchWork) {
-      logger.info(
-        this.queueName,
-        JSON.stringify({
-          topic: "backfill-activities",
-          message: `addToQueue Disabled`,
-          type,
-          fromTimestamp,
-          toTimestamp,
-          cursor,
-          indexName,
-          keepGoing,
-        })
-      );
-
       return;
     }
+
+    const jobId = crypto
+      .createHash("sha256")
+      .update(
+        `${type}:${JSON.stringify(cursor)}${fromTimestamp}:${toTimestamp}:${indexName}:${keepGoing}`
+      )
+      .digest("hex");
 
     return this.send(
       {
         payload: { type, cursor, fromTimestamp, toTimestamp, indexName, keepGoing },
-        jobId: `${type}:${JSON.stringify(
-          cursor
-        )}${fromTimestamp}:${toTimestamp}:${indexName}:${keepGoing}`,
+        jobId,
       },
       keepGoing ? 5000 : 1000
     );
@@ -218,21 +244,22 @@ const getActivities = async (
   type: string,
   fromTimestamp: number,
   toTimestamp: number,
-  cursor?: OrderCursorInfo | EventCursorInfo
+  cursor?: OrderCursorInfo | EventCursorInfo,
+  limit = 1000
 ) => {
   switch (type) {
     case "ask":
-      return getAskActivities(fromTimestamp, toTimestamp, cursor as OrderCursorInfo);
+      return getAskActivities(fromTimestamp, toTimestamp, cursor as OrderCursorInfo, limit);
     case "ask-cancel":
-      return getAskCancelActivities(fromTimestamp, toTimestamp, cursor as OrderCursorInfo);
+      return getAskCancelActivities(fromTimestamp, toTimestamp, cursor as OrderCursorInfo, limit);
     case "bid":
-      return getBidActivities(fromTimestamp, toTimestamp, cursor as OrderCursorInfo);
+      return getBidActivities(fromTimestamp, toTimestamp, cursor as OrderCursorInfo, limit);
     case "bid-cancel":
-      return getBidCancelActivities(fromTimestamp, toTimestamp, cursor as OrderCursorInfo);
+      return getBidCancelActivities(fromTimestamp, toTimestamp, cursor as OrderCursorInfo, limit);
     case "sale":
-      return getSaleActivities(fromTimestamp, toTimestamp, cursor as EventCursorInfo);
+      return getSaleActivities(fromTimestamp, toTimestamp, cursor as EventCursorInfo, limit);
     case "transfer":
-      return getTransferActivities(fromTimestamp, toTimestamp, cursor as EventCursorInfo);
+      return getTransferActivities(fromTimestamp, toTimestamp, cursor as EventCursorInfo, limit);
     default:
       throw new Error("Unknown type!");
   }
@@ -240,7 +267,8 @@ const getActivities = async (
 const getAskActivities = async (
   fromTimestamp: number,
   toTimestamp: number,
-  cursor?: OrderCursorInfo
+  cursor?: OrderCursorInfo,
+  limit = 1000
 ) => {
   const activities = [];
   let nextCursor: OrderCursorInfo | undefined;
@@ -256,6 +284,7 @@ const getAskActivities = async (
   const query = `
             ${AskCreatedEventHandler.buildBaseQuery()}
             WHERE side = 'sell'
+            AND kind != 'element-erc1155'
             ${timestampFilter}
             ${continuationFilter}
             ORDER BY updated_at, id
@@ -267,7 +296,7 @@ const getAskActivities = async (
     updatedAt: cursor?.updatedAt,
     fromTimestamp,
     toTimestamp,
-    limit: 1000,
+    limit,
   });
 
   if (results.length) {
@@ -298,7 +327,8 @@ const getAskActivities = async (
 const getAskCancelActivities = async (
   fromTimestamp: number,
   toTimestamp: number,
-  cursor?: OrderCursorInfo
+  cursor?: OrderCursorInfo,
+  limit = 1000
 ) => {
   const activities = [];
   let nextCursor: OrderCursorInfo | undefined;
@@ -314,6 +344,7 @@ const getAskCancelActivities = async (
   const query = `
             ${AskCancelledEventHandler.buildBaseQuery()}
             WHERE side = 'sell' AND fillability_status = 'cancelled'
+            AND kind != 'element-erc1155'
             ${timestampFilter}
             ${continuationFilter}
             ORDER BY updated_at, id
@@ -325,7 +356,7 @@ const getAskCancelActivities = async (
     updatedAt: cursor?.updatedAt,
     fromTimestamp,
     toTimestamp,
-    limit: 1000,
+    limit,
   });
 
   if (results.length) {
@@ -356,7 +387,8 @@ const getAskCancelActivities = async (
 const getBidActivities = async (
   fromTimestamp: number,
   toTimestamp: number,
-  cursor?: OrderCursorInfo
+  cursor?: OrderCursorInfo,
+  limit = 1000
 ) => {
   const activities = [];
   let nextCursor: OrderCursorInfo | undefined;
@@ -383,7 +415,7 @@ const getBidActivities = async (
     updatedAt: cursor?.updatedAt,
     fromTimestamp,
     toTimestamp,
-    limit: 1000,
+    limit,
   });
 
   if (results.length) {
@@ -414,7 +446,8 @@ const getBidActivities = async (
 const getBidCancelActivities = async (
   fromTimestamp: number,
   toTimestamp: number,
-  cursor?: OrderCursorInfo
+  cursor?: OrderCursorInfo,
+  limit = 1000
 ) => {
   const activities = [];
   let nextCursor: OrderCursorInfo | undefined;
@@ -441,7 +474,7 @@ const getBidCancelActivities = async (
     updatedAt: cursor?.updatedAt,
     fromTimestamp,
     toTimestamp,
-    limit: 1000,
+    limit,
   });
 
   if (results.length) {
@@ -472,7 +505,8 @@ const getBidCancelActivities = async (
 const getSaleActivities = async (
   fromTimestamp: number,
   toTimestamp: number,
-  cursor?: EventCursorInfo
+  cursor?: EventCursorInfo,
+  limit = 1000
 ) => {
   const activities = [];
   let nextCursor: EventCursorInfo | undefined;
@@ -499,7 +533,7 @@ const getSaleActivities = async (
     batchIndex: cursor?.batchIndex,
     fromTimestamp,
     toTimestamp,
-    limit: 1000,
+    limit,
   });
 
   if (results.length) {
@@ -531,7 +565,8 @@ const getSaleActivities = async (
 const getTransferActivities = async (
   fromTimestamp: number,
   toTimestamp: number,
-  cursor?: EventCursorInfo
+  cursor?: EventCursorInfo,
+  limit = 1000
 ) => {
   const activities = [];
   let nextCursor: EventCursorInfo | undefined;
@@ -565,7 +600,7 @@ const getTransferActivities = async (
     batchIndex: cursor?.batchIndex,
     fromTimestamp,
     toTimestamp,
-    limit: 1000,
+    limit,
   });
 
   if (results.length) {

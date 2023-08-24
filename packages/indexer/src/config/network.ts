@@ -152,6 +152,7 @@ type NetworkSettings = {
   washTradingExcludedContracts: string[];
   washTradingWhitelistedAddresses: string[];
   washTradingBlacklistedAddresses: string[];
+  trendingExcludedContracts: string[];
   customTokenAddresses: string[];
   nonSimulatableContracts: string[];
   mintsAsSalesBlacklist: string[];
@@ -192,6 +193,8 @@ export const getNetworkSettings = (): NetworkSettings => {
     washTradingExcludedContracts: [],
     washTradingWhitelistedAddresses: [],
     washTradingBlacklistedAddresses: [],
+
+    trendingExcludedContracts: [],
     customTokenAddresses: [],
     nonSimulatableContracts: [],
     multiCollectionContracts: [],
@@ -286,6 +289,12 @@ export const getNetworkSettings = (): NetworkSettings => {
           ...defaultNetworkSettings.mintAddresses,
           // Nifty Gateway Omnibus
           "0xe052113bd7d7700d623414a0a4585bcae754e9d5",
+        ],
+
+        trendingExcludedContracts: [
+          "0x57f1887a8bf19b14fc0df6fd9b2acc9af147ea85", // ens
+          "0xd4416b13d2b3a9abae7acd5d6c2bbdbe25686401", // ens
+          "0xc36442b4a4522e871399cd717abdd847ab11fe88", // uniswap positions
         ],
         whitelistedCurrencies: new Map([
           [
@@ -522,6 +531,8 @@ export const getNetworkSettings = (): NetworkSettings => {
           indexes: {
             activities: {
               numberOfShards: 10,
+              disableMappingsUpdate: true,
+              configName: "CONFIG_1689873821",
             },
           },
         },
@@ -875,6 +886,14 @@ export const getNetworkSettings = (): NetworkSettings => {
           // PaymentProcessor WETH
           "0xfff9976782d46cc05630d1f6ebab18b2324d6b14": true,
         },
+        elasticsearch: {
+          indexes: {
+            activities: {
+              disableMappingsUpdate: true,
+              configName: "CONFIG_1689873821",
+            },
+          },
+        },
         subDomain: "api-sepolia",
         onStartup: async () => {
           // Insert the native currency
@@ -908,6 +927,11 @@ export const getNetworkSettings = (): NetworkSettings => {
         enableWebSocket: false,
         realtimeSyncMaxBlockLag: 32,
         realtimeSyncFrequencySeconds: 5,
+        supportedBidCurrencies: {
+          ...defaultNetworkSettings.supportedBidCurrencies,
+          // OpenSea WETH
+          "0xa6fa4fb5f76172d178d61b04b0ecd319c5d1c0aa": true,
+        },
         lastBlockLatency: 5,
         subDomain: "api-mumbai",
         elasticsearch: {
