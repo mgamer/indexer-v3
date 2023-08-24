@@ -84,18 +84,18 @@ export const generateSwapExecutions = async (
   const iface = new Interface([
     `function multicall(uint256 deadline, bytes[] calldata data)`,
     `
-        function exactOutputSingle(
-          tuple(
-            address tokenIn,
-            address tokenOut,
-            uint24 fee,
-            address recipient,
-            uint256 amountOut,
-            uint256 amountInMaximum,
-            uint160 sqrtPriceLimitX96
-          ) params
-        )
-      `,
+      function exactOutputSingle(
+        tuple(
+          address tokenIn,
+          address tokenOut,
+          uint24 fee,
+          address recipient,
+          uint256 amountOut,
+          uint256 amountInMaximum,
+          uint160 sqrtPriceLimitX96
+        ) params
+      )
+    `,
   ]);
 
   let params: Result;

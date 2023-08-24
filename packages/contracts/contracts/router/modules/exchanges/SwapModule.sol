@@ -87,14 +87,8 @@ contract SwapModule is BaseExchangeModule {
     for (uint256 i; i < swapsLength; ) {
       Swap calldata swap = swaps[i];
 
-      if (
-        address(swap.params.tokenIn) != address(WETH) || msg.value != swap.params.amountInMaximum
-      ) {
-        revert WrongParams();
-      }
-
       // Execute the swap
-      try SWAP_ROUTER.exactOutputSingle{value: msg.value}(swap.params) {
+      try SWAP_ROUTER.exactOutputSingle{value: swap.params.amountInMaximum}(swap.params) {
         uint256 length = swap.transfers.length;
         for (uint256 j = 0; j < length; ) {
           TransferDetail calldata transferDetail = swap.transfers[j];
@@ -119,13 +113,13 @@ contract SwapModule is BaseExchangeModule {
         }
       }
 
-      // Refund any ETH stucked in the router
-      SWAP_ROUTER.refundETH();
-
       unchecked {
         ++i;
       }
     }
+
+    // Refund any ETH stucked in the router
+    SWAP_ROUTER.refundETH();
   }
 
   function erc20ToExactOutput(

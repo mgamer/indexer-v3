@@ -2,6 +2,7 @@ import { BigNumberish } from "@ethersproject/bignumber";
 import { Contract } from "@ethersproject/contracts";
 import { Provider } from "@ethersproject/abstract-provider";
 
+import { bn } from "../../../utils";
 import { ExecutionInfo } from "../types";
 import { isETH, isWETH } from "../utils";
 import * as oneInch from "./1inch";
@@ -21,7 +22,7 @@ export type TransferDetail = {
   toETH: boolean;
 };
 
-export const generateSwapExecutions = async (
+export const generateSwapInfo = async (
   chainId: number,
   provider: Provider,
   swapProvider: string,
@@ -46,7 +47,6 @@ export const generateSwapExecutions = async (
         data: options.module.interface.encodeFunctionData("wrap", [options.transfers]),
         value: toTokenAmount,
       },
-
       kind: "wrap-or-unwrap",
     };
   } else if (isWETH(chainId, fromTokenAddress) && isETH(chainId, toTokenAddress)) {
@@ -60,7 +60,6 @@ export const generateSwapExecutions = async (
         data: options.module.interface.encodeFunctionData("unwrap", [options.transfers]),
         value: 0,
       },
-
       kind: "wrap-or-unwrap",
     };
   } else {
@@ -93,56 +92,51 @@ export const generateSwapExecutions = async (
   }
 };
 
-export const mergeSwapExecutions = (chainId: number, executions: SwapInfo[]): SwapInfo[] => {
+export const mergeSwapInfos = (chainId: number, infos: SwapInfo[]): SwapInfo[] => {
   const results: SwapInfo[] = [];
 
-  const handledIndexes: { [index: number]: boolean } = {};
-
-  // First, we have the `wrap-or-unwrap` executions
-  for (let i = 0; i < executions.length; i++) {
-    if (handledIndexes[i]) {
-      continue;
-    }
-
-    if (executions[i].kind === "wrap-or-unwrap") {
-      results.push(executions[i]);
-      handledIndexes[i] = true;
+  const tokenInToSwapInfos: { [tokenIn: string]: SwapInfo[] } = {};
+  for (const info of infos) {
+    if (info.kind === "wrap-or-unwrap") {
+      // `wrap-or-unwrap` executions go through directly
+      results.push(info);
+    } else {
+      if (!tokenInToSwapInfos[info.tokenIn]) {
+        tokenInToSwapInfos[info.tokenIn] = [];
+      }
+      tokenInToSwapInfos[info.tokenIn].push(info);
     }
   }
 
-  // Then, handle the `swap` executions
-  for (let i = 0; i < executions.length; i++) {
-    if (handledIndexes[i]) {
-      continue;
-    }
+  // Anything else (eg. `swap` executions) needs to be merged together
+  for (const [tokenIn, infos] of Object.entries(tokenInToSwapInfos)) {
+    const fromETH = isETH(chainId, tokenIn);
 
-    if (executions[i].kind === "swap") {
-      const sameTokenInExecutions: SwapInfo[] = [];
-      for (let j = 1; i + j < executions.length; j++) {
-        if (handledIndexes[i + j]) {
-          continue;
-        }
+    const decodedExecutionData = infos.map((info) =>
+      info.module.interface.decodeFunctionData(
+        fromETH ? "ethToExactOutput" : "erc20ToExactOutput",
+        info.execution.data
+      )
+    );
 
-        if (executions[i + j].tokenIn === executions[i].tokenIn) {
-          sameTokenInExecutions.push(executions[i + j]);
-          handledIndexes[i + j];
-        }
-      }
-
-      //const fromETH = isETH(chainId, executions[i].tokenIn);
-
-      // const mergedExecutionInfo: ExecutionInfo = executions[i].execution;
-      // for (const { execution } of sameTokenInExecutions) {
-      //   const { swaps, refundTo, revertIfIncomplete } = executions[
-      //     i
-      //   ].module.interface.decodeFunctionData(
-      //     fromETH ? "ethToExactOutput" : "erc20ToExactOutput",
-      //     execution.data
-      //   );
-
-      //   mergeSwapExecutions;
-      // }
-    }
+    results.push({
+      tokenIn,
+      amountIn: infos.map((info) => bn(info.amountIn)).reduce((a, b) => a.add(b)),
+      module: infos[0].module,
+      kind: infos[0].kind,
+      execution: {
+        module: infos[0].execution.module,
+        data: infos[0].module.interface.encodeFunctionData(
+          fromETH ? "ethToExactOutput" : "erc20ToExactOutput",
+          [
+            decodedExecutionData.map((d) => d.swaps).flat(),
+            decodedExecutionData[0].refundTo,
+            decodedExecutionData[0].revertIfIncomplete,
+          ]
+        ),
+        value: infos.map((info) => bn(info.execution.value)).reduce((a, b) => a.add(b)),
+      },
+    });
   }
 
   return results;

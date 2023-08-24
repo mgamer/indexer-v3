@@ -743,7 +743,7 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
     expect(await weth.getBalance(router.contracts.swapModule.address)).to.eq(0);
   });
 
-  it.only("Fill multiple cross-currency listings with USDC", async () => {
+  it("Fill multiple cross-currency listings with USDC", async () => {
     const router = new Sdk.RouterV6.Router(chainId, ethers.provider);
 
     // Get some USDC
@@ -751,25 +751,28 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
       {
         module: router.contracts.swapModule.address,
         data: router.contracts.swapModule.interface.encodeFunctionData("ethToExactOutput", [
-          {
-            params: {
-              tokenIn: Sdk.Common.Addresses.WNative[chainId],
-              tokenOut: Sdk.Common.Addresses.Usdc[chainId],
-              fee: 500,
-              recipient: router.contracts.swapModule.address,
-              amountOut: parseUnits("50000", 6),
-              amountInMaximum: parseEther("50"),
-              sqrtPriceLimitX96: 0,
-            },
-            transfers: [
-              {
-                recipient: dan.address,
-                amount: parseUnits("50000", 6),
-                toETH: false,
+          [
+            {
+              params: {
+                tokenIn: Sdk.Common.Addresses.WNative[chainId],
+                tokenOut: Sdk.Common.Addresses.Usdc[chainId],
+                fee: 500,
+                recipient: router.contracts.swapModule.address,
+                amountOut: parseUnits("50000", 6),
+                amountInMaximum: parseEther("50"),
+                sqrtPriceLimitX96: 0,
               },
-            ],
-          },
+              transfers: [
+                {
+                  recipient: dan.address,
+                  amount: parseUnits("50000", 6),
+                  toETH: false,
+                },
+              ],
+            },
+          ],
           dan.address,
+          true,
         ]),
         // Anything on top should be refunded
         value: parseEther("50"),
@@ -903,7 +906,7 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
       // Approve the exchange
       await erc721
         .connect(seller3)
-        .setApprovalForAll(Sdk.SeaportV11.Addresses.Exchange[chainId], true);
+        .setApprovalForAll(Sdk.SeaportV14.Addresses.Exchange[chainId], true);
 
       // Build sell order
       const builder = new Sdk.SeaportBase.Builders.SingleToken(chainId);
@@ -926,16 +929,16 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
           startTime: await getCurrentTimestamp(ethers.provider),
           endTime: (await getCurrentTimestamp(ethers.provider)) + 60,
         },
-        Sdk.SeaportV11.Order
+        Sdk.SeaportV14.Order
       );
-      await sellOrder.sign(seller1);
+      await sellOrder.sign(seller3);
 
       await sellOrder.checkFillability(ethers.provider);
 
       listings.push({
         // Irrelevant
         orderId: "0",
-        kind: "seaport",
+        kind: "seaport-v1.4",
         contractKind: "erc721",
         contract: erc721.address,
         tokenId: tokenId3.toString(),
@@ -945,7 +948,7 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
       });
     }
 
-    // Order 4: Seaport ETH
+    // Order 4: Seaport WETH
     const seller4 = alice;
     const tokenId4 = 4;
     const price4 = parseEther("1");
@@ -957,7 +960,7 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
       // Approve the exchange
       await erc721
         .connect(seller4)
-        .setApprovalForAll(Sdk.SeaportV11.Addresses.Exchange[chainId], true);
+        .setApprovalForAll(Sdk.SeaportV14.Addresses.Exchange[chainId], true);
 
       // Build sell order
       const builder = new Sdk.SeaportBase.Builders.SingleToken(chainId);
@@ -980,16 +983,16 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
           startTime: await getCurrentTimestamp(ethers.provider),
           endTime: (await getCurrentTimestamp(ethers.provider)) + 60,
         },
-        Sdk.SeaportV11.Order
+        Sdk.SeaportV14.Order
       );
-      await sellOrder.sign(seller1);
+      await sellOrder.sign(seller4);
 
       await sellOrder.checkFillability(ethers.provider);
 
       listings.push({
         // Irrelevant
         orderId: "0",
-        kind: "seaport",
+        kind: "seaport-v1.4",
         contractKind: "erc721",
         contract: erc721.address,
         tokenId: tokenId4.toString(),
@@ -1028,11 +1031,11 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
       await buyer.sendTransaction(approval.txData);
     }
 
-    await buyer.sendTransaction({ ...tx.txs[0].txData, gasLimit: 2000000 });
+    await buyer.sendTransaction(tx.txs[0].txData);
 
     const seller1EthBalanceAfter = await seller1.getBalance();
     const seller2UsdcBalanceAfter = await usdc.getBalance(seller2.address);
-    const seller3DaiBalanceAfter = await dai.getBalance(seller2.address);
+    const seller3DaiBalanceAfter = await dai.getBalance(seller3.address);
 
     const token1OwnerAfter = await erc721.ownerOf(tokenId1);
     const token2OwnerAfter = await erc721.ownerOf(tokenId2);
@@ -1564,25 +1567,28 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
       {
         module: router.contracts.swapModule.address,
         data: router.contracts.swapModule.interface.encodeFunctionData("ethToExactOutput", [
-          {
-            params: {
-              tokenIn: Sdk.Common.Addresses.WNative[chainId],
-              tokenOut: Sdk.Common.Addresses.Usdc[chainId],
-              fee: 500,
-              recipient: router.contracts.swapModule.address,
-              amountOut: parseUnits("50000", 6),
-              amountInMaximum: parseEther("50"),
-              sqrtPriceLimitX96: 0,
-            },
-            transfers: [
-              {
-                recipient: dan.address,
-                amount: parseUnits("50000", 6),
-                toETH: false,
+          [
+            {
+              params: {
+                tokenIn: Sdk.Common.Addresses.WNative[chainId],
+                tokenOut: Sdk.Common.Addresses.Usdc[chainId],
+                fee: 500,
+                recipient: router.contracts.swapModule.address,
+                amountOut: parseUnits("50000", 6),
+                amountInMaximum: parseEther("50"),
+                sqrtPriceLimitX96: 0,
               },
-            ],
-          },
+              transfers: [
+                {
+                  recipient: dan.address,
+                  amount: parseUnits("50000", 6),
+                  toETH: false,
+                },
+              ],
+            },
+          ],
           dan.address,
+          true,
         ]),
         // Anything on top should be refunded
         value: parseEther("50"),
@@ -1768,25 +1774,28 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
       {
         module: router.contracts.swapModule.address,
         data: router.contracts.swapModule.interface.encodeFunctionData("ethToExactOutput", [
-          {
-            params: {
-              tokenIn: Sdk.Common.Addresses.WNative[chainId],
-              tokenOut: Sdk.Common.Addresses.Usdc[chainId],
-              fee: 500,
-              recipient: router.contracts.swapModule.address,
-              amountOut: parseUnits("50000", 6),
-              amountInMaximum: parseEther("50"),
-              sqrtPriceLimitX96: 0,
-            },
-            transfers: [
-              {
-                recipient: dan.address,
-                amount: parseUnits("50000", 6),
-                toETH: false,
+          [
+            {
+              params: {
+                tokenIn: Sdk.Common.Addresses.WNative[chainId],
+                tokenOut: Sdk.Common.Addresses.Usdc[chainId],
+                fee: 500,
+                recipient: router.contracts.swapModule.address,
+                amountOut: parseUnits("50000", 6),
+                amountInMaximum: parseEther("50"),
+                sqrtPriceLimitX96: 0,
               },
-            ],
-          },
+              transfers: [
+                {
+                  recipient: dan.address,
+                  amount: parseUnits("50000", 6),
+                  toETH: false,
+                },
+              ],
+            },
+          ],
           dan.address,
+          true,
         ]),
         // Anything on top should be refunded
         value: parseEther("50"),
