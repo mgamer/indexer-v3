@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import * as Sdk from "@reservoir0x/sdk";
 import { Queue, QueueScheduler, Worker } from "bullmq";
 import { randomUUID } from "crypto";
 
@@ -75,6 +74,7 @@ if (config.doBackgroundWork) {
 
       // Fix 1: Set the currency of old bids to WETH instead of ETH
       // (since it was set to ETH by default for all sales)
+      /*
       {
         const values: any[] = [];
         const columns = new pgp.helpers.ColumnSet(
@@ -112,6 +112,7 @@ if (config.doBackgroundWork) {
           );
         }
       }
+      */
 
       // Fix 2: Set the USD price
       {
@@ -139,13 +140,15 @@ if (config.doBackgroundWork) {
               throw new Error("Missing USD price");
             }
 
-            values.push({
-              tx_hash,
-              log_index,
-              batch_index,
-              currency_price: price,
-              usd_price: prices.usdPrice ?? null,
-            });
+            if (prices.usdPrice != usd_price) {
+              values.push({
+                tx_hash,
+                log_index,
+                batch_index,
+                currency_price: price,
+                usd_price: prices.usdPrice ?? null,
+              });
+            }
           }
         }
 
