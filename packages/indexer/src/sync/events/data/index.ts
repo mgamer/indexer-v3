@@ -292,8 +292,8 @@ export type EventSubKind =
   | "erc721c-verified-eoa-signature"
   | "erc721c-added-to-allowlist"
   | "erc721c-removed-from-allowlist"
+  | "erc721c-set-allowlist"
   | "erc721c-set-transfer-security-level"
-  | "erc721c-set-allow-list"
   | "erc721c-transfer-validator-updated";
 
 export type EventData = {

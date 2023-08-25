@@ -38,6 +38,20 @@ export const removedFromAllowlist: EventData = {
   ]),
 };
 
+export const setAllowlist: EventData = {
+  kind: "erc721c",
+  subKind: "erc721c-set-allowlist",
+  topic: "0x6e5a76d990dc6af893e20eb82ea37eac6f22cc50e7c7306275569cdc5421a543",
+  numTopics: 4,
+  abi: new Interface([
+    `event SetAllowlist(
+      uint8 indexed kind,
+      address indexed collection,
+      uint120 indexed id
+    )`,
+  ]),
+};
+
 export const transferValidatorUpdated: EventData = {
   kind: "erc721c",
   subKind: "erc721c-transfer-validator-updated",
@@ -60,20 +74,6 @@ export const setTransferSecurityLevel: EventData = {
     `event SetTransferSecurityLevel(
       address indexed collection,
       uint8 level
-    )`,
-  ]),
-};
-
-export const setAllowlist: EventData = {
-  kind: "erc721c",
-  subKind: "erc721c-set-allow-list",
-  topic: "0x6e5a76d990dc6af893e20eb82ea37eac6f22cc50e7c7306275569cdc5421a543",
-  numTopics: 4,
-  abi: new Interface([
-    `event SetAllowlist(
-      uint8 indexed kind,
-      address indexed collection,
-      uint120 indexed id
     )`,
   ]),
 };

@@ -16,7 +16,7 @@ export const handleEvents = async (events: EnhancedEvent[]) => {
         break;
       }
 
-      case "erc721c-set-allow-list":
+      case "erc721c-set-allowlist":
       case "erc721c-set-transfer-security-level": {
         const parsedLog = eventData.abi.parseLog(log);
         const collection = parsedLog.args["collection"].toLowerCase();
