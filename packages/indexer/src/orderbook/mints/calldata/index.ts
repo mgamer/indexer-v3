@@ -181,9 +181,9 @@ export const generateCollectionMintTxData = async (
             break;
           }
 
-          case "mintdotfun": {
+          case "lanyard": {
             if (allowlistItemIndex === 0) {
-              abiValue = await mints.mintdotfun.generateProofValue(collectionMint, minter);
+              abiValue = await mints.lanyard.generateProofValue(collectionMint, minter);
             }
 
             break;
