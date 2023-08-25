@@ -9,6 +9,7 @@ import { TokenIDs } from "fummpel";
 // Needed for `rarible`
 import { encodeForMatchOrders } from "../../rarible/utils";
 // Needed for `seaport`
+import { ConduitController } from "../../seaport-base";
 import { constructOfferCounterOrderAndFulfillments } from "../../seaport-base/helpers";
 
 import * as Sdk from "../../index";
@@ -30,8 +31,9 @@ import {
   PerPoolSwapDetails,
   SwapDetail,
   PreSignature,
+  TransfersResult,
 } from "./types";
-import { generateSwapExecutions } from "./swap/index";
+import { SwapInfo, generateSwapInfo, mergeSwapInfos } from "./swap/index";
 import { generateFTApprovalTxData, generateNFTApprovalTxData, isETH, isWETH } from "./utils";
 
 // Tokens
@@ -41,6 +43,7 @@ import ERC1155Abi from "../../common/abis/Erc1155.json";
 import RouterAbi from "./abis/ReservoirV6_0_1.json";
 // Misc
 import ApprovalProxyAbi from "./abis/ApprovalProxy.json";
+import OpenseaTransferHelperAbi from "./abis/OpenseaTransferHelper.json";
 // Modules
 import CollectionXyzModuleAbi from "./abis/CollectionXyzModule.json";
 import ElementModuleAbi from "./abis/ElementModule.json";
@@ -2842,7 +2845,7 @@ export class Router {
 
     // Handle any needed swaps
 
-    const successfulSwapExecutions: ExecutionInfo[] = [];
+    const successfulSwapInfos: SwapInfo[] = [];
     const unsuccessfulDependentExecutionIndexes: number[] = [];
     if (swapDetails.length) {
       // Aggregate any swap details for the same token pair
@@ -2872,7 +2875,7 @@ export class Router {
         return perPoolDetails;
       }, {} as PerPoolSwapDetails);
 
-      // For each token pair, generate a swap execution
+      // For each token pair, generate a swap info
       for (const swapDetails of Object.values(aggregatedSwapDetails)) {
         // All swap details for this pool will have the same out and in tokens
         const { tokenIn, tokenOut } = swapDetails[0];
@@ -2898,7 +2901,7 @@ export class Router {
           // Only generate a swap if the in token is different from the out token
           let inAmount = totalAmountOut.toString();
           if (tokenIn !== tokenOut) {
-            const { executions: swapExecutions, amountIn } = await generateSwapExecutions(
+            const swapInfo = await generateSwapInfo(
               this.chainId,
               this.provider,
               swapProvider,
@@ -2909,13 +2912,14 @@ export class Router {
                 module: swapModule,
                 transfers,
                 refundTo: relayer,
+                revertIfIncomplete: Boolean(!options?.partial),
               }
             );
 
-            successfulSwapExecutions.push(...swapExecutions);
+            successfulSwapInfos.push(swapInfo);
 
             // Update the in amount
-            inAmount = amountIn.toString();
+            inAmount = swapInfo.amountIn.toString();
           }
 
           if (!isETH(this.chainId, tokenIn)) {
@@ -2995,7 +2999,10 @@ export class Router {
 
     if (executions.length) {
       // Prepend any swap executions
-      executions = [...successfulSwapExecutions, ...executions];
+      executions = [
+        ...mergeSwapInfos(this.chainId, successfulSwapInfos).map((info) => info.execution),
+        ...executions,
+      ];
 
       // If the buy-in currency is not ETH then we won't need any `value` fields
       if (buyInCurrency !== Sdk.Common.Addresses.Native[this.chainId]) {
@@ -3250,6 +3257,7 @@ export class Router {
       for (const detail of details) {
         const order = detail.order as Sdk.PaymentProcessor.Order;
         const takerOrder = order.buildMatching({
+          tokenId: detail.tokenId,
           taker,
           takerMasterNonce: await exchange.getMasterNonce(this.provider, taker),
         });
@@ -4334,5 +4342,72 @@ export class Router {
       txs,
       success,
     };
+  }
+
+  public async transfersTx(
+    transferItem: ApprovalProxy.TransferItem,
+    sender: string
+  ): Promise<TransfersResult> {
+    const useOpenseaTransferHelper = Sdk.Common.Addresses.OpenseaTransferHelper[this.chainId];
+
+    const conduitKey = useOpenseaTransferHelper
+      ? Sdk.SeaportBase.Addresses.OpenseaConduitKey[this.chainId]
+      : Sdk.SeaportBase.Addresses.ReservoirConduitKey[this.chainId];
+    const conduit = new ConduitController(this.chainId).deriveConduit(conduitKey);
+
+    const approvals = transferItem.items.map((item) => ({
+      orderIds: [],
+      contract: item.token,
+      owner: sender,
+      operator: conduit,
+      txData: generateNFTApprovalTxData(item.token, sender, conduit),
+    }));
+    // Ensure approvals are unique
+    const uniqueApprovals = uniqBy(
+      approvals,
+      ({ txData: { from, to, data } }) => `${from}-${to}-${data}`
+    );
+
+    if (useOpenseaTransferHelper) {
+      return {
+        txs: [
+          {
+            approvals: uniqueApprovals,
+            txData: {
+              from: sender,
+              to: Sdk.Common.Addresses.OpenseaTransferHelper[this.chainId],
+              data: new Interface(OpenseaTransferHelperAbi).encodeFunctionData("bulkTransfer", [
+                [
+                  {
+                    ...transferItem,
+                    items: transferItem.items.map((item) => ({
+                      ...item,
+                      validateERC721Receiver: true,
+                    })),
+                  },
+                ],
+                conduitKey,
+              ]),
+            },
+          },
+        ],
+      };
+    } else {
+      return {
+        txs: [
+          {
+            approvals: uniqueApprovals,
+            txData: {
+              from: sender,
+              to: Addresses.ApprovalProxy[this.chainId],
+              data: this.contracts.approvalProxy.interface.encodeFunctionData(
+                "bulkTransferWithExecute",
+                [[transferItem], [], conduitKey]
+              ),
+            },
+          },
+        ],
+      };
+    }
   }
 }

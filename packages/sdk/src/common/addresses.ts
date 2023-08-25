@@ -61,6 +61,10 @@ export const Usdc: ChainIdToAddress = {
   [Network.Base]: "0xd9aaec86b65d86f6a7b5b1b0c42ffa531710b6ca",
 };
 
+export const Dai: ChainIdToAddress = {
+  [Network.Ethereum]: "0x6b175474e89094c44da98b954eedeac495271d0f",
+};
+
 export const RoyaltyEngine: ChainIdToAddress = {
   [Network.Ethereum]: "0x0385603ab55642cb4dd5de3ae9e306809991804f",
   [Network.EthereumGoerli]: "0xe7c9cb6d966f76f3b5142167088927bf34966a1f",
@@ -116,4 +120,19 @@ export const GelatoRelay1BalanceERC2771: ChainIdToAddress = {
   [Network.EthereumGoerli]: "0xd8253782c45a12053594b9deb72d8e8ab2fca54c",
   [Network.Polygon]: "0xd8253782c45a12053594b9deb72d8e8ab2fca54c",
   [Network.Mumbai]: "0xd8253782c45a12053594b9deb72d8e8ab2fca54c",
+};
+
+export const OpenseaTransferHelper: ChainIdToAddress = {
+  [Network.Ethereum]: "0x0000000000c2d145a2526bd8c716263bfebe1a72",
+  [Network.EthereumGoerli]: "0x0000000000c2d145a2526bd8c716263bfebe1a72",
+  [Network.EthereumSepolia]: "0x0000000000c2d145a2526bd8c716263bfebe1a72",
+  [Network.Polygon]: "0x0000000000c2d145a2526bd8c716263bfebe1a72",
+  [Network.Mumbai]: "0x0000000000c2d145a2526bd8c716263bfebe1a72",
+  [Network.Optimism]: "0x0000000000c2d145a2526bd8c716263bfebe1a72",
+  [Network.Arbitrum]: "0x0000000000c2d145a2526bd8c716263bfebe1a72",
+  [Network.ArbitrumNova]: "0x0000000000c2d145a2526bd8c716263bfebe1a72",
+  [Network.Bsc]: "0x0000000000c2d145a2526bd8c716263bfebe1a72",
+  [Network.Avalanche]: "0x0000000000c2d145a2526bd8c716263bfebe1a72",
+  [Network.Base]: "0x0000000000c2d145a2526bd8c716263bfebe1a72",
+  [Network.BaseGoerli]: "0x0000000000c2d145a2526bd8c716263bfebe1a72",
 };
