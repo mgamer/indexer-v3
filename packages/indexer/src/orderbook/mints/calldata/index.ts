@@ -231,7 +231,7 @@ export const generateCollectionMintTxData = async (
       case "referrer": {
         abiData.push({
           abiType: p.abiType,
-          abiValue: referrer,
+          abiValue: referrer ?? AddressZero,
         });
         break;
       }
