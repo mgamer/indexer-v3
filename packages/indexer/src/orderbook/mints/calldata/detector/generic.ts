@@ -13,7 +13,8 @@ import {
 import { AbiParam } from "@/orderbook/mints/calldata";
 import { getMaxSupply } from "@/orderbook/mints/calldata/helpers";
 import { getMethodSignature } from "@/orderbook/mints/method-signatures";
-import * as mintdotfun from "@/orderbook/mints/calldata/detector/mintdotfun";
+
+import * as lanyard from "@/orderbook/mints/calldata/detector/lanyard";
 
 const STANDARD = "unknown";
 
@@ -57,7 +58,10 @@ export const extractByTx = async (
   }
 
   // For now, we only support simple data types in the calldata
-  if (["(", ")", "[", "]", "bytes"].some((x) => methodSignature.params.includes(x))) {
+  let couldBeLanyardCompatible = false;
+  if (methodSignature.params.includes("bytes32[]")) {
+    couldBeLanyardCompatible = true;
+  } else if (["(", ")", "[", "]", "bytes"].some((x) => methodSignature.params.includes(x))) {
     return [];
   }
 
@@ -94,7 +98,6 @@ export const extractByTx = async (
     logger.error("mint-detector", JSON.stringify({ kind: STANDARD, error }));
   }
 
-  const proofParams = params.filter((c) => c.abiType.includes("bytes32[]"));
   const collectionMint: CollectionMint = {
     collection,
     contract: collection,
@@ -116,14 +119,17 @@ export const extractByTx = async (
     maxSupply,
   };
 
-  if (proofParams.length === 1) {
-    const matched = await mintdotfun.extractByCollectionMint(collectionMint);
-    if (matched.length) {
-      return matched;
-    }
+  const results = [collectionMint];
+
+  if (couldBeLanyardCompatible && params.filter((c) => c.abiType.includes("bytes32[]"))) {
+    const lanyardCollectionMints = await lanyard.extractByCollectionMint(
+      collectionMint,
+      methodSignature
+    );
+    results.push(...lanyardCollectionMints);
   }
 
-  return [collectionMint];
+  return results;
 };
 
 export const refreshByCollection = async (collection: string) => {
