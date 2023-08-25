@@ -11,6 +11,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
       case "joepeg-taker-ask":
       case "joepeg-taker-bid": {
         const parsedLog = eventData.abi.parseLog(log);
+        const orderHash = parsedLog.args["orderHash"].toLowerCase();
         const orderSide = subKind === "joepeg-taker-ask" ? "buy" : "sell";
         let taker = parsedLog.args["taker"].toLowerCase();
         const maker = parsedLog.args["maker"].toLowerCase();
@@ -26,7 +27,6 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           currencyPrice,
           baseEventParams.timestamp
         );
-
         if (!priceData.nativePrice) {
           // We must always have the native price
           break;
@@ -34,7 +34,6 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
 
         // Handle: attribution
         const orderKind = "joepeg";
-
         const attributionData = await utils.extractAttributionData(
           baseEventParams.txHash,
           orderKind
@@ -45,6 +44,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         }
 
         onChainData.fillEvents.push({
+          orderId: orderHash,
           orderKind,
           orderSide,
           maker,
