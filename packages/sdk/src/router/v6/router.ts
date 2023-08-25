@@ -9,6 +9,7 @@ import { TokenIDs } from "fummpel";
 // Needed for `rarible`
 import { encodeForMatchOrders } from "../../rarible/utils";
 // Needed for `seaport`
+import { ConduitController } from "../../seaport-base";
 import { constructOfferCounterOrderAndFulfillments } from "../../seaport-base/helpers";
 
 import * as Sdk from "../../index";
@@ -30,6 +31,7 @@ import {
   PerPoolSwapDetails,
   SwapDetail,
   PreSignature,
+  TransfersResult,
 } from "./types";
 import { SwapInfo, generateSwapInfo, mergeSwapInfos } from "./swap/index";
 import { generateFTApprovalTxData, generateNFTApprovalTxData, isETH, isWETH } from "./utils";
@@ -41,6 +43,7 @@ import ERC1155Abi from "../../common/abis/Erc1155.json";
 import RouterAbi from "./abis/ReservoirV6_0_1.json";
 // Misc
 import ApprovalProxyAbi from "./abis/ApprovalProxy.json";
+import OpenseaTransferHelperAbi from "./abis/OpenseaTransferHelper.json";
 // Modules
 import CollectionXyzModuleAbi from "./abis/CollectionXyzModule.json";
 import ElementModuleAbi from "./abis/ElementModule.json";
@@ -68,8 +71,6 @@ import CryptoPunksModuleAbi from "./abis/CryptoPunksModule.json";
 import PaymentProcessorModuleAbi from "./abis/PaymentProcessorModule.json";
 import MintModuleAbi from "./abis/MintModule.json";
 import MintProxyAbi from "./abis/MintProxy.json";
-import OpenSeaTransferHelperAbi from "./abis/OpenSeaTransferHelper.json";
-
 // Exchanges
 import SeaportV15Abi from "../../seaport-v1.5/abis/Exchange.json";
 
@@ -4342,34 +4343,69 @@ export class Router {
     };
   }
 
-  public async genTransferTx(
-    transferItems: ApprovalProxy.TransferItem[],
-    sender: string,
-    type: "opensea" | "reservoir"
-  ): Promise<TxData> {
-    if (type === "opensea") {
+  public async transfersTx(
+    transferItem: ApprovalProxy.TransferItem,
+    sender: string
+  ): Promise<TransfersResult> {
+    const useOpenseaTransferHelper = Sdk.Common.Addresses.OpenseaTransferHelper[this.chainId];
+
+    const conduitKey = useOpenseaTransferHelper
+      ? Sdk.SeaportBase.Addresses.OpenseaConduitKey[this.chainId]
+      : Sdk.SeaportBase.Addresses.ReservoirConduitKey[this.chainId];
+    const conduit = new ConduitController(this.chainId).deriveConduit(conduitKey);
+
+    const approvals = transferItem.items.map((item) => ({
+      orderIds: [],
+      contract: item.token,
+      owner: sender,
+      operator: conduit,
+      txData: generateNFTApprovalTxData(item.token, sender, conduit),
+    }));
+    // Ensure approvals are unique
+    const uniqueApprovals = uniqBy(
+      approvals,
+      ({ txData: { from, to, data } }) => `${from}-${to}-${data}`
+    );
+
+    if (useOpenseaTransferHelper) {
       return {
-        from: sender,
-        to: Sdk.Common.Addresses.OpenSeaTransferHelper[this.chainId],
-        data: new Interface(OpenSeaTransferHelperAbi).encodeFunctionData("bulkTransfer", [
-          transferItems.map((c) => {
-            return {
-              ...c,
-              validateERC721Receiver: true,
-            };
-          }),
-          Sdk.SeaportBase.Addresses.OpenseaConduitKey[this.chainId],
-        ]),
+        txs: [
+          {
+            approvals: uniqueApprovals,
+            txData: {
+              from: sender,
+              to: Sdk.Common.Addresses.OpenseaTransferHelper[this.chainId],
+              data: new Interface(OpenseaTransferHelperAbi).encodeFunctionData("bulkTransfer", [
+                [
+                  {
+                    ...transferItem,
+                    items: transferItem.items.map((item) => ({
+                      ...item,
+                      validateERC721Receiver: true,
+                    })),
+                  },
+                ],
+                conduitKey,
+              ]),
+            },
+          },
+        ],
       };
     } else {
       return {
-        from: sender,
-        to: this.contracts.approvalProxy.address,
-        data: this.contracts.approvalProxy.interface.encodeFunctionData("bulkTransferWithExecute", [
-          transferItems,
-          [],
-          Sdk.SeaportBase.Addresses.ReservoirConduitKey[this.chainId],
-        ]),
+        txs: [
+          {
+            approvals: uniqueApprovals,
+            txData: {
+              from: sender,
+              to: Addresses.ApprovalProxy[this.chainId],
+              data: this.contracts.approvalProxy.interface.encodeFunctionData(
+                "bulkTransferWithExecute",
+                [[transferItem], [], conduitKey]
+              ),
+            },
+          },
+        ],
       };
     }
   }

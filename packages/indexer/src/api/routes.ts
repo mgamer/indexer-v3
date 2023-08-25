@@ -755,6 +755,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
+    path: "/execute/transfer/v1",
+    options: executeEndpoints.postExecuteTransferV1Options,
+  });
+
+  server.route({
+    method: "POST",
     path: "/execute/permit-signature/v1",
     options: executeEndpoints.postPermitSignatureV1Options,
   });
@@ -763,12 +769,6 @@ export const setupRoutes = (server: Server) => {
     method: "POST",
     path: "/execute/pre-signature/v1",
     options: executeEndpoints.postPreSignatureV1Options,
-  });
-
-  server.route({
-    method: "GET",
-    path: "/execute/get-transfer/v1",
-    options: executeEndpoints.getExecuteTransferV1Options,
   });
 
   // Health

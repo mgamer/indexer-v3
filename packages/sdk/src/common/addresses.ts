@@ -122,6 +122,17 @@ export const GelatoRelay1BalanceERC2771: ChainIdToAddress = {
   [Network.Mumbai]: "0xd8253782c45a12053594b9deb72d8e8ab2fca54c",
 };
 
-export const OpenSeaTransferHelper: ChainIdToAddress = {
+export const OpenseaTransferHelper: ChainIdToAddress = {
   [Network.Ethereum]: "0x0000000000c2d145a2526bd8c716263bfebe1a72",
+  [Network.EthereumGoerli]: "0x0000000000c2d145a2526bd8c716263bfebe1a72",
+  [Network.EthereumSepolia]: "0x0000000000c2d145a2526bd8c716263bfebe1a72",
+  [Network.Polygon]: "0x0000000000c2d145a2526bd8c716263bfebe1a72",
+  [Network.Mumbai]: "0x0000000000c2d145a2526bd8c716263bfebe1a72",
+  [Network.Optimism]: "0x0000000000c2d145a2526bd8c716263bfebe1a72",
+  [Network.Arbitrum]: "0x0000000000c2d145a2526bd8c716263bfebe1a72",
+  [Network.ArbitrumNova]: "0x0000000000c2d145a2526bd8c716263bfebe1a72",
+  [Network.Bsc]: "0x0000000000c2d145a2526bd8c716263bfebe1a72",
+  [Network.Avalanche]: "0x0000000000c2d145a2526bd8c716263bfebe1a72",
+  [Network.Base]: "0x0000000000c2d145a2526bd8c716263bfebe1a72",
+  [Network.BaseGoerli]: "0x0000000000c2d145a2526bd8c716263bfebe1a72",
 };
