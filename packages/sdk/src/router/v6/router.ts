@@ -68,6 +68,8 @@ import CryptoPunksModuleAbi from "./abis/CryptoPunksModule.json";
 import PaymentProcessorModuleAbi from "./abis/PaymentProcessorModule.json";
 import MintModuleAbi from "./abis/MintModule.json";
 import MintProxyAbi from "./abis/MintProxy.json";
+import OpenSeaTransferHelperAbi from "./abis/OpenSeaTransferHelper.json";
+
 // Exchanges
 import SeaportV15Abi from "../../seaport-v1.5/abis/Exchange.json";
 
@@ -4334,5 +4336,37 @@ export class Router {
       txs,
       success,
     };
+  }
+
+  public async genTransferTx(
+    transferItems: ApprovalProxy.TransferItem[],
+    sender: string,
+    type: "opensea" | "reservoir"
+  ): Promise<TxData> {
+    if (type === "opensea") {
+      return {
+        from: sender,
+        to: Sdk.Common.Addresses.OpenSeaTransferHelper[this.chainId],
+        data: new Interface(OpenSeaTransferHelperAbi).encodeFunctionData("bulkTransfer", [
+          transferItems.map((c) => {
+            return {
+              ...c,
+              validateERC721Receiver: true,
+            };
+          }),
+          Sdk.SeaportBase.Addresses.OpenseaConduitKey[this.chainId],
+        ]),
+      };
+    } else {
+      return {
+        from: sender,
+        to: this.contracts.approvalProxy.address,
+        data: this.contracts.approvalProxy.interface.encodeFunctionData("bulkTransferWithExecute", [
+          transferItems,
+          [],
+          Sdk.SeaportBase.Addresses.ReservoirConduitKey[this.chainId],
+        ]),
+      };
+    }
   }
 }

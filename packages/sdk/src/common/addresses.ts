@@ -117,3 +117,7 @@ export const GelatoRelay1BalanceERC2771: ChainIdToAddress = {
   [Network.Polygon]: "0xd8253782c45a12053594b9deb72d8e8ab2fca54c",
   [Network.Mumbai]: "0xd8253782c45a12053594b9deb72d8e8ab2fca54c",
 };
+
+export const OpenSeaTransferHelper: ChainIdToAddress = {
+  [Network.Ethereum]: "0x0000000000c2d145a2526bd8c716263bfebe1a72",
+};

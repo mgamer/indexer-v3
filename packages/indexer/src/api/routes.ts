@@ -765,6 +765,12 @@ export const setupRoutes = (server: Server) => {
     options: executeEndpoints.postPreSignatureV1Options,
   });
 
+  server.route({
+    method: "GET",
+    path: "/execute/get-transfer/v1",
+    options: executeEndpoints.getExecuteTransferV1Options,
+  });
+
   // Health
 
   // Both `/readyz` and `/livez` point to the same handler,
