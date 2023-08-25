@@ -213,8 +213,8 @@ export const getNetworkSettings = (): NetworkSettings => {
       indexes: {
         activities: {
           numberOfShards: 2,
-          disableMappingsUpdate: false,
-          configName: "CONFIG_DEFAULT",
+          disableMappingsUpdate: true,
+          configName: "CONFIG_1689873821",
         },
       },
     },
@@ -531,6 +531,8 @@ export const getNetworkSettings = (): NetworkSettings => {
           indexes: {
             activities: {
               numberOfShards: 10,
+              disableMappingsUpdate: true,
+              configName: "CONFIG_1689873821",
             },
           },
         },
@@ -884,6 +886,14 @@ export const getNetworkSettings = (): NetworkSettings => {
           // PaymentProcessor WETH
           "0xfff9976782d46cc05630d1f6ebab18b2324d6b14": true,
         },
+        elasticsearch: {
+          indexes: {
+            activities: {
+              disableMappingsUpdate: true,
+              configName: "CONFIG_1689873821",
+            },
+          },
+        },
         subDomain: "api-sepolia",
         onStartup: async () => {
           // Insert the native currency
@@ -917,6 +927,11 @@ export const getNetworkSettings = (): NetworkSettings => {
         enableWebSocket: false,
         realtimeSyncMaxBlockLag: 32,
         realtimeSyncFrequencySeconds: 5,
+        supportedBidCurrencies: {
+          ...defaultNetworkSettings.supportedBidCurrencies,
+          // OpenSea WETH
+          "0xa6fa4fb5f76172d178d61b04b0ecd319c5d1c0aa": true,
+        },
         lastBlockLatency: 5,
         subDomain: "api-mumbai",
         elasticsearch: {
@@ -1000,6 +1015,9 @@ export const getNetworkSettings = (): NetworkSettings => {
         realtimeSyncFrequencySeconds: 5,
         lastBlockLatency: 5,
         subDomain: "api-arbitrum-nova",
+        coingecko: {
+          networkId: "arbitrum-nova",
+        },
         elasticsearch: {
           indexes: {
             activities: {
@@ -1115,6 +1133,9 @@ export const getNetworkSettings = (): NetworkSettings => {
         realtimeSyncFrequencySeconds: 5,
         lastBlockLatency: 5,
         subDomain: "api-avalanche",
+        coingecko: {
+          networkId: "avalanche",
+        },
         onStartup: async () => {
           // Insert the native currency
           await Promise.all([
@@ -1148,6 +1169,9 @@ export const getNetworkSettings = (): NetworkSettings => {
         realtimeSyncFrequencySeconds: 5,
         lastBlockLatency: 5,
         subDomain: "api-base",
+        coingecko: {
+          networkId: "base",
+        },
         elasticsearch: {
           indexes: {
             activities: {
@@ -1188,6 +1212,9 @@ export const getNetworkSettings = (): NetworkSettings => {
         realtimeSyncFrequencySeconds: 5,
         lastBlockLatency: 5,
         subDomain: "api-linea",
+        coingecko: {
+          networkId: "linea",
+        },
         onStartup: async () => {
           // Insert the native currency
           await Promise.all([

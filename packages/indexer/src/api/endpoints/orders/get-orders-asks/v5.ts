@@ -315,13 +315,6 @@ export const getOrdersAsksV5Options: RouteOptions = {
         );
       }
 
-      // TODO Remove this restriction once an index is created for updatedAt and contracts
-      if (query.sortBy === "updatedAt" && query.contracts && query.status === "any") {
-        throw Boom.badRequest(
-          `Cannot filter by contracts while sortBy = "updatedAt" and status = "any"`
-        );
-      }
-
       switch (query.status) {
         case "active": {
           orderStatusFilter = `orders.fillability_status = 'fillable' AND orders.approval_status = 'approved'`;
@@ -530,9 +523,9 @@ export const getOrdersAsksV5Options: RouteOptions = {
       // Sorting
       if (query.sortBy === "price") {
         if (query.normalizeRoyalties) {
-          baseQuery += ` ORDER BY orders.normalized_value, orders.id`;
+          baseQuery += ` ORDER BY orders.normalized_value, orders.fee_bps, orders.id`;
         } else {
-          baseQuery += ` ORDER BY orders.price, orders.id`;
+          baseQuery += ` ORDER BY orders.price, orders.fee_bps, orders.id`;
         }
       } else if (query.sortBy === "updatedAt") {
         if (query.sortDirection === "asc") {

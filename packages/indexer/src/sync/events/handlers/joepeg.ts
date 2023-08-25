@@ -8,10 +8,10 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
   for (const { subKind, baseEventParams, log } of events) {
     const eventData = getEventData([subKind])[0];
     switch (subKind) {
-      case "joepegs-taker-ask":
-      case "joepegs-taker-bid": {
+      case "joepeg-taker-ask":
+      case "joepeg-taker-bid": {
         const parsedLog = eventData.abi.parseLog(log);
-        const orderSide = subKind === "joepegs-taker-ask" ? "buy" : "sell";
+        const orderSide = subKind === "joepeg-taker-ask" ? "buy" : "sell";
         let taker = parsedLog.args["taker"].toLowerCase();
         const maker = parsedLog.args["maker"].toLowerCase();
         const currency = parsedLog.args["currency"].toLowerCase();
@@ -33,7 +33,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         }
 
         // Handle: attribution
-        const orderKind = "joepegs";
+        const orderKind = "joepeg";
 
         const attributionData = await utils.extractAttributionData(
           baseEventParams.txHash,
@@ -45,7 +45,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         }
 
         onChainData.fillEvents.push({
-          orderKind: "joepegs",
+          orderKind,
           orderSide,
           maker,
           taker,
@@ -61,6 +61,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           fillSourceId: attributionData.fillSource?.id,
           baseEventParams,
         });
+
         break;
       }
     }

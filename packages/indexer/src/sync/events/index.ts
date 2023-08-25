@@ -259,8 +259,8 @@ export const extractEventsBatches = async (
             data: kindToEvents.get("erc721c") ?? [],
           },
           {
-            kind: "joepegs",
-            data: kindToEvents.get("joepegs") ?? [],
+            kind: "joepeg",
+            data: kindToEvents.get("joepeg") ?? [],
           },
         ];
 

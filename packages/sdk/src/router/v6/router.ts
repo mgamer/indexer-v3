@@ -31,7 +31,7 @@ import {
   SwapDetail,
   PreSignature,
 } from "./types";
-import { generateSwapExecutions } from "./swap/index";
+import { SwapInfo, generateSwapInfo, mergeSwapInfos } from "./swap/index";
 import { generateFTApprovalTxData, generateNFTApprovalTxData, isETH, isWETH } from "./utils";
 
 // Tokens
@@ -780,7 +780,8 @@ export class Router {
       const operator = exchange.contract.address;
 
       // Use the gas-efficient sweep method when all listings are from the same collection
-      const useSweepCollection = details.every((c) => c.contract === details[0].contract);
+      const useSweepCollection =
+        details.length > 1 && details.every((c) => c.contract === details[0].contract);
 
       let approval: FTApproval | undefined;
       if (!isETH(this.chainId, details[0].currency)) {
@@ -2841,7 +2842,7 @@ export class Router {
 
     // Handle any needed swaps
 
-    const successfulSwapExecutions: ExecutionInfo[] = [];
+    const successfulSwapInfos: SwapInfo[] = [];
     const unsuccessfulDependentExecutionIndexes: number[] = [];
     if (swapDetails.length) {
       // Aggregate any swap details for the same token pair
@@ -2871,7 +2872,7 @@ export class Router {
         return perPoolDetails;
       }, {} as PerPoolSwapDetails);
 
-      // For each token pair, generate a swap execution
+      // For each token pair, generate a swap info
       for (const swapDetails of Object.values(aggregatedSwapDetails)) {
         // All swap details for this pool will have the same out and in tokens
         const { tokenIn, tokenOut } = swapDetails[0];
@@ -2897,7 +2898,7 @@ export class Router {
           // Only generate a swap if the in token is different from the out token
           let inAmount = totalAmountOut.toString();
           if (tokenIn !== tokenOut) {
-            const { executions: swapExecutions, amountIn } = await generateSwapExecutions(
+            const swapInfo = await generateSwapInfo(
               this.chainId,
               this.provider,
               swapProvider,
@@ -2908,13 +2909,14 @@ export class Router {
                 module: swapModule,
                 transfers,
                 refundTo: relayer,
+                revertIfIncomplete: Boolean(!options?.partial),
               }
             );
 
-            successfulSwapExecutions.push(...swapExecutions);
+            successfulSwapInfos.push(swapInfo);
 
             // Update the in amount
-            inAmount = amountIn.toString();
+            inAmount = swapInfo.amountIn.toString();
           }
 
           if (!isETH(this.chainId, tokenIn)) {
@@ -2994,7 +2996,10 @@ export class Router {
 
     if (executions.length) {
       // Prepend any swap executions
-      executions = [...successfulSwapExecutions, ...executions];
+      executions = [
+        ...mergeSwapInfos(this.chainId, successfulSwapInfos).map((info) => info.execution),
+        ...executions,
+      ];
 
       // If the buy-in currency is not ETH then we won't need any `value` fields
       if (buyInCurrency !== Sdk.Common.Addresses.Native[this.chainId]) {
