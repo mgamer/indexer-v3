@@ -573,7 +573,9 @@ export const postOrderV4Options: RouteOptions = {
 
       return { results };
     } catch (error) {
-      logger.error(`post-order-${version}-handler`, `Handler failure: ${error}`);
+      if (!(error instanceof Boom.Boom)) {
+        logger.error(`post-order-${version}-handler`, `Handler failure: ${error}`);
+      }
       throw error;
     }
   },
