@@ -39,7 +39,8 @@ if (config.doBackgroundWork) {
             fill_events_2.tx_hash,
             fill_events_2.log_index,
             fill_events_2.batch_index,
-            fill_events_2.timestamp
+            fill_events_2.timestamp,
+            fill_events_2.taker
           FROM fill_events_2
           WHERE (
             fill_events_2.timestamp,
