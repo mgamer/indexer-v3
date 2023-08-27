@@ -91,7 +91,7 @@ if (config.doBackgroundWork) {
             values.push({
               tx_hash: toBuffer(fe.baseEventParams.txHash),
               log_index: fe.baseEventParams.logIndex,
-              batchIndex: fe.baseEventParams.batchIndex,
+              batch_index: fe.baseEventParams.batchIndex,
               maker: toBuffer(fe.maker),
               taker: toBuffer(fe.taker),
             });
@@ -112,6 +112,7 @@ if (config.doBackgroundWork) {
             WHERE fill_events_2.tx_hash = x.tx_hash::BYTEA
               AND fill_events_2.log_index = x.log_index::INT
               AND fill_events_2.batch_index = x.batch_index::INT
+              AND fill_events_2.is_deleted != 1
               AND (fill_events_2.maker != x.maker::BYTEA OR fill_events_2.taker != x.taker::BYTEA)
           `
         );
