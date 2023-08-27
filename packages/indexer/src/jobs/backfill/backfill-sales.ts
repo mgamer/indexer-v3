@@ -122,7 +122,7 @@ if (config.doBackgroundWork) {
   });
 
   redlock
-    .acquire([`${QUEUE_NAME}-lock-2`], 60 * 60 * 24 * 30 * 1000)
+    .acquire([`${QUEUE_NAME}-lock-999`], 60 * 60 * 24 * 30 * 1000)
     .then(async () => {
       if (Sdk.RouterV6.Addresses.SeaportV15Module[config.chainId]) {
         await idb.none(
