@@ -276,13 +276,16 @@ async function insertQueries(queries: string[], backfill: boolean) {
       await eventsSyncNftTransfersWriteBufferJob.addToQueue({ query: pgp.helpers.concat(query) });
     }
   } else {
+    const promises = [];
     // Otherwise write directly since there might be jobs that depend
     // on the events to have been written to the database at the time
     // they get to run and we have no way to easily enforce this when
     // using the write buffer.
-    for (const query of _.chunk(queries, 250)) {
-      await idb.none(pgp.helpers.concat(query));
+    for (const query of _.chunk(queries, 500)) {
+      promises.push(idb.none(pgp.helpers.concat(query)));
     }
+
+    await Promise.all(promises);
   }
 }
 
