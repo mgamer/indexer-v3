@@ -221,9 +221,6 @@ export const getTopSellingCollections = async (params: {
   const { startTime, endTime, fillType, limit } = params;
 
   const { trendingExcludedContracts } = getNetworkSettings();
-  const collectionId = !["optimism", "base"].includes(getNetworkName())
-    ? "collection.id"
-    : "collection.id.keyword";
 
   const salesQuery = {
     bool: {
@@ -246,7 +243,7 @@ export const getTopSellingCollections = async (params: {
         must_not: [
           {
             terms: {
-              collectionId: trendingExcludedContracts,
+              "collection.id": trendingExcludedContracts,
             },
           },
         ],
@@ -257,19 +254,23 @@ export const getTopSellingCollections = async (params: {
   const collectionAggregation = {
     collections: {
       terms: {
-        field: collectionId,
+        field: !["optimism", "base"].includes(getNetworkName())
+          ? "collection.id"
+          : "collection.id.keyword",
         size: limit,
         order: { total_transactions: "desc" },
       },
       aggs: {
         total_sales: {
           value_count: {
-            field: "id",
+            field: !["optimism", "base"].includes(getNetworkName()) ? "id" : "id.keyword",
           },
         },
         total_transactions: {
           cardinality: {
-            field: "event.txHash",
+            field: !["optimism", "base"].includes(getNetworkName())
+              ? "event.txHash"
+              : "event.txHash.keyword",
           },
         },
 
@@ -286,7 +287,7 @@ export const getTopSellingCollections = async (params: {
                 "contract",
                 "collection.name",
                 "collection.image",
-                collectionId,
+                "collection.id",
                 "name",
                 "toAddress",
                 "token.id",
