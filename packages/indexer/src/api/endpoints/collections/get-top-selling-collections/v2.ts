@@ -131,28 +131,28 @@ export const getTopSellingCollectionsV2Options: RouteOptions = {
       normalizeRoyalties,
       useNonFlaggedFloorAsk,
     } = request.query;
-
+    const now = Math.floor(new Date().getTime() / 1000);
     try {
-      let startTime = Math.floor(new Date().getTime() / 1000) - 60 * 24 * 60;
+      let startTime = now - 60 * 24 * 60;
 
       switch (period) {
         case "5m": {
-          startTime = Math.floor(new Date().getTime() / 1000) - 5 * 60;
+          startTime = now - 5 * 60;
           cacheTime = 60 * 1;
           break;
         }
         case "30m": {
-          startTime = Math.floor(new Date().getTime() / 1000) - 30 * 60;
+          startTime = now - 30 * 60;
           cacheTime = 60 * 10;
           break;
         }
         case "1h": {
-          startTime = Math.floor(new Date().getTime() / 1000) - 60 * 1 * 60;
+          startTime = now - 60 * 1 * 60;
           cacheTime = 60 * 30;
           break;
         }
         case "6h": {
-          startTime = Math.floor(new Date().getTime() / 1000) - 60 * 6 * 60;
+          startTime = now - 60 * 6 * 60;
           break;
         }
       }
