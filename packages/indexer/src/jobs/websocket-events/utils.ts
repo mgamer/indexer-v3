@@ -10,7 +10,7 @@ export const formatValidBetween = (validBetween: string, id?: string) => {
       validUntil: Math.floor(new Date(parsed[1]).getTime() / 1000),
     };
   } catch (error) {
-    logger.info(
+    logger.error(
       "formatValidBetween",
       `Error parsing validBetween. validBetween=${validBetween} id=${id}`
     );
