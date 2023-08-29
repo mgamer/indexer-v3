@@ -283,7 +283,7 @@ export const getTopSellingCollectionsV2Options: RouteOptions = {
         })
       );
       const response = h.response({ collections });
-      response.header("cache-control", `${cacheTime}`);
+      response.header("cache-control", `${cacheTime}, public`);
       return response;
     } catch (error) {
       logger.error(`get-top-selling-collections-${version}-handler`, `Handler failure: ${error}`);
