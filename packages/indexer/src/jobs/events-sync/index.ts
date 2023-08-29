@@ -37,8 +37,8 @@ if (config.doBackgroundWork && config.catchup) {
             if (!config.master || !networkSettings.enableWebSocket) {
               const block = await baseProvider.getBlockNumber();
               await eventsSyncRealtimeJob.addToQueue({ block });
+              logger.info("events-sync-catchup", `Catching up events for block ${block}`);
             }
-            logger.info("events-sync-catchup", "Catching up events");
           } catch (error) {
             logger.error("events-sync-catchup", `Failed to catch up events: ${error}`);
           }
