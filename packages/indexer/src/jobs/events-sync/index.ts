@@ -20,7 +20,6 @@ import { checkForMissingBlocks } from "@/events-sync/syncEventsV2";
 // BACKGROUND WORKER ONLY
 if (config.doBackgroundWork && config.catchup) {
   const networkSettings = getNetworkSettings();
-
   // MASTER ONLY
   if (config.master && networkSettings.enableWebSocket) {
     // Besides the manual polling of events via the above cron job
