@@ -1,6 +1,6 @@
 import { AbstractRabbitMqJobHandler, BackoffStrategy } from "@/jobs/abstract-rabbit-mq-job-handler";
 import { config } from "@/config/index";
-import { redis } from "@/common/redis";
+import { acquireLock, redis } from "@/common/redis";
 import { logger } from "@/common/logger";
 import { checkForOrphanedBlock, syncEvents } from "@/events-sync/syncEventsV2";
 
@@ -20,6 +20,16 @@ export class EventsSyncRealtimeJob extends AbstractRabbitMqJobHandler {
 
   protected async process(payload: EventsSyncRealtimeJobPayload) {
     const { block } = payload;
+
+    // Prevent duplicate syncs on polygon
+    if (
+      config.chainId === 137 &&
+      !(await acquireLock(`realtime-sync-${block}`, this.consumerTimeout))
+    ) {
+      logger.warn(this.queueName, `duplicate block ${block}`);
+      return;
+    }
+
     // lets set the latest block to the block we are syncing if it is higher than the current latest block by 1. If it is higher than 1, we create a job to sync the missing blocks
     // if its lower than the current latest block, we dont update the latest block in redis, but we still sync the block (this is for when we are catching up on missed blocks, or when we are syncing a block that is older than the current latest block)
     // dont do this on polygon
