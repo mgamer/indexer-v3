@@ -127,7 +127,9 @@ export const getChainStatsFromActivity = async () => {
               },
               aggs: {
                 sales_count: {
-                  value_count: { field: "id" },
+                  value_count: {
+                    field: !["optimism", "base"].includes(getNetworkName()) ? "id" : "id.keyword",
+                  },
                 },
                 total_volume: {
                   sum: { field: "pricing.priceDecimal" },
