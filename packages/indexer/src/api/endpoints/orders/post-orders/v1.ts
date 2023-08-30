@@ -42,6 +42,7 @@ export const postOrdersV1Options: RouteOptions = {
             .required(),
           data: Joi.object().required(),
           originatedAt: Joi.string(),
+          source: Joi.string(),
         })
       ),
     }),
@@ -64,6 +65,16 @@ export const postOrdersV1Options: RouteOptions = {
       const orders = payload.orders;
 
       logger.info(`post-orders-${version}-handler`, `Got ${orders.length} orders`);
+
+      // Log seaport order for debugging
+      if (orders.length > 0 && orders[0].kind === "seaport-v1.5") {
+        logger.info(
+          `post-orders-${version}-handler`,
+          JSON.stringify({
+            order: orders[0],
+          })
+        );
+      }
 
       const orderInfos: GenericOrderInfo[] = [];
       for (const { kind, data, originatedAt, source } of orders) {
