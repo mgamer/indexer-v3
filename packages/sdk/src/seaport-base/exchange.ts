@@ -11,6 +11,7 @@ import * as CommonAddresses from "../common/addresses";
 import { TxData, bn, generateSourceBytes, lc, n, s } from "../utils";
 
 import { ConduitController } from "../seaport-base";
+import { Network } from "../utils";
 
 export abstract class SeaportBaseExchange {
   public chainId: number;
@@ -114,7 +115,10 @@ export abstract class SeaportBaseExchange {
         // Order has no criteria
         !matchParams.criteriaResolvers &&
         // Order requires no extra data
-        !this.requiresExtraData(order)
+        !this.requiresExtraData(order) &&
+        // we found high gas on linea mainnet with fulfillBasicOrder_efficient_6GL6yc
+        // so try use fulfillAdvancedOrder instead
+        this.chainId !== Network.Linea
       ) {
         info = info as BaseOrderInfo;
 
