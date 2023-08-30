@@ -75,7 +75,6 @@ export const postOrdersV1Options: RouteOptions = {
               originatedAt,
               source,
             },
-            isOpenSea: source === "opensea",
           },
           validateBidValue: true,
         });
