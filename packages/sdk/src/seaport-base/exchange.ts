@@ -115,19 +115,21 @@ export abstract class SeaportBaseExchange {
         // Order has no criteria
         !matchParams.criteriaResolvers &&
         // Order requires no extra data
-        !this.requiresExtraData(order) &&
-        // we found high gas on linea mainnet with fulfillBasicOrder_efficient_6GL6yc
-        // so try use fulfillAdvancedOrder instead
-        this.chainId !== Network.Linea
+        !this.requiresExtraData(order)
       ) {
         info = info as BaseOrderInfo;
+        // to see if fulfillBasicOrder can solve gas problem on linea mainnet
+        const methodName =
+          this.chainId === Network.Linea
+            ? "fulfillBasicOrder"
+            : "fulfillBasicOrder_efficient_6GL6yc";
 
         // Use "basic" fulfillment
         return {
           from: taker,
           to: this.contract.address,
           data:
-            this.contract.interface.encodeFunctionData("fulfillBasicOrder_efficient_6GL6yc", [
+            this.contract.interface.encodeFunctionData(methodName, [
               {
                 considerationToken: info.paymentToken,
                 considerationIdentifier: "0",
