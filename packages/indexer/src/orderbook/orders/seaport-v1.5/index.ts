@@ -83,13 +83,13 @@ export const save = async (
     orderParams: Sdk.SeaportBase.Types.OrderComponents,
     metadata: OrderMetadata,
     isReservoir?: boolean,
-    isOpenSea?: boolean,
     openSeaOrderParams?: OpenseaOrderParams
   ) => {
     try {
       const order = new Sdk.SeaportV15.Order(config.chainId, orderParams);
       const info = order.getInfo();
       const id = order.hash();
+      const isOpenSea = metadata.source === "opensea";
 
       // Check: order has a valid format
       if (!info) {
@@ -576,10 +576,6 @@ export const save = async (
 
       let source: SourcesEntity | undefined;
 
-      if (isOpenSea) {
-        source = await sources.getOrInsert("opensea.io");
-      }
-
       if (metadata.source) {
         source = await sources.getOrInsert(metadata.source);
       } else {
@@ -588,6 +584,10 @@ export const save = async (
         if (matchedSource) {
           source = matchedSource;
         }
+      }
+
+      if (isOpenSea) {
+        source = await sources.getOrInsert("opensea.io");
       }
 
       // If the order is native, override any default source
@@ -845,7 +845,6 @@ export const save = async (
             orderInfo.orderParams as Sdk.SeaportBase.Types.OrderComponents,
             orderInfo.metadata,
             orderInfo.isReservoir,
-            orderInfo.isOpenSea,
             orderInfo.openSeaOrderParams
           )
         )
