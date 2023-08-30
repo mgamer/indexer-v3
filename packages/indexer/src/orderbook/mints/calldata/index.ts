@@ -194,6 +194,17 @@ export const generateCollectionMintTxData = async (
             break;
           }
 
+          case "mintdotfun": {
+            if (allowlistItemIndex === 0) {
+              abiValue = await mints.mintdotfun.generateProofValue(
+                collectionMint,
+                minter,
+                referrer ?? AddressZero
+              );
+            }
+            break;
+          }
+
           default: {
             throw new Error("Allowlist fields not supported");
           }

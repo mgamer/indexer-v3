@@ -19,8 +19,9 @@ import * as seadrop from "@/orderbook/mints/calldata/detector/seadrop";
 import * as thirdweb from "@/orderbook/mints/calldata/detector/thirdweb";
 import * as zora from "@/orderbook/mints/calldata/detector/zora";
 import * as lanyard from "@/orderbook/mints/calldata/detector/lanyard";
+import * as mintdotfun from "@/orderbook/mints/calldata/detector/mintdotfun";
 
-export { decent, foundation, generic, manifold, seadrop, thirdweb, zora, lanyard };
+export { decent, foundation, generic, manifold, seadrop, thirdweb, zora, lanyard, mintdotfun };
 
 export const extractByTx = async (txHash: string, skipCache = false) => {
   // Fetch all transfers associated to the transaction
