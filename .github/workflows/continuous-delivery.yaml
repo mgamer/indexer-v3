@@ -462,7 +462,7 @@ jobs:
             ./prod/platform/indexer-worker-linea.yaml \
             ${{ github.sha }} \
             indexer-worker-linea
-          /utils/version_update.sh \
+          ./utils/version_update.sh \
             ./prod/platform/indexer-worker-master-linea.yaml \
             ${{ github.sha }} \
             indexer-worker-master-linea
