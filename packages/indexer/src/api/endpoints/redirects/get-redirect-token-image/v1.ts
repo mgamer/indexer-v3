@@ -8,6 +8,8 @@ import { logger } from "@/common/logger";
 import { Tokens } from "@/models/tokens";
 import * as Boom from "@hapi/boom";
 import { Assets, ImageSize } from "@/utils/assets";
+import { metadataIndexFetchJob } from "@/jobs/metadata-index/metadata-fetch-job";
+import { config } from "@/config/index";
 
 const version = "v1";
 
@@ -48,8 +50,29 @@ export const getRedirectTokenImageV1Options: RouteOptions = {
       const [contract, tokenId] = params.token.split(":");
       const token = await Tokens.getByContractAndTokenId(contract, tokenId, true);
 
-      if (_.isNull(token) || !token.image) {
+      if (_.isNull(token)) {
         throw Boom.badData(`Token ${params.token} not found`);
+      }
+
+      if (!token.image) {
+        // Refresh token metadata if image does not exist
+        metadataIndexFetchJob.addToQueue(
+          [
+            {
+              kind: "single-token",
+              data: {
+                method: config.metadataIndexingMethod,
+                contract,
+                tokenId,
+                collection: token.collectionId || contract,
+              },
+              context: "get-redirect-token-image-v1",
+            },
+          ],
+          true
+        );
+
+        throw Boom.notFound(`Image not found for token ${params.token}`);
       }
 
       const imageUrl = Assets.getResizedImageUrl(
