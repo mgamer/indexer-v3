@@ -147,6 +147,10 @@ export type GenericOrder =
       order: Sdk.SudoswapV2.Order;
     }
   | {
+      kind: "midaswap";
+      order: Sdk.Midaswap.Order;
+    }
+  | {
       kind: "caviar-v1";
       order: Sdk.CaviarV1.Order;
     }
@@ -225,6 +229,7 @@ export type FillBidsResult = {
     approvals: NFTApproval[];
     txData: TxData;
     orderIds: string[];
+    preSignatures: PreSignature[];
   }[];
   success: { [orderId: string]: boolean };
 };
@@ -244,6 +249,15 @@ export type FillMintsResult = {
     orderIds: string[];
   }[];
   success: { [orderId: string]: boolean };
+};
+
+// Transfers
+
+export type TransfersResult = {
+  txs: {
+    approvals: NFTApproval[];
+    txData: TxData;
+  }[];
 };
 
 // Swaps

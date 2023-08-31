@@ -11,6 +11,7 @@ export const OpenseaConduitKey: ChainIdToAddress = {
   [Network.ArbitrumNova]: "0x0000007b02230091a7ed01230072f7006a004d60a8d4e71d599b8104250f0000",
   [Network.Mumbai]: "0x0000007b02230091a7ed01230072f7006a004d60a8d4e71d599b8104250f0000",
   [Network.Avalanche]: "0x0000007b02230091a7ed01230072f7006a004d60a8d4e71d599b8104250f0000",
+  [Network.Base]: "0x0000007b02230091a7ed01230072f7006a004d60a8d4e71d599b8104250f0000",
 };
 
 export const ReservoirConduitKey: ChainIdToAddress = {
@@ -28,6 +29,7 @@ export const ReservoirConduitKey: ChainIdToAddress = {
   [Network.Zora]: "0xf3d63166f0ca56c3c1a3508fce03ff0cf3fb691e000000000000000000000000",
   [Network.Base]: "0xf3d63166f0ca56c3c1a3508fce03ff0cf3fb691e000000000000000000000000",
   [Network.Linea]: "0xf3d63166f0ca56c3c1a3508fce03ff0cf3fb691e000000000000000000000000",
+  [Network.Avalanche]: "0xf3d63166f0ca56c3c1a3508fce03ff0cf3fb691e000000000000000000000000",
 };
 
 export const ConduitController: ChainIdToAddress = {
@@ -80,6 +82,8 @@ export const OperatorFilterRegistry: ChainIdToAddress = {
   [Network.Optimism]: "0x000000000000aaeb6d7670e522a718067333cd4e",
   [Network.Polygon]: "0x000000000000aaeb6d7670e522a718067333cd4e",
   [Network.Arbitrum]: "0x000000000000aaeb6d7670e522a718067333cd4e",
+  [Network.Avalanche]: "0x000000000000aaeb6d7670e522a718067333cd4e",
+  [Network.Base]: "0x000000000000aaeb6d7670e522a718067333cd4e",
 };
 
 // Zones
@@ -87,10 +91,13 @@ export const OperatorFilterRegistry: ChainIdToAddress = {
 export const OpenSeaProtectedOffersZone: ChainIdToAddress = {
   [Network.Ethereum]: "0x000000e7ec00e7b300774b00001314b8610022b8",
   [Network.EthereumGoerli]: "0x000000e7ec00e7b300774b00001314b8610022b8",
+  [Network.EthereumSepolia]: "0x000000e7ec00e7b300774b00001314b8610022b8",
   [Network.Bsc]: "0x000000e7ec00e7b300774b00001314b8610022b8",
   [Network.Optimism]: "0x000000e7ec00e7b300774b00001314b8610022b8",
   [Network.Polygon]: "0x000000e7ec00e7b300774b00001314b8610022b8",
   [Network.Arbitrum]: "0x000000e7ec00e7b300774b00001314b8610022b8",
+  [Network.Avalanche]: "0x000000e7ec00e7b300774b00001314b8610022b8",
+  [Network.Base]: "0x000000e7ec00e7b300774b00001314b8610022b8",
 };
 
 // TODO: Deploy to all other supported networks

@@ -21,6 +21,7 @@ export * as superrare from "@/orderbook/orders/superrare";
 export * as looksRareV2 from "@/orderbook/orders/looks-rare-v2";
 export * as collectionxyz from "@/orderbook/orders/collectionxyz";
 export * as sudoswapV2 from "@/orderbook/orders/sudoswap-v2";
+export * as midaswap from "@/orderbook/orders/midaswap";
 export * as caviarV1 from "@/orderbook/orders/caviar-v1";
 export * as paymentProcessor from "@/orderbook/orders/payment-processor";
 
@@ -36,7 +37,7 @@ import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
 import { SourcesEntity } from "@/models/sources/sources-entity";
 import { checkMarketplaceIsFiltered } from "@/utils/marketplace-blacklists";
-import { getRoyalties } from "@/utils/royalties";
+import * as registry from "@/utils/royalties/registry";
 
 // Whenever a new order kind is added, make sure to also include an
 // entry/implementation in the below types/methods in order to have
@@ -79,9 +80,11 @@ export type OrderKind =
   | "blend"
   | "collectionxyz"
   | "sudoswap-v2"
+  | "midaswap"
   | "caviar-v1"
   | "payment-processor"
-  | "blur-v2";
+  | "blur-v2"
+  | "joepeg";
 
 // In case we don't have the source of an order readily available, we use
 // a default value where possible (since very often the exchange protocol
@@ -160,6 +163,8 @@ export const getOrderSourceByOrderKind = async (
       case "sudoswap":
       case "sudoswap-v2":
         return sources.getOrInsert("sudoswap.xyz");
+      case "midaswap":
+        return sources.getOrInsert("midaswap.org");
       case "caviar-v1":
         return sources.getOrInsert("caviar.sh");
       case "nftx":
@@ -407,6 +412,14 @@ export const generateListingDetailsV6 = (
         kind: "sudoswap-v2",
         ...common,
         order: new Sdk.SudoswapV2.Order(config.chainId, order.rawData),
+      };
+    }
+
+    case "midaswap": {
+      return {
+        kind: "midaswap",
+        ...common,
+        order: new Sdk.Midaswap.Order(config.chainId, order.rawData),
       };
     }
 
@@ -737,6 +750,15 @@ export const generateBidDetailsV6 = async (
       };
     }
 
+    case "midaswap": {
+      const sdkOrder = new Sdk.Midaswap.Order(config.chainId, order.rawData);
+      return {
+        kind: "midaswap",
+        ...common,
+        order: sdkOrder,
+      };
+    }
+
     case "caviar-v1": {
       const sdkOrder = new Sdk.CaviarV1.Order(config.chainId, order.rawData);
 
@@ -767,9 +789,9 @@ export const generateBidDetailsV6 = async (
         ...common,
         order: sdkOrder,
         extraArgs: {
-          maxRoyaltyFeeNumerator: await getRoyalties(token.contract, undefined, "onchain").then(
-            (royalties) => royalties.map((r) => r.bps).reduce((a, b) => a + b, 0)
-          ),
+          maxRoyaltyFeeNumerator: await registry
+            .getRegistryRoyalties(common.contract, common.tokenId)
+            .then((royalties) => royalties.map((r) => r.bps).reduce((a, b) => a + b, 0)),
         },
       };
     }

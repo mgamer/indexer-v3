@@ -3,14 +3,21 @@ import {
   SaleWebsocketEventInfo,
 } from "@/jobs/websocket-events/sale-websocket-events-trigger-job";
 
-import * as bidWebsocketEventsTriggerQueue from "@/jobs/websocket-events/bid-websocket-events-trigger-queue";
+import {
+  askWebsocketEventsTriggerQueueJob,
+  OrderWebsocketEventInfo,
+} from "@/jobs/websocket-events/ask-websocket-events-trigger-job";
+
+import { bidWebsocketEventsTriggerQueueJob } from "@/jobs/websocket-events/bid-websocket-events-trigger-job";
 
 import {
   transferWebsocketEventsTriggerQueueJob,
   TransferWebsocketEventInfo,
 } from "@/jobs/websocket-events/transfer-websocket-events-trigger-job";
-import * as tokenWebsocketEventsTriggerQueue from "@/jobs/websocket-events/token-websocket-events-trigger-queue";
-import * as askWebsocketEventsTriggerQueue from "@/jobs/websocket-events/ask-websocket-events-trigger-queue";
+import {
+  tokenWebsocketEventsTriggerJob,
+  TokenWebsocketEventInfo,
+} from "@/jobs/websocket-events/token-websocket-events-trigger-job";
 import {
   collectionWebsocketEventsTriggerQueueJob,
   CollectionWebsocketEventInfo,
@@ -33,16 +40,16 @@ export const WebsocketEventRouter = async ({
 }) => {
   switch (eventKind) {
     case WebsocketEventKind.SellOrder:
-      await askWebsocketEventsTriggerQueue.addToQueue([
+      await askWebsocketEventsTriggerQueueJob.addToQueue([
         {
-          data: eventInfo as askWebsocketEventsTriggerQueue.AskWebsocketEventInfo,
+          data: eventInfo as OrderWebsocketEventInfo,
         },
       ]);
       break;
     case WebsocketEventKind.BuyOrder:
-      await bidWebsocketEventsTriggerQueue.addToQueue([
+      await bidWebsocketEventsTriggerQueueJob.addToQueue([
         {
-          data: eventInfo as bidWebsocketEventsTriggerQueue.BidWebsocketEventInfo,
+          data: eventInfo as OrderWebsocketEventInfo,
         },
       ]);
       break;
@@ -68,9 +75,9 @@ export const WebsocketEventRouter = async ({
       ]);
       break;
     case WebsocketEventKind.TokenEvent:
-      await tokenWebsocketEventsTriggerQueue.addToQueue([
+      await tokenWebsocketEventsTriggerJob.addToQueue([
         {
-          data: eventInfo as tokenWebsocketEventsTriggerQueue.TokenWebsocketEventInfo,
+          data: eventInfo as TokenWebsocketEventInfo,
         },
       ]);
       break;
@@ -106,10 +113,9 @@ export enum WebsocketEventKind {
 
 export type EventInfo =
   | TopBidWebsocketEventInfo
-  | askWebsocketEventsTriggerQueue.AskWebsocketEventInfo
-  | bidWebsocketEventsTriggerQueue.BidWebsocketEventInfo
+  | OrderWebsocketEventInfo
   | SaleWebsocketEventInfo
   | TransferWebsocketEventInfo
-  | tokenWebsocketEventsTriggerQueue.TokenWebsocketEventInfo
+  | TokenWebsocketEventInfo
   | CollectionWebsocketEventInfo
   | TokenAttributeWebsocketEventInfo;

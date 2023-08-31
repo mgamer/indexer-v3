@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { MaxUint256 } from "@ethersproject/constants";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
 import Joi from "joi";
@@ -138,10 +139,10 @@ export const getTokensV6Options: RouteOptions = {
           "Allowed only with collection and tokens filtering!\n-1 = All tokens (default)\n0 = Non flagged tokens\n1 = Flagged tokens"
         ),
       sortBy: Joi.string()
-        .valid("floorAskPrice", "tokenId", "rarity")
+        .valid("floorAskPrice", "tokenId", "rarity", "updatedAt")
         .default("floorAskPrice")
         .description(
-          "Order the items are returned in the response. Options are `floorAskPrice`, `tokenId`, and `rarity`. No rarity rank for collections over 100k."
+          "Order the items are returned in the response. Options are `floorAskPrice`, `tokenId`, `rarity`, and `updatedAt`. No rarity rank for collections over 100k."
         ),
       sortDirection: Joi.string().lowercase().valid("asc", "desc"),
       currencies: Joi.alternatives().try(
@@ -167,9 +168,11 @@ export const getTokensV6Options: RouteOptions = {
       includeTopBid: Joi.boolean()
         .default(false)
         .description("If true, top bid will be returned in the response."),
-      excludeEoa: Joi.boolean()
+      excludeEOA: Joi.boolean()
         .default(false)
-        .description("If true, blur bids will be excluded from top bid / asks."),
+        .description(
+          "Exclude orders that can only be filled by EOAs, to support filling with smart contracts. defaults to false"
+        ),
       includeAttributes: Joi.boolean()
         .default(false)
         .description("If true, attributes will be returned in the response."),
@@ -239,6 +242,8 @@ export const getTokensV6Options: RouteOptions = {
               name: Joi.string().allow("", null),
               image: Joi.string().allow("", null),
               slug: Joi.string().allow("", null),
+              creator: Joi.string().lowercase().pattern(regex.address).allow("", null),
+              tokenCount: Joi.number().allow(null),
             }),
             lastSale: JoiSale.optional(),
             owner: Joi.string().allow(null),
@@ -291,6 +296,7 @@ export const getTokensV6Options: RouteOptions = {
                 .description("Can be null if no active bids"),
             }).optional(),
           }),
+          updatedAt: Joi.string(),
         })
       ),
       continuation: Joi.string().pattern(regex.base64).allow(null),
@@ -417,7 +423,7 @@ export const getTokensV6Options: RouteOptions = {
     }
 
     let sourceCte = "";
-    if (query.nativeSource || query.excludeEoa) {
+    if (query.nativeSource || query.excludeEOA) {
       const sourceConditions: string[] = [];
 
       if (query.nativeSource) {
@@ -447,7 +453,7 @@ export const getTokensV6Options: RouteOptions = {
         `taker = '\\x0000000000000000000000000000000000000000' OR taker IS NULL`
       );
 
-      if (query.excludeEoa) {
+      if (query.excludeEOA) {
         sourceConditions.push(`kind NOT IN ('blur')`);
       }
 
@@ -524,7 +530,10 @@ export const getTokensV6Options: RouteOptions = {
           t.last_flag_change,
           t.supply,
           t.remaining_supply,
+          extract(epoch from t.updated_at) AS t_updated_at,
           c.slug,
+          c.creator,
+          c.token_count,
           (c.metadata ->> 'imageUrl')::TEXT AS collection_image,
           (
             SELECT
@@ -542,9 +551,7 @@ export const getTokensV6Options: RouteOptions = {
         FROM tokens t
         ${
           sourceCte !== ""
-            ? `${
-                query.excludeEoa ? "LEFT" : ""
-              } JOIN filtered_orders s ON s.contract = t.contract AND s.token_id = t.token_id`
+            ? "JOIN filtered_orders s ON s.contract = t.contract AND s.token_id = t.token_id"
             : ""
         }
         ${includeQuantityQuery}
@@ -759,6 +766,21 @@ export const getTokensV6Options: RouteOptions = {
               break;
             }
 
+            case "updatedAt": {
+              if (contArr.length !== 3) {
+                throw new Error("Invalid continuation string used");
+              }
+              const sign = query.sortDirection == "desc" ? "<" : ">";
+              conditions.push(
+                `(t.updated_at, t.contract, t.token_id) ${sign} (to_timestamp($/contUpdatedAt/), $/contContract/, $/contTokenId/)`
+              );
+              (query as any).contUpdatedAt = contArr[0];
+              (query as any).contContract = toBuffer(contArr[1]);
+              (query as any).contTokenId = contArr[2];
+
+              break;
+            }
+
             case "floorAskPrice":
             default:
               {
@@ -821,6 +843,11 @@ export const getTokensV6Options: RouteOptions = {
             return ` ORDER BY t_contract ${query.sortDirection || "ASC"}, t_token_id ${
               query.sortDirection || "ASC"
             }`;
+          }
+          case "updatedAt": {
+            return ` ORDER BY t_updated_at ${query.sortDirection || "ASC"}, t_contract ${
+              query.sortDirection || "ASC"
+            }, t_token_id ${query.sortDirection || "ASC"}`;
           }
           case "floorAskPrice":
           default: {
@@ -914,7 +941,7 @@ export const getTokensV6Options: RouteOptions = {
               AND o.side = 'buy'
               AND o.fillability_status = 'fillable'
               AND o.approval_status = 'approved'
-              ${query.excludeEoa ? `AND o.kind NOT IN ('blur')` : ""}
+              ${query.excludeEOA ? `AND o.kind NOT IN ('blur')` : ""}
               AND EXISTS(
                 SELECT FROM nft_balances nb
                   WHERE nb.contract = x.t_contract
@@ -961,6 +988,10 @@ export const getTokensV6Options: RouteOptions = {
           switch (query.sortBy) {
             case "rarity":
               continuation = rawResult[rawResult.length - 1].rarity_rank || "null";
+              break;
+
+            case "updatedAt":
+              continuation = rawResult[rawResult.length - 1].t_updated_at;
               break;
 
             case "floorAskPrice":
@@ -1071,9 +1102,14 @@ export const getTokensV6Options: RouteOptions = {
                 },
               };
             } else if (
-              ["sudoswap", "sudoswap-v2", "nftx", "collectionxyz", "caviar-v1"].includes(
-                r.floor_sell_order_kind
-              )
+              [
+                "sudoswap",
+                "sudoswap-v2",
+                "nftx",
+                "collectionxyz",
+                "caviar-v1",
+                "midaswap",
+              ].includes(r.floor_sell_order_kind)
             ) {
               // Pool orders
               dynamicPricing = {
@@ -1081,17 +1117,21 @@ export const getTokensV6Options: RouteOptions = {
                 data: {
                   pool: r.floor_sell_raw_data.pair ?? r.floor_sell_raw_data.pool,
                   prices: await Promise.all(
-                    (r.floor_sell_raw_data.extra.prices as string[]).map((price) =>
-                      getJoiPriceObject(
-                        {
-                          gross: {
-                            amount: bn(price).add(missingRoyalties).toString(),
-                          },
-                        },
-                        floorAskCurrency,
-                        query.displayCurrency
+                    (r.floor_sell_raw_data.extra.prices as string[])
+                      .filter((price) =>
+                        bn(price).lte(bn(r.floor_sell_raw_data.extra.floorPrice || MaxUint256))
                       )
-                    )
+                      .map((price) =>
+                        getJoiPriceObject(
+                          {
+                            gross: {
+                              amount: bn(price).add(missingRoyalties).toString(),
+                            },
+                          },
+                          floorAskCurrency,
+                          query.displayCurrency
+                        )
+                      )
                   ),
                 },
               };
@@ -1127,6 +1167,8 @@ export const getTokensV6Options: RouteOptions = {
               name: r.collection_name,
               image: Assets.getLocalAssetsLink(r.collection_image),
               slug: r.slug,
+              creator: r.creator ? fromBuffer(r.creator) : null,
+              tokenCount: r.token_count,
             },
             lastSale:
               query.includeLastSale && r.last_sale_currency
@@ -1241,6 +1283,7 @@ export const getTokensV6Options: RouteOptions = {
                 }
               : undefined,
           },
+          updatedAt: new Date(r.t_updated_at * 1000).toISOString(),
         };
       });
 

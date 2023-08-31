@@ -319,6 +319,50 @@ jobs:
             ${{ github.sha }} \
             indexer-websocket-goerli
           ./utils/version_update.sh \
+            ./prod/platform/indexer-websocket-sepolia.yaml \
+            ${{ github.sha }} \
+            indexer-websocket-sepolia
+          ./utils/version_update.sh \
+            ./prod/platform/indexer-websocket-bsc.yaml \
+            ${{ github.sha }} \
+            indexer-websocket-bsc
+          ./utils/version_update.sh \
+            ./prod/platform/indexer-websocket-arbitrum.yaml \
+            ${{ github.sha }} \
+            indexer-websocket-arbitrum
+          ./utils/version_update.sh \
+            ./prod/platform/indexer-websocket-arbitrum-nova.yaml \
+            ${{ github.sha }} \
+            indexer-websocket-arbitrum-nova
+          ./utils/version_update.sh \
+            ./prod/platform/indexer-websocket-optimism.yaml \
+            ${{ github.sha }} \
+            indexer-websocket-optimism
+          ./utils/version_update.sh \
+            ./prod/platform/indexer-websocket-base.yaml \
+            ${{ github.sha }} \
+            indexer-websocket-base
+          ./utils/version_update.sh \
+            ./prod/platform/indexer-websocket-zora.yaml \
+            ${{ github.sha }} \
+            indexer-websocket-zora
+          ./utils/version_update.sh \
+            ./prod/platform/indexer-websocket-avalanche.yaml \
+            ${{ github.sha }} \
+            indexer-websocket-avalanche
+          ./utils/version_update.sh \
+            ./prod/platform/indexer-websocket-mumbai.yaml \
+            ${{ github.sha }} \
+            indexer-websocket-mumbai
+          ./utils/version_update.sh \
+            ./prod/platform/indexer-websocket-base-goerli.yaml \
+            ${{ github.sha }} \
+            indexer-websocket-base-goerli   
+          ./utils/version_update.sh \
+            ./prod/platform/indexer-websocket-zora-testnet.yaml \
+            ${{ github.sha }} \
+            indexer-websocket-zora-testnet
+          ./utils/version_update.sh \
             ./prod/platform/indexer-kafka-worker-mainnet.yaml \
             ${{ github.sha }} \
             indexer-kafka-worker-mainnet
@@ -346,6 +390,18 @@ jobs:
             ./prod/platform/indexer-kafka-worker-optimism.yaml \
             ${{ github.sha }} \
             indexer-kafka-worker-optimism
+          ./utils/version_update.sh \
+            ./prod/platform/indexer-kafka-worker-sepolia.yaml \
+            ${{ github.sha }} \
+            indexer-kafka-worker-sepolia
+          ./utils/version_update.sh \
+            ./prod/platform/indexer-kafka-worker-base.yaml \
+            ${{ github.sha }} \
+            indexer-kafka-worker-base
+          ./utils/version_update.sh \
+            ./prod/platform/indexer-kafka-worker-mumbai.yaml \
+            ${{ github.sha }} \
+            indexer-kafka-worker-mumbai
           ./utils/version_update.sh \
             ./prod/platform/indexer-worker-master-optimism.yaml \
             ${{ github.sha }} \
@@ -406,6 +462,10 @@ jobs:
             ./prod/platform/indexer-worker-linea.yaml \
             ${{ github.sha }} \
             indexer-worker-linea
+          ./utils/version_update.sh \
+            ./prod/platform/indexer-worker-master-linea.yaml \
+            ${{ github.sha }} \
+            indexer-worker-master-linea
           ./utils/version_update.sh \
             ./prod/platform/indexer-worker-master-zksync.yaml \
             ${{ github.sha }} \

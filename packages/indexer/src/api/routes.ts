@@ -498,9 +498,14 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
-
     path: "/collections/top-selling/v1",
-    options: collectionsEndpoints.getTopSellingCollectionsOptions,
+    options: collectionsEndpoints.getTopSellingCollectionsV1Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/collections/top-selling/v2",
+    options: collectionsEndpoints.getTopSellingCollectionsV2Options,
   });
 
   server.route({
@@ -751,6 +756,12 @@ export const setupRoutes = (server: Server) => {
     method: "POST",
     path: "/execute/results/v1",
     options: executeEndpoints.postExecuteResultsV1,
+  });
+
+  server.route({
+    method: "POST",
+    path: "/execute/transfer/v1",
+    options: executeEndpoints.postExecuteTransferV1Options,
   });
 
   server.route({
@@ -1334,6 +1345,12 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/sales/v5",
     options: transfersEndpoints.getSalesV5Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/sales/v6",
+    options: transfersEndpoints.getSalesV6Options,
   });
 
   server.route({

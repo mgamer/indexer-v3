@@ -30,6 +30,7 @@ import * as b from "@/utils/auth/blur";
 import { getCurrency } from "@/utils/currencies";
 import { ExecutionsBuffer } from "@/utils/executions";
 import { tryGetTokensSuspiciousStatus } from "@/utils/opensea";
+import { getPreSignatureId, getPreSignature, savePreSignature } from "@/utils/pre-signatures";
 import { getUSDAndCurrencyPrices } from "@/utils/prices";
 
 const version = "v7";
@@ -968,6 +969,13 @@ export const getExecuteSellV7Options: RouteOptions = {
           items: [],
         },
         {
+          id: "pre-signatures",
+          action: "Sign orders",
+          description: "Some marketplaces require signing additional orders before filling",
+          kind: "signature",
+          items: [],
+        },
+        {
           id: "sale",
           action: "Accept offer",
           description: "To sell this item you must confirm the transaction and pay the gas fee",
@@ -1057,6 +1065,11 @@ export const getExecuteSellV7Options: RouteOptions = {
               },
             });
 
+            // Remove any 'pre-signature' steps
+            if (bidDetails.every((d) => d.kind !== "payment-processor")) {
+              steps = steps.filter((s) => s.id !== "pre-signatures");
+            }
+
             // Force the client to poll
             steps[1].items.push({
               status: "incomplete",
@@ -1086,6 +1099,11 @@ export const getExecuteSellV7Options: RouteOptions = {
                 maxPriorityFeePerGas,
               },
             });
+          }
+
+          // Remove any 'pre-signature' steps
+          if (bidDetails.every((d) => d.kind !== "payment-processor")) {
+            steps = steps.filter((s) => s.id !== "pre-signatures");
           }
 
           // Force the client to poll
@@ -1196,15 +1214,59 @@ export const getExecuteSellV7Options: RouteOptions = {
         }
       }
 
-      for (const { txData, orderIds } of txs) {
-        steps[2].items.push({
+      for (const { txData, orderIds, preSignatures } of txs) {
+        // Handle pre-signatures
+        const signaturesPaymentProcessor: string[] = [];
+        for (const preSignature of preSignatures) {
+          if (preSignature.kind === "payment-processor-take-order") {
+            const id = getPreSignatureId(request.payload as object, {
+              uniqueId: preSignature.uniqueId,
+            });
+
+            const cachedSignature = await getPreSignature(id);
+            if (cachedSignature) {
+              preSignature.signature = cachedSignature.signature;
+            } else {
+              await savePreSignature(id, preSignature);
+            }
+
+            const hasSignature = preSignature.signature;
+            if (hasSignature) {
+              signaturesPaymentProcessor.push(preSignature.signature!);
+              continue;
+            }
+
+            steps[2].items.push({
+              status: "incomplete",
+              data: {
+                sign: preSignature.data,
+                post: {
+                  endpoint: "/execute/pre-signature/v1",
+                  method: "POST",
+                  body: {
+                    id,
+                  },
+                },
+              },
+            });
+          }
+        }
+
+        if (signaturesPaymentProcessor.length && !steps[2].items.length) {
+          const exchange = new Sdk.PaymentProcessor.Exchange(config.chainId);
+          txData.data = exchange.attachTakerSignatures(txData.data, signaturesPaymentProcessor);
+        }
+
+        steps[3].items.push({
           status: "incomplete",
           orderIds,
-          data: {
-            ...txData,
-            maxFeePerGas,
-            maxPriorityFeePerGas,
-          },
+          data: !steps[2].items.length
+            ? {
+                ...txData,
+                maxFeePerGas,
+                maxPriorityFeePerGas,
+              }
+            : undefined,
         });
       }
 
@@ -1216,7 +1278,11 @@ export const getExecuteSellV7Options: RouteOptions = {
         // If we reached this point and the Blur auth is missing then we
         // can be sure that no Blur orders were requested and it is safe
         // to remove the auth step
-        steps = steps.slice(1);
+        steps = steps.filter((s) => s.id !== "auth");
+      }
+      if (!bidDetails.some((d) => d.kind === "payment-processor")) {
+        // For now, pre-signatures are only needed for `payment-processor` orders
+        steps = steps.filter((s) => s.id !== "pre-signatures");
       }
 
       const executionsBuffer = new ExecutionsBuffer();
