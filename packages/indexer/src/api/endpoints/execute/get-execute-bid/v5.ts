@@ -80,113 +80,115 @@ export const getExecuteBidV5Options: RouteOptions = {
       blurAuth: Joi.string().description(
         "Advanced use case to pass personal blurAuthToken; the API will generate one if left empty."
       ),
-      params: Joi.array().items(
-        Joi.object({
-          token: Joi.string()
-            .lowercase()
-            .pattern(regex.token)
-            .description(
-              "Bid on a particular token. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
+      params: Joi.array()
+        .items(
+          Joi.object({
+            token: Joi.string()
+              .lowercase()
+              .pattern(regex.token)
+              .description(
+                "Bid on a particular token. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
+              ),
+            tokenSetId: Joi.string().description(
+              "Bid on a particular token set. Cannot be used with cross-posting to OpenSea. Example: `token:CONTRACT:TOKEN_ID` representing a single token within contract, `contract:CONTRACT` representing a whole contract, `range:CONTRACT:START_TOKEN_ID:END_TOKEN_ID` representing a continuous token id range within a contract and `list:CONTRACT:TOKEN_IDS_HASH` representing a list of token ids within a contract."
             ),
-          tokenSetId: Joi.string().description(
-            "Bid on a particular token set. Cannot be used with cross-posting to OpenSea. Example: `token:CONTRACT:TOKEN_ID` representing a single token within contract, `contract:CONTRACT` representing a whole contract, `range:CONTRACT:START_TOKEN_ID:END_TOKEN_ID` representing a continuous token id range within a contract and `list:CONTRACT:TOKEN_IDS_HASH` representing a list of token ids within a contract."
-          ),
-          collection: Joi.string()
-            .lowercase()
-            .description(
-              "Bid on a particular collection with collection-id. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
+            collection: Joi.string()
+              .lowercase()
+              .description(
+                "Bid on a particular collection with collection-id. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
+              ),
+            attributeKey: Joi.string().description(
+              "Bid on a particular attribute key. This is case sensitive. Example: `Composition`"
             ),
-          attributeKey: Joi.string().description(
-            "Bid on a particular attribute key. This is case sensitive. Example: `Composition`"
-          ),
-          attributeValue: Joi.string().description(
-            "Bid on a particular attribute value. This is case sensitive. Example: `Teddy (#33)`"
-          ),
-          quantity: Joi.number().description("Quantity of tokens to bid on."),
-          weiPrice: Joi.string()
-            .pattern(regex.number)
-            .description(
-              "Amount bidder is willing to offer in the smallest denomination for the specific currency. Example: `1000000000000000000`"
-            )
-            .required(),
-          orderKind: Joi.string()
-            .valid(
-              "blur",
-              "zeroex-v4",
-              "seaport",
-              "seaport-v1.4",
-              "seaport-v1.5",
-              "looks-rare",
-              "looks-rare-v2",
-              "x2y2",
-              "alienswap",
-              "payment-processor"
-            )
-            .default("seaport-v1.5")
-            .description("Exchange protocol used to create order. Example: `seaport-v1.5`"),
-          options: Joi.object({
-            "seaport-v1.4": Joi.object({
-              conduitKey: Joi.string().pattern(regex.bytes32),
-              useOffChainCancellation: Joi.boolean().required(),
-              replaceOrderId: Joi.string().when("useOffChainCancellation", {
-                is: true,
-                then: Joi.optional(),
-                otherwise: Joi.forbidden(),
+            attributeValue: Joi.string().description(
+              "Bid on a particular attribute value. This is case sensitive. Example: `Teddy (#33)`"
+            ),
+            quantity: Joi.number().description("Quantity of tokens to bid on."),
+            weiPrice: Joi.string()
+              .pattern(regex.number)
+              .description(
+                "Amount bidder is willing to offer in the smallest denomination for the specific currency. Example: `1000000000000000000`"
+              )
+              .required(),
+            orderKind: Joi.string()
+              .valid(
+                "blur",
+                "zeroex-v4",
+                "seaport",
+                "seaport-v1.4",
+                "seaport-v1.5",
+                "looks-rare",
+                "looks-rare-v2",
+                "x2y2",
+                "alienswap",
+                "payment-processor"
+              )
+              .default("seaport-v1.5")
+              .description("Exchange protocol used to create order. Example: `seaport-v1.5`"),
+            options: Joi.object({
+              "seaport-v1.4": Joi.object({
+                conduitKey: Joi.string().pattern(regex.bytes32),
+                useOffChainCancellation: Joi.boolean().required(),
+                replaceOrderId: Joi.string().when("useOffChainCancellation", {
+                  is: true,
+                  then: Joi.optional(),
+                  otherwise: Joi.forbidden(),
+                }),
               }),
-            }),
-            "seaport-v1.5": Joi.object({
-              conduitKey: Joi.string().pattern(regex.bytes32),
-              useOffChainCancellation: Joi.boolean().required(),
-              replaceOrderId: Joi.string().when("useOffChainCancellation", {
-                is: true,
-                then: Joi.optional(),
-                otherwise: Joi.forbidden(),
+              "seaport-v1.5": Joi.object({
+                conduitKey: Joi.string().pattern(regex.bytes32),
+                useOffChainCancellation: Joi.boolean().required(),
+                replaceOrderId: Joi.string().when("useOffChainCancellation", {
+                  is: true,
+                  then: Joi.optional(),
+                  otherwise: Joi.forbidden(),
+                }),
               }),
-            }),
-          }).description("Additional options."),
-          orderbook: Joi.string()
-            .valid("blur", "reservoir", "opensea", "looks-rare", "x2y2")
-            .default("reservoir")
-            .description("Orderbook where order is placed. Example: `Reservoir`"),
-          orderbookApiKey: Joi.string().description("Optional API key for the target orderbook"),
-          automatedRoyalties: Joi.boolean()
-            .default(true)
-            .description("If true, royalty amounts and recipients will be set automatically."),
-          royaltyBps: Joi.number().description(
-            "Set a maximum amount of royalties to pay, rather than the full amount. Only relevant when using automated royalties. 1 BPS = 0.01% Note: OpenSea does not support values below 50 bps."
-          ),
-          fees: Joi.array()
-            .items(Joi.string().pattern(regex.fee))
-            .description(
-              "List of fees (formatted as `feeRecipient:feeBps`) to be bundled within the order. 1 BPS = 0.01% Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00:100`"
+            }).description("Additional options."),
+            orderbook: Joi.string()
+              .valid("blur", "reservoir", "opensea", "looks-rare", "x2y2")
+              .default("reservoir")
+              .description("Orderbook where order is placed. Example: `Reservoir`"),
+            orderbookApiKey: Joi.string().description("Optional API key for the target orderbook"),
+            automatedRoyalties: Joi.boolean()
+              .default(true)
+              .description("If true, royalty amounts and recipients will be set automatically."),
+            royaltyBps: Joi.number().description(
+              "Set a maximum amount of royalties to pay, rather than the full amount. Only relevant when using automated royalties. 1 BPS = 0.01% Note: OpenSea does not support values below 50 bps."
             ),
-          excludeFlaggedTokens: Joi.boolean()
-            .default(false)
-            .description("If true flagged tokens will be excluded"),
-          listingTime: Joi.string()
-            .pattern(regex.unixTimestamp)
-            .description(
-              "Unix timestamp (seconds) indicating when listing will be listed. Example: `1656080318`"
-            ),
-          expirationTime: Joi.string()
-            .pattern(regex.unixTimestamp)
-            .description(
-              "Unix timestamp (seconds) indicating when listing will expire. Example: `1656080318`"
-            ),
-          salt: Joi.string()
-            .pattern(regex.number)
-            .description("Optional. Random string to make the order unique"),
-          nonce: Joi.string().pattern(regex.number).description("Optional. Set a custom nonce"),
-          currency: Joi.string()
-            .pattern(regex.address)
-            .default(Sdk.Common.Addresses.WNative[config.chainId]),
-        })
-          .or("token", "collection", "tokenSetId")
-          .oxor("token", "collection", "tokenSetId")
-          .with("attributeValue", "attributeKey")
-          .with("attributeKey", "attributeValue")
-          .with("attributeKey", "collection")
-      ),
+            fees: Joi.array()
+              .items(Joi.string().pattern(regex.fee))
+              .description(
+                "List of fees (formatted as `feeRecipient:feeBps`) to be bundled within the order. 1 BPS = 0.01% Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00:100`"
+              ),
+            excludeFlaggedTokens: Joi.boolean()
+              .default(false)
+              .description("If true flagged tokens will be excluded"),
+            listingTime: Joi.string()
+              .pattern(regex.unixTimestamp)
+              .description(
+                "Unix timestamp (seconds) indicating when listing will be listed. Example: `1656080318`"
+              ),
+            expirationTime: Joi.string()
+              .pattern(regex.unixTimestamp)
+              .description(
+                "Unix timestamp (seconds) indicating when listing will expire. Example: `1656080318`"
+              ),
+            salt: Joi.string()
+              .pattern(regex.number)
+              .description("Optional. Random string to make the order unique"),
+            nonce: Joi.string().pattern(regex.number).description("Optional. Set a custom nonce"),
+            currency: Joi.string()
+              .pattern(regex.address)
+              .default(Sdk.Common.Addresses.WNative[config.chainId]),
+          })
+            .or("token", "collection", "tokenSetId")
+            .oxor("token", "collection", "tokenSetId")
+            .with("attributeValue", "attributeKey")
+            .with("attributeKey", "attributeValue")
+            .with("attributeKey", "collection")
+        )
+        .min(1),
     }),
   },
   response: {
@@ -471,11 +473,11 @@ export const getExecuteBidV5Options: RouteOptions = {
           }
 
           try {
-            const WETH = Sdk.Common.Addresses.WNative[config.chainId];
+            const WNATIVE = Sdk.Common.Addresses.WNative[config.chainId];
             const BETH = Sdk.Blur.Addresses.Beth[config.chainId];
 
             // Default currency for Blur is BETH
-            if (params.orderKind === "blur" && params.currency === WETH) {
+            if (params.orderKind === "blur" && params.currency === WNATIVE) {
               params.currency = BETH;
             }
 
@@ -496,7 +498,7 @@ export const getExecuteBidV5Options: RouteOptions = {
             const currency = new Sdk.Common.Helpers.Erc20(baseProvider, params.currency);
             const currencyBalance = await currency.getBalance(maker);
             if (bn(currencyBalance).lt(totalPrice)) {
-              if ([WETH, BETH].includes(params.currency)) {
+              if ([WNATIVE, BETH].includes(params.currency)) {
                 const ethBalance = await baseProvider.getBalance(maker);
                 if (bn(currencyBalance).add(ethBalance).lt(totalPrice)) {
                   return errors.push({
@@ -504,13 +506,15 @@ export const getExecuteBidV5Options: RouteOptions = {
                     orderIndex: i,
                   });
                 } else {
-                  const weth = new Sdk.Common.Helpers.WNative(baseProvider, config.chainId);
-                  const wrapTx = weth.depositTransaction(maker, totalPrice.sub(currencyBalance));
+                  const wnative = new Sdk.Common.Helpers.WNative(baseProvider, config.chainId);
+                  const wrapTx = wnative.depositTransaction(maker, totalPrice.sub(currencyBalance));
 
                   steps[1].items.push({
                     status: "incomplete",
                     data:
-                      params.currency === BETH ? { ...wrapTx, to: BETH } : { ...wrapTx, to: WETH },
+                      params.currency === BETH
+                        ? { ...wrapTx, to: BETH }
+                        : { ...wrapTx, to: WNATIVE },
                     orderIndexes: [i],
                   });
                 }
@@ -882,12 +886,14 @@ export const getExecuteBidV5Options: RouteOptions = {
 
                 // Check the maker's approval
                 let approvalTx: TxData | undefined;
-                const wethApproval = await currency.getAllowance(
+                const currencyApproval = await currency.getAllowance(
                   maker,
                   Sdk.ZeroExV4.Addresses.Exchange[config.chainId]
                 );
                 if (
-                  bn(wethApproval).lt(bn(order.params.erc20TokenAmount).add(order.getFeeAmount()))
+                  bn(currencyApproval).lt(
+                    bn(order.params.erc20TokenAmount).add(order.getFeeAmount())
+                  )
                 ) {
                   approvalTx = currency.approveTransaction(
                     maker,
@@ -976,11 +982,11 @@ export const getExecuteBidV5Options: RouteOptions = {
 
                 // Check the maker's approval
                 let approvalTx: TxData | undefined;
-                const wethApproval = await currency.getAllowance(
+                const currencyApproval = await currency.getAllowance(
                   maker,
                   Sdk.LooksRareV2.Addresses.Exchange[config.chainId]
                 );
-                if (bn(wethApproval).lt(bn(order.params.price))) {
+                if (bn(currencyApproval).lt(bn(order.params.price))) {
                   approvalTx = currency.approveTransaction(
                     maker,
                     Sdk.LooksRareV2.Addresses.Exchange[config.chainId]
@@ -1065,11 +1071,11 @@ export const getExecuteBidV5Options: RouteOptions = {
 
                 // Check the maker's approval
                 let approvalTx: TxData | undefined;
-                const wethApproval = await currency.getAllowance(
+                const currencyApproval = await currency.getAllowance(
                   maker,
                   Sdk.X2Y2.Addresses.Exchange[config.chainId]
                 );
-                if (bn(wethApproval).lt(bn(upstreamOrder.params.price))) {
+                if (bn(currencyApproval).lt(bn(upstreamOrder.params.price))) {
                   approvalTx = currency.approveTransaction(
                     maker,
                     Sdk.X2Y2.Addresses.Exchange[config.chainId]
@@ -1149,11 +1155,11 @@ export const getExecuteBidV5Options: RouteOptions = {
 
                 // Check the maker's approval
                 let approvalTx: TxData | undefined;
-                const wethApproval = await currency.getAllowance(
+                const currencyApproval = await currency.getAllowance(
                   maker,
                   Sdk.PaymentProcessor.Addresses.Exchange[config.chainId]
                 );
-                if (bn(wethApproval).lt(bn(order.params.price))) {
+                if (bn(currencyApproval).lt(bn(order.params.price))) {
                   approvalTx = currency.approveTransaction(
                     maker,
                     Sdk.PaymentProcessor.Addresses.Exchange[config.chainId]
@@ -1366,8 +1372,8 @@ export const getExecuteBidV5Options: RouteOptions = {
         steps[1].items = [];
         for (const [to, amount] of Object.entries(amounts)) {
           if (amount.gt(0)) {
-            const weth = new Sdk.Common.Helpers.WNative(baseProvider, config.chainId);
-            const wrapTx = weth.depositTransaction(maker, amount);
+            const wnative = new Sdk.Common.Helpers.WNative(baseProvider, config.chainId);
+            const wrapTx = wnative.depositTransaction(maker, amount);
 
             steps[1].items.push({
               status: "incomplete",

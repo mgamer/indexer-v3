@@ -90,7 +90,6 @@ const getUpstreamUSDPrice = async (
         [
           Sdk.Common.Addresses.Usdc[config.chainId],
           // Only needed for Goerli
-          "0x68b7e050e6e2c7efe11439045c9d49813c1724b8",
           "0x2f3a40a3db8a7e3d09b0adfefbce4f6f81927557",
         ].includes(currencyAddress)
       ) {
@@ -101,6 +100,8 @@ const getUpstreamUSDPrice = async (
         [
           Sdk.Common.Addresses.Native[config.chainId],
           Sdk.Common.Addresses.WNative[config.chainId],
+          // Only needed for Mumbai
+          "0xa6fa4fb5f76172d178d61b04b0ecd319c5d1c0aa",
         ].includes(currencyAddress)
       ) {
         // 2000:1 to USD
@@ -223,9 +224,7 @@ const isTestnetCurrency = (currencyAddress: string) => {
       Sdk.Common.Addresses.Native[config.chainId],
       Sdk.Common.Addresses.WNative[config.chainId],
       Sdk.Common.Addresses.Usdc[config.chainId],
-      // Only needed for Goerli
-      "0x68b7e050e6e2c7efe11439045c9d49813c1724b8",
-      "0x2f3a40a3db8a7e3d09b0adfefbce4f6f81927557",
+      ...Object.keys(getNetworkSettings().supportedBidCurrencies),
     ].includes(currencyAddress);
   }
 };

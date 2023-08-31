@@ -123,11 +123,13 @@ export const getChainStatsFromActivity = async () => {
           aggs: {
             sales_by_type: {
               terms: {
-                field: "type",
+                field: !["optimism", "base"].includes(getNetworkName()) ? "type" : "type.keyword",
               },
               aggs: {
                 sales_count: {
-                  value_count: { field: "id" },
+                  value_count: {
+                    field: !["optimism", "base"].includes(getNetworkName()) ? "id" : "id.keyword",
+                  },
                 },
                 total_volume: {
                   sum: { field: "pricing.priceDecimal" },
@@ -183,7 +185,8 @@ export enum TopSellingFillOptions {
 }
 
 const mapBucketToCollection = (bucket: any, includeRecentSales: boolean) => {
-  const collectionData = bucket?.top_collection_hits?.hits?.hits[0]?._source.collection;
+  const data = bucket?.top_collection_hits?.hits?.hits[0]?._source;
+  const collectionData = data.collection;
 
   const recentSales = bucket?.top_collection_hits?.hits?.hits.map((hit: any) => {
     const sale = hit._source;
@@ -201,11 +204,11 @@ const mapBucketToCollection = (bucket: any, includeRecentSales: boolean) => {
 
   return {
     volume: bucket?.total_volume?.value,
-    count: bucket?.total_transactions?.value,
+    count: bucket?.total_sales.value,
     id: collectionData?.id,
     name: collectionData?.name,
     image: collectionData?.image,
-    primaryContract: collectionData?.contract,
+    primaryContract: data?.contract,
     recentSales: includeRecentSales ? recentSales : [],
   };
 };
@@ -218,6 +221,8 @@ export const getTopSellingCollections = async (params: {
   includeRecentSales: boolean;
 }): Promise<CollectionAggregation[]> => {
   const { startTime, endTime, fillType, limit } = params;
+
+  const { trendingExcludedContracts } = getNetworkSettings();
 
   const salesQuery = {
     bool: {
@@ -236,20 +241,38 @@ export const getTopSellingCollections = async (params: {
           },
         },
       ],
+      ...(trendingExcludedContracts && {
+        must_not: [
+          {
+            terms: {
+              "collection.id": trendingExcludedContracts,
+            },
+          },
+        ],
+      }),
     },
   } as any;
 
   const collectionAggregation = {
     collections: {
       terms: {
-        field: "collection.id",
+        field: !["optimism", "base"].includes(getNetworkName())
+          ? "collection.id"
+          : "collection.id.keyword",
         size: limit,
         order: { total_transactions: "desc" },
       },
       aggs: {
-        total_transactions: {
+        total_sales: {
           value_count: {
-            field: "id",
+            field: !["optimism", "base"].includes(getNetworkName()) ? "id" : "id.keyword",
+          },
+        },
+        total_transactions: {
+          cardinality: {
+            field: !["optimism", "base"].includes(getNetworkName())
+              ? "event.txHash"
+              : "event.txHash.keyword",
           },
         },
 

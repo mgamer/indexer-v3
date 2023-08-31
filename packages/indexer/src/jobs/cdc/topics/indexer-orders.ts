@@ -5,7 +5,10 @@ import {
   WebsocketEventKind,
   WebsocketEventRouter,
 } from "@/jobs/websocket-events/websocket-event-router";
+import { Collections } from "@/models/collections";
+import { metadataIndexFetchJob } from "@/jobs/metadata-index/metadata-fetch-job";
 import { config } from "@/config/index";
+import { acquireLock } from "@/common/redis";
 
 export class IndexerOrdersHandler extends KafkaEventHandler {
   topicName = "indexer.public.orders";
@@ -15,41 +18,36 @@ export class IndexerOrdersHandler extends KafkaEventHandler {
       return;
     }
 
-    if (!config.doOldOrderWebsocketWork) {
-      let eventKind;
-      if (payload.after.side === "sell") {
-        eventKind = WebsocketEventKind.SellOrder;
-      } else if (payload.after.side === "buy") {
-        eventKind = WebsocketEventKind.BuyOrder;
-      } else {
-        logger.warn(
-          "kafka-event-handler",
-          `${this.topicName}: Unknown order kind, skipping websocket event router for order=${
-            JSON.stringify(payload.after) || "null"
-          }`
-        );
-        return;
-      }
+    let eventKind;
 
-      await WebsocketEventRouter({
-        eventInfo: {
-          kind: payload.after.kind,
-          orderId: payload.after.id,
-          trigger: "insert",
-          offset,
-        },
-        eventKind,
-      });
+    if (payload.after.side === "sell") {
+      eventKind = WebsocketEventKind.SellOrder;
+    } else if (payload.after.side === "buy") {
+      eventKind = WebsocketEventKind.BuyOrder;
     } else {
-      logger.info(
+      logger.warn(
         "kafka-event-handler",
-        `${
-          this.topicName
-        }: Old order websocket work is enabled, skipping websocket event router for order=${
+        `${this.topicName}: Unknown order kind, skipping websocket event router for order=${
           JSON.stringify(payload.after) || "null"
         }`
       );
+
+      return;
     }
+
+    await WebsocketEventRouter({
+      eventInfo: {
+        before: payload.before,
+        after: payload.after,
+        trigger: "insert",
+        offset,
+      },
+      eventKind,
+    });
+
+    // if (payload.after.side === "sell") {
+    //   await this.handleSellOrder(payload);
+    // }
   }
 
   protected async handleUpdate(payload: any, offset: string): Promise<void> {
@@ -57,44 +55,94 @@ export class IndexerOrdersHandler extends KafkaEventHandler {
       return;
     }
 
-    if (!config.doOldOrderWebsocketWork) {
-      let eventKind;
-      if (payload.after.side === "sell") {
-        eventKind = WebsocketEventKind.SellOrder;
-      } else if (payload.after.side === "buy") {
-        eventKind = WebsocketEventKind.BuyOrder;
-      } else {
-        logger.warn(
-          "kafka-event-handler",
-          `${this.topicName}: Unknown order kind, skipping websocket event router for order=${
-            JSON.stringify(payload.after) || "null"
-          }`
-        );
-        return;
-      }
+    let eventKind;
 
-      await WebsocketEventRouter({
-        eventInfo: {
-          kind: payload.after.kind,
-          orderId: payload.after.id,
-          trigger: "update",
-          offset,
-        },
-        eventKind: eventKind,
-      });
+    if (payload.after.side === "sell") {
+      eventKind = WebsocketEventKind.SellOrder;
+    } else if (payload.after.side === "buy") {
+      eventKind = WebsocketEventKind.BuyOrder;
     } else {
-      logger.info(
+      logger.warn(
         "kafka-event-handler",
-        `${
-          this.topicName
-        }: Old order websocket work is enabled, skipping websocket event router for order=${
+        `${this.topicName}: Unknown order kind, skipping websocket event router for order=${
           JSON.stringify(payload.after) || "null"
         }`
       );
+
+      return;
     }
+
+    await WebsocketEventRouter({
+      eventInfo: {
+        before: payload.before,
+        after: payload.after,
+        trigger: "update",
+        offset,
+      },
+      eventKind,
+    });
   }
 
   protected async handleDelete(): Promise<void> {
     // probably do nothing here
+  }
+
+  async handleSellOrder(payload: any): Promise<void> {
+    try {
+      if (
+        payload.after.fillability_status === "fillable" &&
+        payload.after.approval_status === "approved"
+      ) {
+        const [, contract, tokenId] = payload.after.token_set_id.split(":");
+
+        const acquiredLock = await acquireLock(
+          `fetch-ask-token-metadata-lock:${contract}:${tokenId}`,
+          86400
+        );
+
+        if (acquiredLock) {
+          logger.info(
+            "kafka-event-handler",
+            JSON.stringify({
+              topic: "handleSellOrder",
+              message: "Refreshing token metadata.",
+              payload,
+              contract,
+              tokenId,
+            })
+          );
+
+          if (config.chainId === 5) {
+            const collection = await Collections.getByContractAndTokenId(contract, tokenId);
+
+            await metadataIndexFetchJob.addToQueue(
+              [
+                {
+                  kind: "single-token",
+                  data: {
+                    method: metadataIndexFetchJob.getIndexingMethod(collection?.community || null),
+                    contract,
+                    tokenId,
+                    collection: collection?.id || contract,
+                  },
+                  context: "kafka-event-handler",
+                },
+              ],
+              true
+            );
+          }
+        }
+      }
+    } catch (error) {
+      logger.error(
+        "kafka-event-handler",
+        JSON.stringify({
+          topic: "handleSellOrder",
+          message: "Handle sell order error. error=${error}",
+          payload,
+          error,
+        })
+      );
+    }
   }
 }

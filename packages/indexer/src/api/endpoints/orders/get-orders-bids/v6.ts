@@ -116,7 +116,7 @@ export const getOrdersBidsV6Options: RouteOptions = {
           otherwise: Joi.valid("active"),
         })
         .description(
-          "activeª^º = currently valid\ninactiveª^ = temporarily invalid\nexpiredª^, canceledª^, filledª^ = permanently invalid\nanyªº = any status\nª when an `id` is passed\n^ when a `maker` is passed\nº when a `contract` is passed"
+          "activeª^º = currently valid\ninactiveª^ = temporarily invalid\nexpiredª^, cancelledª^, filledª^ = permanently invalid\nanyªº = any status\nª when an `id` is passed\n^ when a `maker` is passed\nº when a `contract` is passed"
         ),
       sources: Joi.alternatives()
         .try(
@@ -441,13 +441,6 @@ export const getOrdersBidsV6Options: RouteOptions = {
       ) {
         throw Boom.badRequest(
           `Cannot filter with additional query params when sortBy = updatedAt and status != 'active.`
-        );
-      }
-
-      // TODO Remove this restriction once an index is created for updatedAt and contracts
-      if (query.sortBy === "updatedAt" && query.contracts && query.status === "any") {
-        throw Boom.badRequest(
-          `Cannot filter by contracts while sortBy = "updatedAt" and status = "any"`
         );
       }
 
