@@ -58,6 +58,7 @@ export class CollectionNewContractDeployedJob extends AbstractRabbitMqJobHandler
           $/symbol/,
           $/name/
         )
+        ON CONFLICT DO NOTHING
       `,
         {
           address: contract,
