@@ -118,11 +118,12 @@ export const getCollectionsV6Options: RouteOptions = {
           "30DayVolume",
           "allTimeVolume",
           "createdAt",
+          "updatedAt",
           "floorAskPrice"
         )
         .default("allTimeVolume")
         .description(
-          "Order the items are returned in the response. Options are `#DayVolume`, `createdAt`, or `floorAskPrice`"
+          "Order the items are returned in the response. Options are `#DayVolume`, `createdAt`, `updatedAt`, or `floorAskPrice`"
         ),
       limit: Joi.number()
         .integer()
@@ -147,6 +148,7 @@ export const getCollectionsV6Options: RouteOptions = {
           id: Joi.string().description("Collection id"),
           slug: Joi.string().allow("", null).description("Open Sea slug"),
           createdAt: Joi.string().description("Time when added to indexer"),
+          updatedAt: Joi.string().description("Time when updated in indexer"),
           name: Joi.string().allow("", null),
           image: Joi.string().allow("", null),
           banner: Joi.string().allow("", null),
@@ -423,6 +425,7 @@ export const getCollectionsV6Options: RouteOptions = {
           collections.token_count,
           collections.owner_count,
           collections.created_at,
+          collections.updated_at,
           collections.top_buy_id,
           collections.top_buy_maker,        
           collections.minted_timestamp,
@@ -546,6 +549,15 @@ export const getCollectionsV6Options: RouteOptions = {
           break;
         }
 
+        case "updatedAt": {
+          if (query.continuation) {
+            conditions.push(`(collections.updated_at, collections.id) < ($/contParam/, $/contId/)`);
+          }
+          orderBy = ` ORDER BY collections.updated_at DESC, collections.id DESC`;
+
+          break;
+        }
+
         case "floorAskPrice": {
           if (query.continuation) {
             if (query.contParam !== "null") {
@@ -661,6 +673,7 @@ export const getCollectionsV6Options: RouteOptions = {
             id: r.id,
             slug: r.slug,
             createdAt: new Date(r.created_at).toISOString(),
+            updatedAt: new Date(r.updated_at).toISOString(),
             name: r.name,
             image:
               r.image ?? (sampleImages.length ? Assets.getLocalAssetsLink(sampleImages[0]) : null),
@@ -843,6 +856,13 @@ export const getCollectionsV6Options: RouteOptions = {
             case "createdAt": {
               continuation = buildContinuation(
                 `${new Date(lastCollection.created_at).toISOString()}_${lastCollection.id}`
+              );
+              break;
+            }
+
+            case "updatedAt": {
+              continuation = buildContinuation(
+                `${new Date(lastCollection.updated_at).toISOString()}_${lastCollection.id}`
               );
               break;
             }
