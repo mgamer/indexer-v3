@@ -11,7 +11,7 @@ export type CollectionContractDeployed = {
 };
 
 export class CollectionNewContractDeployedJob extends AbstractRabbitMqJobHandler {
-  queueName = "collections-refresh-cache";
+  queueName = "collection-new-contract-deployed";
   maxRetries = 10;
   concurrency = 10;
   persistent = false;
