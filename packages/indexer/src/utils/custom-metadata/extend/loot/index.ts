@@ -3,7 +3,7 @@
 
 import { BigNumber } from "@ethersproject/bignumber";
 import { id } from "@ethersproject/hash";
-import { lootRarity, rarityDescription } from "loot-rarity";
+// import { lootRarity, rarityDescription } from "loot-rarity";
 
 const items: {
   [key: string]: string[];
@@ -335,7 +335,8 @@ export const extend = async (_chainId: number, metadata: any) => {
   });
   attributes.push({
     key: "Rarity",
-    value: rarityDescription(lootRarity(bagItems.map((i) => i))),
+    // value: rarityDescription(lootRarity(bagItems.map((i) => i))),
+    value: 0,
   });
   attributes.push({
     key: `Dragons`,
