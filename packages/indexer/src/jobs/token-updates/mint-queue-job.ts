@@ -77,8 +77,7 @@ export class MintQueueJob extends AbstractRabbitMqJobHandler {
           isFirstToken = true;
         }
       }
-
-      if (!isFirstToken && collection) {
+      if (collection) {
         const queries: PgPromiseQuery[] = [];
 
         // If the collection is readily available in the database then
@@ -189,13 +188,17 @@ export class MintQueueJob extends AbstractRabbitMqJobHandler {
             delay
           );
         }
-      } else if (collection && isFirstToken) {
+      }
+
+      if (isFirstToken && collection) {
         await collectionMetadataQueueJob.addToQueue({
           contract,
           tokenId,
           community: collection?.community ?? null,
         });
-      } else {
+      }
+
+      if (!collection) {
         // We fetch the collection metadata from upstream
         await fetchCollectionMetadataJob.addToQueue([
           {
