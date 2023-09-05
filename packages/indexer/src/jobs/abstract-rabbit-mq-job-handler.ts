@@ -4,8 +4,6 @@
 import { RabbitMq, RabbitMQMessage } from "@/common/rabbit-mq";
 import { logger } from "@/common/logger";
 import _ from "lodash";
-import EventEmitter from "events";
-import TypedEmitter from "typed-emitter";
 import { ConsumeMessage } from "amqplib";
 import { releaseLock } from "@/common/redis";
 import { ChannelWrapper } from "amqp-connection-manager";
@@ -24,12 +22,7 @@ export type BackoffStrategy =
 
 export type QueueType = "classic" | "quorum";
 
-export type AbstractRabbitMqJobHandlerEvents = {
-  onCompleted: (message: RabbitMQMessage, processResult: any) => void;
-  onError: (message: RabbitMQMessage, error: any) => void;
-};
-
-export abstract class AbstractRabbitMqJobHandler extends (EventEmitter as new () => TypedEmitter<AbstractRabbitMqJobHandlerEvents>) {
+export abstract class AbstractRabbitMqJobHandler {
   static defaultMaxDeadLetterQueue = 50000;
 
   abstract queueName: string;
@@ -61,7 +54,6 @@ export abstract class AbstractRabbitMqJobHandler extends (EventEmitter as new ()
         await channel.ack(consumeMessage); // Ack the message with rabbit
       }
 
-      this.events(); // Subscribe to any events
       const processResult = await this.process(this.rabbitMqMessage.payload); // Process the message
 
       if (!this.getImmediateAck()) {
@@ -75,9 +67,9 @@ export abstract class AbstractRabbitMqJobHandler extends (EventEmitter as new ()
         await releaseLock(this.rabbitMqMessage.jobId).catch();
       }
 
-      this.emit("onCompleted", this.rabbitMqMessage, processResult); // Emit on Completed event
+      await this.onCompleted(this.rabbitMqMessage, processResult).catch();
     } catch (error) {
-      this.emit("onError", this.rabbitMqMessage, error); // Emit error event
+      await this.onError(this.rabbitMqMessage, error).catch();
 
       this.rabbitMqMessage.retryCount += 1;
       let queueName = this.getQueue();
@@ -126,8 +118,15 @@ export abstract class AbstractRabbitMqJobHandler extends (EventEmitter as new ()
     }
   }
 
-  // Function to subscribe to the object EventEmitter events
-  public events() {
+  // Function to handle on completed event
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  public async onCompleted(message: RabbitMQMessage, processResult: any) {
+    return;
+  }
+
+  // Function to handle on error event
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  public async onError(message: RabbitMQMessage, error: any) {
     return;
   }
 
