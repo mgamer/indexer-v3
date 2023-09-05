@@ -8,8 +8,6 @@ import { logger } from "@/common/logger";
 import { Tokens } from "@/models/tokens";
 import * as Boom from "@hapi/boom";
 import { Assets, ImageSize } from "@/utils/assets";
-import { metadataIndexFetchJob } from "@/jobs/metadata-index/metadata-fetch-job";
-import { config } from "@/config/index";
 
 const version = "v1";
 
@@ -55,23 +53,6 @@ export const getRedirectTokenImageV1Options: RouteOptions = {
       }
 
       if (!token.image) {
-        // Refresh token metadata if image does not exist
-        metadataIndexFetchJob.addToQueue(
-          [
-            {
-              kind: "single-token",
-              data: {
-                method: config.metadataIndexingMethod,
-                contract,
-                tokenId,
-                collection: token.collectionId || contract,
-              },
-              context: "get-redirect-token-image-v1",
-            },
-          ],
-          true
-        );
-
         throw Boom.notFound(`Image not found for token ${params.token}`);
       }
 
@@ -81,12 +62,8 @@ export const getRedirectTokenImageV1Options: RouteOptions = {
       );
 
       delete request.query.imageSize;
-      if (imageUrl) {
-        const imageWithQueryParams = Assets.addImageParams(imageUrl, request.query);
-        return response.redirect(imageWithQueryParams).header("cache-control", `${1000 * 60}`);
-      } else {
-        throw Boom.notFound(`Image not found for token ${params.token}`);
-      }
+      const imageWithQueryParams = Assets.addImageParams(imageUrl, request.query);
+      return response.redirect(imageWithQueryParams).header("cache-control", `${1000 * 60}`);
     } catch (error) {
       logger.error(`get-redirect-token-image-${version}-handler`, `Handler failure: ${error}`);
       throw error;
