@@ -112,18 +112,22 @@ export class RabbitMq {
       );
     }
 
-    if (config.chainId === 137 && queueName === "events-sync-realtime") {
-      logger.info(
-        "events-sync-realtime",
-        `publish realtime sync ${JSON.stringify(content)} delay ${delay}`
-      );
-    }
-
     try {
       const channelIndex = _.random(0, RabbitMq.maxPublisherChannelsCount - 1);
 
       content.publishTime = content.publishTime ?? _.now();
       content.prioritized = Boolean(priority);
+
+      if (config.chainId === 137 && queueName === "events-sync-realtime") {
+        logger.info(
+          "events-sync-realtime",
+          `publish realtime sync ${JSON.stringify(
+            content
+          )} delay ${delay} lockTime ${lockTime} channelIndex ${channelIndex} queueLength ${RabbitMq.rabbitMqPublisherChannels[
+            channelIndex
+          ].queueLength()}`
+        );
+      }
 
       await new Promise<void>((resolve, reject) => {
         if (delay) {
