@@ -12,27 +12,34 @@ import {
   getCollectionMints,
   simulateAndUpsertCollectionMint,
 } from "@/orderbook/mints";
-import { constants } from "ethers";
 
 const STANDARD = "mintdotfun";
+
+const MINT_DOT_FUN_DEPLOYER = "0x56d7303fb0d0781c2fbef962d7f9461bf416916f";
 
 export const extractByCollection = async (collection: string): Promise<CollectionMint[]> => {
   const results: CollectionMint[] = [];
   try {
     const nft = new Contract(
       collection,
-      new Interface([`function mintOpen() external view returns (bool)`]),
+      new Interface([
+        "function name() external view returns (string)",
+        "function owner() external view returns (address)",
+        "function mintOpen() external view returns (bool)",
+      ]),
       baseProvider
     );
 
     const mintOpen = await nft.mintOpen();
-    if (mintOpen) {
+    const owner = await nft.owner().then((o: string) => o.toLowerCase());
+    const name = await nft.name();
+    if (owner === MINT_DOT_FUN_DEPLOYER && name.includes("fundrop")) {
       results.push({
         collection,
         contract: collection,
-        stage: `claim-${collection}`,
-        kind: "public",
-        status: "open",
+        stage: "allowlist-sale",
+        kind: "allowlist",
+        status: mintOpen ? "open" : "closed",
         standard: STANDARD,
         details: {
           tx: {
@@ -42,9 +49,8 @@ export const extractByCollection = async (collection: string): Promise<Collectio
               signature: "0xb510391f",
               params: [
                 {
-                  kind: "unknown",
+                  kind: "referrer",
                   abiType: "address",
-                  abiValue: constants.AddressZero,
                 },
                 {
                   kind: "allowlist",
@@ -55,6 +61,7 @@ export const extractByCollection = async (collection: string): Promise<Collectio
           },
         },
         currency: Sdk.Common.Addresses.Native[config.chainId],
+        price: "0",
         maxMintsPerWallet: "1",
         maxSupply: undefined,
       });

@@ -186,14 +186,6 @@ export const generateCollectionMintTxData = async (
             break;
           }
 
-          case "lanyard": {
-            if (allowlistItemIndex === 0) {
-              abiValue = await mints.lanyard.generateProofValue(collectionMint, minter);
-            }
-
-            break;
-          }
-
           case "mintdotfun": {
             if (allowlistItemIndex === 0) {
               abiValue = await mints.mintdotfun.generateProofValue(
@@ -312,10 +304,10 @@ export const refreshMintsForCollection = async (collection: string) => {
         return mints.decent.refreshByCollection(collection);
       case "foundation":
         return mints.foundation.refreshByCollection(collection);
-      case "lanyard":
-        return mints.lanyard.refreshByCollection(collection);
       case "manifold":
         return mints.manifold.refreshByCollection(collection);
+      case "mintdotfun":
+        return mints.mintdotfun.refreshByCollection(collection);
       case "seadrop-v1.0":
         return mints.seadrop.refreshByCollection(collection);
       case "thirdweb":
