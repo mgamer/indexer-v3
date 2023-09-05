@@ -281,6 +281,10 @@ const _saveBlockTransactions = async (blockData: BlockWithTransactions) => {
 };
 
 export const syncEvents = async (block: number) => {
+  if (config.chainId === 137) {
+    logger.info("sync-events-v2", `Start syncing block ${block}`);
+  }
+
   const startSyncTime = Date.now();
 
   const startGetBlockTime = Date.now();
@@ -395,6 +399,7 @@ export const syncEvents = async (block: number) => {
 
   if (config.chainId === 137) {
     await acquireLock(blockLockName, 60 * 60).catch();
+    logger.info("sync-events-v2", `Done syncing block ${block}`);
   }
 };
 
