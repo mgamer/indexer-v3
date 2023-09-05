@@ -1,13 +1,13 @@
 import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handler";
 
-import { detectTokenStandard, getContractNameAndSymbol } from "./utils";
+import { detectTokenStandard, getContractDeployer, getContractNameAndSymbol } from "./utils";
 import { logger } from "@/common/logger";
 import { idb } from "@/common/db";
 import { toBuffer } from "@/common/utils";
 
 export type CollectionContractDeployed = {
   contract: string;
-  deployer: string;
+  deployer?: string;
 };
 
 export class CollectionNewContractDeployedJob extends AbstractRabbitMqJobHandler {
@@ -17,11 +17,16 @@ export class CollectionNewContractDeployedJob extends AbstractRabbitMqJobHandler
   persistent = false;
 
   protected async process(payload: CollectionContractDeployed) {
-    const { contract, deployer } = payload;
+    const { contract } = payload;
+    let deployer = payload.deployer || null;
 
-    if (!contract || !deployer) {
-      logger.error(this.queueName, `Missing contract or deployer`);
+    if (!contract) {
+      logger.error(this.queueName, `Missing contract`);
       return;
+    }
+
+    if (!deployer) {
+      deployer = await getContractDeployer(contract);
     }
 
     // get the type of the collection, either ERC721 or ERC1155. if it's not one of those, we don't care
@@ -48,8 +53,8 @@ export class CollectionNewContractDeployedJob extends AbstractRabbitMqJobHandler
       idb.none(
         `
         INSERT INTO contracts (
-          address,
-          kind,
+            address,
+            kind,
             symbol,
             name
         ) VALUES (
@@ -58,7 +63,9 @@ export class CollectionNewContractDeployedJob extends AbstractRabbitMqJobHandler
           $/symbol/,
           $/name/
         )
-        ON CONFLICT DO NOTHING
+        ON CONFLICT (address) DO UPDATE SET
+          symbol = EXCLUDED.symbol,
+          name = EXCLUDED.name
       `,
         {
           address: contract,

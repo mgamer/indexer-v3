@@ -67,3 +67,24 @@ export async function getContractNameAndSymbol(contractAddress: string) {
     };
   }
 }
+
+export async function getContractDeployer(contractAddress: string) {
+  const provider = new ethers.providers.JsonRpcProvider(config.baseNetworkHttpUrl);
+  const contract = new ethers.Contract(
+    contractAddress,
+    ["function owner() view returns (address)"],
+    provider
+  );
+
+  try {
+    const deployer = await contract.getDeployer();
+    return deployer;
+  } catch (error) {
+    logger.error(
+      "onchain-fetcher",
+      `getContractDeployer error. contractAddress:${contractAddress}, error:${error}`
+    );
+
+    return null;
+  }
+}
