@@ -13,7 +13,7 @@ import { getContractKind } from "@/orderbook/mints/calldata/helpers";
 import MetadataApi from "@/utils/metadata-api";
 
 import { manifold } from "@/orderbook/mints/calldata/detector";
-import { collectionNewContractDeployedJob } from "../collections/collection-contract-deployed";
+import { collectionNewContractDeployedJob } from "@/jobs/collections/collection-contract-deployed";
 
 export type MintsProcessJobPayload =
   | {

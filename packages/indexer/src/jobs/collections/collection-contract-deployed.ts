@@ -68,7 +68,7 @@ export class CollectionNewContractDeployedJob extends AbstractRabbitMqJobHandler
           name = EXCLUDED.name
       `,
         {
-          address: contract,
+          address: toBuffer(contract),
           kind: collectionKind.toLowerCase(),
           symbol: contractName.symbol || null,
           name: contractName.name || null,
@@ -92,7 +92,7 @@ export class CollectionNewContractDeployedJob extends AbstractRabbitMqJobHandler
           id: contract,
           name: contractName || null,
           contract: toBuffer(contract),
-          creator: deployer,
+          creator: deployer ? toBuffer(deployer) : null,
         }
       ),
     ]);
