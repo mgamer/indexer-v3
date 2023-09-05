@@ -48,18 +48,7 @@ export async function getContractNameAndSymbol(contractAddress: string) {
   const provider = new ethers.providers.JsonRpcProvider(config.baseNetworkHttpUrl);
   const contract = new ethers.Contract(
     contractAddress,
-    [
-      {
-        name: "name",
-        outputs: [{ type: "string" }],
-        type: "function",
-      },
-      {
-        name: "symbol",
-        outputs: [{ type: "string" }],
-        type: "function",
-      },
-    ],
+    ["function name() view returns (string)", "function symbol() view returns (string)"],
     provider
   );
 
