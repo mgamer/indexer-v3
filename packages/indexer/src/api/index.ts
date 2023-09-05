@@ -43,7 +43,7 @@ export const start = async (): Promise<void> => {
       },
       cors: {
         origin: ["*"],
-        additionalHeaders: ["x-api-key", "x-rkc-version", "x-rkui-version"],
+        additionalHeaders: ["x-api-key", "x-rkc-version", "x-rkui-version", "x-syncnode-version"],
       },
       // Expose any validation errors
       // https://github.com/hapijs/hapi/issues/3706
@@ -122,9 +122,7 @@ export const start = async (): Promise<void> => {
           },
         },
         schemes: ["https", "http"],
-        host: `${config.chainId === 1 ? "api" : `api-${getNetworkName()}`}.${
-          config.environment === "dev" ? "dev." : ""
-        }reservoir.tools`,
+        host: `${config.chainId === 1 ? "api" : `api-${getNetworkName()}`}.reservoir.tools`,
         cors: true,
         tryItOutEnabled: true,
         documentationPath: "/",

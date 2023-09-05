@@ -230,6 +230,10 @@ export class ApiKeyManager {
       log.origin = request.headers["origin"];
     }
 
+    if (request.headers["x-syncnode-version"]) {
+      log.syncnodeVersion = request.headers["x-syncnode-version"];
+    }
+
     if (request.headers["x-rkui-version"]) {
       log.rkuiVersion = request.headers["x-rkui-version"];
     }
