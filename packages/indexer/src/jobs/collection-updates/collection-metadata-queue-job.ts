@@ -84,7 +84,7 @@ export class CollectionMetadataQueueJob extends AbstractRabbitMqJobHandler {
     params: {
       contract: string | { contract: string; community: string }[];
       tokenId?: string;
-      community?: string;
+      community?: string | null;
       forceRefresh?: boolean;
     },
     delay = 0,

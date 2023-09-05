@@ -11,6 +11,7 @@ import { tokenRefreshCacheJob } from "@/jobs/token-updates/token-refresh-cache-j
 import _ from "lodash";
 import { fetchCollectionMetadataJob } from "@/jobs/token-updates/fetch-collection-metadata-job";
 import { metadataIndexFetchJob } from "@/jobs/metadata-index/metadata-fetch-job";
+import { collectionMetadataQueueJob } from "../collection-updates/collection-metadata-queue-job";
 
 export type MintQueueJobPayload = {
   contract: string;
@@ -56,7 +57,28 @@ export class MintQueueJob extends AbstractRabbitMqJobHandler {
         }
       );
 
+      let isFirstToken = false;
+      // check if there are any tokens that exist already for the collection
+      // if there are not, we need to fetch the collection metadata from upstream
       if (collection) {
+        const existingToken = await idb.oneOrNone(
+          `
+            SELECT 1 FROM tokens
+            WHERE tokens.contract = $/contract/
+              AND tokens.collection_id = $/collection/
+            LIMIT 1
+          `,
+          {
+            contract: toBuffer(contract),
+            collection: collection.id,
+          }
+        );
+        if (!existingToken) {
+          isFirstToken = true;
+        }
+      }
+
+      if (!isFirstToken && collection) {
         const queries: PgPromiseQuery[] = [];
 
         // If the collection is readily available in the database then
@@ -167,6 +189,12 @@ export class MintQueueJob extends AbstractRabbitMqJobHandler {
             delay
           );
         }
+      } else if (collection && isFirstToken) {
+        await collectionMetadataQueueJob.addToQueue({
+          contract,
+          tokenId,
+          community: collection?.community ?? null,
+        });
       } else {
         // We fetch the collection metadata from upstream
         await fetchCollectionMetadataJob.addToQueue([
