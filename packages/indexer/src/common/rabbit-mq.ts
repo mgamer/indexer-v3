@@ -112,6 +112,13 @@ export class RabbitMq {
       );
     }
 
+    if (config.chainId === 137 && queueName === "events-sync-realtime") {
+      logger.info(
+        "events-sync-realtime",
+        `publish realtime sync ${JSON.stringify(content)} delay ${delay}`
+      );
+    }
+
     try {
       const channelIndex = _.random(0, RabbitMq.maxPublisherChannelsCount - 1);
 

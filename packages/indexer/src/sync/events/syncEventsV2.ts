@@ -15,8 +15,9 @@ import { BlockWithTransactions } from "@ethersproject/abstract-provider";
 import { Block } from "@/models/blocks";
 import { removeUnsyncedEventsActivitiesJob } from "@/jobs/activities/remove-unsynced-events-activities-job";
 import { blockCheckJob } from "@/jobs/events-sync/block-check-queue-job";
-import { redis } from "@/common/redis";
+import { acquireLock, redis, releaseLock } from "@/common/redis";
 import { eventsSyncRealtimeJob } from "@/jobs/events-sync/events-sync-realtime-job";
+import { config } from "@/config/index";
 
 export const extractEventsBatches = (enhancedEvents: EnhancedEvent[]): EventsBatch[] => {
   const txHashToEvents = new Map<string, EnhancedEvent[]>();
@@ -280,6 +281,10 @@ const _saveBlockTransactions = async (blockData: BlockWithTransactions) => {
 };
 
 export const syncEvents = async (block: number) => {
+  if (config.chainId === 137) {
+    logger.info("sync-events-v2", `Start syncing block ${block}`);
+  }
+
   const startSyncTime = Date.now();
 
   const startGetBlockTime = Date.now();
@@ -288,110 +293,122 @@ export const syncEvents = async (block: number) => {
     throw new Error(`Block ${block} not found with RPC provider`);
   }
 
-  const endGetBlockTime = Date.now();
+  const blockLockName = `realtime-sync-${block}-${blockData.hash}`;
 
-  const eventFilter: Filter = {
-    topics: [[...new Set(getEventData().map(({ topic }) => topic))]],
-    fromBlock: block,
-    toBlock: block,
-  };
+  try {
+    if (config.chainId === 137 && !(await acquireLock(blockLockName, 60 * 5))) {
+      logger.info("sync-events-v2", `block ${block} hash ${blockData.hash} was already synced`);
+      return;
+    }
 
-  const availableEventData = getEventData();
+    const endGetBlockTime = Date.now();
 
-  const [
-    { traces, getTransactionTracesTime },
-    { logs, getLogsTime },
-    { saveBlocksTime, endSaveBlocksTime },
-    saveBlockTransactionsTime,
-  ] = await Promise.all([
-    syncEventsUtils._getTransactionTraces(blockData.transactions, block),
-    _getLogs(eventFilter),
-    _saveBlock({
-      number: block,
-      hash: blockData.hash,
-      timestamp: blockData.timestamp,
-    }),
-    _saveBlockTransactions(blockData),
-  ]);
+    const eventFilter: Filter = {
+      topics: [[...new Set(getEventData().map(({ topic }) => topic))]],
+      fromBlock: block,
+      toBlock: block,
+    };
 
-  let enhancedEvents = logs
-    .map((log) => {
-      try {
-        const baseEventParams = parseEvent(log, blockData.timestamp);
-        return availableEventData
-          .filter(
-            ({ addresses, numTopics, topic }) =>
-              log.topics[0] === topic &&
-              log.topics.length === numTopics &&
-              (addresses ? addresses[log.address.toLowerCase()] : true)
-          )
-          .map((eventData) => ({
-            kind: eventData.kind,
-            subKind: eventData.subKind,
-            baseEventParams,
-            log,
-          }));
-      } catch (error) {
-        logger.error("sync-events-v2", `Failed to handle events: ${error}`);
-        throw error;
-      }
-    })
-    .flat();
+    const availableEventData = getEventData();
 
-  enhancedEvents = enhancedEvents.filter((e) => e) as EnhancedEvent[];
+    const [
+      { traces, getTransactionTracesTime },
+      { logs, getLogsTime },
+      { saveBlocksTime, endSaveBlocksTime },
+      saveBlockTransactionsTime,
+    ] = await Promise.all([
+      syncEventsUtils._getTransactionTraces(blockData.transactions, block),
+      _getLogs(eventFilter),
+      _saveBlock({
+        number: block,
+        hash: blockData.hash,
+        timestamp: blockData.timestamp,
+      }),
+      _saveBlockTransactions(blockData),
+    ]);
 
-  // Process the retrieved events
-  const eventsBatches = extractEventsBatches(enhancedEvents as EnhancedEvent[]);
+    let enhancedEvents = logs
+      .map((log) => {
+        try {
+          const baseEventParams = parseEvent(log, blockData.timestamp);
+          return availableEventData
+            .filter(
+              ({ addresses, numTopics, topic }) =>
+                log.topics[0] === topic &&
+                log.topics.length === numTopics &&
+                (addresses ? addresses[log.address.toLowerCase()] : true)
+            )
+            .map((eventData) => ({
+              kind: eventData.kind,
+              subKind: eventData.subKind,
+              baseEventParams,
+              log,
+            }));
+        } catch (error) {
+          logger.error("sync-events-v2", `Failed to handle events: ${error}`);
+          throw error;
+        }
+      })
+      .flat();
 
-  const startProcessLogs = Date.now();
+    enhancedEvents = enhancedEvents.filter((e) => e) as EnhancedEvent[];
 
-  const [processEventsLatencies] = await Promise.all([
-    processEventsBatchV2(eventsBatches),
-    syncEventsUtils.processContractAddresses(traces),
-  ]);
+    // Process the retrieved events
+    const eventsBatches = extractEventsBatches(enhancedEvents as EnhancedEvent[]);
 
-  const endProcessLogs = Date.now();
+    const startProcessLogs = Date.now();
 
-  const endSyncTime = Date.now();
+    const [processEventsLatencies] = await Promise.all([
+      processEventsBatchV2(eventsBatches),
+      syncEventsUtils.processContractAddresses(traces),
+    ]);
 
-  logger.info(
-    "sync-events-timing-v2",
-    JSON.stringify({
-      message: `Events realtime syncing block ${block}`,
-      block,
-      syncTime: endSyncTime - startSyncTime,
-      blockSyncTime: endSaveBlocksTime - startSyncTime,
+    const endProcessLogs = Date.now();
 
-      logs: {
-        count: logs.length,
-        eventCount: enhancedEvents.length,
-        getLogsTime,
-        processLogs: endProcessLogs - startProcessLogs,
-      },
-      traces: {
-        count: traces.length,
-        getTransactionTracesTime,
-      },
+    const endSyncTime = Date.now();
 
-      blocks: {
-        count: 1,
-        getBlockTime: endGetBlockTime - startGetBlockTime,
-        saveBlocksTime,
-        saveBlockTransactionsTime,
-        blockMinedTimestamp: blockData.timestamp,
-        startJobTimestamp: startSyncTime,
-        getBlockTimestamp: endGetBlockTime,
-      },
-      transactions: {
-        count: blockData.transactions.length,
-        saveBlockTransactionsTime,
-      },
-      processEventsLatencies: processEventsLatencies,
-    })
-  );
+    logger.info(
+      "sync-events-timing-v2",
+      JSON.stringify({
+        message: `Events realtime syncing block ${block}`,
+        block,
+        syncTime: endSyncTime - startSyncTime,
+        blockSyncTime: endSaveBlocksTime - startSyncTime,
 
-  await blockCheckJob.addToQueue({ block: block, blockHash: blockData.hash, delay: 60 });
-  await blockCheckJob.addToQueue({ block: block, blockHash: blockData.hash, delay: 60 * 5 });
+        logs: {
+          count: logs.length,
+          eventCount: enhancedEvents.length,
+          getLogsTime,
+          processLogs: endProcessLogs - startProcessLogs,
+        },
+        traces: {
+          count: traces.length,
+          getTransactionTracesTime,
+        },
+
+        blocks: {
+          count: 1,
+          getBlockTime: endGetBlockTime - startGetBlockTime,
+          saveBlocksTime,
+          saveBlockTransactionsTime,
+          blockMinedTimestamp: blockData.timestamp,
+          startJobTimestamp: startSyncTime,
+          getBlockTimestamp: endGetBlockTime,
+        },
+        transactions: {
+          count: blockData.transactions.length,
+          saveBlockTransactionsTime,
+        },
+        processEventsLatencies: processEventsLatencies,
+      })
+    );
+
+    await blockCheckJob.addToQueue({ block: block, blockHash: blockData.hash, delay: 60 });
+    await blockCheckJob.addToQueue({ block: block, blockHash: blockData.hash, delay: 60 * 5 });
+  } catch (error) {
+    await releaseLock(blockLockName);
+    throw error;
+  }
 };
 
 export const unsyncEvents = async (block: number, blockHash: string) => {

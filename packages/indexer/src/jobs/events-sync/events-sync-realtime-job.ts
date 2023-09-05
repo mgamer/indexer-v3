@@ -21,7 +21,7 @@ export class EventsSyncRealtimeJob extends AbstractRabbitMqJobHandler {
   protected async process(payload: EventsSyncRealtimeJobPayload) {
     const { block } = payload;
 
-    if (config.chainId === 59144 && block >= 340000) {
+    if (config.chainId === 59144 && block >= 488000) {
       logger.info(this.queueName, `Skip Block ${block}`);
 
       return;
@@ -52,6 +52,7 @@ export class EventsSyncRealtimeJob extends AbstractRabbitMqJobHandler {
       "onCompleted",
       async (message: RabbitMQMessage, processResult: { addToQueue?: boolean; delay?: number }) => {
         if (processResult?.addToQueue) {
+          logger.info(this.queueName, `Retry block ${message.payload.block}`);
           await this.addToQueue({ block: message.payload.block }, processResult.delay);
         }
       }
