@@ -113,7 +113,10 @@ export class RabbitMq {
     }
 
     if (config.chainId === 137 && queueName === "events-sync-realtime") {
-      logger.info("events-sync-realtime", `publish realtime sync ${JSON.stringify(content)}`);
+      logger.info(
+        "events-sync-realtime",
+        `publish realtime sync ${JSON.stringify(content)} delay ${delay}`
+      );
     }
 
     try {
