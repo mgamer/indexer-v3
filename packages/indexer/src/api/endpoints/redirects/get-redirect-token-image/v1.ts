@@ -81,8 +81,12 @@ export const getRedirectTokenImageV1Options: RouteOptions = {
       );
 
       delete request.query.imageSize;
-      const imageWithQueryParams = Assets.addImageParams(imageUrl, request.query);
-      return response.redirect(imageWithQueryParams).header("cache-control", `${1000 * 60}`);
+      if (imageUrl) {
+        const imageWithQueryParams = Assets.addImageParams(imageUrl, request.query);
+        return response.redirect(imageWithQueryParams).header("cache-control", `${1000 * 60}`);
+      } else {
+        throw Boom.notFound(`Image not found for token ${params.token}`);
+      }
     } catch (error) {
       logger.error(`get-redirect-token-image-${version}-handler`, `Handler failure: ${error}`);
       throw error;
