@@ -39,8 +39,10 @@ export class CollectionMetadataQueueJob extends AbstractRabbitMqJobHandler {
             );
           }
 
-          await Collections.updateCollectionCache(contract, tokenId, community);
-          await Contracts.updateContractMetadata(contract);
+          await Promise.all([
+            Collections.updateCollectionCache(contract, tokenId, community),
+            Contracts.updateContractMetadata(contract),
+          ]);
         } catch (error) {
           logger.error(
             this.queueName,
