@@ -80,12 +80,16 @@ export class CollectionNewContractDeployedJob extends AbstractRabbitMqJobHandler
                 id,
                 name,
                 contract,
-                creator
+                creator,
+                token_id_range,
+                token_set_id
               ) VALUES (
                 $/id/,
                 $/name/,
                 $/contract/,
-                $/creator/
+                $/creator/,
+                '(,)'::numrange,
+                $/tokenSetId/
               ) ON CONFLICT DO NOTHING
             `,
         {
@@ -93,6 +97,7 @@ export class CollectionNewContractDeployedJob extends AbstractRabbitMqJobHandler
           name: name || null,
           contract: toBuffer(contract),
           creator: deployer ? toBuffer(deployer) : null,
+          tokenSetId: `contract:${contract}`,
         }
       ),
     ]);
