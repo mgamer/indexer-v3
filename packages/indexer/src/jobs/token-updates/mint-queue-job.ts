@@ -61,11 +61,6 @@ export class MintQueueJob extends AbstractRabbitMqJobHandler {
       // check if there are any tokens that exist already for the collection
       // if there are not, we need to fetch the collection metadata from upstream
       if (collection) {
-        logger.info(
-          this.queueName,
-          `Minted token ${contract}:${tokenId} for collection ${collection.id}`
-        );
-
         const existingToken = await idb.oneOrNone(
           `
             SELECT 1 FROM tokens
@@ -205,11 +200,6 @@ export class MintQueueJob extends AbstractRabbitMqJobHandler {
       }
 
       if (isFirstToken) {
-        logger.info(
-          this.queueName,
-          `First token for collection ${collection?.id} ${contract}:${tokenId}`
-        );
-
         await collectionMetadataQueueJob.addToQueue({
           contract,
           tokenId,
