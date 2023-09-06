@@ -170,12 +170,25 @@ export const processContractAddresses = async (traces: TransactionTrace[]) => {
   for (const trace of traces) {
     // eslint-disable-next-line
     // @ts-ignore
-    trace?.calls?.forEach((call) => {
-      const processedCall = processCall(trace, call);
+    if (trace.result && !trace.result.error && !trace?.calls) {
+      // eslint-disable-next-line
+      // @ts-ignore
+      const processedCall = processCall(trace, trace.result);
       if (processedCall) {
         contractAddresses.push(...processedCall);
       }
-    });
+      // eslint-disable-next-line
+      // @ts-ignore
+    } else if (trace?.calls?.length > 0) {
+      // eslint-disable-next-line
+      // @ts-ignore
+      trace?.calls?.forEach((call) => {
+        const processedCall = processCall(trace, call);
+        if (processedCall) {
+          contractAddresses.push(...processedCall);
+        }
+      });
+    }
   }
 
   contractAddresses = contractAddresses.filter((ca) => ca);
