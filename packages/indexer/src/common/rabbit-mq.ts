@@ -57,12 +57,18 @@ export class RabbitMq {
   private static rabbitMqPublisherChannels: ChannelWrapper[] = [];
 
   public static async connect() {
-    RabbitMq.rabbitMqPublisherConnection = amqplibConnectionManager.connect({
-      hostname: config.rabbitHostname,
-      username: config.rabbitUsername,
-      password: config.rabbitPassword,
-      vhost: getNetworkName(),
-    });
+    RabbitMq.rabbitMqPublisherConnection = amqplibConnectionManager.connect(
+      {
+        hostname: config.rabbitHostname,
+        username: config.rabbitUsername,
+        password: config.rabbitPassword,
+        vhost: getNetworkName(),
+      },
+      {
+        reconnectTimeInSeconds: 5,
+        heartbeatIntervalInSeconds: 0,
+      }
+    );
 
     for (let index = 0; index < RabbitMq.maxPublisherChannelsCount; ++index) {
       const channel = this.rabbitMqPublisherConnection.createChannel();

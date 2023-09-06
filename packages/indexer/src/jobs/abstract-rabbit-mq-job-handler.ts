@@ -55,7 +55,7 @@ export abstract class AbstractRabbitMqJobHandler {
       if (config.chainId === 137) {
         logger.info(
           "publish-debug",
-          `acking ${this.rabbitMqMessage.correlationId} delivery tag ${
+          `acking ${this.rabbitMqMessage.correlationId} ${this.getQueue()} delivery tag ${
             consumeMessage.fields.deliveryTag
           } with payload ${JSON.stringify(this.rabbitMqMessage.payload)}`
         );
@@ -99,7 +99,7 @@ export abstract class AbstractRabbitMqJobHandler {
         if (config.chainId === 137) {
           logger.info(
             "publish-debug",
-            `acking ${this.rabbitMqMessage.correlationId} delivery tag ${
+            `acking ${this.rabbitMqMessage.correlationId} ${this.getQueue()} delivery tag ${
               consumeMessage.fields.deliveryTag
             } with payload ${JSON.stringify(this.rabbitMqMessage.payload)}`
           );
