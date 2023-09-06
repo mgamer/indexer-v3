@@ -47,7 +47,7 @@ export class CollectionNewContractDeployedJob extends AbstractRabbitMqJobHandler
         return;
     }
 
-    const contractName = await getContractNameAndSymbol(contract);
+    const { symbol, name } = await getContractNameAndSymbol(contract);
 
     await Promise.all([
       idb.none(
@@ -70,8 +70,8 @@ export class CollectionNewContractDeployedJob extends AbstractRabbitMqJobHandler
         {
           address: toBuffer(contract),
           kind: collectionKind.toLowerCase(),
-          symbol: contractName.symbol || null,
-          name: contractName.name || null,
+          symbol: symbol || null,
+          name: name || null,
         }
       ),
       idb.none(
@@ -90,7 +90,7 @@ export class CollectionNewContractDeployedJob extends AbstractRabbitMqJobHandler
             `,
         {
           id: contract,
-          name: contractName || null,
+          name: name || null,
           contract: toBuffer(contract),
           creator: deployer ? toBuffer(deployer) : null,
         }
