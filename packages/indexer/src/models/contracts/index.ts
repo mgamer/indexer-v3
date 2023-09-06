@@ -14,7 +14,7 @@ export class Contracts {
           symbol,
           name
         FROM contracts
-        WHERE contracts.contract = $/contract/
+        WHERE contracts.address = $/contract/
       `,
       {
         contract: toBuffer(contract),
@@ -43,7 +43,7 @@ export class Contracts {
         SET
           symbol = $/symbol/,
           name = $/name/
-        WHERE contracts.contract = $/contract/
+        WHERE contracts.address = $/contract/
       `,
       {
         contract: toBuffer(contract),
