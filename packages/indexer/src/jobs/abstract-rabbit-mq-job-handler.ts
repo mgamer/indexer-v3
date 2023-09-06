@@ -65,21 +65,15 @@ export abstract class AbstractRabbitMqJobHandler {
 
     try {
       const processResult = await this.process(this.rabbitMqMessage.payload); // Process the message
+      const jobTimedOut = now() - start > (this.consumerTimeout || 30 * 60 * 1000);
 
-      channel.ack(consumeMessage); // Ack the message with rabbit
-      if (
-        config.chainId === 137 &&
-        [
-          "collection-updates-floor-ask-queue",
-          "order-fixes",
-          "collection-updates-normalized-floor-ask-queue",
-          "collection-updates-non-flagged-floor-ask-queue",
-          "token-reclac-supply",
-          "collection-recalc-owner-count-queue",
-        ].includes(this.getQueue())
-      ) {
+      // Don't ack jobs that timed out as rabbit already re-queued them
+      if (!jobTimedOut) {
+        channel.ack(consumeMessage); // Ack the message with rabbit
+      } else {
+        // Log the timed out job
         logger.info(
-          "publish-debug",
+          this.queueName,
           `time ${(now() - start) / 1000}s acking ${
             this.rabbitMqMessage.correlationId
           } ${this.getQueue()} delivery tag ${
@@ -123,24 +117,6 @@ export abstract class AbstractRabbitMqJobHandler {
 
       try {
         channel.ack(consumeMessage); // Ack the message with rabbit
-        if (
-          config.chainId === 137 &&
-          [
-            "collection-updates-floor-ask-queue",
-            "order-fixes",
-            "collection-updates-normalized-floor-ask-queue",
-            "collection-updates-non-flagged-floor-ask-queue",
-            "token-reclac-supply",
-            "collection-recalc-owner-count-queue",
-          ].includes(this.getQueue())
-        ) {
-          logger.info(
-            "publish-debug",
-            `acking ${this.rabbitMqMessage.correlationId} ${this.getQueue()} delivery tag ${
-              consumeMessage.fields.deliveryTag
-            } with payload ${JSON.stringify(this.rabbitMqMessage.payload)}`
-          );
-        }
 
         // Release lock if there's a job id
         if (this.rabbitMqMessage.jobId) {
