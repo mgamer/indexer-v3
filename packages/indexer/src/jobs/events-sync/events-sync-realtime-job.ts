@@ -12,7 +12,7 @@ export class EventsSyncRealtimeJob extends AbstractRabbitMqJobHandler {
   queueName = "events-sync-realtime";
   maxRetries = 30;
   concurrency = [80001, 11155111].includes(config.chainId) ? 1 : 5;
-  consumerTimeout = 30 * 60 * 1000;
+  consumerTimeout = 10 * 60 * 1000;
   backoff = {
     type: "fixed",
     delay: 1000,
@@ -47,16 +47,14 @@ export class EventsSyncRealtimeJob extends AbstractRabbitMqJobHandler {
     await checkForOrphanedBlock(block);
   }
 
-  public events() {
-    this.once(
-      "onCompleted",
-      async (message: RabbitMQMessage, processResult: { addToQueue?: boolean; delay?: number }) => {
-        if (processResult?.addToQueue) {
-          logger.info(this.queueName, `Retry block ${message.payload.block}`);
-          await this.addToQueue({ block: message.payload.block }, processResult.delay);
-        }
-      }
-    );
+  public async onCompleted(
+    message: RabbitMQMessage,
+    processResult: { addToQueue?: boolean; delay?: number }
+  ) {
+    if (processResult?.addToQueue) {
+      logger.info(this.queueName, `Retry block ${message.payload.block}`);
+      await this.addToQueue({ block: message.payload.block }, processResult.delay);
+    }
   }
 
   public async addToQueue(params: EventsSyncRealtimeJobPayload, delay = 0) {

@@ -882,6 +882,13 @@ export const updateActivitiesCollection = async (
 
   const query = {
     bool: {
+      must_not: [
+        {
+          term: {
+            "collection.id": newCollection.id,
+          },
+        },
+      ],
       must: [
         {
           term: {
@@ -898,13 +905,17 @@ export const updateActivitiesCollection = async (
   };
 
   try {
-    const pendingUpdateActivities = await _search({
-      // This is needed due to issue with elasticsearch DSL.
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      query,
-      size: 1000,
-    });
+    const pendingUpdateActivities = await _search(
+      {
+        // This is needed due to issue with elasticsearch DSL.
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        query,
+        size: 1000,
+      },
+      0,
+      true
+    );
 
     if (pendingUpdateActivities.length) {
       const bulkParams = {
