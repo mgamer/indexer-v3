@@ -9,7 +9,8 @@ import { TxData } from "@reservoir0x/sdk/dist/utils";
 import axios from "axios";
 import Joi from "joi";
 import _ from "lodash";
-
+import { MaxUint256 } from "@ethersproject/constants";
+import { getPreSignatureId, getPreSignature, savePreSignature } from "@/utils/pre-signatures";
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { bn, now, regex } from "@/common/utils";
@@ -18,6 +19,7 @@ import { getExecuteError } from "@/orderbook/orders/errors";
 import { checkBlacklistAndFallback } from "@/orderbook/orders";
 import * as b from "@/utils/auth/blur";
 import { ExecutionsBuffer } from "@/utils/executions";
+import { PreSignature } from "@reservoir0x/sdk/dist/router/v6/types";
 
 // Blur
 import * as blurBuyCollection from "@/orderbook/orders/blur/build/buy/collection";
@@ -306,6 +308,14 @@ export const getExecuteBidV5Options: RouteOptions = {
           items: [],
         },
         {
+          id: "permit-approval",
+          action: "Approve currency",
+          description:
+            "We'll ask your approval for the exchange to access your token. This is a one-time only operation per exchange.",
+          kind: "signature",
+          items: [],
+        },
+        {
           id: "order-signature",
           action: "Authorize offer",
           description: "A free off-chain signature to create the offer",
@@ -329,6 +339,7 @@ export const getExecuteBidV5Options: RouteOptions = {
           };
           collection?: string;
           isNonFlagged?: boolean;
+          permitId?: string;
           orderbook: string;
           orderbookApiKey?: string;
           source?: string;
@@ -347,6 +358,7 @@ export const getExecuteBidV5Options: RouteOptions = {
           };
           collection?: string;
           isNonFlagged?: boolean;
+          permitId?: string;
           orderbook: string;
           orderbookApiKey?: string;
           source?: string;
@@ -537,6 +549,10 @@ export const getExecuteBidV5Options: RouteOptions = {
             const collection =
               collectionId && !attributeKey && !attributeValue ? collectionId : undefined;
 
+            const supportPermit = [Sdk.Common.Addresses.Usdc[config.chainId]].includes(
+              params.currency
+            );
+
             switch (params.orderKind) {
               case "blur": {
                 if (!["blur"].includes(params.orderbook)) {
@@ -564,7 +580,7 @@ export const getExecuteBidV5Options: RouteOptions = {
                 if (needsBethWrapping) {
                   // Force the client to poll
                   // (since Blur won't release the calldata unless you have enough BETH in your wallet)
-                  steps[3].items.push({
+                  steps[4].items.push({
                     status: "incomplete",
                   });
                 } else {
@@ -580,7 +596,7 @@ export const getExecuteBidV5Options: RouteOptions = {
 
                   const id = new Sdk.BlurV2.Order(config.chainId, signData.value).hash();
 
-                  steps[3].items.push({
+                  steps[4].items.push({
                     status: "incomplete",
                     data: {
                       sign: {
@@ -709,11 +725,65 @@ export const getExecuteBidV5Options: RouteOptions = {
                   approvalTx = currency.approveTransaction(maker, conduit);
                 }
 
-                steps[2].items.push({
-                  status: !approvalTx ? "complete" : "incomplete",
-                  data: approvalTx,
-                  orderIndexes: [i],
-                });
+                // Use ERC20-Permit
+                let permitId: string | undefined;
+                if (supportPermit && approvalTx) {
+                  const permitData = await Sdk.Common.Helpers.createPermitMessage(
+                    {
+                      chainId: config.chainId,
+                      token: params.currency,
+                      owner: maker,
+                      spender: conduit,
+                      amount: MaxUint256.toString(),
+                      deadline: String(now() + 86400 * 7),
+                    },
+                    baseProvider
+                  );
+
+                  const preSignature: PreSignature = {
+                    signer: maker,
+                    kind: "permit-bidding",
+                    data: permitData,
+                    uniqueId: `${params.currency}-${maker}-${conduit}`,
+                  };
+
+                  permitId = getPreSignatureId(params as object, {
+                    uniqueId: preSignature.uniqueId,
+                  });
+
+                  const cachedSignature = await getPreSignature(permitId);
+                  if (cachedSignature) {
+                    preSignature.data = cachedSignature.data;
+                    preSignature.signature = cachedSignature.signature;
+                  } else {
+                    await savePreSignature(permitId, preSignature);
+                  }
+
+                  const hasSignature = preSignature.signature;
+                  if (!hasSignature) {
+                    steps[3].items.push({
+                      status: "incomplete",
+                      data: {
+                        sign: preSignature.data,
+                        post: {
+                          endpoint: "/execute/pre-signature/v1",
+                          method: "POST",
+                          body: {
+                            id: permitId,
+                          },
+                        },
+                      },
+                    });
+                  }
+                }
+
+                if (!supportPermit) {
+                  steps[2].items.push({
+                    status: !approvalTx ? "complete" : "incomplete",
+                    data: approvalTx,
+                    orderIndexes: [i],
+                  });
+                }
 
                 bulkOrders["seaport-v1.5"].push({
                   order: {
@@ -727,6 +797,7 @@ export const getExecuteBidV5Options: RouteOptions = {
                   collection,
                   isNonFlagged: params.excludeFlaggedTokens,
                   orderbook: params.orderbook,
+                  permitId,
                   orderbookApiKey: params.orderbookApiKey,
                   source,
                   orderIndex: i,
@@ -809,11 +880,65 @@ export const getExecuteBidV5Options: RouteOptions = {
                   approvalTx = currency.approveTransaction(maker, conduit);
                 }
 
-                steps[2].items.push({
-                  status: !approvalTx ? "complete" : "incomplete",
-                  data: approvalTx,
-                  orderIndexes: [i],
-                });
+                // Use ERC20-Permit
+                let permitId: string | undefined;
+                if (supportPermit && approvalTx) {
+                  const permitData = await Sdk.Common.Helpers.createPermitMessage(
+                    {
+                      chainId: config.chainId,
+                      token: params.currency,
+                      owner: maker,
+                      spender: conduit,
+                      amount: MaxUint256.toString(),
+                      deadline: String(now() + 86400 * 7),
+                    },
+                    baseProvider
+                  );
+
+                  const preSignature: PreSignature = {
+                    signer: maker,
+                    kind: "permit-bidding",
+                    data: permitData,
+                    uniqueId: `${params.currency}-${maker}-${conduit}`,
+                  };
+
+                  permitId = getPreSignatureId(params as object, {
+                    uniqueId: preSignature.uniqueId,
+                  });
+
+                  const cachedSignature = await getPreSignature(permitId);
+                  if (cachedSignature) {
+                    preSignature.data = cachedSignature.data;
+                    preSignature.signature = cachedSignature.signature;
+                  } else {
+                    await savePreSignature(permitId, preSignature);
+                  }
+
+                  const hasSignature = preSignature.signature;
+                  if (!hasSignature) {
+                    steps[3].items.push({
+                      status: "incomplete",
+                      data: {
+                        sign: preSignature.data,
+                        post: {
+                          endpoint: "/execute/pre-signature/v1",
+                          method: "POST",
+                          body: {
+                            id: permitId,
+                          },
+                        },
+                      },
+                    });
+                  }
+                }
+
+                if (!supportPermit) {
+                  steps[2].items.push({
+                    status: !approvalTx ? "complete" : "incomplete",
+                    data: approvalTx,
+                    orderIndexes: [i],
+                  });
+                }
 
                 bulkOrders["alienswap"].push({
                   order: {
@@ -826,6 +951,7 @@ export const getExecuteBidV5Options: RouteOptions = {
                   attribute,
                   collection,
                   isNonFlagged: params.excludeFlaggedTokens,
+                  permitId,
                   orderbook: params.orderbook,
                   orderbookApiKey: params.orderbookApiKey,
                   source,
@@ -901,12 +1027,69 @@ export const getExecuteBidV5Options: RouteOptions = {
                   );
                 }
 
-                steps[2].items.push({
-                  status: !approvalTx ? "complete" : "incomplete",
-                  data: approvalTx,
-                  orderIndexes: [i],
-                });
-                steps[3].items.push({
+                // Use ERC20-Permit
+                let permitId: string | undefined;
+                if (supportPermit && approvalTx) {
+                  const permitData = await Sdk.Common.Helpers.createPermitMessage(
+                    {
+                      chainId: config.chainId,
+                      token: params.currency,
+                      owner: maker,
+                      spender: Sdk.ZeroExV4.Addresses.Exchange[config.chainId],
+                      amount: MaxUint256.toString(),
+                      deadline: String(now() + 86400 * 7),
+                    },
+                    baseProvider
+                  );
+
+                  const preSignature: PreSignature = {
+                    signer: maker,
+                    kind: "permit-bidding",
+                    data: permitData,
+                    uniqueId: `${params.currency}-${maker}-${
+                      Sdk.ZeroExV4.Addresses.Exchange[config.chainId]
+                    }`,
+                  };
+
+                  permitId = getPreSignatureId(params as object, {
+                    uniqueId: preSignature.uniqueId,
+                  });
+
+                  const cachedSignature = await getPreSignature(permitId);
+                  if (cachedSignature) {
+                    preSignature.data = cachedSignature.data;
+                    preSignature.signature = cachedSignature.signature;
+                  } else {
+                    await savePreSignature(permitId, preSignature);
+                  }
+
+                  const hasSignature = preSignature.signature;
+                  if (!hasSignature) {
+                    steps[3].items.push({
+                      status: "incomplete",
+                      data: {
+                        sign: preSignature.data,
+                        post: {
+                          endpoint: "/execute/pre-signature/v1",
+                          method: "POST",
+                          body: {
+                            id: permitId,
+                          },
+                        },
+                      },
+                    });
+                  }
+                }
+
+                if (!supportPermit) {
+                  steps[2].items.push({
+                    status: !approvalTx ? "complete" : "incomplete",
+                    data: approvalTx,
+                    orderIndexes: [i],
+                  });
+                }
+
+                steps[4].items.push({
                   status: "incomplete",
                   data: {
                     sign: order.getSignatureData(),
@@ -924,6 +1107,7 @@ export const getExecuteBidV5Options: RouteOptions = {
                         attribute,
                         collection,
                         isNonFlagged: params.excludeFlaggedTokens,
+                        permitId,
                         orderbook: params.orderbook,
                         orderbookApiKey: params.orderbookApiKey,
                         source,
@@ -993,12 +1177,69 @@ export const getExecuteBidV5Options: RouteOptions = {
                   );
                 }
 
-                steps[2].items.push({
-                  status: !approvalTx ? "complete" : "incomplete",
-                  data: approvalTx,
-                  orderIndexes: [i],
-                });
-                steps[3].items.push({
+                // Use ERC20-Permit
+                let permitId: string | undefined;
+                if (supportPermit && approvalTx) {
+                  const permitData = await Sdk.Common.Helpers.createPermitMessage(
+                    {
+                      chainId: config.chainId,
+                      token: params.currency,
+                      owner: maker,
+                      spender: Sdk.LooksRareV2.Addresses.Exchange[config.chainId],
+                      amount: MaxUint256.toString(),
+                      deadline: String(now() + 86400 * 7),
+                    },
+                    baseProvider
+                  );
+
+                  const preSignature: PreSignature = {
+                    signer: maker,
+                    kind: "permit-bidding",
+                    data: permitData,
+                    uniqueId: `${params.currency}-${maker}-${
+                      Sdk.LooksRareV2.Addresses.Exchange[config.chainId]
+                    }`,
+                  };
+
+                  permitId = getPreSignatureId(params as object, {
+                    uniqueId: preSignature.uniqueId,
+                  });
+
+                  const cachedSignature = await getPreSignature(permitId);
+                  if (cachedSignature) {
+                    preSignature.data = cachedSignature.data;
+                    preSignature.signature = cachedSignature.signature;
+                  } else {
+                    await savePreSignature(permitId, preSignature);
+                  }
+
+                  const hasSignature = preSignature.signature;
+                  if (!hasSignature) {
+                    steps[3].items.push({
+                      status: "incomplete",
+                      data: {
+                        sign: preSignature.data,
+                        post: {
+                          endpoint: "/execute/pre-signature/v1",
+                          method: "POST",
+                          body: {
+                            id: permitId,
+                          },
+                        },
+                      },
+                    });
+                  }
+                }
+
+                if (!supportPermit) {
+                  steps[2].items.push({
+                    status: !approvalTx ? "complete" : "incomplete",
+                    data: approvalTx,
+                    orderIndexes: [i],
+                  });
+                }
+
+                steps[4].items.push({
                   status: "incomplete",
                   data: {
                     sign: order.getSignatureData(),
@@ -1016,6 +1257,7 @@ export const getExecuteBidV5Options: RouteOptions = {
                         collection,
                         orderbook: params.orderbook,
                         orderbookApiKey: params.orderbookApiKey,
+                        permitId,
                         source,
                       },
                     },
@@ -1082,12 +1324,69 @@ export const getExecuteBidV5Options: RouteOptions = {
                   );
                 }
 
-                steps[2].items.push({
-                  status: !approvalTx ? "complete" : "incomplete",
-                  data: approvalTx,
-                  orderIndexes: [i],
-                });
-                steps[3].items.push({
+                // Use ERC20-Permit
+                let permitId: string | undefined;
+                if (supportPermit && approvalTx) {
+                  const permitData = await Sdk.Common.Helpers.createPermitMessage(
+                    {
+                      chainId: config.chainId,
+                      token: params.currency,
+                      owner: maker,
+                      spender: Sdk.X2Y2.Addresses.Exchange[config.chainId],
+                      amount: MaxUint256.toString(),
+                      deadline: String(now() + 86400 * 7),
+                    },
+                    baseProvider
+                  );
+
+                  const preSignature: PreSignature = {
+                    signer: maker,
+                    kind: "permit-bidding",
+                    data: permitData,
+                    uniqueId: `${params.currency}-${maker}-${
+                      Sdk.X2Y2.Addresses.Exchange[config.chainId]
+                    }`,
+                  };
+
+                  permitId = getPreSignatureId(params as object, {
+                    uniqueId: preSignature.uniqueId,
+                  });
+
+                  const cachedSignature = await getPreSignature(permitId);
+                  if (cachedSignature) {
+                    preSignature.data = cachedSignature.data;
+                    preSignature.signature = cachedSignature.signature;
+                  } else {
+                    await savePreSignature(permitId, preSignature);
+                  }
+
+                  const hasSignature = preSignature.signature;
+                  if (!hasSignature) {
+                    steps[3].items.push({
+                      status: "incomplete",
+                      data: {
+                        sign: preSignature.data,
+                        post: {
+                          endpoint: "/execute/pre-signature/v1",
+                          method: "POST",
+                          body: {
+                            id: permitId,
+                          },
+                        },
+                      },
+                    });
+                  }
+                }
+
+                if (!supportPermit) {
+                  steps[2].items.push({
+                    status: !approvalTx ? "complete" : "incomplete",
+                    data: approvalTx,
+                    orderIndexes: [i],
+                  });
+                }
+
+                steps[4].items.push({
                   status: "incomplete",
                   data: {
                     sign: new Sdk.X2Y2.Exchange(
@@ -1108,6 +1407,7 @@ export const getExecuteBidV5Options: RouteOptions = {
                         collection,
                         orderbook: params.orderbook,
                         orderbookApiKey: params.orderbookApiKey,
+                        permitId,
                         source,
                       },
                     },
@@ -1166,12 +1466,69 @@ export const getExecuteBidV5Options: RouteOptions = {
                   );
                 }
 
-                steps[2].items.push({
-                  status: !approvalTx ? "complete" : "incomplete",
-                  data: approvalTx,
-                  orderIndexes: [i],
-                });
-                steps[3].items.push({
+                // Use ERC20-Permit
+                let permitId: string | undefined;
+                if (supportPermit && approvalTx) {
+                  const permitData = await Sdk.Common.Helpers.createPermitMessage(
+                    {
+                      chainId: config.chainId,
+                      token: params.currency,
+                      owner: maker,
+                      spender: Sdk.PaymentProcessor.Addresses.Exchange[config.chainId],
+                      amount: MaxUint256.toString(),
+                      deadline: String(now() + 86400 * 7),
+                    },
+                    baseProvider
+                  );
+
+                  const preSignature: PreSignature = {
+                    signer: maker,
+                    kind: "permit-bidding",
+                    data: permitData,
+                    uniqueId: `${params.currency}-${maker}-${
+                      Sdk.PaymentProcessor.Addresses.Exchange[config.chainId]
+                    }`,
+                  };
+
+                  permitId = getPreSignatureId(params as object, {
+                    uniqueId: preSignature.uniqueId,
+                  });
+
+                  const cachedSignature = await getPreSignature(permitId);
+                  if (cachedSignature) {
+                    preSignature.data = cachedSignature.data;
+                    preSignature.signature = cachedSignature.signature;
+                  } else {
+                    await savePreSignature(permitId, preSignature);
+                  }
+
+                  const hasSignature = preSignature.signature;
+                  if (!hasSignature) {
+                    steps[3].items.push({
+                      status: "incomplete",
+                      data: {
+                        sign: preSignature.data,
+                        post: {
+                          endpoint: "/execute/pre-signature/v1",
+                          method: "POST",
+                          body: {
+                            id: permitId,
+                          },
+                        },
+                      },
+                    });
+                  }
+                }
+
+                if (!supportPermit) {
+                  steps[2].items.push({
+                    status: !approvalTx ? "complete" : "incomplete",
+                    data: approvalTx,
+                    orderIndexes: [i],
+                  });
+                }
+
+                steps[4].items.push({
                   status: "incomplete",
                   data: {
                     sign: order.getSignatureData(),
@@ -1191,6 +1548,7 @@ export const getExecuteBidV5Options: RouteOptions = {
                             attribute,
                             collection,
                             isNonFlagged: params.excludeFlaggedTokens,
+                            permitId,
                             orderbook: params.orderbook,
                             orderbookApiKey: params.orderbookApiKey,
                           },
@@ -1221,7 +1579,7 @@ export const getExecuteBidV5Options: RouteOptions = {
         const orders = bulkOrders["seaport-v1.5"];
         if (orders.length === 1) {
           const order = new Sdk.SeaportV15.Order(config.chainId, orders[0].order.data);
-          steps[3].items.push({
+          steps[4].items.push({
             status: "incomplete",
             data: {
               sign: order.getSignatureData(),
@@ -1239,6 +1597,7 @@ export const getExecuteBidV5Options: RouteOptions = {
                   attribute: orders[0].attribute,
                   collection: orders[0].collection,
                   isNonFlagged: orders[0].isNonFlagged,
+                  permitId: orders[0].permitId,
                   orderbook: orders[0].orderbook,
                   orderbookApiKey: orders[0].orderbookApiKey,
                   source,
@@ -1253,7 +1612,7 @@ export const getExecuteBidV5Options: RouteOptions = {
             orders.map((o) => new Sdk.SeaportV15.Order(config.chainId, o.order.data))
           );
 
-          steps[3].items.push({
+          steps[4].items.push({
             status: "incomplete",
             data: {
               sign: signatureData,
@@ -1267,6 +1626,7 @@ export const getExecuteBidV5Options: RouteOptions = {
                     attribute: o.attribute,
                     collection: o.collection,
                     isNonFlagged: o.isNonFlagged,
+                    permitId: o.permitId,
                     orderbook: o.orderbook,
                     orderbookApiKey: o.orderbookApiKey,
                     bulkData: {
@@ -1291,7 +1651,7 @@ export const getExecuteBidV5Options: RouteOptions = {
         const orders = bulkOrders["alienswap"];
         if (orders.length === 1) {
           const order = new Sdk.Alienswap.Order(config.chainId, orders[0].order.data);
-          steps[3].items.push({
+          steps[4].items.push({
             status: "incomplete",
             data: {
               sign: order.getSignatureData(),
@@ -1309,6 +1669,7 @@ export const getExecuteBidV5Options: RouteOptions = {
                   attribute: orders[0].attribute,
                   collection: orders[0].collection,
                   isNonFlagged: orders[0].isNonFlagged,
+                  permitId: orders[0].permitId,
                   orderbook: orders[0].orderbook,
                   orderbookApiKey: orders[0].orderbookApiKey,
                   source,
@@ -1323,7 +1684,7 @@ export const getExecuteBidV5Options: RouteOptions = {
             orders.map((o) => new Sdk.Alienswap.Order(config.chainId, o.order.data))
           );
 
-          steps[3].items.push({
+          steps[4].items.push({
             status: "incomplete",
             data: {
               sign: signatureData,
@@ -1337,6 +1698,7 @@ export const getExecuteBidV5Options: RouteOptions = {
                     attribute: o.attribute,
                     collection: o.collection,
                     isNonFlagged: o.isNonFlagged,
+                    permitId: o.permitId,
                     orderbook: o.orderbook,
                     orderbookApiKey: o.orderbookApiKey,
                     bulkData: {
@@ -1386,7 +1748,7 @@ export const getExecuteBidV5Options: RouteOptions = {
         }
       }
 
-      if (!steps[3].items.length) {
+      if (!steps[4].items.length) {
         const error = getExecuteError("No orders can be created");
         error.output.payload.errors = errors;
         throw error;

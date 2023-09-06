@@ -35,6 +35,17 @@ contract PermitProxy is ERC2771Context, ReentrancyGuard {
     Transfer[] transfers;
   }
 
+  struct PermitApproval {
+    IERC20 token;
+    address owner;
+    address spender;
+    uint256 amount;
+    uint256 deadline;
+    uint8 v;
+    bytes32 r;
+    bytes32 s;
+  }
+
   // --- Errors ---
 
   error Unauthorized();
@@ -91,5 +102,26 @@ contract PermitProxy is ERC2771Context, ReentrancyGuard {
     }
 
     ROUTER.execute(executionInfos);
+  }
+
+  function bulkPermit(
+    PermitApproval[] calldata permits
+  ) external nonReentrant {
+    uint256 permitsLength = permits.length;
+    for (uint256 i = 0; i < permitsLength; ) {
+      PermitApproval memory permit = permits[i];
+      IERC20Permit(address(permit.token)).permit(
+        permit.owner,
+        permit.spender,
+        permit.amount,
+        permit.deadline,
+        permit.v,
+        permit.r,
+        permit.s
+      );
+      unchecked {
+        ++i;
+      }
+    }
   }
 }

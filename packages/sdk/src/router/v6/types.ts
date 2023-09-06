@@ -51,6 +51,16 @@ export type Permit = {
   data: PermitWithTransfers;
 };
 
+export type PermitApproval = {
+  token: string;
+  owner: string;
+  spender: string;
+  value: string;
+  nonce: string;
+  deadline: string;
+  signature: string;
+};
+
 // Orders
 
 export type GenericOrder =
@@ -183,7 +193,7 @@ export type PerCurrencyListingDetails = {
 };
 
 export type PreSignature = {
-  kind: "payment-processor-take-order";
+  kind: "payment-processor-take-order" | "permit-bidding";
   signer: string;
   signature?: string;
   uniqueId: string;
@@ -221,6 +231,7 @@ export type BidFillDetails = {
   owner?: string;
   isProtected?: boolean;
   fees?: Fee[];
+  permitApproval?: PermitApproval;
 };
 export type BidDetails = GenericOrder & BidFillDetails;
 

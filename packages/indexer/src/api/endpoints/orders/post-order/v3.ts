@@ -62,6 +62,7 @@ export const postOrderV3Options: RouteOptions = {
       collection: Joi.string(),
       tokenSetId: Joi.string(),
       isNonFlagged: Joi.boolean(),
+      permitId: Joi.string().optional(),
     }).oxor("tokenSetId", "collection", "attribute"),
   },
   response: {
@@ -102,6 +103,9 @@ export const postOrderV3Options: RouteOptions = {
 
       // Only relevant for non-flagged tokens bids
       const isNonFlagged = payload.isNonFlagged;
+
+      // Permit bidding
+      const permitId = payload.permitId;
 
       const signature = query.signature ?? order.data.signature;
       if (signature) {
@@ -173,6 +177,7 @@ export const postOrderV3Options: RouteOptions = {
             metadata: {
               schema,
               source,
+              permitId,
             },
           };
 
@@ -255,6 +260,7 @@ export const postOrderV3Options: RouteOptions = {
                   metadata: {
                     schema,
                     source,
+                    permitId,
                   },
                 },
               ]);
@@ -271,6 +277,7 @@ export const postOrderV3Options: RouteOptions = {
                   metadata: {
                     schema,
                     source,
+                    permitId,
                   },
                 },
               ]);
@@ -287,6 +294,7 @@ export const postOrderV3Options: RouteOptions = {
                   metadata: {
                     schema,
                     source,
+                    permitId,
                   },
                 },
               ]);
@@ -302,6 +310,7 @@ export const postOrderV3Options: RouteOptions = {
                   metadata: {
                     schema,
                     source,
+                    permitId,
                   },
                 },
               ]);
@@ -397,6 +406,7 @@ export const postOrderV3Options: RouteOptions = {
               metadata: {
                 schema,
                 source,
+                permitId,
               },
             };
 
@@ -453,6 +463,7 @@ export const postOrderV3Options: RouteOptions = {
                 orderParams: order.data,
                 metadata: {
                   schema,
+                  permitId,
                 },
               },
             ]);

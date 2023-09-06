@@ -35,6 +35,7 @@ import {
 } from "./types";
 import { SwapInfo, generateSwapInfo, mergeSwapInfos } from "./swap/index";
 import { generateFTApprovalTxData, generateNFTApprovalTxData, isETH, isWETH } from "./utils";
+import { splitSignature } from "@ethersproject/bytes";
 
 // Tokens
 import ERC721Abi from "../../common/abis/Erc721.json";
@@ -4271,12 +4272,41 @@ export class Router {
       }
     }
 
+    const permitApprovalExecutions: ExecutionInfo[] = [];
+    const permitBiddingBids = details.filter((c) => c.permitApproval);
+
+    if (permitBiddingBids.length) {
+      permitApprovalExecutions.push({
+        module: this.contracts.permitProxy.address,
+        data: this.contracts.permitProxy.interface.encodeFunctionData("bulkPermit", [
+          permitBiddingBids
+            .map((c) => c.permitApproval)
+            .map((permitApproval) => {
+              if (permitApproval) {
+                const { v, r, s } = splitSignature(permitApproval.signature!);
+                return {
+                  token: permitApproval.token,
+                  owner: permitApproval.owner,
+                  spender: permitApproval.spender,
+                  amount: permitApproval.value,
+                  deadline: permitApproval.deadline,
+                  v,
+                  r,
+                  s,
+                };
+              }
+            })
+            .filter((c) => c),
+        ]),
+        value: 0,
+      });
+    }
+
     if (executionsWithDetails.length === 1 && !options?.forceApprovalProxy) {
       const execution = executionsWithDetails[0].execution;
       const detail = executionsWithDetails[0].detail;
-
       const routerLevelTxData = this.contracts.router.interface.encodeFunctionData("execute", [
-        [execution],
+        [...permitApprovalExecutions, execution],
       ]);
 
       // Use the on-received ERC721/ERC1155 hooks for approval-less bid filling
@@ -4319,7 +4349,10 @@ export class Router {
           data:
             this.contracts.approvalProxy.interface.encodeFunctionData("bulkTransferWithExecute", [
               nftTransferItems,
-              executionsWithDetails.map(({ execution }) => execution),
+              [
+                ...permitApprovalExecutions,
+                ...executionsWithDetails.map(({ execution }) => execution),
+              ],
               Sdk.SeaportBase.Addresses.ReservoirConduitKey[this.chainId],
             ]) + generateSourceBytes(options?.source),
         },

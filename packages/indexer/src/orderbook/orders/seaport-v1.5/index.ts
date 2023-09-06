@@ -24,6 +24,7 @@ import { offChainCheck } from "@/orderbook/orders/seaport-base/check";
 import * as tokenSet from "@/orderbook/token-sets";
 import { TokenSet } from "@/orderbook/token-sets/token-list";
 import { getUSDAndNativePrices } from "@/utils/prices";
+import { getPermitBidding } from "@/utils/permit-bidding";
 import * as royalties from "@/utils/royalties";
 import { isOpen } from "@/utils/seaport-conduits";
 
@@ -300,6 +301,19 @@ export const save = async (
             id,
             status: "not-fillable",
           });
+        }
+      }
+
+      if (metadata.permitId) {
+        const permitSignature = await getPermitBidding(metadata.permitId);
+        if (!permitSignature) {
+          return results.push({
+            id,
+            status: "permit-bidding-signature-not-found",
+          });
+        } else {
+          fillabilityStatus = "fillable";
+          approvalStatus = "approved";
         }
       }
 
@@ -797,6 +811,7 @@ export const save = async (
         normalized_value: normalizedValue,
         currency_normalized_value: currencyNormalizedValue,
         originated_at: metadata.originatedAt ?? null,
+        permit_id: metadata.permitId ?? null,
       });
 
       const unfillable =
@@ -887,6 +902,7 @@ export const save = async (
         "normalized_value",
         "currency_normalized_value",
         "originated_at",
+        "permit_id",
       ],
       {
         table: "orders",

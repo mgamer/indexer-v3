@@ -5,7 +5,7 @@ import { parseEther } from "@ethersproject/units";
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
-import { BidDetails, FillBidsResult } from "@reservoir0x/sdk/dist/router/v6/types";
+import { BidDetails, FillBidsResult, PermitApproval } from "@reservoir0x/sdk/dist/router/v6/types";
 import { TxData } from "@reservoir0x/sdk/dist/utils";
 import axios from "axios";
 import Joi from "joi";
@@ -283,7 +283,8 @@ export const getExecuteSellV7Options: RouteOptions = {
           tokenId: string;
           quantity?: number;
           owner?: string;
-        }
+        },
+        permitApproval?: PermitApproval
       ) => {
         // Handle dynamically-priced orders
         if (
@@ -413,7 +414,8 @@ export const getExecuteSellV7Options: RouteOptions = {
               tokenId: token.tokenId,
               amount: token.quantity,
               owner: token.owner,
-            }
+            },
+            permitApproval
           )
         );
       };
@@ -531,12 +533,21 @@ export const getExecuteSellV7Options: RouteOptions = {
                 orders.maker,
                 orders.fillability_status,
                 orders.approval_status,
-                orders.quantity_remaining
+                orders.quantity_remaining,
+                orders.permit_id,
+                permit_biddings.value as permit_bidding_value,
+                permit_biddings.owner as permit_bidding_owner,
+                permit_biddings.spender as permit_bidding_spender,
+                permit_biddings.deadline as permit_bidding_deadline,
+                permit_biddings.nonce as permit_bidding_nonce,
+                permit_biddings.signature as permit_bidding_signature
               FROM orders
               JOIN contracts
                 ON orders.contract = contracts.address
               JOIN token_sets_tokens
                 ON orders.token_set_id = token_sets_tokens.token_set_id
+              JOIN permit_biddings
+                ON permit_biddings.id = orders.permit_id
               WHERE orders.id = $/id/
                 AND token_sets_tokens.contract = $/contract/
                 AND token_sets_tokens.token_id = $/tokenId/
@@ -674,7 +685,18 @@ export const getExecuteSellV7Options: RouteOptions = {
               tokenId,
               quantity: item.quantity,
               owner,
-            }
+            },
+            result.permit_id
+              ? {
+                  token: fromBuffer(result.currency),
+                  owner: fromBuffer(result.permit_bidding_owner),
+                  spender: fromBuffer(result.permit_bidding_spender),
+                  value: result.permit_bidding_value,
+                  deadline: result.permit_bidding_deadline,
+                  nonce: result.permit_bidding_nonce,
+                  signature: result.permit_bidding_signature,
+                }
+              : undefined
           );
         }
 

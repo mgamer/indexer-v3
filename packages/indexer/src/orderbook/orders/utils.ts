@@ -16,6 +16,7 @@ export type OrderMetadata = {
   target?: string;
   originatedAt?: string;
   fromOnChain?: boolean;
+  permitId?: string;
 };
 
 // Underlying database model for an order
@@ -53,6 +54,7 @@ export type DbOrder = {
   originated_at?: string | null;
   block_number?: number | null;
   log_index?: number | null;
+  permit_id?: string | null;
 };
 
 // TODO: Move under `token-sets`
