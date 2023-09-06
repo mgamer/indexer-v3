@@ -53,7 +53,7 @@ export const getRedirectTokenImageV1Options: RouteOptions = {
       }
 
       if (!token.image) {
-        throw Boom.notFound(`Image not found for token ${params.token}`);
+        throw Boom.badData(`Image not found for token ${params.token}`);
       }
 
       const imageUrl = Assets.getResizedImageUrl(
