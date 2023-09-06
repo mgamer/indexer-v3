@@ -317,9 +317,9 @@ export class RabbitMqJobsConsumer {
       connection.once("disconnect", (error) => {
         logger.error(
           "rabbit-error",
-          `Consumer connection error index ${i} isConnected ${connection.isConnected()} ${JSON.stringify(
-            error
-          )}`
+          `Consumer connection error index ${i} isConnected ${connection.isConnected()} channelCount ${
+            connection.channelCount
+          } ${JSON.stringify(error)}`
         );
       });
     }
@@ -363,7 +363,14 @@ export class RabbitMqJobsConsumer {
       await channel.waitForConnect();
 
       channel.once("connect", () => {
-        logger.info("rabbit-consume", `reconnected to ${job.getQueue()}`);
+        logger.info(
+          "rabbit-consume",
+          `reconnected to ${job.getQueue()} isConnected ${RabbitMqJobsConsumer.rabbitMqConsumerConnections[
+            connectionIndex
+          ].isConnected()} channelCount ${
+            RabbitMqJobsConsumer.rabbitMqConsumerConnections[connectionIndex].channelCount
+          }`
+        );
       });
     }
 
