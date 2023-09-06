@@ -51,10 +51,10 @@ export abstract class AbstractRabbitMqJobHandler {
     try {
       const processResult = await this.process(this.rabbitMqMessage.payload); // Process the message
 
-      await channel.ack(consumeMessage); // Ack the message with rabbit
-      if (config.chainId === 137 && this.queueName === "events-sync-realtime") {
+      channel.ack(consumeMessage); // Ack the message with rabbit
+      if (config.chainId === 137) {
         logger.info(
-          this.queueName,
+          "publish-debug",
           `acking ${this.rabbitMqMessage.correlationId} delivery tag ${
             consumeMessage.fields.deliveryTag
           } with payload ${JSON.stringify(this.rabbitMqMessage.payload)}`
@@ -95,10 +95,10 @@ export abstract class AbstractRabbitMqJobHandler {
       );
 
       try {
-        await channel.ack(consumeMessage); // Ack the message with rabbit
-        if (config.chainId === 137 && this.queueName === "events-sync-realtime") {
+        channel.ack(consumeMessage); // Ack the message with rabbit
+        if (config.chainId === 137) {
           logger.info(
-            this.queueName,
+            "publish-debug",
             `acking ${this.rabbitMqMessage.correlationId} delivery tag ${
               consumeMessage.fields.deliveryTag
             } with payload ${JSON.stringify(this.rabbitMqMessage.payload)}`
