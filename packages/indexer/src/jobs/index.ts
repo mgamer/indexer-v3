@@ -314,6 +314,10 @@ export class RabbitMqJobsConsumer {
       connection.once("disconnect", (error) => {
         logger.error("rabbit-error", `Consumer connection error ${JSON.stringify(error)}`);
       });
+
+      connection.once("connect", ({ url }) => {
+        logger.error("rabbit-error", `Consumer connection connected ${url}`);
+      });
     }
   }
 
