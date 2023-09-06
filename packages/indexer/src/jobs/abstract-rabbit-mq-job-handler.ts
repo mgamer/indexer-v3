@@ -55,9 +55,9 @@ export abstract class AbstractRabbitMqJobHandler {
       if (config.chainId === 137 && this.queueName === "events-sync-realtime") {
         logger.info(
           this.queueName,
-          `acking ${this.rabbitMqMessage.correlationId} with payload ${JSON.stringify(
-            this.rabbitMqMessage.payload
-          )}`
+          `acking ${this.rabbitMqMessage.correlationId} delivery tag ${
+            consumeMessage.fields.deliveryTag
+          } with payload ${JSON.stringify(this.rabbitMqMessage.payload)}`
         );
       }
 
@@ -99,9 +99,9 @@ export abstract class AbstractRabbitMqJobHandler {
         if (config.chainId === 137 && this.queueName === "events-sync-realtime") {
           logger.info(
             this.queueName,
-            `acking ${this.rabbitMqMessage.correlationId} with payload ${JSON.stringify(
-              this.rabbitMqMessage.payload
-            )}`
+            `acking ${this.rabbitMqMessage.correlationId} delivery tag ${
+              consumeMessage.fields.deliveryTag
+            } with payload ${JSON.stringify(this.rabbitMqMessage.payload)}`
           );
         }
 
