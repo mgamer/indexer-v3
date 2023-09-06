@@ -74,7 +74,7 @@ export abstract class AbstractRabbitMqJobHandler {
         // Log the timed out job
         logger.info(
           this.queueName,
-          `time ${(now() - start) / 1000}s acking ${
+          `job timed out ${(now() - start) / 1000}s correlationId ${
             this.rabbitMqMessage.correlationId
           } ${this.getQueue()} delivery tag ${
             consumeMessage.fields.deliveryTag
