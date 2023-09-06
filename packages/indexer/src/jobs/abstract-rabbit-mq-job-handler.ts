@@ -43,7 +43,20 @@ export abstract class AbstractRabbitMqJobHandler {
   protected disableConsuming = config.rabbitDisableQueuesConsuming;
 
   public async consume(channel: ChannelWrapper, consumeMessage: ConsumeMessage): Promise<void> {
-    this.rabbitMqMessage = JSON.parse(consumeMessage.content.toString()) as RabbitMQMessage;
+    try {
+      this.rabbitMqMessage = JSON.parse(consumeMessage.content.toString()) as RabbitMQMessage;
+    } catch (error) {
+      // Log the error
+      logger.error(
+        this.queueName,
+        `Error parsing JSON: ${JSON.stringify(
+          error
+        )}, queueName=${this.getQueue()}, payload=${JSON.stringify(this.rabbitMqMessage)}`
+      );
+
+      channel.ack(consumeMessage);
+      return;
+    }
 
     this.rabbitMqMessage.consumedTime = this.rabbitMqMessage.consumedTime ?? _.now();
     this.rabbitMqMessage.retryCount = this.rabbitMqMessage.retryCount ?? 0;
