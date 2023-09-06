@@ -200,6 +200,11 @@ export class MintQueueJob extends AbstractRabbitMqJobHandler {
       }
 
       if (isFirstToken) {
+        logger.info(
+          this.queueName,
+          `First token for collection ${collection?.id} ${contract}:${tokenId}`
+        );
+
         await collectionMetadataQueueJob.addToQueue({
           contract,
           tokenId,
