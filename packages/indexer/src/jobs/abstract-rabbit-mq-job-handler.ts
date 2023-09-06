@@ -65,7 +65,17 @@ export abstract class AbstractRabbitMqJobHandler {
       const processResult = await this.process(this.rabbitMqMessage.payload); // Process the message
 
       channel.ack(consumeMessage); // Ack the message with rabbit
-      if (config.chainId === 137) {
+      if (
+        config.chainId === 137 &&
+        [
+          "collection-updates-floor-ask-queue",
+          "order-fixes",
+          "collection-updates-normalized-floor-ask-queue",
+          "collection-updates-non-flagged-floor-ask-queue",
+          "token-reclac-supply",
+          "collection-recalc-owner-count-queue",
+        ].includes(this.getQueue())
+      ) {
         logger.info(
           "publish-debug",
           `acking ${this.rabbitMqMessage.correlationId} ${this.getQueue()} delivery tag ${
@@ -109,7 +119,17 @@ export abstract class AbstractRabbitMqJobHandler {
 
       try {
         channel.ack(consumeMessage); // Ack the message with rabbit
-        if (config.chainId === 137) {
+        if (
+          config.chainId === 137 &&
+          [
+            "collection-updates-floor-ask-queue",
+            "order-fixes",
+            "collection-updates-normalized-floor-ask-queue",
+            "collection-updates-non-flagged-floor-ask-queue",
+            "token-reclac-supply",
+            "collection-recalc-owner-count-queue",
+          ].includes(this.getQueue())
+        ) {
           logger.info(
             "publish-debug",
             `acking ${this.rabbitMqMessage.correlationId} ${this.getQueue()} delivery tag ${
