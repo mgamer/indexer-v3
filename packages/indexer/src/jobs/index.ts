@@ -316,7 +316,7 @@ export class RabbitMqJobsConsumer {
       });
 
       connection.once("connect", ({ url }) => {
-        logger.error("rabbit-error", `Consumer connection connected ${url}`);
+        logger.info("rabbit-connect", `Consumer connection connected ${JSON.stringify(url)}`);
       });
     }
   }
