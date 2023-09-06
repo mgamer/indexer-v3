@@ -41,7 +41,6 @@ export abstract class AbstractRabbitMqJobHandler {
   protected queueType: QueueType = "classic";
   protected consumerTimeout = 0;
   protected disableConsuming = config.rabbitDisableQueuesConsuming;
-  protected immediateAck = false;
 
   public async consume(channel: ChannelWrapper, consumeMessage: ConsumeMessage): Promise<void> {
     this.rabbitMqMessage = JSON.parse(consumeMessage.content.toString()) as RabbitMQMessage;
@@ -50,14 +49,16 @@ export abstract class AbstractRabbitMqJobHandler {
     this.rabbitMqMessage.retryCount = this.rabbitMqMessage.retryCount ?? 0;
 
     try {
-      if (this.getImmediateAck()) {
-        await channel.ack(consumeMessage); // Ack the message with rabbit
-      }
-
       const processResult = await this.process(this.rabbitMqMessage.payload); // Process the message
 
-      if (!this.getImmediateAck()) {
-        await channel.ack(consumeMessage); // Ack the message with rabbit
+      await channel.ack(consumeMessage); // Ack the message with rabbit
+      if (config.chainId === 137 && this.queueName === "events-sync-realtime") {
+        logger.info(
+          this.queueName,
+          `acking ${this.rabbitMqMessage.correlationId} with payload ${JSON.stringify(
+            this.rabbitMqMessage.payload
+          )}`
+        );
       }
 
       this.rabbitMqMessage.completeTime = _.now(); // Set the complete time
@@ -94,8 +95,14 @@ export abstract class AbstractRabbitMqJobHandler {
       );
 
       try {
-        if (!this.getImmediateAck()) {
-          await channel.ack(consumeMessage); // Ack the message with rabbit
+        await channel.ack(consumeMessage); // Ack the message with rabbit
+        if (config.chainId === 137 && this.queueName === "events-sync-realtime") {
+          logger.info(
+            this.queueName,
+            `acking ${this.rabbitMqMessage.correlationId} with payload ${JSON.stringify(
+              this.rabbitMqMessage.payload
+            )}`
+          );
         }
 
         // Release lock if there's a job id
@@ -189,10 +196,6 @@ export abstract class AbstractRabbitMqJobHandler {
 
   public getConsumerTimeout(): number {
     return this.consumerTimeout;
-  }
-
-  public getImmediateAck(): boolean {
-    return this.immediateAck;
   }
 
   protected async send(job: { payload?: any; jobId?: string } = {}, delay = 0, priority = 0) {

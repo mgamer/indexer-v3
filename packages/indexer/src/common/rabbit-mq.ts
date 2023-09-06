@@ -13,6 +13,7 @@ import { acquireLock, releaseLock } from "@/common/redis";
 import axios from "axios";
 import pLimit from "p-limit";
 import { FailedPublishMessages } from "@/models/failed-publish-messages-list";
+import { randomUUID } from "crypto";
 
 export type RabbitMQMessage = {
   payload: any;
@@ -25,6 +26,7 @@ export type RabbitMQMessage = {
   publishRetryCount?: number;
   persistent?: boolean;
   prioritized?: boolean;
+  correlationId?: string;
 };
 
 export type CreatePolicyPayload = {
@@ -87,6 +89,8 @@ export class RabbitMq {
 
   public static async send(queueName: string, content: RabbitMQMessage, delay = 0, priority = 0) {
     content.publishRetryCount = content.publishRetryCount ?? 0;
+    content.correlationId = content.correlationId ?? randomUUID();
+
     const msgConsumingBuffer = 5 * 60; // Time for the job to actually process, will be released on the job is done
     const lockTime = delay ? _.max([_.toInteger(delay / 1000), 0]) : msgConsumingBuffer;
     let lockAcquired = false;
