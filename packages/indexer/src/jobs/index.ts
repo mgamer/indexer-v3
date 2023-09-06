@@ -303,7 +303,7 @@ export class RabbitMqJobsConsumer {
 
       RabbitMqJobsConsumer.rabbitMqConsumerVhostConnections.push(connection);
 
-      const sharedChannel = connection.createChannel({ confirm: false });
+      const sharedChannel = connection.createChannel({ confirm: false, name: "sharedChannel" });
 
       // Create a shared channel for each connection
       RabbitMqJobsConsumer.vhostSharedChannels.set(
@@ -312,11 +312,10 @@ export class RabbitMqJobsConsumer {
       );
 
       connection.once("disconnect", (error) => {
-        logger.error("rabbit-error", `Consumer connection error ${JSON.stringify(error)}`);
-      });
-
-      connection.once("connect", ({ url }) => {
-        logger.info("rabbit-connect", `Consumer connection connected ${JSON.stringify(url)}`);
+        logger.error(
+          "rabbit-error",
+          `Consumer connection error index ${i} ${JSON.stringify(error)}`
+        );
       });
     }
   }
@@ -333,7 +332,7 @@ export class RabbitMqJobsConsumer {
    * Subscribing to a given job
    * @param job
    */
-  public static async subscribeToVhost(job: AbstractRabbitMqJobHandler) {
+  public static async subscribe(job: AbstractRabbitMqJobHandler) {
     // Check if the queue is paused
     const pausedQueues = await PausedRabbitMqQueues.getPausedQueues();
     if (_.indexOf(pausedQueues, job.getQueue()) !== -1) {
@@ -355,8 +354,14 @@ export class RabbitMqJobsConsumer {
         connectionIndex
       ].createChannel({
         confirm: false,
+        name: job.getQueue(),
       });
+
       await channel.waitForConnect();
+
+      channel.once("connect", () => {
+        logger.info("rabbit-consume", `connected to ${job.getQueue()}`);
+      });
     }
 
     RabbitMqJobsConsumer.vhostQueueToChannel.set(job.getQueue(), channel);
@@ -419,7 +424,7 @@ export class RabbitMqJobsConsumer {
       try {
         for (const queue of RabbitMqJobsConsumer.getQueues()) {
           if (!queue.isDisableConsuming()) {
-            subscribeToVhostPromises.push(RabbitMqJobsConsumer.subscribeToVhost(queue));
+            subscribeToVhostPromises.push(RabbitMqJobsConsumer.subscribe(queue));
           }
         }
 
