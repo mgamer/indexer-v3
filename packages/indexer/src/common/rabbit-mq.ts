@@ -112,11 +112,39 @@ export class RabbitMq {
       );
     }
 
-    try {
-      const channelIndex = _.random(0, RabbitMq.maxPublisherChannelsCount - 1);
+    const channelIndex = _.random(0, RabbitMq.maxPublisherChannelsCount - 1);
 
-      content.publishTime = content.publishTime ?? _.now();
-      content.prioritized = Boolean(priority);
+    content.publishTime = content.publishTime ?? _.now();
+    content.prioritized = Boolean(priority);
+
+    try {
+      if (delay) {
+        content.delay = delay;
+
+        // If delay given publish to the delayed exchange
+        await RabbitMq.rabbitMqPublisherChannels[channelIndex].publish(
+          RabbitMq.delayedExchangeName,
+          queueName,
+          Buffer.from(JSON.stringify(content)),
+          {
+            priority,
+            persistent: content.persistent,
+            headers: {
+              "x-delay": delay,
+            },
+          }
+        );
+      } else {
+        // If no delay send directly to queue to save any unnecessary routing
+        await RabbitMq.rabbitMqPublisherChannels[channelIndex].sendToQueue(
+          queueName,
+          Buffer.from(JSON.stringify(content)),
+          {
+            priority,
+            persistent: content.persistent,
+          }
+        );
+      }
 
       if (config.chainId === 137 && queueName === "events-sync-realtime") {
         logger.info(
@@ -128,50 +156,6 @@ export class RabbitMq {
           ].queueLength()}`
         );
       }
-
-      await new Promise<void>((resolve, reject) => {
-        if (delay) {
-          content.delay = delay;
-
-          // If delay given publish to the delayed exchange
-          RabbitMq.rabbitMqPublisherChannels[channelIndex].publish(
-            RabbitMq.delayedExchangeName,
-            queueName,
-            Buffer.from(JSON.stringify(content)),
-            {
-              priority,
-              persistent: content.persistent,
-              headers: {
-                "x-delay": delay,
-              },
-            },
-            (error) => {
-              if (!_.isNull(error)) {
-                return reject(error);
-              }
-
-              return resolve();
-            }
-          );
-        } else {
-          // If no delay send directly to queue to save any unnecessary routing
-          RabbitMq.rabbitMqPublisherChannels[channelIndex].sendToQueue(
-            queueName,
-            Buffer.from(JSON.stringify(content)),
-            {
-              priority,
-              persistent: content.persistent,
-            },
-            (error) => {
-              if (!_.isNull(error)) {
-                return reject(error);
-              }
-
-              return resolve();
-            }
-          );
-        }
-      });
 
       if (content.publishRetryCount > 0) {
         logger.info(
