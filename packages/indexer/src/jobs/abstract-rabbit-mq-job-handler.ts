@@ -3,7 +3,7 @@
 // Abstract class needed to be implemented in order to process job from rabbit
 import { RabbitMq, RabbitMQMessage } from "@/common/rabbit-mq";
 import { logger } from "@/common/logger";
-import _ from "lodash";
+import _, { now } from "lodash";
 import { ConsumeMessage } from "amqplib";
 import { releaseLock } from "@/common/redis";
 import { ChannelWrapper } from "amqp-connection-manager";
@@ -43,6 +43,8 @@ export abstract class AbstractRabbitMqJobHandler {
   protected disableConsuming = config.rabbitDisableQueuesConsuming;
 
   public async consume(channel: ChannelWrapper, consumeMessage: ConsumeMessage): Promise<void> {
+    const start = now();
+
     try {
       this.rabbitMqMessage = JSON.parse(consumeMessage.content.toString()) as RabbitMQMessage;
     } catch (error) {
@@ -78,7 +80,9 @@ export abstract class AbstractRabbitMqJobHandler {
       ) {
         logger.info(
           "publish-debug",
-          `acking ${this.rabbitMqMessage.correlationId} ${this.getQueue()} delivery tag ${
+          `time ${(now() - start) / 1000}s acking ${
+            this.rabbitMqMessage.correlationId
+          } ${this.getQueue()} delivery tag ${
             consumeMessage.fields.deliveryTag
           } with payload ${JSON.stringify(this.rabbitMqMessage.payload)}`
         );
