@@ -32,6 +32,7 @@ import { ExecutionsBuffer } from "@/utils/executions";
 import { tryGetTokensSuspiciousStatus } from "@/utils/opensea";
 import { getPreSignatureId, getPreSignature, savePreSignature } from "@/utils/pre-signatures";
 import { getUSDAndCurrencyPrices } from "@/utils/prices";
+import { GasEstimationTranscation, getTotalEstimateGas } from "@/utils/gas-estimation";
 
 const version = "v7";
 
@@ -208,6 +209,7 @@ export const getExecuteSellV7Options: RouteOptions = {
           feesOnTop: Joi.array().items(JoiExecuteFee).description("Can be referral fees."),
         })
       ),
+      totalEstimateGas: Joi.string().optional(),
     }).label(`getExecuteSell${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(`get-execute-sell-${version}-handler`, `Wrong response schema: ${error}`);
@@ -1186,6 +1188,10 @@ export const getExecuteSellV7Options: RouteOptions = {
       }
 
       const { txs, success } = result;
+      const allTranscations: GasEstimationTranscation[] = txs.map(({ txData, txTags }) => ({
+        txData,
+        txTags,
+      }));
 
       // Filter out any non-fillable orders from the path
       path = path.filter((p) => success[p.orderId]);
@@ -1202,6 +1208,10 @@ export const getExecuteSellV7Options: RouteOptions = {
           approval.operator
         );
         if (!isApproved) {
+          allTranscations.push({
+            txTags: ["nft-approval"],
+            txData: approval.txData,
+          });
           steps[1].items.push({
             status: "incomplete",
             orderIds: approval.orderIds,
@@ -1270,6 +1280,8 @@ export const getExecuteSellV7Options: RouteOptions = {
         });
       }
 
+      const { totalEstimateGas } = await getTotalEstimateGas(allTranscations);
+
       // Warning! When filtering the steps, we should ensure that it
       // won't affect the client, which might be polling the API and
       // expect to get the steps returned in the same order / at the
@@ -1331,6 +1343,7 @@ export const getExecuteSellV7Options: RouteOptions = {
 
       return {
         requestId,
+        totalEstimateGas,
         steps: blurAuth ? [steps[0], ...steps.slice(1).filter((s) => s.items.length)] : steps,
         errors,
         path,

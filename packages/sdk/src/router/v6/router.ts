@@ -20,6 +20,7 @@ import { PermitHandler, PermitWithTransfers } from "./permit";
 import {
   BidDetails,
   ExecutionInfo,
+  ExecutionExtendInfo,
   FTApproval,
   FillBidsResult,
   FillListingsResult,
@@ -81,6 +82,29 @@ type SetupOptions = {
   orderFetcherBaseUrl?: string;
   orderFetcherMetadata?: object;
 };
+
+function extractIdentifiersFromExections(
+  executions: ExecutionInfo[],
+  executionExtendInfos?: ExecutionExtendInfo[]
+) {
+  const tags: string[] = [];
+  executions.forEach((execution, index) => {
+    const extendInfo = executionExtendInfos ? executionExtendInfos[index] : undefined;
+    // const selector = execution.data.slice(0, 10);
+    // tags.push(`module-${execution.module}`);
+    // tags.push(`method-${selector}`);
+    if (extendInfo) {
+      if (extendInfo.protocol) {
+        tags.push(extendInfo.protocol);
+      }
+      tags.push(`with-fees-${extendInfo.feesSize}`);
+      if (extendInfo.tokenIn) {
+        tags.push(`swaps-${extendInfo.tokenIn}-${extendInfo.tokenOut}-${extendInfo.transfers}}`);
+      }
+    }
+  });
+  return tags;
+}
 
 export class Router {
   public chainId: number;
@@ -361,6 +385,7 @@ export class Router {
       permits: { kind: "erc20"; data: PermitWithTransfers }[];
       preSignatures: PreSignature[];
       txData: TxData;
+      txTags: string[];
       orderIds: string[];
     }[] = [];
     const success: { [orderId: string]: boolean } = {};
@@ -390,6 +415,7 @@ export class Router {
           approvals: [],
           permits: [],
           preSignatures: [],
+          txTags: ["fill-listings", "manifold", "single-order"],
           txData: exchange.fillOrderTx(
             taker,
             Number(order.params.id),
@@ -503,6 +529,18 @@ export class Router {
               approvals: [],
               permits: [],
               preSignatures: [],
+              txTags: [
+                "fill-listings",
+                "blur",
+                `multiple-order`,
+                String(orderIds.length),
+                `with-fees-${String(
+                  successfulBlurCompatibleListings.reduce(
+                    (total, detail) => total + (detail.fees?.length ?? 0),
+                    0
+                  )
+                )}`,
+              ],
               txData: {
                 from: data.from,
                 to: data.to,
@@ -648,6 +686,12 @@ export class Router {
               approvals: approval ? [approval] : [],
               permits: [],
               preSignatures: [],
+              txTags: [
+                "fill-listings",
+                "seaport-v1.5",
+                "single-order",
+                `with-fees-${order.getInfo()?.fees.length ?? 0}`,
+              ],
               txData: await exchange.fillOrderTx(
                 taker,
                 order,
@@ -664,12 +708,23 @@ export class Router {
         };
       } else {
         const orders = details.map((d) => d.order as Sdk.SeaportV15.Order);
+        const totalFeesLength = orders.reduce((count, order) => {
+          return count + (order.getInfo()?.fees.length ?? 0);
+        }, 0);
+
         return {
           txs: [
             {
               approvals: approval ? [approval] : [],
               permits: [],
               preSignatures: [],
+              txTags: [
+                "fill-listings",
+                "seaport-v1.5",
+                `multiple-order`,
+                String(details.length),
+                `with-fees-${totalFeesLength}`,
+              ],
               txData: await exchange.fillOrdersTx(
                 taker,
                 orders,
@@ -727,6 +782,12 @@ export class Router {
               approvals: approval ? [approval] : [],
               permits: [],
               preSignatures: [],
+              txTags: [
+                "fill-listings",
+                "alienswap",
+                `single-order`,
+                `with-fees-${order.getInfo()?.fees.length ?? 0}`,
+              ],
               txData: await exchange.fillOrderTx(
                 taker,
                 order,
@@ -743,12 +804,22 @@ export class Router {
         };
       } else {
         const orders = details.map((d) => d.order as Sdk.Alienswap.Order);
+        const totalFeesLength = orders.reduce((count, order) => {
+          return count + (order.getInfo()?.fees.length ?? 0);
+        }, 0);
         return {
           txs: [
             {
               approvals: approval ? [approval] : [],
               permits: [],
               preSignatures: [],
+              txTags: [
+                "fill-listings",
+                "alienswap",
+                `multiple-order`,
+                String(details.length),
+                `with-fees-${totalFeesLength}`,
+              ],
               txData: await exchange.fillOrdersTx(
                 taker,
                 orders,
@@ -824,6 +895,7 @@ export class Router {
               approvals: approval ? [approval] : [],
               permits: [],
               preSignatures: preSignatures,
+              txTags: ["fill-listings", "payment-processor", `sweep-order`, String(details.length)],
               txData: exchange.sweepCollectionTx(taker, bundledOrder, orders),
               orderIds: details.map((d) => d.orderId),
             },
@@ -855,6 +927,12 @@ export class Router {
               approvals: approval ? [approval] : [],
               permits: [],
               preSignatures: preSignatures,
+              txTags: [
+                "fill-listings",
+                "payment-processor",
+                `multiple-order`,
+                String(details.length),
+              ],
               txData: exchange.fillOrdersTx(taker, orders, takeOrders),
               orderIds: details.map((d) => d.orderId),
             },
@@ -1029,13 +1107,15 @@ export class Router {
 
     // Generate router executions
     let executions: ExecutionInfo[] = [];
+
+    // Extend infos for GAS stats
+    let executionExtendInfos: ExecutionExtendInfo[] = [];
     const swapDetails: SwapDetail[] = [];
 
     // Handle Element ERC721 listings
     if (elementErc721Details.length) {
       const orders = elementErc721Details.map((d) => d.order as Sdk.Element.Order);
       const module = this.contracts.elementModule;
-
       const fees = getFees(elementErc721Details);
       const price = orders.map((order) => order.getTotalPrice()).reduce((a, b) => a.add(b), bn(0));
       const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
@@ -1047,6 +1127,11 @@ export class Router {
         revertIfIncomplete: Boolean(!options?.partial),
         amount: price,
       };
+
+      executionExtendInfos.push({
+        protocol: "element",
+        feesSize: fees.length,
+      });
 
       executions.push({
         module: module.address,
@@ -1102,6 +1187,11 @@ export class Router {
         amount: price,
       };
 
+      executionExtendInfos.push({
+        protocol: "element",
+        feesSize: fees.length,
+      });
+
       executions.push({
         module: module.address,
         data:
@@ -1156,6 +1246,11 @@ export class Router {
         amount: price,
       };
 
+      executionExtendInfos.push({
+        protocol: "element",
+        feesSize: fees.length,
+      });
+
       executions.push({
         module: module.address,
         data:
@@ -1204,6 +1299,11 @@ export class Router {
       const price = orders.map((order) => bn(order.params.price)).reduce((a, b) => a.add(b), bn(0));
       const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
       const totalPrice = price.add(feeAmount);
+
+      executionExtendInfos.push({
+        protocol: "element",
+        feesSize: fees.length,
+      });
 
       executions.push({
         module: module.address,
@@ -1265,6 +1365,11 @@ export class Router {
       const price = orders.map((order) => bn(order.params.price)).reduce((a, b) => a.add(b), bn(0));
       const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
       const totalPrice = price.add(feeAmount);
+
+      executionExtendInfos.push({
+        protocol: "looksrare",
+        feesSize: fees.length,
+      });
 
       executions.push({
         module: module.address,
@@ -1335,9 +1440,18 @@ export class Router {
           .reduce((a, b) => a.add(b), bn(0));
         const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
         const totalPrice = price.add(feeAmount);
+        const totalFeesLength = orders.reduce((count, order) => {
+          return count + (order.getInfo()?.fees.length ?? 0);
+        }, 0);
 
         const currencyIsETH = isETH(this.chainId, currency);
         const buyInCurrencyIsETH = isETH(this.chainId, buyInCurrency);
+
+        executionExtendInfos.push({
+          protocol: "seaport-v1.1",
+          feesSize: fees.length + totalFeesLength,
+        });
+
         executions.push({
           module: module.address,
           data:
@@ -1453,6 +1567,15 @@ export class Router {
 
         const currencyIsETH = isETH(this.chainId, currency);
         const buyInCurrencyIsETH = isETH(this.chainId, buyInCurrency);
+
+        const totalFeesLength = orders.reduce((count, order) => {
+          return count + (order.getInfo()?.fees.length ?? 0);
+        }, 0);
+
+        executionExtendInfos.push({
+          protocol: "seaport-v1.4",
+          feesSize: fees.length + totalFeesLength,
+        });
 
         executions.push({
           module: module.address,
@@ -1574,6 +1697,15 @@ export class Router {
         const currencyIsETH = isETH(this.chainId, currency);
         const buyInCurrencyIsETH = isETH(this.chainId, buyInCurrency);
 
+        const totalFeesLength = orders.reduce((count, order) => {
+          return count + (order.getInfo()?.fees.length ?? 0);
+        }, 0);
+
+        executionExtendInfos.push({
+          protocol: "seaport-v1.5",
+          feesSize: fees.length + totalFeesLength,
+        });
+
         executions.push({
           module: module.address,
           data:
@@ -1692,6 +1824,15 @@ export class Router {
 
         const currencyIsETH = isETH(this.chainId, currency);
         const buyInCurrencyIsETH = isETH(this.chainId, buyInCurrency);
+
+        const totalFeesLength = orders.reduce((count, order) => {
+          return count + (order.getInfo()?.fees.length ?? 0);
+        }, 0);
+
+        executionExtendInfos.push({
+          protocol: "alienswap",
+          feesSize: fees.length + totalFeesLength,
+        });
 
         executions.push({
           module: module.address,
@@ -1833,6 +1974,11 @@ export class Router {
             amount: price,
           };
 
+      executionExtendInfos.push({
+        protocol: "collection.xyz",
+        feesSize: fees.length,
+      });
+
       executions.push({
         module: module.address,
         data: module.interface.encodeFunctionData(functionName, [
@@ -1889,6 +2035,11 @@ export class Router {
         .reduce((a, b) => a.add(b), bn(0));
       const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
       const totalPrice = price.add(feeAmount);
+
+      executionExtendInfos.push({
+        protocol: "sudoswap",
+        feesSize: fees.length,
+      });
 
       executions.push({
         module: module.address,
@@ -1957,6 +2108,11 @@ export class Router {
       const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
       const totalPrice = price.add(feeAmount);
 
+      executionExtendInfos.push({
+        protocol: "sudoswap-v2",
+        feesSize: fees.length,
+      });
+
       executions.push({
         module: module.address,
         data: module.interface.encodeFunctionData("buyWithETH", [
@@ -2022,6 +2178,11 @@ export class Router {
       const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
       const totalPrice = price.add(feeAmount);
 
+      executionExtendInfos.push({
+        protocol: "midaswap",
+        feesSize: fees.length,
+      });
+
       executions.push({
         module: module.address,
         data: module.interface.encodeFunctionData("buyWithETH", [
@@ -2081,6 +2242,11 @@ export class Router {
         .reduce((a, b) => a.add(b), bn(0));
 
       const totalPrice = price.add(feeAmount);
+
+      executionExtendInfos.push({
+        protocol: "caviar-v1",
+        feesSize: fees.length,
+      });
 
       executions.push({
         module: module.address,
@@ -2168,6 +2334,11 @@ export class Router {
       const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
       const totalPrice = price.add(feeAmount);
 
+      executionExtendInfos.push({
+        protocol: "nftx",
+        feesSize: fees.length,
+      });
+
       executions.push({
         module: module.address,
         data: module.interface.encodeFunctionData("buyWithETH", [
@@ -2215,6 +2386,11 @@ export class Router {
       const exchange = new Sdk.X2Y2.Exchange(this.chainId, String(this.options?.x2y2ApiKey));
       if (orders.length === 1) {
         try {
+          executionExtendInfos.push({
+            protocol: "x2y2",
+            feesSize: fees.length,
+          });
+
           executions.push({
             module: module.address,
             data: module.interface.encodeFunctionData("acceptETHListing", [
@@ -2307,6 +2483,10 @@ export class Router {
         );
 
         if (inputs.some(Boolean)) {
+          executionExtendInfos.push({
+            protocol: "x2y2",
+            feesSize: fees.length,
+          });
           executions.push({
             module: module.address,
             data: module.interface.encodeFunctionData("acceptETHListings", [
@@ -2390,6 +2570,15 @@ export class Router {
           .reduce((a, b) => a.add(b), bn(0));
         const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
         const totalPrice = price.add(feeAmount);
+
+        const totalFeesLength = orders.reduce((count, order) => {
+          return count + (order.params.fees.length ?? 0);
+        }, 0);
+
+        executionExtendInfos.push({
+          protocol: "zeroex-v4",
+          feesSize: fees.length + totalFeesLength,
+        });
 
         executions.push({
           module: module.address,
@@ -2493,6 +2682,14 @@ export class Router {
         const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
         const totalPrice = price.add(feeAmount);
 
+        const totalFeesLength = orders.reduce((count, order) => {
+          return count + (order.params.fees.length ?? 0);
+        }, 0);
+        executionExtendInfos.push({
+          protocol: "zeroex-v4",
+          feesSize: fees.length + totalFeesLength,
+        });
+
         executions.push({
           module: module.address,
           data:
@@ -2557,6 +2754,11 @@ export class Router {
         .reduce((a, b) => a.add(b), bn(0));
       const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
       const totalPrice = price.add(feeAmount);
+
+      executionExtendInfos.push({
+        protocol: "zora",
+        feesSize: fees.length,
+      });
 
       executions.push({
         module: module.address,
@@ -2627,6 +2829,11 @@ export class Router {
       const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
       const totalPrice = price.add(feeAmount);
 
+      executionExtendInfos.push({
+        protocol: "rarible",
+        feesSize: fees.length,
+      });
+
       executions.push({
         module: module.address,
         data:
@@ -2687,6 +2894,11 @@ export class Router {
       const price = orders.map((order) => bn(order.params.price)).reduce((a, b) => a.add(b), bn(0));
       const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
       const totalPrice = price.add(feeAmount);
+
+      executionExtendInfos.push({
+        protocol: "superrare",
+        feesSize: fees.length,
+      });
 
       executions.push({
         module: module.address,
@@ -2755,6 +2967,11 @@ export class Router {
       const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
       const totalPrice = price.add(feeAmount);
 
+      executionExtendInfos.push({
+        protocol: "cryptopunk",
+        feesSize: fees.length,
+      });
+
       executions.push({
         module: module.address,
         data: module.interface.encodeFunctionData("batchBuyPunksWithETH", [
@@ -2802,6 +3019,11 @@ export class Router {
       const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
       const totalPrice = price.add(feeAmount);
 
+      executionExtendInfos.push({
+        protocol: "payment-processor",
+        feesSize: fees.length,
+      });
+
       executions.push({
         module: module.address,
         data: module.interface.encodeFunctionData("acceptETHListings", [
@@ -2846,6 +3068,8 @@ export class Router {
     // Handle any needed swaps
 
     const successfulSwapInfos: SwapInfo[] = [];
+    const successfulSwapInfosExtend: ExecutionExtendInfo[] = [];
+
     const unsuccessfulDependentExecutionIndexes: number[] = [];
     if (swapDetails.length) {
       // Aggregate any swap details for the same token pair
@@ -2915,6 +3139,13 @@ export class Router {
                 revertIfIncomplete: Boolean(!options?.partial),
               }
             );
+
+            successfulSwapInfosExtend.push({
+              feesSize: 0,
+              transfers: transfers.length,
+              tokenIn,
+              tokenOut,
+            });
 
             successfulSwapInfos.push(swapInfo);
 
@@ -3004,6 +3235,8 @@ export class Router {
         ...executions,
       ];
 
+      executionExtendInfos = [...successfulSwapInfosExtend, ...executionExtendInfos];
+
       // If the buy-in currency is not ETH then we won't need any `value` fields
       if (buyInCurrency !== Sdk.Common.Addresses.Native[this.chainId]) {
         executions.forEach((e) => {
@@ -3020,6 +3253,12 @@ export class Router {
         txs.push({
           approvals: [],
           preSignatures: [],
+          txTags: [
+            "fill-listings",
+            "router",
+            String(details.length),
+            ...extractIdentifiersFromExections(executions, executionExtendInfos),
+          ],
           permits: await new PermitHandler(this.chainId, this.provider)
             .generate(relayer, ftTransferItems)
             .then((permits) =>
@@ -3057,6 +3296,20 @@ export class Router {
           approvals: Object.values(uniqueApprovals),
           permits: [],
           preSignatures: [],
+          txTags: ftTransferItems.length
+            ? [
+                "fill-listings",
+                "approval-proxy",
+                String(details.length),
+                `transfers-${ftTransferItems.length}`,
+                ...extractIdentifiersFromExections(executions, executionExtendInfos),
+              ]
+            : [
+                "fill-listings",
+                "router",
+                String(details.length),
+                ...extractIdentifiersFromExections(executions, executionExtendInfos),
+              ],
           txData: {
             from: relayer,
             ...(ftTransferItems.length
@@ -3089,7 +3342,7 @@ export class Router {
     }
 
     if (!txs.length) {
-      throw new Error("Could not fill any of the requested orders");
+      throw new Error("Could not fees any of the requested orders");
     }
 
     return {
@@ -3098,7 +3351,7 @@ export class Router {
     };
   }
 
-  // Fill multiple bids in a single transaction
+  // fees multiple bids in a single transaction
   public async fillBidsTx(
     details: BidDetails[],
     taker: string,
@@ -3137,6 +3390,7 @@ export class Router {
     const txs: {
       approvals: NFTApproval[];
       txData: TxData;
+      txTags: string[];
       orderIds: string[];
       preSignatures: PreSignature[];
     }[] = [];
@@ -3207,6 +3461,7 @@ export class Router {
 
             txs.push({
               approvals: [],
+              txTags: ["fill-bids", "blur", `multiple-order`, String(blurDetails.length)],
               txData: {
                 from: data.from,
                 to: data.to,
@@ -3288,6 +3543,7 @@ export class Router {
       txs.push({
         approvals: uniqBy(approvals, ({ txData: { from, to, data } }) => `${from}-${to}-${data}`),
         preSignatures,
+        txTags: ["fill-bids", "payment-processor", `multiple-order`, String(orders.length)],
         txData: exchange.fillOrdersTx(taker, orders, takeOrders),
         orderIds: paymentProcessorDetails.map((d) => d.orderId),
       });
@@ -3697,6 +3953,7 @@ export class Router {
 
               // Fill directly
               txs.push({
+                txTags: ["fill-bids", "seaport-v1.5-partial", `isProtected`],
                 txData: {
                   from: taker,
                   to: Sdk.SeaportV15.Addresses.Exchange[this.chainId],
@@ -4283,6 +4540,12 @@ export class Router {
       // Use the on-received ERC721/ERC1155 hooks for approval-less bid filling
       if (detail.contractKind === "erc721") {
         txs.push({
+          txTags: [
+            "fill-bids",
+            "erc721-approval-less",
+            String(details.length),
+            ...extractIdentifiersFromExections([execution]),
+          ],
           txData: {
             from: taker,
             to: detail.contract,
@@ -4298,6 +4561,12 @@ export class Router {
         });
       } else {
         txs.push({
+          txTags: [
+            "fill-bids",
+            "erc1155-approval-less",
+            String(details.length),
+            ...extractIdentifiersFromExections([execution]),
+          ],
           txData: {
             from: taker,
             to: detail.contract,
@@ -4314,6 +4583,15 @@ export class Router {
       }
     } else if (executionsWithDetails.length >= 1) {
       txs.push({
+        txTags: [
+          "fill-bids",
+          "approval-proxy",
+          String(details.length),
+          `transfers-${nftTransferItems.length}`,
+          ...extractIdentifiersFromExections(
+            executionsWithDetails.map(({ execution }) => execution)
+          ),
+        ],
         txData: {
           from: taker,
           to: this.contracts.approvalProxy.address,

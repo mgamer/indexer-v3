@@ -5,7 +5,7 @@ import { BidDetails, ListingDetails } from "@reservoir0x/sdk/src/router/v6/types
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 import { expect } from "chai";
 import { ethers } from "hardhat";
-
+import { randomUUID } from "crypto";
 import {
   bn,
   getChainId,
@@ -15,6 +15,7 @@ import {
   setupRouterWithModules,
 } from "../utils";
 import { PermitHandler } from "@reservoir0x/sdk/src/router/v6/permit";
+import { keccak256 } from "@ethersproject/solidity";
 
 describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
   const chainId = getChainId();
@@ -67,7 +68,7 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
           contract: erc721.address,
           tokenId: tokenId1,
           paymentToken: Sdk.Common.Addresses.Native[chainId],
-          price: price1.sub(price1.mul(fee1).div(10000)),
+          price: price1.sub(price1.mul(fee1).div(10000).mul(4)),
           fees: [
             {
               amount: price1.mul(fee1).div(10000),
@@ -164,8 +165,8 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
     } = await router.fillListingsTx(listings, buyer.address, Sdk.Common.Addresses.Native[chainId], {
       source: "reservoir.market",
     });
-    await buyer.sendTransaction(txData);
 
+    await buyer.sendTransaction(txData);
     const seller1EthBalanceAfter = await seller1.getBalance();
     const seller3EthBalanceAfter = await seller3.getBalance();
     const token1OwnerAfter = await erc721.ownerOf(tokenId1);

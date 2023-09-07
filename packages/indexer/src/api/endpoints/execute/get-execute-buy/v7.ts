@@ -35,6 +35,7 @@ import { getNFTTransferEvents } from "@/orderbook/mints/simulation";
 import { getPermitId, getPermit, savePermit } from "@/utils/permits";
 import { getPreSignatureId, getPreSignature, savePreSignature } from "@/utils/pre-signatures";
 import { getUSDAndCurrencyPrices } from "@/utils/prices";
+import { GasEstimationTranscation, getTotalEstimateGas } from "@/utils/gas-estimation";
 
 const version = "v7";
 
@@ -245,6 +246,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
           maxQuantity: Joi.string().pattern(regex.number).allow(null),
         })
       ),
+      totalEstimateGas: Joi.string().optional(),
     }).label(`getExecuteBuy${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(`get-execute-buy-${version}-handler`, `Wrong response schema: ${error}`);
@@ -1469,6 +1471,10 @@ export const getExecuteBuyV7Options: RouteOptions = {
       }
 
       const { txs, success } = result;
+      const allTranscations: GasEstimationTranscation[] = txs.map(({ txData, txTags }) => ({
+        txData,
+        txTags,
+      }));
 
       // Add any mint transactions
       if (mintTxs.length) {
@@ -1531,6 +1537,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
 
         txs.push(
           ...mintsResult.txs.map(({ txData, orderIds }) => ({
+            txTags: ["fill-mints", `orders-${orderIds.length}`],
             txData,
             orderIds,
             approvals: [],
@@ -1566,6 +1573,10 @@ export const getExecuteBuyV7Options: RouteOptions = {
 
           const isApproved = bn(approvedAmount).gte(approval.amount);
           if (!isApproved) {
+            allTranscations.push({
+              txTags: ["currency-approval"],
+              txData: approval.txData,
+            });
             steps[1].items.push({
               status: "incomplete",
               data: {
@@ -1758,11 +1769,14 @@ export const getExecuteBuyV7Options: RouteOptions = {
         })
       );
 
+      const { totalEstimateGas } = await getTotalEstimateGas(allTranscations);
+
       return {
         requestId,
         steps: blurAuth ? [steps[0], ...steps.slice(1).filter((s) => s.items.length)] : steps,
         errors,
         path,
+        totalEstimateGas,
       };
     } catch (error) {
       if (!(error instanceof Boom.Boom)) {

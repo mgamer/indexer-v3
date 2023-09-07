@@ -41,6 +41,14 @@ export type ExecutionInfo = {
   value: BigNumberish;
 };
 
+export type ExecutionExtendInfo = {
+  feesSize: number;
+  protocol?: string;
+  transfers?: number;
+  tokenIn?: string;
+  tokenOut?: string;
+};
+
 export type Fee = {
   recipient: string;
   amount: BigNumberish;
@@ -194,6 +202,7 @@ export type PreSignature = {
 export type FillListingsResult = {
   txs: {
     approvals: FTApproval[];
+    txTags: string[];
     txData: TxData;
     orderIds: string[];
     permits: Permit[];
@@ -228,6 +237,7 @@ export type FillBidsResult = {
   txs: {
     approvals: NFTApproval[];
     txData: TxData;
+    txTags: string[];
     orderIds: string[];
     preSignatures: PreSignature[];
   }[];
