@@ -1893,7 +1893,7 @@ export class Router {
       const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
       const totalPrice = price.add(feeAmount);
 
-      // add executions
+      // Add executions
       for (const order of orders) {
         executions.push({
           module: module.address,
@@ -1901,6 +1901,7 @@ export class Router {
           value: totalPrice,
         });
       }
+
       // Track any possibly required swap
       swapDetails.push({
         tokenIn: buyInCurrency,
@@ -1911,6 +1912,7 @@ export class Router {
         details: dittoDetails,
         executionIndex: executions.length - 1,
       });
+
       // Mark the listings as successfully handled
       for (const { orderId } of dittoDetails) {
         success[orderId] = true;

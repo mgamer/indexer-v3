@@ -1,18 +1,19 @@
+import { BigNumber } from "@ethersproject/bignumber";
 import { Contract } from "@ethersproject/contracts";
 import { parseEther } from "@ethersproject/units";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
-import { ethers } from "hardhat";
-import { BigNumber } from "@ethersproject/bignumber";
 import { expect } from "chai";
-import abiDittoAppraisal from "../../../../sdk/src/ditto/abis/DittoPoolApp.json";
-import abiUpshotOracle from "../../../../sdk/src/ditto/abis/UpshotOracle.json";
-import { getDittoContracts } from "../helpers/ditto";
 import { Bytes } from "ethers";
+import { ethers } from "hardhat";
 
+import { getDittoContracts } from "../helpers/ditto";
+import { reset } from "../../utils";
 import * as Sdk from "../../../../sdk/src";
 
+import DittoAppraisalAbi from "../../../../sdk/src/ditto/abis/DittoPoolApp.json";
+import UpshotOracleAbi from "../../../../sdk/src/ditto/abis/UpshotOracle.json";
+
 describe("DittoModule", () => {
-  let initialTokenBalance: BigNumber;
   let deployer: SignerWithAddress;
   let alice: SignerWithAddress;
 
@@ -31,10 +32,8 @@ describe("DittoModule", () => {
     token = dittoContracts.token;
     dittoPoolFactory = dittoContracts.dittoPoolFactory;
 
-    let adminAddress = "0x00000000000000000000000000000000DeaDBeef";
+    const adminAddress = "0x00000000000000000000000000000000DeaDBeef";
     alice = await ethers.getImpersonatedSigner(adminAddress);
-
-    initialTokenBalance = ethers.utils.parseEther("10");
 
     router = await ethers
       .getContractFactory("ReservoirV6_0_1", deployer)
@@ -49,20 +48,24 @@ describe("DittoModule", () => {
     await dittoPoolFactory.connect(ownerSigner).addRouters([dittoModule.address]);
   });
 
+  afterEach(reset);
+
   it("Upshot oracle test", async () => {
-    // pick a random token id that hasn't yet been minted on goerli
+    // Pick a random token id that hasn't yet been minted on goerli
     const tokenId04 = ethers.utils.keccak256("0xdeadbeef");
 
-    // mint alice some NFTs and tokens to do trading with.
+    // Mint alice some NFTs and tokens to do trading with.
     await nft.connect(alice).mint(alice.address, tokenId04);
     await nft.connect(alice).setApprovalForAll(dittoPoolFactory.address, true);
+
     await token.connect(alice).mint(alice.address, parseEther("100"));
     await token.connect(alice).approve(dittoPoolFactory.address, parseEther("100"));
-    let approve = await token.connect(alice).approve(dittoModule.address, parseEther("100"));
+
+    const approve = await token.connect(alice).approve(dittoModule.address, parseEther("100"));
     await approve.wait();
 
-    // sanity checks
-    await token.balanceOf(alice.address).then((balance: any) => {
+    // Sanity checks
+    await token.balanceOf(alice.address).then((balance: BigNumber) => {
       expect(balance).to.equal(parseEther("100"));
     });
 
@@ -70,20 +73,21 @@ describe("DittoModule", () => {
       expect(owner).to.equal(alice.address);
     });
 
-    // set up the oracle contract for the test
+    // Set up the oracle contract for the test
     const upshotOracle: Contract = new Contract(
       ethers.utils.getAddress(Sdk.Ditto.Addresses.UpshotOracle[5]),
-      abiUpshotOracle,
+      UpshotOracleAbi,
       ethers.provider
     );
     const oracleOwnerAddress = await upshotOracle.owner();
     const oracleOwnerSigner: SignerWithAddress = await ethers.getImpersonatedSigner(
       oracleOwnerAddress
     );
-    // make it easier for us to forge appraisals for testing with
+
+    // Make it easier for us to forge appraisals for testing with
     await upshotOracle.connect(oracleOwnerSigner).setAuthenticator(deployer.address);
 
-    // set params for creating a pool
+    // Set params for creating a pool
     const isPrivatePool = false; // allow any member of the public to provide liquidity to this pool
     const templateIndex = 6; //DittoPoolApp
     const tokenAddress = token.address; // which ERC20 we are trading
@@ -93,8 +97,9 @@ describe("DittoModule", () => {
     const feeAdmin = 0; // The percentage fee paid to the pool admin for their service of administrating the pool
     const delta = 0; // Unused in appraisal pools
     const basePrice = 0; // Unused in appraisal pools
-    const nftIdList: any[] = [tokenId04]; // initial liquidity deposit of token 4
+    const nftIdList: string[] = [tokenId04]; // initial liquidity deposit of token 4
     const initialTokenBalance = ethers.utils.parseEther("1"); // inital liquidity deposit of 1 ether
+
     // the inital template for creating a ditto appraisal pool takes 3 parameters:
     // first, the address of the oracle to be used for this appraisal pool
     // then as safety guardrail for the range at which a pool should ignore appraisal prices
@@ -104,7 +109,7 @@ describe("DittoModule", () => {
     // for this example we set that to 1 wei and 10 ether respectively, so an appraisal will be ignored
     // if it's for sale for more than 10 ether or less than 1 wei, even if
     // the appraisal is validly signed by the upshot oracle
-    const templateInitData: any = ethers.utils.defaultAbiCoder.encode(
+    const templateInitData = ethers.utils.defaultAbiCoder.encode(
       ["address", "uint256", "uint256"],
       [
         ethers.utils.getAddress(Sdk.Ditto.Addresses.UpshotOracle[5]),
@@ -112,9 +117,9 @@ describe("DittoModule", () => {
         ethers.utils.parseEther("10"),
       ]
     );
-    const referrer: any = new Uint8Array([]); // used with ditto referral program.
+    const referrer = new Uint8Array([]); // used with ditto referral program.
 
-    const poolTemplate: any = {
+    const poolTemplate = {
       isPrivatePool: isPrivatePool,
       templateIndex: templateIndex,
       token: tokenAddress,
@@ -133,7 +138,7 @@ describe("DittoModule", () => {
     // we do not use a pool manager for this pool
     const mngrTemplateIndex = ethers.constants.MaxUint256;
     const mngrInitData = new Uint8Array([]);
-    const poolManagerTemplate: any = {
+    const poolManagerTemplate = {
       templateIndex: mngrTemplateIndex,
       templateInitData: mngrInitData,
     };
@@ -152,20 +157,20 @@ describe("DittoModule", () => {
     const poolCreateTxn = await dittoPoolFactory
       .connect(deployer)
       .createDittoPool(poolTemplate, poolManagerTemplate, permitterTemplate);
-    let output = await poolCreateTxn.wait();
+    const output = await poolCreateTxn.wait();
 
     // find out the address of the newly created pool for further transactions
-    const event: any = output.events.find(
+    const event = output.events.find(
       (event: { event: string }) => event.event === "DittoPoolFactoryDittoPoolCreated"
     );
     const dpAddress = event.args.dittoPool;
-    const dittoPool: Contract = new Contract(dpAddress, abiDittoAppraisal, ethers.provider);
+    const dittoPool: Contract = new Contract(dpAddress, DittoAppraisalAbi, ethers.provider);
 
     // now approve the pool for further trading
     await token.connect(alice).approve(dittoPool.address, parseEther("100"));
 
     // sanity check
-    const oracleAddress: any = await dittoPool.oracle();
+    const oracleAddress = await dittoPool.oracle();
     expect(oracleAddress).to.eq(ethers.utils.getAddress(Sdk.Ditto.Addresses.UpshotOracle[5]));
 
     // construct an appraisal like you would get from the upshot appraisal API
@@ -177,8 +182,9 @@ describe("DittoModule", () => {
     const expiration = BigNumber.from("4102272000");
     const price = ethers.utils.parseEther("1");
     const extraData: Bytes = [];
+
     // create a signature for this appraisal
-    let messageHash = ethers.utils.solidityKeccak256(
+    const messageHash = ethers.utils.solidityKeccak256(
       [
         "uint256",
         "uint256",
@@ -202,11 +208,11 @@ describe("DittoModule", () => {
         extraData,
       ]
     );
-    let messageHashBytes = ethers.utils.arrayify(messageHash);
-    let flatSig = await deployer.signMessage(messageHashBytes);
+    const messageHashBytes = ethers.utils.arrayify(messageHash);
+    const flatSig = await deployer.signMessage(messageHashBytes);
 
     // appraisal in struct form
-    const priceData: any = {
+    const priceData = {
       signature: flatSig,
       nonce: nonce,
       nft: nft.address,
@@ -227,7 +233,7 @@ describe("DittoModule", () => {
 
     const fillTo: string = alice.address;
     const refundTo: string = alice.address;
-    const revertIfIncomplete: boolean = false;
+    const revertIfIncomplete = false;
     const amountPayment: BigNumber = parseEther("1.2");
 
     const eRC20ListingParams = [fillTo, refundTo, revertIfIncomplete, tokenAddress, amountPayment];
@@ -241,13 +247,12 @@ describe("DittoModule", () => {
 
     const buyWithERC20 = [[dittoPool.address], [orderParams], eRC20ListingParams, [fee]];
 
-    let data = dittoModule.interface.encodeFunctionData("buyWithERC20", buyWithERC20);
-
+    const data = dittoModule.interface.encodeFunctionData("buyWithERC20", buyWithERC20);
     const executions = [dittoModule.address, data, 0];
 
     await router.execute([executions]);
 
-    await nft.ownerOf(tokenId04).then((owner: any) => {
+    await nft.ownerOf(tokenId04).then((owner: string) => {
       expect(owner).to.eq(fillTo);
     });
   });

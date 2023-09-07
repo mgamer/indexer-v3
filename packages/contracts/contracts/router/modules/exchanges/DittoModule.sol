@@ -2,14 +2,15 @@
 pragma solidity ^0.8.9;
 
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import {BaseExchangeModule} from "./BaseExchangeModule.sol";
-import {BaseModule} from "../BaseModule.sol";
-import {IDittoPool} from "../../../interfaces/IDittoPool.sol";
 
-import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {SafeTransferLib} from "solmate/src/utils/SafeTransferLib.sol";
+import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+
+import {BaseExchangeModule} from "./BaseExchangeModule.sol";
+import {BaseModule} from "../BaseModule.sol";
+
+import {IDittoPool} from "../../../interfaces/IDittoPool.sol";
 
 struct DittoOrderParams {
   uint256[] nftIds;
@@ -22,28 +23,18 @@ contract DittoModule is BaseExchangeModule {
   // --- Constructor ---
   constructor(address owner, address router) BaseModule(owner) BaseExchangeModule(router) {}
 
-  function poolTransferNftFrom(
-    IERC721 nft, 
-    address from, 
-    address to, 
-    uint256 id
-  ) 
-  external 
-  {
-      // transfer NFTs to pool
-      nft.transferFrom(from, to, id);
+  function poolTransferNftFrom(IERC721 nft, address from, address to, uint256 id) external {
+    // transfer NFTs to pool
+    nft.transferFrom(from, to, id);
   }
 
   function poolTransferErc20From(
     IERC20 token,
-    address from,  
+    address from,
     address to,
     uint256 amount
-  ) 
-  external 
-  virtual 
-  {
-    // transfer tokens to txn sender
+  ) external virtual {
+    // Transfer tokens to txn sender
     token.safeTransferFrom(from, to, amount);
   }
 
@@ -55,14 +46,13 @@ contract DittoModule is BaseExchangeModule {
     ERC20ListingParams calldata params,
     Fee[] calldata fees
   )
-  external
-  nonReentrant
-  refundERC20Leftover(params.refundTo, params.token)
-  chargeERC20Fees(fees, params.token, params.amount)
+    external
+    nonReentrant
+    refundERC20Leftover(params.refundTo, params.token)
+    chargeERC20Fees(fees, params.token, params.amount)
   {
     uint256 pairsLength = pairs.length;
     for (uint256 i; i < pairsLength; ) {
-
       // Execute fill
       IDittoPool.SwapTokensForNftsArgs memory args = IDittoPool.SwapTokensForNftsArgs({
         nftIds: orderParams[i].nftIds,
@@ -70,7 +60,7 @@ contract DittoModule is BaseExchangeModule {
         tokenSender: params.fillTo,
         nftRecipient: params.fillTo,
         swapData: orderParams[i].swapData
-      }); 
+      });
 
       pairs[i].swapTokensForNfts(args);
 
@@ -91,31 +81,29 @@ contract DittoModule is BaseExchangeModule {
     OfferParams calldata params,
     Fee[] calldata fees
   ) external nonReentrant {
-  
-      IERC20 token = pool.token();
+    IERC20 token = pool.token();
 
-      IDittoPool.SwapNftsForTokensArgs memory args = IDittoPool.SwapNftsForTokensArgs({
-        nftIds: orderParams.nftIds,
-        lpIds: lpIds,
-        minExpectedTokenOutput: minOutput,
-        nftSender: params.fillTo,
-        tokenRecipient: params.fillTo,
-        permitterData: permitterData,
-        swapData: orderParams.swapData
-      });
+    IDittoPool.SwapNftsForTokensArgs memory args = IDittoPool.SwapNftsForTokensArgs({
+      nftIds: orderParams.nftIds,
+      lpIds: lpIds,
+      minExpectedTokenOutput: minOutput,
+      nftSender: params.fillTo,
+      tokenRecipient: params.fillTo,
+      permitterData: permitterData,
+      swapData: orderParams.swapData
+    });
 
-      pool.swapNftsForTokens(args);
+    pool.swapNftsForTokens(args);
 
-      // Pay fees
-      uint256 feesLength = fees.length;
-      for (uint256 i; i < feesLength; ) {
-        Fee memory fee = fees[i];
-        _sendERC20(fee.recipient, fee.amount, token);
+    // Pay fees
+    uint256 feesLength = fees.length;
+    for (uint256 i; i < feesLength; ) {
+      Fee memory fee = fees[i];
+      _sendERC20(fee.recipient, fee.amount, token);
 
-        unchecked {
-          ++i;
-        }
+      unchecked {
+        ++i;
       }
+    }
   }
-  
 }

@@ -1,6 +1,7 @@
+import { BigNumberish } from "@ethersproject/bignumber";
+
 import * as Types from "./types";
 import { lc, s, bn } from "../utils";
-import { BigNumberish } from "ethers";
 
 export class Order {
   public chainId: number;

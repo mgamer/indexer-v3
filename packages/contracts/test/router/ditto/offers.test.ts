@@ -1,11 +1,14 @@
-import { Contract, ContractReceipt } from "@ethersproject/contracts";
+import { BigNumber } from "@ethersproject/bignumber";
+import { Contract } from "@ethersproject/contracts";
 import { parseEther } from "@ethersproject/units";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
-import { ethers } from "hardhat";
-import { BigNumber } from "@ethersproject/bignumber";
 import { expect, assert } from "chai";
+import { ethers } from "hardhat";
+
 import { getDittoContracts } from "../helpers/ditto";
-import abiDittoPool from "../../../../sdk/src/ditto/abis/DittoPool.json";
+import { reset } from "../../utils";
+
+import DittoPoolAbi from "../../../../sdk/src/ditto/abis/DittoPool.json";
 
 describe("DittoModule", () => {
   let initialTokenBalance: BigNumber;
@@ -38,11 +41,10 @@ describe("DittoModule", () => {
 
     initialTokenBalance = parseEther("100");
 
-    // deploy and whitelist reservoir module in Ditto protocol
+    // Deploy and whitelist reservoir module in Ditto protocol
     router = await ethers
       .getContractFactory("ReservoirV6_0_1", deployer)
       .then((factory) => factory.deploy());
-
     dittoModule = await ethers
       .getContractFactory("DittoModule", deployer)
       .then((factory) => factory.deploy(deployer.address, router.address));
@@ -76,7 +78,7 @@ describe("DittoModule", () => {
       referrer: "0x",
     };
 
-    const poolManagerTemplate: any = {
+    const poolManagerTemplate = {
       templateIndex: ethers.constants.MaxUint256,
       templateInitData: "0x",
     };
@@ -90,16 +92,18 @@ describe("DittoModule", () => {
     const createDittoPoolTxn = await dittoPoolFactory
       .connect(marketMaker)
       .createDittoPool(poolTemplate, poolManagerTemplate, permitterTemplate);
-    let createDittoPoolReceipt: ContractReceipt = await createDittoPoolTxn.wait();
+    const createDittoPoolReceipt = await createDittoPoolTxn.wait();
 
     // from the creation transaction, get the new pool address and the LP ID for the position
-    const dittoPoolInterface = new ethers.utils.Interface(abiDittoPool);
-    createDittoPoolReceipt.events!.forEach((event) => {
+    const dittoPoolInterface = new ethers.utils.Interface(DittoPoolAbi);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    createDittoPoolReceipt.events!.forEach((event: any) => {
       if (event.event === "DittoPoolFactoryDittoPoolCreated") {
         poolAddress = event.args!.dittoPool;
       }
     });
-    createDittoPoolReceipt.logs.forEach((log) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    createDittoPoolReceipt.logs.forEach((log: any) => {
       try {
         const event = dittoPoolInterface.parseLog(log);
         if (event.name === "DittoPoolMarketMakeLiquidityCreated") {
@@ -113,6 +117,8 @@ describe("DittoModule", () => {
     dittoPool = new Contract(poolAddress, dittoPoolInterface, ethers.provider);
   });
 
+  afterEach(reset);
+
   it("Sell an NFT into a pool", async () => {
     const tokenId00 = 130019123456789; // probably not minted yet
     await nft.connect(trader).mint(traderAddress, tokenId00);
@@ -123,7 +129,7 @@ describe("DittoModule", () => {
     const traderInitialBalance = await token.balanceOf(traderAddress);
 
     const sellQuote = await dittoPool.getSellNftQuote(1, "0x");
-    let outputValue = sellQuote[3];
+    const outputValue = sellQuote[3];
 
     const fee = [poolAddress, 0];
 
@@ -148,13 +154,12 @@ describe("DittoModule", () => {
       [fee],
     ];
 
-    let data = dittoModule.interface.encodeFunctionData("sell", sell);
-
+    const data = dittoModule.interface.encodeFunctionData("sell", sell);
     const executions = [dittoModule.address, data, 0];
 
     await router.execute([executions]);
 
-    await nft.ownerOf(tokenId00).then((owner: any) => {
+    await nft.ownerOf(tokenId00).then((owner: string) => {
       expect(owner).to.eq(poolAddress);
     });
 

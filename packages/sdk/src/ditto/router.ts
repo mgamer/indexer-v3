@@ -3,8 +3,8 @@ import { Contract, ContractTransaction } from "@ethersproject/contracts";
 
 import * as Addresses from "./addresses";
 import { Order } from "./order";
-import { bn, TxData } from "../utils";
 import { NftInSwapStruct, SwapStruct } from "./types";
+import { TxData, bn } from "../utils";
 
 import RouterAbi from "./abis/DittoRouterRoyalties.json";
 
