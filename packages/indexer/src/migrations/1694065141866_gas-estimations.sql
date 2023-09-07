@@ -4,8 +4,6 @@ CREATE TABLE "gas_estimations" (
   "tag_id" TEXT NOT NULL,
   "tags" JSONB NOT NULL,
   "gas" NUMERIC(78, 0),
-  "gas_price" NUMERIC(78, 0),
-  "gas_value" NUMERIC(78, 0),
   "created_at" TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

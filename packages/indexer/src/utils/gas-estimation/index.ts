@@ -11,8 +11,6 @@ export type GasEstimation = {
   tagId: string;
   tags: string[];
   gas: string;
-  gasPrice: string;
-  gasValue: string;
   createdAt?: string;
 };
 
@@ -22,12 +20,9 @@ export type GasEstimationTranscation = {
 };
 
 export async function saveGasEstimations(estimations: GasEstimation[]) {
-  const columns = new pgp.helpers.ColumnSet(
-    ["tag_id", { name: "tags", mod: ":json" }, "gas", "gas_price", "gas_value"],
-    {
-      table: "gas_estimations",
-    }
-  );
+  const columns = new pgp.helpers.ColumnSet(["tag_id", { name: "tags", mod: ":json" }, "gas"], {
+    table: "gas_estimations",
+  });
 
   await idb.none(
     pgp.helpers.insert(
@@ -36,8 +31,6 @@ export async function saveGasEstimations(estimations: GasEstimation[]) {
           tag_id: _.tagId,
           tags: _.tags,
           gas: _.gas,
-          gas_price: _.gasPrice,
-          gas_value: _.gasValue,
         };
       }),
       columns
@@ -85,8 +78,6 @@ export async function getGasEstimations(
       tagId: c.tag_id,
       tags: c.tags,
       gas: c.gas,
-      gasPrice: c.gas_price,
-      gasValue: c.gas_value,
       createdAt: c.created_at,
     };
   });
@@ -132,14 +123,11 @@ export async function getFeeDataWithCache() {
 
 export async function doGasEstimate(txData: TxData, txTags: string[]) {
   const txTagId = getTagId(txTags);
-  const maxFeePerGas = await getFeeDataWithCache();
   const functionGasFees = await baseProvider.estimateGas(txData);
   const gasData: GasEstimation = {
     tagId: keccak256(["string"], [txTagId]),
     tags: txTags,
     gas: functionGasFees.toString(),
-    gasPrice: maxFeePerGas,
-    gasValue: functionGasFees.mul(bn(maxFeePerGas!)).toString(),
   };
   return gasData;
 }
