@@ -487,6 +487,7 @@ export class RabbitMqJobsConsumer {
           async (msg) => {
             if (!_.isNull(msg)) {
               await RabbitMq.send(queueName, JSON.parse(msg.content.toString()) as RabbitMQMessage);
+              channel.ack(msg);
             }
 
             ++counter;
@@ -495,7 +496,7 @@ export class RabbitMqJobsConsumer {
             }
           },
           {
-            noAck: true,
+            noAck: false,
             exclusive: true,
           }
         )
