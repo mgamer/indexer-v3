@@ -7,11 +7,6 @@ import { expect } from "chai";
 import { getDittoContracts } from "../helpers/ditto";
 import abiDittoPool from "../../../../sdk/src/ditto/abis/DittoPool.json";
 
-/**
- * run with the following command:
- *
- * BLOCK_NUMBER="9268037" npx hardhat test test/router/ditto/listings.test.ts
- */
 describe("DittoModule", () => {
   let poolAddress: string;
   let initialTokenBalance: BigNumber;

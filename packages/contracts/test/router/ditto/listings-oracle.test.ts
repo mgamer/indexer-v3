@@ -11,11 +11,6 @@ import { Bytes } from "ethers";
 
 import * as Sdk from "../../../../sdk/src";
 
-/**
- * run with the following command:
- *
- * BLOCK_NUMBER="9268037" npx hardhat test test/router/ditto/listings-oracle.test.ts
- */
 describe("DittoModule", () => {
   let initialTokenBalance: BigNumber;
   let deployer: SignerWithAddress;
@@ -31,15 +26,15 @@ describe("DittoModule", () => {
   beforeEach(async () => {
     [deployer] = await ethers.getSigners();
 
-    const dittoContracts  = getDittoContracts()
-    nft = dittoContracts.nft
-    token = dittoContracts.token
-    dittoPoolFactory = dittoContracts.dittoPoolFactory
+    const dittoContracts = getDittoContracts();
+    nft = dittoContracts.nft;
+    token = dittoContracts.token;
+    dittoPoolFactory = dittoContracts.dittoPoolFactory;
 
     let adminAddress = "0x00000000000000000000000000000000DeaDBeef";
     alice = await ethers.getImpersonatedSigner(adminAddress);
 
-    initialTokenBalance =  ethers.utils.parseEther("10");
+    initialTokenBalance = ethers.utils.parseEther("10");
 
     router = await ethers
       .getContractFactory("ReservoirV6_0_1", deployer)
@@ -77,7 +72,7 @@ describe("DittoModule", () => {
 
     // set up the oracle contract for the test
     const upshotOracle: Contract = new Contract(
-      Sdk.Ditto.Addresses.UpshotOracle[5],
+      ethers.utils.getAddress(Sdk.Ditto.Addresses.UpshotOracle[5]),
       abiUpshotOracle,
       ethers.provider
     );
@@ -107,11 +102,15 @@ describe("DittoModule", () => {
     // The minPriceSell to never sell an NFT for less than
     // and the maxPriceBuy to never buy an NFT for more than
     // for this example we set that to 1 wei and 10 ether respectively, so an appraisal will be ignored
-    // if it's for sale for more than 10 ether or less than 1 wei, even if 
+    // if it's for sale for more than 10 ether or less than 1 wei, even if
     // the appraisal is validly signed by the upshot oracle
     const templateInitData: any = ethers.utils.defaultAbiCoder.encode(
       ["address", "uint256", "uint256"],
-      [Sdk.Ditto.Addresses.UpshotOracle[5], "1", ethers.utils.parseEther("10")]
+      [
+        ethers.utils.getAddress(Sdk.Ditto.Addresses.UpshotOracle[5]),
+        "1",
+        ethers.utils.parseEther("10"),
+      ]
     );
     const referrer: any = new Uint8Array([]); // used with ditto referral program.
 
@@ -132,7 +131,7 @@ describe("DittoModule", () => {
     };
 
     // we do not use a pool manager for this pool
-    const mngrTemplateIndex = ethers.constants.MaxUint256
+    const mngrTemplateIndex = ethers.constants.MaxUint256;
     const mngrInitData = new Uint8Array([]);
     const poolManagerTemplate: any = {
       templateIndex: mngrTemplateIndex,
@@ -140,7 +139,7 @@ describe("DittoModule", () => {
     };
 
     // nor do we use a pool permitter
-    const permitterTemplateIndex = ethers.constants.MaxUint256
+    const permitterTemplateIndex = ethers.constants.MaxUint256;
     const permitterInitData = new Uint8Array([]);
     const liquidityDepositPermissionData = new Uint8Array([]);
     const permitterTemplate = {
@@ -162,13 +161,12 @@ describe("DittoModule", () => {
     const dpAddress = event.args.dittoPool;
     const dittoPool: Contract = new Contract(dpAddress, abiDittoAppraisal, ethers.provider);
 
-    // now approve the pool for further trading 
+    // now approve the pool for further trading
     await token.connect(alice).approve(dittoPool.address, parseEther("100"));
 
     // sanity check
     const oracleAddress: any = await dittoPool.oracle();
-    expect(oracleAddress).to.eq(Sdk.Ditto.Addresses.UpshotOracle[5]);
-    
+    expect(oracleAddress).to.eq(ethers.utils.getAddress(Sdk.Ditto.Addresses.UpshotOracle[5]));
 
     // construct an appraisal like you would get from the upshot appraisal API
     const chainId = 5;
@@ -178,11 +176,31 @@ describe("DittoModule", () => {
     // Wed Dec 30 2099 00:00:00 GMT+0000
     const expiration = BigNumber.from("4102272000");
     const price = ethers.utils.parseEther("1");
-    const extraData: Bytes = []
+    const extraData: Bytes = [];
     // create a signature for this appraisal
     let messageHash = ethers.utils.solidityKeccak256(
-      ["uint256", "uint256", "address", "uint256", "address", "uint256", "uint96", "uint96", "bytes"],
-      [chainId, nonce, nft.address, tokenId04, token.address, price, timestamp, expiration, extraData]
+      [
+        "uint256",
+        "uint256",
+        "address",
+        "uint256",
+        "address",
+        "uint256",
+        "uint96",
+        "uint96",
+        "bytes",
+      ],
+      [
+        chainId,
+        nonce,
+        nft.address,
+        tokenId04,
+        token.address,
+        price,
+        timestamp,
+        expiration,
+        extraData,
+      ]
     );
     let messageHashBytes = ethers.utils.arrayify(messageHash);
     let flatSig = await deployer.signMessage(messageHashBytes);

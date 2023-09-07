@@ -6,13 +6,7 @@ import { BigNumber } from "@ethersproject/bignumber";
 import { expect, assert } from "chai";
 import { getDittoContracts } from "../helpers/ditto";
 import abiDittoPool from "../../../../sdk/src/ditto/abis/DittoPool.json";
-import { constructPrivateListingCounterOrder } from "@reservoir0x/sdk/src/seaport-base/helpers";
 
-/**
- * run with the following command:
- *
- * BLOCK_NUMBER="9268037" npx hardhat test test/router/ditto/offers.test.ts
- */
 describe("DittoModule", () => {
   let initialTokenBalance: BigNumber;
   let deployer: SignerWithAddress;
