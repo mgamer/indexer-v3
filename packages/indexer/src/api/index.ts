@@ -288,7 +288,7 @@ export const start = async (): Promise<void> => {
             };
 
             // If rate limit points are 1
-            request.pre.metrics.points = 1;
+            // request.pre.metrics.points = 1;
 
             return reply
               .response(tooManyRequestsResponse)
