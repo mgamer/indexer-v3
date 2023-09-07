@@ -80,7 +80,7 @@ describe("Gas Estimation", () => {
     expect(estimation).not.toBe(undefined);
   });
 
-  it("cumpute", async () => {
+  it("compute", async () => {
     const txTags = ["fill-listings", "router"];
     const testTranscations = [
       {
