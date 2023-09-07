@@ -168,7 +168,11 @@ export class RabbitMq {
     } catch (error) {
       if (`${error}`.includes("nacked")) {
         if (lockAcquired && content.jobId) {
-          await releaseLock(content.jobId).catch();
+          try {
+            await releaseLock(content.jobId);
+          } catch {
+            // Ignore errors
+          }
         }
 
         logger.error(
@@ -315,9 +319,13 @@ export class RabbitMq {
         definition["queue-mode"] = "lazy";
       }
 
-      // If the queue has specific timeout
-      if (queue.getConsumerTimeout()) {
-        definition["consumer-timeout"] = queue.getConsumerTimeout();
+      // // If the queue has specific timeout
+      if (queue.getTimeout() && !queue.isLazyMode()) {
+        try {
+          await this.deletePolicy({ name: `${queue.getQueue()}-policy` });
+        } catch {
+          // Ignore errors
+        }
       }
 
       if (!_.isEmpty(definition)) {
