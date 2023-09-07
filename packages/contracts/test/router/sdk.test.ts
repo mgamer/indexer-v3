@@ -66,7 +66,7 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
           contract: erc721.address,
           tokenId: tokenId1,
           paymentToken: Sdk.Common.Addresses.Native[chainId],
-          price: price1.sub(price1.mul(fee1).div(10000).mul(4)),
+          price: price1.sub(price1.mul(fee1).div(10000)),
           fees: [
             {
               amount: price1.mul(fee1).div(10000),
