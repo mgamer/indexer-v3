@@ -16,7 +16,7 @@ export class NonFlaggedFloorQueueJob extends AbstractRabbitMqJobHandler {
   queueName = "collection-updates-non-flagged-floor-ask-queue";
   maxRetries = 10;
   concurrency = 5;
-  timeout = 60000;
+  timeout = 5 * 60 * 1000;
   backoff = {
     type: "exponential",
     delay: 20000,
