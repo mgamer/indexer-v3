@@ -132,11 +132,9 @@ export async function getFeeDataWithCache() {
 
 export async function doGasEstimate(txData: TxData, txTags: string[]) {
   const txTagId = getTagId(txTags);
-  //   const feeData = await baseProvider.getFeeData();
   const maxFeePerGas = await getFeeDataWithCache();
   const functionGasFees = await baseProvider.estimateGas(txData);
   const gasData: GasEstimation = {
-    // id: keccak256(["string"], [`${txTagId}-${randomUUID()}`]),
     tagId: keccak256(["string"], [txTagId]),
     tags: txTags,
     gas: functionGasFees.toString(),
