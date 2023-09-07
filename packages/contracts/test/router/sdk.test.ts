@@ -5,7 +5,6 @@ import { BidDetails, ListingDetails } from "@reservoir0x/sdk/src/router/v6/types
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import { randomUUID } from "crypto";
 import {
   bn,
   getChainId,
@@ -15,7 +14,6 @@ import {
   setupRouterWithModules,
 } from "../utils";
 import { PermitHandler } from "@reservoir0x/sdk/src/router/v6/permit";
-import { keccak256 } from "@ethersproject/solidity";
 
 describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
   const chainId = getChainId();
