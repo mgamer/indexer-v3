@@ -8,7 +8,7 @@ import {IDittoPool} from "../../../interfaces/IDittoPool.sol";
 
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {ERC20} from "solmate/src/tokens/ERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {SafeTransferLib} from "solmate/src/utils/SafeTransferLib.sol";
 
 struct DittoOrderParams {
@@ -17,7 +17,7 @@ struct DittoOrderParams {
 }
 
 contract DittoModule is BaseExchangeModule {
-  using SafeTransferLib for ERC20;
+  using SafeERC20 for IERC20;
 
   // --- Constructor ---
   constructor(address owner, address router) BaseModule(owner) BaseExchangeModule(router) {}
@@ -35,7 +35,7 @@ contract DittoModule is BaseExchangeModule {
   }
 
   function poolTransferErc20From(
-    ERC20 token,
+    IERC20 token,
     address from,  
     address to,
     uint256 amount
