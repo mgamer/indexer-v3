@@ -25,6 +25,7 @@ import amqplibConnectionManager, {
   ChannelWrapper,
 } from "amqp-connection-manager";
 
+import * as backfillWrongNftBalances from "@/jobs/backfill/backfill-wrong-nft-balances";
 import * as backfillExpiredOrders from "@/jobs/backfill/backfill-expired-orders";
 import * as backfillExpiredOrders2 from "@/jobs/backfill/backfill-expired-orders-2";
 import * as backfillRefreshCollectionMetadata from "@/jobs/backfill/backfill-refresh-collections-metadata";
@@ -151,6 +152,7 @@ import { blockGapCheckJob } from "@/jobs/events-sync/block-gap-check";
 import { backfillTokensTimeToMetadataJob } from "@/jobs/backfill/backfill-tokens-time-to-metadata-job";
 
 export const allJobQueues = [
+  backfillWrongNftBalances.queue,
   backfillExpiredOrders.queue,
   backfillExpiredOrders2.queue,
   backfillRefreshCollectionMetadata.queue,
