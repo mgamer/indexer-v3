@@ -75,7 +75,7 @@ if (config.doWebsocketWork && config.openSeaApiKey) {
         const openSeaOrderParams = await handleEvent(eventType, event.payload);
 
         // Reduce amount of logs by only total the amount of events received from Ethereum mainnet.
-        if ((_.random(100) <= 50 && openSeaOrderParams) || config.chainId === 1) {
+        if (_.random(100) <= 50 && (openSeaOrderParams || config.chainId === 1)) {
           logger.debug(
             "opensea-websocket",
             JSON.stringify({
