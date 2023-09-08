@@ -39,7 +39,8 @@ export abstract class AbstractRabbitMqJobHandler {
   protected useSharedChannel = false;
   protected lazyMode = false;
   protected queueType: QueueType = "classic";
-  protected timeout = 0;
+  protected timeout = 0; // Job timeout in ms
+  protected consumerTimeout = 0; // Rabbitmq timeout in ms default to 1800000ms (30 min) increase only if the job needs to run more than that, this value shouldn't be smaller than `timeout` (expect 0)
   protected disableConsuming = config.rabbitDisableQueuesConsuming;
 
   public async consume(channel: ChannelWrapper, consumeMessage: ConsumeMessage): Promise<void> {
@@ -236,6 +237,10 @@ export abstract class AbstractRabbitMqJobHandler {
 
   public getQueueType(): string {
     return this.queueType;
+  }
+
+  public getConsumerTimeout(): number {
+    return this.consumerTimeout;
   }
 
   public getTimeout(): number {
