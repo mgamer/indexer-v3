@@ -148,6 +148,7 @@ import { askWebsocketEventsTriggerQueueJob } from "@/jobs/websocket-events/ask-w
 import { bidWebsocketEventsTriggerQueueJob } from "@/jobs/websocket-events/bid-websocket-events-trigger-job";
 import { tokenWebsocketEventsTriggerJob } from "@/jobs/websocket-events/token-websocket-events-trigger-job";
 import { blockGapCheckJob } from "@/jobs/events-sync/block-gap-check";
+import { backfillTokensTimeToMetadataJob } from "@/jobs/backfill/backfill-tokens-time-to-metadata-job";
 
 export const allJobQueues = [
   backfillExpiredOrders.queue,
@@ -166,10 +167,10 @@ export const allJobQueues = [
 export class RabbitMqJobsConsumer {
   private static maxConsumerConnectionsCount = 5;
 
-  private static rabbitMqConsumerVhostConnections: AmqpConnectionManager[] = [];
-  private static vhostQueueToChannel: Map<string, ChannelWrapper> = new Map();
-  private static vhostSharedChannels: Map<string, ChannelWrapper> = new Map();
-  private static vhostChannelsToJobs: Map<ChannelWrapper, AbstractRabbitMqJobHandler[]> = new Map();
+  private static rabbitMqConsumerConnections: AmqpConnectionManager[] = [];
+  private static queueToChannel: Map<string, ChannelWrapper> = new Map();
+  private static sharedChannels: Map<string, ChannelWrapper> = new Map();
+  private static channelsToJobs: Map<ChannelWrapper, AbstractRabbitMqJobHandler[]> = new Map();
 
   private static sharedChannelName = "shared-channel";
 
@@ -279,6 +280,7 @@ export class RabbitMqJobsConsumer {
       bidWebsocketEventsTriggerQueueJob,
       tokenWebsocketEventsTriggerJob,
       blockGapCheckJob,
+      backfillTokensTimeToMetadataJob,
     ];
   }
 
@@ -301,12 +303,15 @@ export class RabbitMqJobsConsumer {
         }
       );
 
-      RabbitMqJobsConsumer.rabbitMqConsumerVhostConnections.push(connection);
+      RabbitMqJobsConsumer.rabbitMqConsumerConnections.push(connection);
 
-      const sharedChannel = connection.createChannel({ confirm: false, name: "sharedChannel" });
+      const sharedChannel = connection.createChannel({
+        confirm: false,
+        name: RabbitMqJobsConsumer.getSharedChannelName(i),
+      });
 
       // Create a shared channel for each connection
-      RabbitMqJobsConsumer.vhostSharedChannels.set(
+      RabbitMqJobsConsumer.sharedChannels.set(
         RabbitMqJobsConsumer.getSharedChannelName(i),
         sharedChannel
       );
@@ -314,7 +319,9 @@ export class RabbitMqJobsConsumer {
       connection.once("disconnect", (error) => {
         logger.error(
           "rabbit-error",
-          `Consumer connection error index ${i} ${JSON.stringify(error)}`
+          `Consumer connection error index ${i} isConnected ${connection.isConnected()} channelCount ${
+            connection.channelCount
+          } ${JSON.stringify(error)}`
         );
       });
     }
@@ -342,7 +349,7 @@ export class RabbitMqJobsConsumer {
 
     let channel: ChannelWrapper;
     const connectionIndex = _.random(0, RabbitMqJobsConsumer.maxConsumerConnectionsCount - 1);
-    const sharedChannel = RabbitMqJobsConsumer.vhostSharedChannels.get(
+    const sharedChannel = RabbitMqJobsConsumer.sharedChannels.get(
       RabbitMqJobsConsumer.getSharedChannelName(connectionIndex)
     );
 
@@ -350,9 +357,7 @@ export class RabbitMqJobsConsumer {
     if (job.getUseSharedChannel() && sharedChannel) {
       channel = sharedChannel;
     } else {
-      channel = RabbitMqJobsConsumer.rabbitMqConsumerVhostConnections[
-        connectionIndex
-      ].createChannel({
+      channel = RabbitMqJobsConsumer.rabbitMqConsumerConnections[connectionIndex].createChannel({
         confirm: false,
         name: job.getQueue(),
       });
@@ -360,15 +365,22 @@ export class RabbitMqJobsConsumer {
       await channel.waitForConnect();
 
       channel.once("connect", () => {
-        logger.info("rabbit-consume", `connected to ${job.getQueue()}`);
+        logger.info(
+          "rabbit-consume",
+          `reconnected to ${job.getQueue()} isConnected ${RabbitMqJobsConsumer.rabbitMqConsumerConnections[
+            connectionIndex
+          ].isConnected()} channelCount ${
+            RabbitMqJobsConsumer.rabbitMqConsumerConnections[connectionIndex].channelCount
+          }`
+        );
       });
     }
 
-    RabbitMqJobsConsumer.vhostQueueToChannel.set(job.getQueue(), channel);
+    RabbitMqJobsConsumer.queueToChannel.set(job.getQueue(), channel);
 
-    RabbitMqJobsConsumer.vhostChannelsToJobs.get(channel)
-      ? RabbitMqJobsConsumer.vhostChannelsToJobs.get(channel)?.push(job)
-      : RabbitMqJobsConsumer.vhostChannelsToJobs.set(channel, [job]);
+    RabbitMqJobsConsumer.channelsToJobs.get(channel)
+      ? RabbitMqJobsConsumer.channelsToJobs.get(channel)?.push(job)
+      : RabbitMqJobsConsumer.channelsToJobs.set(channel, [job]);
 
     // Subscribe to the queue
     await channel
@@ -405,7 +417,7 @@ export class RabbitMqJobsConsumer {
    * @param job
    */
   static async unsubscribe(job: AbstractRabbitMqJobHandler) {
-    const channel = RabbitMqJobsConsumer.vhostQueueToChannel.get(job.getQueue());
+    const channel = RabbitMqJobsConsumer.queueToChannel.get(job.getQueue());
 
     if (channel) {
       await channel.cancel(RabbitMqJobsConsumer.getConsumerTag(job.getQueue()));
@@ -477,6 +489,7 @@ export class RabbitMqJobsConsumer {
           async (msg) => {
             if (!_.isNull(msg)) {
               await RabbitMq.send(queueName, JSON.parse(msg.content.toString()) as RabbitMQMessage);
+              channel.ack(msg);
             }
 
             ++counter;
@@ -485,7 +498,7 @@ export class RabbitMqJobsConsumer {
             }
           },
           {
-            noAck: true,
+            noAck: false,
             exclusive: true,
           }
         )
