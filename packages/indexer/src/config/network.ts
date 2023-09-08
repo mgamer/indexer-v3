@@ -290,7 +290,6 @@ export const getNetworkSettings = (): NetworkSettings => {
           // Nifty Gateway Omnibus
           "0xe052113bd7d7700d623414a0a4585bcae754e9d5",
         ],
-
         trendingExcludedContracts: [
           "0x57f1887a8bf19b14fc0df6fd9b2acc9af147ea85", // ens
           "0xd4416b13d2b3a9abae7acd5d6c2bbdbe25686401", // ens
@@ -482,9 +481,8 @@ export const getNetworkSettings = (): NetworkSettings => {
         elasticsearch: {
           indexes: {
             activities: {
+              ...defaultNetworkSettings.elasticsearch?.indexes?.activities,
               numberOfShards: 10,
-              disableMappingsUpdate: true,
-              configName: "CONFIG_1689873821",
             },
           },
         },
@@ -530,9 +528,8 @@ export const getNetworkSettings = (): NetworkSettings => {
         elasticsearch: {
           indexes: {
             activities: {
+              ...defaultNetworkSettings.elasticsearch?.indexes?.activities,
               numberOfShards: 10,
-              disableMappingsUpdate: true,
-              configName: "CONFIG_1689873821",
             },
           },
         },
@@ -576,6 +573,7 @@ export const getNetworkSettings = (): NetworkSettings => {
         elasticsearch: {
           indexes: {
             activities: {
+              ...defaultNetworkSettings.elasticsearch?.indexes?.activities,
               numberOfShards: 10,
             },
           },
@@ -611,7 +609,7 @@ export const getNetworkSettings = (): NetworkSettings => {
         metadataMintDelay: 180,
         enableWebSocket: true,
         realtimeSyncMaxBlockLag: 32,
-        realtimeSyncFrequencySeconds: 2,
+        realtimeSyncFrequencySeconds: 30,
         lastBlockLatency: 8,
         headBlockDelay: 0,
         backfillBlockBatchSize: 32,
@@ -652,6 +650,7 @@ export const getNetworkSettings = (): NetworkSettings => {
         elasticsearch: {
           indexes: {
             activities: {
+              ...defaultNetworkSettings.elasticsearch?.indexes?.activities,
               numberOfShards: 40,
             },
           },
@@ -744,6 +743,7 @@ export const getNetworkSettings = (): NetworkSettings => {
         elasticsearch: {
           indexes: {
             activities: {
+              ...defaultNetworkSettings.elasticsearch?.indexes?.activities,
               numberOfShards: 10,
             },
           },
@@ -777,7 +777,7 @@ export const getNetworkSettings = (): NetworkSettings => {
       return {
         ...defaultNetworkSettings,
         isTestnet: true,
-        enableWebSocket: true,
+        enableWebSocket: false,
         realtimeSyncMaxBlockLag: 32,
         realtimeSyncFrequencySeconds: 5,
         lastBlockLatency: 5,
@@ -886,14 +886,6 @@ export const getNetworkSettings = (): NetworkSettings => {
           // PaymentProcessor WETH
           "0xfff9976782d46cc05630d1f6ebab18b2324d6b14": true,
         },
-        elasticsearch: {
-          indexes: {
-            activities: {
-              disableMappingsUpdate: true,
-              configName: "CONFIG_1689873821",
-            },
-          },
-        },
         subDomain: "api-sepolia",
         onStartup: async () => {
           // Insert the native currency
@@ -937,6 +929,7 @@ export const getNetworkSettings = (): NetworkSettings => {
         elasticsearch: {
           indexes: {
             activities: {
+              ...defaultNetworkSettings.elasticsearch?.indexes?.activities,
               numberOfShards: 10,
             },
           },
@@ -975,13 +968,6 @@ export const getNetworkSettings = (): NetworkSettings => {
         realtimeSyncFrequencySeconds: 5,
         lastBlockLatency: 5,
         subDomain: "api-base-goerli",
-        elasticsearch: {
-          indexes: {
-            activities: {
-              numberOfShards: 5,
-            },
-          },
-        },
         onStartup: async () => {
           // Insert the native currency
           await Promise.all([
@@ -1017,13 +1003,6 @@ export const getNetworkSettings = (): NetworkSettings => {
         subDomain: "api-arbitrum-nova",
         coingecko: {
           networkId: "arbitrum-nova",
-        },
-        elasticsearch: {
-          indexes: {
-            activities: {
-              numberOfShards: 10,
-            },
-          },
         },
         onStartup: async () => {
           // Insert the native currency
@@ -1092,13 +1071,6 @@ export const getNetworkSettings = (): NetworkSettings => {
         realtimeSyncFrequencySeconds: 5,
         lastBlockLatency: 5,
         subDomain: "api-zora",
-        elasticsearch: {
-          indexes: {
-            activities: {
-              configName: "CONFIG_1689873821",
-            },
-          },
-        },
         onStartup: async () => {
           // Insert the native currency
           await Promise.all([
@@ -1175,6 +1147,7 @@ export const getNetworkSettings = (): NetworkSettings => {
         elasticsearch: {
           indexes: {
             activities: {
+              ...defaultNetworkSettings.elasticsearch?.indexes?.activities,
               numberOfShards: 5,
             },
           },

@@ -18,8 +18,9 @@ import { BidCancelledEventHandler } from "@/elasticsearch/indexes/activities/eve
 import { FillEventCreatedEventHandler } from "@/elasticsearch/indexes/activities/event-handlers/fill-event-created";
 import { fromBuffer, toBuffer } from "@/common/utils";
 import { NftTransferEventCreatedEventHandler } from "@/elasticsearch/indexes/activities/event-handlers/nft-transfer-event-created";
-import { acquireLock, redis, releaseLock } from "@/common/redis";
+import { acquireLock, doesLockExist, redis, releaseLock } from "@/common/redis";
 import crypto from "crypto";
+import { ActivityDocument } from "@/elasticsearch/indexes/activities/base";
 
 export type BackfillSaveActivitiesElasticsearchJobPayload = {
   type: "ask" | "ask-cancel" | "bid" | "bid-cancel" | "sale" | "transfer";
@@ -36,7 +37,7 @@ export class BackfillSaveActivitiesElasticsearchJob extends AbstractRabbitMqJobH
   concurrency = 2;
   persistent = true;
   lazyMode = true;
-  consumerTimeout = 60000;
+  timeout = 60000;
 
   backoff = {
     type: "fixed",
@@ -97,6 +98,14 @@ export class BackfillSaveActivitiesElasticsearchJob extends AbstractRabbitMqJobH
             );
           }
 
+          let errorActivities: ActivityDocument[] = [];
+
+          if (bulkResponse.errors) {
+            const errorItems = bulkResponse.items.filter((item) => item.index?.error);
+            const errorItemsIds = errorItems.map((item) => item.index?._id);
+            errorActivities = activities.filter((activity) => errorItemsIds.includes(activity.id));
+          }
+
           logger.info(
             this.queueName,
             JSON.stringify({
@@ -114,7 +123,8 @@ export class BackfillSaveActivitiesElasticsearchJob extends AbstractRabbitMqJobH
               nextCursor,
               hasNextCursor: !!nextCursor,
               hasErrors: bulkResponse.errors,
-              errors: bulkResponse.items.filter((item) => item.index?.error),
+              errorItems: bulkResponse.items.filter((item) => item.index?.error),
+              errorActivities,
             })
           );
         } else if (keepGoing) {
@@ -186,6 +196,8 @@ export class BackfillSaveActivitiesElasticsearchJob extends AbstractRabbitMqJobH
 
       await releaseLock(lockId);
     } else {
+      const lockExists = await doesLockExist(lockId);
+
       logger.info(
         this.queueName,
         JSON.stringify({
@@ -200,6 +212,7 @@ export class BackfillSaveActivitiesElasticsearchJob extends AbstractRabbitMqJobH
           indexName,
           keepGoing,
           lockId,
+          lockExists,
         })
       );
     }
