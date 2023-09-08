@@ -120,7 +120,7 @@ export class AskWebsocketEventsTriggerQueueJob extends AbstractRabbitMqJobHandle
             : Sdk.Common.Addresses.WNative[config.chainId],
           undefined
         ),
-        ...formatValidBetween(data.after.valid_between, data.after.id),
+        ...formatValidBetween(data.after.valid_between),
         quantityFilled: Number(data.after.quantity_filled),
         quantityRemaining: Number(data.after.quantity_remaining),
         criteria: rawResult.criteria,
