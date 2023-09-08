@@ -8,8 +8,8 @@ import { baseProvider } from "@/common/provider";
 import { config } from "@/config/index";
 import { getNetworkName } from "@/config/network";
 import { logger } from "@/common/logger";
-import { customHandleContractTokens, hasCustomHandler } from "./custom-metadata/custom";
-import { hasExtendHandler } from "./custom-metadata/extend";
+import { customHandleContractTokens, hasCustomHandler } from "@/metadata/custom";
+import { hasExtendHandler } from "@/metadata/extend";
 
 interface TokenMetadata {
   contract: string;
