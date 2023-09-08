@@ -5,7 +5,7 @@ import { RabbitMq, RabbitMQMessage } from "@/common/rabbit-mq";
 import { logger } from "@/common/logger";
 import _ from "lodash";
 import { ConsumeMessage } from "amqplib";
-import { releaseLock } from "@/common/redis";
+import { extendLock, releaseLock } from "@/common/redis";
 import { ChannelWrapper } from "amqp-connection-manager";
 import { config } from "@/config/index";
 
@@ -60,6 +60,17 @@ export abstract class AbstractRabbitMqJobHandler {
 
     this.rabbitMqMessage.consumedTime = this.rabbitMqMessage.consumedTime ?? _.now();
     this.rabbitMqMessage.retryCount = this.rabbitMqMessage.retryCount ?? 0;
+
+    if (this.rabbitMqMessage.jobId) {
+      try {
+        await extendLock(
+          this.rabbitMqMessage.jobId,
+          _.max([_.toInteger(this.getTimeout() / 1000), 0]) || 5 * 60
+        );
+      } catch {
+        // Ignore errors
+      }
+    }
 
     try {
       let processResult;
