@@ -205,6 +205,20 @@ export class MintQueueJob extends AbstractRabbitMqJobHandler {
           tokenId,
           community: collection?.community ?? null,
         });
+
+        // update the minted timestamp on the collection
+        await idb.none(
+          `
+            UPDATE collections SET
+              minted_timestamp = $/mintedTimestamp/
+            WHERE collections.id = $/collection/
+            AND collections.minted_timestamp IS NULL
+          `,
+          {
+            collection: collection?.id,
+            mintedTimestamp,
+          }
+        );
       }
 
       // Set any cached information (eg. floor sell)
