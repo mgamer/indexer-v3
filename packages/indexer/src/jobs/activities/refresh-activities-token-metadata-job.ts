@@ -29,6 +29,20 @@ export class RefreshActivitiesTokenMetadataJob extends AbstractRabbitMqJobHandle
       payload.tokenUpdateData ?? (await Tokens.getByContractAndTokenId(contract, tokenId));
 
     if (!_.isEmpty(tokenUpdateData)) {
+      logger.info(
+        this.queueName,
+        JSON.stringify({
+          message: `Debug. contract=${contract}, tokenId=${tokenId}, tokenUpdateData=${JSON.stringify(
+            tokenUpdateData
+          )}`,
+          data: {
+            contract,
+            tokenId,
+          },
+          payload,
+        })
+      );
+
       const keepGoing = await ActivitiesIndex.updateActivitiesTokenMetadata(
         contract,
         tokenId,
@@ -38,9 +52,16 @@ export class RefreshActivitiesTokenMetadataJob extends AbstractRabbitMqJobHandle
       if (keepGoing) {
         logger.info(
           this.queueName,
-          `KeepGoing. contract=${contract}, tokenId=${tokenId}, tokenUpdateData=${JSON.stringify(
-            tokenUpdateData
-          )}`
+          JSON.stringify({
+            message: `KeepGoing. contract=${contract}, tokenId=${tokenId}, tokenUpdateData=${JSON.stringify(
+              tokenUpdateData
+            )}`,
+            data: {
+              contract,
+              tokenId,
+            },
+            payload,
+          })
         );
 
         addToQueue = true;
@@ -50,15 +71,10 @@ export class RefreshActivitiesTokenMetadataJob extends AbstractRabbitMqJobHandle
     return { addToQueue };
   }
 
-  public events() {
-    this.once(
-      "onCompleted",
-      async (message: RabbitMQMessage, processResult: { addToQueue: boolean }) => {
-        if (processResult.addToQueue) {
-          await this.addToQueue(message.payload.contract, message.payload.tokenId);
-        }
-      }
-    );
+  public async onCompleted(message: RabbitMQMessage, processResult: { addToQueue: boolean }) {
+    if (processResult.addToQueue) {
+      await this.addToQueue(message.payload.contract, message.payload.tokenId);
+    }
   }
 
   public async addToQueue(contract: string, tokenId: string) {
