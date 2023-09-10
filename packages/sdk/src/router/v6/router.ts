@@ -434,9 +434,14 @@ export class Router {
         (c) => c.order as Sdk.PaymentProcessor.Order
       );
 
-      // Use the gas-efficient sweep method when all listings are from the same collection
+      // Use the gas-efficient sweep method when:
+      // - there is at least one listing
+      // - all listings are for the same collection
+      // - all listings have the same payment token
       const useSweepCollection =
-        ownDetails.length > 1 && ownDetails.every((c) => c.contract === details[0].contract);
+        ownDetails.length > 1 &&
+        ownDetails.every((c) => c.contract === details[0].contract) &&
+        ownDetails.every((c) => c.currency === details[0].currency);
 
       if (useSweepCollection) {
         const bundledOrder = Sdk.PaymentProcessor.Order.createBundledOfferOrder(orders, {
