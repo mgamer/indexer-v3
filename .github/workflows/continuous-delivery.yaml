@@ -478,6 +478,14 @@ jobs:
             ./prod/platform/indexer-worker-zksync.yaml \
             ${{ github.sha }} \
             indexer-worker-zksync
+          ./utils/version_update.sh \
+            ./prod/platform/indexer-api-polygon-zkevm.yaml \
+            ${{ github.sha }} \
+            indexer-api-polygon-zkevm
+          ./utils/version_update.sh \
+            ./prod/platform/indexer-worker-polygon-zkevm.yaml \
+            ${{ github.sha }} \
+            indexer-worker-polygon-zkevm
       - name: Post to Slack
         if: ${{ always() }}
         id: slack-deploy-prod
