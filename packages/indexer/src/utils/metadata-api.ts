@@ -8,8 +8,8 @@ import { baseProvider } from "@/common/provider";
 import { config } from "@/config/index";
 import { getNetworkName } from "@/config/network";
 import { logger } from "@/common/logger";
-import { customHandleContractTokens, hasCustomHandler } from "@/metadata/custom";
-import { hasExtendHandler } from "@/metadata/extend";
+import { customHandleContractTokens, customHandleToken, hasCustomHandler } from "@/metadata/custom";
+import { extendMetadata, hasExtendHandler } from "@/metadata/extend";
 
 interface TokenMetadata {
   contract: string;
@@ -147,17 +147,18 @@ export class MetadataApi {
     // get custom / extended metadata locally
     const customMetadata = await Promise.all(
       tokens.map(async (token) => {
-        if (hasExtendHandler(config.chainId, token.contract)) {
-          const result = await customHandleContractTokens(
-            config.chainId,
-            token.contract,
-            token.tokenId
-          );
+        if (hasCustomHandler(config.chainId, token.contract)) {
+          const result = await customHandleToken(config.chainId, {
+            contract: token.contract,
+            _tokenId: token.tokenId,
+          });
           return result;
         }
         return null;
       })
     );
+    // eslint-disable-next-line
+    console.log(customMetadata);
 
     // filter out nulls
     const filteredCustomMetadata = customMetadata.filter((metadata) => metadata !== null);
@@ -186,7 +187,23 @@ export class MetadataApi {
 
     const metadata: TokenMetadata[] = (data as any).metadata;
 
-    return [...metadata, ...filteredCustomMetadata];
+    // merge custom metadata with metadata-api metadata
+    const allMetadata = [...metadata, ...filteredCustomMetadata];
+
+    // extend metadata
+    const extendedMetadata = await Promise.all(
+      allMetadata.map(async (metadata) => {
+        if (hasExtendHandler(config.chainId, metadata.contract)) {
+          // eslint-disable-next-line
+          console.log("extendMetadata", metadata);
+          const result = await extendMetadata(config.chainId, metadata);
+          return result;
+        }
+        return metadata;
+      })
+    );
+
+    return extendedMetadata;
   }
 
   public static async parseTokenMetadata(
