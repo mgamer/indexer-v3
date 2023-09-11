@@ -69,6 +69,9 @@ export const getNetworkName = () => {
     case 59144:
       return "linea";
 
+    case 1101:
+      return "polygon-zkevm";
+
     default:
       return "unknown";
   }
@@ -1205,6 +1208,42 @@ export const getNetworkSettings = (): NetworkSettings => {
                   'ETH',
                   18,
                   '{"coingeckoCurrencyId": "wrapped-ether-linea", "image": "https://assets.coingecko.com/coins/images/31019/large/download_%2817%29.png"}'
+                ) ON CONFLICT DO NOTHING
+              `
+            ),
+          ]);
+        },
+      };
+    }
+    // Polygon zkEVM
+    case 1101: {
+      return {
+        ...defaultNetworkSettings,
+        enableWebSocket: true,
+        realtimeSyncMaxBlockLag: 32,
+        realtimeSyncFrequencySeconds: 5,
+        lastBlockLatency: 5,
+        subDomain: "api-polygon-zkevm",
+        coingecko: {
+          networkId: "polygon-zkevm",
+        },
+        onStartup: async () => {
+          // Insert the native currency
+          await Promise.all([
+            idb.none(
+              `
+                INSERT INTO currencies (
+                  contract,
+                  name,
+                  symbol,
+                  decimals,
+                  metadata
+                ) VALUES (
+                  '\\x0000000000000000000000000000000000000000',
+                  'Matic',
+                  'MATIC',
+                  18,
+                  '{"coingeckoCurrencyId": "matic-network"}'
                 ) ON CONFLICT DO NOTHING
               `
             ),
