@@ -75,6 +75,7 @@ import { refreshContractCollectionsMetadataQueueJob } from "@/jobs/collection-up
 import { setCommunityQueueJob } from "@/jobs/collection-updates/set-community-queue-job";
 import { topBidCollectionJob } from "@/jobs/collection-updates/top-bid-collection-job";
 import { updateCollectionDailyVolumeJob } from "@/jobs/collection-updates/update-collection-daily-volume-job";
+import { collectionNewContractDeployedJob } from "@/jobs/collections/collection-contract-deployed";
 import { collectionRefreshJob } from "@/jobs/collections-refresh/collections-refresh-job";
 import { collectionRefreshCacheJob } from "@/jobs/collections-refresh/collections-refresh-cache-job";
 import { currenciesFetchJob } from "@/jobs/currencies/currencies-fetch-job";
@@ -149,6 +150,7 @@ import { askWebsocketEventsTriggerQueueJob } from "@/jobs/websocket-events/ask-w
 import { bidWebsocketEventsTriggerQueueJob } from "@/jobs/websocket-events/bid-websocket-events-trigger-job";
 import { tokenWebsocketEventsTriggerJob } from "@/jobs/websocket-events/token-websocket-events-trigger-job";
 import { blockGapCheckJob } from "@/jobs/events-sync/block-gap-check";
+import { traceSyncJob } from "@/jobs/events-sync/trace-sync-job";
 import { backfillTokensTimeToMetadataJob } from "@/jobs/backfill/backfill-tokens-time-to-metadata-job";
 
 export const allJobQueues = [
@@ -209,6 +211,7 @@ export class RabbitMqJobsConsumer {
       setCommunityQueueJob,
       topBidCollectionJob,
       updateCollectionDailyVolumeJob,
+      collectionNewContractDeployedJob,
       collectionRefreshJob,
       collectionRefreshCacheJob,
       currenciesFetchJob,
@@ -264,6 +267,7 @@ export class RabbitMqJobsConsumer {
       orderbookPostOrderExternalJob,
       orderbookPostOrderExternalOpenseaJob,
       eventsSyncRealtimeJob,
+      traceSyncJob,
       openseaOrdersProcessJob,
       openseaOrdersFetchJob,
       saveBidEventsJob,
