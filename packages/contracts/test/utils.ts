@@ -6,6 +6,7 @@ import { BigNumberish, BigNumber } from "@ethersproject/bignumber";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import * as Sdk from "@reservoir0x/sdk/src";
 import { ethers, network } from "hardhat";
+import { Contract } from "@ethersproject/contracts";
 
 // --- Misc ---
 
@@ -60,15 +61,40 @@ export const setupTokens = async (deployer: SignerWithAddress) => {
 };
 
 // Deploy mock ERC721/1155 contracts
-export const setupNFTs = async (deployer: SignerWithAddress) => {
+export const setupNFTs = async (deployer: SignerWithAddress, whiteListOperators: string[] = []) => {
   const erc721: any = await ethers
     .getContractFactory("MockERC721", deployer)
     .then((factory) => factory.deploy());
+
+   const erc721c: any = await ethers
+    .getContractFactory("MockERC721C", deployer)
+    .then((factory) => factory.deploy());
+  
+  const erc721cBlock: any = await ethers
+    .getContractFactory("MockERC721C", deployer)
+    .then((factory) => factory.deploy());
+
+  if (whiteListOperators.length) {
+    await erc721cBlock.connect(deployer).setToDefaultSecurityPolicy();
+    const validatorAddress = await erc721cBlock.getTransferValidator();
+    const validator = new Contract(validatorAddress, new Interface([
+      `function createOperatorWhitelist(string calldata name) external returns (uint120)`,
+      `function addOperatorToWhitelist(uint120 id, address operator) external`
+    ], ethers.provider));
+
+    const operatorWhiteListId = await validator.connect(deployer).callStatic.createOperatorWhitelist("test");
+    await validator.connect(deployer).createOperatorWhitelist("test");
+    for (const whiteListOperator of whiteListOperators) {
+      await validator.connect(deployer).addOperatorToWhitelist(operatorWhiteListId,whiteListOperator);
+    }
+    await erc721cBlock.connect(deployer).setToCustomSecurityPolicy(2, operatorWhiteListId, 0);
+  }
+
   const erc1155: any = await ethers
     .getContractFactory("MockERC1155", deployer)
     .then((factory) => factory.deploy());
 
-  return { erc721, erc1155 };
+  return { erc721, erc1155, erc721c, erc721cBlock };
 };
 
 export const setupConduit = async (

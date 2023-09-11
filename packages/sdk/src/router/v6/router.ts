@@ -354,8 +354,153 @@ export class Router {
       ) => Promise<void>;
     }
   ): Promise<FillListingsResult> {
-    // Assume the listing details are consistent with the underlying order object
+    // return this._fillListingsTx(details, taker, buyInCurrency, options);
+    const byCurrencyDetails: PerCurrencyListingDetails = {};
+    let defaultDetails: ListingDetails[] = [];
+    const groupedDetails: ListingDetails[][] = [];
 
+    let unprocessedDetails = details.filter((c) => !["payment-processor"].includes(c.kind));
+    const paymentProcessorDetails = details.filter((c) => ["payment-processor"].includes(c.kind));
+    const blockedPaymentProcessorDetails: ListingDetails[] = [];
+    const allowedPaymentProcessorDetails: ListingDetails[] = [];
+
+    if (paymentProcessorDetails.length && unprocessedDetails.length === 0) {
+      unprocessedDetails = paymentProcessorDetails;
+    } else {
+      // for cross-exchange listings, we need to split them if the router is blocked by ERC721-C
+      for (const paymentProcessorDetail of paymentProcessorDetails) {
+        const order = paymentProcessorDetail.order as Sdk.PaymentProcessor.Order;
+        try {
+          // check module is allowed
+          const isAllowed = await order.isTransferAllowed(
+            this.provider,
+            paymentProcessorDetail.contract,
+            Addresses.PaymentProcessorModule[this.chainId],
+            Addresses.PaymentProcessorModule[this.chainId],
+            Sdk.PaymentProcessor.Addresses.Exchange[this.chainId]
+          );
+          if (!isAllowed) {
+            blockedPaymentProcessorDetails.push(paymentProcessorDetail);
+          } else {
+            allowedPaymentProcessorDetails.push(paymentProcessorDetail);
+          }
+        } catch {
+          // not ERC721-C
+          allowedPaymentProcessorDetails.push(paymentProcessorDetail);
+        }
+      }
+    }
+
+    if (blockedPaymentProcessorDetails.length) {
+      // direct fill
+      groupedDetails.push(blockedPaymentProcessorDetails);
+    }
+
+    if (allowedPaymentProcessorDetails.length) {
+      defaultDetails = [...allowedPaymentProcessorDetails];
+    }
+
+    // split details by currency if the router module is not supported
+    for (const detail of unprocessedDetails) {
+      const { currency, kind } = detail;
+      const supportCurrencyOrModule = [
+        "element",
+        "collectionxyz",
+        "foundation",
+        "looks-rare-v2",
+        "seaport",
+        "seaport-v1.4",
+        "seaport-v1.5",
+        "alienswap",
+        "sudoswap",
+        "sudoswap-v2",
+        "midaswap",
+        "caviar-v1",
+        "x2y2",
+        "zeroex-v4",
+        "zora",
+        "nftx",
+        "rarible",
+        "superrare",
+        "cryptopunks",
+      ].includes(kind);
+      if (!supportCurrencyOrModule) {
+        if (!byCurrencyDetails[currency]) {
+          byCurrencyDetails[currency] = [];
+        }
+        byCurrencyDetails[currency].push(detail);
+      } else {
+        defaultDetails.push(detail);
+      }
+    }
+
+    if (defaultDetails.length) {
+      groupedDetails.push(defaultDetails);
+    }
+
+    for (const currency of Object.keys(byCurrencyDetails)) {
+      groupedDetails.push(byCurrencyDetails[currency]);
+    }
+
+    const txs: {
+      approvals: FTApproval[];
+      permits: { kind: "erc20"; data: PermitWithTransfers }[];
+      preSignatures: PreSignature[];
+      txData: TxData;
+      orderIds: string[];
+    }[] = [];
+    const success: { [orderId: string]: boolean } = {};
+
+    for (const splitedDetails of groupedDetails) {
+      const result = await this._fillListingsTx(splitedDetails, taker, buyInCurrency, options);
+      // append results
+      for (const tx of result.txs) {
+        txs.push(tx);
+      }
+      for (const orderId of Object.keys(result.success)) {
+        success[orderId] = result.success[orderId];
+      }
+    }
+    return {
+      txs,
+      success,
+    };
+  }
+
+  private async _fillListingsTx(
+    details: ListingDetails[],
+    taker: string,
+    buyInCurrency = Sdk.Common.Addresses.Native[this.chainId],
+    options?: {
+      source?: string;
+      // Force filling through the router (where possible)
+      forceRouter?: boolean;
+      // Skip any errors (either off-chain or on-chain)
+      partial?: boolean;
+      // Wallet used for relaying the fill transaction
+      relayer?: string;
+      // Needed for filling Blur orders
+      blurAuth?: {
+        accessToken: string;
+      };
+      // Use permit instead of approvals (only works for USDC)
+      usePermit?: boolean;
+      swapProvider?: "uniswap" | "1inch";
+      // Callback for handling errors
+      onError?: (
+        kind: string,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        error: any,
+        data: {
+          orderId: string;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          additionalInfo: any;
+          isUnrecoverable?: boolean;
+        }
+      ) => Promise<void>;
+    }
+  ): Promise<FillListingsResult> {
+    // Assume the listing details are consistent with the underlying order object
     const txs: {
       approvals: FTApproval[];
       permits: { kind: "erc20"; data: PermitWithTransfers }[];
@@ -2390,24 +2535,30 @@ export class Router {
           .reduce((a, b) => a.add(b), bn(0));
         const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
         const totalPrice = price.add(feeAmount);
+        const tokenOut = orders[0].params.erc20Token;
+        const currencyIsETH = isETH(this.chainId, tokenOut);
 
         executions.push({
           module: module.address,
           data:
             orders.length === 1
-              ? module.interface.encodeFunctionData("acceptETHListingERC721", [
-                  orders[0].getRaw(),
-                  orders[0].params,
-                  {
-                    fillTo: taker,
-                    refundTo: relayer,
-                    revertIfIncomplete: Boolean(!options?.partial),
-                    amount: price,
-                  },
-                  fees,
-                ])
+              ? module.interface.encodeFunctionData(
+                  !currencyIsETH ? "acceptERC20ListingERC721" : "acceptETHListingERC721",
+                  [
+                    orders[0].getRaw(),
+                    orders[0].params,
+                    {
+                      fillTo: taker,
+                      refundTo: relayer,
+                      revertIfIncomplete: Boolean(!options?.partial),
+                      amount: price,
+                      token: orders[0].params.erc20Token,
+                    },
+                    fees,
+                  ]
+                )
               : this.contracts.zeroExV4Module.interface.encodeFunctionData(
-                  "acceptETHListingsERC721",
+                  !currencyIsETH ? "acceptERC20ListingsERC721" : "acceptETHListingsERC721",
                   [
                     orders.map((order) => order.getRaw()),
                     orders.map((order) => order.params),
@@ -2416,17 +2567,18 @@ export class Router {
                       refundTo: relayer,
                       revertIfIncomplete: Boolean(!options?.partial),
                       amount: price,
+                      token: orders[0].params.erc20Token,
                     },
                     fees,
                   ]
                 ),
-          value: totalPrice,
+          value: currencyIsETH ? totalPrice : 0,
         });
 
         // Track any possibly required swap
         swapDetails.push({
           tokenIn: buyInCurrency,
-          tokenOut: Sdk.Common.Addresses.Native[this.chainId],
+          tokenOut,
           tokenOutAmount: totalPrice,
           recipient: module.address,
           refundTo: relayer,
@@ -2492,25 +2644,31 @@ export class Router {
           .reduce((a, b) => a.add(b), bn(0));
         const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
         const totalPrice = price.add(feeAmount);
+        const currency = orders[0].params.erc20Token;
+        const currencyIsETH = isETH(this.chainId, currency);
 
         executions.push({
           module: module.address,
           data:
             orders.length === 1
-              ? module.interface.encodeFunctionData("acceptETHListingERC1155", [
-                  orders[0].getRaw(),
-                  orders[0].params,
-                  zeroexV4Erc1155Details[0].amount ?? 1,
-                  {
-                    fillTo: taker,
-                    refundTo: relayer,
-                    revertIfIncomplete: Boolean(!options?.partial),
-                    amount: price,
-                  },
-                  fees,
-                ])
+              ? module.interface.encodeFunctionData(
+                  `accept${currencyIsETH ? "ETH" : "ERC20"}ListingERC1155`,
+                  [
+                    orders[0].getRaw(),
+                    orders[0].params,
+                    zeroexV4Erc1155Details[0].amount ?? 1,
+                    {
+                      fillTo: taker,
+                      refundTo: relayer,
+                      revertIfIncomplete: Boolean(!options?.partial),
+                      amount: price,
+                      token: currency,
+                    },
+                    fees,
+                  ]
+                )
               : this.contracts.zeroExV4Module.interface.encodeFunctionData(
-                  "acceptETHListingsERC1155",
+                  `accept${currencyIsETH ? "ETH" : "ERC20"}ListingsERC1155`,
                   [
                     orders.map((order) => order.getRaw()),
                     orders.map((order) => order.params),
@@ -2520,6 +2678,7 @@ export class Router {
                       refundTo: relayer,
                       revertIfIncomplete: Boolean(!options?.partial),
                       amount: price,
+                      token: currency,
                     },
                     fees,
                   ]
@@ -2530,7 +2689,7 @@ export class Router {
         // Track any possibly required swap
         swapDetails.push({
           tokenIn: buyInCurrency,
-          tokenOut: Sdk.Common.Addresses.Native[this.chainId],
+          tokenOut: currency,
           tokenOutAmount: totalPrice,
           recipient: module.address,
           refundTo: relayer,
