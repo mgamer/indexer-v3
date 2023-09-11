@@ -50,6 +50,10 @@ export class CollectionNewContractDeployedJob extends AbstractRabbitMqJobHandler
 
     const { symbol, name } = await getContractNameAndSymbol(contract);
 
+    if (!name) {
+      logger.warn(this.queueName, `Collection ${contract} has no name`);
+    }
+
     await Promise.all([
       idb.none(
         `
@@ -78,8 +82,9 @@ export class CollectionNewContractDeployedJob extends AbstractRabbitMqJobHandler
           deployed_at: payload.blockTimestamp ? new Date(payload.blockTimestamp * 1000) : null,
         }
       ),
-      idb.none(
-        `
+      name
+        ? idb.none(
+            `
               INSERT INTO collections (
                 id,
                 name,
@@ -96,14 +101,15 @@ export class CollectionNewContractDeployedJob extends AbstractRabbitMqJobHandler
                 $/tokenSetId/
               ) ON CONFLICT DO NOTHING
             `,
-        {
-          id: contract,
-          name: name || null,
-          contract: toBuffer(contract),
-          creator: deployer ? toBuffer(deployer) : null,
-          tokenSetId: `contract:${contract}`,
-        }
-      ),
+            {
+              id: contract,
+              name: name || null,
+              contract: toBuffer(contract),
+              creator: deployer ? toBuffer(deployer) : null,
+              tokenSetId: `contract:${contract}`,
+            }
+          )
+        : null,
     ]);
   }
 

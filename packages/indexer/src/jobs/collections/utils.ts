@@ -35,11 +35,6 @@ export async function detectTokenStandard(contractAddress: string) {
       return "Unknown";
     }
   } catch (error) {
-    logger.error(
-      "onchain-fetcher",
-      `detectTokenStandard error. contractAddress:${contractAddress}, error:${error}`
-    );
-
     return "Unknown";
   }
 }
