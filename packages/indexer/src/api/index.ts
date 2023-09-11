@@ -15,7 +15,7 @@ import { RateLimiterRes } from "rate-limiter-flexible";
 import { setupRoutes } from "@/api/routes";
 import { logger } from "@/common/logger";
 import { config } from "@/config/index";
-import { getNetworkName } from "@/config/network";
+import { getSubDomain } from "@/config/network";
 import { allJobQueues } from "@/jobs/index";
 import { ApiKeyManager } from "@/models/api-keys";
 import { RateLimitRules } from "@/models/rate-limit-rules";
@@ -122,9 +122,7 @@ export const start = async (): Promise<void> => {
           },
         },
         schemes: ["https", "http"],
-        host: `${config.chainId === 1 ? "api" : `api-${getNetworkName()}`}.${
-          config.environment === "dev" ? "dev." : ""
-        }reservoir.tools`,
+        host: `${getSubDomain()}.reservoir.tools`,
         cors: true,
         tryItOutEnabled: true,
         documentationPath: "/",
