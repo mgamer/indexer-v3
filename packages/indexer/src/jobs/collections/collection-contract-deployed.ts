@@ -58,13 +58,13 @@ export class CollectionNewContractDeployedJob extends AbstractRabbitMqJobHandler
             kind,
             symbol,
             name,
-            created_at
+            deployed_at
         ) VALUES (
           $/address/,
           $/kind/,
           $/symbol/,
           $/name/,
-          $/created_at/
+          $/deployed_at/
         )
         ON CONFLICT (address) DO UPDATE SET
           symbol = EXCLUDED.symbol,
@@ -75,7 +75,7 @@ export class CollectionNewContractDeployedJob extends AbstractRabbitMqJobHandler
           kind: collectionKind.toLowerCase(),
           symbol: symbol || null,
           name: name || null,
-          created_at: payload.blockTimestamp ? new Date(payload.blockTimestamp * 1000) : null,
+          deployed_at: payload.blockTimestamp ? new Date(payload.blockTimestamp * 1000) : null,
         }
       ),
       idb.none(
