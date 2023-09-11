@@ -41,8 +41,8 @@ if (process.env.LOCAL_TESTING) {
 
 MetadataApi.getTokensMetadata([
   {
-    contract: "0xed536e28bf08340f733ae5d49d0510289512a643",
-    tokenId: "1",
+    contract: "0x60e4d786628fea6478f785a6d7e704777c86a7c6",
+    tokenId: "10",
   },
 ]).then((res) => {
   // eslint-disable-next-line

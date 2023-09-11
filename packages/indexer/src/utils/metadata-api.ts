@@ -157,8 +157,6 @@ export class MetadataApi {
         return null;
       })
     );
-    // eslint-disable-next-line
-    console.log(customMetadata);
 
     // filter out nulls
     const filteredCustomMetadata = customMetadata.filter((metadata) => metadata !== null);
@@ -171,24 +169,28 @@ export class MetadataApi {
       return !hasCustomMetadata;
     });
 
-    const queryParams = new URLSearchParams();
+    let metadataFromAPI: TokenMetadata[] = [];
+    // If there are tokens without custom metadata, fetch from metadata-api
+    if (tokensWithoutCustomMetadata.length > 0) {
+      const queryParams = new URLSearchParams();
 
-    tokensWithoutCustomMetadata.forEach((token) => {
-      queryParams.append("token", `${token.contract}:${token.tokenId}`);
-    });
+      tokensWithoutCustomMetadata.forEach((token) => {
+        queryParams.append("token", `${token.contract}:${token.tokenId}`);
+      });
 
-    method = method === "" ? config.metadataIndexingMethod : method;
+      method = method === "" ? config.metadataIndexingMethod : method;
 
-    const url = `${
-      config.metadataApiBaseUrl
-    }/v4/${getNetworkName()}/metadata/token?method=${method}&${queryParams.toString()}`;
+      const url = `${
+        config.metadataApiBaseUrl
+      }/v4/${getNetworkName()}/metadata/token?method=${method}&${queryParams.toString()}`;
 
-    const { data } = await axios.get(url);
+      const { data } = await axios.get(url);
 
-    const metadata: TokenMetadata[] = (data as any).metadata;
+      metadataFromAPI = (data as any).metadata;
+    }
 
     // merge custom metadata with metadata-api metadata
-    const allMetadata = [...metadata, ...filteredCustomMetadata];
+    const allMetadata = [...metadataFromAPI, ...filteredCustomMetadata];
 
     // extend metadata
     const extendedMetadata = await Promise.all(

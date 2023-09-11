@@ -23,7 +23,7 @@ export const extend = async (_chainId: number, metadata: any) => {
     );
   }
 
-  if (!stakedAmountWei) {
+  if (stakedAmountWei === undefined) {
     logger.error(
       "apecoin-extend",
       `Failed to get staked amount for tokenId ${metadata.tokenId}, poolId ${POOL_ID}`
