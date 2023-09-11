@@ -158,6 +158,10 @@ export const extendCollection = async (
     });
   }
 
+  if (!metadata.metadata) {
+    metadata.metadata = {};
+  }
+
   metadata.metadata.imageUrl = releaseFromToken.coverImage.url;
   metadata.metadata.description = releaseFromToken.description;
   metadata.metadata.externalUrl = `https://sound.xyz/${releaseFromToken.artist.soundHandle}/${releaseFromToken.titleSlug}`;

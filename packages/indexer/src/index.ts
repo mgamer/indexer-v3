@@ -8,7 +8,6 @@ import { acquireLock, redis } from "@/common/redis";
 import { config } from "@/config/index";
 import { logger } from "@/common/logger";
 import _ from "lodash";
-import MetadataApi from "./utils/metadata-api";
 
 if (process.env.LOCAL_TESTING) {
   import("./setup");
@@ -38,13 +37,3 @@ if (process.env.LOCAL_TESTING) {
       logger.error("rabbit-publisher-connect", `Error connecting to rabbit ${error}`);
     });
 }
-
-MetadataApi.getTokensMetadata([
-  {
-    contract: "0x60e4d786628fea6478f785a6d7e704777c86a7c6",
-    tokenId: "10",
-  },
-]).then((res) => {
-  // eslint-disable-next-line
-  console.log(res);
-});

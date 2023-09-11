@@ -13,7 +13,8 @@ import { extendMetadata, hasExtendHandler } from "@/metadata/extend";
 
 export interface TokenMetadata {
   contract: string;
-  tokenId: number;
+  // TODO: standardize as string or number throughout the indexer
+  tokenId: any;
   slug: string;
   collection: string;
   flagged: boolean;
@@ -41,15 +42,15 @@ export interface TokenMetadata {
 
 export interface CollectionMetadata {
   id: string;
-  collection: string;
-  slug: string;
+  collection?: string;
+  slug: string | null;
   name: string;
   community: string | null;
   metadata: {
     imageUrl?: string | undefined;
     // TODO: Add other metadata fields
     [key: string]: any;
-  };
+  } | null;
   royalties?: object;
   openseaRoyalties?: object;
   openseaFees?: object;
@@ -78,7 +79,7 @@ export class MetadataApi {
       indexingMethod?: string;
       additionalQueryParams?: { [key: string]: string };
     }
-  ) {
+  ): Promise<CollectionMetadata> {
     if (config.liquidityOnly) {
       // When running in liquidity-only mode:
       // - assume the collection id matches the contract address
@@ -138,23 +139,7 @@ export class MetadataApi {
 
       const { data } = await axios.get(url);
 
-      const collection: {
-        id: string;
-        slug: string;
-        name: string;
-        community: string | null;
-        metadata: object | null;
-        royalties?: object;
-        openseaRoyalties?: object;
-        openseaFees?: object;
-        contract: string;
-        tokenIdRange: [string, string] | null;
-        tokenSetId: string | null;
-        isFallback?: boolean;
-        isCopyrightInfringement?: boolean;
-        paymentTokens?: object | null;
-        creator?: string | null;
-      } = (data as any).collection;
+      const collection: CollectionMetadata = (data as any).collection;
 
       if (collection.isFallback && !options?.allowFallback) {
         throw new Error("Fallback collection data not acceptable");
@@ -167,7 +152,7 @@ export class MetadataApi {
   public static async getTokensMetadata(
     tokens: { contract: string; tokenId: string }[],
     method = ""
-  ) {
+  ): Promise<TokenMetadata[]> {
     // get custom / extended metadata locally
     const customMetadata = await Promise.all(
       tokens.map(async (token) => {
@@ -220,8 +205,6 @@ export class MetadataApi {
     const extendedMetadata = await Promise.all(
       allMetadata.map(async (metadata) => {
         if (hasExtendHandler(config.chainId, metadata.contract)) {
-          // eslint-disable-next-line
-          console.log("extendMetadata", metadata);
           const result = await extendMetadata(config.chainId, metadata);
           return result;
         }
