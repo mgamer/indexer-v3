@@ -1,8 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { TokenMetadata } from "@/utils/metadata-api";
 import avatars from "./avatars.json";
 
-export const extend = async (_chainId: number, metadata: any) => {
+export const extend = async (_chainId: number, metadata: TokenMetadata) => {
   const tokenId = metadata.tokenId;
   const relevantAvatar = (
     avatars as {

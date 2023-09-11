@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { TokenMetadata } from "@/utils/metadata-api";
 import _warriors from "./warriors.json";
 
 const warriors: {
@@ -24,7 +25,7 @@ const rank = {
   Affiliation: 1,
 };
 
-export const extend = async (_chainId: number, metadata: any) => {
+export const extend = async (_chainId: number, metadata: TokenMetadata) => {
   const rankCopy = JSON.parse(JSON.stringify(rank));
   const attributes: any[] = [];
 

@@ -4,10 +4,12 @@ import { request, gql } from "graphql-request";
 import { utils } from "ethers";
 
 import nouns from "./lilnouns.json";
+import { TokenMetadata } from "@/utils/metadata-api";
 
 const capitalizeFirstLetter = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+const replaceAll = (str: string, find: string, replace: string) => str.split(find).join(replace);
 
-export const extend = async (_chainId: number, metadata: any) => {
+export const extend = async (_chainId: number, metadata: TokenMetadata) => {
   const traitMap = ["background", "body", "accessory", "head", "glasses"];
   const data = await request(
     "https://api.thegraph.com/subgraphs/name/lilnounsdao/lil-nouns-subgraph",
@@ -60,8 +62,9 @@ export const extend = async (_chainId: number, metadata: any) => {
 
   return {
     ...metadata,
-    name: metadata.name.replaceAll("Noun", "Lil Noun"),
-    description: metadata.description.replaceAll("Noun", "Lil Noun"),
+    // name: metadata.name.replaceAll("Noun", "Lil Noun"),
+    name: metadata?.name ? replaceAll(metadata.name, "Noun", "Lil Noun") : "",
+    description: metadata?.description ? replaceAll(metadata.description, "Noun", "Lil Noun") : "",
     attributes: traits,
   };
 };

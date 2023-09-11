@@ -11,9 +11,10 @@ import { logger } from "@/common/logger";
 import { customHandleContractTokens, customHandleToken, hasCustomHandler } from "@/metadata/custom";
 import { extendMetadata, hasExtendHandler } from "@/metadata/extend";
 
-interface TokenMetadata {
+export interface TokenMetadata {
   contract: string;
-  tokenId: string;
+  tokenId: number;
+  slug: string;
   collection: string;
   flagged: boolean;
   name?: string;
@@ -36,6 +37,29 @@ interface TokenMetadata {
     kind: "string" | "number" | "date" | "range";
     rank?: number;
   }[];
+}
+
+export interface CollectionMetadata {
+  id: string;
+  collection: string;
+  slug: string;
+  name: string;
+  community: string | null;
+  metadata: {
+    imageUrl?: string | undefined;
+    // TODO: Add other metadata fields
+    [key: string]: any;
+  };
+  royalties?: object;
+  openseaRoyalties?: object;
+  openseaFees?: object;
+  contract: string;
+  tokenIdRange: [number, number] | [string, string] | null;
+  tokenSetId: string | null;
+  isFallback?: boolean;
+  isCopyrightInfringement?: boolean;
+  paymentTokens?: object | null;
+  creator?: string | null;
 }
 
 export interface TokenMetadataBySlugResult {

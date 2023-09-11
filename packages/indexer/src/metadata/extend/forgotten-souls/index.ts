@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { TokenMetadata } from "@/utils/metadata-api";
 import souls from "./souls.json";
 
 const rank = {
@@ -19,7 +20,7 @@ const rank = {
   Origin: 0,
 };
 
-export const extend = async (_chainId: number, metadata: any) => {
+export const extend = async (_chainId: number, metadata: TokenMetadata) => {
   const attributes = [];
   let isUndesirable = false;
   const coreTraits = {
@@ -53,8 +54,11 @@ export const extend = async (_chainId: number, metadata: any) => {
   if (!isUndesirable) {
     // Add name traits
     for (const attribute of ["Title", "Name", "Origin"]) {
-      if (String(metadata.tokenId) in souls && souls[metadata.tokenId as keyof typeof souls]) {
-        const value = souls[metadata.tokenId as keyof typeof souls];
+      if (
+        String(metadata.tokenId) in souls &&
+        souls[metadata.tokenId.toString() as keyof typeof souls]
+      ) {
+        const value = souls[metadata.tokenId.toString() as keyof typeof souls];
         attributes.push({
           key: attribute ?? "property",
           rank: rank[attribute as keyof typeof rank],

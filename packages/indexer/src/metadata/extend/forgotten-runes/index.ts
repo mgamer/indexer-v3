@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { TokenMetadata } from "@/utils/metadata-api";
 import _wizards from "./wizards.json";
 
 const wizards: {
@@ -24,7 +25,7 @@ const rank = {
   Origin: 2,
 };
 
-export const extend = async (_chainId: number, metadata: any) => {
+export const extend = async (_chainId: number, metadata: TokenMetadata) => {
   const attributes: any[] = [];
   for (const trait of Object.keys(rank)) {
     attributes.push({

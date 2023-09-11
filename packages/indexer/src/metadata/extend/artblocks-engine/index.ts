@@ -1,9 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { CollectionMetadata, TokenMetadata } from "@/utils/metadata-api";
 import axios from "axios";
 import slugify from "slugify";
 
-export const extendCollection = async (_chainId: number, metadata: any, _tokenId = null) => {
+export const extendCollection = async (
+  _chainId: number,
+  metadata: CollectionMetadata,
+  _tokenId = null
+) => {
   if (isNaN(Number(_tokenId)) || !_tokenId) {
     throw new Error(`Invalid tokenId ${_tokenId}`);
   }
@@ -39,7 +44,7 @@ export const extendCollection = async (_chainId: number, metadata: any, _tokenId
   };
 };
 
-export const extend = async (_chainId: number, metadata: any) => {
+export const extend = async (_chainId: number, metadata: TokenMetadata) => {
   const startTokenId = metadata.tokenId - (metadata.tokenId % 1000000);
   const endTokenId = startTokenId + 1000000 - 1;
 

@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
 import { logger } from "@/common/logger";
+import { CollectionMetadata, TokenMetadata } from "@/utils/metadata-api";
 import axios from "axios";
 
 function getProjectID(tokenId: number) {
@@ -13,7 +14,11 @@ function getProjectID(tokenId: number) {
   }
 }
 
-export const extendCollection = async (_chainId: number, metadata: any, _tokenId = null) => {
+export const extendCollection = async (
+  _chainId: number,
+  metadata: CollectionMetadata,
+  _tokenId = null
+) => {
   if (isNaN(Number(_tokenId)) || !_tokenId) {
     throw new Error(`Invalid tokenId ${_tokenId}`);
   }
@@ -68,7 +73,7 @@ export const extendCollection = async (_chainId: number, metadata: any, _tokenId
   };
 };
 
-export const extend = async (_chainId: number, metadata: any) => {
+export const extend = async (_chainId: number, metadata: TokenMetadata) => {
   let data;
   try {
     const response = await axios.get(`https://account.miragegallery.ai/curated-details.json`);

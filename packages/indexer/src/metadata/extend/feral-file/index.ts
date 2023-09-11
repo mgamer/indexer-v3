@@ -1,5 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { CollectionMetadata, TokenMetadata } from "@/utils/metadata-api";
+
 const collectionsTokenIdRange = [
   [
     "Winslow Homer's Croquet Challenge by Mitchell F. Chan",
@@ -8,19 +10,23 @@ const collectionsTokenIdRange = [
   ],
 ];
 
-const getCollectionTokenIdRange = (contract: string, tokenId: number) => {
+const getCollectionTokenIdRange = (tokenId: number) => {
   return collectionsTokenIdRange.find(
     (collectionInfo) =>
       collectionInfo[1] <= tokenId.toString() && tokenId.toString() <= collectionInfo[2]
   );
 };
 
-export const extendCollection = async (_chainId: number, metadata: any, _tokenId = null) => {
+export const extendCollection = async (
+  _chainId: number,
+  metadata: CollectionMetadata,
+  _tokenId = null
+) => {
   if (isNaN(Number(_tokenId)) || !_tokenId) {
     throw new Error(`Invalid tokenId ${_tokenId}`);
   }
 
-  const collection = getCollectionTokenIdRange(metadata.contract, _tokenId);
+  const collection = getCollectionTokenIdRange(_tokenId);
 
   if (collection) {
     const [collectionName, startTokenId, endTokenId] = collection;
@@ -34,8 +40,8 @@ export const extendCollection = async (_chainId: number, metadata: any, _tokenId
   return metadata;
 };
 
-export const extend = async (_chainId: number, metadata: any) => {
-  const collection = getCollectionTokenIdRange(metadata.contract, metadata.tokenId);
+export const extend = async (_chainId: number, metadata: TokenMetadata) => {
+  const collection = getCollectionTokenIdRange(metadata.tokenId);
 
   if (collection) {
     const [collectionName, startTokenId, endTokenId] = collection;

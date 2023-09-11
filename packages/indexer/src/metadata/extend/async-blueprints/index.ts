@@ -1,5 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { CollectionMetadata, TokenMetadata } from "@/utils/metadata-api";
+
 const collectionsTokenIdRange = [
   [0, 665], // Grifters by XCOPY
   [666, 1289], // DecentralEyesMashup by Coldie
@@ -12,7 +14,11 @@ const getCollectionTokenIdRange = (_tokenId: number) => {
   );
 };
 
-export const extendCollection = async (_chainId: number, metadata: any, _tokenId = null) => {
+export const extendCollection = async (
+  _chainId: number,
+  metadata: CollectionMetadata,
+  _tokenId = null
+) => {
   if (!_tokenId || isNaN(Number(_tokenId))) {
     throw new Error(`Invalid tokenId ${_tokenId}`);
   }
@@ -31,7 +37,7 @@ export const extendCollection = async (_chainId: number, metadata: any, _tokenId
   return metadata;
 };
 
-export const extend = async (_chainId: number, metadata: any) => {
+export const extend = async (_chainId: number, metadata: TokenMetadata) => {
   const collectionTokenIdRange = getCollectionTokenIdRange(metadata.tokenId);
 
   if (collectionTokenIdRange) {

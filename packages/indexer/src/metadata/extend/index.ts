@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { CollectionMetadata } from "@/utils/metadata-api";
 import * as adidasOriginals from "./adidas-originals";
 import * as admitOne from "./admit-one";
 import * as artTennis from "./art-tennis";
@@ -55,7 +56,7 @@ export const extendCollectionMetadata = async (chainId: number, metadata: any, t
   }
 };
 
-export const extendMetadata = async (chainId: number, metadata: any) => {
+export const extendMetadata = async (chainId: number, metadata: CollectionMetadata) => {
   if (metadata) {
     if (extend[`${chainId},${metadata.contract.toLowerCase()}`]) {
       return extend[`${chainId},${metadata.contract.toLowerCase()}`].extend(chainId, metadata);
@@ -72,14 +73,14 @@ class ExtendLogic {
     this.prefix = prefix;
   }
 
-  public async extendCollection(_chainId: number, metadata: any, _tokenId = null) {
+  public async extendCollection(_chainId: number, metadata: CollectionMetadata, _tokenId = null) {
     metadata.id = `${metadata.contract}:${this.prefix}-${metadata.slug}`;
     metadata.tokenIdRange = null;
     metadata.tokenSetId = null;
 
     return { ...metadata };
   }
-  public async extend(_chainId: number, metadata: any) {
+  public async extend(_chainId: number, metadata: CollectionMetadata) {
     metadata.collection = `${metadata.contract}:${this.prefix}-${metadata.slug}`;
     return { ...metadata };
   }

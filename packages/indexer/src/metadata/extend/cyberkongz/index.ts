@@ -1,8 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { CollectionMetadata } from "@/utils/metadata-api";
 import _ from "lodash";
 
-export const extendCollection = async (_chainId: number, metadata: any, _tokenId = null) => {
+export const extendCollection = async (
+  _chainId: number,
+  metadata: CollectionMetadata,
+  _tokenId = null
+) => {
   let startTokenId;
   let endTokenId;
 

@@ -2,10 +2,11 @@
 
 import { logger } from "@/common/logger";
 import { getStakedAmountWei, stakedAmountWeiToAttributeBucket } from "../apecoin";
+import { TokenMetadata } from "@/utils/metadata-api";
 
 const POOL_ID = 2;
 
-export const extend = async (_chainId: number, metadata: any) => {
+export const extend = async (_chainId: number, metadata: TokenMetadata) => {
   const traitCount = metadata.attributes.length;
   let serumType;
   let name;
@@ -22,7 +23,7 @@ export const extend = async (_chainId: number, metadata: any) => {
   let stakedAmountWei;
   try {
     const { tokenId } = metadata;
-    stakedAmountWei = await getStakedAmountWei({ poolId: POOL_ID, tokenId });
+    stakedAmountWei = await getStakedAmountWei({ poolId: POOL_ID, tokenId: tokenId.toString() });
   } catch (error) {
     logger.error(
       "mayc-extend",

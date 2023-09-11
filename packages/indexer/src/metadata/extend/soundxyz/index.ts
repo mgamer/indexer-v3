@@ -5,6 +5,7 @@ import _ from "lodash";
 import ArtistContracts from "./ArtistContracts.json";
 import ReleaseContracts from "./ReleaseContracts.json";
 import { logger } from "@/common/logger";
+import { CollectionMetadata, TokenMetadata } from "@/utils/metadata-api";
 
 export const SoundxyzArtistContracts = ArtistContracts.map((c) => c.toLowerCase());
 export const SoundxyzReleaseContracts = ReleaseContracts.map((c) => c.toLowerCase());
@@ -98,7 +99,7 @@ export const getContractSlug = async (_chainId: number, contract: string, _token
   }
 };
 
-export const extend = async (_chainId: number, metadata: any) => {
+export const extend = async (_chainId: number, metadata: TokenMetadata) => {
   const {
     data: {
       data: { releaseFromToken },
@@ -133,7 +134,11 @@ export const extend = async (_chainId: number, metadata: any) => {
   return { ...metadata };
 };
 
-export const extendCollection = async (_chainId: number, metadata: any, _tokenId = null) => {
+export const extendCollection = async (
+  _chainId: number,
+  metadata: CollectionMetadata,
+  _tokenId = null
+) => {
   if (isNaN(Number(_tokenId)) || !_tokenId) {
     throw new Error(`Invalid tokenId ${_tokenId}`);
   }
