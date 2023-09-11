@@ -97,8 +97,6 @@ export const getTracesFromBlock = async (blockNumber: number, retryMax = 10) => 
 
       traces = await baseProvider.send("debug_traceBlockByNumber", params);
     } catch (e) {
-      // eslint-disable-next-line
-      console.log(e);
       retries++;
       await new Promise((resolve) => setTimeout(resolve, 200));
     }
