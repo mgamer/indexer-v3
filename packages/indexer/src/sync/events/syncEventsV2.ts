@@ -297,7 +297,7 @@ export const syncTraces = async (block: number) => {
   const endGetBlockTime = Date.now();
 
   // Do what we want with traces here
-  await Promise.all([syncEventsUtils.processContractAddresses(traces)]);
+  await Promise.all([syncEventsUtils.processContractAddresses(traces, blockData.timestamp)]);
 
   const endSyncTime = Date.now();
 

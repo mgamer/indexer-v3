@@ -164,7 +164,10 @@ const processCall = (trace: TransactionTrace, call: CallTrace) => {
   return processedCalls.length ? processedCalls : undefined;
 };
 
-export const processContractAddresses = async (traces: TransactionTrace[]) => {
+export const processContractAddresses = async (
+  traces: TransactionTrace[],
+  blockTimestamp: number
+) => {
   let contractAddresses: ContractAddress[] = [];
 
   for (const trace of traces) {
@@ -197,6 +200,7 @@ export const processContractAddresses = async (traces: TransactionTrace[]) => {
     collectionNewContractDeployedJob.addToQueue({
       contract: ca.address,
       deployer: ca.deploymentSender,
+      blockTimestamp,
     });
   });
 };

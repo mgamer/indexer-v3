@@ -8,6 +8,7 @@ import { toBuffer } from "@/common/utils";
 export type CollectionContractDeployed = {
   contract: string;
   deployer?: string;
+  blockTimestamp?: number;
 };
 
 export class CollectionNewContractDeployedJob extends AbstractRabbitMqJobHandler {
@@ -56,12 +57,14 @@ export class CollectionNewContractDeployedJob extends AbstractRabbitMqJobHandler
             address,
             kind,
             symbol,
-            name
+            name,
+            created_at
         ) VALUES (
           $/address/,
           $/kind/,
           $/symbol/,
-          $/name/
+          $/name/,
+          $/created_at/
         )
         ON CONFLICT (address) DO UPDATE SET
           symbol = EXCLUDED.symbol,
@@ -72,6 +75,7 @@ export class CollectionNewContractDeployedJob extends AbstractRabbitMqJobHandler
           kind: collectionKind.toLowerCase(),
           symbol: symbol || null,
           name: name || null,
+          created_at: payload.blockTimestamp ? new Date(payload.blockTimestamp * 1000) : null,
         }
       ),
       idb.none(
