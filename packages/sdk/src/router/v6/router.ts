@@ -354,7 +354,6 @@ export class Router {
       ) => Promise<void>;
     }
   ): Promise<FillListingsResult> {
-    // return this._fillListingsTx(details, taker, buyInCurrency, options);
     let defaultDetails: ListingDetails[] = [];
     const groupedDetails: ListingDetails[][] = [];
 
