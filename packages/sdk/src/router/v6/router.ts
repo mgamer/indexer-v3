@@ -355,7 +355,6 @@ export class Router {
     }
   ): Promise<FillListingsResult> {
     // return this._fillListingsTx(details, taker, buyInCurrency, options);
-    const byCurrencyDetails: PerCurrencyListingDetails = {};
     let defaultDetails: ListingDetails[] = [];
     const groupedDetails: ListingDetails[][] = [];
 
@@ -400,46 +399,10 @@ export class Router {
       defaultDetails = [...allowedPaymentProcessorDetails];
     }
 
-    // split details by currency if the router module is not supported
-    for (const detail of unprocessedDetails) {
-      const { currency, kind } = detail;
-      const supportCurrencyOrModule = [
-        "element",
-        "collectionxyz",
-        "foundation",
-        "looks-rare-v2",
-        "seaport",
-        "seaport-v1.4",
-        "seaport-v1.5",
-        "alienswap",
-        "sudoswap",
-        "sudoswap-v2",
-        "midaswap",
-        "caviar-v1",
-        "x2y2",
-        "zeroex-v4",
-        "zora",
-        "nftx",
-        "rarible",
-        "superrare",
-        "cryptopunks",
-      ].includes(kind);
-      if (!supportCurrencyOrModule) {
-        if (!byCurrencyDetails[currency]) {
-          byCurrencyDetails[currency] = [];
-        }
-        byCurrencyDetails[currency].push(detail);
-      } else {
-        defaultDetails.push(detail);
-      }
-    }
+    defaultDetails = [...defaultDetails, ...unprocessedDetails];
 
     if (defaultDetails.length) {
       groupedDetails.push(defaultDetails);
-    }
-
-    for (const currency of Object.keys(byCurrencyDetails)) {
-      groupedDetails.push(byCurrencyDetails[currency]);
     }
 
     const txs: {
@@ -1051,7 +1014,7 @@ export class Router {
     const raribleDetails: ListingDetails[] = [];
     const superRareDetails: ListingDetails[] = [];
     const cryptoPunksDetails: ListingDetails[] = [];
-    const paymentProcessorDetails: ListingDetails[] = [];
+    const paymentProcessorDetails: PerCurrencyListingDetails = {};
 
     for (const detail of details) {
       // Skip any listings handled in a previous step
@@ -1161,7 +1124,10 @@ export class Router {
         }
 
         case "payment-processor": {
-          detailsRef = paymentProcessorDetails;
+          if (!paymentProcessorDetails[currency]) {
+            paymentProcessorDetails[currency] = [];
+          }
+          detailsRef = paymentProcessorDetails[currency];
           break;
         }
 
@@ -2952,53 +2918,63 @@ export class Router {
     }
 
     // Handle PaymentProcessor listings
-    if (paymentProcessorDetails.length) {
-      const orders = paymentProcessorDetails.map((d) => d.order as Sdk.PaymentProcessor.Order);
-      const module = this.contracts.paymentProcessorModule;
-      const fees = getFees(paymentProcessorDetails);
+    if (Object.keys(paymentProcessorDetails).length) {
+      for (const currency of Object.keys(paymentProcessorDetails)) {
+        const currencyDetails = paymentProcessorDetails[currency];
+        const orders = currencyDetails.map((d) => d.order as Sdk.PaymentProcessor.Order);
+        const module = this.contracts.paymentProcessorModule;
+        const fees = getFees(currencyDetails);
+        const currencyIsETH = isETH(this.chainId, currency);
 
-      const price = orders.map((order) => bn(order.params.price)).reduce((a, b) => a.add(b), bn(0));
-      const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
-      const totalPrice = price.add(feeAmount);
+        const price = orders
+          .map((order) => bn(order.params.price))
+          .reduce((a, b) => a.add(b), bn(0));
+        const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
+        const totalPrice = price.add(feeAmount);
 
-      executions.push({
-        module: module.address,
-        data: module.interface.encodeFunctionData("acceptETHListings", [
-          orders.map((order) =>
-            order.getMatchedOrder(
-              order.buildMatching({
-                taker: module.address,
-                takerMasterNonce: "0",
-              })
-            )
+        executions.push({
+          module: module.address,
+          data: module.interface.encodeFunctionData(
+            `accept${currencyIsETH ? "ETH" : "ERC20"}Listings`,
+            [
+              orders.map((order) =>
+                order.getMatchedOrder(
+                  order.buildMatching({
+                    taker: module.address,
+                    takerMasterNonce: "0",
+                  })
+                )
+              ),
+              orders.map((order) => order.params),
+              {
+                fillTo: taker,
+                refundTo: relayer,
+                revertIfIncomplete: Boolean(!options?.partial),
+                amount: price,
+                token: currency,
+              },
+              fees,
+            ]
           ),
-          orders.map((order) => order.params),
-          {
-            fillTo: taker,
-            refundTo: relayer,
-            revertIfIncomplete: Boolean(!options?.partial),
-            amount: price,
-          },
-          fees,
-        ]),
-        value: totalPrice,
-      });
+          value: currencyIsETH ? totalPrice : 0,
+        });
 
-      // Track any possibly required swap
-      swapDetails.push({
-        tokenIn: buyInCurrency,
-        tokenOut: Sdk.Common.Addresses.Native[this.chainId],
-        tokenOutAmount: totalPrice,
-        recipient: module.address,
-        refundTo: relayer,
-        details: paymentProcessorDetails,
-        executionIndex: executions.length - 1,
-      });
+        // Track any possibly required swap
+        swapDetails.push({
+          tokenIn: buyInCurrency,
+          tokenOut: currency,
+          tokenOutAmount: totalPrice,
+          recipient: module.address,
+          refundTo: relayer,
+          details: currencyDetails,
+          executionIndex: executions.length - 1,
+        });
 
-      // Mark the listings as successfully handled
-      for (const { orderId } of paymentProcessorDetails) {
-        success[orderId] = true;
-        orderIds.push(orderId);
+        // Mark the listings as successfully handled
+        for (const { orderId } of currencyDetails) {
+          success[orderId] = true;
+          orderIds.push(orderId);
+        }
       }
     }
 

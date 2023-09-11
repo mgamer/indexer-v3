@@ -2005,7 +2005,10 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
       await buyer.sendTransaction(approval.txData);
     }
 
-    await buyer.sendTransaction(tx.txs[0].txData);
+    await buyer.sendTransaction({
+      ...tx.txs[0].txData,
+      gasLimit: 1000000,
+    });
 
     const seller1EthBalanceAfter = await seller1.getBalance();
     const seller2UsdcBalanceAfter = await usdc.getBalance(seller2.address);
@@ -2914,191 +2917,375 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
     expect(await dai.getBalance(router.contracts.swapModule.address)).to.eq(0);
   });
 
-  // it("Fill blocked payment-processor listings by split into multi-transactions", async () => {
-  //   const router = new Sdk.RouterV6.Router(chainId, ethers.provider);
-  //   const buyer = dan;
+  it("Fill blocked payment-processor listings by split into multi-transactions", async () => {
+    const router = new Sdk.RouterV6.Router(chainId, ethers.provider);
+    const buyer = dan;
 
-  //   const listings: ListingDetails[] = [];
+    const listings: ListingDetails[] = [];
 
-  //   // Order 1: Payment-Processor ERC721-C Block
-  //   const seller1 = bob;
-  //   const tokenId1 = 1;
-  //   const price1 = parseUnits("1.5", 6);
-  //   {
-  //     // Mint erc721c to seller
-  //     await erc721cBlock.connect(seller1).mint(tokenId1);
-  //     // Approve the exchange
-  //     await erc721cBlock
-  //       .connect(seller1)
-  //       .setApprovalForAll(Sdk.PaymentProcessor.Addresses.Exchange[chainId], true);
+    // Order 1: Payment-Processor ERC721-C Block
+    const seller1 = bob;
+    const tokenId1 = 1;
+    const price1 = parseUnits("1.5", 6);
+    {
+      // Mint erc721c to seller
+      await erc721cBlock.connect(seller1).mint(tokenId1);
+      // Approve the exchange
+      await erc721cBlock
+        .connect(seller1)
+        .setApprovalForAll(Sdk.PaymentProcessor.Addresses.Exchange[chainId], true);
 
-  //     // Build sell order
-  //     const exchange = new Sdk.PaymentProcessor.Exchange(chainId);
+      // Build sell order
+      const exchange = new Sdk.PaymentProcessor.Exchange(chainId);
 
-  //     const sellerMasterNonce = await exchange.getMasterNonce(ethers.provider, seller1.address);
-  //     const blockTime = await getCurrentTimestamp(ethers.provider);
+      const sellerMasterNonce = await exchange.getMasterNonce(ethers.provider, seller1.address);
+      const blockTime = await getCurrentTimestamp(ethers.provider);
 
-  //     const builder = new Sdk.PaymentProcessor.Builders.SingleToken(chainId);
-  //     const orderParameters = {
-  //       protocol: 0,
-  //       sellerAcceptedOffer: false,
-  //       marketplace: constants.AddressZero,
-  //       marketplaceFeeNumerator: "0",
-  //       maxRoyaltyFeeNumerator: "0",
-  //       privateTaker: constants.AddressZero,
-  //       trader: seller1.address,
-  //       tokenAddress: erc721cBlock.address,
-  //       tokenId: tokenId1,
-  //       amount: "1",
-  //       price: price1,
-  //       expiration: (blockTime + 60 * 60).toString(),
-  //       nonce: "0",
-  //       coin: constants.AddressZero,
-  //       masterNonce: sellerMasterNonce,
-  //     };
+      const builder = new Sdk.PaymentProcessor.Builders.SingleToken(chainId);
+      const orderParameters = {
+        protocol: 0,
+        sellerAcceptedOffer: false,
+        marketplace: constants.AddressZero,
+        marketplaceFeeNumerator: "0",
+        maxRoyaltyFeeNumerator: "0",
+        privateTaker: constants.AddressZero,
+        trader: seller1.address,
+        tokenAddress: erc721cBlock.address,
+        tokenId: tokenId1,
+        amount: "1",
+        price: price1,
+        expiration: (blockTime + 60 * 60).toString(),
+        nonce: "0",
+        coin: constants.AddressZero,
+        masterNonce: sellerMasterNonce,
+      };
 
-  //     // Build sell order
-  //     const sellOrder = builder.build(orderParameters);
-  //     await sellOrder.sign(seller1);
+      // Build sell order
+      const sellOrder = builder.build(orderParameters);
+      await sellOrder.sign(seller1);
 
-  //     sellOrder.checkSignature();
+      sellOrder.checkSignature();
 
-  //     await sellOrder.checkFillability(ethers.provider);
+      await sellOrder.checkFillability(ethers.provider);
 
-  //     listings.push({
-  //       // Irrelevant
-  //       orderId: "1",
-  //       kind: "payment-processor",
-  //       contractKind: "erc721",
-  //       contract: erc721cBlock.address,
-  //       tokenId: tokenId1.toString(),
-  //       order: sellOrder,
-  //       currency: Sdk.Common.Addresses.Native[chainId],
-  //       price: price1.toString(),
-  //     });
-  //   }
+      listings.push({
+        // Irrelevant
+        orderId: "1",
+        kind: "payment-processor",
+        contractKind: "erc721",
+        contract: erc721cBlock.address,
+        tokenId: tokenId1.toString(),
+        order: sellOrder,
+        currency: Sdk.Common.Addresses.Native[chainId],
+        price: price1.toString(),
+      });
+    }
 
-  //   // Order 4: Seaport ETH
-  //   const seller4 = alice;
-  //   const tokenId4 = 4;
-  //   const price4 = parseEther("1");
-  //   const fee4 = bn(550);
-  //   {
-  //     // Mint erc721 to seller
-  //     await erc721.connect(seller4).mint(tokenId4);
+    // Order 4: Seaport ETH
+    const seller4 = alice;
+    const tokenId4 = 4;
+    const price4 = parseEther("1");
+    const fee4 = bn(550);
+    {
+      // Mint erc721 to seller
+      await erc721.connect(seller4).mint(tokenId4);
 
-  //     // Approve the exchange
-  //     await erc721
-  //       .connect(seller4)
-  //       .setApprovalForAll(Sdk.SeaportV14.Addresses.Exchange[chainId], true);
+      // Approve the exchange
+      await erc721
+        .connect(seller4)
+        .setApprovalForAll(Sdk.SeaportV14.Addresses.Exchange[chainId], true);
 
-  //     // Build sell order
-  //     const builder = new Sdk.SeaportBase.Builders.SingleToken(chainId);
-  //     const sellOrder = builder.build(
-  //       {
-  //         side: "sell",
-  //         tokenKind: "erc721",
-  //         offerer: seller4.address,
-  //         contract: erc721.address,
-  //         tokenId: tokenId4,
-  //         paymentToken: Sdk.Common.Addresses.Native[chainId],
-  //         price: price4.sub(price4.mul(fee4).div(10000)),
-  //         fees: [
-  //           {
-  //             amount: price4.mul(fee4).div(10000),
-  //             recipient: deployer.address,
-  //           },
-  //         ],
-  //         counter: 0,
-  //         startTime: await getCurrentTimestamp(ethers.provider),
-  //         endTime: (await getCurrentTimestamp(ethers.provider)) + 60,
-  //       },
-  //       Sdk.SeaportV14.Order
-  //     );
-  //     await sellOrder.sign(seller4);
+      // Build sell order
+      const builder = new Sdk.SeaportBase.Builders.SingleToken(chainId);
+      const sellOrder = builder.build(
+        {
+          side: "sell",
+          tokenKind: "erc721",
+          offerer: seller4.address,
+          contract: erc721.address,
+          tokenId: tokenId4,
+          paymentToken: Sdk.Common.Addresses.Native[chainId],
+          price: price4.sub(price4.mul(fee4).div(10000)),
+          fees: [
+            {
+              amount: price4.mul(fee4).div(10000),
+              recipient: deployer.address,
+            },
+          ],
+          counter: 0,
+          startTime: await getCurrentTimestamp(ethers.provider),
+          endTime: (await getCurrentTimestamp(ethers.provider)) + 60,
+        },
+        Sdk.SeaportV14.Order
+      );
+      await sellOrder.sign(seller4);
 
-  //     await sellOrder.checkFillability(ethers.provider);
+      await sellOrder.checkFillability(ethers.provider);
 
-  //     listings.push({
-  //       // Irrelevant
-  //       orderId: "3",
-  //       kind: "seaport-v1.4",
-  //       contractKind: "erc721",
-  //       contract: erc721.address,
-  //       tokenId: tokenId4.toString(),
-  //       order: sellOrder,
-  //       currency: Sdk.Common.Addresses.Native[chainId],
-  //       price: price4.toString(),
-  //     });
-  //   }
+      listings.push({
+        // Irrelevant
+        orderId: "3",
+        kind: "seaport-v1.4",
+        contractKind: "erc721",
+        contract: erc721.address,
+        tokenId: tokenId4.toString(),
+        order: sellOrder,
+        currency: Sdk.Common.Addresses.Native[chainId],
+        price: price4.toString(),
+      });
+    }
 
-  //   const usdc = new Sdk.Common.Helpers.Erc20(ethers.provider, Sdk.Common.Addresses.Usdc[chainId]);
-  //   const dai = new Sdk.Common.Helpers.Erc20(ethers.provider, Sdk.Common.Addresses.Dai[chainId]);
-  //   const weth = new Sdk.Common.Helpers.WNative(ethers.provider, chainId);
+    const usdc = new Sdk.Common.Helpers.Erc20(ethers.provider, Sdk.Common.Addresses.Usdc[chainId]);
+    const dai = new Sdk.Common.Helpers.Erc20(ethers.provider, Sdk.Common.Addresses.Dai[chainId]);
+    const weth = new Sdk.Common.Helpers.WNative(ethers.provider, chainId);
 
-  //   const token1OwnerBefore = await erc721cBlock.ownerOf(tokenId1);
-  //   const token4OwnerBefore = await erc721.ownerOf(tokenId4);
+    const token1OwnerBefore = await erc721cBlock.ownerOf(tokenId1);
+    const token4OwnerBefore = await erc721.ownerOf(tokenId4);
 
-  //   expect(token1OwnerBefore).to.eq(seller1.address);
-  //   expect(token4OwnerBefore).to.eq(seller4.address);
+    expect(token1OwnerBefore).to.eq(seller1.address);
+    expect(token4OwnerBefore).to.eq(seller4.address);
 
-  //   const tx = await router.fillListingsTx(
-  //     listings,
-  //     buyer.address,
-  //     Sdk.Common.Addresses.Native[chainId],
-  //     {
-  //       source: "reservoir.market",
-  //     }
-  //   );
+    const tx = await router.fillListingsTx(
+      listings,
+      buyer.address,
+      Sdk.Common.Addresses.Native[chainId],
+      {
+        source: "reservoir.market",
+      }
+    );
 
-  //   expect(tx.txs.length).to.eq(2);
+    expect(tx.txs.length).to.eq(2);
 
-  //   const exchange = new Sdk.PaymentProcessor.Exchange(chainId);
+    const exchange = new Sdk.PaymentProcessor.Exchange(chainId);
 
-  //   for(const transcation of tx.txs) {
-  //     const preSignatures: string[] = [];
-  //     for (const { data: preSignature, kind } of transcation.preSignatures) {
-  //       if (kind === "payment-processor-take-order") {
-  //         const signature = await buyer._signTypedData(
-  //           preSignature.domain,
-  //           preSignature.types,
-  //           preSignature.value
-  //         );
-  //         preSignatures.push(signature);
-  //       }
-  //     }
+    for(const transcation of tx.txs) {
+      const preSignatures: string[] = [];
+      for (const { data: preSignature, kind } of transcation.preSignatures) {
+        if (kind === "payment-processor-take-order") {
+          const signature = await buyer._signTypedData(
+            preSignature.domain,
+            preSignature.types,
+            preSignature.value
+          );
+          preSignatures.push(signature);
+        }
+      }
 
-  //     if (preSignatures.length) {
-  //       transcation.txData.data = exchange.attachTakerSignatures(transcation.txData.data, preSignatures);
-  //     }
+      if (preSignatures.length) {
+        transcation.txData.data = exchange.attachTakerSignatures(transcation.txData.data, preSignatures);
+      }
 
-  //     // Trigger approvals
-  //     for (const approval of transcation.approvals) {
-  //       await buyer.sendTransaction(approval.txData);
-  //     }
-  //     await buyer.sendTransaction({
-  //       ...transcation.txData,
-  //       gasLimit: 1000000
-  //     });
-  //   }
+      // Trigger approvals
+      for (const approval of transcation.approvals) {
+        await buyer.sendTransaction(approval.txData);
+      }
+      await buyer.sendTransaction({
+        ...transcation.txData,
+        gasLimit: 1000000
+      });
+    }
 
-  //   const token1OwnerAfter = await erc721cBlock.ownerOf(tokenId1);
-  //   const token4OwnerAfter = await erc721.ownerOf(tokenId4);
+    const token1OwnerAfter = await erc721cBlock.ownerOf(tokenId1);
+    const token4OwnerAfter = await erc721.ownerOf(tokenId4);
 
-  //   expect(token1OwnerAfter).to.eq(buyer.address);
-  //   expect(token4OwnerAfter).to.eq(buyer.address);
+    expect(token1OwnerAfter).to.eq(buyer.address);
+    expect(token4OwnerAfter).to.eq(buyer.address);
 
-  //   // Router is stateless (it shouldn't keep any funds)
-  //   expect(await ethers.provider.getBalance(router.contracts.router.address)).to.eq(0);
-  //   expect(await ethers.provider.getBalance(router.contracts.seaportModule.address)).to.eq(0);
-  //   expect(await usdc.getBalance(router.contracts.seaportModule.address)).to.eq(0);
-  //   expect(await weth.getBalance(router.contracts.seaportModule.address)).to.eq(0);
-  //   expect(await ethers.provider.getBalance(router.contracts.seaportV14Module.address)).to.eq(0);
-  //   expect(await usdc.getBalance(router.contracts.seaportV14Module.address)).to.eq(0);
-  //   expect(await weth.getBalance(router.contracts.seaportV14Module.address)).to.eq(0);
-  //   expect(await ethers.provider.getBalance(router.contracts.swapModule.address)).to.eq(0);
-  //   expect(await usdc.getBalance(router.contracts.swapModule.address)).to.eq(0);
-  //   expect(await dai.getBalance(router.contracts.swapModule.address)).to.eq(0);
-  // });
+    // Router is stateless (it shouldn't keep any funds)
+    expect(await ethers.provider.getBalance(router.contracts.router.address)).to.eq(0);
+    expect(await ethers.provider.getBalance(router.contracts.seaportModule.address)).to.eq(0);
+    expect(await usdc.getBalance(router.contracts.seaportModule.address)).to.eq(0);
+    expect(await weth.getBalance(router.contracts.seaportModule.address)).to.eq(0);
+    expect(await ethers.provider.getBalance(router.contracts.seaportV14Module.address)).to.eq(0);
+    expect(await usdc.getBalance(router.contracts.seaportV14Module.address)).to.eq(0);
+    expect(await weth.getBalance(router.contracts.seaportV14Module.address)).to.eq(0);
+    expect(await ethers.provider.getBalance(router.contracts.swapModule.address)).to.eq(0);
+    expect(await usdc.getBalance(router.contracts.swapModule.address)).to.eq(0);
+    expect(await dai.getBalance(router.contracts.swapModule.address)).to.eq(0);
+  });
+
+  it("Fill multiple-currency listings - payment-processor && seaport ", async () => {
+    const router = new Sdk.RouterV6.Router(chainId, ethers.provider);
+    const buyer = dan;
+
+    const listings: ListingDetails[] = [];
+
+    // Order 1: Payment-Processor USDC
+    const seller1 = bob;
+    const tokenId1 = 1;
+    const price1 = parseUnits("200", 6);
+    {
+      // Mint erc721 to seller
+      await erc721.connect(seller1).mint(tokenId1);
+      // Approve the exchange
+      await erc721
+        .connect(seller1)
+        .setApprovalForAll(Sdk.PaymentProcessor.Addresses.Exchange[chainId], true);
+
+      // Build sell order
+      const exchange = new Sdk.PaymentProcessor.Exchange(chainId);
+
+      const sellerMasterNonce = await exchange.getMasterNonce(ethers.provider, seller1.address);
+      const blockTime = await getCurrentTimestamp(ethers.provider);
+
+      const builder = new Sdk.PaymentProcessor.Builders.SingleToken(chainId);
+      const orderParameters = {
+        protocol: 0,
+        sellerAcceptedOffer: false,
+        marketplace: constants.AddressZero,
+        marketplaceFeeNumerator: "0",
+        maxRoyaltyFeeNumerator: "0",
+        privateTaker: constants.AddressZero,
+        trader: seller1.address,
+        tokenAddress: erc721.address,
+        tokenId: tokenId1,
+        amount: "1",
+        price: price1,
+        expiration: (blockTime + 60 * 60).toString(),
+        nonce: "0",
+        coin: Sdk.Common.Addresses.Usdc[chainId],
+        masterNonce: sellerMasterNonce,
+      };
+
+      // Build sell order
+      const sellOrder = builder.build(orderParameters);
+      await sellOrder.sign(seller1);
+
+      sellOrder.checkSignature();
+
+      await sellOrder.checkFillability(ethers.provider);
+
+      listings.push({
+        // Irrelevant
+        orderId: "1",
+        kind: "payment-processor",
+        contractKind: "erc721",
+        contract: erc721.address,
+        tokenId: tokenId1.toString(),
+        order: sellOrder,
+        currency: Sdk.Common.Addresses.Usdc[chainId],
+        price: price1.toString(),
+      });
+    }
+
+    // Order 4: Seaport USDC
+    const seller4 = alice;
+    const tokenId4 = 4;
+    const price4 = parseUnits("100", 6);
+    const fee4 = bn(550);
+    {
+      // Mint erc721 to seller
+      await erc721.connect(seller4).mint(tokenId4);
+
+      // Approve the exchange
+      await erc721
+        .connect(seller4)
+        .setApprovalForAll(Sdk.SeaportV14.Addresses.Exchange[chainId], true);
+
+      // Build sell order
+      const builder = new Sdk.SeaportBase.Builders.SingleToken(chainId);
+      const sellOrder = builder.build(
+        {
+          side: "sell",
+          tokenKind: "erc721",
+          offerer: seller4.address,
+          contract: erc721.address,
+          tokenId: tokenId4,
+          paymentToken: Sdk.Common.Addresses.Usdc[chainId],
+          price: price4.sub(price4.mul(fee4).div(10000)),
+          fees: [
+            {
+              amount: price4.mul(fee4).div(10000),
+              recipient: deployer.address,
+            },
+          ],
+          counter: 0,
+          startTime: await getCurrentTimestamp(ethers.provider),
+          endTime: (await getCurrentTimestamp(ethers.provider)) + 60,
+        },
+        Sdk.SeaportV14.Order
+      );
+      await sellOrder.sign(seller4);
+
+      await sellOrder.checkFillability(ethers.provider);
+
+      listings.push({
+        // Irrelevant
+        orderId: "3",
+        kind: "seaport-v1.4",
+        contractKind: "erc721",
+        contract: erc721.address,
+        tokenId: tokenId4.toString(),
+        order: sellOrder,
+        currency: Sdk.Common.Addresses.Usdc[chainId],
+        price: price4.toString(),
+      });
+    }
+
+    const usdc = new Sdk.Common.Helpers.Erc20(ethers.provider, Sdk.Common.Addresses.Usdc[chainId]);
+    const dai = new Sdk.Common.Helpers.Erc20(ethers.provider, Sdk.Common.Addresses.Dai[chainId]);
+    const weth = new Sdk.Common.Helpers.WNative(ethers.provider, chainId);
+
+    const token1OwnerBefore = await erc721.ownerOf(tokenId1);
+    const token4OwnerBefore = await erc721.ownerOf(tokenId4);
+
+    expect(token1OwnerBefore).to.eq(seller1.address);
+    expect(token4OwnerBefore).to.eq(seller4.address);
+
+    const tx = await router.fillListingsTx(
+      listings,
+      buyer.address,
+      Sdk.Common.Addresses.Native[chainId],
+      {
+        source: "reservoir.market",
+      }
+    );
+
+    const exchange = new Sdk.PaymentProcessor.Exchange(chainId);
+    for(const transcation of tx.txs) {
+      const preSignatures: string[] = [];
+      for (const { data: preSignature, kind } of transcation.preSignatures) {
+        if (kind === "payment-processor-take-order") {
+          const signature = await buyer._signTypedData(
+            preSignature.domain,
+            preSignature.types,
+            preSignature.value
+          );
+          preSignatures.push(signature);
+        }
+      }
+
+      if (preSignatures.length) {
+        transcation.txData.data = exchange.attachTakerSignatures(transcation.txData.data, preSignatures);
+      }
+
+      // Trigger approvals
+      for (const approval of transcation.approvals) {
+        await buyer.sendTransaction(approval.txData);
+      }
+      await buyer.sendTransaction({
+        ...transcation.txData,
+        gasLimit: 1000000
+      });
+    }
+
+    const token1OwnerAfter = await erc721.ownerOf(tokenId1);
+    const token4OwnerAfter = await erc721.ownerOf(tokenId4);
+
+    expect(token1OwnerAfter).to.eq(buyer.address);
+    expect(token4OwnerAfter).to.eq(buyer.address);
+
+    // Router is stateless (it shouldn't keep any funds)
+    expect(await ethers.provider.getBalance(router.contracts.router.address)).to.eq(0);
+    expect(await ethers.provider.getBalance(router.contracts.seaportModule.address)).to.eq(0);
+    expect(await usdc.getBalance(router.contracts.seaportModule.address)).to.eq(0);
+    expect(await weth.getBalance(router.contracts.seaportModule.address)).to.eq(0);
+    expect(await ethers.provider.getBalance(router.contracts.seaportV14Module.address)).to.eq(0);
+    expect(await usdc.getBalance(router.contracts.seaportV14Module.address)).to.eq(0);
+    expect(await weth.getBalance(router.contracts.seaportV14Module.address)).to.eq(0);
+    expect(await ethers.provider.getBalance(router.contracts.swapModule.address)).to.eq(0);
+    expect(await usdc.getBalance(router.contracts.swapModule.address)).to.eq(0);
+    expect(await dai.getBalance(router.contracts.swapModule.address)).to.eq(0);
+  });
 
 });

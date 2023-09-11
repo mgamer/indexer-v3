@@ -84,6 +84,61 @@ contract PaymentProcessorModule is BaseExchangeModule {
     }
   }
 
+  function acceptERC20Listings(
+    IPaymentProcessor.MatchedOrder[] memory saleDetails,
+    IPaymentProcessor.SignatureECDSA[] memory signedListings,
+    ERC20ListingParams calldata params,
+    Fee[] calldata fees
+  )
+    external
+    payable
+    nonReentrant
+    refundERC20Leftover(params.refundTo, params.token)
+    chargeERC20Fees(fees, params.token, params.amount)
+  {
+    
+    // Approve the exchange if needed
+    _approveERC20IfNeeded(params.token, address(EXCHANGE), params.amount);
+
+    uint256 length = saleDetails.length;
+    for (uint256 i; i < length; ) {
+      // Execute the fill
+      try
+        EXCHANGE.buySingleListing(
+          saleDetails[i],
+          signedListings[i],
+          IPaymentProcessor.SignatureECDSA({v: 0, r: bytes32(0), s: bytes32(0)})
+        )
+      {
+        // Forward any token to the specified receiver
+        if (saleDetails[i].protocol == IPaymentProcessor.TokenProtocols.ERC721) {
+          IERC721(saleDetails[i].tokenAddress).safeTransferFrom(
+            address(this),
+            params.fillTo,
+            saleDetails[i].tokenId
+          );
+        } else {
+          IERC1155(saleDetails[i].tokenAddress).safeTransferFrom(
+            address(this),
+            params.fillTo,
+            saleDetails[i].tokenId,
+            saleDetails[i].amount,
+            ""
+          );
+        }
+      } catch {
+        // Revert if specified
+        if (params.revertIfIncomplete) {
+          revert UnsuccessfulFill();
+        }
+      }
+
+      unchecked {
+        ++i;
+      }
+    }
+  }
+
   function acceptOffers(
     IPaymentProcessor.MatchedOrder[] memory saleDetails,
     IPaymentProcessor.SignatureECDSA[] memory signedOffers,

@@ -200,6 +200,12 @@ export const setupRouterWithModules = async (chainId: number, deployer: SignerWi
     .then((factory) => factory.deploy(router.address, deployer.address));
   Sdk.RouterV6.Addresses.PermitProxy[chainId] = permitProxy.address.toLowerCase();
 
+  const paymentProcessorModule = await ethers
+    .getContractFactory("PaymentProcessorModule", deployer)
+    .then((factory) => factory.deploy(deployer.address, router.address, Sdk.PaymentProcessor.Addresses.Exchange[chainId]));
+
+  Sdk.RouterV6.Addresses.PaymentProcessorModule[chainId] = paymentProcessorModule.address.toLowerCase();
+
   const conduitKey = await setupConduit(chainId, deployer, [approvalProxy.address]);
   Sdk.SeaportBase.Addresses.ReservoirConduitKey[chainId] = conduitKey;
 };
