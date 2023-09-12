@@ -453,6 +453,117 @@ export class Router {
       }
     }
 
+    if (details.some(({ kind }) => kind === "payment-processor")) {
+      if (options?.relayer) {
+        throw new Error("Relayer not supported for PaymentProcessor orders");
+      }
+
+      const ownDetails = details.filter(({ kind }) => kind === "payment-processor");
+
+      const exchange = new Sdk.PaymentProcessor.Exchange(this.chainId);
+      const operator = exchange.contract.address;
+
+      const approvals: FTApproval[] = [];
+      for (const { currency, price } of ownDetails) {
+        if (!isETH(this.chainId, currency)) {
+          approvals.push({
+            currency,
+            amount: price,
+            owner: taker,
+            operator,
+            txData: generateFTApprovalTxData(currency, taker, operator),
+          });
+        }
+      }
+
+      const preSignatures: PreSignature[] = [];
+      const orders: Sdk.PaymentProcessor.Order[] = ownDetails.map(
+        (c) => c.order as Sdk.PaymentProcessor.Order
+      );
+
+      // Use the gas-efficient sweep method when:
+      // - there is at least one listing
+      // - all listings are for the same collection
+      // - all listings have the same payment token
+      const useSweepCollection =
+        ownDetails.length > 1 &&
+        ownDetails.every((c) => c.contract === details[0].contract) &&
+        ownDetails.every((c) => c.currency === details[0].currency);
+
+      if (useSweepCollection) {
+        const bundledOrder = Sdk.PaymentProcessor.Order.createBundledOfferOrder(orders, {
+          taker,
+          takerMasterNonce: await exchange.getMasterNonce(this.provider, taker),
+        });
+
+        const signData = bundledOrder.getSignatureData();
+        preSignatures.push({
+          kind: "payment-processor-take-order",
+          signer: taker,
+          data: signData,
+          uniqueId: `${bundledOrder.params.tokenAddress}-${bundledOrder.params.tokenIds?.join(
+            "-"
+          )}-${bundledOrder.params.price}`,
+        });
+
+        txs.push({
+          approvals,
+          permits: [],
+          txTags: {
+            kind: "sale",
+            listings: [
+              {
+                protocol: "payment-processor-sweep",
+                count: orders.length,
+              },
+            ],
+          },
+          preSignatures: preSignatures,
+          txData: exchange.sweepCollectionTx(taker, bundledOrder, orders),
+          orderIds: ownDetails.map((d) => d.orderId),
+        });
+      } else {
+        const takeOrders: Sdk.PaymentProcessor.Order[] = [];
+        for (const order of orders) {
+          const takerOrder = order.buildMatching({
+            taker,
+            takerMasterNonce: await exchange.getMasterNonce(this.provider, taker),
+          });
+
+          takeOrders.push(takerOrder);
+
+          const signData = takerOrder.getSignatureData();
+          preSignatures.push({
+            kind: "payment-processor-take-order",
+            signer: taker,
+            data: signData,
+            uniqueId: `${takerOrder.params.tokenAddress}-${takerOrder.params.tokenId}-${takerOrder.params.price}`,
+          });
+        }
+
+        txs.push({
+          approvals,
+          permits: [],
+          txTags: {
+            kind: "sale",
+            listings: [
+              {
+                protocol: "payment-processor",
+                count: orders.length,
+              },
+            ],
+          },
+          preSignatures: preSignatures,
+          txData: exchange.fillOrdersTx(taker, orders, takeOrders),
+          orderIds: ownDetails.map((d) => d.orderId),
+        });
+      }
+
+      for (const { orderId } of ownDetails) {
+        success[orderId] = true;
+      }
+    }
+
     // Filling Blur listings is extremely tricky since they explicitly designed
     // their contracts so that it is not possible to fill indirectly (eg. via a
     // router contract). Given these restriction, we might need to use multiple

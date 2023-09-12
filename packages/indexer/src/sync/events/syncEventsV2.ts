@@ -18,6 +18,7 @@ import { blockCheckJob } from "@/jobs/events-sync/block-check-queue-job";
 import { acquireLock, redis, releaseLock } from "@/common/redis";
 import { eventsSyncRealtimeJob } from "@/jobs/events-sync/events-sync-realtime-job";
 import { config } from "@/config/index";
+import { traceSyncJob } from "@/jobs/events-sync/trace-sync-job";
 
 export const extractEventsBatches = (enhancedEvents: EnhancedEvent[]): EventsBatch[] => {
   const txHashToEvents = new Map<string, EnhancedEvent[]>();
@@ -280,6 +281,49 @@ const _saveBlockTransactions = async (blockData: BlockWithTransactions) => {
   return timerEnd - timerStart;
 };
 
+export const syncTraces = async (block: number) => {
+  const startSyncTime = Date.now();
+  const startGetBlockTime = Date.now();
+  const blockData = await syncEventsUtils.fetchBlock(block);
+  if (!blockData) {
+    throw new Error(`Block ${block} not found with RPC provider`);
+  }
+
+  const { traces, getTransactionTracesTime } = await syncEventsUtils._getTransactionTraces(
+    blockData.transactions,
+    block
+  );
+
+  const endGetBlockTime = Date.now();
+
+  // Do what we want with traces here
+  await Promise.all([syncEventsUtils.processContractAddresses(traces, blockData.timestamp)]);
+
+  const endSyncTime = Date.now();
+
+  logger.info(
+    "sync-traces-timing",
+    JSON.stringify({
+      message: `Traces realtime syncing block ${block}`,
+      block,
+      syncTime: endSyncTime - startSyncTime,
+      blockSyncTime: endSyncTime - startSyncTime,
+
+      traces: {
+        count: traces.length,
+        getTransactionTracesTime,
+      },
+      blocks: {
+        count: 1,
+        getBlockTime: endGetBlockTime - startGetBlockTime,
+        blockMinedTimestamp: blockData.timestamp,
+        startJobTimestamp: startSyncTime,
+        getBlockTimestamp: endGetBlockTime,
+      },
+    })
+  );
+};
+
 export const syncEvents = async (block: number) => {
   if (config.chainId === 137) {
     logger.info("sync-events-v2", `Start syncing block ${block}`);
@@ -298,7 +342,6 @@ export const syncEvents = async (block: number) => {
   try {
     if (config.chainId === 137 && !(await acquireLock(blockLockName, 60 * 5))) {
       logger.info("sync-events-v2", `block ${block} hash ${blockData.hash} was already synced`);
-      return;
     }
 
     const endGetBlockTime = Date.now();
@@ -356,11 +399,6 @@ export const syncEvents = async (block: number) => {
 
     const startProcessLogs = Date.now();
 
-    // const processEventsLatencies = await Promise.all(
-    //   eventsBatches.map(async (eventsBatch) => {
-    //     await processEventsBatchV2([eventsBatch]);
-    //   })
-    // );
     const processEventsLatencies = await processEventsBatchV2(eventsBatches);
 
     const endProcessLogs = Date.now();
@@ -381,6 +419,7 @@ export const syncEvents = async (block: number) => {
           getLogsTime,
           processLogs: endProcessLogs - startProcessLogs,
         },
+
         blocks: {
           count: 1,
           getBlockTime: endGetBlockTime - startGetBlockTime,
@@ -398,6 +437,7 @@ export const syncEvents = async (block: number) => {
       })
     );
 
+    await traceSyncJob.addToQueue({ block: block });
     await blockCheckJob.addToQueue({ block: block, blockHash: blockData.hash, delay: 60 });
     await blockCheckJob.addToQueue({ block: block, blockHash: blockData.hash, delay: 60 * 5 });
   } catch (error) {
@@ -438,6 +478,8 @@ export const checkForOrphanedBlock = async (block: number) => {
 
   // TODO: add block hash to transactions table and delete transactions associated to the orphaned block
   // await deleteBlockTransactions(block);
+
+  // TODO: add block hash to contracts table, and delete contracts / tokens associated to the orphaned block
 
   // delete the block data
   await blocksModel.deleteBlock(block, orphanedBlock.hash);

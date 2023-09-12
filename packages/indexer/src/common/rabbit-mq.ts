@@ -13,6 +13,7 @@ import { acquireLock, releaseLock } from "@/common/redis";
 import axios from "axios";
 import pLimit from "p-limit";
 import { FailedPublishMessages } from "@/models/failed-publish-messages-list";
+import { randomUUID } from "crypto";
 
 export type RabbitMQMessage = {
   payload: any;
@@ -25,6 +26,7 @@ export type RabbitMQMessage = {
   publishRetryCount?: number;
   persistent?: boolean;
   prioritized?: boolean;
+  correlationId?: string;
 };
 
 export type CreatePolicyPayload = {
@@ -55,12 +57,18 @@ export class RabbitMq {
   private static rabbitMqPublisherChannels: ChannelWrapper[] = [];
 
   public static async connect() {
-    RabbitMq.rabbitMqPublisherConnection = amqplibConnectionManager.connect({
-      hostname: config.rabbitHostname,
-      username: config.rabbitUsername,
-      password: config.rabbitPassword,
-      vhost: getNetworkName(),
-    });
+    RabbitMq.rabbitMqPublisherConnection = amqplibConnectionManager.connect(
+      {
+        hostname: config.rabbitHostname,
+        username: config.rabbitUsername,
+        password: config.rabbitPassword,
+        vhost: getNetworkName(),
+      },
+      {
+        reconnectTimeInSeconds: 5,
+        heartbeatIntervalInSeconds: 0,
+      }
+    );
 
     for (let index = 0; index < RabbitMq.maxPublisherChannelsCount; ++index) {
       const channel = this.rabbitMqPublisherConnection.createChannel();
@@ -87,14 +95,16 @@ export class RabbitMq {
 
   public static async send(queueName: string, content: RabbitMQMessage, delay = 0, priority = 0) {
     content.publishRetryCount = content.publishRetryCount ?? 0;
-    const msgConsumingBuffer = 5 * 60; // Time for the job to actually process, will be released on the job is done
-    const lockTime = delay ? _.max([_.toInteger(delay / 1000), 0]) : msgConsumingBuffer;
+    content.correlationId = content.correlationId ?? randomUUID();
+
+    const msgConsumingBuffer = 7 * 24 * 60 * 60; // Will be released on the job is done
+    const lockTime = Number(_.max([_.toInteger(delay / 1000), 0])) + msgConsumingBuffer;
     let lockAcquired = false;
 
     // For deduplication messages use redis lock, setting lock only if jobId is passed
     try {
       if (content.jobId && lockTime) {
-        if (!(await acquireLock(content.jobId, lockTime + msgConsumingBuffer))) {
+        if (!(await acquireLock(content.jobId, lockTime))) {
           return;
         }
 
@@ -146,17 +156,6 @@ export class RabbitMq {
         );
       }
 
-      if (config.chainId === 137 && queueName === "events-sync-realtime") {
-        logger.info(
-          "events-sync-realtime",
-          `publish realtime sync ${JSON.stringify(
-            content
-          )} delay ${delay} lockTime ${lockTime} channelIndex ${channelIndex} queueLength ${RabbitMq.rabbitMqPublisherChannels[
-            channelIndex
-          ].queueLength()}`
-        );
-      }
-
       if (content.publishRetryCount > 0) {
         logger.info(
           `rabbit-message-republish`,
@@ -169,7 +168,11 @@ export class RabbitMq {
     } catch (error) {
       if (`${error}`.includes("nacked")) {
         if (lockAcquired && content.jobId) {
-          await releaseLock(content.jobId).catch();
+          try {
+            await releaseLock(content.jobId);
+          } catch {
+            // Ignore errors
+          }
         }
 
         logger.error(

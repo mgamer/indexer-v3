@@ -8,7 +8,7 @@ import Joi from "joi";
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { config } from "@/config/index";
-import { getNetworkSettings } from "@/config/network";
+import { getNetworkSettings, getSubDomain } from "@/config/network";
 import { getOrUpdateBlurRoyalties } from "@/utils/blur";
 import * as marketplaceFees from "@/utils/marketplace-fees";
 
@@ -133,7 +133,7 @@ export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
         {
           name: "LooksRare",
           domain: "looksrare.org",
-          imageUrl: `https://${ns.subDomain}.reservoir.tools/redirect/sources/looksrare/logo/v2`,
+          imageUrl: `https://${getSubDomain()}.reservoir.tools/redirect/sources/looksrare/logo/v2`,
           fee: {
             bps: 50,
           },
@@ -147,7 +147,7 @@ export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
         {
           name: "X2Y2",
           domain: "x2y2.io",
-          imageUrl: `https://${ns.subDomain}.reservoir.tools/redirect/sources/x2y2/logo/v2`,
+          imageUrl: `https://${getSubDomain()}.reservoir.tools/redirect/sources/x2y2/logo/v2`,
           fee: {
             bps: 50,
           },
@@ -166,7 +166,7 @@ export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
         const royalties: Royalty[] = collectionResult.royalties ?? [];
         marketplaces.push({
           name: "Reservoir",
-          imageUrl: `https://${ns.subDomain}.reservoir.tools/redirect/sources/reservoir/logo/v2`,
+          imageUrl: `https://${getSubDomain()}.reservoir.tools/redirect/sources/reservoir/logo/v2`,
           fee: {
             bps: 0,
           },
@@ -205,7 +205,7 @@ export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
         marketplaces.push({
           name: "OpenSea",
           domain: "opensea.io",
-          imageUrl: `https://${ns.subDomain}.reservoir.tools/redirect/sources/opensea/logo/v2`,
+          imageUrl: `https://${getSubDomain()}.reservoir.tools/redirect/sources/opensea/logo/v2`,
           fee: {
             bps: openseaMarketplaceFees[0]?.bps ?? 0,
           },
@@ -232,7 +232,7 @@ export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
           marketplaces.push({
             name: "Blur",
             domain: "blur.io",
-            imageUrl: `https://${ns.subDomain}.reservoir.tools/redirect/sources/blur.io/logo/v2`,
+            imageUrl: `https://${getSubDomain()}.reservoir.tools/redirect/sources/blur.io/logo/v2`,
             fee: {
               bps: 0,
             },

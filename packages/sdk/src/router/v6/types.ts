@@ -115,6 +115,10 @@ export type GenericOrder =
       order: Sdk.CollectionXyz.Order;
     }
   | {
+      kind: "ditto";
+      order: Sdk.Ditto.Order;
+    }
+  | {
       kind: "zora";
       order: Sdk.Zora.Order;
     }

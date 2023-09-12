@@ -5,7 +5,7 @@ import { RabbitMq, RabbitMQMessage } from "@/common/rabbit-mq";
 import { logger } from "@/common/logger";
 import _ from "lodash";
 import { ConsumeMessage } from "amqplib";
-import { releaseLock } from "@/common/redis";
+import { extendLock, releaseLock } from "@/common/redis";
 import { ChannelWrapper } from "amqp-connection-manager";
 import { config } from "@/config/index";
 
@@ -39,37 +39,87 @@ export abstract class AbstractRabbitMqJobHandler {
   protected useSharedChannel = false;
   protected lazyMode = false;
   protected queueType: QueueType = "classic";
-  protected consumerTimeout = 0;
+  protected timeout = 0; // Job timeout in ms
+  protected consumerTimeout = 0; // Rabbitmq timeout in ms default to 1800000ms (30 min) increase only if the job needs to run more than that, this value shouldn't be smaller than `timeout` (expect 0)
   protected disableConsuming = config.rabbitDisableQueuesConsuming;
-  protected immediateAck = false;
 
   public async consume(channel: ChannelWrapper, consumeMessage: ConsumeMessage): Promise<void> {
-    this.rabbitMqMessage = JSON.parse(consumeMessage.content.toString()) as RabbitMQMessage;
+    try {
+      this.rabbitMqMessage = JSON.parse(consumeMessage.content.toString()) as RabbitMQMessage;
+    } catch (error) {
+      // Log the error
+      logger.error(
+        this.queueName,
+        `Error parsing JSON: ${JSON.stringify(
+          error
+        )}, queueName=${this.getQueue()}, payload=${JSON.stringify(this.rabbitMqMessage)}`
+      );
+
+      channel.ack(consumeMessage);
+      return;
+    }
 
     this.rabbitMqMessage.consumedTime = this.rabbitMqMessage.consumedTime ?? _.now();
     this.rabbitMqMessage.retryCount = this.rabbitMqMessage.retryCount ?? 0;
 
+    if (this.rabbitMqMessage.jobId) {
+      try {
+        await extendLock(
+          this.rabbitMqMessage.jobId,
+          _.max([_.toInteger(this.getTimeout() / 1000), 0]) || 5 * 60
+        );
+      } catch {
+        // Ignore errors
+      }
+    }
+
     try {
-      if (this.getImmediateAck()) {
-        await channel.ack(consumeMessage); // Ack the message with rabbit
+      let processResult;
+      if (this.getTimeout()) {
+        processResult = await Promise.race([
+          this.process(this.rabbitMqMessage.payload),
+          new Promise((resolve, reject) => {
+            setTimeout(
+              () =>
+                reject(
+                  new Error(
+                    `job timed out ${
+                      this.getTimeout() / 1000
+                    }s ${this.getQueue()} with payload ${consumeMessage.content.toString()}`
+                  )
+                ),
+              this.getTimeout()
+            );
+          }),
+        ]);
+      } else {
+        processResult = await this.process(this.rabbitMqMessage.payload); // Process the message
       }
 
-      const processResult = await this.process(this.rabbitMqMessage.payload); // Process the message
-
-      if (!this.getImmediateAck()) {
-        await channel.ack(consumeMessage); // Ack the message with rabbit
-      }
+      channel.ack(consumeMessage); // Ack the message with rabbit
 
       this.rabbitMqMessage.completeTime = _.now(); // Set the complete time
 
       // Release lock if there's a job id
       if (this.rabbitMqMessage.jobId) {
-        await releaseLock(this.rabbitMqMessage.jobId).catch();
+        try {
+          await releaseLock(this.rabbitMqMessage.jobId);
+        } catch {
+          // Ignore errors
+        }
       }
 
-      await this.onCompleted(this.rabbitMqMessage, processResult).catch();
+      try {
+        await this.onCompleted(this.rabbitMqMessage, processResult);
+      } catch {
+        // Ignore errors
+      }
     } catch (error) {
-      await this.onError(this.rabbitMqMessage, error).catch();
+      try {
+        await this.onError(this.rabbitMqMessage, error);
+      } catch {
+        // Ignore errors
+      }
 
       this.rabbitMqMessage.retryCount += 1;
       let queueName = this.getQueue();
@@ -94,13 +144,15 @@ export abstract class AbstractRabbitMqJobHandler {
       );
 
       try {
-        if (!this.getImmediateAck()) {
-          await channel.ack(consumeMessage); // Ack the message with rabbit
-        }
+        channel.ack(consumeMessage); // Ack the message with rabbit
 
         // Release lock if there's a job id
         if (this.rabbitMqMessage.jobId) {
-          await releaseLock(this.rabbitMqMessage.jobId).catch();
+          try {
+            await releaseLock(this.rabbitMqMessage.jobId);
+          } catch {
+            // Ignore errors
+          }
         }
 
         await RabbitMq.send(queueName, this.rabbitMqMessage, delay); // Trigger the retry / or send to dead letter queue
@@ -191,8 +243,8 @@ export abstract class AbstractRabbitMqJobHandler {
     return this.consumerTimeout;
   }
 
-  public getImmediateAck(): boolean {
-    return this.immediateAck;
+  public getTimeout(): number {
+    return this.timeout;
   }
 
   protected async send(job: { payload?: any; jobId?: string } = {}, delay = 0, priority = 0) {
