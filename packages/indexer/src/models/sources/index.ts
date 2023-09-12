@@ -1,4 +1,3 @@
-import { AddressZero } from "@ethersproject/constants";
 import { keccak256 } from "@ethersproject/solidity";
 import { randomBytes } from "crypto";
 import _ from "lodash";
@@ -87,23 +86,6 @@ export class Sources {
     if (Sources.instance) {
       await Sources.instance.loadData(true);
     }
-  }
-
-  public static getDefaultSource(): SourcesEntity {
-    return new SourcesEntity({
-      id: 0,
-      domain: "reservoir.tools",
-      domainHash: "0x1d4da48b",
-      address: AddressZero,
-      name: "Reservoir",
-      metadata: {
-        icon: "https://www.reservoir.market/reservoir.svg",
-        tokenUrlMainnet: "https://www.reservoir.market/${contract}/${tokenId}",
-        tokenUrlRinkeby: "https://dev.reservoir.market/${contract}/${tokenId}",
-      },
-      optimized: true,
-      createdAt: "2022-02-05 04:50:47.191 +0200",
-    });
   }
 
   public static async syncSources() {
@@ -272,11 +254,9 @@ export class Sources {
     tokenId?: string,
     optimizeCheckoutURL = false
   ): SourcesEntity | undefined {
-    let sourceEntity: SourcesEntity;
+    let sourceEntity: SourcesEntity | undefined;
     if (id in this.sources) {
       sourceEntity = _.cloneDeep(this.sources[id]);
-    } else {
-      sourceEntity = _.cloneDeep(Sources.getDefaultSource());
     }
 
     if (sourceEntity && contract && tokenId) {
@@ -285,8 +265,7 @@ export class Sources {
         (!sourceEntity.metadata.tokenUrlMainnet?.includes("${contract}") &&
           !sourceEntity.metadata.tokenUrlMainnet?.includes("${tokenId}"))
       ) {
-        const defaultSource = Sources.getDefaultSource();
-        sourceEntity.metadata.url = this.getTokenUrl(defaultSource, contract, tokenId);
+        sourceEntity = undefined;
       } else {
         sourceEntity.metadata.url = this.getTokenUrl(sourceEntity, contract, tokenId);
       }
@@ -301,7 +280,7 @@ export class Sources {
     if (_.toLower(domain) in this.sourcesByDomain) {
       sourceEntity = this.sourcesByDomain[_.toLower(domain)];
     } else if (returnDefault) {
-      sourceEntity = Sources.getDefaultSource();
+      sourceEntity = undefined;
     }
 
     return sourceEntity;
@@ -319,7 +298,7 @@ export class Sources {
     if (_.toLower(name) in this.sourcesByName) {
       sourceEntity = this.sourcesByName[_.toLower(name)];
     } else if (returnDefault) {
-      sourceEntity = Sources.getDefaultSource();
+      sourceEntity = undefined;
     }
 
     return sourceEntity;
@@ -339,7 +318,7 @@ export class Sources {
     if (address in this.sourcesByAddress) {
       sourceEntity = this.sourcesByAddress[address];
     } else if (options?.returnDefault) {
-      sourceEntity = Sources.getDefaultSource();
+      sourceEntity = undefined;
     }
 
     if (sourceEntity && options?.contract && options?.tokenId) {
