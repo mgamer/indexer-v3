@@ -66,14 +66,4 @@ export class SourcesEntity {
   getTitle() {
     return this.metadata.adminTitle || this.metadata.title || this.name;
   }
-
-  getObject() {
-    return {
-      id: this.id ?? null,
-      domain: this.domain ?? null,
-      name: this.getTitle() ?? null,
-      icon: this.getIcon() ?? null,
-      url: this.metadata.url ?? null,
-    };
-  }
 }
