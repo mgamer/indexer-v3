@@ -228,9 +228,7 @@ describe("DittoModule", () => {
     const data = dittoModule.interface.encodeFunctionData("sell", sell);
     const swapExecution = [dittoModule.address, data, 0];
 
-    await weth.connect(trader).approve(swapModule.address, outputValue);
     await weth.connect(trader).approve(router.address, outputValue);
-    await weth.connect(trader).approve(dittoModule.address, outputValue);
 
     const unWrapInfo = await generateSwapInfo(
       chainId,
@@ -243,7 +241,7 @@ describe("DittoModule", () => {
         module: swapModule,
         transfers: [
           {
-            toETH: false,
+            toETH: true,
             recipient: trader.address,
             amount: outputValue,
           },
