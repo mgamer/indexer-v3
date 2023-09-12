@@ -1537,12 +1537,15 @@ export const getExecuteBuyV7Options: RouteOptions = {
 
         txs.push(
           ...mintsResult.txs.map(({ txData, orderIds }) => ({
-            txTags: ["fill-mints", `orders-${orderIds.length}`],
             txData,
             orderIds,
             approvals: [],
             permits: [],
             preSignatures: [],
+            txTags: {
+              kind: "mint",
+              mints: orderIds.length,
+            },
           }))
         );
 
@@ -1574,7 +1577,10 @@ export const getExecuteBuyV7Options: RouteOptions = {
           const isApproved = bn(approvedAmount).gte(approval.amount);
           if (!isApproved) {
             allTranscations.push({
-              txTags: ["currency-approval"],
+              txTags: {
+                kind: "approval",
+                approvals: 1,
+              },
               txData: approval.txData,
             });
             steps[1].items.push({

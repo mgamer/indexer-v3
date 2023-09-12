@@ -1031,7 +1031,7 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
     }
 
     await buyer.sendTransaction(tx.txs[0].txData);
-
+    
     const seller1EthBalanceAfter = await seller1.getBalance();
     const seller2UsdcBalanceAfter = await usdc.getBalance(seller2.address);
     const seller3DaiBalanceAfter = await dai.getBalance(seller3.address);
@@ -1175,7 +1175,7 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
 
       bids.push({
         // Irrelevant
-        orderId: "0",
+        orderId: "1",
         kind: "seaport-v1.4",
         contractKind: "erc721",
         contract: erc721.address,
@@ -1331,7 +1331,7 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
 
       bids.push({
         // Irrelevant
-        orderId: "0",
+        orderId: "1",
         kind: "seaport-v1.4",
         contractKind: "erc721",
         contract: erc721.address,
@@ -1386,7 +1386,7 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
 
       bids.push({
         // Irrelevant
-        orderId: "0",
+        orderId: "2",
         kind: "seaport",
         contractKind: "erc721",
         contract: erc721.address,

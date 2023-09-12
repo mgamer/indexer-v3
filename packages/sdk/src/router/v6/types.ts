@@ -203,8 +203,9 @@ export type PreSignature = {
   data: any;
 };
 
+export type TxAttributeKind = "approval" | "sale" | "mint" | "swap";
 export type TxAttribute = {
-  kind: "approval" | "sale" | "mint" | "swap";
+  kind: TxAttributeKind;
   approvals?: number;
   listings?: {
     protocol: string;

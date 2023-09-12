@@ -1209,7 +1209,10 @@ export const getExecuteSellV7Options: RouteOptions = {
         );
         if (!isApproved) {
           allTranscations.push({
-            txTags: ["nft-approval"],
+            txTags: {
+              kind: "approval",
+              approvals: 1,
+            },
             txData: approval.txData,
           });
           steps[1].items.push({

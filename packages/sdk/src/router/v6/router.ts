@@ -98,16 +98,19 @@ function extractIdentifiersFromExections(
 
   executions.forEach((execution, index) => {
     const extendInfo = executionExtendInfos ? executionExtendInfos[index] : undefined;
-    if (extendInfo) {
+    if (extendInfo && extendInfo.protocol) {
       const has = tags.find((c) => c.protocol === extendInfo?.protocol);
       if (has) {
         has.count++;
       } else {
         tags.push({
           protocol: extendInfo.protocol!,
-          count: 2,
+          count: 1,
         });
       }
+    }
+
+    if (extendInfo) {
       feesOnTop += extendInfo.feesSize;
       if (extendInfo.tokenIn) {
         swaps++;
