@@ -205,13 +205,7 @@ export const getCollectionActivityV5Options: RouteOptions = {
                     ? "ask"
                     : "bid"
                   : undefined,
-                source: orderSource
-                  ? {
-                      domain: orderSource?.domain,
-                      name: orderSource?.getTitle(),
-                      icon: orderSource?.getIcon(),
-                    }
-                  : undefined,
+                source: sources.getSourceObject(orderSource),
                 criteria: orderCriteria,
               }
             : undefined;
@@ -219,13 +213,7 @@ export const getCollectionActivityV5Options: RouteOptions = {
           order = activity.order?.id
             ? {
                 id: activity.order.id,
-                source: orderSource
-                  ? {
-                      domain: orderSource?.domain,
-                      name: orderSource?.getTitle(),
-                      icon: orderSource?.getIcon(),
-                    }
-                  : undefined,
+                source: sources.getSourceObject(orderSource),
               }
             : undefined;
         }

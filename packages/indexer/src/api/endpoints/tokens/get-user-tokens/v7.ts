@@ -746,13 +746,7 @@ export const getUserTokensV7Options: RouteOptions = {
                         query.displayCurrency
                       )
                     : null,
-                  source: {
-                    id: topBidSource?.address,
-                    domain: topBidSource?.domain,
-                    name: topBidSource?.metadata.title || topBidSource?.name,
-                    icon: topBidSource?.getIcon(),
-                    url: topBidSource?.metadata.url,
-                  },
+                  source: sources.getFullSourceObject(topBidSource),
                 }
               : undefined,
             lastAppraisalValue: r.last_token_appraisal_value
@@ -798,13 +792,7 @@ export const getUserTokensV7Options: RouteOptions = {
               kind: r.floor_sell_kind,
               validFrom: r.floor_sell_value ? r.floor_sell_valid_from : null,
               validUntil: r.floor_sell_value ? r.floor_sell_valid_to : null,
-              source: {
-                id: floorSellSource?.address,
-                domain: floorSellSource?.domain,
-                name: floorSellSource?.metadata.title || floorSellSource?.name,
-                icon: floorSellSource?.getIcon(),
-                url: floorSellSource?.metadata.url,
-              },
+              source: sources.getFullSourceObject(floorSellSource),
               rawData: query.includeRawData ? r.floor_sell_raw_data : undefined,
               isNativeOffChainCancellable: query.includeRawData
                 ? r.floor_sell_raw_data?.zone ===

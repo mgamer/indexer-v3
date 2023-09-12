@@ -496,13 +496,7 @@ export const getTokensDetailsV4Options: RouteOptions = {
               maker: r.floor_sell_maker ? fromBuffer(r.floor_sell_maker) : null,
               validFrom: r.floor_sell_value ? r.floor_sell_valid_from : null,
               validUntil: r.floor_sell_value ? r.floor_sell_valid_to : null,
-              source: {
-                id: source?.address,
-                domain: source?.domain,
-                name: source?.getTitle(),
-                icon: source?.getIcon(),
-                url: source?.metadata.url,
-              },
+              source: sources.getFullSourceObject(source),
             },
             topBid: query.includeTopBid
               ? {

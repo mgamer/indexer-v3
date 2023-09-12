@@ -1113,13 +1113,7 @@ export const getTokensV5Options: RouteOptions = {
                   ? r.floor_sell_quantity_remaining
                   : undefined,
               dynamicPricing,
-              source: {
-                id: floorSellSource?.address,
-                domain: floorSellSource?.domain,
-                name: floorSellSource?.getTitle(),
-                icon: floorSellSource?.getIcon(),
-                url: floorSellSource?.metadata.url,
-              },
+              source: sources.getFullSourceObject(floorSellSource),
             },
             topBid: query.includeTopBid
               ? {
@@ -1147,13 +1141,7 @@ export const getTokensV5Options: RouteOptions = {
                   maker: r.top_buy_maker ? fromBuffer(r.top_buy_maker) : null,
                   validFrom: r.top_buy_valid_from,
                   validUntil: r.top_buy_value ? r.top_buy_valid_until : null,
-                  source: {
-                    id: topBuySource?.address,
-                    domain: topBuySource?.domain,
-                    name: topBuySource?.getTitle(),
-                    icon: topBuySource?.getIcon(),
-                    url: topBuySource?.metadata.url,
-                  },
+                  source: sources.getFullSourceObject(topBuySource),
                   feeBreakdown: feeBreakdown,
                 }
               : undefined,

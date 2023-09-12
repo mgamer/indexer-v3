@@ -103,7 +103,8 @@ export class TopBidWebSocketEventsTriggerJob extends AbstractRabbitMqJobHandler 
       const payloads = [];
       const owners = await this.getOwners(order.token_set_id);
       const ownersChunks = _.chunk(owners, 25 * 20);
-      const source = (await Sources.getInstance()).get(Number(order.source_id_int));
+      const sources = await Sources.getInstance();
+      const source = sources.get(Number(order.source_id_int));
 
       for (const ownersChunk of ownersChunks) {
         const [price, priceNormalized] = await Promise.all([
@@ -143,13 +144,7 @@ export class TopBidWebSocketEventsTriggerJob extends AbstractRabbitMqJobHandler 
             createdAt: new Date(order.created_at).toISOString(),
             validFrom: order.valid_from,
             validUntil: order.valid_until,
-            source: {
-              id: source?.address,
-              domain: source?.domain,
-              name: source?.getTitle(),
-              icon: source?.getIcon(),
-              url: source?.metadata.url,
-            },
+            source: sources.getFullSourceObject(source),
             price: {
               currency: price.currency,
               amount: price.amount,

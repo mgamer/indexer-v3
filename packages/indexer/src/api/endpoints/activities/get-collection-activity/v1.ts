@@ -132,13 +132,7 @@ export const getCollectionActivityV1Options: RouteOptions = {
           txHash: activity.event?.txHash,
           logIndex: activity.event?.logIndex,
           batchIndex: activity.event?.batchIndex,
-          source: source
-            ? {
-                domain: source?.domain,
-                name: source?.getTitle(),
-                icon: source?.getIcon(),
-              }
-            : undefined,
+          source: sources.getSourceObject(source),
         };
       });
 

@@ -669,13 +669,7 @@ export const getJoiOrderObject = async (order: {
       ? null
       : undefined,
     criteria: order.criteria,
-    source: {
-      id: source?.address,
-      domain: source?.domain,
-      name: source?.getTitle(),
-      icon: source?.getIcon(),
-      url: source?.metadata.url,
-    },
+    source: sources.getFullSourceObject(source),
     feeBps: Number(feeBps.toString()),
     feeBreakdown: feeBreakdown,
     expiration: Math.floor(Number(order.expiration)),
@@ -718,9 +712,9 @@ export const getJoiActivityOrderObject = async (order: {
     side: order.side ? (order.side === "sell" ? "ask" : "bid") : undefined,
     source: orderSource
       ? {
-          domain: orderSource?.domain,
-          name: orderSource?.getTitle(),
-          icon: orderSource?.getIcon(),
+          domain: orderSource?.domain ?? null,
+          name: orderSource?.getTitle() ?? null,
+          icon: orderSource?.getIcon() ?? null,
         }
       : undefined,
     criteria: order.criteria,

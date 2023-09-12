@@ -608,13 +608,7 @@ export const getUserTokensV6Options: RouteOptions = {
                     r.floor_sell_missing_royalties ? r.floor_sell_missing_royalties : undefined
                   )
                 : null,
-              source: {
-                id: floorSellSource?.address,
-                domain: floorSellSource?.domain,
-                name: floorSellSource?.metadata.title || floorSellSource?.name,
-                icon: floorSellSource?.getIcon(),
-                url: floorSellSource?.metadata.url,
-              },
+              source: sources.getFullSourceObject(floorSellSource),
             },
             acquiredAt: acquiredTime,
           },

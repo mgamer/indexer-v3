@@ -530,4 +530,32 @@ export class Sources {
       }
     }
   }
+
+  public getFullSourceObject(source: SourcesEntity | undefined): {
+    id: string | null;
+    domain: string | null;
+    name: string | null;
+    icon: string | null;
+    url: string | null;
+  } {
+    return {
+      id: source?.address ?? null,
+      domain: source?.domain ?? null,
+      name: source?.getTitle() ?? null,
+      icon: source?.getIcon() ?? null,
+      url: source?.metadata.url ?? null,
+    };
+  }
+
+  public getSourceObject(source: SourcesEntity | undefined): {
+    domain: string | null;
+    name: string | null;
+    icon: string | null;
+  } {
+    return {
+      domain: source?.domain ?? null,
+      name: source?.getTitle() ?? null,
+      icon: source?.getIcon() ?? null,
+    };
+  }
 }

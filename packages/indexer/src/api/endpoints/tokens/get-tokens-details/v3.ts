@@ -430,10 +430,10 @@ export const getTokensDetailsV3Options: RouteOptions = {
               validFrom: r.floor_sell_valid_from,
               validUntil: r.floor_sell_value ? r.floor_sell_valid_until : null,
               source: {
-                id: source?.address,
-                name: source?.getTitle(),
-                icon: source?.getIcon(),
-                url: source?.metadata.url,
+                id: source?.address ?? null,
+                name: source?.getTitle() ?? null,
+                icon: source?.getIcon() ?? null,
+                url: source?.metadata.url ?? null,
               },
             },
             topBid: {

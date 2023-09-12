@@ -243,13 +243,7 @@ export const getUserActivityV5Options: RouteOptions = {
                     ? "ask"
                     : "bid"
                   : undefined,
-                source: orderSource
-                  ? {
-                      domain: orderSource?.domain,
-                      name: orderSource?.getTitle(),
-                      icon: orderSource?.getIcon(),
-                    }
-                  : undefined,
+                source: sources.getSourceObject(orderSource),
                 criteria: orderCriteria,
               }
             : undefined;

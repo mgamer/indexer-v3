@@ -135,13 +135,7 @@ export class TokenWebsocketEventsTriggerJob extends AbstractRabbitMqJobHandler {
             validFrom: data.after.floor_sell_value ? data.after.floor_sell_valid_from : null,
             validUntil: data.after.floor_sell_value ? data.after.floor_sell_valid_to : null,
 
-            source: {
-              id: floorSellSource?.address,
-              domain: floorSellSource?.domain,
-              name: floorSellSource?.getTitle(),
-              icon: floorSellSource?.getIcon(),
-              url: floorSellSource?.metadata.url,
-            },
+            source: sources.getFullSourceObject(floorSellSource),
           },
           floorAskNormalized: data.after.normalized_floor_sell_value && {
             id: data.after.normalized_floor_sell_id,
@@ -168,13 +162,7 @@ export class TokenWebsocketEventsTriggerJob extends AbstractRabbitMqJobHandler {
             validUntil: data.after.normalized_floor_sell_value
               ? data.after.normalized_floor_sell_valid_to
               : null,
-            source: {
-              id: normalizedFloorSellSource?.address,
-              domain: normalizedFloorSellSource?.domain,
-              name: normalizedFloorSellSource?.getTitle(),
-              icon: normalizedFloorSellSource?.getIcon(),
-              url: normalizedFloorSellSource?.metadata.url,
-            },
+            source: sources.getFullSourceObject(normalizedFloorSellSource),
           },
         },
         createdAt: new Date(data.after.created_at).toISOString(),

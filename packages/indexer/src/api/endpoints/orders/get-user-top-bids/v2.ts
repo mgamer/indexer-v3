@@ -258,13 +258,7 @@ export const getUserTopBidsV2Options: RouteOptions = {
           validFrom: r.top_bid_valid_from,
           validUntil: r.top_bid_valid_until,
           floorDifferencePercentage: _.round(r.floor_difference_percentage || 0, 2),
-          source: {
-            id: source?.address,
-            domain: source?.domain,
-            name: source?.getTitle(),
-            icon: source?.getIcon(),
-            url: source?.metadata.url,
-          },
+          source: sources.getFullSourceObject(source),
           feeBreakdown: r.fee_breakdown,
           criteria: r.bid_criteria,
           token: {
