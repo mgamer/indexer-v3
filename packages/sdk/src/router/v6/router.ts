@@ -48,6 +48,7 @@ import ApprovalProxyAbi from "./abis/ApprovalProxy.json";
 import OpenseaTransferHelperAbi from "./abis/OpenseaTransferHelper.json";
 // Modules
 import CollectionXyzModuleAbi from "./abis/CollectionXyzModule.json";
+import DittoModuleAbi from "./abis/DittoModule.json";
 import ElementModuleAbi from "./abis/ElementModule.json";
 import FoundationModuleAbi from "./abis/FoundationModule.json";
 import LooksRareV2ModuleAbi from "./abis/LooksRareV2Module.json";
@@ -149,6 +150,11 @@ export class Router {
       collectionXyzModule: new Contract(
         Addresses.CollectionXyzModule[chainId] ?? AddressZero,
         CollectionXyzModuleAbi,
+        provider
+      ),
+      dittoModule: new Contract(
+        Addresses.DittoModule[chainId] ?? AddressZero,
+        DittoModuleAbi,
         provider
       ),
       elementModule: new Contract(
@@ -1125,6 +1131,7 @@ export class Router {
     const orderIds: string[] = [];
 
     // Split all listings by their kind
+    const dittoDetails: ListingDetails[] = [];
     const elementErc721Details: ListingDetails[] = [];
     const elementErc721V2Details: ListingDetails[] = [];
     const elementErc1155Details: ListingDetails[] = [];
@@ -1171,6 +1178,10 @@ export class Router {
 
         case "collectionxyz":
           detailsRef = collectionXyzDetails;
+          break;
+
+        case "ditto":
+          detailsRef = dittoDetails;
           break;
 
         case "foundation":
@@ -2173,6 +2184,46 @@ export class Router {
 
       // Mark the listings as successfully handled
       for (const { orderId } of collectionXyzDetails) {
+        success[orderId] = true;
+        orderIds.push(orderId);
+      }
+    }
+
+    // Handle Ditto listings
+    if (dittoDetails.length) {
+      const orders = dittoDetails.map((d) => d.order as Sdk.Ditto.Order);
+      const router = new Sdk.Ditto.Router(this.chainId);
+      const module = this.contracts.dittoModule;
+
+      const fees = getFees(dittoDetails);
+      const price = orders
+        .map((order) => bn(order.params.expectedTokenAmount))
+        .reduce((a, b) => a.add(b), bn(0));
+      const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
+      const totalPrice = price.add(feeAmount);
+
+      // Add executions
+      for (const order of orders) {
+        executions.push({
+          module: module.address,
+          data: router.fillBuyOrderTx(taker, order).data,
+          value: totalPrice,
+        });
+      }
+
+      // Track any possibly required swap
+      swapDetails.push({
+        tokenIn: buyInCurrency,
+        tokenOut: Sdk.Common.Addresses.Native[this.chainId],
+        tokenOutAmount: totalPrice,
+        recipient: module.address,
+        refundTo: relayer,
+        details: dittoDetails,
+        executionIndex: executions.length - 1,
+      });
+
+      // Mark the listings as successfully handled
+      for (const { orderId } of dittoDetails) {
         success[orderId] = true;
         orderIds.push(orderId);
       }
@@ -3500,7 +3551,7 @@ export class Router {
     }
 
     if (!txs.length) {
-      throw new Error("Could not fees any of the requested orders");
+      throw new Error("Could not fill any of the requested orders");
     }
 
     return {
@@ -3509,7 +3560,7 @@ export class Router {
     };
   }
 
-  // fees multiple bids in a single transaction
+  // Fill multiple bids in a single transaction
   public async fillBidsTx(
     details: BidDetails[],
     taker: string,
@@ -3808,6 +3859,11 @@ export class Router {
 
         case "collectionxyz": {
           module = this.contracts.collectionXyzModule;
+          break;
+        }
+
+        case "ditto": {
+          module = this.contracts.dittoModule;
           break;
         }
 
@@ -4404,6 +4460,25 @@ export class Router {
                 },
                 fees,
               ]),
+              value: 0,
+            },
+          });
+
+          success[detail.orderId] = true;
+
+          break;
+        }
+
+        case "ditto": {
+          const order = detail.order as Sdk.Ditto.Order;
+          const module = this.contracts.dittoswapModule;
+          const router = new Sdk.Ditto.Router(this.chainId);
+
+          executionsWithDetails.push({
+            detail,
+            execution: {
+              module: module.address,
+              data: router.fillSellOrderTx(taker, order).data,
               value: 0,
             },
           });
