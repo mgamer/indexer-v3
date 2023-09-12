@@ -3,7 +3,6 @@ import {
   CollectionMetadata,
   MapEntry,
   Metadata,
-  ProviderMethod,
   TokenMetadata,
   TokenMetadataBySlugResult,
 } from "../types";
@@ -28,21 +27,18 @@ export abstract class AbstractBaseProvider {
   }
 
   async getTokensMetadata(
-    tokens: { contract: string; tokenId: string }[],
-    method: ProviderMethod
+    tokens: { contract: string; tokenId: string }[]
   ): Promise<TokenMetadata[]> {
     // handle universal extend/custom logic here
-    return this._getTokensMetadata(tokens, method);
+    return this._getTokensMetadata(tokens);
   }
 
   async getTokensMetadataBySlug(
-    contract: string,
     slug: string,
-    method?: ProviderMethod,
-    continuation?: string
+    continuation: string
   ): Promise<TokenMetadataBySlugResult> {
     // handle universal extend/custom logic here
-    return this._getTokensMetadataBySlug(contract, slug, method, continuation);
+    return this._getTokensMetadataBySlug(slug, continuation);
   }
 
   normalizeMetadata = (collection: Collection): Metadata => {
@@ -196,14 +192,12 @@ export abstract class AbstractBaseProvider {
   ): Promise<CollectionMetadata>;
 
   protected abstract _getTokensMetadata(
-    tokens: { contract: string; tokenId: string }[],
-    method: ProviderMethod
+    tokens: { contract: string; tokenId: string }[]
   ): Promise<TokenMetadata[]>;
 
   protected abstract _getTokensMetadataBySlug(
     contract: string,
     slug: string,
-    method?: ProviderMethod,
     continuation?: string
   ): Promise<TokenMetadataBySlugResult>;
 }

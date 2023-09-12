@@ -1,13 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { config } from "@/config/index";
-import { CollectionMetadata } from "../types";
+import { CollectionMetadata, TokenMetadata, TokenMetadataBySlugResult } from "../types";
 import { logger } from "@/common/logger";
 import { Contract } from "ethers";
 import { Interface } from "ethers/lib/utils";
 import { baseProvider } from "@/common/provider";
 import axios from "axios";
-import { normalizeMetadata } from "./utils";
+import { RequestWasThrottledError, normalizeMetadata } from "./utils";
+import _ from "lodash";
 
 export class OpenseaMetadataProvider {
   async _getCollectionMetadata(contract: string, tokenId: string): Promise<CollectionMetadata> {
@@ -158,6 +159,136 @@ export class OpenseaMetadataProvider {
         isFallback: true,
       };
     }
+  }
+
+  async _getTokensMetadata(
+    tokens: { contract: string; tokenId: string }[]
+  ): Promise<TokenMetadata[]> {
+    const searchParams = new URLSearchParams();
+    for (const { contract, tokenId } of tokens) {
+      searchParams.append("asset_contract_addresses", contract);
+      searchParams.append("token_ids", tokenId);
+    }
+
+    const url = `${
+      !this.isOSTestnet(config.chainId)
+        ? "https://api.opensea.io"
+        : "https://testnets-api.opensea.io"
+    }/api/v1/assets?${searchParams.toString()}`;
+
+    const data = await axios
+      .get(!this.isOSTestnet(config.chainId) ? config.openseaBaseUrlAlt || url : url, {
+        headers: !this.isOSTestnet(config.chainId)
+          ? {
+              url,
+              "X-API-KEY": config.openSeaApiKey.trim(),
+              Accept: "application/json",
+            }
+          : {
+              Accept: "application/json",
+            },
+      })
+      .then((response) => response.data)
+      .catch((error) => {
+        logger.error(
+          "opensea-fetcher",
+          `fetchTokens error. url:${url} chainId:${config.chainId}, message:${
+            error.message
+          },  status:${error.response?.status}, data:${JSON.stringify(
+            error.response?.data
+          )}, url:${JSON.stringify(error.config?.url)}, headers:${JSON.stringify(
+            error.config?.headers?.url
+          )}`
+        );
+
+        this.handleError(error);
+      });
+
+    return data.assets.map(this.parse).filter(Boolean);
+  }
+
+  async _getTokensMetadataBySlug(
+    slug: string,
+    continuation?: string
+  ): Promise<TokenMetadataBySlugResult> {
+    const searchParams = new URLSearchParams();
+    if (continuation) {
+      searchParams.append("cursor", continuation);
+    }
+    if (slug) {
+      searchParams.append("collection_slug", slug);
+    }
+    searchParams.append("limit", "200");
+
+    const url = `${
+      config.chainId === 1
+        ? config.openseaSlugBaseUrl || "https://api.opensea.io"
+        : "https://rinkeby-api.opensea.io"
+    }/api/v1/assets?${searchParams.toString()}`;
+    const data = await axios
+      .get(url, {
+        headers:
+          config.chainId === 1
+            ? {
+                [config.openSeaSlugApiHeaders ?? "X-API-KEY"]: config.openSeaSlugApiKey.trim(),
+                Accept: "application/json",
+              }
+            : {
+                Accept: "application/json",
+              },
+      })
+      .then((response) => response.data)
+      .catch((error) => this.handleError(error));
+
+    const assets = data.assets.map(this.parse).filter(Boolean);
+    return {
+      metadata: assets,
+      continuation: data.next ?? undefined,
+      previous: data.previous ?? undefined,
+    };
+  }
+
+  handleError(error: any) {
+    if (error.response?.status === 429 || error.response?.status === 503) {
+      let delay = 1;
+
+      if (error.response.data.detail?.startsWith("Request was throttled. Expected available in")) {
+        try {
+          delay = error.response.data.detail.split(" ")[6];
+        } catch {
+          // Skip on any errors
+        }
+      }
+
+      throw new RequestWasThrottledError(error.response.statusText, delay);
+    }
+
+    throw error;
+  }
+
+  parse(asset: any): TokenMetadata {
+    return {
+      contract: asset.asset_contract.address,
+      tokenId: asset.token_id,
+      collection: _.toLower(asset.asset_contract.address),
+      slug: asset.collection.slug,
+      name: asset.name,
+      flagged: asset.supports_wyvern != null ? !asset.supports_wyvern : false,
+      // Token descriptions are a waste of space for most collections we deal with
+      // so by default we ignore them (this behaviour can be overridden if needed).
+      description: asset.description,
+      imageUrl: asset.image_url,
+      imageOriginalUrl: asset.image_original_url,
+      animationOriginalUrl: asset.animation_original_url,
+      metadataOriginalUrl: asset.token_metadata,
+      mediaUrl: asset.animation_url,
+      attributes: (asset.traits || []).map((trait: any) => ({
+        key: trait.trait_type ?? "property",
+        value: trait.value,
+        kind: typeof trait.value == "number" ? "number" : "string",
+        rank: 1,
+      })),
+    };
   }
 
   getOSNetworkName(chainId: number): string {
