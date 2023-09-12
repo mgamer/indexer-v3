@@ -33,6 +33,7 @@ import {
   SwapDetail,
   PreSignature,
   TransfersResult,
+  TxAttribute,
 } from "./types";
 import { SwapInfo, generateSwapInfo, mergeSwapInfos } from "./swap/index";
 import { generateFTApprovalTxData, generateNFTApprovalTxData, isETH, isWETH } from "./utils";
@@ -87,23 +88,37 @@ function extractIdentifiersFromExections(
   executions: ExecutionInfo[],
   executionExtendInfos?: ExecutionExtendInfo[]
 ) {
-  const tags: string[] = [];
+  const tags: {
+    protocol: string;
+    count: number;
+  }[] = [];
+
+  let feesOnTop = 0;
+  let swaps = 0;
+
   executions.forEach((execution, index) => {
     const extendInfo = executionExtendInfos ? executionExtendInfos[index] : undefined;
-    // const selector = execution.data.slice(0, 10);
-    // tags.push(`module-${execution.module}`);
-    // tags.push(`method-${selector}`);
     if (extendInfo) {
-      if (extendInfo.protocol) {
-        tags.push(extendInfo.protocol);
+      const has = tags.find((c) => c.protocol === extendInfo?.protocol);
+      if (has) {
+        has.count++;
+      } else {
+        tags.push({
+          protocol: extendInfo.protocol!,
+          count: 2,
+        });
       }
-      tags.push(`with-fees-${extendInfo.feesSize}`);
+      feesOnTop += extendInfo.feesSize;
       if (extendInfo.tokenIn) {
-        tags.push(`swaps-${extendInfo.tokenIn}-${extendInfo.tokenOut}-${extendInfo.transfers}}`);
+        swaps++;
       }
     }
   });
-  return tags;
+  return {
+    feesOnTop,
+    tags,
+    swaps,
+  };
 }
 
 export class Router {
@@ -385,7 +400,7 @@ export class Router {
       permits: { kind: "erc20"; data: PermitWithTransfers }[];
       preSignatures: PreSignature[];
       txData: TxData;
-      txTags: string[];
+      txTags: TxAttribute;
       orderIds: string[];
     }[] = [];
     const success: { [orderId: string]: boolean } = {};
@@ -415,7 +430,15 @@ export class Router {
           approvals: [],
           permits: [],
           preSignatures: [],
-          txTags: ["fill-listings", "manifold", "single-order"],
+          txTags: {
+            kind: "sale",
+            listings: [
+              {
+                protocol: "manifold",
+                count: 1,
+              },
+            ],
+          },
           txData: exchange.fillOrderTx(
             taker,
             Number(order.params.id),
@@ -529,18 +552,19 @@ export class Router {
               approvals: [],
               permits: [],
               preSignatures: [],
-              txTags: [
-                "fill-listings",
-                "blur",
-                `multiple-order`,
-                String(orderIds.length),
-                `with-fees-${String(
-                  successfulBlurCompatibleListings.reduce(
-                    (total, detail) => total + (detail.fees?.length ?? 0),
-                    0
-                  )
-                )}`,
-              ],
+              txTags: {
+                kind: "sale",
+                listings: [
+                  {
+                    protocol: "blur",
+                    count: orderIds.length,
+                  },
+                ],
+                feesOnTop: successfulBlurCompatibleListings.reduce(
+                  (total, detail) => total + (detail.fees?.length ?? 0),
+                  0
+                ),
+              },
               txData: {
                 from: data.from,
                 to: data.to,
@@ -686,12 +710,16 @@ export class Router {
               approvals: approval ? [approval] : [],
               permits: [],
               preSignatures: [],
-              txTags: [
-                "fill-listings",
-                "seaport-v1.5",
-                "single-order",
-                `with-fees-${order.getInfo()?.fees.length ?? 0}`,
-              ],
+              txTags: {
+                kind: "sale",
+                listings: [
+                  {
+                    protocol: "seaport-v1.5",
+                    count: 1,
+                  },
+                ],
+                fees: order.getInfo()?.fees.length,
+              },
               txData: await exchange.fillOrderTx(
                 taker,
                 order,
@@ -718,13 +746,16 @@ export class Router {
               approvals: approval ? [approval] : [],
               permits: [],
               preSignatures: [],
-              txTags: [
-                "fill-listings",
-                "seaport-v1.5",
-                `multiple-order`,
-                String(details.length),
-                `with-fees-${totalFeesLength}`,
-              ],
+              txTags: {
+                kind: "sale",
+                listings: [
+                  {
+                    protocol: "seaport-v1.5",
+                    count: details.length,
+                  },
+                ],
+                fees: totalFeesLength,
+              },
               txData: await exchange.fillOrdersTx(
                 taker,
                 orders,
@@ -782,12 +813,16 @@ export class Router {
               approvals: approval ? [approval] : [],
               permits: [],
               preSignatures: [],
-              txTags: [
-                "fill-listings",
-                "alienswap",
-                `single-order`,
-                `with-fees-${order.getInfo()?.fees.length ?? 0}`,
-              ],
+              txTags: {
+                kind: "sale",
+                listings: [
+                  {
+                    protocol: "alienswap",
+                    count: 1,
+                  },
+                ],
+                fees: order.getInfo()?.fees.length,
+              },
               txData: await exchange.fillOrderTx(
                 taker,
                 order,
@@ -813,13 +848,16 @@ export class Router {
               approvals: approval ? [approval] : [],
               permits: [],
               preSignatures: [],
-              txTags: [
-                "fill-listings",
-                "alienswap",
-                `multiple-order`,
-                String(details.length),
-                `with-fees-${totalFeesLength}`,
-              ],
+              txTags: {
+                kind: "sale",
+                listings: [
+                  {
+                    protocol: "alienswap",
+                    count: details.length,
+                  },
+                ],
+                fees: totalFeesLength,
+              },
               txData: await exchange.fillOrdersTx(
                 taker,
                 orders,
@@ -895,7 +933,15 @@ export class Router {
               approvals: approval ? [approval] : [],
               permits: [],
               preSignatures: preSignatures,
-              txTags: ["fill-listings", "payment-processor", `sweep-order`, String(details.length)],
+              txTags: {
+                kind: "sale",
+                listings: [
+                  {
+                    protocol: "payment-processor-sweep",
+                    count: details.length,
+                  },
+                ],
+              },
               txData: exchange.sweepCollectionTx(taker, bundledOrder, orders),
               orderIds: details.map((d) => d.orderId),
             },
@@ -927,12 +973,15 @@ export class Router {
               approvals: approval ? [approval] : [],
               permits: [],
               preSignatures: preSignatures,
-              txTags: [
-                "fill-listings",
-                "payment-processor",
-                `multiple-order`,
-                String(details.length),
-              ],
+              txTags: {
+                kind: "sale",
+                listings: [
+                  {
+                    protocol: "payment-processor",
+                    count: details.length,
+                  },
+                ],
+              },
               txData: exchange.fillOrdersTx(taker, orders, takeOrders),
               orderIds: details.map((d) => d.orderId),
             },
@@ -1129,7 +1178,7 @@ export class Router {
       };
 
       executionExtendInfos.push({
-        protocol: "element",
+        protocol: elementErc721Details[0].kind,
         feesSize: fees.length,
       });
 
@@ -1188,7 +1237,7 @@ export class Router {
       };
 
       executionExtendInfos.push({
-        protocol: "element",
+        protocol: elementErc721V2Details[0].kind,
         feesSize: fees.length,
       });
 
@@ -1247,7 +1296,7 @@ export class Router {
       };
 
       executionExtendInfos.push({
-        protocol: "element",
+        protocol: elementErc1155Details[0].kind,
         feesSize: fees.length,
       });
 
@@ -1301,7 +1350,7 @@ export class Router {
       const totalPrice = price.add(feeAmount);
 
       executionExtendInfos.push({
-        protocol: "element",
+        protocol: foundationDetails[0].kind,
         feesSize: fees.length,
       });
 
@@ -1367,7 +1416,7 @@ export class Router {
       const totalPrice = price.add(feeAmount);
 
       executionExtendInfos.push({
-        protocol: "looksrare",
+        protocol: looksRareV2Details[0].kind,
         feesSize: fees.length,
       });
 
@@ -1448,7 +1497,7 @@ export class Router {
         const buyInCurrencyIsETH = isETH(this.chainId, buyInCurrency);
 
         executionExtendInfos.push({
-          protocol: "seaport-v1.1",
+          protocol: currencyDetails[0].kind,
           feesSize: fees.length + totalFeesLength,
         });
 
@@ -1573,7 +1622,7 @@ export class Router {
         }, 0);
 
         executionExtendInfos.push({
-          protocol: "seaport-v1.4",
+          protocol: currencyDetails[0].kind,
           feesSize: fees.length + totalFeesLength,
         });
 
@@ -1702,7 +1751,7 @@ export class Router {
         }, 0);
 
         executionExtendInfos.push({
-          protocol: "seaport-v1.5",
+          protocol: currencyDetails[0].kind,
           feesSize: fees.length + totalFeesLength,
         });
 
@@ -1830,7 +1879,7 @@ export class Router {
         }, 0);
 
         executionExtendInfos.push({
-          protocol: "alienswap",
+          protocol: currencyDetails[0].kind,
           feesSize: fees.length + totalFeesLength,
         });
 
@@ -1975,7 +2024,7 @@ export class Router {
           };
 
       executionExtendInfos.push({
-        protocol: "collection.xyz",
+        protocol: collectionXyzDetails[0].kind,
         feesSize: fees.length,
       });
 
@@ -2037,7 +2086,7 @@ export class Router {
       const totalPrice = price.add(feeAmount);
 
       executionExtendInfos.push({
-        protocol: "sudoswap",
+        protocol: sudoswapDetails[0].kind,
         feesSize: fees.length,
       });
 
@@ -2109,7 +2158,7 @@ export class Router {
       const totalPrice = price.add(feeAmount);
 
       executionExtendInfos.push({
-        protocol: "sudoswap-v2",
+        protocol: sudoswapV2Details[0].kind,
         feesSize: fees.length,
       });
 
@@ -2179,7 +2228,7 @@ export class Router {
       const totalPrice = price.add(feeAmount);
 
       executionExtendInfos.push({
-        protocol: "midaswap",
+        protocol: midaswapDetails[0].kind,
         feesSize: fees.length,
       });
 
@@ -2244,7 +2293,7 @@ export class Router {
       const totalPrice = price.add(feeAmount);
 
       executionExtendInfos.push({
-        protocol: "caviar-v1",
+        protocol: caviarV1Details[0].kind,
         feesSize: fees.length,
       });
 
@@ -2335,7 +2384,7 @@ export class Router {
       const totalPrice = price.add(feeAmount);
 
       executionExtendInfos.push({
-        protocol: "nftx",
+        protocol: details[0].kind,
         feesSize: fees.length,
       });
 
@@ -2387,7 +2436,7 @@ export class Router {
       if (orders.length === 1) {
         try {
           executionExtendInfos.push({
-            protocol: "x2y2",
+            protocol: x2y2Details[0].kind,
             feesSize: fees.length,
           });
 
@@ -2484,7 +2533,7 @@ export class Router {
 
         if (inputs.some(Boolean)) {
           executionExtendInfos.push({
-            protocol: "x2y2",
+            protocol: x2y2Details[0].kind,
             feesSize: fees.length,
           });
           executions.push({
@@ -2576,7 +2625,7 @@ export class Router {
         }, 0);
 
         executionExtendInfos.push({
-          protocol: "zeroex-v4",
+          protocol: zeroexV4Erc721Details[0].kind,
           feesSize: fees.length + totalFeesLength,
         });
 
@@ -2686,7 +2735,7 @@ export class Router {
           return count + (order.params.fees.length ?? 0);
         }, 0);
         executionExtendInfos.push({
-          protocol: "zeroex-v4",
+          protocol: zeroexV4Erc1155Details[0].kind,
           feesSize: fees.length + totalFeesLength,
         });
 
@@ -2756,7 +2805,7 @@ export class Router {
       const totalPrice = price.add(feeAmount);
 
       executionExtendInfos.push({
-        protocol: "zora",
+        protocol: zoraDetails[0].kind,
         feesSize: fees.length,
       });
 
@@ -2830,7 +2879,7 @@ export class Router {
       const totalPrice = price.add(feeAmount);
 
       executionExtendInfos.push({
-        protocol: "rarible",
+        protocol: raribleDetails[0].kind,
         feesSize: fees.length,
       });
 
@@ -2896,7 +2945,7 @@ export class Router {
       const totalPrice = price.add(feeAmount);
 
       executionExtendInfos.push({
-        protocol: "superrare",
+        protocol: superRareDetails[0].kind,
         feesSize: fees.length,
       });
 
@@ -2968,7 +3017,7 @@ export class Router {
       const totalPrice = price.add(feeAmount);
 
       executionExtendInfos.push({
-        protocol: "cryptopunk",
+        protocol: cryptoPunksDetails[0].kind,
         feesSize: fees.length,
       });
 
@@ -3020,7 +3069,7 @@ export class Router {
       const totalPrice = price.add(feeAmount);
 
       executionExtendInfos.push({
-        protocol: "payment-processor",
+        protocol: paymentProcessorDetails[0].kind,
         feesSize: fees.length,
       });
 
@@ -3250,15 +3299,17 @@ export class Router {
           throw new Error("Buying with permit not supported");
         }
 
+        const info = extractIdentifiersFromExections(executions, executionExtendInfos);
+
         txs.push({
           approvals: [],
           preSignatures: [],
-          txTags: [
-            "fill-listings",
-            "router",
-            String(details.length),
-            ...extractIdentifiersFromExections(executions, executionExtendInfos),
-          ],
+          txTags: {
+            kind: "sale",
+            listings: info.tags,
+            feesOnTop: info.feesOnTop,
+            swaps: info.swaps,
+          },
           permits: await new PermitHandler(this.chainId, this.provider)
             .generate(relayer, ftTransferItems)
             .then((permits) =>
@@ -3292,24 +3343,17 @@ export class Router {
           }
         }
 
+        const info = extractIdentifiersFromExections(executions, executionExtendInfos);
         txs.push({
           approvals: Object.values(uniqueApprovals),
           permits: [],
           preSignatures: [],
-          txTags: ftTransferItems.length
-            ? [
-                "fill-listings",
-                "approval-proxy",
-                String(details.length),
-                `transfers-${ftTransferItems.length}`,
-                ...extractIdentifiersFromExections(executions, executionExtendInfos),
-              ]
-            : [
-                "fill-listings",
-                "router",
-                String(details.length),
-                ...extractIdentifiersFromExections(executions, executionExtendInfos),
-              ],
+          txTags: {
+            kind: "sale",
+            listings: info.tags,
+            feesOnTop: info.feesOnTop,
+            swaps: info.swaps,
+          },
           txData: {
             from: relayer,
             ...(ftTransferItems.length
@@ -3390,7 +3434,7 @@ export class Router {
     const txs: {
       approvals: NFTApproval[];
       txData: TxData;
-      txTags: string[];
+      txTags: TxAttribute;
       orderIds: string[];
       preSignatures: PreSignature[];
     }[] = [];
@@ -3461,7 +3505,15 @@ export class Router {
 
             txs.push({
               approvals: [],
-              txTags: ["fill-bids", "blur", `multiple-order`, String(blurDetails.length)],
+              txTags: {
+                kind: "sale",
+                bids: [
+                  {
+                    protocol: "blur",
+                    count: blurDetails.length,
+                  },
+                ],
+              },
               txData: {
                 from: data.from,
                 to: data.to,
@@ -3543,7 +3595,15 @@ export class Router {
       txs.push({
         approvals: uniqBy(approvals, ({ txData: { from, to, data } }) => `${from}-${to}-${data}`),
         preSignatures,
-        txTags: ["fill-bids", "payment-processor", `multiple-order`, String(orders.length)],
+        txTags: {
+          kind: "sale",
+          bids: [
+            {
+              protocol: "payment-processor",
+              count: orders.length,
+            },
+          ],
+        },
         txData: exchange.fillOrdersTx(taker, orders, takeOrders),
         orderIds: paymentProcessorDetails.map((d) => d.orderId),
       });
@@ -3953,7 +4013,15 @@ export class Router {
 
               // Fill directly
               txs.push({
-                txTags: ["fill-bids", "seaport-v1.5-partial", `isProtected`],
+                txTags: {
+                  kind: "sale",
+                  bids: [
+                    {
+                      protocol: "seaport-v1.5-partial",
+                      count: 1,
+                    },
+                  ],
+                },
                 txData: {
                   from: taker,
                   to: Sdk.SeaportV15.Addresses.Exchange[this.chainId],
@@ -4539,13 +4607,21 @@ export class Router {
 
       // Use the on-received ERC721/ERC1155 hooks for approval-less bid filling
       if (detail.contractKind === "erc721") {
+        const info = extractIdentifiersFromExections(
+          [execution],
+          [
+            {
+              protocol: detail.kind,
+              feesSize: detail.fees?.length ?? 0,
+            },
+          ]
+        );
         txs.push({
-          txTags: [
-            "fill-bids",
-            "erc721-approval-less",
-            String(details.length),
-            ...extractIdentifiersFromExections([execution]),
-          ],
+          txTags: {
+            kind: "sale",
+            bids: info.tags,
+            feesOnTop: info.feesOnTop,
+          },
           txData: {
             from: taker,
             to: detail.contract,
@@ -4560,13 +4636,21 @@ export class Router {
           orderIds: [detail.orderId],
         });
       } else {
+        const info = extractIdentifiersFromExections(
+          [execution],
+          [
+            {
+              protocol: detail.kind,
+              feesSize: detail.fees?.length ?? 0,
+            },
+          ]
+        );
         txs.push({
-          txTags: [
-            "fill-bids",
-            "erc1155-approval-less",
-            String(details.length),
-            ...extractIdentifiersFromExections([execution]),
-          ],
+          txTags: {
+            kind: "sale",
+            bids: info.tags,
+            feesOnTop: info.feesOnTop,
+          },
           txData: {
             from: taker,
             to: detail.contract,
@@ -4582,16 +4666,19 @@ export class Router {
         });
       }
     } else if (executionsWithDetails.length >= 1) {
+      const info = extractIdentifiersFromExections(
+        executionsWithDetails.map(({ execution }) => execution),
+        executionsWithDetails.map(({ detail }) => ({
+          protocol: detail.kind,
+          feesSize: detail.fees?.length ?? 0,
+        }))
+      );
       txs.push({
-        txTags: [
-          "fill-bids",
-          "approval-proxy",
-          String(details.length),
-          `transfers-${nftTransferItems.length}`,
-          ...extractIdentifiersFromExections(
-            executionsWithDetails.map(({ execution }) => execution)
-          ),
-        ],
+        txTags: {
+          kind: "sale",
+          bids: info.tags,
+          feesOnTop: info.feesOnTop,
+        },
         txData: {
           from: taker,
           to: this.contracts.approvalProxy.address,

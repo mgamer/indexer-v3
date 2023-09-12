@@ -199,10 +199,27 @@ export type PreSignature = {
   data: any;
 };
 
+export type TxAttribute = {
+  kind: "approval" | "sale" | "mint" | "swap";
+  approvals?: number;
+  listings?: {
+    protocol: string;
+    count: number;
+  }[];
+  bids?: {
+    protocol: string;
+    count: number;
+  }[];
+  mints?: number;
+  swaps?: number;
+  feesOnTop?: number;
+  fees?: number;
+};
+
 export type FillListingsResult = {
   txs: {
     approvals: FTApproval[];
-    txTags: string[];
+    txTags: TxAttribute;
     txData: TxData;
     orderIds: string[];
     permits: Permit[];
@@ -237,7 +254,7 @@ export type FillBidsResult = {
   txs: {
     approvals: NFTApproval[];
     txData: TxData;
-    txTags: string[];
+    txTags: TxAttribute;
     orderIds: string[];
     preSignatures: PreSignature[];
   }[];
