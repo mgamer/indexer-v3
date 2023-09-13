@@ -516,6 +516,12 @@ export const getTokensV6Options: RouteOptions = {
         );
 
         sourceConditions.push("contract IN ($/tokensContracts:csv/)");
+      } else if (query.community) {
+        sourceConditions.push(`contract IN (
+            SELECT DISTINCT contract
+            FROM collections
+            WHERE community = $/community/
+          )`);
       }
 
       sourceCte = `
