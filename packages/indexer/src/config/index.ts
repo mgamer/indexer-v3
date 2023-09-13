@@ -95,6 +95,7 @@ export const config = {
   ),
 
   simplehashApiKey: String(process.env.SIMPLEHASH_API_KEY),
+  centerdevApiKey: String(process.env.CENTERDEV_API_KEY),
 
   x2y2ApiKey: String(process.env.X2Y2_API_KEY),
   cbApiKey: String(process.env.CB_API_KEY),
