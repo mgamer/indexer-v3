@@ -10,7 +10,7 @@ import { logger } from "@/common/logger";
 import { formatEth, fromBuffer } from "@/common/utils";
 import { Sources } from "@/models/sources";
 import { Assets } from "@/utils/assets";
-// import * as registry from "@/utils/royalties/registry";
+import * as registry from "@/utils/royalties/registry";
 
 const version = "v3";
 
@@ -359,7 +359,11 @@ export const getCollectionV3Options: RouteOptions = {
             }
       );
 
-      return { collection: result };
+      const tokenRoyalties =
+        query.tokenId != undefined
+          ? await registry.getRegistryRoyaltiesWithCache(result.primaryContract, query.tokenId)
+          : null;
+      return { collection: { ...result, tokenRoyalties } };
     } catch (error) {
       logger.error(`get-collection-${version}-handler`, `Handler failure: ${error}`);
       throw error;

@@ -7,6 +7,7 @@ import { bn, fromBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { idb } from "@/common/db";
 import { Royalty, updateRoyaltySpec } from "@/utils/royalties";
+import { redis } from "@/common/redis";
 
 const DEFAULT_PRICE = "1000000000000000000";
 
@@ -97,4 +98,15 @@ export const getRegistryRoyalties = async (token: string, tokenId: string) => {
   }
 
   return latestRoyalties;
+};
+
+export const getRegistryRoyaltiesWithCache = async (token: string, tokenId: string) => {
+  let result: Royalty[] | null = [];
+  const cacheKey = `token-royalties:${token}:${tokenId}`;
+  result = await redis.get(cacheKey).then((r) => (r ? (JSON.parse(r) as Royalty[]) : null));
+  if (!result) {
+    result = await getRegistryRoyalties(token, tokenId);
+    await redis.set(cacheKey, JSON.stringify(result), "EX", 10 * 60);
+  }
+  return result;
 };
