@@ -422,6 +422,16 @@ export const getTokensV6Options: RouteOptions = {
         `;
     }
 
+    // Get the collections from the collection set
+    let collections: any[] = [];
+    if (query.collectionsSetId) {
+      collections = await CollectionSets.getCollectionsIds(query.collectionsSetId);
+
+      if (_.isEmpty(collections)) {
+        throw Boom.badRequest(`No collections for collection set ${query.collectionsSetId}`);
+      }
+    }
+
     let sourceCte = "";
     if (query.nativeSource || query.excludeEOA) {
       const sourceConditions: string[] = [];
@@ -461,6 +471,7 @@ export const getTokensV6Options: RouteOptions = {
         sourceConditions.push(`currency IN ($/currenciesFilter:raw/)`);
       }
 
+      // Retrieve the contract from the different filters options
       if (query.contract) {
         sourceConditions.push(`contract = $/contract/`);
       } else if (query.collection) {
@@ -486,6 +497,24 @@ export const getTokensV6Options: RouteOptions = {
         query.tokensContracts = _.uniq(tokensContracts).map((contract: string) =>
           toBuffer(contract)
         );
+
+        sourceConditions.push("contract IN ($/tokensContracts:csv/)");
+      } else if (query.collectionsSetId && !_.isEmpty(collections)) {
+        const tokensContracts = [];
+
+        for (const collection of collections) {
+          if (collection.includes(":")) {
+            const [contract, ,] = collection.split(":");
+            tokensContracts.push(contract);
+          } else {
+            tokensContracts.push(collection);
+          }
+        }
+
+        query.tokensContracts = _.uniq(tokensContracts).map((contract: string) =>
+          toBuffer(contract)
+        );
+
         sourceConditions.push("contract IN ($/tokensContracts:csv/)");
       }
 
@@ -586,20 +615,11 @@ export const getTokensV6Options: RouteOptions = {
         `;
       }
 
-      let collections: any[] = [];
-      if (query.collectionsSetId) {
-        collections = await CollectionSets.getCollectionsIds(query.collectionsSetId);
-
-        if (_.isEmpty(collections)) {
-          throw Boom.badRequest(`No collections for collection set ${query.collectionsSetId}`);
-        }
-
-        if (collections.length > 20) {
-          baseQuery += `
+      if (collections.length > 20) {
+        baseQuery += `
             JOIN collections_sets_collections csc
               ON t.collection_id = csc.collection_id
           `;
-        }
       }
 
       if (query.attributes) {
