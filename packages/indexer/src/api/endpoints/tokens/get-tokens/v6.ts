@@ -638,7 +638,7 @@ export const getTokensV6Options: RouteOptions = {
       if (query.minFloorAskPrice !== undefined) {
         (query as any).minFloorSellValue = query.minFloorAskPrice * 10 ** 18;
         conditions.push(
-          `${query.nativeSource ? "s." : "t."}${
+          `${query.nativeSource || query.excludeEOA ? "s." : "t."}${
             query.normalizeRoyalties ? "normalized_" : ""
           }floor_sell_value >= $/minFloorSellValue/`
         );
@@ -647,7 +647,7 @@ export const getTokensV6Options: RouteOptions = {
       if (query.maxFloorAskPrice !== undefined) {
         (query as any).maxFloorSellValue = query.maxFloorAskPrice * 10 ** 18;
         conditions.push(
-          `${query.nativeSource ? "s." : "t."}${
+          `${query.nativeSource || query.excludeEOA ? "s." : "t."}${
             query.normalizeRoyalties ? "normalized_" : ""
           }floor_sell_value <= $/maxFloorSellValue/`
         );
@@ -715,7 +715,7 @@ export const getTokensV6Options: RouteOptions = {
 
         (query as any).currenciesFilter = _.join((query as any).currenciesFilter, ",");
 
-        if (query.nativeSource) {
+        if (query.nativeSource || query.excludeEOA) {
           // if nativeSource is passed in, then we have two floor_sell_currency columns
           conditions.push(`s.floor_sell_currency IN ($/currenciesFilter:raw/)`);
         } else {
@@ -790,11 +790,12 @@ export const getTokensV6Options: RouteOptions = {
                   throw new Error("Invalid continuation string used");
                 }
                 const sign = query.sortDirection == "desc" ? "<" : ">";
-                const sortColumn = query.nativeSource
-                  ? "s.floor_sell_value"
-                  : query.normalizeRoyalties
-                  ? "t.normalized_floor_sell_value"
-                  : "t.floor_sell_value";
+                const sortColumn =
+                  query.nativeSource || query.excludeEOA
+                    ? "s.floor_sell_value"
+                    : query.normalizeRoyalties
+                    ? "t.normalized_floor_sell_value"
+                    : "t.floor_sell_value";
 
                 if (contArr[0] !== "null") {
                   conditions.push(`(
@@ -853,11 +854,12 @@ export const getTokensV6Options: RouteOptions = {
           }
           case "floorAskPrice":
           default: {
-            const sortColumn = query.nativeSource
-              ? `${union ? "" : "s."}floor_sell_value`
-              : query.normalizeRoyalties
-              ? `${union ? "" : "t."}normalized_floor_sell_value`
-              : `${union ? "" : "t."}floor_sell_value`;
+            const sortColumn =
+              query.nativeSource || query.excludeEOA
+                ? `${union ? "" : "s."}floor_sell_value`
+                : query.normalizeRoyalties
+                ? `${union ? "" : "t."}normalized_floor_sell_value`
+                : `${union ? "" : "t."}floor_sell_value`;
 
             return ` ORDER BY ${sortColumn} ${
               query.sortDirection || "ASC"
