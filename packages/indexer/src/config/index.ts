@@ -94,6 +94,8 @@ export const config = {
     process.env.OPENSEA_CROSS_POSTING_API_KEY || process.env.OPENSEA_API_KEY
   ),
 
+  simplehashApiKey: String(process.env.SIMPLEHASH_API_KEY),
+
   x2y2ApiKey: String(process.env.X2Y2_API_KEY),
   cbApiKey: String(process.env.CB_API_KEY),
   orderFetcherApiKey: String(process.env.ORDER_FETCHER_API_KEY),
