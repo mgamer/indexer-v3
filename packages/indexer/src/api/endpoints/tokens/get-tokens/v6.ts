@@ -472,6 +472,21 @@ export const getTokensV6Options: RouteOptions = {
 
         (query as any).contract = contractString;
         sourceConditions.push(`contract = $/contract/`);
+      } else if (query.tokens) {
+        if (!_.isArray(query.tokens)) {
+          query.tokens = [query.tokens];
+        }
+
+        const tokensContracts = [];
+        for (const token of query.tokens) {
+          const [contract] = token.split(":");
+          tokensContracts.push(contract);
+        }
+
+        query.tokensContracts = _.uniq(tokensContracts).map((contract: string) =>
+          toBuffer(contract)
+        );
+        sourceConditions.push("contract IN ($/tokensContracts:csv/)");
       }
 
       sourceCte = `
