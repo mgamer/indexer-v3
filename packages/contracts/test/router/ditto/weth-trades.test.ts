@@ -117,9 +117,18 @@ describe("DittoModule", () => {
   afterEach(reset);
 
   it("Purchase an NFT with unwrapped native ether", async () => {
-    await weth.balanceOf(trader.address).then((balance: BigNumber) => {
-      expect(balance).to.equal(ethers.constants.Zero);
-    });
+    const wethBalanceTraderInitial = await weth.balanceOf(trader.address);
+    expect(wethBalanceTraderInitial).to.equal(ethers.constants.Zero);
+
+    // Fetch the current price
+    const result = await dittoPool.getBuyNftQuote(2, "0x");
+    const inputValue = result[3];
+    const nftCostData = result[4];
+    let quoteProtocolFee = ethers.BigNumber.from(0);
+    for (const costData of nftCostData) {
+      quoteProtocolFee = quoteProtocolFee.add(costData.fee.protocol);
+    }
+    const amountPayment: BigNumber = inputValue;
 
     const wrapInfo = await generateSwapInfo(
       chainId,
@@ -127,14 +136,14 @@ describe("DittoModule", () => {
       "",
       Sdk.Common.Addresses.Native[chainId],
       weth.address,
-      initialTokenBalance,
+      amountPayment,
       {
         module: swapModule,
         transfers: [
           {
             toETH: false,
-            recipient: trader.address,
-            amount: initialTokenBalance,
+            recipient: dittoModule.address,
+            amount: amountPayment,
           },
         ],
         refundTo: trader.address,
@@ -142,17 +151,9 @@ describe("DittoModule", () => {
       }
     );
 
-    const approve = await weth.connect(trader).approve(dittoModule.address, initialTokenBalance);
-    await approve.wait();
-
-    // Fetch the current price
-    const result = await dittoPool.getBuyNftQuote(2, "0x");
-    const inputValue = result[3];
-
     const fillTo: string = trader.address;
     const refundTo: string = trader.address;
-    const revertIfIncomplete = false;
-    const amountPayment: BigNumber = inputValue;
+    const revertIfIncomplete = true;
 
     const eRC20ListingParams = [fillTo, refundTo, revertIfIncomplete, weth.address, amountPayment];
 
@@ -161,63 +162,82 @@ describe("DittoModule", () => {
 
     const fee = [recipient, amountFee];
 
-    const orderParams = [[tokenId00, tokenId01], "0x"];
+    const dittoOrderParams = [dittoModule.address, [tokenId00, tokenId01], "0x"];
 
-    const buyWithERC20 = [[dittoPool.address], [orderParams], eRC20ListingParams, [fee]];
+    const buyWithERC20 = [[dittoPool.address], [dittoOrderParams], eRC20ListingParams, [fee]];
 
     const data = dittoModule.interface.encodeFunctionData("buyWithERC20", buyWithERC20);
     const executions = [dittoModule.address, data, 0];
-    await router
+    const traderBalanceBefore = await trader.getBalance();
+    const protocolFeeRecipient = await dittoPoolFactory.protocolFeeRecipient();
+    const protocolFeeRecipientBalanceBefore = await weth.balanceOf(protocolFeeRecipient);
+    const routerExecution = await router
       .connect(trader)
-      .execute([wrapInfo.execution, executions], { value: initialTokenBalance });
+      .execute([wrapInfo.execution, executions], { value: amountPayment });
 
-    await nft.ownerOf(tokenId00).then((owner: string) => {
-      expect(owner).to.eq(fillTo);
-    });
-    await nft.ownerOf(tokenId01).then((owner: string) => {
-      expect(owner).to.eq(fillTo);
-    });
-    await weth.balanceOf(trader.address).then((balance: BigNumber) => {
-      expect(balance).to.equal(initialTokenBalance.sub(amountPayment));
-    });
+    const routerExecutionReceipt = await routerExecution.wait();
+    const routerExecutionGasUsed = routerExecutionReceipt.gasUsed;
+    const routerExecutionGasPrice = routerExecutionReceipt.effectiveGasPrice;
+    const routerExecutionGasCost = routerExecutionGasUsed.mul(routerExecutionGasPrice);
+
+    const tokenId00Owner = await nft.ownerOf(tokenId00);
+    const tokenId01Owner = await nft.ownerOf(tokenId01);
+    const ethBalanceTraderAfter = await trader.getBalance();
+    expect(tokenId00Owner).to.eq(fillTo);
+    expect(tokenId01Owner).to.eq(fillTo);
+    expect(ethBalanceTraderAfter).to.equal(
+      traderBalanceBefore.sub(amountPayment).sub(routerExecutionGasCost)
+    );
+
+    const protocolFeeRecipientWethBalanceAfter = await weth.balanceOf(protocolFeeRecipient);
+    const wethBalanceDittoPoolAfter = await weth.balanceOf(dittoPool.address);
+
+    expect(protocolFeeRecipientWethBalanceAfter).to.equal(
+      protocolFeeRecipientBalanceBefore.add(quoteProtocolFee)
+    );
+    expect(wethBalanceDittoPoolAfter).to.equal(
+      initialTokenBalance.add(amountPayment).sub(quoteProtocolFee)
+    );
   });
 
   it("Sell an NFT for native unwrapped ether", async () => {
-    await weth.balanceOf(trader.address).then((balance: BigNumber) => {
-      expect(balance).to.equal(ethers.constants.Zero);
-    });
-    await trader.getBalance().then((balance: BigNumber) => {
-      expect(balance).to.equal(parseEther("10000"));
-    });
-    await weth.balanceOf(dittoPool.address).then((balance: BigNumber) => {
-      expect(balance).to.equal(initialTokenBalance);
-    });
+    const wethBalanceTraderInitial = await weth.balanceOf(trader.address);
+    expect(wethBalanceTraderInitial).to.equal(ethers.constants.Zero);
+    const ethBalanceTraderInitial = await trader.getBalance();
+    expect(ethBalanceTraderInitial).to.equal(parseEther("10000"));
+    const wethBalanceDittoPoolBefore = await weth.balanceOf(dittoPool.address);
+    expect(wethBalanceDittoPoolBefore).to.equal(initialTokenBalance);
+
     const tokenId03 = 130019123456789; // probably not minted yet
     await nft.connect(trader).mint(trader.address, tokenId03);
-    await nft.ownerOf(tokenId03).then((owner: string) => {
-      expect(owner).to.eq(trader.address);
-    });
+    const tokenId03Owner = await nft.ownerOf(tokenId03);
+    expect(tokenId03Owner).to.eq(trader.address);
     await nft.connect(trader).setApprovalForAll(dittoModule.address, true);
 
     const sellQuote = await dittoPool.getSellNftQuote(1, "0x");
     const outputValue = sellQuote[3];
-
+    const nftCostData = sellQuote[4];
+    let quoteProtocolFee = ethers.BigNumber.from(0);
+    for (const costData of nftCostData) {
+      quoteProtocolFee = quoteProtocolFee.add(costData.fee.protocol);
+    }
     const fee = [poolAddress, 0];
 
-    const orderParams = {
+    const dittoOrderParams = {
+      tokenSender: trader.address,
       nftIds: [tokenId03],
       swapData: "0x",
     };
 
     const offerParams = {
-      fillTo: trader.address,
+      fillTo: swapModule.address,
       refundTo: trader.address,
-      revertIfIncomplete: false,
+      revertIfIncomplete: true,
     };
 
     const sell = [
       poolAddress,
-      orderParams,
+      dittoOrderParams,
       [marketMakerLpId.toString()],
       "0x",
       outputValue,
@@ -227,8 +247,6 @@ describe("DittoModule", () => {
 
     const data = dittoModule.interface.encodeFunctionData("sell", sell);
     const swapExecution = [dittoModule.address, data, 0];
-
-    await weth.connect(trader).approve(router.address, outputValue);
 
     const unWrapInfo = await generateSwapInfo(
       chainId,
@@ -247,37 +265,27 @@ describe("DittoModule", () => {
           },
         ],
         refundTo: trader.address,
-        revertIfIncomplete: false,
+        revertIfIncomplete: true,
       }
     );
 
-    // the unwrap function on the swapModule only works if the swap module
-    // holds the weth itself. But the DittoModule (right now) won't let you
-    // send the weth to another address other than the trader
-    // so we have to send the swapModule the weth so that it can then unwrap it
-    // and send it back
-    const transferFromDetail = weth.interface.getFunction(
-      "transferFrom(address, address, uint256)"
-    );
-    const transferFromData = weth.interface.encodeFunctionData(transferFromDetail, [
-      trader.address,
-      swapModule.address,
-      outputValue,
-    ]);
-    const transferFromExecution = [weth.address, transferFromData, 0];
-
     const traderBalanceBeforeTrade = await trader.getBalance();
-    const executionPath = [swapExecution, transferFromExecution, unWrapInfo.execution];
+    const executionPath = [swapExecution, unWrapInfo.execution];
     const routerExecution = await router.connect(trader).execute(executionPath);
     const routerExecutionReceipt = await routerExecution.wait();
     const routerExecutionGasUsed = routerExecutionReceipt.gasUsed;
     const routerExecutionGasPrice = routerExecutionReceipt.effectiveGasPrice;
     const routerExecutionGasCost = routerExecutionGasUsed.mul(routerExecutionGasPrice);
 
-    await trader.getBalance().then((balance: BigNumber) => {
-      expect(balance).to.equal(
-        ethers.BigNumber.from(traderBalanceBeforeTrade).add(outputValue).sub(routerExecutionGasCost)
-      );
-    });
+    const ethBalanceTraderAfter = await trader.getBalance();
+    expect(ethBalanceTraderAfter).to.equal(
+      ethers.BigNumber.from(traderBalanceBeforeTrade).add(outputValue).sub(routerExecutionGasCost)
+    );
+    const tokenId03OwnerAfter = await nft.ownerOf(tokenId03);
+    expect(tokenId03OwnerAfter).to.eq(dittoPool.address);
+    const wethBalanceDittoPoolAfter = await weth.balanceOf(dittoPool.address);
+    expect(wethBalanceDittoPoolAfter).to.equal(
+      wethBalanceDittoPoolBefore.sub(outputValue.add(quoteProtocolFee))
+    );
   });
 });

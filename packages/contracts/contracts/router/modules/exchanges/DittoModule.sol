@@ -13,6 +13,7 @@ import {BaseModule} from "../BaseModule.sol";
 import {IDittoPool} from "../../../interfaces/IDittoPool.sol";
 
 struct DittoOrderParams {
+  address tokenSender;
   uint256[] nftIds;
   bytes swapData;
 }
@@ -24,7 +25,6 @@ contract DittoModule is BaseExchangeModule {
   constructor(address owner, address router) BaseModule(owner) BaseExchangeModule(router) {}
 
   function poolTransferNftFrom(IERC721 nft, address from, address to, uint256 id) external {
-    // transfer NFTs to pool
     nft.transferFrom(from, to, id);
   }
 
@@ -34,8 +34,11 @@ contract DittoModule is BaseExchangeModule {
     address to,
     uint256 amount
   ) external virtual {
-    // Transfer tokens to txn sender
-    token.safeTransferFrom(from, to, amount);
+    if(from == address(this)) {
+      token.safeTransfer(to, amount);
+    } else {
+      token.safeTransferFrom(from, to, amount);
+    }
   }
 
   // --- Multiple ERC20 listing ---
@@ -57,7 +60,7 @@ contract DittoModule is BaseExchangeModule {
       IDittoPool.SwapTokensForNftsArgs memory args = IDittoPool.SwapTokensForNftsArgs({
         nftIds: orderParams[i].nftIds,
         maxExpectedTokenInput: params.amount,
-        tokenSender: params.fillTo,
+        tokenSender: orderParams[i].tokenSender,
         nftRecipient: params.fillTo,
         swapData: orderParams[i].swapData
       });
@@ -87,7 +90,7 @@ contract DittoModule is BaseExchangeModule {
       nftIds: orderParams.nftIds,
       lpIds: lpIds,
       minExpectedTokenOutput: minOutput,
-      nftSender: params.fillTo,
+      nftSender: orderParams.tokenSender,
       tokenRecipient: params.fillTo,
       permitterData: permitterData,
       swapData: orderParams.swapData
