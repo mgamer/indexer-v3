@@ -10,7 +10,7 @@ import { CollectionMetadata, TokenMetadata } from "@/utils/metadata-api";
 export const SoundxyzArtistContracts = ArtistContracts.map((c) => c.toLowerCase());
 export const SoundxyzReleaseContracts = ReleaseContracts.map((c) => c.toLowerCase());
 
-export const getContractSlug = async (_chainId: number, contract: string, _tokenId: number) => {
+export const getContractSlug = async (_chainId: number, contract: string, _tokenId: string) => {
   const apiUrl = ![4, 5].includes(_chainId)
     ? "https://api.sound.xyz/graphql?x-sound-client-name=firstmate"
     : "https://staging.api.sound.xyz/graphql";

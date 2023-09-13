@@ -6,7 +6,7 @@ import { TokenMetadata } from "../types";
 import axios from "axios";
 import _ from "lodash";
 
-export class SimplehashMetadataProvider {
+export class RaribleMetadataProvider {
   async _getTokensMetadata(
     tokens: { contract: string; tokenId: string }[]
   ): Promise<TokenMetadata[]> {

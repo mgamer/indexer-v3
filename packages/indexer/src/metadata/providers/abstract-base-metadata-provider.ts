@@ -8,22 +8,9 @@ import {
 } from "../types";
 
 export abstract class AbstractBaseProvider {
-  maxRetries = 5;
-  // in milliseconds
-  timeout = 30 * 1000;
-
-  async getCollectionMetadata(
-    contract: string,
-    tokenId: string,
-    community?: string,
-    options?: {
-      allowFallback?: boolean;
-      indexingMethod?: string;
-      additionalQueryParams?: { [key: string]: string };
-    }
-  ): Promise<CollectionMetadata> {
+  async getCollectionMetadata(contract: string, tokenId: string): Promise<CollectionMetadata> {
     // handle universal extend/custom logic here
-    return this._getCollectionMetadata(contract, tokenId, community, options);
+    return this._getCollectionMetadata(contract, tokenId);
   }
 
   async getTokensMetadata(
@@ -182,13 +169,7 @@ export abstract class AbstractBaseProvider {
 
   protected abstract _getCollectionMetadata(
     contract: string,
-    tokenId: string,
-    community?: string,
-    options?: {
-      allowFallback?: boolean;
-      indexingMethod?: string;
-      additionalQueryParams?: { [key: string]: string };
-    }
+    tokenId: string
   ): Promise<CollectionMetadata>;
 
   protected abstract _getTokensMetadata(

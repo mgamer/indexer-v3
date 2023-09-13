@@ -9,9 +9,13 @@ import { baseProvider } from "@/common/provider";
 import axios from "axios";
 import { RequestWasThrottledError, normalizeMetadata } from "./utils";
 import _ from "lodash";
+import { AbstractBaseProvider } from "./abstract-base-metadata-provider";
 
-export class OpenseaMetadataProvider {
-  async _getCollectionMetadata(contract: string, tokenId: string): Promise<CollectionMetadata> {
+class OpenseaMetadataProvider extends AbstractBaseProvider {
+  protected async _getCollectionMetadata(
+    contract: string,
+    tokenId: string
+  ): Promise<CollectionMetadata> {
     try {
       let data;
       let creatorAddress;
@@ -161,7 +165,7 @@ export class OpenseaMetadataProvider {
     }
   }
 
-  async _getTokensMetadata(
+  protected async _getTokensMetadata(
     tokens: { contract: string; tokenId: string }[]
   ): Promise<TokenMetadata[]> {
     const searchParams = new URLSearchParams();
@@ -207,7 +211,7 @@ export class OpenseaMetadataProvider {
     return data.assets.map(this.parse).filter(Boolean);
   }
 
-  async _getTokensMetadataBySlug(
+  protected async _getTokensMetadataBySlug(
     slug: string,
     continuation?: string
   ): Promise<TokenMetadataBySlugResult> {
@@ -461,3 +465,5 @@ export class OpenseaMetadataProvider {
     }
   }
 }
+
+export const openseaMetadataProvider = new OpenseaMetadataProvider();
