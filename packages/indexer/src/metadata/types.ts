@@ -4,13 +4,13 @@ export interface TokenMetadata {
   contract: string;
   // TODO: standardize as string or number throughout the indexer
   tokenId: any;
-  slug: string;
+  slug: string | null;
   collection: string;
-  flagged: boolean;
+  flagged: boolean | null;
   name?: string;
   description?: string;
   originalMetadata?: JSON;
-  imageUrl?: string;
+  imageUrl?: string | null;
   imageOriginalUrl?: string;
   imageProperties?: {
     width?: number;
@@ -20,7 +20,7 @@ export interface TokenMetadata {
   };
   animationOriginalUrl?: string;
   metadataOriginalUrl?: string;
-  mediaUrl?: string;
+  mediaUrl?: string | null;
   attributes: {
     key: string;
     value: string;
