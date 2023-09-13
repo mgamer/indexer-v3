@@ -11,9 +11,9 @@ import _ from "lodash";
 import { getNetworkName } from "@/config/network";
 import { baseProvider } from "@/common/provider";
 import slugify from "slugify";
-import { AbstractBaseProvider } from "./abstract-base-metadata-provider";
+import { AbstractBaseMetadataProvider } from "./abstract-base-metadata-provider";
 
-export class SimplehashMetadataProvider extends AbstractBaseProvider {
+export class SimplehashMetadataProvider extends AbstractBaseMetadataProvider {
   async _getCollectionMetadata(contract: string, tokenId: string): Promise<CollectionMetadata> {
     const network = this.getSimplehashNetworkName();
     const url = `https://api.simplehash.com/api/v0/nfts/${network}/${contract}/${tokenId}`;

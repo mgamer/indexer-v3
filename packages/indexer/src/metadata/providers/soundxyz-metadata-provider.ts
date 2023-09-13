@@ -9,9 +9,9 @@ import slugify from "slugify";
 import * as soundxyz from "../extend/soundxyz/index";
 import { RequestWasThrottledError } from "./utils";
 import { openseaMetadataProvider } from "./opensea-metadata-provider";
-import { AbstractBaseProvider } from "./abstract-base-metadata-provider";
+import { AbstractBaseMetadataProvider } from "./abstract-base-metadata-provider";
 
-export class SoundxyzhMetadataProvider extends AbstractBaseProvider {
+export class SoundxyzhMetadataProvider extends AbstractBaseMetadataProvider {
   async _getCollectionMetadata(contract: string, tokenId: string): Promise<CollectionMetadata> {
     const {
       data: {

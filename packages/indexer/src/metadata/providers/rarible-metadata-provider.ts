@@ -5,9 +5,9 @@ import { CollectionMetadata, TokenMetadata, TokenMetadataBySlugResult } from "..
 
 import axios from "axios";
 import _ from "lodash";
-import { AbstractBaseProvider } from "./abstract-base-metadata-provider";
+import { AbstractBaseMetadataProvider } from "./abstract-base-metadata-provider";
 
-export class RaribleMetadataProvider extends AbstractBaseProvider {
+export class RaribleMetadataProvider extends AbstractBaseMetadataProvider {
   async _getTokensMetadata(
     tokens: { contract: string; tokenId: string }[]
   ): Promise<TokenMetadata[]> {

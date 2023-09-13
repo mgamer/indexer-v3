@@ -9,9 +9,9 @@ import { baseProvider } from "@/common/provider";
 import axios from "axios";
 import { RequestWasThrottledError, normalizeMetadata } from "./utils";
 import _ from "lodash";
-import { AbstractBaseProvider } from "./abstract-base-metadata-provider";
+import { AbstractBaseMetadataProvider } from "./abstract-base-metadata-provider";
 
-class OpenseaMetadataProvider extends AbstractBaseProvider {
+class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
   protected async _getCollectionMetadata(
     contract: string,
     tokenId: string

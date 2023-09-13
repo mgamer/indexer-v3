@@ -5,13 +5,13 @@ import { CollectionMetadata, TokenMetadata, TokenMetadataBySlugResult } from "..
 
 import axios from "axios";
 import _ from "lodash";
-import { AbstractBaseProvider } from "./abstract-base-metadata-provider";
 import { baseProvider } from "@/common/provider";
 import { Interface } from "ethers/lib/utils";
 import { Contract } from "ethers";
 import { logger } from "@/common/logger";
+import { AbstractBaseMetadataProvider } from "./abstract-base-metadata-provider";
 
-export class CenterdevMetadataProvider extends AbstractBaseProvider {
+export class CenterdevMetadataProvider extends AbstractBaseMetadataProvider {
   async _getTokensMetadata(
     tokens: { contract: string; tokenId: string }[]
   ): Promise<TokenMetadata[]> {

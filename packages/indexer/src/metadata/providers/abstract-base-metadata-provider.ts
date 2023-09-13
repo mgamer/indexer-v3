@@ -1,3 +1,5 @@
+import { config } from "@/config/index";
+import { customHandleContractTokens, customHandleToken, hasCustomHandler } from "../custom";
 import {
   Collection,
   CollectionMetadata,
@@ -6,18 +8,73 @@ import {
   TokenMetadata,
   TokenMetadataBySlugResult,
 } from "../types";
+import { extendMetadata, hasExtendHandler } from "../extend";
 
-export abstract class AbstractBaseProvider {
+export abstract class AbstractBaseMetadataProvider {
   async getCollectionMetadata(contract: string, tokenId: string): Promise<CollectionMetadata> {
     // handle universal extend/custom logic here
+    if (hasCustomHandler(config.chainId, contract)) {
+      const result = await customHandleContractTokens(config.chainId, contract, tokenId);
+      return result;
+    }
+
     return this._getCollectionMetadata(contract, tokenId);
   }
 
   async getTokensMetadata(
     tokens: { contract: string; tokenId: string }[]
   ): Promise<TokenMetadata[]> {
-    // handle universal extend/custom logic here
-    return this._getTokensMetadata(tokens);
+    const customMetadata = await Promise.all(
+      tokens.map(async (token) => {
+        if (hasCustomHandler(config.chainId, token.contract)) {
+          const result = await customHandleToken(config.chainId, {
+            contract: token.contract,
+            _tokenId: token.tokenId,
+          });
+          return result;
+        }
+        return null;
+      })
+    );
+
+    // filter out nulls
+    const filteredCustomMetadata = customMetadata.filter((metadata) => metadata !== null);
+
+    // for tokens that don't have custom metadata, get from metadata-api
+    const tokensWithoutCustomMetadata = tokens.filter((token) => {
+      const hasCustomMetadata = filteredCustomMetadata.find((metadata) => {
+        return metadata.contract === token.contract && metadata.tokenId === token.tokenId;
+      });
+      return !hasCustomMetadata;
+    });
+
+    let metadataFromProvider: TokenMetadata[] = [];
+
+    if (tokensWithoutCustomMetadata.length > 0) {
+      const queryParams = new URLSearchParams();
+
+      tokensWithoutCustomMetadata.forEach((token) => {
+        queryParams.append("token", `${token.contract}:${token.tokenId}`);
+      });
+
+      metadataFromProvider = await this._getTokensMetadata(tokensWithoutCustomMetadata);
+    }
+
+    // merge custom metadata with metadata-api metadata
+    const allMetadata = [...metadataFromProvider, ...filteredCustomMetadata];
+
+    // extend metadata
+    const extendedMetadata = await Promise.all(
+      allMetadata.map(async (metadata) => {
+        if (hasExtendHandler(config.chainId, metadata.contract)) {
+          const result = await extendMetadata(config.chainId, metadata);
+          return result;
+        }
+        return metadata;
+      })
+    );
+
+    return extendedMetadata;
   }
 
   async getTokensMetadataBySlug(

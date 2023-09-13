@@ -3,13 +3,13 @@
 import { config } from "@/config/index";
 import { CollectionMetadata, TokenMetadata, TokenMetadataBySlugResult } from "../types";
 
-import { AbstractBaseProvider } from "./abstract-base-metadata-provider";
 import { baseProvider } from "@/common/provider";
 import { defaultAbiCoder } from "ethers/lib/utils";
 import { logger } from "@/common/logger";
 import { ethers } from "ethers";
 import { RequestWasThrottledError } from "./utils";
 import _ from "lodash";
+import { AbstractBaseMetadataProvider } from "./abstract-base-metadata-provider";
 
 const erc721Interface = new ethers.utils.Interface([
   "function supportsInterface(bytes4 interfaceId) view returns (bool)",
@@ -22,7 +22,7 @@ const erc1155Interface = new ethers.utils.Interface([
   "function balanceOf(address account, uint256 id) view returns (uint256)",
 ]);
 
-export class OnchainMetadataProvider extends AbstractBaseProvider {
+export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
   async _getTokensMetadata(
     tokens: { contract: string; tokenId: string }[]
   ): Promise<TokenMetadata[]> {
