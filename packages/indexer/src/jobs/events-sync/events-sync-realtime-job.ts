@@ -18,6 +18,7 @@ export class EventsSyncRealtimeJob extends AbstractRabbitMqJobHandler {
     type: "fixed",
     delay: 1000,
   } as BackoffStrategy;
+  disableConsuming = config.chainId === 137 && !config.master;
 
   protected async process(payload: EventsSyncRealtimeJobPayload) {
     const { block } = payload;
