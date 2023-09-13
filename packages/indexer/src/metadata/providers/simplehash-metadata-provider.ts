@@ -167,3 +167,5 @@ export class SimplehashMetadataProvider extends AbstractBaseProvider {
     return network;
   }
 }
+
+export const simplehashMetadataProvider = new SimplehashMetadataProvider();

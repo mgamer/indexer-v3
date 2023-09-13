@@ -410,3 +410,5 @@ export class OnchainMetadataProvider extends AbstractBaseProvider {
     };
   };
 }
+
+export const onchainMetadataProvider = new OnchainMetadataProvider();

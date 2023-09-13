@@ -82,3 +82,5 @@ export class RaribleMetadataProvider extends AbstractBaseProvider {
     return undefined;
   };
 }
+
+export const raribleMetadataProvider = new RaribleMetadataProvider();

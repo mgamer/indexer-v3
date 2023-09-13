@@ -145,3 +145,5 @@ export class CenterdevMetadataProvider extends AbstractBaseProvider {
     return network;
   };
 }
+
+export const centerdevMetadataProvider = new CenterdevMetadataProvider();

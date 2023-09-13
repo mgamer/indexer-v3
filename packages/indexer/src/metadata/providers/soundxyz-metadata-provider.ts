@@ -149,3 +149,5 @@ export class SoundxyzhMetadataProvider extends AbstractBaseProvider {
     throw error;
   }
 }
+
+export const soundxyzMetadataProvider = new SoundxyzhMetadataProvider();
