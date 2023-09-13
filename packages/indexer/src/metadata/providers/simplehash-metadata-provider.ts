@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { config } from "@/config/index";
-import { CollectionMetadata, TokenMetadata } from "../types";
+import { CollectionMetadata, TokenMetadata, TokenMetadataBySlugResult } from "../types";
 import { logger } from "@/common/logger";
 import { Contract } from "ethers";
 import { Interface } from "ethers/lib/utils";
@@ -11,8 +11,9 @@ import _ from "lodash";
 import { getNetworkName } from "@/config/network";
 import { baseProvider } from "@/common/provider";
 import slugify from "slugify";
+import { AbstractBaseProvider } from "./abstract-base-metadata-provider";
 
-export class SimplehashMetadataProvider {
+export class SimplehashMetadataProvider extends AbstractBaseProvider {
   async _getCollectionMetadata(contract: string, tokenId: string): Promise<CollectionMetadata> {
     const network = this.getSimplehashNetworkName();
     const url = `https://api.simplehash.com/api/v0/nfts/${network}/${contract}/${tokenId}`;
@@ -100,10 +101,9 @@ export class SimplehashMetadataProvider {
     return data.nfts.map(this.parse).filter(Boolean);
   }
 
-  // async _getTokensMetadataBySlug(
-  //   slug: string,
-  //   continuation?: string
-  // ): Promise<TokenMetadataBySlugResult> {}
+  async _getTokensMetadataBySlug(): Promise<TokenMetadataBySlugResult> {
+    throw new Error("Method not implemented.");
+  }
 
   parse = (asset: any) => {
     const {
@@ -133,7 +133,7 @@ export class SimplehashMetadataProvider {
       metadataOriginalUrl: metadata_original_url,
       imageProperties: asset.image_properties,
       mediaUrl: asset.video_url,
-      attributes: (attributes || []).map((trait) => ({
+      attributes: (attributes || []).map((trait: any) => ({
         key: trait.trait_type ?? "property",
         value: trait.value,
         kind: typeof trait.value == "number" ? "number" : "string",

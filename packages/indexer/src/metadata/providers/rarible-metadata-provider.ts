@@ -1,12 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { config } from "@/config/index";
-import { TokenMetadata } from "../types";
+import { CollectionMetadata, TokenMetadata, TokenMetadataBySlugResult } from "../types";
 
 import axios from "axios";
 import _ from "lodash";
+import { AbstractBaseProvider } from "./abstract-base-metadata-provider";
 
-export class RaribleMetadataProvider {
+export class RaribleMetadataProvider extends AbstractBaseProvider {
   async _getTokensMetadata(
     tokens: { contract: string; tokenId: string }[]
   ): Promise<TokenMetadata[]> {
@@ -23,10 +24,12 @@ export class RaribleMetadataProvider {
     return data.map(this.parse).filter(Boolean);
   }
 
-  // async _getTokensMetadataBySlug(
-  //   slug: string,
-  //   continuation?: string
-  // ): Promise<TokenMetadataBySlugResult> {}
+  async _getCollectionMetadata(): Promise<CollectionMetadata> {
+    throw new Error("Method not implemented.");
+  }
+  async _getTokensMetadataBySlug(): Promise<TokenMetadataBySlugResult> {
+    throw new Error("Method not implemented.");
+  }
 
   parse = (asset: any) => {
     try {
