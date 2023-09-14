@@ -1,6 +1,6 @@
 import { idb } from "@/common/db";
 import { logger } from "@/common/logger";
-import { now, toBuffer } from "@/common/utils";
+import { toBuffer } from "@/common/utils";
 import { AbstractRabbitMqJobHandler, BackoffStrategy } from "@/jobs/abstract-rabbit-mq-job-handler";
 import {
   orderUpdatesByIdJob,
