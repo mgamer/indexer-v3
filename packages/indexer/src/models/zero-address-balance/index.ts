@@ -59,10 +59,10 @@ if (config.doBackgroundWork) {
                   "amount"
                 ) VALUES ${pgp.helpers.values(
                   {
-                    balance: balance.balance,
                     contract: toBuffer(balance.contract),
                     tokenId: balance.tokenId,
                     owner: toBuffer(AddressZero),
+                    balance: balance.balance,
                   },
                   columns
                 )} ($/contract/, $/tokenId/, $/owner/, $/balance/)
