@@ -206,7 +206,7 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
       const result = await insertQueries(nftTransferQueries, backfill);
 
       if (!_.isEmpty(result) && deferUpdate) {
-        await ZeroAddressBalance.count(
+        await ZeroAddressBalance.add(
           fromBuffer(event.address),
           event.token_id,
           -Number(event.amount)

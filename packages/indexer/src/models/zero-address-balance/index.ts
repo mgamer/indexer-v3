@@ -10,7 +10,7 @@ import { AddressZero } from "@ethersproject/constants";
 export class ZeroAddressBalance {
   public static key = `zero-address-balance`;
 
-  public static async count(contract: string, tokenId: string, incrementBy = 1) {
+  public static async add(contract: string, tokenId: string, incrementBy = 1) {
     const member = `${contract}*${tokenId}`;
     await redis.zincrby(ZeroAddressBalance.key, incrementBy, member);
   }
@@ -71,7 +71,16 @@ if (config.doBackgroundWork) {
             }
 
             if (!_.isEmpty(queries)) {
-              await idb.tx(async (t) => t.batch(queries.map((q) => t.none(q))));
+              try {
+                await idb.tx(async (t) => t.batch(queries.map((q) => t.none(q))));
+              } catch (error) {
+                // Requeue messages if transaction failed
+                for (const balance of balances) {
+                  await ZeroAddressBalance.add(balance.contract, balance.tokenId, balance.balance);
+                }
+
+                throw error;
+              }
             }
           }
         } while (balances.length === count);
