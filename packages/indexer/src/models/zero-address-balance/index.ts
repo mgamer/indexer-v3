@@ -65,7 +65,7 @@ if (config.doBackgroundWork) {
                     amount: balance.balance,
                   },
                   columns
-                )} ($/contract/, $/tokenId/, $/owner/, $/balance/)
+                )}
                ON CONFLICT ("contract", "token_id", "owner") DO
                UPDATE SET amount = nft_balances.amount + EXCLUDED.amount`);
             }
