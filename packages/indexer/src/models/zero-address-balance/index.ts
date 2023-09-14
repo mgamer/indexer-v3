@@ -60,7 +60,7 @@ if (config.doBackgroundWork) {
                 ) VALUES ${pgp.helpers.values(
                   {
                     contract: toBuffer(balance.contract),
-                    tokenId: balance.tokenId,
+                    token_id: balance.tokenId,
                     owner: toBuffer(AddressZero),
                     balance: balance.balance,
                   },
