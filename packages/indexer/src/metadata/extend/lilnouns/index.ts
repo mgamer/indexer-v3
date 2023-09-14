@@ -4,7 +4,7 @@ import { request, gql } from "graphql-request";
 import { utils } from "ethers";
 
 import nouns from "./lilnouns.json";
-import { TokenMetadata } from "@/utils/metadata-api";
+import { TokenMetadata } from "@/metadata/types";
 
 const capitalizeFirstLetter = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const replaceAll = (str: string, find: string, replace: string) => str.split(find).join(replace);

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { CollectionMetadata } from "@/utils/metadata-api";
+import { CollectionMetadata } from "@/metadata/types";
 import _ from "lodash";
 
 export const extendCollection = async (

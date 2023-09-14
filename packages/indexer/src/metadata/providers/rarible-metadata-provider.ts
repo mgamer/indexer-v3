@@ -8,6 +8,7 @@ import _ from "lodash";
 import { AbstractBaseMetadataProvider } from "./abstract-base-metadata-provider";
 
 export class RaribleMetadataProvider extends AbstractBaseMetadataProvider {
+  method = "rarible";
   async _getTokensMetadata(
     tokens: { contract: string; tokenId: string }[]
   ): Promise<TokenMetadata[]> {

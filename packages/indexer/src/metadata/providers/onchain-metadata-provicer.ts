@@ -23,14 +23,10 @@ const erc1155Interface = new ethers.utils.Interface([
 ]);
 
 export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
+  method = "onchain";
   async _getTokensMetadata(
     tokens: { contract: string; tokenId: string }[]
   ): Promise<TokenMetadata[]> {
-    // TODO: Add support for other chains via RPC_URL
-
-    if (tokens.length === 0) return [];
-    if (!Array.isArray(tokens)) tokens = [tokens];
-
     const tokenData: {
       contract: string;
       tokenId: string;
@@ -154,6 +150,7 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
       tokenIdRange: null,
     };
   }
+
   async _getTokensMetadataBySlug(): Promise<TokenMetadataBySlugResult> {
     throw new Error("Method not implemented.");
   }

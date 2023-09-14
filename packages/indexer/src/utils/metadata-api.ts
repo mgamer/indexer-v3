@@ -1,73 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { Interface } from "@ethersproject/abi";
-import { Contract } from "@ethersproject/contracts";
-import axios from "axios";
-
-import { baseProvider } from "@/common/provider";
 import { config } from "@/config/index";
-import { getNetworkName } from "@/config/network";
-import { logger } from "@/common/logger";
 import { customHandleContractTokens, customHandleToken, hasCustomHandler } from "@/metadata/custom";
+import { MetadataProvidersMap } from "@/metadata/providers";
+import { CollectionMetadata, TokenMetadata, TokenMetadataBySlugResult } from "@/metadata/types";
 import { extendMetadata, hasExtendHandler } from "@/metadata/extend";
-
-export interface TokenMetadata {
-  contract: string;
-  // TODO: standardize as string or number throughout the indexer
-  tokenId: any;
-  slug: string;
-  collection: string;
-  flagged: boolean;
-  name?: string;
-  description?: string;
-  originalMetadata?: JSON;
-  imageUrl?: string;
-  imageOriginalUrl?: string;
-  imageProperties?: {
-    width?: number;
-    height?: number;
-    size?: number;
-    mime_type?: string;
-  };
-  animationOriginalUrl?: string;
-  metadataOriginalUrl?: string;
-  mediaUrl?: string;
-  attributes: {
-    key: string;
-    value: string;
-    kind: "string" | "number" | "date" | "range";
-    rank?: number;
-  }[];
-}
-
-export interface CollectionMetadata {
-  id: string;
-  collection?: string;
-  slug: string | null;
-  name: string;
-  community: string | null;
-  metadata: {
-    imageUrl?: string | undefined;
-    // TODO: Add other metadata fields
-    [key: string]: any;
-  } | null;
-  royalties?: object;
-  openseaRoyalties?: object;
-  openseaFees?: object;
-  contract: string;
-  tokenIdRange: [number, number] | [string, string] | null;
-  tokenSetId: string | null;
-  isFallback?: boolean;
-  isCopyrightInfringement?: boolean;
-  paymentTokens?: object | null;
-  creator?: string | null;
-}
-
-export interface TokenMetadataBySlugResult {
-  metadata: TokenMetadata[];
-  continuation?: string;
-  previous: string;
-}
 
 export class MetadataApi {
   public static async getCollectionMetadata(
@@ -81,34 +18,7 @@ export class MetadataApi {
     }
   ): Promise<CollectionMetadata> {
     if (config.liquidityOnly) {
-      // When running in liquidity-only mode:
-      // - assume the collection id matches the contract address
-      // - the collection name is retrieved from an on-chain `name()` call
-
-      const name = await new Contract(
-        contract,
-        new Interface(["function name() view returns (string)"]),
-        baseProvider
-      )
-        .name()
-        .catch(() => "");
-
-      return {
-        id: contract,
-        slug: null,
-        name,
-        community: null,
-        metadata: null,
-        royalties: undefined,
-        openseaRoyalties: undefined,
-        openseaFees: undefined,
-        contract,
-        tokenIdRange: null,
-        tokenSetId: `contract:${contract}`,
-        isCopyrightInfringement: undefined,
-        paymentTokens: undefined,
-        creator: null,
-      };
+      return await MetadataProvidersMap["onchain"].getCollectionMetadata(contract, tokenId);
     } else {
       // get custom / extended metadata locally
       if (hasCustomHandler(config.chainId, contract)) {
@@ -128,18 +38,9 @@ export class MetadataApi {
         indexingMethod = "simplehash";
       }
 
-      let url = `${
-        config.metadataApiBaseUrl
-      }/v4/${getNetworkName()}/metadata/collection?method=${indexingMethod}&token=${contract}:${tokenId}`;
-      if (options?.additionalQueryParams) {
-        for (const [key, value] of Object.entries(options.additionalQueryParams)) {
-          url += `&${key}=${value}`;
-        }
-      }
-
-      const { data } = await axios.get(url);
-
-      const collection: CollectionMetadata = (data as any).collection;
+      const collection: CollectionMetadata = await MetadataProvidersMap[
+        indexingMethod
+      ].getCollectionMetadata(contract, tokenId);
 
       if (collection.isFallback && !options?.allowFallback) {
         throw new Error("Fallback collection data not acceptable");
@@ -153,72 +54,19 @@ export class MetadataApi {
     tokens: { contract: string; tokenId: string }[],
     method = ""
   ): Promise<TokenMetadata[]> {
-    // get custom / extended metadata locally
-    const customMetadata = await Promise.all(
-      tokens.map(async (token) => {
-        if (hasCustomHandler(config.chainId, token.contract)) {
-          const result = await customHandleToken(config.chainId, {
-            contract: token.contract,
-            _tokenId: token.tokenId,
-          });
-          return result;
-        }
-        return null;
-      })
-    );
+    method = method === "" ? config.metadataIndexingMethod : method;
 
-    // filter out nulls
-    const filteredCustomMetadata = customMetadata.filter((metadata) => metadata !== null);
-
-    // for tokens that don't have custom metadata, get from metadata-api
-    const tokensWithoutCustomMetadata = tokens.filter((token) => {
-      const hasCustomMetadata = filteredCustomMetadata.find((metadata) => {
-        return metadata.contract === token.contract && metadata.tokenId === token.tokenId;
-      });
-      return !hasCustomMetadata;
-    });
-
-    let metadataFromAPI: TokenMetadata[] = [];
-    // If there are tokens without custom metadata, fetch from metadata-api
-    if (tokensWithoutCustomMetadata.length > 0) {
-      const queryParams = new URLSearchParams();
-
-      tokensWithoutCustomMetadata.forEach((token) => {
-        queryParams.append("token", `${token.contract}:${token.tokenId}`);
-      });
-
-      method = method === "" ? config.metadataIndexingMethod : method;
-
-      const url = `${
-        config.metadataApiBaseUrl
-      }/v4/${getNetworkName()}/metadata/token?method=${method}&${queryParams.toString()}`;
-
-      const { data } = await axios.get(url);
-
-      metadataFromAPI = (data as any).metadata;
-    }
-
-    // merge custom metadata with metadata-api metadata
-    const allMetadata = [...metadataFromAPI, ...filteredCustomMetadata];
-
-    // extend metadata
-    const extendedMetadata = await Promise.all(
-      allMetadata.map(async (metadata) => {
-        if (hasExtendHandler(config.chainId, metadata.contract)) {
-          const result = await extendMetadata(config.chainId, metadata);
-          return result;
-        }
-        return metadata;
-      })
-    );
-
-    return extendedMetadata;
+    return await MetadataProvidersMap[method].getTokensMetadata(tokens);
   }
 
+  // This just checks the extend for the token, it doesn't actually fetch the metadata
   public static async parseTokenMetadata(
     request: {
       asset_contract: {
         address: string;
+      };
+      collection: {
+        slug: string;
       };
       token_id: string;
       name?: string;
@@ -232,27 +80,54 @@ export class MetadataApi {
     },
     method = ""
   ): Promise<TokenMetadata | null> {
-    method = method === "" ? config.metadataIndexingMethod : method;
-
-    const url = `${
-      config.metadataApiBaseUrl
-    }/v4/${getNetworkName()}/metadata/token?method=${method}`;
-
-    let response;
-    try {
-      response = await axios.post(url, request);
-    } catch (error: any) {
-      logger.error(
-        "metadata-api",
-        `parseTokenMetadata error. url=${url}, request=${JSON.stringify(request)}, error=${
-          error.message
-        }`
-      );
-      return null;
+    if (method !== "opensea") {
+      throw new Error("Method not implemented: " + method);
     }
-    const tokenMetadata: TokenMetadata = response.data;
 
-    return tokenMetadata;
+    if (hasCustomHandler(config.chainId, request.asset_contract.address)) {
+      const result = await customHandleToken(config.chainId, {
+        contract: request.asset_contract.address,
+        _tokenId: request.token_id,
+      });
+      return result;
+    }
+
+    if (hasExtendHandler(config.chainId, request.asset_contract.address)) {
+      const result = await extendMetadata(config.chainId, {
+        contract: request.asset_contract.address,
+        slug: request.collection.slug,
+        collection: request.asset_contract.address,
+        flagged: null,
+        tokenId: request.token_id,
+        name: request.name ?? "",
+        description: request.description ?? "",
+        imageUrl: request.image_url ?? "",
+        mediaUrl: request.animation_url ?? "",
+        attributes: request.traits.map((trait) => ({
+          key: trait.trait_type,
+          value: trait.value,
+          kind: typeof trait.value == "number" ? "number" : "string",
+        })),
+      });
+      return result;
+    }
+
+    return {
+      contract: request.asset_contract.address,
+      slug: request.collection.slug,
+      collection: request.asset_contract.address,
+      flagged: null,
+      tokenId: request.token_id,
+      name: request.name ?? "",
+      description: request.description ?? "",
+      imageUrl: request.image_url ?? "",
+      mediaUrl: request.animation_url ?? "",
+      attributes: request.traits.map((trait) => ({
+        key: trait.trait_type,
+        value: trait.value,
+        kind: typeof trait.value == "number" ? "number" : "string",
+      })),
+    };
   }
 
   public static async getTokensMetadataBySlug(
@@ -261,22 +136,14 @@ export class MetadataApi {
     method = "",
     continuation?: string
   ): Promise<TokenMetadataBySlugResult> {
-    const queryParams = new URLSearchParams();
-    queryParams.append("collectionSlug", `${contract}:${slug}`);
-    if (continuation) {
-      queryParams.append("continuation", continuation);
+    if (method !== "opensea") {
+      throw new Error("Method not implemented.");
     }
-    method = method === "" ? config.metadataIndexingMethod : method;
-
-    const url = `${
-      config.metadataApiBaseUrl
-    }/v4/${getNetworkName()}/metadata/token?method=${method}&${queryParams.toString()}`;
-
-    const { data } = await axios.get(url);
-
-    const metadata: TokenMetadata[] = (data as any).metadata;
-
-    return { metadata, continuation: data.continuation, previous: data.previous };
+    return await MetadataProvidersMap["opensea"].getTokensMetadataBySlug(
+      contract,
+      slug,
+      continuation ?? ""
+    );
   }
 
   public static getCollectionIndexingMethod(community: string | null) {

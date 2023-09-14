@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { TokenMetadata } from "@/utils/metadata-api";
+import { TokenMetadata } from "@/metadata/types";
 
 export const extend = async (_chainId: number, metadata: TokenMetadata) => {
   let name = metadata.name;

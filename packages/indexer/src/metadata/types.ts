@@ -23,7 +23,7 @@ export interface TokenMetadata {
   mediaUrl?: string | null;
   attributes: {
     key: string;
-    value: string;
+    value: string | number | null;
     kind: "string" | "number" | "date" | "range";
     rank?: number;
   }[];

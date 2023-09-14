@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { CollectionMetadata, TokenMetadata } from "@/utils/metadata-api";
+import { CollectionMetadata, TokenMetadata } from "@/metadata/types";
 import axios from "axios";
 import slugify from "slugify";
 

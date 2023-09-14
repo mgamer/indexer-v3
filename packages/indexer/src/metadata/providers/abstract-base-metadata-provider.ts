@@ -11,6 +11,8 @@ import {
 import { extendMetadata, hasExtendHandler } from "../extend";
 
 export abstract class AbstractBaseMetadataProvider {
+  abstract method: string;
+
   async getCollectionMetadata(contract: string, tokenId: string): Promise<CollectionMetadata> {
     // handle universal extend/custom logic here
     if (hasCustomHandler(config.chainId, contract)) {
@@ -61,7 +63,7 @@ export abstract class AbstractBaseMetadataProvider {
     }
 
     // merge custom metadata with metadata-api metadata
-    const allMetadata = [...metadataFromProvider, ...filteredCustomMetadata];
+    const allMetadata: TokenMetadata[] = [...metadataFromProvider, ...filteredCustomMetadata];
 
     // extend metadata
     const extendedMetadata = await Promise.all(
@@ -78,10 +80,14 @@ export abstract class AbstractBaseMetadataProvider {
   }
 
   async getTokensMetadataBySlug(
+    contract: string,
     slug: string,
     continuation: string
   ): Promise<TokenMetadataBySlugResult> {
-    // handle universal extend/custom logic here
+    if (hasCustomHandler(config.chainId, contract) || hasExtendHandler(config.chainId, contract)) {
+      throw new Error("Custom handler is not supported with collection slug.");
+    }
+
     return this._getTokensMetadataBySlug(slug, continuation);
   }
 

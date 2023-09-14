@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { baseProvider } from "@/common/provider";
-import { TokenMetadata } from "@/utils/metadata-api";
+import { TokenMetadata } from "@/metadata/types";
+
 import { Interface } from "@ethersproject/abi";
 import { Contract } from "@ethersproject/contracts";
 import axios from "axios";

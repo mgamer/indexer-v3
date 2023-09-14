@@ -14,6 +14,7 @@ import slugify from "slugify";
 import { AbstractBaseMetadataProvider } from "./abstract-base-metadata-provider";
 
 export class SimplehashMetadataProvider extends AbstractBaseMetadataProvider {
+  method = "simplehash";
   async _getCollectionMetadata(contract: string, tokenId: string): Promise<CollectionMetadata> {
     const network = this.getSimplehashNetworkName();
     const url = `https://api.simplehash.com/api/v0/nfts/${network}/${contract}/${tokenId}`;

@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { TokenMetadata } from "@/utils/metadata-api";
+import { TokenMetadata } from "@/metadata/types";
+
 import _warriors from "./warriors.json";
 
 const warriors: {

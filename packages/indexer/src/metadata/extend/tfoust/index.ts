@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { TokenMetadata } from "@/utils/metadata-api";
+import { TokenMetadata } from "@/metadata/types";
+
 import CollectiblesContracts from "./contracts.json";
 
 export const CollectiblesCollections = CollectiblesContracts.map((c) => c.toLowerCase());

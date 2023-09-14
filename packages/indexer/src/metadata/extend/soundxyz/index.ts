@@ -5,7 +5,7 @@ import _ from "lodash";
 import ArtistContracts from "./ArtistContracts.json";
 import ReleaseContracts from "./ReleaseContracts.json";
 import { logger } from "@/common/logger";
-import { CollectionMetadata, TokenMetadata } from "@/utils/metadata-api";
+import { CollectionMetadata, TokenMetadata } from "@/metadata/types";
 
 export const SoundxyzArtistContracts = ArtistContracts.map((c) => c.toLowerCase());
 export const SoundxyzReleaseContracts = ReleaseContracts.map((c) => c.toLowerCase());

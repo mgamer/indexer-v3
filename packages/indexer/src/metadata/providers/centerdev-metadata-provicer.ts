@@ -12,6 +12,7 @@ import { logger } from "@/common/logger";
 import { AbstractBaseMetadataProvider } from "./abstract-base-metadata-provider";
 
 export class CenterdevMetadataProvider extends AbstractBaseMetadataProvider {
+  method = "centerdev";
   async _getTokensMetadata(
     tokens: { contract: string; tokenId: string }[]
   ): Promise<TokenMetadata[]> {

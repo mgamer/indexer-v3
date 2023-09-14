@@ -11,7 +11,8 @@ import { RequestWasThrottledError } from "./utils";
 import { openseaMetadataProvider } from "./opensea-metadata-provider";
 import { AbstractBaseMetadataProvider } from "./abstract-base-metadata-provider";
 
-export class SoundxyzhMetadataProvider extends AbstractBaseMetadataProvider {
+export class SoundxyzMetadataProvider extends AbstractBaseMetadataProvider {
+  method = "soundxyz";
   async _getCollectionMetadata(contract: string, tokenId: string): Promise<CollectionMetadata> {
     const {
       data: {
@@ -149,5 +150,3 @@ export class SoundxyzhMetadataProvider extends AbstractBaseMetadataProvider {
     throw error;
   }
 }
-
-export const soundxyzMetadataProvider = new SoundxyzhMetadataProvider();

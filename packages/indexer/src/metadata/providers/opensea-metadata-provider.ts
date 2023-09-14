@@ -12,6 +12,7 @@ import _ from "lodash";
 import { AbstractBaseMetadataProvider } from "./abstract-base-metadata-provider";
 
 class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
+  method = "opensea";
   protected async _getCollectionMetadata(
     contract: string,
     tokenId: string

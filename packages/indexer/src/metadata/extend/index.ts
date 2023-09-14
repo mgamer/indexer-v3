@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { CollectionMetadata } from "@/utils/metadata-api";
+import { CollectionMetadata, TokenMetadata } from "../types";
 import * as adidasOriginals from "./adidas-originals";
 import * as admitOne from "./admit-one";
 import * as artTennis from "./art-tennis";
@@ -56,7 +56,7 @@ export const extendCollectionMetadata = async (chainId: number, metadata: any, t
   }
 };
 
-export const extendMetadata = async (chainId: number, metadata: CollectionMetadata) => {
+export const extendMetadata = async (chainId: number, metadata: TokenMetadata) => {
   if (metadata) {
     if (extend[`${chainId},${metadata.contract.toLowerCase()}`]) {
       return extend[`${chainId},${metadata.contract.toLowerCase()}`].extend(chainId, metadata);
@@ -80,7 +80,7 @@ class ExtendLogic {
 
     return { ...metadata };
   }
-  public async extend(_chainId: number, metadata: CollectionMetadata) {
+  public async extend(_chainId: number, metadata: TokenMetadata) {
     metadata.collection = `${metadata.contract}:${this.prefix}-${metadata.slug}`;
     return { ...metadata };
   }

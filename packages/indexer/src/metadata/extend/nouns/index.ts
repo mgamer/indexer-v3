@@ -4,7 +4,7 @@ import { request, gql } from "graphql-request";
 import { utils } from "ethers";
 
 import nouns from "./nouns.json";
-import { TokenMetadata } from "@/utils/metadata-api";
+import { TokenMetadata } from "@/metadata/types";
 
 const capitalizeFirstLetter = (s: any) => s.charAt(0).toUpperCase() + s.slice(1);
 

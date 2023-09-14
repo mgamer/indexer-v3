@@ -2,7 +2,7 @@
 
 import { logger } from "@/common/logger";
 import { getStakedAmountWei, stakedAmountWeiToAttributeBucket } from "../apecoin";
-import { TokenMetadata } from "@/utils/metadata-api";
+import { TokenMetadata } from "@/metadata/types";
 
 const POOL_ID = 1;
 

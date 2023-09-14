@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { CollectionMetadata } from "@/utils/metadata-api";
-
+import { CollectionMetadata } from "@/metadata/types";
 export const extendCollection = async (
   _chainId: number,
   metadata: CollectionMetadata,

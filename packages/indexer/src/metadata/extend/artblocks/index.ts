@@ -3,7 +3,7 @@
 import _ from "lodash";
 import axios from "axios";
 import slugify from "slugify";
-import { CollectionMetadata, TokenMetadata } from "@/utils/metadata-api";
+import { CollectionMetadata, TokenMetadata } from "@/metadata/types";
 
 export const extendCollection = async (
   _chainId: number,

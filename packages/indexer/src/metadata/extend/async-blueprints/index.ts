@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { CollectionMetadata, TokenMetadata } from "@/utils/metadata-api";
+import { CollectionMetadata, TokenMetadata } from "@/metadata/types";
 
 const collectionsTokenIdRange = [
   [0, 665], // Grifters by XCOPY
