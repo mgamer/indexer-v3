@@ -7,6 +7,7 @@ import { BaseEventParams } from "@/events-sync/parser";
 import { eventsSyncNftTransfersWriteBufferJob } from "@/jobs/events-sync/write-buffers/nft-transfers-job";
 import { AddressZero } from "@ethersproject/constants";
 import { tokenReclacSupplyJob } from "@/jobs/token-updates/token-reclac-supply-job";
+import { ZeroAddressBalance } from "@/models/zero-address-balance";
 
 export type Event = {
   kind: ContractKind;
@@ -64,6 +65,7 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
 
   const tokenValuesErc721: erc721Token[] = [];
   const tokenValuesErc1155: erc1155Token[] = [];
+  const erc1155Contracts = [];
 
   for (const event of events) {
     const contractId = event.baseEventParams.address.toString();
@@ -106,6 +108,7 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
           remaining_supply: event.to === AddressZero ? 0 : 1,
         });
       } else {
+        erc1155Contracts.push(event.baseEventParams.address);
         tokenValuesErc1155.push({
           collection_id: event.baseEventParams.address,
           contract: toBuffer(event.baseEventParams.address),
@@ -137,6 +140,10 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
         { table: "nft_transfer_events" }
       );
 
+      const isFromZeroAddress = fromBuffer(event.from) === AddressZero;
+      const isErc1155 = _.includes(erc1155Contracts, fromBuffer(event.address));
+      const deferUpdate = config.chainId === 137 && isFromZeroAddress && isErc1155;
+
       // Atomically insert the transfer events and update balances
       nftTransferQueries.push(`
         WITH "x" AS (
@@ -162,6 +169,7 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
             ARRAY[-"amount", "amount"] AS "amount_deltas",
             ARRAY[NULL, to_timestamp("timestamp")] AS "timestamps"
         )
+        
         INSERT INTO "nft_balances" (
           "contract",
           "token_id",
@@ -191,7 +199,14 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
         UPDATE SET 
           "amount" = "nft_balances"."amount" + "excluded"."amount", 
           "acquired_at" = COALESCE(GREATEST("excluded"."acquired_at", "nft_balances"."acquired_at"), "nft_balances"."acquired_at")
+        ${
+          deferUpdate ? `WHERE excluded.owner != '\\x0000000000000000000000000000000000000000'` : ""
+        }
       `);
+
+      if (deferUpdate) {
+        await ZeroAddressBalance.count(fromBuffer(event.address), event.token_id, -1);
+      }
 
       await insertQueries(nftTransferQueries, backfill);
     }
