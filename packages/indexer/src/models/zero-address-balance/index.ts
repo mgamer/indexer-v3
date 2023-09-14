@@ -54,7 +54,7 @@ if (config.doBackgroundWork) {
                   "acquired_at"
                 ) VALUES($/contract/, $/tokenId/, $/owner/, $/balance/, NOW())
                ON CONFLICT ("contract", "token_id", "owner") DO
-               UPDATE SET amount = amount + $/balance/`;
+               UPDATE SET amount = nft_balances.amount + $/balance/`;
 
               await idb.none(query, {
                 balance: balance.balance,
