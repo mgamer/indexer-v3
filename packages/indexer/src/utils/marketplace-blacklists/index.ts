@@ -1,6 +1,7 @@
 import { Interface } from "@ethersproject/abi";
 import { Contract } from "@ethersproject/contracts";
 import * as Sdk from "@reservoir0x/sdk";
+import { orderRevalidationsJob } from "@/jobs/order-fixes/order-revalidations-job";
 
 import { idb, redb } from "@/common/db";
 import { baseProvider } from "@/common/provider";
@@ -149,6 +150,18 @@ const updateMarketplaceBlacklist = async (contract: string) => {
       contract: toBuffer(contract),
       blacklist,
     }
+  );
+  // TODO: might only need to trigger when the list changes
+  // Trigger revalidation job
+  await orderRevalidationsJob.addToQueue(
+    blacklist.map((operator) => ({
+      by: "operator",
+      data: {
+        contract,
+        operator,
+        status: "inactive",
+      },
+    }))
   );
   return blacklist;
 };
