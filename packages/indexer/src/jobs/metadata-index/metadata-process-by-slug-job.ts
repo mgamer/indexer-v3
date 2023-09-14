@@ -4,7 +4,7 @@ import { AbstractRabbitMqJobHandler, BackoffStrategy } from "@/jobs/abstract-rab
 import _ from "lodash";
 import { config } from "@/config/index";
 import { logger } from "@/common/logger";
-import MetadataApi from "@/utils/metadata-api";
+import MetadataApi from "@/metadata/metadata-api";
 import { metadataIndexWriteJob } from "@/jobs/metadata-index/metadata-write-job";
 import {
   PendingRefreshTokensBySlug,

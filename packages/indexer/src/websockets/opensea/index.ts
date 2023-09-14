@@ -27,7 +27,7 @@ import { handleEvent as handleCollectionOfferEvent } from "@/websockets/opensea/
 import { handleEvent as handleItemCancelled } from "@/websockets/opensea/handlers/item_cancelled";
 import { handleEvent as handleOrderRevalidate } from "@/websockets/opensea/handlers/order_revalidate";
 import { handleEvent as handleTraitOfferEvent } from "@/websockets/opensea/handlers/trait_offer";
-import MetadataApi from "@/utils/metadata-api";
+import MetadataApi from "@/metadata/metadata-api";
 
 import { openseaBidsQueueJob } from "@/jobs/orderbook/opensea-bids-queue-job";
 import { metadataIndexWriteJob } from "@/jobs/metadata-index/metadata-write-job";

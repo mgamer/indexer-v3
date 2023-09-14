@@ -10,7 +10,7 @@ import {
 } from "@/orderbook/mints";
 import * as detector from "@/orderbook/mints/calldata/detector";
 import { getContractKind } from "@/orderbook/mints/calldata/helpers";
-import MetadataApi from "@/utils/metadata-api";
+import MetadataApi from "@/metadata/metadata-api";
 
 import { manifold } from "@/orderbook/mints/calldata/detector";
 

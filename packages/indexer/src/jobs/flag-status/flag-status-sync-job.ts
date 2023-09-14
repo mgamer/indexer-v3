@@ -6,7 +6,7 @@ import _ from "lodash";
 import { PendingFlagStatusSyncTokens } from "@/models/pending-flag-status-sync-tokens";
 import { releaseLock } from "@/common/redis";
 import { generateCollectionTokenSetJob } from "@/jobs/flag-status/generate-collection-token-set-job";
-import MetadataApi from "@/utils/metadata-api";
+import MetadataApi from "@/metadata/metadata-api";
 import { TokensEntityUpdateParams } from "@/models/tokens/tokens-entity";
 import { Tokens } from "@/models/tokens";
 import { nonFlaggedFloorQueueJob } from "@/jobs/collection-updates/non-flagged-floor-queue-job";

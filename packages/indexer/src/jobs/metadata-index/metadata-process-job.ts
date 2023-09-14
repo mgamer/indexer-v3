@@ -3,7 +3,7 @@ import _ from "lodash";
 import { config } from "@/config/index";
 import { PendingRefreshTokens } from "@/models/pending-refresh-tokens";
 import { logger } from "@/common/logger";
-import MetadataApi from "@/utils/metadata-api";
+import MetadataApi from "@/metadata/metadata-api";
 import { metadataIndexWriteJob } from "@/jobs/metadata-index/metadata-write-job";
 import { RabbitMQMessage } from "@/common/rabbit-mq";
 

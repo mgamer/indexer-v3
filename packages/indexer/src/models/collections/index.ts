@@ -15,7 +15,7 @@ import { updateBlurRoyalties } from "@/utils/blur";
 import * as erc721c from "@/utils/erc721c";
 import * as marketplaceBlacklist from "@/utils/marketplace-blacklists";
 import * as marketplaceFees from "@/utils/marketplace-fees";
-import MetadataApi from "@/utils/metadata-api";
+import MetadataApi from "@/metadata/metadata-api";
 import * as royalties from "@/utils/royalties";
 
 import { recalcOwnerCountQueueJob } from "@/jobs/collection-updates/recalc-owner-count-queue-job";
