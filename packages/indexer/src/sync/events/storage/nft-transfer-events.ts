@@ -169,7 +169,6 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
             ARRAY[-"amount", "amount"] AS "amount_deltas",
             ARRAY[NULL, to_timestamp("timestamp")] AS "timestamps"
         )
-        
         INSERT INTO "nft_balances" (
           "contract",
           "token_id",
@@ -205,7 +204,11 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
       `);
 
       if (deferUpdate) {
-        await ZeroAddressBalance.count(fromBuffer(event.address), event.token_id, -1);
+        await ZeroAddressBalance.count(
+          fromBuffer(event.address),
+          event.token_id,
+          -Number(event.amount)
+        );
       }
 
       await insertQueries(nftTransferQueries, backfill);
