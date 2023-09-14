@@ -1,10 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { config } from "@/config/index";
-import { customHandleCollection, customHandleToken, hasCustomHandler } from "@/metadata/custom";
 import { MetadataProvidersMap } from "@/metadata/providers";
-import { CollectionMetadata, TokenMetadata, TokenMetadataBySlugResult } from "@/metadata/types";
-import { extendMetadata, hasExtendHandler } from "@/metadata/extend";
+import { CollectionMetadata, TokenMetadata } from "@/metadata/types";
 
 export class MetadataApi {
   public static async getCollectionMetadata(
@@ -19,11 +17,6 @@ export class MetadataApi {
   ): Promise<CollectionMetadata> {
     if (config.liquidityOnly) {
       return await MetadataProvidersMap["onchain"].getCollectionMetadata(contract, tokenId);
-    }
-    // get custom / extended metadata locally
-    if (hasCustomHandler(contract)) {
-      const result = await customHandleCollection(contract);
-      return result;
     }
 
     let indexingMethod =
@@ -56,93 +49,6 @@ export class MetadataApi {
     method = method === "" ? config.metadataIndexingMethod : method;
 
     return await MetadataProvidersMap[method].getTokensMetadata(tokens);
-  }
-
-  // This just checks the extend for the token, it doesn't actually fetch the metadata
-  public static async parseTokenMetadata(
-    request: {
-      asset_contract: {
-        address: string;
-      };
-      collection: {
-        slug: string;
-      };
-      token_id: string;
-      name?: string;
-      description?: string;
-      image_url?: string;
-      animation_url?: string;
-      traits: Array<{
-        trait_type: string;
-        value: string | number | null;
-      }>;
-    },
-    method = ""
-  ): Promise<TokenMetadata | null> {
-    if (method !== "opensea") {
-      throw new Error("Method not implemented: " + method);
-    }
-
-    if (hasCustomHandler(request.asset_contract.address)) {
-      const result = await customHandleToken({
-        contract: request.asset_contract.address,
-        _tokenId: request.token_id,
-      });
-      return result;
-    }
-
-    if (hasExtendHandler(request.asset_contract.address)) {
-      const result = await extendMetadata({
-        contract: request.asset_contract.address,
-        slug: request.collection.slug,
-        collection: request.asset_contract.address,
-        flagged: null,
-        tokenId: request.token_id,
-        name: request.name ?? "",
-        description: request.description ?? "",
-        imageUrl: request.image_url ?? "",
-        mediaUrl: request.animation_url ?? "",
-        attributes: request.traits.map((trait) => ({
-          key: trait.trait_type,
-          value: trait.value,
-          kind: typeof trait.value == "number" ? "number" : "string",
-        })),
-      });
-      return result;
-    }
-
-    return {
-      contract: request.asset_contract.address,
-      slug: request.collection.slug,
-      collection: request.asset_contract.address,
-      flagged: null,
-      tokenId: request.token_id,
-      name: request.name ?? "",
-      description: request.description ?? "",
-      imageUrl: request.image_url ?? "",
-      mediaUrl: request.animation_url ?? "",
-      attributes: request.traits.map((trait) => ({
-        key: trait.trait_type,
-        value: trait.value,
-        kind: typeof trait.value == "number" ? "number" : "string",
-      })),
-    };
-  }
-
-  public static async getTokensMetadataBySlug(
-    contract: string,
-    slug: string,
-    method = "",
-    continuation?: string
-  ): Promise<TokenMetadataBySlugResult> {
-    if (method !== "opensea") {
-      throw new Error("Method not implemented.");
-    }
-    return await MetadataProvidersMap["opensea"].getTokensMetadataBySlug(
-      contract,
-      slug,
-      continuation ?? ""
-    );
   }
 
   public static getCollectionIndexingMethod(community: string | null) {
