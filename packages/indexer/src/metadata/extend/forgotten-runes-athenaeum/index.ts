@@ -2,7 +2,7 @@
 
 import { TokenMetadata } from "@/metadata/types";
 
-export const extend = async (_chainId: number, metadata: TokenMetadata) => {
+export const extend = async (metadata: TokenMetadata) => {
   return {
     ...metadata,
     attributes: [

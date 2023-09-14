@@ -9,7 +9,7 @@ import { TokenMetadata } from "@/metadata/types";
 const capitalizeFirstLetter = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const replaceAll = (str: string, find: string, replace: string) => str.split(find).join(replace);
 
-export const extend = async (_chainId: number, metadata: TokenMetadata) => {
+export const extend = async (metadata: TokenMetadata) => {
   const traitMap = ["background", "body", "accessory", "head", "glasses"];
   const data = await request(
     "https://api.thegraph.com/subgraphs/name/lilnounsdao/lil-nouns-subgraph",

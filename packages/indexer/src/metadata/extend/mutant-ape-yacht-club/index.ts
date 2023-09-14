@@ -6,7 +6,7 @@ import { TokenMetadata } from "@/metadata/types";
 
 const POOL_ID = 2;
 
-export const extend = async (_chainId: number, metadata: TokenMetadata) => {
+export const extend = async (metadata: TokenMetadata) => {
   const traitCount = metadata.attributes.length;
   let serumType;
   let name;
@@ -15,7 +15,7 @@ export const extend = async (_chainId: number, metadata: TokenMetadata) => {
   if (metadata.attributes.length === 1) {
     serumType = "Mega";
     name = metadata.attributes[0].value;
-  } else {
+  } else if (metadata.attributes[0]?.value && typeof metadata.attributes[0].value === "string") {
     serumType = metadata.attributes[0].value.slice(0, 2);
     name = `#${metadata.tokenId} (${serumType})`;
   }

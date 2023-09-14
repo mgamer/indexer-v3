@@ -26,7 +26,7 @@ const rank = {
   Origin: 2,
 };
 
-export const extend = async (_chainId: number, metadata: TokenMetadata) => {
+export const extend = async (metadata: TokenMetadata) => {
   const attributes: any[] = [];
   for (const trait of Object.keys(rank)) {
     attributes.push({

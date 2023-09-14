@@ -2,7 +2,7 @@
 
 import { TokenMetadata } from "@/metadata/types";
 
-export const extend = async (_chainId: number, metadata: TokenMetadata) => {
+export const extend = async (metadata: TokenMetadata) => {
   let name = metadata.name;
   if (metadata.tokenId == 0) {
     name = "Phase 1";

@@ -1,17 +1,17 @@
 import { Collection, MapEntry, Metadata } from "../types";
 
+export const normalizeLink = (link: string) => {
+  if (link.startsWith("ipfs://")) {
+    return `https://ipfs.io/ipfs/${link.slice(7)}`;
+  }
+
+  return link;
+};
+
 export const normalizeMetadata = (collection: Collection): Metadata => {
   if (!collection) {
     return {};
   }
-
-  const normalizeLink = (link: string) => {
-    if (link.startsWith("ipfs://")) {
-      return `https://ipfs.io/ipfs/${link.slice(7)}`;
-    }
-
-    return link;
-  };
 
   const map: Record<string, MapEntry> = {
     discord: {

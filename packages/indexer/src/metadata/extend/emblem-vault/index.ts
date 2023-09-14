@@ -3,7 +3,7 @@
 import { logger } from "@/common/logger";
 import axios from "axios";
 
-export const extendCollection = async (_chainId: number, metadata: any, _tokenId = null) => {
+export const extendCollection = async (metadata: any, _tokenId = null) => {
   metadata.community = null;
   metadata.tokenIdRange = null;
   metadata.tokenSetId = null;
@@ -37,7 +37,7 @@ export const extendCollection = async (_chainId: number, metadata: any, _tokenId
     .catch((error) => {
       logger.error(
         "ordinals-fetcher-collection",
-        `fetchTokens error. chainId:${_chainId}, message:${error.message},  status:${
+        `fetchTokens error.  message:${error.message},  status:${
           error.response?.status
         }, data:${JSON.stringify(error.response?.data)}`
       );
@@ -46,7 +46,7 @@ export const extendCollection = async (_chainId: number, metadata: any, _tokenId
   return metadata;
 };
 
-export const extend = async (_chainId: number, metadata: any) => {
+export const extend = async (metadata: any) => {
   await axios
     .get(`https://metadata.ordinals.market/emblem?token_id=${metadata.tokenId}`, {
       headers: {
@@ -56,9 +56,9 @@ export const extend = async (_chainId: number, metadata: any) => {
     .then((response) => {
       logger.info(
         "ordinals-fetcher-token",
-        `fetchTokens response. chainId:${_chainId}, data:${JSON.stringify(
-          response.data
-        )} contract:${metadata.collection} tokenId:${metadata.tokenId}`
+        `fetchTokens response. data:${JSON.stringify(response.data)} contract:${
+          metadata.collection
+        } tokenId:${metadata.tokenId}`
       );
 
       const data = response.data;
@@ -75,7 +75,7 @@ export const extend = async (_chainId: number, metadata: any) => {
     .catch((error) => {
       logger.error(
         "ordinals-fetcher-token",
-        `fetchTokens error. chainId:${_chainId}, message:${error.message},  status:${
+        `fetchTokens error. message:${error.message},  status:${
           error.response?.status
         }, data:${JSON.stringify(error.response?.data)} contract:${metadata.collection} tokenId:${
           metadata.tokenId

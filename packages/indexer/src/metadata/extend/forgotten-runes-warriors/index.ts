@@ -26,7 +26,7 @@ const rank = {
   Affiliation: 1,
 };
 
-export const extend = async (_chainId: number, metadata: TokenMetadata) => {
+export const extend = async (metadata: TokenMetadata) => {
   const rankCopy = JSON.parse(JSON.stringify(rank));
   const attributes: any[] = [];
 

@@ -3,11 +3,7 @@
 
 import { CollectionMetadata, TokenMetadata } from "@/metadata/types";
 
-export const extendCollection = async (
-  _chainId: number,
-  metadata: CollectionMetadata,
-  _tokenId = null
-) => {
+export const extendCollection = async (metadata: CollectionMetadata, _tokenId = null) => {
   metadata.id = `${metadata.contract}:courtyard-${metadata.slug}`;
   metadata.tokenIdRange = null;
   metadata.tokenSetId = null;
@@ -15,7 +11,7 @@ export const extendCollection = async (
   return { ...metadata };
 };
 
-export const extend = async (_chainId: number, metadata: TokenMetadata) => {
+export const extend = async (metadata: TokenMetadata) => {
   metadata.collection = `${metadata.contract}:courtyard-${metadata.slug}`;
   return { ...metadata };
 };

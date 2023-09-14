@@ -7,7 +7,7 @@ import { baseProvider } from "@/common/provider";
 import { defaultAbiCoder } from "ethers/lib/utils";
 import { logger } from "@/common/logger";
 import { ethers } from "ethers";
-import { RequestWasThrottledError } from "./utils";
+import { RequestWasThrottledError, normalizeLink, normalizeMetadata } from "./utils";
 import _ from "lodash";
 import { AbstractBaseMetadataProvider } from "./abstract-base-metadata-provider";
 
@@ -144,7 +144,7 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
       slug: null,
       community: null,
       name: collectionName,
-      metadata: this.normalizeMetadata(collection),
+      metadata: normalizeMetadata(collection),
       contract,
       tokenSetId: `contract:${contract}`,
       tokenIdRange: null,
@@ -256,7 +256,7 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
         baseProvider
       );
       let uri = await contract.contractURI();
-      uri = this.normalizeLink(uri);
+      uri = normalizeLink(uri);
 
       const isDataUri = uri.startsWith("data:application/json;base64,");
       if (isDataUri) {
@@ -375,15 +375,6 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
     }
   };
 
-  normalizeLink = (link: string) => {
-    if (!link) return null;
-    if (link.startsWith("ipfs://")) {
-      return `https://ipfs.io/ipfs/${link.slice(7)}`;
-    }
-
-    return link;
-  };
-
   parse = (asset: any) => {
     return {
       contract: asset.contract,
@@ -395,9 +386,9 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
       // Token descriptions are a waste of space for most collections we deal with
       // so by default we ignore them (this behaviour can be overridden if needed).
       description: asset.description || null,
-      imageUrl: this.normalizeLink(asset?.image) || null,
+      imageUrl: normalizeLink(asset?.image) || null,
       imageOriginalUrl: asset?.image || null,
-      mediaUrl: this.normalizeLink(asset?.animation_url) || null,
+      mediaUrl: normalizeLink(asset?.animation_url) || null,
       attributes: (asset.attributes || []).map((trait: any) => ({
         key: trait.trait_type ?? "property",
         value: trait.value,

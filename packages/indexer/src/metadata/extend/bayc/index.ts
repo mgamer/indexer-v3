@@ -6,7 +6,7 @@ import { TokenMetadata } from "@/metadata/types";
 
 const POOL_ID = 1;
 
-export const extend = async (_chainId: number, metadata: TokenMetadata) => {
+export const extend = async (metadata: TokenMetadata) => {
   const traitCount = metadata.attributes.length;
 
   let stakedAmountWei;

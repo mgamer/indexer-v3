@@ -6,12 +6,13 @@ import ArtistContracts from "./ArtistContracts.json";
 import ReleaseContracts from "./ReleaseContracts.json";
 import { logger } from "@/common/logger";
 import { CollectionMetadata, TokenMetadata } from "@/metadata/types";
+import { config } from "@/config/index";
 
 export const SoundxyzArtistContracts = ArtistContracts.map((c) => c.toLowerCase());
 export const SoundxyzReleaseContracts = ReleaseContracts.map((c) => c.toLowerCase());
 
-export const getContractSlug = async (_chainId: number, contract: string, _tokenId: string) => {
-  const apiUrl = ![4, 5].includes(_chainId)
+export const getContractSlug = async (contract: string, _tokenId: string) => {
+  const apiUrl = ![4, 5].includes(config.chainId)
     ? "https://api.sound.xyz/graphql?x-sound-client-name=firstmate"
     : "https://staging.api.sound.xyz/graphql";
 
@@ -92,19 +93,19 @@ export const getContractSlug = async (_chainId: number, contract: string, _token
   } catch (error) {
     logger.error(
       "soundxyz-fetcher",
-      `fetchCollection error. chainId:${_chainId}, contract:${contract}, message:${error}`
+      `fetchCollection error. contract:${contract}, message:${error}`
     );
 
     throw error;
   }
 };
 
-export const extend = async (_chainId: number, metadata: TokenMetadata) => {
+export const extend = async (metadata: TokenMetadata) => {
   const {
     data: {
       data: { releaseFromToken },
     },
-  } = await getContractSlug(_chainId, metadata.contract, metadata.tokenId);
+  } = await getContractSlug(metadata.contract, metadata.tokenId);
   const isGoldenEgg = releaseFromToken.eggGame?.nft.tokenId === metadata.tokenId;
   let imageUrl =
     releaseFromToken.animatedCoverImage?.url ??
@@ -134,11 +135,7 @@ export const extend = async (_chainId: number, metadata: TokenMetadata) => {
   return { ...metadata };
 };
 
-export const extendCollection = async (
-  _chainId: number,
-  metadata: CollectionMetadata,
-  _tokenId = null
-) => {
+export const extendCollection = async (metadata: CollectionMetadata, _tokenId = null) => {
   if (isNaN(Number(_tokenId)) || !_tokenId) {
     throw new Error(`Invalid tokenId ${_tokenId}`);
   }
@@ -147,7 +144,7 @@ export const extendCollection = async (
     data: {
       data: { releaseFromToken },
     },
-  } = await getContractSlug(_chainId, metadata.contract, _tokenId);
+  } = await getContractSlug(metadata.contract, _tokenId);
 
   const royalties = [];
 

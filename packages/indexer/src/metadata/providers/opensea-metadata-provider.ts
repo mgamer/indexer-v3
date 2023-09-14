@@ -22,35 +22,23 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
       let creatorAddress;
 
       if (config.chainId === 1) {
-        data = await this.getOSData("asset", config.chainId, contract, tokenId);
+        data = await this.getOSData("asset", contract, tokenId);
         creatorAddress = data?.creator?.address;
       } else {
-        data = await this.getOSData("nft", config.chainId, contract, tokenId);
+        data = await this.getOSData("nft", contract, tokenId);
         creatorAddress = data?.creator;
 
         if (data?.collection) {
-          data = await this.getOSData(
-            "collection",
-            config.chainId,
-            contract,
-            tokenId,
-            data.collection
-          );
+          data = await this.getOSData("collection", contract, tokenId, data.collection);
           creatorAddress = creatorAddress ?? data?.creator?.address;
         } else {
           data =
-            (await this.getOSData("events", config.chainId, contract, tokenId)) ??
-            (await this.getOSData("asset", config.chainId, contract, tokenId));
+            (await this.getOSData("events", contract, tokenId)) ??
+            (await this.getOSData("asset", contract, tokenId));
 
           // Get payment tokens if we have the collection slug
           if (data?.collection?.slug && !data?.collection?.payment_tokens) {
-            data = await this.getOSData(
-              "collection",
-              config.chainId,
-              contract,
-              tokenId,
-              data.collection.slug
-            );
+            data = await this.getOSData("collection", contract, tokenId, data.collection.slug);
           }
 
           creatorAddress = data?.creator?.address;
@@ -176,14 +164,12 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
     }
 
     const url = `${
-      !this.isOSTestnet(config.chainId)
-        ? "https://api.opensea.io"
-        : "https://testnets-api.opensea.io"
+      !this.isOSTestnet() ? "https://api.opensea.io" : "https://testnets-api.opensea.io"
     }/api/v1/assets?${searchParams.toString()}`;
 
     const data = await axios
-      .get(!this.isOSTestnet(config.chainId) ? config.openseaBaseUrlAlt || url : url, {
-        headers: !this.isOSTestnet(config.chainId)
+      .get(!this.isOSTestnet() ? config.openseaBaseUrlAlt || url : url, {
+        headers: !this.isOSTestnet()
           ? {
               url,
               "X-API-KEY": config.openSeaApiKey.trim(),
@@ -197,13 +183,11 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
       .catch((error) => {
         logger.error(
           "opensea-fetcher",
-          `fetchTokens error. url:${url} chainId:${config.chainId}, message:${
-            error.message
-          },  status:${error.response?.status}, data:${JSON.stringify(
-            error.response?.data
-          )}, url:${JSON.stringify(error.config?.url)}, headers:${JSON.stringify(
-            error.config?.headers?.url
-          )}`
+          `fetchTokens error. url:${url}, message:${error.message},  status:${
+            error.response?.status
+          }, data:${JSON.stringify(error.response?.data)}, url:${JSON.stringify(
+            error.config?.url
+          )}, headers:${JSON.stringify(error.config?.headers?.url)}`
         );
 
         this.handleError(error);
@@ -296,8 +280,8 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
     };
   }
 
-  getOSNetworkName(chainId: number): string {
-    switch (chainId) {
+  getOSNetworkName(): string {
+    switch (config.chainId) {
       case 1:
         return "ethereum";
       case 4:
@@ -329,12 +313,12 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
       case 999:
         return "zora_testnet";
       default:
-        throw new Error(`Unknown chainId for metadata provider opensea: ${chainId}`);
+        throw new Error(`Unknown chainId for metadata provider opensea: ${config.chainId}`);
     }
   }
 
-  isOSTestnet(chainId: number): boolean {
-    switch (chainId) {
+  isOSTestnet(): boolean {
+    switch (config.chainId) {
       case 4:
       case 5:
       case 11155111:
@@ -349,14 +333,13 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
 
   getUrlForApi(
     api: string,
-    chainId: number,
     contract: string,
     tokenId?: string,
     network?: string,
     slug?: string
   ): string {
     const baseUrl = `${
-      !this.isOSTestnet(chainId) ? "https://api.opensea.io" : "https://testnets-api.opensea.io"
+      !this.isOSTestnet() ? "https://api.opensea.io" : "https://testnets-api.opensea.io"
     }`;
 
     switch (api) {
@@ -377,17 +360,11 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
     }
   }
 
-  async getOSData(
-    api: string,
-    chainId: number,
-    contract: string,
-    tokenId?: string,
-    slug?: string
-  ): Promise<any> {
-    const network = this.getOSNetworkName(chainId);
-    const url = this.getUrlForApi(api, chainId, contract, tokenId, network, slug);
+  async getOSData(api: string, contract: string, tokenId?: string, slug?: string): Promise<any> {
+    const network = this.getOSNetworkName();
+    const url = this.getUrlForApi(api, contract, tokenId, network, slug);
 
-    const headers = !this.isOSTestnet(chainId)
+    const headers = !this.isOSTestnet()
       ? {
           url,
           "X-API-KEY": config.openSeaApiKey,
@@ -399,7 +376,7 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
 
     try {
       const osResponse = await axios.get(
-        !this.isOSTestnet(chainId) ? process.env.OPENSEA_BASE_URL_ALT || url : url,
+        !this.isOSTestnet() ? process.env.OPENSEA_BASE_URL_ALT || url : url,
         { headers }
       );
 
@@ -409,7 +386,7 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
           if (network == osResponse.data.asset_events[0]?.asset.asset_contract.chain_identifier) {
             return osResponse.data.asset_events[0]?.asset;
           } else {
-            return await this.getOSData("offers", chainId, contract, tokenId);
+            return await this.getOSData("offers", contract, tokenId);
           }
         case "offers":
           return osResponse.data.orders[0]?.taker_asset_bundle.assets[0];
@@ -427,7 +404,6 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
           JSON.stringify({
             topic: "getOSData",
             message: "Retrieve asset error.",
-            chainId,
             url,
             contract,
             tokenId,
@@ -440,12 +416,12 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
           if (isNaN(Number(tokenId))) {
             logger.error(
               "opensea-fetcher",
-              `fetchCollection retrieve asset contract - Invalid tokenId. chainId:${chainId}, contract:${contract}, tokenId:${tokenId}`
+              `fetchCollection retrieve asset contract - Invalid tokenId. contract:${contract}, tokenId:${tokenId}`
             );
 
             throw new Error(`Invalid tokenId.`);
           }
-          return await this.getOSData("asset_contract", chainId, contract);
+          return await this.getOSData("asset_contract", contract);
         } else {
           throw error;
         }
@@ -455,7 +431,6 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
           JSON.stringify({
             topic: "getOSData",
             message: "Could not fetch from API",
-            chainId,
             url,
             contract,
             tokenId,

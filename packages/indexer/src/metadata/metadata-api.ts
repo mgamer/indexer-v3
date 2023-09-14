@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { config } from "@/config/index";
-import { customHandleContractTokens, customHandleToken, hasCustomHandler } from "@/metadata/custom";
+import { customHandleCollection, customHandleToken, hasCustomHandler } from "@/metadata/custom";
 import { MetadataProvidersMap } from "@/metadata/providers";
 import { CollectionMetadata, TokenMetadata, TokenMetadataBySlugResult } from "@/metadata/types";
 import { extendMetadata, hasExtendHandler } from "@/metadata/extend";
@@ -21,8 +21,8 @@ export class MetadataApi {
       return await MetadataProvidersMap["onchain"].getCollectionMetadata(contract, tokenId);
     }
     // get custom / extended metadata locally
-    if (hasCustomHandler(config.chainId, contract)) {
-      const result = await customHandleContractTokens(config.chainId, contract, tokenId);
+    if (hasCustomHandler(contract)) {
+      const result = await customHandleCollection(contract);
       return result;
     }
 
@@ -83,16 +83,16 @@ export class MetadataApi {
       throw new Error("Method not implemented: " + method);
     }
 
-    if (hasCustomHandler(config.chainId, request.asset_contract.address)) {
-      const result = await customHandleToken(config.chainId, {
+    if (hasCustomHandler(request.asset_contract.address)) {
+      const result = await customHandleToken({
         contract: request.asset_contract.address,
         _tokenId: request.token_id,
       });
       return result;
     }
 
-    if (hasExtendHandler(config.chainId, request.asset_contract.address)) {
-      const result = await extendMetadata(config.chainId, {
+    if (hasExtendHandler(request.asset_contract.address)) {
+      const result = await extendMetadata({
         contract: request.asset_contract.address,
         slug: request.collection.slug,
         collection: request.asset_contract.address,

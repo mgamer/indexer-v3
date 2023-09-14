@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { config } from "@/config/index";
 import { CollectionMetadata, TokenMetadata, TokenMetadataBySlugResult } from "../types";
 import { logger } from "@/common/logger";
 
@@ -18,7 +17,7 @@ export class SoundxyzMetadataProvider extends AbstractBaseMetadataProvider {
       data: {
         data: { releaseFromToken },
       },
-    } = await soundxyz.getContractSlug(config.chainId, contract, tokenId);
+    } = await soundxyz.getContractSlug(contract, tokenId);
     const royalties = [];
 
     if (releaseFromToken.fundingAddress && releaseFromToken.royaltyBps) {
@@ -57,8 +56,8 @@ export class SoundxyzMetadataProvider extends AbstractBaseMetadataProvider {
     for (const { contract, tokenId } of tokens) {
       try {
         const [response, collection] = await Promise.all([
-          soundxyz.getContractSlug(config.chainId, contract, tokenId),
-          this.getCollectionId(config.chainId, contract, tokenId),
+          soundxyz.getContractSlug(contract, tokenId),
+          this.getCollectionId(contract, tokenId),
         ]);
 
         data.push(this.parse(contract, tokenId, collection, response.data.data.releaseFromToken));
@@ -80,7 +79,7 @@ export class SoundxyzMetadataProvider extends AbstractBaseMetadataProvider {
     throw new Error("Method not implemented.");
   }
 
-  getCollectionId = async (chainId: number, contract: string, tokenId: string) => {
+  getCollectionId = async (contract: string, tokenId: string) => {
     // If this is not a shared contract collection -> contract
     if (
       _.indexOf(soundxyz.SoundxyzArtistContracts, _.toLower(contract)) === -1 &&
@@ -94,7 +93,7 @@ export class SoundxyzMetadataProvider extends AbstractBaseMetadataProvider {
       data: {
         data: { releaseFromToken },
       },
-    } = await soundxyz.getContractSlug(chainId, contract, tokenId);
+    } = await soundxyz.getContractSlug(contract, tokenId);
     return `${contract}:soundxyz-${releaseFromToken.id}`;
   };
 

@@ -15,7 +15,7 @@ const ranks = {
   "Last Updated At": 0,
 };
 
-export const extend = async (_chainId: number, metadata: TokenMetadata) => {
+export const extend = async (metadata: TokenMetadata) => {
   const response = await axios.get(`${metadataBaseURI}/${metadata.tokenId}`);
   const attributes = response.data.attributes.map((a: { trait_type: string; value: string }) => ({
     key: a.trait_type ?? "property",

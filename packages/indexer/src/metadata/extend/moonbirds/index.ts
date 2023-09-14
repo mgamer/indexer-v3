@@ -4,7 +4,7 @@ import { TokenMetadata } from "@/metadata/types";
 
 import axios from "axios";
 
-export const extend = async (_chainId: number, metadata: TokenMetadata) => {
+export const extend = async (metadata: TokenMetadata) => {
   // get extra meta data from MB API
   const url = `https://birdwatching.moonbirds.xyz/moonbirds/${metadata.tokenId}`;
   const { data } = await axios.get(url, {});
