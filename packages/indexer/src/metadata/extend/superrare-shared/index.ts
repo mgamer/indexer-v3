@@ -23,7 +23,7 @@ export const extendCollection = async (
     metadata.id = `${metadata.contract}:superrare-shared-${creatorAddress}`;
 
     await axios.get(tokenURI).then((rawMetadata) => {
-      metadata.name = `SuperRare 1/1s ${rawMetadata.data.createdBy}`;
+      metadata.name = `SuperRare 1/1s: ${rawMetadata.data.createdBy}`;
     });
     return {
       ...metadata,
