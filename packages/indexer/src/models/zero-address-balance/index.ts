@@ -62,7 +62,7 @@ if (config.doBackgroundWork) {
                     contract: toBuffer(balance.contract),
                     token_id: balance.tokenId,
                     owner: toBuffer(AddressZero),
-                    balance: balance.balance,
+                    amount: balance.balance,
                   },
                   columns
                 )} ($/contract/, $/tokenId/, $/owner/, $/balance/)
