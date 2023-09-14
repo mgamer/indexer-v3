@@ -165,6 +165,7 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
           RETURNING
             "address",
             "token_id",
+            true AS "new_transfer",
             ARRAY["from", "to"] AS "owners",
             ARRAY[-"amount", "amount"] AS "amount_deltas",
             ARRAY[NULL, to_timestamp("timestamp")] AS "timestamps"
@@ -192,18 +193,19 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
             FROM "x"
             ORDER BY "address" ASC, "token_id" ASC, "owner" ASC
           ) "y"
-          ${deferUpdate ? `WHERE y.owner != '\\x0000000000000000000000000000000000000000'` : ""}
+          ${deferUpdate ? `WHERE y.owner != ${pgp.as.buffer(() => toBuffer(AddressZero))}` : ""}
           GROUP BY "y"."address", "y"."token_id", "y"."owner"
         )
         ON CONFLICT ("contract", "token_id", "owner") DO
         UPDATE SET 
           "amount" = "nft_balances"."amount" + "excluded"."amount", 
           "acquired_at" = COALESCE(GREATEST("excluded"."acquired_at", "nft_balances"."acquired_at"), "nft_balances"."acquired_at")
+        RETURNING (SELECT x.new_transfer FROM "x")
       `);
 
-      await insertQueries(nftTransferQueries, backfill);
+      const result = await insertQueries(nftTransferQueries, backfill);
 
-      if (deferUpdate) {
+      if (!_.isEmpty(result) && deferUpdate) {
         await ZeroAddressBalance.count(
           fromBuffer(event.address),
           event.token_id,
@@ -296,16 +298,7 @@ async function insertQueries(queries: string[], backfill: boolean) {
     // on the events to have been written to the database at the time
     // they get to run and we have no way to easily enforce this when
     // using the write buffer.
-    const promises = [];
-    for (const query of _.chunk(queries, [80001, 84531].includes(config.chainId) ? 250 : 500)) {
-      promises.push(idb.none(pgp.helpers.concat(query)));
-    }
-
-    await Promise.all(promises);
-
-    // for (const query of _.chunk(queries, [80001, 84531].includes(config.chainId) ? 250 : 500)) {
-    //   await idb.tx(async (t) => t.batch(query.map((q) => t.none(q))));
-    // }
+    return await idb.manyOrNone(pgp.helpers.concat(queries));
   }
 }
 
