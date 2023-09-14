@@ -12,40 +12,20 @@ import { AbstractBaseMetadataProvider } from "./abstract-base-metadata-provider"
 
 export class SoundxyzMetadataProvider extends AbstractBaseMetadataProvider {
   method = "soundxyz";
+
   async _getCollectionMetadata(contract: string, tokenId: string): Promise<CollectionMetadata> {
     const {
       data: {
         data: { releaseFromToken },
       },
     } = await soundxyz.getContractSlug(contract, tokenId);
-    const royalties = [];
 
-    if (releaseFromToken.fundingAddress && releaseFromToken.royaltyBps) {
-      royalties.push({
-        recipient: _.toLower(releaseFromToken.fundingAddress),
-        bps: releaseFromToken.royaltyBps,
-      });
-    }
+    const openseaRoyalties = await openseaMetadataProvider
+      .getCollectionMetadata(contract, tokenId)
+      .then((m) => m.openseaRoyalties)
+      .catch(() => []);
 
-    return {
-      id: `${contract}`,
-      slug: slugify(releaseFromToken.titleSlug, { lower: true }),
-      name: `${releaseFromToken.artist.name} - ${releaseFromToken.title}`,
-      community: "sound.xyz",
-      metadata: {
-        imageUrl: releaseFromToken.coverImage.url,
-        description: releaseFromToken.description,
-        externalUrl: `https://sound.xyz/${releaseFromToken.artist.soundHandle}/${releaseFromToken.titleSlug}`,
-      },
-      royalties,
-      openseaRoyalties: await openseaMetadataProvider
-        .getCollectionMetadata(contract, tokenId)
-        .then((m) => m.openseaRoyalties)
-        .catch(() => []),
-      contract,
-      tokenIdRange: null,
-      tokenSetId: `contract:${contract}`,
-    };
+    return this.parseCollection(releaseFromToken, contract, openseaRoyalties);
   }
 
   async _getTokensMetadata(
@@ -60,7 +40,9 @@ export class SoundxyzMetadataProvider extends AbstractBaseMetadataProvider {
           this.getCollectionId(contract, tokenId),
         ]);
 
-        data.push(this.parse(contract, tokenId, collection, response.data.data.releaseFromToken));
+        data.push(
+          this.parseToken(response.data.data.releaseFromToken, contract, tokenId, collection)
+        );
       } catch (error) {
         logger.error(
           "soundxyz-fetcher",
@@ -79,7 +61,7 @@ export class SoundxyzMetadataProvider extends AbstractBaseMetadataProvider {
     throw new Error("Method not implemented.");
   }
 
-  getCollectionId = async (contract: string, tokenId: string) => {
+  async getCollectionId(contract: string, tokenId: string) {
     // If this is not a shared contract collection -> contract
     if (
       _.indexOf(soundxyz.SoundxyzArtistContracts, _.toLower(contract)) === -1 &&
@@ -95,33 +77,34 @@ export class SoundxyzMetadataProvider extends AbstractBaseMetadataProvider {
       },
     } = await soundxyz.getContractSlug(contract, tokenId);
     return `${contract}:soundxyz-${releaseFromToken.id}`;
-  };
+  }
 
-  parse = (contract: string, tokenId: string, collection: any, releaseFromToken: any) => {
-    const isGoldenEgg = releaseFromToken.eggGame?.nft.tokenId === tokenId;
+  parseToken(metadata: any, contract: string, collection: any, tokenId: string): TokenMetadata {
+    const isGoldenEgg = metadata.eggGame?.nft.tokenId === tokenId;
     let imageUrl =
-      releaseFromToken.animatedCoverImage?.url ??
-      releaseFromToken.coverImage?.url ??
-      releaseFromToken.staticCoverImage?.url;
+      metadata.animatedCoverImage?.url ??
+      metadata.coverImage?.url ??
+      metadata.staticCoverImage?.url;
     if (isGoldenEgg) {
       imageUrl =
-        releaseFromToken.eggGame.animatedGoldenEggImageOptimized?.url ??
-        releaseFromToken.eggGame.goldenEggImage?.url;
+        metadata.eggGame.animatedGoldenEggImageOptimized?.url ??
+        metadata.eggGame.goldenEggImage?.url;
     }
 
     return {
       contract: contract,
       tokenId: tokenId,
       collection,
-      name: releaseFromToken.title,
+      slug: null,
+      name: metadata.title,
       flagged: false,
-      description: releaseFromToken.behindTheMusic,
+      description: metadata.behindTheMusic,
       imageUrl,
-      mediaUrl: releaseFromToken.track.revealedAudio.url,
+      mediaUrl: metadata.track.revealedAudio.url,
       attributes: (
         (isGoldenEgg
-          ? releaseFromToken.eggGame.nft.openSeaMetadataAttributes
-          : releaseFromToken.baseMetadataAttributes) || []
+          ? metadata.eggGame.nft.openSeaMetadataAttributes
+          : metadata.baseMetadataAttributes) || []
       ).map((trait: any) => ({
         key: trait.traitType ?? "property",
         value: trait.value,
@@ -129,7 +112,35 @@ export class SoundxyzMetadataProvider extends AbstractBaseMetadataProvider {
         rank: 1,
       })),
     };
-  };
+  }
+
+  parseCollection(metadata: any, contract: string, openseaRoyalties?: object): CollectionMetadata {
+    const royalties = [];
+
+    if (metadata.fundingAddress && metadata.royaltyBps) {
+      royalties.push({
+        recipient: _.toLower(metadata.fundingAddress),
+        bps: metadata.royaltyBps,
+      });
+    }
+
+    return {
+      id: `${contract}`,
+      slug: slugify(metadata.titleSlug, { lower: true }),
+      name: `${metadata.artist.name} - ${metadata.title}`,
+      community: "sound.xyz",
+      metadata: {
+        imageUrl: metadata.coverImage.url,
+        description: metadata.description,
+        externalUrl: `https://sound.xyz/${metadata.artist.soundHandle}/${metadata.titleSlug}`,
+      },
+      royalties,
+      openseaRoyalties: openseaRoyalties,
+      contract,
+      tokenIdRange: null,
+      tokenSetId: `contract:${contract}`,
+    };
+  }
 
   handleError(error: any) {
     if (error.response?.status === 429 || error.response?.status === 503) {

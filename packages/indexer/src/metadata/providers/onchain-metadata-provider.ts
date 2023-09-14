@@ -24,6 +24,9 @@ const erc1155Interface = new ethers.utils.Interface([
 
 export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
   method = "onchain";
+
+  // get metadata methods
+
   async _getTokensMetadata(
     tokens: { contract: string; tokenId: string }[]
   ): Promise<TokenMetadata[]> {
@@ -126,7 +129,7 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
     );
 
     return resolvedMetadata.map((token) => {
-      return this.parse(token);
+      return this.parseToken(token);
     });
   }
 
@@ -139,21 +142,56 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
       collectionName = (await this.getContractName(contract)) ?? contract;
     }
 
-    return {
-      id: contract,
-      slug: null,
-      community: null,
-      name: collectionName,
-      metadata: normalizeMetadata(collection),
+    return this.parseCollection({
+      ...collection,
       contract,
-      tokenSetId: `contract:${contract}`,
-      tokenIdRange: null,
-    };
+      name: collectionName,
+    });
   }
 
   async _getTokensMetadataBySlug(): Promise<TokenMetadataBySlugResult> {
     throw new Error("Method not implemented.");
   }
+
+  // parsers
+
+  parseToken(metadata: any): TokenMetadata {
+    return {
+      contract: metadata.contract,
+      slug: null,
+      tokenId: metadata.token_id,
+      collection: _.toLower(metadata.contract),
+      name: metadata?.name || null,
+      flagged: null,
+      // Token descriptions are a waste of space for most collections we deal with
+      // so by default we ignore them (this behaviour can be overridden if needed).
+      description: metadata.description || null,
+      imageUrl: normalizeLink(metadata?.image) || null,
+      imageOriginalUrl: metadata?.metadata || null,
+      mediaUrl: normalizeLink(metadata?.animation_url) || null,
+      attributes: (metadata.attributes || []).map((trait: any) => ({
+        key: trait.trait_type ?? "property",
+        value: trait.value,
+        kind: typeof trait.value == "number" ? "number" : "string",
+        rank: 1,
+      })),
+    };
+  }
+
+  parseCollection(metadata: any): CollectionMetadata {
+    return {
+      id: metadata.contract,
+      slug: null,
+      community: null,
+      name: metadata?.name || null,
+      metadata: normalizeMetadata(metadata),
+      contract: metadata.contract,
+      tokenSetId: `contract:${metadata.contract}`,
+      tokenIdRange: null,
+    };
+  }
+
+  // helpers
 
   async detectTokenStandard(contractAddress: string) {
     const provider = new ethers.providers.JsonRpcProvider(this.getRPC());
@@ -186,7 +224,7 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
     }
   }
 
-  encodeTokenERC721 = (token: any) => {
+  encodeTokenERC721(token: any) {
     const iface = new ethers.utils.Interface([
       {
         name: "tokenURI",
@@ -206,9 +244,9 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
       encodedTokenID: iface.encodeFunctionData("tokenURI", [token.tokenId]),
       contract: token.contract,
     };
-  };
+  }
 
-  encodeTokenERC1155 = (token: any) => {
+  encodeTokenERC1155(token: any) {
     const iface = new ethers.utils.Interface([
       {
         name: "uri",
@@ -228,13 +266,13 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
       encodedTokenID: iface.encodeFunctionData("uri", [token.tokenId]),
       contract: token.contract,
     };
-  };
+  }
 
-  getRPC = () => {
+  getRPC() {
     return config.baseNetworkHttpUrl;
-  };
+  }
 
-  getContractName = async (contractAddress: string) => {
+  async getContractName(contractAddress: string) {
     try {
       const contract = new ethers.Contract(
         contractAddress,
@@ -246,9 +284,9 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
     } catch (e) {
       return null;
     }
-  };
+  }
 
-  getCollectionMetadata = async (contractAddress: string) => {
+  async getCollectionMetadata(contractAddress: string) {
     try {
       const contract = new ethers.Contract(
         contractAddress,
@@ -279,9 +317,9 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
     } catch (e) {
       return null;
     }
-  };
+  }
 
-  createBatch = (encodedTokens: any) => {
+  createBatch(encodedTokens: any) {
     return encodedTokens.map((token: any) => {
       return {
         jsonrpc: "2.0",
@@ -296,9 +334,9 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
         ],
       };
     });
-  };
+  }
 
-  sendBatch = async (encodedTokens: any) => {
+  async sendBatch(encodedTokens: any) {
     let response;
     try {
       response = await fetch(this.getRPC(), {
@@ -332,9 +370,9 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
         },
       ];
     }
-  };
+  }
 
-  getTokenMetadataFromURI = async (uri: string) => {
+  async getTokenMetadataFromURI(uri: string) {
     try {
       if (uri.includes("ipfs://")) {
         uri = uri.replace("ipfs://", "https://ipfs.io/ipfs/");
@@ -373,30 +411,7 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
     } catch (e) {
       return [null, e];
     }
-  };
-
-  parse = (asset: any) => {
-    return {
-      contract: asset.contract,
-      slug: null,
-      tokenId: asset.token_id,
-      collection: _.toLower(asset.contract),
-      name: asset?.name || null,
-      flagged: null,
-      // Token descriptions are a waste of space for most collections we deal with
-      // so by default we ignore them (this behaviour can be overridden if needed).
-      description: asset.description || null,
-      imageUrl: normalizeLink(asset?.image) || null,
-      imageOriginalUrl: asset?.image || null,
-      mediaUrl: normalizeLink(asset?.animation_url) || null,
-      attributes: (asset.attributes || []).map((trait: any) => ({
-        key: trait.trait_type ?? "property",
-        value: trait.value,
-        kind: typeof trait.value == "number" ? "number" : "string",
-        rank: 1,
-      })),
-    };
-  };
+  }
 }
 
 export const onchainMetadataProvider = new OnchainMetadataProvider();

@@ -1,5 +1,5 @@
 import _ from "lodash";
-import { OnchainMetadataProvider } from "./onchain-metadata-provicer";
+import { OnchainMetadataProvider } from "./onchain-metadata-provider";
 import { RaribleMetadataProvider } from "./rarible-metadata-provider";
 import { SimplehashMetadataProvider } from "./simplehash-metadata-provider";
 import { SoundxyzMetadataProvider } from "./soundxyz-metadata-provider";

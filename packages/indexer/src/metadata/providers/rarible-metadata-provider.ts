@@ -22,7 +22,7 @@ export class RaribleMetadataProvider extends AbstractBaseMetadataProvider {
       })
       .then((response) => response.data);
 
-    return data.map(this.parse).filter(Boolean);
+    return data.map(this.parseToken).filter(Boolean);
   }
 
   async _getCollectionMetadata(): Promise<CollectionMetadata> {
@@ -32,56 +32,56 @@ export class RaribleMetadataProvider extends AbstractBaseMetadataProvider {
     throw new Error("Method not implemented.");
   }
 
-  parse = (asset: any) => {
-    try {
-      // Image
-      let imageUrl = null;
-      if (!imageUrl) {
-        imageUrl = asset.meta?.image?.url?.["PREVIEW"];
-      }
-      if (!imageUrl) {
-        imageUrl = asset.meta?.image?.url?.["BIG"];
-      }
-      if (!imageUrl) {
-        imageUrl = asset.meta?.image?.url?.["ORIGINAL"];
-      }
-
-      // Media
-      let mediaUrl = null;
-      if (!mediaUrl) {
-        mediaUrl = asset.meta?.animation?.url?.["ORIGINAL"];
-      }
-
-      // Attributes
-      const attributes = asset.meta.attributes?.reduce((result: any, trait: any) => {
-        if (trait.value) {
-          result.push({
-            key: trait.key ?? "property",
-            value: trait.value,
-            kind: isNaN(trait.value) ? "string" : "number",
-            rank: 1,
-          });
-        }
-        return result;
-      }, []);
-
-      // Token descriptions are a waste of space for most collections we deal with
-      // so by default we ignore them (this behaviour can be overridden if needed).
-      return {
-        contract: asset.contract,
-        tokenId: asset.tokenId,
-        collection: _.toLower(asset.contract),
-        name: asset.meta.name,
-        imageUrl,
-        mediaUrl,
-        attributes,
-      };
-    } catch {
-      // Skip any errors
+  parseToken(asset: any): TokenMetadata {
+    // Image
+    let imageUrl = null;
+    if (!imageUrl) {
+      imageUrl = asset.meta?.image?.url?.["PREVIEW"];
+    }
+    if (!imageUrl) {
+      imageUrl = asset.meta?.image?.url?.["BIG"];
+    }
+    if (!imageUrl) {
+      imageUrl = asset.meta?.image?.url?.["ORIGINAL"];
     }
 
-    return undefined;
-  };
+    // Media
+    let mediaUrl = null;
+    if (!mediaUrl) {
+      mediaUrl = asset.meta?.animation?.url?.["ORIGINAL"];
+    }
+
+    // Attributes
+    const attributes = asset.meta.attributes?.reduce((result: any, trait: any) => {
+      if (trait.value) {
+        result.push({
+          key: trait.key ?? "property",
+          value: trait.value,
+          kind: isNaN(trait.value) ? "string" : "number",
+          rank: 1,
+        });
+      }
+      return result;
+    }, []);
+
+    // Token descriptions are a waste of space for most collections we deal with
+    // so by default we ignore them (this behaviour can be overridden if needed).
+    return {
+      contract: asset.contract,
+      slug: null,
+      flagged: null,
+      tokenId: asset.tokenId,
+      collection: _.toLower(asset.contract),
+      name: asset.meta.name,
+      imageUrl,
+      mediaUrl,
+      attributes,
+    };
+  }
+
+  parseCollection(): CollectionMetadata {
+    throw new Error("Method not implemented.");
+  }
 }
 
 export const raribleMetadataProvider = new RaribleMetadataProvider();

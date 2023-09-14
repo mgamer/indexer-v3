@@ -26,26 +26,7 @@ export class SimplehashMetadataProvider extends AbstractBaseMetadataProvider {
         })
         .then((response) => response.data);
 
-      let slug = null;
-      if (_.isArray(data.collection.marketplace_pages)) {
-        for (const market of data.collection.marketplace_pages) {
-          if (market.marketplace_id === "opensea") {
-            slug = slugify(market.marketplace_collection_id, { lower: true });
-          }
-        }
-      }
-
-      return {
-        id: contract,
-        slug,
-        name: data.collection.name,
-        community: null,
-        metadata: normalizeMetadata(data.collection),
-        contract,
-        tokenIdRange: null,
-        tokenSetId: `contract:${contract}`,
-        creator: _.toLower(data.contract.deployed_by),
-      };
+      return this.parseCollection(data, contract);
     } catch (error) {
       logger.error(
         "simplehash-fetcher",
@@ -99,41 +80,42 @@ export class SimplehashMetadataProvider extends AbstractBaseMetadataProvider {
         throw error;
       });
 
-    return data.nfts.map(this.parse).filter(Boolean);
+    return data.nfts.map(this.parseToken).filter(Boolean);
   }
 
   async _getTokensMetadataBySlug(): Promise<TokenMetadataBySlugResult> {
     throw new Error("Method not implemented.");
   }
 
-  parse = (asset: any) => {
+  parseToken(metadata: any): TokenMetadata {
     const {
       image_original_url,
       animation_original_url,
       metadata_original_url,
       attributes,
       ...original_metadata
-    } = asset.extra_metadata;
+    } = metadata.extra_metadata;
 
     return {
-      contract: _.toLower(asset.contract_address),
-      tokenId: asset.token_id,
-      name: asset.name,
-      collection: _.toLower(asset.contract_address),
+      contract: _.toLower(metadata.contract_address),
+      tokenId: metadata.token_id,
+      name: metadata.name,
+      collection: _.toLower(metadata.contract_address),
+      flagged: null,
       slug:
-        asset.collection.marketplace_pages.filter(
+        metadata.collection.marketplace_pages.filter(
           (market: any) => market.marketplace_id === "opensea"
         )[0]?.marketplace_collection_id ?? undefined,
       // Token descriptions are a waste of space for most collections we deal with
       // so by default we ignore them (this behaviour can be overridden if needed).
-      description: asset.description,
+      description: metadata.description,
       originalMetadata: original_metadata,
-      imageUrl: asset.previews?.image_medium_url ?? asset.image_url,
+      imageUrl: metadata.previews?.image_medium_url ?? metadata.image_url,
       imageOriginalUrl: image_original_url,
       animationOriginalUrl: animation_original_url,
       metadataOriginalUrl: metadata_original_url,
-      imageProperties: asset.image_properties,
-      mediaUrl: asset.video_url,
+      imageProperties: metadata.image_properties,
+      mediaUrl: metadata.video_url,
       attributes: (attributes || []).map((trait: any) => ({
         key: trait.trait_type ?? "property",
         value: trait.value,
@@ -141,7 +123,30 @@ export class SimplehashMetadataProvider extends AbstractBaseMetadataProvider {
         rank: 1,
       })),
     };
-  };
+  }
+
+  protected parseCollection(metadata: any, contract: string): CollectionMetadata {
+    let slug = null;
+    if (_.isArray(metadata.collection.marketplace_pages)) {
+      for (const market of metadata.collection.marketplace_pages) {
+        if (market.marketplace_id === "opensea") {
+          slug = slugify(market.marketplace_collection_id, { lower: true });
+        }
+      }
+    }
+
+    return {
+      id: contract,
+      slug,
+      name: metadata.collection.name,
+      community: null,
+      metadata: normalizeMetadata(metadata.collection),
+      contract,
+      tokenIdRange: null,
+      tokenSetId: `contract:${contract}`,
+      creator: _.toLower(metadata.contract.deployed_by),
+    };
+  }
 
   getSimplehashNetworkName(): string {
     const network = getNetworkName();

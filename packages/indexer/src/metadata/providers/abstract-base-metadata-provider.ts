@@ -5,6 +5,7 @@ import { extendMetadata, hasExtendHandler } from "../extend";
 export abstract class AbstractBaseMetadataProvider {
   abstract method: string;
 
+  // Wrapper methods for internal methods, handles custom/extend logic so subclasses don't have to
   async getCollectionMetadata(contract: string, tokenId: string): Promise<CollectionMetadata> {
     // handle universal extend/custom logic here
     if (hasCustomHandler(contract)) {
@@ -83,6 +84,7 @@ export abstract class AbstractBaseMetadataProvider {
     return this._getTokensMetadataBySlug(slug, continuation);
   }
 
+  // Internal methods for subclasses
   protected abstract _getCollectionMetadata(
     contract: string,
     tokenId: string
@@ -97,4 +99,12 @@ export abstract class AbstractBaseMetadataProvider {
     slug: string,
     continuation?: string
   ): Promise<TokenMetadataBySlugResult>;
+
+  // Parsers
+
+  // eslint-disable-next-line
+  protected abstract parseCollection(...args: any[]): CollectionMetadata;
+
+  // eslint-disable-next-line
+  protected abstract parseToken(...args: any[]): TokenMetadata;
 }

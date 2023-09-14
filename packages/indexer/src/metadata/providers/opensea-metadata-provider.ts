@@ -18,101 +18,19 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
     tokenId: string
   ): Promise<CollectionMetadata> {
     try {
-      let data;
-      let creatorAddress;
-
-      if (config.chainId === 1) {
-        data = await this.getOSData("asset", contract, tokenId);
-        creatorAddress = data?.creator?.address;
-      } else {
-        data = await this.getOSData("nft", contract, tokenId);
-        creatorAddress = data?.creator;
-
-        if (data?.collection) {
-          data = await this.getOSData("collection", contract, tokenId, data.collection);
-          creatorAddress = creatorAddress ?? data?.creator?.address;
-        } else {
-          data =
-            (await this.getOSData("events", contract, tokenId)) ??
-            (await this.getOSData("asset", contract, tokenId));
-
-          // Get payment tokens if we have the collection slug
-          if (data?.collection?.slug && !data?.collection?.payment_tokens) {
-            data = await this.getOSData("collection", contract, tokenId, data.collection.slug);
-          }
-
-          creatorAddress = data?.creator?.address;
-        }
-      }
+      const { data, creatorAddress } = await this.getDataWithCreator(contract, tokenId);
 
       if (!data?.collection) {
         throw new Error("Missing collection");
       }
 
-      // TODO: Do we really need these here?
-      const communities = {
-        "0xff9c1b15b16263c61d017ee9f65c50e4ae0113d7": "loot",
-        "0x8db687aceb92c66f013e1d614137238cc698fedb": "loot",
-        "0x1dfe7ca09e99d10835bf73044a23b73fc20623df": "loot",
-        "0x521f9c7505005cfa19a8e5786a9c3c9c9f5e6f42": "forgottenrunes",
-        "0xf55b615b479482440135ebf1b907fd4c37ed9420": "forgottenrunes",
-        "0x31158181b4b91a423bfdc758fc3bf8735711f9c5": "forgottenrunes",
-        "0x251b5f14a825c537ff788604ea1b58e49b70726f": "forgottenrunes",
-        "0x57f1887a8bf19b14fc0df6fd9b2acc9af147ea85": "ens",
-      };
-
-      // Collect the fees
-      const royalties = [];
-      const fees = [];
-
-      for (const key in data.collection.fees.seller_fees) {
-        if (Object.prototype.hasOwnProperty.call(data.collection.fees.seller_fees, key)) {
-          royalties.push({
-            recipient: key,
-            bps: data.collection.fees.seller_fees[key],
-          });
-        }
-      }
-
-      for (const key in data.collection.fees.opensea_fees) {
-        if (Object.prototype.hasOwnProperty.call(data.collection.fees.opensea_fees, key)) {
-          fees.push({
-            recipient: key,
-            bps: data.collection.fees.opensea_fees[key],
-          });
-        }
-      }
-
-      return {
-        id: contract,
-        slug: data.collection.slug,
-        name: data.collection ? data.collection.name : data.name,
-        community: communities[contract as keyof typeof communities] ?? null,
-        metadata: data.collection ? normalizeMetadata(data.collection) : null,
-        openseaRoyalties: royalties,
-        openseaFees: fees,
-        contract,
-        tokenIdRange: null,
-        tokenSetId: `contract:${contract}`,
-        paymentTokens: data.collection.payment_tokens
-          ? data.collection.payment_tokens.map((token: any) => {
-              return {
-                address: token.address,
-                decimals: token.decimals,
-                name: token.name,
-                symbol: token.symbol,
-              };
-            })
-          : undefined,
-        creator: creatorAddress ? _.toLower(creatorAddress) : null,
-      };
+      return this.parseCollection(data, contract, creatorAddress);
     } catch (error) {
       logger.error(
         "opensea-fetcher",
         JSON.stringify({
           topic: "fetchCollectionError",
-          message: `Could not fetch collection. config.chainId=${config.chainId}, contract=${contract}, tokenId=${tokenId}, error=${error}`,
-          chainId: config.chainId,
+          message: `Could not fetch collection.  contract=${contract}, tokenId=${tokenId}, error=${error}`,
           contract,
           tokenId,
           error,
@@ -131,8 +49,8 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
           "opensea-fetcher",
           JSON.stringify({
             topic: "fetchContractNameError",
-            message: `Could not fetch collection. config.chainId=${config.chainId}, contract=${contract}, tokenId=${tokenId}, error=${error}`,
-            chainId: config.chainId,
+            message: `Could not fetch collection.  contract=${contract}, tokenId=${tokenId}, error=${error}`,
+
             contract,
             tokenId,
             error,
@@ -193,7 +111,7 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
         this.handleError(error);
       });
 
-    return data.assets.map(this.parse).filter(Boolean);
+    return data.assets.map(this.parseToken).filter(Boolean);
   }
 
   protected async _getTokensMetadataBySlug(
@@ -229,7 +147,7 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
       .then((response) => response.data)
       .catch((error) => this.handleError(error));
 
-    const assets = data.assets.map(this.parse).filter(Boolean);
+    const assets = data.assets.map(this.parseToken).filter(Boolean);
     return {
       metadata: assets,
       continuation: data.next ?? undefined,
@@ -255,29 +173,130 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
     throw error;
   }
 
-  parse(asset: any): TokenMetadata {
+  parseToken(metadata: any): TokenMetadata {
     return {
-      contract: asset.asset_contract.address,
-      tokenId: asset.token_id,
-      collection: _.toLower(asset.asset_contract.address),
-      slug: asset.collection.slug,
-      name: asset.name,
-      flagged: asset.supports_wyvern != null ? !asset.supports_wyvern : false,
+      contract: metadata.asset_contract.address,
+      tokenId: metadata.token_id,
+      collection: _.toLower(metadata.asset_contract.address),
+      slug: metadata.collection.slug,
+      name: metadata.name,
+      flagged: metadata.supports_wyvern != null ? !metadata.supports_wyvern : false,
       // Token descriptions are a waste of space for most collections we deal with
       // so by default we ignore them (this behaviour can be overridden if needed).
-      description: asset.description,
-      imageUrl: asset.image_url,
-      imageOriginalUrl: asset.image_original_url,
-      animationOriginalUrl: asset.animation_original_url,
-      metadataOriginalUrl: asset.token_metadata,
-      mediaUrl: asset.animation_url,
-      attributes: (asset.traits || []).map((trait: any) => ({
+      description: metadata.description,
+      imageUrl: metadata.image_url,
+      imageOriginalUrl: metadata.image_original_url,
+      animationOriginalUrl: metadata.animation_original_url,
+      metadataOriginalUrl: metadata.token_metadata,
+      mediaUrl: metadata.animation_url,
+      attributes: (metadata.traits || []).map((trait: any) => ({
         key: trait.trait_type ?? "property",
         value: trait.value,
         kind: typeof trait.value == "number" ? "number" : "string",
         rank: 1,
       })),
     };
+  }
+
+  parseCollection(metadata: any, contract: string, creator: string): CollectionMetadata {
+    // TODO: Do we really need these here?
+    const communities = {
+      "0xff9c1b15b16263c61d017ee9f65c50e4ae0113d7": "loot",
+      "0x8db687aceb92c66f013e1d614137238cc698fedb": "loot",
+      "0x1dfe7ca09e99d10835bf73044a23b73fc20623df": "loot",
+      "0x521f9c7505005cfa19a8e5786a9c3c9c9f5e6f42": "forgottenrunes",
+      "0xf55b615b479482440135ebf1b907fd4c37ed9420": "forgottenrunes",
+      "0x31158181b4b91a423bfdc758fc3bf8735711f9c5": "forgottenrunes",
+      "0x251b5f14a825c537ff788604ea1b58e49b70726f": "forgottenrunes",
+      "0x57f1887a8bf19b14fc0df6fd9b2acc9af147ea85": "ens",
+    };
+
+    // Collect the fees
+    const royalties = [];
+    const fees = [];
+
+    for (const key in metadata.collection.fees.seller_fees) {
+      if (Object.prototype.hasOwnProperty.call(metadata.collection.fees.seller_fees, key)) {
+        royalties.push({
+          recipient: key,
+          bps: metadata.collection.fees.seller_fees[key],
+        });
+      }
+    }
+
+    for (const key in metadata.collection.fees.opensea_fees) {
+      if (Object.prototype.hasOwnProperty.call(metadata.collection.fees.opensea_fees, key)) {
+        fees.push({
+          recipient: key,
+          bps: metadata.collection.fees.opensea_fees[key],
+        });
+      }
+    }
+
+    return {
+      id: contract,
+      slug: metadata.collection.slug,
+      name: metadata.collection ? metadata.collection.name : metadata.name,
+      community: communities[contract as keyof typeof communities] ?? null,
+      metadata: metadata.collection ? normalizeMetadata(metadata.collection) : null,
+      openseaRoyalties: royalties,
+      openseaFees: fees,
+      contract,
+      tokenIdRange: null,
+      tokenSetId: `contract:${contract}`,
+      paymentTokens: metadata.collection.payment_tokens
+        ? metadata.collection.payment_tokens.map((token: any) => {
+            return {
+              address: token.address,
+              decimals: token.decimals,
+              name: token.name,
+              symbol: token.symbol,
+            };
+          })
+        : undefined,
+      creator: creator ? _.toLower(creator) : null,
+    };
+  }
+
+  async getDataWithCreator(
+    contract: string,
+    tokenId: string
+  ): Promise<{ creatorAddress: string; data: any }> {
+    if (config.chainId === 1) {
+      const data = await this.getOSData("asset", contract, tokenId);
+
+      return { data, creatorAddress: data?.creator?.address };
+    }
+
+    let data = await this.getOSData("nft", contract, tokenId);
+    let creatorAddress = data?.creator;
+
+    if (data?.collection) {
+      data = await this.getOSDataForCollection(contract, tokenId, data.collection);
+      creatorAddress = creatorAddress ?? data?.creator?.address;
+    } else {
+      data = await this.getOSDataForEventsOrAsset(contract, tokenId);
+      if (data?.collection?.slug && !data?.collection?.payment_tokens) {
+        data = await this.getOSData("collection", contract, tokenId, data.collection.slug);
+      }
+      creatorAddress = data?.creator?.address;
+    }
+
+    return {
+      data,
+      creatorAddress,
+    };
+  }
+
+  async getOSDataForCollection(contract: string, tokenId: string, collection: any): Promise<any> {
+    return await this.getOSData("collection", contract, tokenId, collection);
+  }
+
+  async getOSDataForEventsOrAsset(contract: string, tokenId: string): Promise<any> {
+    return (
+      (await this.getOSData("events", contract, tokenId)) ||
+      (await this.getOSData("asset", contract, tokenId))
+    );
   }
 
   getOSNetworkName(): string {
