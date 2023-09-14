@@ -201,6 +201,8 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
           "acquired_at" = COALESCE(GREATEST("excluded"."acquired_at", "nft_balances"."acquired_at"), "nft_balances"."acquired_at")
       `);
 
+      await insertQueries(nftTransferQueries, backfill);
+
       if (deferUpdate) {
         await ZeroAddressBalance.count(
           fromBuffer(event.address),
@@ -208,8 +210,6 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
           -Number(event.amount)
         );
       }
-
-      await insertQueries(nftTransferQueries, backfill);
     }
   }
 
