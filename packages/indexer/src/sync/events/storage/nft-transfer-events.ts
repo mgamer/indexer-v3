@@ -192,15 +192,13 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
             FROM "x"
             ORDER BY "address" ASC, "token_id" ASC, "owner" ASC
           ) "y"
+          ${deferUpdate ? `WHERE y.owner != '\\x0000000000000000000000000000000000000000'` : ""}
           GROUP BY "y"."address", "y"."token_id", "y"."owner"
         )
         ON CONFLICT ("contract", "token_id", "owner") DO
         UPDATE SET 
           "amount" = "nft_balances"."amount" + "excluded"."amount", 
           "acquired_at" = COALESCE(GREATEST("excluded"."acquired_at", "nft_balances"."acquired_at"), "nft_balances"."acquired_at")
-        ${
-          deferUpdate ? `WHERE excluded.owner != '\\x0000000000000000000000000000000000000000'` : ""
-        }
       `);
 
       if (deferUpdate) {

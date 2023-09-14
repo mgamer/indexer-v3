@@ -45,11 +45,16 @@ if (config.doBackgroundWork) {
 
           if (!_.isEmpty(balances)) {
             for (const balance of balances) {
-              const query = `UPDATE nft_balances
-                           SET amount = amount + $/balance/
-                           WHERE contract = $/contract/
-                           AND token_id = $/tokenId/
-                           AND owner = $/owner/`;
+              const query = `
+                INSERT INTO "nft_balances" (
+                  "contract",
+                  "token_id",
+                  "owner",
+                  "amount",
+                  "acquired_at"
+                ) VALUES($/contract/, $/tokenId/, $/owner/, $/balance/, NOW())
+               ON CONFLICT ("contract", "token_id", "owner") DO
+               UPDATE SET amount = amount + $/balance/`;
 
               await idb.none(query, {
                 balance: balance.balance,
