@@ -3,7 +3,7 @@ import _ from "lodash";
 import { config } from "@/config/index";
 import cron from "node-cron";
 import { logger } from "@/common/logger";
-import { idb } from "@/common/db";
+import { idb, pgp } from "@/common/db";
 import { toBuffer } from "@/common/utils";
 import { AddressZero } from "@ethersproject/constants";
 
@@ -44,24 +44,34 @@ if (config.doBackgroundWork) {
           balances = await ZeroAddressBalance.popCounts(count);
 
           if (!_.isEmpty(balances)) {
+            const columns = new pgp.helpers.ColumnSet(["contract", "token_id", "owner", "amount"], {
+              table: "nft_balances",
+            });
+
+            const queries: string[] = [];
+
             for (const balance of balances) {
-              const query = `
+              queries.push(`
                 INSERT INTO "nft_balances" (
                   "contract",
                   "token_id",
                   "owner",
-                  "amount",
-                  "acquired_at"
-                ) VALUES($/contract/, $/tokenId/, $/owner/, $/balance/, NOW())
+                  "amount"
+                ) VALUES ${pgp.helpers.values(
+                  {
+                    balance: balance.balance,
+                    contract: toBuffer(balance.contract),
+                    tokenId: balance.tokenId,
+                    owner: toBuffer(AddressZero),
+                  },
+                  columns
+                )} ($/contract/, $/tokenId/, $/owner/, $/balance/)
                ON CONFLICT ("contract", "token_id", "owner") DO
-               UPDATE SET amount = nft_balances.amount + $/balance/`;
+               UPDATE SET amount = nft_balances.amount + EXCLUDED.amount`);
+            }
 
-              await idb.none(query, {
-                balance: balance.balance,
-                contract: toBuffer(balance.contract),
-                tokenId: balance.tokenId,
-                owner: toBuffer(AddressZero),
-              });
+            if (!_.isEmpty(queries)) {
+              await idb.tx(async (t) => t.batch(queries.map((q) => t.none(q))));
             }
           }
         } while (balances.length === count);
