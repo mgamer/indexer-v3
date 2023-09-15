@@ -1,6 +1,6 @@
 import { customHandleContractTokens, customHandleToken, hasCustomHandler } from "../custom";
 import { CollectionMetadata, TokenMetadata, TokenMetadataBySlugResult } from "../types";
-import { extendMetadata, hasExtendHandler } from "../extend";
+import { extendCollectionMetadata, extendMetadata, hasExtendHandler } from "../extend";
 
 export abstract class AbstractBaseMetadataProvider {
   abstract method: string;
@@ -13,7 +13,10 @@ export abstract class AbstractBaseMetadataProvider {
       return result;
     }
 
-    return this._getCollectionMetadata(contract, tokenId);
+    const collectionMetadata = await this._getCollectionMetadata(contract, tokenId);
+
+    // handle extend logic here
+    return extendCollectionMetadata(collectionMetadata, tokenId);
   }
 
   async getTokensMetadata(
@@ -46,18 +49,13 @@ export abstract class AbstractBaseMetadataProvider {
     let metadataFromProvider: TokenMetadata[] = [];
 
     if (tokensWithoutCustomMetadata.length > 0) {
-      const queryParams = new URLSearchParams();
-
-      tokensWithoutCustomMetadata.forEach((token) => {
-        queryParams.append("token", `${token.contract}:${token.tokenId}`);
-      });
-
       metadataFromProvider = await this._getTokensMetadata(tokensWithoutCustomMetadata);
     }
 
     // merge custom metadata with metadata-api metadata
     const allMetadata: TokenMetadata[] = [...metadataFromProvider, ...filteredCustomMetadata];
-
+    // eslint-disable-next-line
+    console.log(allMetadata);
     // extend metadata
     const extendedMetadata = await Promise.all(
       allMetadata.map(async (metadata) => {

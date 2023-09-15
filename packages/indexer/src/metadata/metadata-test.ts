@@ -5,10 +5,10 @@ dotEnvConfig();
 // Use this to run custom/extend metadata in local env
 import MetadataApi from "@/metadata/metadata-api";
 
-const CUSTOM_CONTRACT_TO_TEST = "0xed5af388653567af2f388e6224dc7c4b3241c544";
-const CUSTOM_TOKEN_ID_TO_TEST = ["15"];
+const CUSTOM_CONTRACT_TO_TEST = "0xc143bbfcdbdbed6d454803804752a064a622c1f3";
+const CUSTOM_TOKEN_ID_TO_TEST = ["1"];
 
-const EXTEND_CONTRACT_TO_TEST = "0xed5af388653567af2f388e6224dc7c4b3241c544";
+const EXTEND_CONTRACT_TO_TEST = "0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d";
 const EXTEND_TOKEN_ID_TO_TEST = ["15"];
 
 const testControl = async () => {
@@ -69,20 +69,22 @@ const testCustom = async () => {
 
   // Test extend
 
-  const extendCollectionMetadata = await MetadataApi.getCollectionMetadata(
-    EXTEND_CONTRACT_TO_TEST,
-    EXTEND_TOKEN_ID_TO_TEST[0]
+  const extendTokensMetadata = await MetadataApi.getTokensMetadata(
+    EXTEND_TOKEN_ID_TO_TEST.map((tokenId) => ({
+      contract: EXTEND_CONTRACT_TO_TEST,
+      tokenId,
+    }))
   ).catch((error) => {
     console.error(error);
     process.exit(1);
   });
 
-  if (!extendCollectionMetadata) {
+  if (!extendTokensMetadata) {
     console.error("Extend test failed: collection metadata not found");
     process.exit(1);
   }
 
-  console.log("Extend Test result: ", extendCollectionMetadata);
+  console.log("Extend Test result: ", extendTokensMetadata);
 };
 
 testControl()

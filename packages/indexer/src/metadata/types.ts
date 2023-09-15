@@ -66,6 +66,7 @@ export interface SocialUrls {
 
 export interface Collection {
   social_urls?: SocialUrls;
+  [key: string]: any;
 }
 
 export interface Metadata {

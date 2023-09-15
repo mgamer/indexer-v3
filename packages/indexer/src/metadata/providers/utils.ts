@@ -120,21 +120,33 @@ export const normalizeMetadata = (collection: Collection): Metadata => {
   }
 
   // // do the above via the map
-  // Object.keys(map).forEach((key) => {
-  //   const mapKey = map[key];
-  //   if (mapKey && key in collection) {
-  //     const collectionKey = collection[key as keyof Collection];
-  //     if (mapKey.normalize && collectionKey) {
-  //       // Check for normalize function before invoking
-  //       const normalizedValue = mapKey.normalize ? mapKey.normalize(collectionKey) : undefined;
-  //       if (normalizedValue) {
-  //         metadata[mapKey.key] = normalizedValue;
-  //       }
-  //     } else {
-  //       metadata[mapKey.key] = collectionKey;
-  //     }
-  //   }
-  // });
+  Object.keys(map).forEach((key) => {
+    const mapKey = map[key];
+    if (mapKey && key in collection) {
+      const collectionKey = collection[key as keyof Collection];
+      if (mapKey.normalize && collectionKey) {
+        // Check for normalize function before invoking
+        const normalizedValue = mapKey.normalize ? mapKey.normalize(collectionKey) : undefined;
+        if (normalizedValue) {
+          metadata[mapKey.key] = normalizedValue;
+        }
+      } else {
+        metadata[mapKey.key] = collectionKey;
+      }
+    }
+  });
+
+  Object.keys(map).forEach((key) => {
+    const mapKey = map[key];
+    if (key in collection) {
+      const collectionKey = collection[key as keyof Collection];
+      if (mapKey.normalize) {
+        metadata[mapKey.key] = mapKey.normalize(collectionKey);
+      } else {
+        metadata[mapKey.key] = collectionKey;
+      }
+    }
+  });
 
   return metadata;
 };

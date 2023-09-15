@@ -7,6 +7,8 @@ import { TokenMetadata } from "@/metadata/types";
 const POOL_ID = 1;
 
 export const extend = async (metadata: TokenMetadata) => {
+  // eslint-disable-next-line
+  console.log(metadata);
   const traitCount = metadata.attributes.length;
 
   let stakedAmountWei;

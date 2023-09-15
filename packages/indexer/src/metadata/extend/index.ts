@@ -42,7 +42,7 @@ const extend: any = {};
 
 export const hasExtendHandler = (contract: string) => extend[`${config.chainId},${contract}`];
 
-export const extendCollectionMetadata = async (metadata: any, tokenId = null) => {
+export const extendCollectionMetadata = async (metadata: any, tokenId?: string) => {
   if (metadata) {
     if (extendCollection[`${config.chainId},${metadata.id}`]) {
       return extendCollection[`${config.chainId},${metadata.id}`].extendCollection(
@@ -58,10 +58,7 @@ export const extendCollectionMetadata = async (metadata: any, tokenId = null) =>
 export const extendMetadata = async (metadata: TokenMetadata) => {
   if (metadata) {
     if (extend[`${config.chainId},${metadata.contract.toLowerCase()}`]) {
-      return extend[`${config.chainId},${metadata.contract.toLowerCase()}`].extend(
-        config.chainId,
-        metadata
-      );
+      return extend[`${config.chainId},${metadata.contract.toLowerCase()}`].extend(metadata);
     } else {
       return metadata;
     }
