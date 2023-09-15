@@ -52,7 +52,7 @@ const testControl = async () => {
 const testCustom = async () => {
   // Test Custom
 
-  const collectionMetadata = await MetadataApi.getCollectionMetadata(
+  const customCollectionMetadata = await MetadataApi.getCollectionMetadata(
     CUSTOM_CONTRACT_TO_TEST,
     CUSTOM_TOKEN_ID_TO_TEST[0]
   ).catch((error) => {
@@ -60,12 +60,12 @@ const testCustom = async () => {
     process.exit(1);
   });
 
-  if (!collectionMetadata) {
-    console.error("Custom test failed: collection metadata not found");
+  if (!customCollectionMetadata) {
+    console.error("Custom test failed: custom collection metadata not found");
     process.exit(1);
   }
 
-  console.log("Custom Test result: ", collectionMetadata);
+  console.log("Custom Test result: ", customCollectionMetadata);
 
   // Test extend
 
