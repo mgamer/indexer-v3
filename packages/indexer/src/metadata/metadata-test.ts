@@ -1,4 +1,6 @@
 /* eslint-disable no-console */
+import { config as dotEnvConfig } from "dotenv";
+dotEnvConfig();
 
 // Use this to run custom/extend metadata in local env
 import MetadataApi from "@/metadata/metadata-api";

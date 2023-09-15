@@ -88,7 +88,7 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
     }/api/v1/assets?${searchParams.toString()}`;
 
     const data = await axios
-      .get(!this.isOSTestnet() ? config.openseaBaseUrlAlt || url : url, {
+      .get(url, {
         headers: !this.isOSTestnet()
           ? {
               url,

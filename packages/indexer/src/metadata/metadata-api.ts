@@ -48,6 +48,9 @@ export class MetadataApi {
   ): Promise<TokenMetadata[]> {
     method = method === "" ? config.metadataIndexingMethod : method;
 
+    if (!MetadataProvidersMap[method]) {
+      throw new Error(`Metadata provider ${method} not found`);
+    }
     return await MetadataProvidersMap[method].getTokensMetadata(tokens);
   }
 
