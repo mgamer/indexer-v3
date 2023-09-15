@@ -10,6 +10,8 @@ import axios from "axios";
 import { RequestWasThrottledError, normalizeMetadata } from "./utils";
 import _ from "lodash";
 import { AbstractBaseMetadataProvider } from "./abstract-base-metadata-provider";
+import { customHandleToken, hasCustomHandler } from "../custom";
+import { extendMetadata, hasExtendHandler } from "../extend";
 
 class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
   method = "opensea";
@@ -297,6 +299,69 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
       (await this.getOSData("events", contract, tokenId)) ||
       (await this.getOSData("asset", contract, tokenId))
     );
+  }
+
+  public async parseTokenMetadata(request: {
+    asset_contract: {
+      address: string;
+    };
+    collection: {
+      slug: string;
+    };
+    token_id: string;
+    name?: string;
+    description?: string;
+    image_url?: string;
+    animation_url?: string;
+    traits: Array<{
+      trait_type: string;
+      value: string | number | null;
+    }>;
+  }): Promise<TokenMetadata | null> {
+    if (hasCustomHandler(request.asset_contract.address)) {
+      const result = await customHandleToken({
+        contract: request.asset_contract.address,
+        _tokenId: request.token_id,
+      });
+      return result;
+    }
+
+    if (hasExtendHandler(request.asset_contract.address)) {
+      const result = await extendMetadata({
+        contract: request.asset_contract.address,
+        slug: request.collection.slug,
+        collection: request.asset_contract.address,
+        flagged: null,
+        tokenId: request.token_id,
+        name: request.name ?? "",
+        description: request.description ?? "",
+        imageUrl: request.image_url ?? "",
+        mediaUrl: request.animation_url ?? "",
+        attributes: request.traits.map((trait) => ({
+          key: trait.trait_type,
+          value: trait.value,
+          kind: typeof trait.value == "number" ? "number" : "string",
+        })),
+      });
+      return result;
+    }
+
+    return {
+      contract: request.asset_contract.address,
+      slug: request.collection.slug,
+      collection: request.asset_contract.address,
+      flagged: null,
+      tokenId: request.token_id,
+      name: request.name ?? "",
+      description: request.description ?? "",
+      imageUrl: request.image_url ?? "",
+      mediaUrl: request.animation_url ?? "",
+      attributes: request.traits.map((trait) => ({
+        key: trait.trait_type,
+        value: trait.value,
+        kind: typeof trait.value == "number" ? "number" : "string",
+      })),
+    };
   }
 
   getOSNetworkName(): string {

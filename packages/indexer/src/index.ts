@@ -11,6 +11,8 @@ import _ from "lodash";
 
 if (process.env.LOCAL_TESTING) {
   import("./setup");
+} else if (process.env.METADATA_TESTING) {
+  import("@/metadata/metadata-test");
 } else {
   RabbitMq.createVhost()
     .then(() => RabbitMq.connect())
