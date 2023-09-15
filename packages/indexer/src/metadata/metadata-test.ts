@@ -28,6 +28,7 @@ const testControl = async () => {
     console.error("Control test failed: token metadata not found");
     process.exit(1);
   }
+  console.log("Control Test result: ", controlTokenResponse);
 
   // get collection metadata
   const controlCollectionResponse = await MetadataApi.getCollectionMetadata(
@@ -42,6 +43,8 @@ const testControl = async () => {
     console.error("Control test failed: collection metadata not found");
     process.exit(1);
   }
+
+  console.log("Control Test result: ", controlCollectionResponse);
 };
 
 const testCustom = async () => {
