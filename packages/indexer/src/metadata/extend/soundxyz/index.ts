@@ -84,9 +84,9 @@ export const getContractSlug = async (contract: string, _tokenId: string) => {
       { query },
       {
         headers: {
-          "x-sound-client-key": process.env.SOUNDXYZ_API_KEY,
+          "x-sound-client-key": config.soundxyzApiKey,
           "CONTENT-TYPE": "application/json",
-          "user-agent": process.env.SOUNDXYZ_USER_AGENT,
+          "user-agent": config.soundxyzUserAgent,
         },
       }
     );

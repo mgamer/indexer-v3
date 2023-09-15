@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { logger } from "@/common/logger";
+import { config } from "@/config/index";
 import axios from "axios";
 
 export const extendCollection = async (metadata: any, _tokenId = null) => {
@@ -11,7 +12,7 @@ export const extendCollection = async (metadata: any, _tokenId = null) => {
   await axios
     .get(`https://metadata.ordinals.market/emblem?token_id=${_tokenId}`, {
       headers: {
-        "X-Api-Key": process.env.ORDINALS_API_KEY,
+        "X-Api-Key": config.ordinalsApiKey,
       },
     })
     .then((response) => {
@@ -50,7 +51,7 @@ export const extend = async (metadata: any) => {
   await axios
     .get(`https://metadata.ordinals.market/emblem?token_id=${metadata.tokenId}`, {
       headers: {
-        "X-Api-Key": process.env.ORDINALS_API_KEY,
+        "X-Api-Key": config.ordinalsApiKey,
       },
     })
     .then((response) => {

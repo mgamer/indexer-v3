@@ -96,6 +96,11 @@ export const config = {
 
   simplehashApiKey: String(process.env.SIMPLEHASH_API_KEY),
 
+  soundxyzApiKey: String(process.env.SOUNDXYZ_API_KEY),
+  soundxyzUserAgent: String(process.env.SOUNDXYZ_USER_AGENT),
+
+  ordinalsApiKey: String(process.env.ORDINALS_API_KEY),
+
   x2y2ApiKey: String(process.env.X2Y2_API_KEY),
   cbApiKey: String(process.env.CB_API_KEY),
   orderFetcherApiKey: String(process.env.ORDER_FETCHER_API_KEY),

@@ -460,7 +460,7 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
 
     try {
       const osResponse = await axios.get(
-        !this.isOSTestnet() ? process.env.OPENSEA_BASE_URL_ALT || url : url,
+        !this.isOSTestnet() ? config.openseaBaseUrlAlt || url : url,
         { headers }
       );
 
