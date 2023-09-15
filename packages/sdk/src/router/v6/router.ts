@@ -382,10 +382,6 @@ export class Router {
       }
 
       for (const detail of details.filter(({ kind }) => kind === "manifold")) {
-        if (detail.fees?.length) {
-          throw new Error("Fees not supported for Manifold orders");
-        }
-
         const order = detail.order as Sdk.Manifold.Order;
         const exchange = new Sdk.Manifold.Exchange(this.chainId);
 
@@ -407,6 +403,99 @@ export class Router {
         });
 
         success[detail.orderId] = true;
+      }
+    }
+
+    if (details.some(({ kind }) => kind === "payment-processor")) {
+      if (options?.relayer) {
+        throw new Error("Relayer not supported for PaymentProcessor orders");
+      }
+
+      const ownDetails = details.filter(({ kind }) => kind === "payment-processor");
+
+      const exchange = new Sdk.PaymentProcessor.Exchange(this.chainId);
+      const operator = exchange.contract.address;
+
+      const approvals: FTApproval[] = [];
+      for (const { currency, price } of ownDetails) {
+        if (!isETH(this.chainId, currency)) {
+          approvals.push({
+            currency,
+            amount: price,
+            owner: taker,
+            operator,
+            txData: generateFTApprovalTxData(currency, taker, operator),
+          });
+        }
+      }
+
+      const preSignatures: PreSignature[] = [];
+      const orders: Sdk.PaymentProcessor.Order[] = ownDetails.map(
+        (c) => c.order as Sdk.PaymentProcessor.Order
+      );
+
+      // Use the gas-efficient sweep method when:
+      // - there is at least one listing
+      // - all listings are for the same collection
+      // - all listings have the same payment token
+      const useSweepCollection =
+        ownDetails.length > 1 &&
+        ownDetails.every((c) => c.contract === details[0].contract) &&
+        ownDetails.every((c) => c.currency === details[0].currency);
+
+      if (useSweepCollection) {
+        const bundledOrder = Sdk.PaymentProcessor.Order.createBundledOfferOrder(orders, {
+          taker,
+          takerMasterNonce: await exchange.getMasterNonce(this.provider, taker),
+        });
+
+        const signData = bundledOrder.getSignatureData();
+        preSignatures.push({
+          kind: "payment-processor-take-order",
+          signer: taker,
+          data: signData,
+          uniqueId: `${bundledOrder.params.tokenAddress}-${bundledOrder.params.tokenIds?.join(
+            "-"
+          )}-${bundledOrder.params.price}`,
+        });
+
+        txs.push({
+          approvals,
+          permits: [],
+          preSignatures: preSignatures,
+          txData: exchange.sweepCollectionTx(taker, bundledOrder, orders),
+          orderIds: ownDetails.map((d) => d.orderId),
+        });
+      } else {
+        const takeOrders: Sdk.PaymentProcessor.Order[] = [];
+        for (const order of orders) {
+          const takerOrder = order.buildMatching({
+            taker,
+            takerMasterNonce: await exchange.getMasterNonce(this.provider, taker),
+          });
+
+          takeOrders.push(takerOrder);
+
+          const signData = takerOrder.getSignatureData();
+          preSignatures.push({
+            kind: "payment-processor-take-order",
+            signer: taker,
+            data: signData,
+            uniqueId: `${takerOrder.params.tokenAddress}-${takerOrder.params.tokenId}-${takerOrder.params.price}`,
+          });
+        }
+
+        txs.push({
+          approvals,
+          permits: [],
+          preSignatures: preSignatures,
+          txData: exchange.fillOrdersTx(taker, orders, takeOrders),
+          orderIds: ownDetails.map((d) => d.orderId),
+        });
+      }
+
+      for (const { orderId } of ownDetails) {
+        success[orderId] = true;
       }
     }
 
@@ -612,7 +701,6 @@ export class Router {
     // Direct filling for:
     // - seaport-1.5
     // - alienswap
-    // - payment-processor
 
     if (
       details.every(
@@ -764,104 +852,6 @@ export class Router {
                   conduitKey,
                 }
               ),
-              orderIds: details.map((d) => d.orderId),
-            },
-          ],
-          success: Object.fromEntries(details.map((d) => [d.orderId, true])),
-        };
-      }
-    }
-
-    if (
-      details.every(
-        ({ kind, fees, currency }) =>
-          kind === "payment-processor" &&
-          buyInCurrency === currency &&
-          // All orders must have the same currency
-          currency === details[0].currency &&
-          !fees?.length
-      ) &&
-      !options?.forceRouter &&
-      !options?.relayer &&
-      !options?.usePermit
-    ) {
-      const exchange = new Sdk.PaymentProcessor.Exchange(this.chainId);
-      const operator = exchange.contract.address;
-
-      // Use the gas-efficient sweep method when all listings are from the same collection
-      const useSweepCollection =
-        details.length > 1 && details.every((c) => c.contract === details[0].contract);
-
-      let approval: FTApproval | undefined;
-      if (!isETH(this.chainId, details[0].currency)) {
-        approval = {
-          currency: details[0].currency,
-          amount: details[0].price,
-          owner: taker,
-          operator,
-          txData: generateFTApprovalTxData(details[0].currency, taker, operator),
-        };
-      }
-
-      const preSignatures: PreSignature[] = [];
-      const orders: Sdk.PaymentProcessor.Order[] = details.map(
-        (c) => c.order as Sdk.PaymentProcessor.Order
-      );
-
-      if (useSweepCollection) {
-        const bundledOrder = Sdk.PaymentProcessor.Order.createBundledOfferOrder(orders, {
-          taker,
-          takerMasterNonce: await exchange.getMasterNonce(this.provider, taker),
-        });
-
-        const signData = bundledOrder.getSignatureData();
-        preSignatures.push({
-          kind: "payment-processor-take-order",
-          signer: taker,
-          data: signData,
-          uniqueId: `${bundledOrder.params.tokenAddress}-${bundledOrder.params.tokenIds?.join(
-            "-"
-          )}-${bundledOrder.params.price}`,
-        });
-
-        return {
-          txs: [
-            {
-              approvals: approval ? [approval] : [],
-              permits: [],
-              preSignatures: preSignatures,
-              txData: exchange.sweepCollectionTx(taker, bundledOrder, orders),
-              orderIds: details.map((d) => d.orderId),
-            },
-          ],
-          success: Object.fromEntries(details.map((d) => [d.orderId, true])),
-        };
-      } else {
-        const takeOrders: Sdk.PaymentProcessor.Order[] = [];
-        for (const order of orders) {
-          const takerOrder = order.buildMatching({
-            taker,
-            takerMasterNonce: await exchange.getMasterNonce(this.provider, taker),
-          });
-
-          takeOrders.push(takerOrder);
-
-          const signData = takerOrder.getSignatureData();
-          preSignatures.push({
-            kind: "payment-processor-take-order",
-            signer: taker,
-            data: signData,
-            uniqueId: `${takerOrder.params.tokenAddress}-${takerOrder.params.tokenId}-${takerOrder.params.price}`,
-          });
-        }
-
-        return {
-          txs: [
-            {
-              approvals: approval ? [approval] : [],
-              permits: [],
-              preSignatures: preSignatures,
-              txData: exchange.fillOrdersTx(taker, orders, takeOrders),
               orderIds: details.map((d) => d.orderId),
             },
           ],

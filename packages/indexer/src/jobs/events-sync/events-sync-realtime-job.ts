@@ -3,6 +3,7 @@ import { config } from "@/config/index";
 import { logger } from "@/common/logger";
 import { checkForOrphanedBlock, syncEvents } from "@/events-sync/syncEventsV2";
 import { RabbitMQMessage } from "@/common/rabbit-mq";
+import { traceSyncJob } from "./trace-sync-job";
 
 export type EventsSyncRealtimeJobPayload = {
   block: number;
@@ -29,6 +30,7 @@ export class EventsSyncRealtimeJob extends AbstractRabbitMqJobHandler {
 
     try {
       await syncEvents(block);
+      await traceSyncJob.addToQueue({ block: block });
       //eslint-disable-next-line
     } catch (error: any) {
       // if the error is block not found, add back to queue
@@ -37,6 +39,10 @@ export class EventsSyncRealtimeJob extends AbstractRabbitMqJobHandler {
           this.queueName,
           `Block ${block} not found with RPC provider, adding back to queue`
         );
+
+        return { addToQueue: true, delay: 1000 };
+      } else if (error?.message.includes("unfinalized")) {
+        logger.info(this.queueName, `Block ${block} is unfinalized, adding back to queue`);
 
         return { addToQueue: true, delay: 1000 };
       } else {

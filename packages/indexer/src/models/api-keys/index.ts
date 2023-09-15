@@ -10,7 +10,7 @@ import { ApiKeyEntity, ApiKeyUpdateParams } from "@/models/api-keys/api-key-enti
 import getUuidByString from "uuid-by-string";
 import { AllChainsChannel, Channel } from "@/pubsub/channels";
 import axios from "axios";
-import { getNetworkName, getNetworkSettings } from "@/config/network";
+import { getNetworkName, getSubDomain } from "@/config/network";
 import { config } from "@/config/index";
 import { Boom } from "@hapi/boom";
 import tracer from "@/common/tracer";
@@ -257,7 +257,7 @@ export class ApiKeyManager {
     }
 
     if (log.route) {
-      log.fullUrl = `https://${getNetworkSettings().subDomain}.reservoir.tools${log.route}${
+      log.fullUrl = `https://${getSubDomain()}.reservoir.tools${log.route}${
         request.pre.queryString ? `?${request.pre.queryString}` : ""
       }`;
     }

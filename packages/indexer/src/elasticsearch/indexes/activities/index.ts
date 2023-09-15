@@ -2,7 +2,13 @@
 
 import { elasticsearch } from "@/common/elasticsearch";
 
-import { QueryDslQueryContainer, Sort } from "@elastic/elasticsearch/lib/api/types";
+import {
+  AggregationsAggregate,
+  QueryDslQueryContainer,
+  SearchResponse,
+  Sort,
+} from "@elastic/elasticsearch/lib/api/types";
+
 import { SortResults } from "@elastic/elasticsearch/lib/api/typesWithBodyKey";
 import { logger } from "@/common/logger";
 import { CollectionsEntity } from "@/models/collections/collections-entity";
@@ -490,7 +496,7 @@ export const search = async (
   }
 
   try {
-    const activities = await _search(
+    const esResult = await _search(
       {
         query: esQuery,
         sort: esSort as Sort,
@@ -500,6 +506,8 @@ export const search = async (
       0,
       debug
     );
+
+    const activities: ActivityDocument[] = esResult.hits.hits.map((hit) => hit._source!);
 
     let continuation = null;
 
@@ -538,6 +546,7 @@ export const search = async (
 
 export const _search = async (
   params: {
+    _source?: string[] | undefined;
     query?: QueryDslQueryContainer | undefined;
     sort?: Sort | undefined;
     size?: number | undefined;
@@ -546,7 +555,7 @@ export const _search = async (
   },
   retries = 0,
   debug = false
-): Promise<ActivityDocument[]> => {
+): Promise<SearchResponse<ActivityDocument, Record<string, AggregationsAggregate>>> => {
   try {
     params.track_total_hits = params.track_total_hits ?? false;
 
@@ -554,8 +563,6 @@ export const _search = async (
       index: INDEX_NAME,
       ...params,
     });
-
-    const results = esResult.hits.hits.map((hit) => hit._source!);
 
     if (retries > 0 || debug) {
       logger.info(
@@ -565,13 +572,13 @@ export const _search = async (
           latency: esResult.took,
           paramsJSON: JSON.stringify(params),
           retries,
-          results: debug ? results : undefined,
+          esResult: debug ? esResult : undefined,
           params: debug ? params : undefined,
         })
       );
     }
 
-    return results;
+    return esResult;
   } catch (error) {
     const retryableError =
       (error as any).meta?.meta?.aborted ||
@@ -774,7 +781,8 @@ export const updateActivitiesMissingCollection = async (
   };
 
   try {
-    const pendingUpdateActivities = await _search({
+    const esResult = await _search({
+      _source: ["id"],
       // This is needed due to issue with elasticsearch DSL.
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
@@ -782,10 +790,12 @@ export const updateActivitiesMissingCollection = async (
       size: 1000,
     });
 
+    const pendingUpdateActivities: string[] = esResult.hits.hits.map((hit) => hit._source!.id);
+
     if (pendingUpdateActivities.length) {
       const bulkParams = {
-        body: pendingUpdateActivities.flatMap((activity) => [
-          { update: { _index: INDEX_NAME, _id: activity.id, retry_on_conflict: 3 } },
+        body: pendingUpdateActivities.flatMap((activityId) => [
+          { update: { _index: INDEX_NAME, _id: activityId, retry_on_conflict: 3 } },
           {
             script: {
               source:
@@ -917,8 +927,9 @@ export const updateActivitiesCollection = async (
   };
 
   try {
-    const pendingUpdateActivities = await _search(
+    const esResult = await _search(
       {
+        _source: ["id"],
         // This is needed due to issue with elasticsearch DSL.
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
@@ -929,10 +940,14 @@ export const updateActivitiesCollection = async (
       true
     );
 
-    if (pendingUpdateActivities.length) {
+    const pendingUpdateDocuments: { id: string; index: string }[] = esResult.hits.hits.map(
+      (hit) => ({ id: hit._source!.id, index: hit._index })
+    );
+
+    if (pendingUpdateDocuments.length) {
       const bulkParams = {
-        body: pendingUpdateActivities.flatMap((activity) => [
-          { update: { _index: INDEX_NAME, _id: activity.id, retry_on_conflict: 3 } },
+        body: pendingUpdateDocuments.flatMap((document) => [
+          { update: { _index: document.index, _id: document.id, retry_on_conflict: 3 } },
           {
             script: {
               source:
@@ -969,7 +984,7 @@ export const updateActivitiesCollection = async (
           })
         );
       } else {
-        keepGoing = pendingUpdateActivities.length === 1000;
+        keepGoing = pendingUpdateDocuments.length === 1000;
 
         // logger.info(
         //   "elasticsearch-activities",
@@ -1109,20 +1124,27 @@ export const updateActivitiesTokenMetadata = async (
 
   const query = {
     bool: {
-      must: [
-        {
-          term: {
-            contract: contract.toLowerCase(),
-          },
-        },
-        {
-          term: {
-            "token.id": tokenId,
-          },
-        },
-      ],
       filter: {
         bool: {
+          must: [
+            {
+              term: {
+                contract: "0xb76fbbb30e31f2c3bdaa2466cfb1cfe39b220d06",
+              },
+            },
+            {
+              term: {
+                "token.id": "7514",
+              },
+            },
+          ],
+          must_not: [
+            {
+              term: {
+                type: "bid",
+              },
+            },
+          ],
           should,
         },
       },
@@ -1130,22 +1152,26 @@ export const updateActivitiesTokenMetadata = async (
   };
 
   try {
-    const pendingUpdateActivities = await _search(
+    const esResult = await _search(
       {
+        _source: ["id"],
         // This is needed due to issue with elasticsearch DSL.
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
         query,
         size: 1000,
       },
-      0,
-      true
+      0
     );
 
-    if (pendingUpdateActivities.length) {
+    const pendingUpdateDocuments: { id: string; index: string }[] = esResult.hits.hits.map(
+      (hit) => ({ id: hit._source!.id, index: hit._index })
+    );
+
+    if (pendingUpdateDocuments.length) {
       const bulkParams = {
-        body: pendingUpdateActivities.flatMap((activity) => [
-          { update: { _index: INDEX_NAME, _id: activity.id, retry_on_conflict: 3 } },
+        body: pendingUpdateDocuments.flatMap((document) => [
+          { update: { _index: document.index, _id: document.id, retry_on_conflict: 3 } },
           {
             script: {
               source:
@@ -1181,23 +1207,23 @@ export const updateActivitiesTokenMetadata = async (
           })
         );
       } else {
-        keepGoing = pendingUpdateActivities.length === 1000;
+        keepGoing = pendingUpdateDocuments.length === 1000;
 
-        logger.info(
-          "elasticsearch-activities",
-          JSON.stringify({
-            topic: "updateActivitiesTokenMetadata",
-            message: `Success`,
-            data: {
-              contract,
-              tokenId,
-              tokenData,
-            },
-            bulkParams,
-            response,
-            keepGoing,
-          })
-        );
+        // logger.info(
+        //   "elasticsearch-activities",
+        //   JSON.stringify({
+        //     topic: "updateActivitiesTokenMetadata",
+        //     message: `Success`,
+        //     data: {
+        //       contract,
+        //       tokenId,
+        //       tokenData,
+        //     },
+        //     bulkParams,
+        //     response,
+        //     keepGoing,
+        //   })
+        // );
       }
     }
   } catch (error) {
@@ -1312,7 +1338,8 @@ export const updateActivitiesCollectionMetadata = async (
   };
 
   try {
-    const pendingUpdateActivities = await _search({
+    const esResult = await _search({
+      _source: ["id"],
       // This is needed due to issue with elasticsearch DSL.
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
@@ -1320,10 +1347,14 @@ export const updateActivitiesCollectionMetadata = async (
       size: 1000,
     });
 
-    if (pendingUpdateActivities.length) {
+    const pendingUpdateDocuments: { id: string; index: string }[] = esResult.hits.hits.map(
+      (hit) => ({ id: hit._source!.id, index: hit._index })
+    );
+
+    if (pendingUpdateDocuments.length) {
       const bulkParams = {
-        body: pendingUpdateActivities.flatMap((activity) => [
-          { update: { _index: INDEX_NAME, _id: activity.id, retry_on_conflict: 3 } },
+        body: pendingUpdateDocuments.flatMap((document) => [
+          { update: { _index: document.index, _id: document.id, retry_on_conflict: 3 } },
           {
             script: {
               source:
@@ -1358,7 +1389,7 @@ export const updateActivitiesCollectionMetadata = async (
           })
         );
       } else {
-        keepGoing = pendingUpdateActivities.length === 1000;
+        keepGoing = pendingUpdateDocuments.length === 1000;
 
         // logger.info(
         //   "elasticsearch-activities",
@@ -1433,7 +1464,8 @@ export const deleteActivitiesByBlockHash = async (blockHash: string): Promise<bo
   };
 
   try {
-    const pendingDeleteActivities = await _search({
+    const esResult = await _search({
+      _source: ["id"],
       // This is needed due to issue with elasticsearch DSL.
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
@@ -1441,10 +1473,14 @@ export const deleteActivitiesByBlockHash = async (blockHash: string): Promise<bo
       size: 1000,
     });
 
-    if (pendingDeleteActivities.length) {
+    const pendingUpdateDocuments: { id: string; index: string }[] = esResult.hits.hits.map(
+      (hit) => ({ id: hit._source!.id, index: hit._index })
+    );
+
+    if (pendingUpdateDocuments.length) {
       const bulkParams = {
-        body: pendingDeleteActivities.flatMap((activity) => [
-          { delete: { _index: INDEX_NAME, _id: activity.id } },
+        body: pendingUpdateDocuments.flatMap((document) => [
+          { delete: { _index: document.index, _id: document.id } },
         ]),
         filter_path: "items.*.error",
       };
@@ -1468,7 +1504,7 @@ export const deleteActivitiesByBlockHash = async (blockHash: string): Promise<bo
           })
         );
       } else {
-        keepGoing = pendingDeleteActivities.length === 1000;
+        keepGoing = pendingUpdateDocuments.length === 1000;
 
         // logger.info(
         //   "elasticsearch-activities",

@@ -39,9 +39,16 @@ export class FetchCollectionMetadataJob extends AbstractRabbitMqJobHandler {
 
     try {
       // Fetch collection metadata
-      const collection = await MetadataApi.getCollectionMetadata(contract, tokenId, "", {
-        allowFallback: !newCollection,
+      let collection = await MetadataApi.getCollectionMetadata(contract, tokenId, "", {
+        allowFallback: true,
       });
+
+      if (newCollection && collection?.isFallback) {
+        collection = await MetadataApi.getCollectionMetadata(contract, tokenId, "", {
+          allowFallback: false,
+          indexingMethod: "simplehash",
+        });
+      }
 
       let tokenIdRange: string | null = null;
       if (collection.tokenIdRange) {
