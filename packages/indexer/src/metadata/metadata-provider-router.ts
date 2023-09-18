@@ -4,7 +4,7 @@ import { config } from "@/config/index";
 import { MetadataProvidersMap } from "@/metadata/providers";
 import { CollectionMetadata, TokenMetadata } from "@/metadata/types";
 
-export class MetadataApi {
+export class MetadataProviderRouter {
   public static async getCollectionMetadata(
     contract: string,
     tokenId: string,
@@ -19,8 +19,7 @@ export class MetadataApi {
       return await MetadataProvidersMap["onchain"].getCollectionMetadata(contract, tokenId);
     }
 
-    let indexingMethod =
-      options?.indexingMethod ?? MetadataApi.getCollectionIndexingMethod(community);
+    let indexingMethod = options?.indexingMethod ?? this.getCollectionIndexingMethod(community);
 
     //TODO: Remove when adding proper support for overriding indexing method
     if (config.chainId === 1 && contract === "0xd532b88607b1877fe20c181cba2550e3bbd6b31c") {
@@ -64,4 +63,4 @@ export class MetadataApi {
   }
 }
 
-export { MetadataApi as default };
+export { MetadataProviderRouter as default };

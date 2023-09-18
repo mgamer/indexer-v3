@@ -3,7 +3,7 @@ import { config as dotEnvConfig } from "dotenv";
 dotEnvConfig();
 
 // Use this to run custom/extend metadata in local env
-import MetadataApi from "@/metadata/metadata-api";
+import MetadataProviderRouter from "@/metadata/metadata-provider-router";
 
 const CUSTOM_CONTRACT_TO_TEST = "0xc143bbfcdbdbed6d454803804752a064a622c1f3";
 const CUSTOM_TOKEN_ID_TO_TEST = ["1"];
@@ -21,10 +21,12 @@ const testControl = async () => {
       tokenId: "15",
     },
   ];
-  const controlTokenResponse = await MetadataApi.getTokensMetadata(controlToken).catch((error) => {
-    console.error(error);
-    process.exit(1);
-  });
+  const controlTokenResponse = await MetadataProviderRouter.getTokensMetadata(controlToken).catch(
+    (error) => {
+      console.error(error);
+      process.exit(1);
+    }
+  );
 
   if (controlTokenResponse.length !== 1) {
     console.error("Control test failed: token metadata not found");
@@ -33,7 +35,7 @@ const testControl = async () => {
   console.log("Control Test result: ", controlTokenResponse);
 
   // get collection metadata
-  const controlCollectionResponse = await MetadataApi.getCollectionMetadata(
+  const controlCollectionResponse = await MetadataProviderRouter.getCollectionMetadata(
     "0xed5af388653567af2f388e6224dc7c4b3241c544",
     "15"
   ).catch((error) => {
@@ -52,7 +54,7 @@ const testControl = async () => {
 const testCustom = async () => {
   // Test Custom
 
-  const customCollectionMetadata = await MetadataApi.getCollectionMetadata(
+  const customCollectionMetadata = await MetadataProviderRouter.getCollectionMetadata(
     CUSTOM_CONTRACT_TO_TEST,
     CUSTOM_TOKEN_ID_TO_TEST[0]
   ).catch((error) => {
@@ -69,7 +71,7 @@ const testCustom = async () => {
 
   // Test extend
 
-  const extendTokensMetadata = await MetadataApi.getTokensMetadata(
+  const extendTokensMetadata = await MetadataProviderRouter.getTokensMetadata(
     EXTEND_TOKEN_ID_TO_TEST.map((tokenId) => ({
       contract: EXTEND_CONTRACT_TO_TEST,
       tokenId,
