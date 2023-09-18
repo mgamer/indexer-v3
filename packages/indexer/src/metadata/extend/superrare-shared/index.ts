@@ -17,7 +17,7 @@ export const extendCollection = async (metadata: CollectionMetadata, _tokenId: n
 
   if (creatorAddress && tokenURI) {
     metadata.id = `${metadata.contract}:superrare-shared-${creatorAddress}`;
-
+    metadata.creator = creatorAddress;
     await axios.get(tokenURI).then((rawMetadata) => {
       metadata.name = `SuperRare 1/1s: ${rawMetadata.data.createdBy}`;
     });
