@@ -89,16 +89,15 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
 
     const data = await axios
       .get(!this.isOSTestnet() ? config.openSeaApiUrl || url : url, {
-        headers:
-          config.chainId === 1
-            ? {
-                url,
-                "X-API-KEY": config.openSeaApiKey.trim(),
-                Accept: "application/json",
-              }
-            : {
-                Accept: "application/json",
-              },
+        headers: !this.isOSTestnet()
+          ? {
+              url,
+              "X-API-KEY": config.openSeaApiKey.trim(),
+              Accept: "application/json",
+            }
+          : {
+              Accept: "application/json",
+            },
       })
       .then((response) => response.data)
       .catch((error) => {
@@ -131,7 +130,7 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
     searchParams.append("limit", "200");
 
     const url = `${
-      config.chainId === 1
+      !this.isOSTestnet()
         ? config.openSeaSlugBaseUrl || "https://api.opensea.io"
         : "https://rinkeby-api.opensea.io"
     }/api/v1/assets?${searchParams.toString()}`;
@@ -265,7 +264,7 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
     contract: string,
     tokenId: string
   ): Promise<{ creatorAddress: string; data: any }> {
-    if (config.chainId === 1) {
+    if (!this.isOSTestnet()) {
       const data = await this.getOSData("asset", contract, tokenId);
 
       return { data, creatorAddress: data?.creator?.address };
