@@ -102,7 +102,7 @@ export class BidsDataSource extends BaseDataSource {
           valid_from: Number(r.valid_from),
           valid_until: Number(r.valid_until),
           nonce: Number(r.nonce),
-          source: sources.get(r.source_id_int)?.domain,
+          source: sources.get(r.source_id_int) ? sources.get(r.source_id_int)?.domain : null,
           fee_bps: Number(r.fee_bps),
           expiration: Number(r.expiration),
           raw_data: r.raw_data ?? null,

@@ -55,7 +55,9 @@ export class CollectionTopBidEventsDataSource extends BaseDataSource {
         price: r.price ? r.price.toString() : null,
         previous_price: r.previous_price ? r.previous_price.toString() : null,
         valid_until: r.valid_until ? Number(r.valid_until) : null,
-        source: sources.get(r.order_source_id_int)?.name,
+        source: sources.get(r.order_source_id_int)
+          ? sources.get(r.order_source_id_int)?.name
+          : null,
         tx_hash: r.tx_hash ? fromBuffer(r.tx_hash) : null,
         tx_timestamp: r.tx_timestamp ? Number(r.tx_timestamp) : null,
         created_at: new Date(r.created_at * 1000).toISOString(),

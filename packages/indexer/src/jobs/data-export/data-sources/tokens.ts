@@ -68,7 +68,9 @@ export class TokensDataSource extends BaseDataSource {
         floor_ask_maker: r.floor_sell_maker ? fromBuffer(r.floor_sell_maker) : null,
         floor_ask_valid_from: r.floor_sell_valid_from ? r.floor_sell_valid_from : null,
         floor_ask_valid_to: r.floor_sell_valid_to ? r.floor_sell_valid_to : null,
-        floor_ask_source: sources.get(r.floor_sell_source_id_int)?.name,
+        floor_ask_source: sources.get(r.floor_sell_source_id_int)
+          ? sources.get(r.floor_sell_source_id_int)?.name
+          : null,
         last_sale_value: r.last_sell_value ? r.last_sell_value.toString() : null,
         last_sale_timestamp: r.last_sell_timestamp,
         created_at: new Date(r.created_at).toISOString(),
