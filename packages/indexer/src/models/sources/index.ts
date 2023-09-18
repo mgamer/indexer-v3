@@ -289,8 +289,6 @@ export class Sources {
         if (returnDefault) {
           const defaultSource = Sources.getDefaultSource();
           sourceEntity.metadata.url = this.getTokenUrl(defaultSource, contract, tokenId);
-        } else {
-          sourceEntity = undefined;
         }
       } else {
         sourceEntity.metadata.url = this.getTokenUrl(sourceEntity, contract, tokenId);
@@ -305,8 +303,8 @@ export class Sources {
 
     if (_.toLower(domain) in this.sourcesByDomain) {
       sourceEntity = this.sourcesByDomain[_.toLower(domain)];
-    } else {
-      sourceEntity = returnDefault ? Sources.getDefaultSource() : undefined;
+    } else if (returnDefault) {
+      sourceEntity = Sources.getDefaultSource();
     }
 
     return sourceEntity;
@@ -323,8 +321,8 @@ export class Sources {
 
     if (_.toLower(name) in this.sourcesByName) {
       sourceEntity = this.sourcesByName[_.toLower(name)];
-    } else {
-      sourceEntity = returnDefault ? Sources.getDefaultSource() : undefined;
+    } else if (returnDefault) {
+      sourceEntity = Sources.getDefaultSource();
     }
 
     return sourceEntity;
@@ -343,8 +341,8 @@ export class Sources {
     address = _.toLower(address);
     if (address in this.sourcesByAddress) {
       sourceEntity = this.sourcesByAddress[address];
-    } else {
-      sourceEntity = options?.returnDefault ? Sources.getDefaultSource() : undefined;
+    } else if (options?.returnDefault) {
+      sourceEntity = Sources.getDefaultSource();
     }
 
     if (sourceEntity && options?.contract && options?.tokenId) {
