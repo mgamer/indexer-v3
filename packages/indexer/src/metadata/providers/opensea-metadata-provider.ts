@@ -450,7 +450,6 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
 
     const headers = !this.isOSTestnet()
       ? {
-          url,
           "X-API-KEY": config.openSeaApiKey,
           Accept: "application/json",
         }
@@ -459,10 +458,7 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
         };
 
     try {
-      const osResponse = await axios.get(
-        !this.isOSTestnet() ? config.openseaBaseUrlAlt || url : url,
-        { headers }
-      );
+      const osResponse = await axios.get(url, { headers });
 
       switch (api) {
         case "events":
