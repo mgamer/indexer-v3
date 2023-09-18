@@ -88,7 +88,7 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
     }/api/v1/assets?${searchParams.toString()}`;
 
     const data = await axios
-      .get(!this.isOSTestnet() ? config.openSeaBaseUrlAlt || url : url, {
+      .get(!this.isOSTestnet() ? config.openSeaApiUrl || url : url, {
         headers:
           config.chainId === 1
             ? {
@@ -136,7 +136,7 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
         : "https://rinkeby-api.opensea.io"
     }/api/v1/assets?${searchParams.toString()}`;
     const data = await axios
-      .get(!this.isOSTestnet() ? config.openSeaBaseUrlAlt || url : url, {
+      .get(!this.isOSTestnet() ? config.openSeaApiUrl || url : url, {
         headers: !this.isOSTestnet()
           ? {
               url,
@@ -460,10 +460,9 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
         };
 
     try {
-      const osResponse = await axios.get(
-        !this.isOSTestnet() ? config.openSeaBaseUrlAlt || url : url,
-        { headers }
-      );
+      const osResponse = await axios.get(!this.isOSTestnet() ? config.openSeaApiUrl || url : url, {
+        headers,
+      });
 
       switch (api) {
         case "events":
