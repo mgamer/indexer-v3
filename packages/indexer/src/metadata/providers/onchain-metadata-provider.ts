@@ -315,6 +315,10 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
 
       return json;
     } catch (e) {
+      logger.error(
+        "onchain-fetcher",
+        `getCollectionMetadata error. contractAddress:${contractAddress}, error:${e}`
+      );
       return null;
     }
   }

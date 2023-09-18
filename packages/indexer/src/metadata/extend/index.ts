@@ -36,6 +36,7 @@ import * as shreddingSassy from "./shredding-sassy";
 import * as soundxyz from "./soundxyz";
 import * as tfoust from "./tfoust";
 import * as utopiaAvatars from "./utopia-avatars";
+import * as superrareShared from "./superrare-shared";
 
 const extendCollection: any = {};
 const extend: any = {};
@@ -172,6 +173,10 @@ extendCollection["1,0xc143bbfcdbdbed6d454803804752a064a622c1f3"] = asyncBlueprin
 
 // Mirage Gallery Curated
 extendCollection["1,0xb7ec7bbd2d2193b47027247fc666fb342d23c4b5"] = mirageGalleryCurated;
+
+extendCollection["1,0xb932a70a57673d89f4acffbe830e8ed7f75fb9e0"] = superrareShared;
+
+extend["1,0xb932a70a57673d89f4acffbe830e8ed7f75fb9e0"] = superrareShared;
 
 // Sound XYZ
 soundxyz.SoundxyzArtistContracts.forEach(
