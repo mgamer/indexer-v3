@@ -88,16 +88,17 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
     }/api/v1/assets?${searchParams.toString()}`;
 
     const data = await axios
-      .get(url, {
-        headers: !this.isOSTestnet()
-          ? {
-              url,
-              "X-API-KEY": config.openSeaApiKey.trim(),
-              Accept: "application/json",
-            }
-          : {
-              Accept: "application/json",
-            },
+      .get(!this.isOSTestnet() ? config.openSeaBaseUrlAlt || url : url, {
+        headers:
+          config.chainId === 1
+            ? {
+                url,
+                "X-API-KEY": config.openSeaApiKey.trim(),
+                Accept: "application/json",
+              }
+            : {
+                Accept: "application/json",
+              },
       })
       .then((response) => response.data)
       .catch((error) => {
@@ -131,13 +132,14 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
 
     const url = `${
       config.chainId === 1
-        ? config.openseaSlugBaseUrl || "https://api.opensea.io"
+        ? config.openSeaSlugBaseUrl || "https://api.opensea.io"
         : "https://rinkeby-api.opensea.io"
     }/api/v1/assets?${searchParams.toString()}`;
     const data = await axios
-      .get(url, {
+      .get(!this.isOSTestnet() ? config.openSeaBaseUrlAlt || url : url, {
         headers: !this.isOSTestnet()
           ? {
+              url,
               "X-API-KEY": config.openSeaApiKey.trim(),
               Accept: "application/json",
             }
@@ -449,6 +451,7 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
 
     const headers = !this.isOSTestnet()
       ? {
+          url,
           "X-API-KEY": config.openSeaApiKey,
           Accept: "application/json",
         }
@@ -457,7 +460,10 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
         };
 
     try {
-      const osResponse = await axios.get(url, { headers });
+      const osResponse = await axios.get(
+        !this.isOSTestnet() ? config.openSeaBaseUrlAlt || url : url,
+        { headers }
+      );
 
       switch (api) {
         case "events":
