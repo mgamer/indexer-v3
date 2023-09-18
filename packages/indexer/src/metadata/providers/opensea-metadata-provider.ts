@@ -136,15 +136,14 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
     }/api/v1/assets?${searchParams.toString()}`;
     const data = await axios
       .get(url, {
-        headers:
-          config.chainId === 1
-            ? {
-                [config.openSeaSlugApiHeaders ?? "X-API-KEY"]: config.openSeaSlugApiKey.trim(),
-                Accept: "application/json",
-              }
-            : {
-                Accept: "application/json",
-              },
+        headers: !this.isOSTestnet()
+          ? {
+              "X-API-KEY": config.openSeaApiKey.trim(),
+              Accept: "application/json",
+            }
+          : {
+              Accept: "application/json",
+            },
       })
       .then((response) => response.data)
       .catch((error) => this.handleError(error));
