@@ -107,6 +107,7 @@ import { fillPostProcessJob } from "@/jobs/fill-updates/fill-post-process-job";
 import { generateCollectionTokenSetJob } from "@/jobs/flag-status/generate-collection-token-set-job";
 import { flagStatusUpdateJob } from "@/jobs/flag-status/flag-status-update-job";
 import { flagStatusProcessJob } from "@/jobs/flag-status/flag-status-process-job";
+
 import { metadataIndexFetchJob } from "@/jobs/metadata-index/metadata-fetch-job";
 import { metadataIndexProcessJob } from "@/jobs/metadata-index/metadata-process-job";
 import { metadataIndexWriteJob } from "@/jobs/metadata-index/metadata-write-job";
@@ -152,6 +153,7 @@ import { tokenWebsocketEventsTriggerJob } from "@/jobs/websocket-events/token-we
 import { blockGapCheckJob } from "@/jobs/events-sync/block-gap-check";
 import { traceSyncJob } from "@/jobs/events-sync/trace-sync-job";
 import { backfillTokensTimeToMetadataJob } from "@/jobs/backfill/backfill-tokens-time-to-metadata-job";
+import { flagStatusRefreshJob } from "./flag-status/flag-status-refresh-job";
 
 export const allJobQueues = [
   backfillWrongNftBalances.queue,
@@ -240,6 +242,7 @@ export class RabbitMqJobsConsumer {
       generateCollectionTokenSetJob,
       flagStatusUpdateJob,
       flagStatusProcessJob,
+      flagStatusRefreshJob,
       metadataIndexFetchJob,
       metadataIndexProcessJob,
       metadataIndexWriteJob,
