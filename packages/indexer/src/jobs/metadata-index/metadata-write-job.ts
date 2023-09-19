@@ -10,7 +10,6 @@ import { updateCollectionDailyVolumeJob } from "@/jobs/collection-updates/update
 import { replaceActivitiesCollectionJob } from "@/jobs/activities/replace-activities-collection-job";
 import { fetchCollectionMetadataJob } from "@/jobs/token-updates/fetch-collection-metadata-job";
 import { getUnixTime } from "date-fns";
-import { flagStatusUpdateJob } from "@/jobs/flag-status/flag-status-update-job";
 import PgPromise from "pg-promise";
 import { resyncAttributeKeyCountsJob } from "@/jobs/update-attribute/resync-attribute-key-counts-job";
 import { resyncAttributeValueCountsJob } from "@/jobs/update-attribute/resync-attribute-value-counts-job";
@@ -47,7 +46,6 @@ export class MetadataIndexWriteJob extends AbstractRabbitMqJobHandler {
       animationOriginalUrl,
       metadataOriginalUrl,
       mediaUrl,
-      flagged,
       attributes,
     } = payload;
 
@@ -159,16 +157,6 @@ export class MetadataIndexWriteJob extends AbstractRabbitMqJobHandler {
       );
 
       return;
-    }
-
-    if (flagged != null) {
-      await flagStatusUpdateJob.addToQueue([
-        {
-          contract,
-          tokenId,
-          isFlagged: Boolean(flagged),
-        },
-      ]);
     }
 
     // const startHandleTokenAttributesTime = Date.now();
