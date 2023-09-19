@@ -20,6 +20,11 @@ export type SecurityPolicy = {
   pushPaymentGasLimit: string;
 };
 
+export type PricingBounds = {
+  floorPrice: string;
+  ceilingPrice: string;
+};
+
 export const getSecurityPolicy = async (
   securityPolicyId: string,
   refresh?: boolean
@@ -74,6 +79,36 @@ export const getContractSecurityPolicy = async (
         policy: await getSecurityPolicy(securityPolicyId, refresh),
       };
       await redis.set(cacheKey, JSON.stringify(result), "EX", 24 * 3600);
+    } catch {
+      // Skip errors
+    }
+  }
+  return result;
+};
+
+export const getContractPricingBounds = async (
+  contract: string,
+  tokenId: string,
+  refresh?: boolean
+): Promise<PricingBounds | undefined> => {
+  const cacheKey = `payment-processor-pricing-bounds:${contract}${tokenId}`;
+  let result = await redis
+    .get(cacheKey)
+    .then((r) => (r ? (JSON.parse(r) as PricingBounds) : undefined));
+  if (result == undefined || refresh) {
+    try {
+      const exchange = new Sdk.PaymentProcessor.Exchange(config.chainId).contract.connect(
+        baseProvider
+      );
+      const [floorPrice, ceilingPrice] = await Promise.all([
+        exchange.getFloorPrice(contract, tokenId),
+        exchange.getCeilingPrice(contract, tokenId),
+      ]);
+      result = {
+        floorPrice: floorPrice.toString(),
+        ceilingPrice: ceilingPrice.toString(),
+      };
+      await redis.set(cacheKey, JSON.stringify(result), "EX", 60 * 10);
     } catch {
       // Skip errors
     }

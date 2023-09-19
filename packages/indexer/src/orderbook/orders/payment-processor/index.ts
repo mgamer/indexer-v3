@@ -83,25 +83,26 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
               status: "payment-token-not-whitelisted",
             });
           }
-
           const currencyPrice = bn(order.params.price).div(order.params.amount);
-          const [floorPrice, ceilingPrice] = await Promise.all([
-            exchange.getFloorPrice(order.params.tokenAddress, order.params.tokenId),
-            exchange.getCeilingPrice(order.params.tokenAddress, order.params.tokenId),
-          ]);
+          const pricingBounds = await paymentProcessor.getContractPricingBounds(
+            order.params.tokenAddress,
+            order.params.tokenId ?? "0"
+          );
+          if (pricingBounds) {
+            const { floorPrice, ceilingPrice } = pricingBounds;
+            if (currencyPrice.lt(floorPrice)) {
+              return results.push({
+                id,
+                status: "sale-price-below-minium-floor",
+              });
+            }
 
-          if (currencyPrice.lt(floorPrice)) {
-            return results.push({
-              id,
-              status: "sale-price-below-minium-floor",
-            });
-          }
-
-          if (currencyPrice.gt(ceilingPrice)) {
-            return results.push({
-              id,
-              status: "sale-price-above-maximum-floor",
-            });
+            if (currencyPrice.gt(ceilingPrice)) {
+              return results.push({
+                id,
+                status: "sale-price-above-maximum-floor",
+              });
+            }
           }
         } else if (
           securityPolicy.enforcePaymentMethodWhitelist &&
