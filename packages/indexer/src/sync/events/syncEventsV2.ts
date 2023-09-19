@@ -470,14 +470,14 @@ export const checkForMissingBlocks = async (block: number) => {
   const latestBlock = await redis.get("latest-block-realtime");
   if (latestBlock) {
     const latestBlockNumber = Number(latestBlock);
-    if (block > latestBlockNumber) {
-      await redis.set("latest-block-realtime", block);
-      if (block - latestBlockNumber > 1) {
-        // if we are missing more than 1 block, we need to sync the missing blocks
-        for (let i = latestBlockNumber + 1; i < block; i++) {
-          logger.info("sync-events-realtime", `Found missing block: ${i}`);
-          await eventsSyncRealtimeJob.addToQueue({ block: i });
-        }
+    if (block - latestBlockNumber > 2) {
+      // if we are missing more than 1 block, we need to sync the missing blocks
+      for (let i = latestBlockNumber + 1; i <= block; i++) {
+        logger.info(
+          "sync-events-realtime",
+          `Found missing block: ${i} block ${block} latestBlock ${latestBlockNumber}`
+        );
+        await eventsSyncRealtimeJob.addToQueue({ block: i });
       }
     }
   } else {
