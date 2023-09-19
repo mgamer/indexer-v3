@@ -9,6 +9,7 @@ contract MockERC721 is ERC721 {
   address public owner;
 
   constructor() ERC721("Mock", "MOCK") {
+    // IOwnable
     owner = msg.sender;
   }
 
