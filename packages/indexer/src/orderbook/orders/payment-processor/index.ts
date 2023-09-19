@@ -67,14 +67,15 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         });
       }
 
-      const securityPolicy = await paymentProcessor.getContractSecurityPolicy(
+      const contractSecurityPolicy = await paymentProcessor.getContractSecurityPolicy(
         order.params.tokenAddress
       );
-      if (securityPolicy && securityPolicy.policy) {
+      if (contractSecurityPolicy && contractSecurityPolicy.policy) {
         const exchange = new Sdk.PaymentProcessor.Exchange(config.chainId).contract.connect(
           baseProvider
         );
-        if (securityPolicy.policy.enforcePricingConstraints) {
+        const { policy: securityPolicy } = contractSecurityPolicy;
+        if (securityPolicy.enforcePricingConstraints) {
           const paymentCoin = await exchange.collectionPaymentCoins(order.params.tokenAddress);
           if (order.params.coin.toLowerCase() != paymentCoin.toLowerCase()) {
             return results.push({
@@ -103,11 +104,11 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
             });
           }
         } else if (
-          securityPolicy.policy.enforcePaymentMethodWhitelist &&
+          securityPolicy.enforcePaymentMethodWhitelist &&
           order.params.coin !== Sdk.Common.Addresses.Native[config.chainId]
         ) {
           const isWhitelisted = await exchange.isPaymentMethodApproved(
-            securityPolicy.securityPolicyId,
+            contractSecurityPolicy.securityPolicyId,
             order.params.coin
           );
           if (!isWhitelisted) {
