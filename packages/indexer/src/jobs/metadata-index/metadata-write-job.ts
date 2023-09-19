@@ -6,7 +6,6 @@ import { config } from "@/config/index";
 import { logger } from "@/common/logger";
 import { idb, ridb } from "@/common/db";
 import { toBuffer } from "@/common/utils";
-import { refreshActivitiesTokenMetadataJob } from "@/jobs/activities/refresh-activities-token-metadata-job";
 import { updateCollectionDailyVolumeJob } from "@/jobs/collection-updates/update-collection-daily-volume-job";
 import { replaceActivitiesCollectionJob } from "@/jobs/activities/replace-activities-collection-job";
 import { fetchCollectionMetadataJob } from "@/jobs/token-updates/fetch-collection-metadata-job";
@@ -51,7 +50,7 @@ export class MetadataIndexWriteJob extends AbstractRabbitMqJobHandler {
   maxRetries = 10;
   concurrency = 40;
   lazyMode = true;
-  consumerTimeout = 60000;
+  timeout = 60000;
   backoff = {
     type: "exponential",
     delay: 20000,
@@ -76,7 +75,6 @@ export class MetadataIndexWriteJob extends AbstractRabbitMqJobHandler {
       metadataOriginalUrl,
       mediaUrl,
       flagged,
-      isCopyrightInfringement,
       attributes,
     } = payload;
 
@@ -93,7 +91,19 @@ export class MetadataIndexWriteJob extends AbstractRabbitMqJobHandler {
           media = $/media/,
           updated_at = now(),
           collection_id = collection_id,
-          created_at = created_at
+          created_at = created_at,
+          metadata_indexed_at = CASE 
+                                    WHEN metadata_indexed_at IS NULL AND image IS NOT NULL THEN metadata_indexed_at 
+                                    WHEN metadata_indexed_at IS NULL THEN now() 
+                                    ELSE metadata_indexed_at
+                                END,
+          metadata_initialized_at = CASE
+                                        WHEN metadata_initialized_at IS NULL AND image IS NOT NULL THEN metadata_initialized_at 
+                                        WHEN metadata_initialized_at IS NULL AND COALESCE(image, $/image/) IS NOT NULL THEN now() 
+                                        ELSE metadata_initialized_at
+                                    END,
+          metadata_changed_at = CASE WHEN metadata_initialized_at IS NOT NULL AND NULLIF(image, $/image/) IS NOT NULL THEN now() ELSE metadata_changed_at END,
+          metadata_updated_at = now()
         WHERE tokens.contract = $/contract/
         AND tokens.token_id = $/tokenId/
         RETURNING collection_id, created_at, (
@@ -131,15 +141,6 @@ export class MetadataIndexWriteJob extends AbstractRabbitMqJobHandler {
     // Skip if there is no associated entry in the `tokens` table
     if (!result) {
       return;
-    }
-
-    if (
-      isCopyrightInfringement ||
-      result.old_metadata.name != name ||
-      result.old_metadata.image != imageUrl ||
-      result.old_metadata.media != mediaUrl
-    ) {
-      await refreshActivitiesTokenMetadataJob.addToQueue(contract, tokenId);
     }
 
     // If the new collection ID is different from the collection ID currently stored
@@ -362,7 +363,11 @@ export class MetadataIndexWriteJob extends AbstractRabbitMqJobHandler {
 
       if (!attributeResult?.id) {
         // Otherwise, fail (and retry)
-        throw new Error(`Could not fetch/save attribute "${value}"`);
+        throw new Error(
+          `Could not fetch/save attribute keyId ${
+            attributeKeysIdsMap.get(key)?.id
+          } key ${key} value ${value} attributeResult ${JSON.stringify(attributeResult)}`
+        );
       }
 
       attributeIds.push(attributeResult.id);

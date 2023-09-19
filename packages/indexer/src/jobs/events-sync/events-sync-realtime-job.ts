@@ -3,6 +3,7 @@ import { config } from "@/config/index";
 import { logger } from "@/common/logger";
 import { checkForOrphanedBlock, syncEvents } from "@/events-sync/syncEventsV2";
 import { RabbitMQMessage } from "@/common/rabbit-mq";
+import { traceSyncJob } from "./trace-sync-job";
 
 export type EventsSyncRealtimeJobPayload = {
   block: number;
@@ -11,8 +12,8 @@ export type EventsSyncRealtimeJobPayload = {
 export class EventsSyncRealtimeJob extends AbstractRabbitMqJobHandler {
   queueName = "events-sync-realtime";
   maxRetries = 30;
-  concurrency = [80001, 11155111].includes(config.chainId) ? 1 : 5;
-  consumerTimeout = 10 * 60 * 1000;
+  concurrency = [84531, 80001, 11155111].includes(config.chainId) ? 1 : 5;
+  timeout = 10 * 60 * 1000;
   backoff = {
     type: "fixed",
     delay: 1000,
@@ -21,7 +22,7 @@ export class EventsSyncRealtimeJob extends AbstractRabbitMqJobHandler {
   protected async process(payload: EventsSyncRealtimeJobPayload) {
     const { block } = payload;
 
-    if (config.chainId === 59144 && block >= 488000) {
+    if (config.chainId === 59144 && block >= 916077) {
       logger.info(this.queueName, `Skip Block ${block}`);
 
       return;
@@ -29,6 +30,7 @@ export class EventsSyncRealtimeJob extends AbstractRabbitMqJobHandler {
 
     try {
       await syncEvents(block);
+      await traceSyncJob.addToQueue({ block: block });
       //eslint-disable-next-line
     } catch (error: any) {
       // if the error is block not found, add back to queue
@@ -39,6 +41,8 @@ export class EventsSyncRealtimeJob extends AbstractRabbitMqJobHandler {
         );
 
         return { addToQueue: true, delay: 1000 };
+      } else if (error?.message.includes("unfinalized")) {
+        return { addToQueue: true, delay: 2000 };
       } else {
         throw error;
       }

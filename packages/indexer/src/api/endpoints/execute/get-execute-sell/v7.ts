@@ -869,7 +869,7 @@ export const getExecuteSellV7Options: RouteOptions = {
       }
 
       const ordersEligibleForGlobalFees = bidDetails
-        .filter((b) => !b.isProtected && b.source !== "blur.io")
+        .filter((b) => b.source !== "blur.io")
         .map((b) => b.orderId);
 
       const addGlobalFee = async (

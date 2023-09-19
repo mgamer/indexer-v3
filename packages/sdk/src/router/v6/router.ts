@@ -46,6 +46,7 @@ import ApprovalProxyAbi from "./abis/ApprovalProxy.json";
 import OpenseaTransferHelperAbi from "./abis/OpenseaTransferHelper.json";
 // Modules
 import CollectionXyzModuleAbi from "./abis/CollectionXyzModule.json";
+import DittoModuleAbi from "./abis/DittoModule.json";
 import ElementModuleAbi from "./abis/ElementModule.json";
 import FoundationModuleAbi from "./abis/FoundationModule.json";
 import LooksRareV2ModuleAbi from "./abis/LooksRareV2Module.json";
@@ -107,6 +108,11 @@ export class Router {
       collectionXyzModule: new Contract(
         Addresses.CollectionXyzModule[chainId] ?? AddressZero,
         CollectionXyzModuleAbi,
+        provider
+      ),
+      dittoModule: new Contract(
+        Addresses.DittoModule[chainId] ?? AddressZero,
+        DittoModuleAbi,
         provider
       ),
       elementModule: new Contract(
@@ -376,10 +382,6 @@ export class Router {
       }
 
       for (const detail of details.filter(({ kind }) => kind === "manifold")) {
-        if (detail.fees?.length) {
-          throw new Error("Fees not supported for Manifold orders");
-        }
-
         const order = detail.order as Sdk.Manifold.Order;
         const exchange = new Sdk.Manifold.Exchange(this.chainId);
 
@@ -401,6 +403,99 @@ export class Router {
         });
 
         success[detail.orderId] = true;
+      }
+    }
+
+    if (details.some(({ kind }) => kind === "payment-processor")) {
+      if (options?.relayer) {
+        throw new Error("Relayer not supported for PaymentProcessor orders");
+      }
+
+      const ownDetails = details.filter(({ kind }) => kind === "payment-processor");
+
+      const exchange = new Sdk.PaymentProcessor.Exchange(this.chainId);
+      const operator = exchange.contract.address;
+
+      const approvals: FTApproval[] = [];
+      for (const { currency, price } of ownDetails) {
+        if (!isETH(this.chainId, currency)) {
+          approvals.push({
+            currency,
+            amount: price,
+            owner: taker,
+            operator,
+            txData: generateFTApprovalTxData(currency, taker, operator),
+          });
+        }
+      }
+
+      const preSignatures: PreSignature[] = [];
+      const orders: Sdk.PaymentProcessor.Order[] = ownDetails.map(
+        (c) => c.order as Sdk.PaymentProcessor.Order
+      );
+
+      // Use the gas-efficient sweep method when:
+      // - there is at least one listing
+      // - all listings are for the same collection
+      // - all listings have the same payment token
+      const useSweepCollection =
+        ownDetails.length > 1 &&
+        ownDetails.every((c) => c.contract === details[0].contract) &&
+        ownDetails.every((c) => c.currency === details[0].currency);
+
+      if (useSweepCollection) {
+        const bundledOrder = Sdk.PaymentProcessor.Order.createBundledOfferOrder(orders, {
+          taker,
+          takerMasterNonce: await exchange.getMasterNonce(this.provider, taker),
+        });
+
+        const signData = bundledOrder.getSignatureData();
+        preSignatures.push({
+          kind: "payment-processor-take-order",
+          signer: taker,
+          data: signData,
+          uniqueId: `${bundledOrder.params.tokenAddress}-${bundledOrder.params.tokenIds?.join(
+            "-"
+          )}-${bundledOrder.params.price}`,
+        });
+
+        txs.push({
+          approvals,
+          permits: [],
+          preSignatures: preSignatures,
+          txData: exchange.sweepCollectionTx(taker, bundledOrder, orders),
+          orderIds: ownDetails.map((d) => d.orderId),
+        });
+      } else {
+        const takeOrders: Sdk.PaymentProcessor.Order[] = [];
+        for (const order of orders) {
+          const takerOrder = order.buildMatching({
+            taker,
+            takerMasterNonce: await exchange.getMasterNonce(this.provider, taker),
+          });
+
+          takeOrders.push(takerOrder);
+
+          const signData = takerOrder.getSignatureData();
+          preSignatures.push({
+            kind: "payment-processor-take-order",
+            signer: taker,
+            data: signData,
+            uniqueId: `${takerOrder.params.tokenAddress}-${takerOrder.params.tokenId}-${takerOrder.params.price}`,
+          });
+        }
+
+        txs.push({
+          approvals,
+          permits: [],
+          preSignatures: preSignatures,
+          txData: exchange.fillOrdersTx(taker, orders, takeOrders),
+          orderIds: ownDetails.map((d) => d.orderId),
+        });
+      }
+
+      for (const { orderId } of ownDetails) {
+        success[orderId] = true;
       }
     }
 
@@ -606,7 +701,6 @@ export class Router {
     // Direct filling for:
     // - seaport-1.5
     // - alienswap
-    // - payment-processor
 
     if (
       details.every(
@@ -766,104 +860,6 @@ export class Router {
       }
     }
 
-    if (
-      details.every(
-        ({ kind, fees, currency }) =>
-          kind === "payment-processor" &&
-          buyInCurrency === currency &&
-          // All orders must have the same currency
-          currency === details[0].currency &&
-          !fees?.length
-      ) &&
-      !options?.forceRouter &&
-      !options?.relayer &&
-      !options?.usePermit
-    ) {
-      const exchange = new Sdk.PaymentProcessor.Exchange(this.chainId);
-      const operator = exchange.contract.address;
-
-      // Use the gas-efficient sweep method when all listings are from the same collection
-      const useSweepCollection =
-        details.length > 1 && details.every((c) => c.contract === details[0].contract);
-
-      let approval: FTApproval | undefined;
-      if (!isETH(this.chainId, details[0].currency)) {
-        approval = {
-          currency: details[0].currency,
-          amount: details[0].price,
-          owner: taker,
-          operator,
-          txData: generateFTApprovalTxData(details[0].currency, taker, operator),
-        };
-      }
-
-      const preSignatures: PreSignature[] = [];
-      const orders: Sdk.PaymentProcessor.Order[] = details.map(
-        (c) => c.order as Sdk.PaymentProcessor.Order
-      );
-
-      if (useSweepCollection) {
-        const bundledOrder = Sdk.PaymentProcessor.Order.createBundledOfferOrder(orders, {
-          taker,
-          takerMasterNonce: await exchange.getMasterNonce(this.provider, taker),
-        });
-
-        const signData = bundledOrder.getSignatureData();
-        preSignatures.push({
-          kind: "payment-processor-take-order",
-          signer: taker,
-          data: signData,
-          uniqueId: `${bundledOrder.params.tokenAddress}-${bundledOrder.params.tokenIds?.join(
-            "-"
-          )}-${bundledOrder.params.price}`,
-        });
-
-        return {
-          txs: [
-            {
-              approvals: approval ? [approval] : [],
-              permits: [],
-              preSignatures: preSignatures,
-              txData: exchange.sweepCollectionTx(taker, bundledOrder, orders),
-              orderIds: details.map((d) => d.orderId),
-            },
-          ],
-          success: Object.fromEntries(details.map((d) => [d.orderId, true])),
-        };
-      } else {
-        const takeOrders: Sdk.PaymentProcessor.Order[] = [];
-        for (const order of orders) {
-          const takerOrder = order.buildMatching({
-            taker,
-            takerMasterNonce: await exchange.getMasterNonce(this.provider, taker),
-          });
-
-          takeOrders.push(takerOrder);
-
-          const signData = takerOrder.getSignatureData();
-          preSignatures.push({
-            kind: "payment-processor-take-order",
-            signer: taker,
-            data: signData,
-            uniqueId: `${takerOrder.params.tokenAddress}-${takerOrder.params.tokenId}-${takerOrder.params.price}`,
-          });
-        }
-
-        return {
-          txs: [
-            {
-              approvals: approval ? [approval] : [],
-              permits: [],
-              preSignatures: preSignatures,
-              txData: exchange.fillOrdersTx(taker, orders, takeOrders),
-              orderIds: details.map((d) => d.orderId),
-            },
-          ],
-          success: Object.fromEntries(details.map((d) => [d.orderId, true])),
-        };
-      }
-    }
-
     const getFees = (ownDetails: ListingDetails[]) =>
       // TODO: Should not split the local fees among all executions
       ownDetails
@@ -884,6 +880,7 @@ export class Router {
     const orderIds: string[] = [];
 
     // Split all listings by their kind
+    const dittoDetails: ListingDetails[] = [];
     const elementErc721Details: ListingDetails[] = [];
     const elementErc721V2Details: ListingDetails[] = [];
     const elementErc1155Details: ListingDetails[] = [];
@@ -930,6 +927,10 @@ export class Router {
 
         case "collectionxyz":
           detailsRef = collectionXyzDetails;
+          break;
+
+        case "ditto":
+          detailsRef = dittoDetails;
           break;
 
         case "foundation":
@@ -1864,6 +1865,46 @@ export class Router {
 
       // Mark the listings as successfully handled
       for (const { orderId } of collectionXyzDetails) {
+        success[orderId] = true;
+        orderIds.push(orderId);
+      }
+    }
+
+    // Handle Ditto listings
+    if (dittoDetails.length) {
+      const orders = dittoDetails.map((d) => d.order as Sdk.Ditto.Order);
+      const router = new Sdk.Ditto.Router(this.chainId);
+      const module = this.contracts.dittoModule;
+
+      const fees = getFees(dittoDetails);
+      const price = orders
+        .map((order) => bn(order.params.expectedTokenAmount))
+        .reduce((a, b) => a.add(b), bn(0));
+      const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
+      const totalPrice = price.add(feeAmount);
+
+      // Add executions
+      for (const order of orders) {
+        executions.push({
+          module: module.address,
+          data: router.fillBuyOrderTx(taker, order).data,
+          value: totalPrice,
+        });
+      }
+
+      // Track any possibly required swap
+      swapDetails.push({
+        tokenIn: buyInCurrency,
+        tokenOut: Sdk.Common.Addresses.Native[this.chainId],
+        tokenOutAmount: totalPrice,
+        recipient: module.address,
+        refundTo: relayer,
+        details: dittoDetails,
+        executionIndex: executions.length - 1,
+      });
+
+      // Mark the listings as successfully handled
+      for (const { orderId } of dittoDetails) {
         success[orderId] = true;
         orderIds.push(orderId);
       }
@@ -3381,6 +3422,11 @@ export class Router {
           break;
         }
 
+        case "ditto": {
+          module = this.contracts.dittoModule;
+          break;
+        }
+
         case "nftx": {
           module = this.contracts.nftxModule;
           break;
@@ -3965,6 +4011,25 @@ export class Router {
                 },
                 fees,
               ]),
+              value: 0,
+            },
+          });
+
+          success[detail.orderId] = true;
+
+          break;
+        }
+
+        case "ditto": {
+          const order = detail.order as Sdk.Ditto.Order;
+          const module = this.contracts.dittoswapModule;
+          const router = new Sdk.Ditto.Router(this.chainId);
+
+          executionsWithDetails.push({
+            detail,
+            execution: {
+              module: module.address,
+              data: router.fillSellOrderTx(taker, order).data,
               value: 0,
             },
           });
