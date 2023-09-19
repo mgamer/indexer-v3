@@ -20,7 +20,11 @@ export abstract class AbstractBaseMetadataProvider {
   }
 
   async getTokensMetadata(
-    tokens: { contract: string; tokenId: string }[]
+    tokens: { contract: string; tokenId: string }[],
+    options?: {
+      allowFallback?: boolean;
+      flagged?: boolean;
+    }
   ): Promise<TokenMetadata[]> {
     const customMetadata = await Promise.all(
       tokens.map(async (token) => {
@@ -49,7 +53,7 @@ export abstract class AbstractBaseMetadataProvider {
     let metadataFromProvider: TokenMetadata[] = [];
 
     if (tokensWithoutCustomMetadata.length > 0) {
-      metadataFromProvider = await this._getTokensMetadata(tokensWithoutCustomMetadata);
+      metadataFromProvider = await this._getTokensMetadata(tokensWithoutCustomMetadata, options);
     }
 
     // merge custom metadata with metadata-api metadata
@@ -89,7 +93,11 @@ export abstract class AbstractBaseMetadataProvider {
   ): Promise<CollectionMetadata>;
 
   protected abstract _getTokensMetadata(
-    tokens: { contract: string; tokenId: string }[]
+    tokens: { contract: string; tokenId: string }[],
+    options?: {
+      allowFallback?: boolean;
+      flagged?: boolean;
+    }
   ): Promise<TokenMetadata[]>;
 
   protected abstract _getTokensMetadataBySlug(

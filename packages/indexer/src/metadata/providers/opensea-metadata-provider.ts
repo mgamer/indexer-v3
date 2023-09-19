@@ -75,7 +75,11 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
   }
 
   protected async _getTokensMetadata(
-    tokens: { contract: string; tokenId: string }[]
+    tokens: { contract: string; tokenId: string }[],
+    options?: {
+      allowFallback?: boolean;
+      flagged?: boolean;
+    }
   ): Promise<TokenMetadata[]> {
     const searchParams = new URLSearchParams();
     for (const { contract, tokenId } of tokens) {
@@ -87,12 +91,14 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
       !this.isOSTestnet() ? "https://api.opensea.io" : "https://testnets-api.opensea.io"
     }/api/v1/assets?${searchParams.toString()}`;
 
+    const API_KEY_TO_USE = options?.flagged ? config.openSeaApiKeyFlagged : config.openSeaApiKey;
+
     const data = await axios
       .get(!this.isOSTestnet() ? config.openSeaApiUrl || url : url, {
         headers: !this.isOSTestnet()
           ? {
               url,
-              "X-API-KEY": config.openSeaApiKey.trim(),
+              "X-API-KEY": API_KEY_TO_USE.trim(),
               Accept: "application/json",
             }
           : {

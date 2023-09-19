@@ -9,6 +9,8 @@ import { PendingRefreshTokensBySlug } from "@/models/pending-refresh-tokens-by-s
 import { AddressZero } from "@ethersproject/constants";
 import { metadataIndexProcessJob } from "@/jobs/metadata-index/metadata-process-job";
 import { metadataIndexProcessBySlugJob } from "@/jobs/metadata-index/metadata-process-by-slug-job";
+import { PendingFlagStatusRefreshTokens } from "@/models/pending-flag-status-refresh-tokens";
+import { flagStatusRefreshJob } from "../flag-status/flag-status-refresh-job";
 
 export type MetadataIndexFetchJobPayload =
   | {
@@ -62,6 +64,8 @@ export class MetadataIndexFetchJob extends AbstractRabbitMqJobHandler {
     const prioritized = !_.isUndefined(this.rabbitMqMessage?.prioritized);
     const limit = 1000;
     let refreshTokens: RefreshTokens[] = [];
+    let contract = kind === "single-token" ? data.contract : AddressZero;
+    let tokenId = kind === "single-token" ? data.tokenId : "0";
 
     if (kind === "full-collection-by-slug") {
       logger.info(this.queueName, `Full collection by slug. data=${JSON.stringify(data)}`);
@@ -84,9 +88,8 @@ export class MetadataIndexFetchJob extends AbstractRabbitMqJobHandler {
       logger.info(this.queueName, `Full collection. data=${JSON.stringify(data)}`);
 
       // Get batch of tokens for the collection
-      const [contract, tokenId] = data.continuation
-        ? data.continuation.split(":")
-        : [AddressZero, "0"];
+      [contract, tokenId] = data.continuation ? data.continuation.split(":") : [AddressZero, "0"];
+
       refreshTokens = await this.getTokensForCollection(data.collection, contract, tokenId, limit);
 
       // If no more tokens found
@@ -123,9 +126,28 @@ export class MetadataIndexFetchJob extends AbstractRabbitMqJobHandler {
       });
     }
 
-    // Add the tokens to the list
-    const pendingRefreshTokens = new PendingRefreshTokens(data.method);
-    await pendingRefreshTokens.add(refreshTokens, prioritized);
+    // Dont add the tokens to the list if the flag status refresh job is disabled or if the indexer is running in liquidity-only mode
+    if (!config.disableFlagStatusRefreshJob || !config.liquidityOnly) {
+      // Add the tokens to the list
+      const pendingRefreshTokens = new PendingRefreshTokens(data.method);
+      await pendingRefreshTokens.add(refreshTokens, prioritized);
+
+      // Add the tokens to the flag status refresh queue
+      const pendingFlagStatusRefreshTokens = new PendingFlagStatusRefreshTokens(data.collection);
+      await pendingFlagStatusRefreshTokens.add(
+        refreshTokens.map((r) => ({
+          collectionId: data.collection,
+          contract: r.contract,
+          tokenId: r.tokenId,
+          isFlagged: 0,
+        }))
+      );
+
+      await flagStatusRefreshJob.addToQueue({
+        collectionId: data.collection,
+        contract: contract,
+      });
+    }
 
     await metadataIndexProcessJob.addToQueue({ method: data.method });
   }

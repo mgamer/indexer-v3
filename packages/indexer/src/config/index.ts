@@ -29,6 +29,7 @@ export const config = {
       "opensea"
   ),
   metadataApiBaseUrl: String(process.env.METADATA_API_BASE_URL),
+  disableFlagStatusRefreshJob: Boolean(Number(process.env.DISABLE_FLAG_STATUS_REFRESH_JOB)),
 
   disableRealtimeMetadataRefresh: Boolean(Number(process.env.DISABLE_REALTIME_METADATA_REFRESH)),
 
@@ -84,6 +85,7 @@ export const config = {
 
   looksRareApiKey: String(process.env.LOOKSRARE_API_KEY),
   openSeaApiKey: String(process.env.OPENSEA_API_KEY),
+  openSeaApiKeyFlagged: String(process.env.OPENSEA_API_KEY_FLAGGED),
   openSeaSlugApiKey: String(process.env.OPENSEA_SLUG_API_KEY),
   openSeaSlugApiHeaders: process.env.OPENSEA_SLUG_API_HEADERS,
   openSeaSlugBaseUrl: String(process.env.OPENSEA_SLUG_BASE_URL),
