@@ -1,7 +1,5 @@
-import { Interface } from "@ethersproject/abi";
 import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
-import { Contract } from "@ethersproject/contracts";
 import { keccak256 } from "@ethersproject/solidity";
 import * as Sdk from "@reservoir0x/sdk";
 import _ from "lodash";
@@ -23,6 +21,7 @@ import * as tokenSet from "@/orderbook/token-sets";
 import { checkMarketplaceIsFiltered } from "@/utils/marketplace-blacklists";
 import { getUSDAndNativePrices } from "@/utils/prices";
 import * as royalties from "@/utils/royalties";
+import * as paymentProcessor from "@/utils/payment-processor";
 
 export type OrderInfo = {
   orderParams: Sdk.PaymentProcessor.Types.BaseOrder;
@@ -68,33 +67,47 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         });
       }
 
-      if (order.params.coin !== Sdk.Common.Addresses.Native[config.chainId]) {
-        const exchange = new Contract(
-          Sdk.PaymentProcessor.Addresses.Exchange[config.chainId],
-          new Interface([
-            "function getTokenSecurityPolicyId(address collectionAddress) public view returns (uint256)",
-            `function getSecurityPolicy(uint256 securityPolicyId) public view returns (
-              (
-                bool enforceExchangeWhitelist,
-                bool enforcePaymentMethodWhitelist,
-                bool enforcePricingConstraints,
-                bool disablePrivateListings,
-                bool disableDelegatedPurchases,
-                bool disableEIP1271Signatures,
-                bool disableExchangeWhitelistEOABypass,
-                uint32 pushPaymentGasLimit,
-                address policyOwner
-              ) securityPolicy
-            )`,
-            "function isPaymentMethodApproved(uint256 securityPolicyId, address coin) public view returns (bool)",
-          ]),
+      const securityPolicy = await paymentProcessor.getContractSecurityPolicy(
+        order.params.tokenAddress
+      );
+      if (securityPolicy && securityPolicy.policy) {
+        const exchange = new Sdk.PaymentProcessor.Exchange(config.chainId).contract.connect(
           baseProvider
         );
-        const securityPolicyId = await exchange.getTokenSecurityPolicyId(order.params.tokenAddress);
-        const securityPolicy = await exchange.getSecurityPolicy(securityPolicyId);
-        if (securityPolicy.enforcePaymentMethodWhitelist) {
+        if (securityPolicy.policy.enforcePricingConstraints) {
+          const paymentCoin = await exchange.collectionPaymentCoins(order.params.tokenAddress);
+          if (order.params.coin.toLowerCase() != paymentCoin.toLowerCase()) {
+            return results.push({
+              id,
+              status: "payment-token-not-whitelisted",
+            });
+          }
+
+          const currencyPrice = bn(order.params.price).div(order.params.amount);
+          const [floorPrice, ceilingPrice] = await Promise.all([
+            exchange.getFloorPrice(order.params.tokenAddress, order.params.tokenId),
+            exchange.getCeilingPrice(order.params.tokenAddress, order.params.tokenId),
+          ]);
+
+          if (currencyPrice.lt(floorPrice)) {
+            return results.push({
+              id,
+              status: "sale-price-below-minium-floor",
+            });
+          }
+
+          if (currencyPrice.gt(ceilingPrice)) {
+            return results.push({
+              id,
+              status: "sale-price-above-maximum-floor",
+            });
+          }
+        } else if (
+          securityPolicy.policy.enforcePaymentMethodWhitelist &&
+          order.params.coin !== Sdk.Common.Addresses.Native[config.chainId]
+        ) {
           const isWhitelisted = await exchange.isPaymentMethodApproved(
-            securityPolicyId,
+            securityPolicy.securityPolicyId,
             order.params.coin
           );
           if (!isWhitelisted) {

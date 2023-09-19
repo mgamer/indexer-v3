@@ -10,6 +10,7 @@ import { config } from "@/config/index";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import * as paymentProcessor from "@/orderbook/orders/payment-processor";
 import { getUSDAndNativePrices } from "@/utils/prices";
+import * as paymentProcessorUtils from "@/utils/payment-processor";
 
 export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChainData) => {
   // For keeping track of all individual trades per transaction
@@ -527,6 +528,21 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           }
         }
 
+        break;
+      }
+
+      case "payment-processor-created-or-updated-security-policy": {
+        const parsedLog = eventData.abi.parseLog(log);
+        const securityPolicyId = parsedLog.args.securityPolicyId.toString();
+        await paymentProcessorUtils.getSecurityPolicy(securityPolicyId, true);
+        break;
+      }
+
+      case "payment-processor-updated-collection-payment-coin":
+      case "payment-processor-updated-collection-security-policy": {
+        const parsedLog = eventData.abi.parseLog(log);
+        const tokenAddress = parsedLog.args["tokenAddress"].toLowerCase();
+        await paymentProcessorUtils.getContractSecurityPolicy(tokenAddress, true);
         break;
       }
     }
