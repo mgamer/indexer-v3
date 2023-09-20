@@ -6,12 +6,12 @@ import { redb } from "@/common/db";
 import { baseProvider } from "@/common/provider";
 import { bn, fromBuffer, now } from "@/common/utils";
 import { config } from "@/config/index";
-import * as marketplaceFees from "@/utils/marketplace-fees";
 import {
   BaseOrderBuildOptions,
   OrderBuildInfo,
   padSourceToSalt,
 } from "@/orderbook/orders/seaport-base/build/utils";
+import * as marketplaceFees from "@/utils/marketplace-fees";
 import * as registry from "@/utils/royalties/registry";
 
 export const getBuildInfo = async (
@@ -108,9 +108,8 @@ export const getBuildInfo = async (
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const tokenId = (options as any)["tokenId"];
-    if (tokenId != undefined) {
+    if (tokenId !== undefined) {
       const tokenRoyalties = await registry.getRegistryRoyalties(options.contract!, tokenId);
-      // replace if there has token-level on-chain royalty
       if (tokenRoyalties.length) {
         royalties = tokenRoyalties;
       }
