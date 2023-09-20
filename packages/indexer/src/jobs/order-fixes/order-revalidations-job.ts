@@ -73,7 +73,7 @@ export class OrderRevalidationsJob extends AbstractRabbitMqJobHandler {
           const { contract, blacklistedOperators, whitelistedOperators, createdAtContinutation } =
             data;
 
-          logger.info(this.queueName, JSON.stringify({ payload }));
+          logger.info(this.queueName, `DATA: ${JSON.stringify({ payload })}`);
 
           if (!blacklistedOperators && !whitelistedOperators) {
             return;
@@ -138,14 +138,14 @@ export class OrderRevalidationsJob extends AbstractRabbitMqJobHandler {
 
             logger.info(
               this.queueName,
-              JSON.stringify({
+              `DATA: ${JSON.stringify({
                 contract,
                 results,
                 data,
                 blacklistedOperators,
                 whitelistedOperators,
                 createdAtContinutation,
-              })
+              })}`
             );
 
             // Recheck the orders
