@@ -5,7 +5,6 @@ import { logger } from "@/common/logger";
 import { TokensEntityUpdateParams } from "@/models/tokens/tokens-entity";
 import { Tokens } from "@/models/tokens";
 import { nonFlaggedFloorQueueJob } from "@/jobs/collection-updates/non-flagged-floor-queue-job";
-import { flagStatusProcessJob } from "@/jobs/flag-status/flag-status-process-job";
 import { openseaMetadataProvider } from "@/metadata/providers/opensea-metadata-provider";
 import _ from "lodash";
 
@@ -95,8 +94,6 @@ export class FlagStatusSyncJob extends AbstractRabbitMqJobHandler {
         }
       })
     );
-
-    await flagStatusProcessJob.addToQueue();
   }
 
   async getTokensFlagStatusWithTokenIds(
