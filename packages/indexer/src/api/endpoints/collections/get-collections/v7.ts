@@ -140,8 +140,24 @@ export const getCollectionsV7Options: RouteOptions = {
         })
         .default(20)
         .description(
-          "Amount of items returned in response. Default and max limit is 20, unless sorting by updatedAt which has a max limit of 100."
+          "Amount of items returned in response. Default and max limit is 20, unless sorting by `updatedAt` which has a max limit of 100."
         ),
+      startTimestamp: Joi.number()
+        .when("sortBy", {
+          is: "updatedAt",
+          then: Joi.allow(),
+          otherwise: Joi.forbidden(),
+        })
+        .description(
+          "When sorting by `updatedAt`, the start timestamp you want to filter on (UTC)."
+        ),
+      endTimestamp: Joi.number()
+        .when("sortBy", {
+          is: "updatedAt",
+          then: Joi.allow(),
+          otherwise: Joi.forbidden(),
+        })
+        .description("When sorting by `updatedAt`, the end timestamp you want to filter on (UTC)."),
       continuation: Joi.string().description(
         "Use continuation token to request next offset of items."
       ),
@@ -542,6 +558,14 @@ export const getCollectionsV7Options: RouteOptions = {
       if (query.minFloorAskPrice) {
         query.minFloorAskPrice = parseEther(query.minFloorAskPrice.toString()).toString();
         conditions.push(`collections.floor_sell_value >= $/minFloorAskPrice/`);
+      }
+
+      if (query.startTimestamp) {
+        conditions.push(`collections.updated_at >= to_timestamp($/startTimestamp/)`);
+      }
+
+      if (query.endTimestamp) {
+        conditions.push(`collections.updated_at <= to_timestamp($/endTimestamp/)`);
       }
 
       // Sorting and pagination
