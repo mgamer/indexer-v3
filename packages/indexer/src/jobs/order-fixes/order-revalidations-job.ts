@@ -136,7 +136,7 @@ export class OrderRevalidationsJob extends AbstractRabbitMqJobHandler {
 
             logger.info(
               this.queueName,
-              `DATA: ${JSON.stringify({
+              `Results: ${JSON.stringify({
                 contract,
                 results,
                 data,
