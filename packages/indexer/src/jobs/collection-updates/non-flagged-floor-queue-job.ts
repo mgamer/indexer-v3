@@ -1,10 +1,9 @@
 import { idb } from "@/common/db";
 import { toBuffer } from "@/common/utils";
 import { AbstractRabbitMqJobHandler, BackoffStrategy } from "@/jobs/abstract-rabbit-mq-job-handler";
-import { Collections } from "@/models/collections";
-import { metadataIndexFetchJob } from "@/jobs/metadata-index/metadata-fetch-job";
 // import { logger } from "@/common/logger";
 import { acquireLock, releaseLock } from "@/common/redis";
+import { flagStatusSyncJob } from "../flag-status/flag-status-sync-job";
 
 export type NonFlaggedFloorQueueJobPayload = {
   kind: string;
@@ -178,23 +177,12 @@ export class NonFlaggedFloorQueueJob extends AbstractRabbitMqJobHandler {
     }
 
     if (nonFlaggedCollectionFloorAsk?.token_id) {
-      const collection = await Collections.getById(collectionResult.collection_id);
-
-      await metadataIndexFetchJob.addToQueue(
-        [
-          {
-            kind: "single-token",
-            data: {
-              method: metadataIndexFetchJob.getIndexingMethod(collection?.community || null),
-              contract: payload.contract,
-              tokenId: payload.tokenId,
-              collection: collectionResult.collection_id,
-            },
-            context: this.queueName,
-          },
-        ],
-        true
-      );
+      await flagStatusSyncJob.addToQueue({
+        collectionId: collectionResult.collection_id,
+        contract: payload.contract,
+        kind: "single-token",
+        tokenIds: payload.kind === "single-token" ? [payload.tokenId] : undefined,
+      });
     }
   }
 
