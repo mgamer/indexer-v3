@@ -3,7 +3,6 @@ import { Contract } from "@ethersproject/contracts";
 import * as Sdk from "@reservoir0x/sdk";
 
 import { idb, redb } from "@/common/db";
-import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { redis } from "@/common/redis";
 import { toBuffer } from "@/common/utils";
@@ -154,17 +153,6 @@ const updateMarketplaceBlacklist = async (contract: string) => {
   );
 
   // Invalid any orders relying on the blacklisted operator
-  logger.info(
-    "revalidation-debug",
-    `DATA (whitelist): ${JSON.stringify({
-      by: "operator",
-      data: {
-        contract,
-        blacklistedOperators: blacklist,
-        status: "inactive",
-      },
-    })}`
-  );
   await orderRevalidationsJob.addToQueue([
     {
       by: "operator",
