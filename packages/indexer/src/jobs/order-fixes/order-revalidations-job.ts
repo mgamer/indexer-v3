@@ -107,11 +107,13 @@ export class OrderRevalidationsJob extends AbstractRabbitMqJobHandler {
                 FROM x
                 WHERE orders.id = x.id
                   ${
-                    blacklistedOperators ? "AND orders.conduit IN ($/blacklistedConduit:list/)" : ""
+                    blacklistedOperators
+                      ? "AND orders.conduit IN ($/blacklistedOperators:list/)"
+                      : ""
                   }
                   ${
                     whitelistedOperators
-                      ? "AND orders.conduit NOT IN ($/whitelistedConduits:list/)"
+                      ? "AND orders.conduit NOT IN ($/whitelistedOperators:list/)"
                       : ""
                   }
                 RETURNING x.id, y.created_at
