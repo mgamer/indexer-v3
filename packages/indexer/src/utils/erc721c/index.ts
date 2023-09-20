@@ -2,6 +2,7 @@ import { Interface } from "@ethersproject/abi";
 import { Contract } from "@ethersproject/contracts";
 
 import { idb, redb } from "@/common/db";
+import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { fromBuffer, toBuffer } from "@/common/utils";
 import { orderRevalidationsJob } from "@/jobs/order-fixes/order-revalidations-job";
@@ -183,6 +184,19 @@ export const refreshERC721COperatorWhitelist = async (transferValidator: string,
   );
 
   // Invalid any orders relying on the blacklisted operator
+  logger.info(
+    "revalidation-debug",
+    JSON.stringify(
+      relevantContracts.map((c) => ({
+        by: "operator",
+        data: {
+          contract: fromBuffer(c.contract),
+          whitelistedOperators: whitelist,
+          status: "inactive",
+        },
+      }))
+    )
+  );
   await orderRevalidationsJob.addToQueue(
     relevantContracts.map((c) => ({
       by: "operator",
