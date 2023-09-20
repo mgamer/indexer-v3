@@ -28,7 +28,7 @@ export type FetchCollectionMetadataJobPayload = {
 export class FetchCollectionMetadataJob extends AbstractRabbitMqJobHandler {
   queueName = "token-updates-fetch-collection-metadata-queue";
   maxRetries = 10;
-  concurrency = 5;
+  concurrency = 1;
   backoff = {
     type: "exponential",
     delay: 20000,
