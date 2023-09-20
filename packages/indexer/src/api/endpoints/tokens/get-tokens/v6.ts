@@ -164,9 +164,15 @@ export const getTokensV6Options: RouteOptions = {
       limit: Joi.number()
         .integer()
         .min(1)
-        .max(100)
+        .when("sortBy", {
+          is: "updatedAt",
+          then: Joi.number().integer().max(500),
+          otherwise: Joi.number().integer().max(100),
+        })
         .default(20)
-        .description("Amount of items returned in response. Max limit is 100."),
+        .description(
+          "Amount of items returned in response. Max limit is 100, except when sorting by `updatedAt` which has a limit of 500."
+        ),
       includeTopBid: Joi.boolean()
         .default(false)
         .description("If true, top bid will be returned in the response."),
