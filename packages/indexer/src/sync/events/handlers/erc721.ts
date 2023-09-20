@@ -160,39 +160,6 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
               });
             }
           }
-
-          // Make sure to only handle the same data once per transaction
-          const contextPrefix = `${baseEventParams.txHash}-${baseEventParams.address}-${tokenId}`;
-
-          onChainData.makerInfos.push({
-            context: `${contextPrefix}-${from}-sell-balance`,
-            maker: from,
-            trigger: {
-              kind: "balance-change",
-              txHash: baseEventParams.txHash,
-              txTimestamp: baseEventParams.timestamp,
-            },
-            data: {
-              kind: "sell-balance",
-              contract: baseEventParams.address,
-              tokenId,
-            },
-          });
-
-          onChainData.makerInfos.push({
-            context: `${contextPrefix}-${to}-sell-balance`,
-            maker: to,
-            trigger: {
-              kind: "balance-change",
-              txHash: baseEventParams.txHash,
-              txTimestamp: baseEventParams.timestamp,
-            },
-            data: {
-              kind: "sell-balance",
-              contract: baseEventParams.address,
-              tokenId,
-            },
-          });
         }
 
         break;
