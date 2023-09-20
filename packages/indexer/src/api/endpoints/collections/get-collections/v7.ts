@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { parseEther } from "@ethersproject/units";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Boom from "@hapi/boom";
 import * as Sdk from "@reservoir0x/sdk";
@@ -8,7 +9,6 @@ import Joi from "joi";
 
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
-import { parseEther } from "@ethersproject/units";
 import { JoiPrice, getJoiPriceObject } from "@/common/joi";
 import {
   buildContinuation,

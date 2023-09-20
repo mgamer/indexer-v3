@@ -10,7 +10,6 @@ import { logger } from "@/common/logger";
 import { formatEth, fromBuffer } from "@/common/utils";
 import { Sources } from "@/models/sources";
 import { Assets } from "@/utils/assets";
-import * as registry from "@/utils/royalties/registry";
 
 const version = "v3";
 
@@ -33,9 +32,6 @@ export const getCollectionV3Options: RouteOptions = {
       slug: Joi.string().description(
         "Filter to a particular collection slug. Example: `boredapeyachtclub`"
       ),
-      tokenId: Joi.string()
-        .optional()
-        .description("If provide, token-level's royalties will be returned in the response."),
       includeTopBid: Joi.boolean()
         .default(false)
         .description("If true, top bid will be returned in the response."),
@@ -61,12 +57,6 @@ export const getCollectionV3Options: RouteOptions = {
           recipient: Joi.string().allow("", null),
           bps: Joi.number(),
         }).allow(null),
-        tokenRoyalties: Joi.object({
-          recipient: Joi.string().allow("", null),
-          bps: Joi.number(),
-        })
-          .allow(null)
-          .optional(),
         lastBuy: {
           value: Joi.number().unsafe().allow(null),
           timestamp: Joi.number().allow(null),
@@ -359,11 +349,7 @@ export const getCollectionV3Options: RouteOptions = {
             }
       );
 
-      const tokenRoyalties =
-        query.tokenId != undefined
-          ? await registry.getRegistryRoyaltiesWithCache(result.primaryContract, query.tokenId)
-          : null;
-      return { collection: { ...result, tokenRoyalties } };
+      return { collection: result };
     } catch (error) {
       logger.error(`get-collection-${version}-handler`, `Handler failure: ${error}`);
       throw error;
