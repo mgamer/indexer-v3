@@ -7,6 +7,7 @@ import { Tokens } from "@/models/tokens";
 import { nonFlaggedFloorQueueJob } from "@/jobs/collection-updates/non-flagged-floor-queue-job";
 import { openseaMetadataProvider } from "@/metadata/providers/opensea-metadata-provider";
 import _ from "lodash";
+import { config } from "@/config/index";
 
 export type FlagStatusSyncJobPayload = {
   contract: string;
@@ -23,6 +24,7 @@ export class FlagStatusSyncJob extends AbstractRabbitMqJobHandler {
   lazyMode = true;
   tokensLimit = 25000;
   useSharedChannel = true;
+  disableConsuming = !config.disableFlagStatusRefreshJob || !config.liquidityOnly;
 
   protected async process(payload: FlagStatusSyncJobPayload) {
     const { collectionId, contract } = payload;

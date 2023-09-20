@@ -287,24 +287,6 @@ export class Tokens {
     return tokenIds;
   }
 
-  public static async getLastFlagUpdate(contract: string) {
-    const query = `SELECT last_flag_update
-                    FROM tokens 
-                    WHERE contract = $/contract/
-                    ORDER BY last_flag_update DESC
-                    LIMIT 1`;
-
-    const result = await idb.oneOrNone(query, {
-      contract: toBuffer(contract),
-    });
-
-    if (result) {
-      return result.last_flag_update;
-    }
-
-    return null;
-  }
-
   /**
    * Return the lowest sell price and number of tokens on sale for the given attribute
    * @param collection
