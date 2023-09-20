@@ -130,9 +130,7 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
     searchParams.append("limit", "200");
 
     const url = `${
-      !this.isOSTestnet()
-        ? config.openSeaSlugBaseUrl || "https://api.opensea.io"
-        : "https://rinkeby-api.opensea.io"
+      !this.isOSTestnet() ? "https://api.opensea.io" : "https://testnets-api.opensea.io"
     }/api/v1/assets?${searchParams.toString()}`;
     const data = await axios
       .get(!this.isOSTestnet() ? config.openSeaApiUrl || url : url, {
