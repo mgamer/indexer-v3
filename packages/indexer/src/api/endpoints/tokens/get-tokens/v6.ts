@@ -67,11 +67,13 @@ export const getTokensV6Options: RouteOptions = {
           then: Joi.forbidden(),
           otherwise: Joi.allow(),
         }),
-      contract: Joi.string()
-        .lowercase()
-        .pattern(regex.address)
+      contract: Joi.alternatives()
+        .try(
+          Joi.array().items(Joi.string().lowercase().pattern(regex.address)).max(20),
+          Joi.string().lowercase().pattern(regex.address)
+        )
         .description(
-          "Filter to a particular contract. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
+          "Array of contracts. Max amount is 20. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
         )
         .when("flagStatus", {
           is: Joi.exist(),
@@ -477,7 +479,7 @@ export const getTokensV6Options: RouteOptions = {
 
       // Retrieve the contract from the different filters options
       if (query.contract) {
-        sourceConditions.push(`contract = $/contract/`);
+        sourceConditions.push(`contract IN ($/contract:csv/)`);
       } else if (query.collection) {
         let contractString = query.collection;
         if (query.collection.includes(":")) {
@@ -668,8 +670,11 @@ export const getTokensV6Options: RouteOptions = {
       }
 
       if (query.contract) {
-        (query as any).contract = toBuffer(query.contract);
-        conditions.push(`t.contract = $/contract/`);
+        if (!Array.isArray(query.contract)) {
+          query.contract = [query.contract];
+        }
+        query.contract = query.contract.map((contract: string) => toBuffer(contract));
+        conditions.push(`t.contract IN ($/contract:csv/)`);
       }
 
       if (query.minRarityRank) {
