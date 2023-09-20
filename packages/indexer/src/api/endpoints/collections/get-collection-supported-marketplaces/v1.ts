@@ -69,6 +69,8 @@ export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
         .description(
           "Filter to a particular collection, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
         ),
+    }),
+    query: Joi.object({
       tokenId: Joi.string()
         .optional()
         .description("When set, token-level royalties will be returned in the response"),
