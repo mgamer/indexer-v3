@@ -27,7 +27,7 @@ export const postTriggerRabbitJobOptions: RouteOptions = {
     const payload = request.payload as any;
 
     try {
-      const job = await import(`@/jobs/${payload.path}`);
+      const { job } = await import(`@/jobs/${payload.path}`);
       const jobObject = new job();
       jobObject.addToQueue(...payload.params);
 
