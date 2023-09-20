@@ -84,7 +84,6 @@ export const config = {
 
   looksRareApiKey: String(process.env.LOOKSRARE_API_KEY),
   openSeaApiKey: String(process.env.OPENSEA_API_KEY),
-  openSeaSlugBaseUrl: String(process.env.OPENSEA_SLUG_BASE_URL),
   openSeaApiUrl: String(process.env.OPENSEA_API_URL || ""),
 
   openSeaCrossPostingApiKey: String(
