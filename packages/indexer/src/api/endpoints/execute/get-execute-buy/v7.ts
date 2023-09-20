@@ -1356,8 +1356,8 @@ export const getExecuteBuyV7Options: RouteOptions = {
         },
         {
           id: "pre-signatures",
-          action: "Sign orders",
-          description: "Some marketplaces require signing additional orders before filling",
+          action: "Sign data",
+          description: "Some exchanges require signing additional data before filling",
           kind: "signature",
           items: [],
         },

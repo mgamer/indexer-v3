@@ -35,6 +35,7 @@ import * as shreddingSassy from "./shredding-sassy";
 import * as soundxyz from "./soundxyz";
 import * as tfoust from "./tfoust";
 import * as utopiaAvatars from "./utopia-avatars";
+import * as superrareShared from "./superrare-shared";
 
 const extendCollection: any = {};
 const extend: any = {};
@@ -42,7 +43,7 @@ const extend: any = {};
 export const hasExtendHandler = (chainId: number, contract: string) =>
   extend[`${chainId},${contract}`];
 
-export const extendCollectionMetadata = async (chainId: number, metadata: any, tokenId = null) => {
+export const extendCollectionMetadata = async (chainId: number, metadata: any, tokenId: string) => {
   if (metadata) {
     if (extendCollection[`${chainId},${metadata.id}`]) {
       return extendCollection[`${chainId},${metadata.id}`].extendCollection(
@@ -104,6 +105,7 @@ extendCollection["1,0x7a15b36cb834aea88553de69077d3777460d73ac"] = ExtendLogicCl
 extendCollection["1,0x68d0f6d1d99bb830e17ffaa8adb5bbed9d6eec2e"] = ExtendLogicClasses.opensea;
 extendCollection["1,0x33eecbf908478c10614626a9d304bfe18b78dd73"] = ExtendLogicClasses.opensea;
 extendCollection["1,0x495f947276749ce646f68ac8c248420045cb7b5e"] = ExtendLogicClasses.opensea;
+extendCollection["1,0x48b17a2c46007471b3eb72d16268eaecdd1502b7"] = ExtendLogicClasses.opensea;
 
 // Courtyard
 extendCollection["1,0xd4ac3ce8e1e14cd60666d49ac34ff2d2937cf6fa"] = ExtendLogicClasses.courtyard;
@@ -125,9 +127,6 @@ extendCollection["5,0xd8560c88d1dc85f9ed05b25878e366c49b68bef9"] = sharedContrac
 // Rarible ERC1155
 extendCollection["1,0xb66a603f4cfe17e3d27b87a8bfcad319856518b8"] = sharedContracts;
 extendCollection["5,0x7c4b13b5893cd82f371c5e28f12fb2f37542bbc5"] = sharedContracts;
-
-// Superrare
-extendCollection["1,0xb932a70a57673d89f4acffbe830e8ed7f75fb9e0"] = sharedContracts;
 
 // Foundation
 extendCollection["1,0x3b3ee1931dc30c1957379fac9aba94d1c48a5405"] = sharedContracts;
@@ -173,6 +172,9 @@ extendCollection["1,0xc143bbfcdbdbed6d454803804752a064a622c1f3"] = asyncBlueprin
 // Mirage Gallery Curated
 extendCollection["1,0xb7ec7bbd2d2193b47027247fc666fb342d23c4b5"] = mirageGalleryCurated;
 
+// Superrare Shared
+extendCollection["1,0xb932a70a57673d89f4acffbe830e8ed7f75fb9e0"] = superrareShared;
+
 // Sound XYZ
 soundxyz.SoundxyzArtistContracts.forEach(
   (address) => (extendCollection[`1,${address}`] = soundxyz)
@@ -195,6 +197,7 @@ extend["1,0x7a15b36cb834aea88553de69077d3777460d73ac"] = ExtendLogicClasses.open
 extend["1,0x68d0f6d1d99bb830e17ffaa8adb5bbed9d6eec2e"] = ExtendLogicClasses.opensea;
 extend["1,0x33eecbf908478c10614626a9d304bfe18b78dd73"] = ExtendLogicClasses.opensea;
 extend["1,0x495f947276749ce646f68ac8c248420045cb7b5e"] = ExtendLogicClasses.opensea;
+extend["1,0x48b17a2c46007471b3eb72d16268eaecdd1502b7"] = ExtendLogicClasses.opensea;
 
 // Courtyard
 extend["1,0xd4ac3ce8e1e14cd60666d49ac34ff2d2937cf6fa"] = courtyard;
@@ -302,3 +305,6 @@ extend["1,0x11708dc8a3ea69020f520c81250abb191b190110"] = cryptokicksIrl;
 
 // Utopia Avatars
 extend["1,0x5f076e995290f3f9aea85fdd06d8fae118f2b75c"] = utopiaAvatars;
+
+// Superrare Shared
+extend["1,0xb932a70a57673d89f4acffbe830e8ed7f75fb9e0"] = superrareShared;
