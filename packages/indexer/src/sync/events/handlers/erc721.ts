@@ -160,6 +160,8 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
               });
             }
           }
+
+          // Skip pushing to `makerInfos` since that could result in "out-of-memory" errors
         }
 
         break;
