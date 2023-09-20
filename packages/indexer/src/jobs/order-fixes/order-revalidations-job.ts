@@ -19,8 +19,10 @@ export type OrderRevalidationsJobPayload =
       by: "operator";
       data: {
         contract: string;
-        operator: string;
-        status: "active" | "inactive";
+        blacklistedOperators?: string[];
+        whitelistedOperators?: string[];
+        createdAtContinutation?: string;
+        status: "inactive";
       };
     };
 
@@ -36,10 +38,12 @@ export class OrderRevalidationsJob extends AbstractRabbitMqJobHandler {
 
   protected async process(payload: OrderRevalidationsJobPayload) {
     const { by, data } = payload;
+
     try {
       switch (by) {
         case "id": {
           const { id, status } = data;
+
           await idb.none(
             `
               UPDATE orders SET
@@ -50,6 +54,7 @@ export class OrderRevalidationsJob extends AbstractRabbitMqJobHandler {
             `,
             { id }
           );
+
           // Recheck the order
           await orderUpdatesByIdJob.addToQueue([
             {
@@ -60,24 +65,89 @@ export class OrderRevalidationsJob extends AbstractRabbitMqJobHandler {
               },
             } as OrderUpdatesByIdJobPayload,
           ]);
+
           break;
         }
 
         case "operator": {
-          const { contract, operator, status } = data;
+          const { contract, blacklistedOperators, whitelistedOperators, createdAtContinutation } =
+            data;
+
+          let done = true;
+
+          const limit = 1000;
           for (const side of ["sell", "buy"]) {
-            await idb.none(
+            const results = await idb.manyOrNone(
               `
+                WITH
+                  x AS (
+                    SELECT
+                      orders.id,
+                      orders.created_at
+                    FROM orders
+                    WHERE orders.contract = $/contract/
+                      AND orders.side = $/side/
+                      AND orders.fillability_status = 'fillable'
+                      AND orders.approval_status = 'approved'
+                      ${createdAtContinutation ? "AND orders.createdAt < $/createdAt/" : ""}
+                      ORDER BY orders.created_at DESC
+                    LIMIT $/limit/
+                  ),
+                  y AS (
+                    SELECT
+                      x.created_at
+                    FROM x
+                    ORDER BY x.created_at DESC
+                    LIMIT 1
+                  )
                 UPDATE orders SET
-                  fillability_status = '${status === "active" ? "fillable" : "cancelled"}',
-                  approval_status = '${status === "active" ? "approved" : "disabled"}',
+                  fillability_status = 'cancelled',
+                  approval_status = 'disabled',
                   updated_at = now()
-                WHERE orders.contract = $/contract/
-                AND orders.side = $/side/
-                AND orders.conduit = $/conduit/
+                FROM x
+                WHERE orders.id = x.id
+                  ${
+                    blacklistedOperators ? "AND orders.conduit IN ($/blacklistedConduit:list/)" : ""
+                  }
+                  ${
+                    whitelistedOperators
+                      ? "AND orders.conduit NOT IN ($/whitelistedConduits:list/)"
+                      : ""
+                  }
+                RETURNING x.id, y.created_at
               `,
-              { contract: toBuffer(contract), side, conduit: toBuffer(operator) }
+              {
+                contract: toBuffer(contract),
+                side,
+                limit,
+                blacklistedOperators: blacklistedOperators?.map((o) => toBuffer(o)),
+                whitelistedOperators: whitelistedOperators?.map((o) => toBuffer(o)),
+                createdAt: createdAtContinutation,
+              }
             );
+
+            // Recheck the orders
+            await orderUpdatesByIdJob.addToQueue(
+              results.map(
+                (r) =>
+                  ({
+                    context: `revalidation-${Date.now()}-${r.id}`,
+                    id: r.id,
+                    trigger: {
+                      kind: "revalidation",
+                    },
+                  } as OrderUpdatesByIdJobPayload)
+              )
+            );
+
+            if (results.length >= 1) {
+              done = false;
+              payload.data.createdAtContinutation = results[0].created_at;
+            }
+          }
+
+          if (!done) {
+            await this.addToQueue([payload]);
           }
 
           break;

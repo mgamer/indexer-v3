@@ -1,13 +1,13 @@
 import { Interface } from "@ethersproject/abi";
 import { Contract } from "@ethersproject/contracts";
 import * as Sdk from "@reservoir0x/sdk";
-import { orderRevalidationsJob } from "@/jobs/order-fixes/order-revalidations-job";
 
 import { idb, redb } from "@/common/db";
 import { baseProvider } from "@/common/provider";
 import { redis } from "@/common/redis";
 import { toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
+import { orderRevalidationsJob } from "@/jobs/order-fixes/order-revalidations-job";
 import { OrderKind } from "@/orderbook/orders";
 import * as erc721c from "@/utils/erc721c";
 
@@ -151,17 +151,18 @@ const updateMarketplaceBlacklist = async (contract: string) => {
       blacklist,
     }
   );
-  // TODO: might only need to trigger when the list changes
-  // Trigger revalidation job
-  await orderRevalidationsJob.addToQueue(
-    blacklist.map((operator) => ({
+
+  // Invalid any orders relying on the blacklisted operator
+  await orderRevalidationsJob.addToQueue([
+    {
       by: "operator",
       data: {
         contract,
-        operator,
+        blacklistedOperators: blacklist,
         status: "inactive",
       },
-    }))
-  );
+    },
+  ]);
+
   return blacklist;
 };
