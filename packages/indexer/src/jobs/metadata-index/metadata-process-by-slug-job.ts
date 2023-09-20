@@ -53,9 +53,9 @@ export class MetadataIndexProcessBySlugJob extends AbstractRabbitMqJobHandler {
     async function processSlug(refreshTokenBySlug: RefreshTokenBySlug) {
       try {
         const results = await openseaMetadataProvider.getTokensMetadataBySlug(
-          refreshTokenBySlug.contract,
           refreshTokenBySlug.slug,
-          refreshTokenBySlug.continuation ?? ""
+          refreshTokenBySlug.continuation ?? "",
+          refreshTokenBySlug.slug
         );
         if (results.metadata.length === 0) {
           //  Slug might be missing or might be wrong.

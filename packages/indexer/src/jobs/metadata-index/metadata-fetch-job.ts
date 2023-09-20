@@ -134,6 +134,8 @@ export class MetadataIndexFetchJob extends AbstractRabbitMqJobHandler {
       await flagStatusSyncJob.addToQueue({
         collectionId: data.collection,
         contract: contract,
+        kind: payload.kind,
+        tokenIds: payload.kind === "single-token" ? [tokenId] : undefined,
       });
     }
 

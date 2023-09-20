@@ -75,11 +75,11 @@ export abstract class AbstractBaseMetadataProvider {
   }
 
   async getTokensMetadataBySlug(
-    contract: string,
     slug: string,
-    continuation: string
+    continuation: string,
+    contract?: string
   ): Promise<TokenMetadataBySlugResult> {
-    if (hasCustomHandler(contract) || hasExtendHandler(contract)) {
+    if (contract && (hasCustomHandler(contract) || hasExtendHandler(contract))) {
       throw new Error("Custom handler is not supported with collection slug.");
     }
 

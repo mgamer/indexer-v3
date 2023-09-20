@@ -7,11 +7,14 @@ import { Tokens } from "@/models/tokens";
 import { nonFlaggedFloorQueueJob } from "@/jobs/collection-updates/non-flagged-floor-queue-job";
 import { flagStatusProcessJob } from "@/jobs/flag-status/flag-status-process-job";
 import { openseaMetadataProvider } from "@/metadata/providers/opensea-metadata-provider";
+import _ from "lodash";
 
 export type FlagStatusSyncJobPayload = {
   contract: string;
   collectionId: string;
+  tokenIds?: string[];
   force?: boolean;
+  kind: "full-collection" | "single-token";
 };
 
 export class FlagStatusSyncJob extends AbstractRabbitMqJobHandler {
@@ -20,40 +23,24 @@ export class FlagStatusSyncJob extends AbstractRabbitMqJobHandler {
   concurrency = 1;
   lazyMode = true;
   tokensLimit = 25000;
-  sleepTime = 60; // in minutes
   useSharedChannel = true;
 
   protected async process(payload: FlagStatusSyncJobPayload) {
-    const { collectionId, contract, force } = payload;
+    const { collectionId, contract } = payload;
+    let tokens: { contract: string; tokenId: string; flagged: boolean | null }[] = [];
 
-    // check last update time, skip if it's too early (less than sleepTime)
-    const lastUpdate = await Tokens.getLastFlagUpdate(contract);
-    if (
-      !force &&
-      lastUpdate &&
-      new Date().getTime() - new Date(lastUpdate).getTime() < this.sleepTime * 60 * 1000
-    ) {
-      logger.info(
-        this.queueName,
-        `Flag Status Skip. collectionId:${collectionId}, contract:${contract}, lastUpdate:${lastUpdate}`
-      );
-
-      return;
-    }
-
-    let continuation;
-    let tokens: { contract: string; tokenId: string; flagged: boolean }[] = [];
-    let isDone = false;
-    while (!isDone && tokens.length < this.tokensLimit) {
-      const result = await openseaMetadataProvider._getTokensFlagStatus(contract, continuation);
-
-      tokens = tokens.concat(result.data);
-      continuation = result.continuation;
-
-      if (!continuation) {
-        isDone = true;
+    switch (payload.kind) {
+      case "full-collection":
+        tokens = await this.getTokensFlagStatusForCollection(collectionId);
         break;
-      }
+      case "single-token":
+        if (!payload.tokenIds) {
+          throw new Error("Missing tokenIds");
+        }
+        tokens = await this.getTokensFlagStatusWithTokenIds(contract, payload.tokenIds);
+        break;
+      default:
+        throw new Error(`Unknown kind: ${payload.kind}`);
     }
 
     await Promise.all(
@@ -110,6 +97,66 @@ export class FlagStatusSyncJob extends AbstractRabbitMqJobHandler {
     );
 
     await flagStatusProcessJob.addToQueue();
+  }
+
+  async getTokensFlagStatusWithTokenIds(
+    contract: string,
+    tokenIds: string[]
+  ): Promise<{ contract: string; tokenId: string; flagged: boolean | null }[]> {
+    // chunk token ids in groups of 20, use lodash
+
+    const tokenIdChunks = _.chunk(tokenIds, 20);
+
+    let tokens: {
+      contract: string;
+      tokenId: any;
+      flagged: boolean | null;
+    }[] = [];
+
+    for (const tokenIds of tokenIdChunks) {
+      const result = await openseaMetadataProvider.getTokensMetadata(
+        tokenIds.map((tokenId) => ({ contract, tokenId }))
+      );
+
+      const parsedResults = result.map((token) => ({
+        contract,
+        tokenId: token.tokenId,
+        flagged: token.flagged,
+      }));
+
+      tokens = [...tokens, ...parsedResults];
+    }
+
+    return tokens;
+  }
+
+  async getTokensFlagStatusForCollection(
+    slug: string
+  ): Promise<{ contract: string; tokenId: string; flagged: boolean | null }[]> {
+    const tokens: { contract: string; tokenId: string; flagged: boolean | null }[] = [];
+
+    let continuation = "";
+    let isDone = false;
+    while (!isDone && tokens.length < this.tokensLimit) {
+      const result = await openseaMetadataProvider.getTokensMetadataBySlug(slug, continuation);
+
+      const parsedResults = result.metadata.map((token) => ({
+        contract: token.contract,
+        tokenId: token.tokenId,
+        flagged: token.flagged,
+      }));
+
+      tokens.push(...parsedResults);
+
+      if (!result.continuation) {
+        isDone = true;
+        break;
+      }
+
+      continuation = result.continuation;
+    }
+
+    return tokens;
   }
 
   public getLockName() {
