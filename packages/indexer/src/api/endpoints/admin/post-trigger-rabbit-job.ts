@@ -7,8 +7,8 @@ import Joi from "joi";
 import { logger } from "@/common/logger";
 import { config } from "@/config/index";
 
-export const postTriggerJobOptions: RouteOptions = {
-  description: "Trigger bullmq job",
+export const postTriggerRabbitJobOptions: RouteOptions = {
+  description: "Trigger rabbit job",
   tags: ["api", "x-admin"],
   validate: {
     headers: Joi.object({
@@ -28,10 +28,10 @@ export const postTriggerJobOptions: RouteOptions = {
 
     try {
       const job = await import(`@/jobs/${payload.path}`);
+      const jobObject = new job();
+      jobObject.addToQueue(...payload.params);
 
-      job.addToQueue(...payload.params);
-
-      return true;
+      return { message: `triggered @/jobs/${payload.path} with ${JSON.stringify(payload.params)}` };
     } catch (error) {
       logger.error("post-trigger-job-handler", `Handler failure: ${error}`);
       throw error;
