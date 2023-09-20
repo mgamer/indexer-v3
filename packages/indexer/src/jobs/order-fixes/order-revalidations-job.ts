@@ -73,7 +73,7 @@ export class OrderRevalidationsJob extends AbstractRabbitMqJobHandler {
           const { contract, blacklistedOperators, whitelistedOperators, createdAtContinutation } =
             data;
 
-          logger.info(this.queueName, JSON.stringify({ payload }));
+          logger.info(this.queueName, `DATA: ${JSON.stringify({ payload })}`);
 
           if (!blacklistedOperators && !whitelistedOperators) {
             return;
@@ -95,7 +95,7 @@ export class OrderRevalidationsJob extends AbstractRabbitMqJobHandler {
                       AND orders.side = $/side/
                       AND orders.fillability_status = 'fillable'
                       AND orders.approval_status = 'approved'
-                      ${createdAtContinutation ? "AND orders.createdAt < $/createdAt/" : ""}
+                      ${createdAtContinutation ? "AND orders.created_at < $/createdAt/" : ""}
                       ORDER BY orders.created_at DESC
                     LIMIT $/limit/
                   ),
@@ -138,14 +138,14 @@ export class OrderRevalidationsJob extends AbstractRabbitMqJobHandler {
 
             logger.info(
               this.queueName,
-              JSON.stringify({
+              `DATA: ${JSON.stringify({
                 contract,
                 results,
                 data,
                 blacklistedOperators,
                 whitelistedOperators,
                 createdAtContinutation,
-              })
+              })}`
             );
 
             // Recheck the orders

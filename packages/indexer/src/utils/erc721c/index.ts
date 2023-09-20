@@ -186,7 +186,7 @@ export const refreshERC721COperatorWhitelist = async (transferValidator: string,
   // Invalid any orders relying on the blacklisted operator
   logger.info(
     "revalidation-debug",
-    JSON.stringify(
+    `DATA: ${JSON.stringify(
       relevantContracts.map((c) => ({
         by: "operator",
         data: {
@@ -195,7 +195,7 @@ export const refreshERC721COperatorWhitelist = async (transferValidator: string,
           status: "inactive",
         },
       }))
-    )
+    )}`
   );
   await orderRevalidationsJob.addToQueue(
     relevantContracts.map((c) => ({
