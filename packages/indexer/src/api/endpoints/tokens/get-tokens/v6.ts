@@ -173,6 +173,22 @@ export const getTokensV6Options: RouteOptions = {
         .description(
           "Amount of items returned in response. Max limit is 100, except when sorting by `updatedAt` which has a limit of 500."
         ),
+      startTimestamp: Joi.number()
+        .when("sortBy", {
+          is: "updatedAt",
+          then: Joi.allow(),
+          otherwise: Joi.forbidden(),
+        })
+        .description(
+          "When sorting by `updatedAt`, the start timestamp you want to filter on (UTC)."
+        ),
+      endTimestamp: Joi.number()
+        .when("sortBy", {
+          is: "updatedAt",
+          then: Joi.allow(),
+          otherwise: Joi.forbidden(),
+        })
+        .description("When sorting by `updatedAt`, the end timestamp you want to filter on (UTC)."),
       includeTopBid: Joi.boolean()
         .default(false)
         .description("If true, top bid will be returned in the response."),
@@ -718,6 +734,14 @@ export const getTokensV6Options: RouteOptions = {
 
         (query as any).source = source?.id;
         conditions.push(`t.floor_sell_source_id_int = $/source/`);
+      }
+
+      if (query.startTimestamp) {
+        conditions.push(`t.updated_at >= to_timestamp($/startTimestamp/)`);
+      }
+
+      if (query.endTimestamp) {
+        conditions.push(`t.updated_at <= to_timestamp($/endTimestamp/)`);
       }
 
       if (query.tokens) {
