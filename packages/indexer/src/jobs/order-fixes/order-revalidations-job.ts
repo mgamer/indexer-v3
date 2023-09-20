@@ -73,6 +73,10 @@ export class OrderRevalidationsJob extends AbstractRabbitMqJobHandler {
           const { contract, blacklistedOperators, whitelistedOperators, createdAtContinutation } =
             data;
 
+          if (!blacklistedOperators && !whitelistedOperators) {
+            return;
+          }
+
           let done = true;
 
           const limit = 1000;
