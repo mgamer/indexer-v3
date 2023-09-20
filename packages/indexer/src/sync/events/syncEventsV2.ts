@@ -475,7 +475,7 @@ export const checkForMissingBlocks = async (block: number, minAllowedDiff = 1) =
       for (let i = latestBlockNumber + 1; i <= block; i++) {
         logger.info(
           "sync-events-realtime",
-          `Found missing block: ${i} latest block ${block} latestBlock ${latestBlockNumber}`
+          `Found missing block: ${i} latest block ${block} latestBlock ${latestBlockNumber} minAllowedDiff ${minAllowedDiff}`
         );
         await eventsSyncRealtimeJob.addToQueue({ block: i });
       }
