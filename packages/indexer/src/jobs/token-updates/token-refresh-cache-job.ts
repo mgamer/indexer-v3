@@ -23,14 +23,6 @@ export class TokenRefreshCacheJob extends AbstractRabbitMqJobHandler {
   protected async process(payload: TokenRefreshCacheJobPayload) {
     const { contract, tokenId, checkTopBid } = payload;
 
-    if (
-      contract === "0x4e9edbb6fa91a4859d14f98627dba991d16c9f10" ||
-      contract === "0xd7f566aeba20453e9bab7ea2fd737bfaec70cc69" ||
-      contract === "0x95a2c45003b86235bb3e05b6f3b8b7781e562f2b"
-    ) {
-      return;
-    }
-
     if (contract === "0x4923917e9e288b95405e2c893d0ac46b895dda22") {
       // Skip OpenSea Shared contract simulations
       return;
