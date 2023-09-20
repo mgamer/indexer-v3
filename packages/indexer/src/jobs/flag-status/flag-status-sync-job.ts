@@ -2,19 +2,16 @@
 
 import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handler";
 import { logger } from "@/common/logger";
-import _ from "lodash";
-import { PendingFlagStatusSyncTokens } from "@/models/pending-flag-status-sync-tokens";
-import { releaseLock } from "@/common/redis";
-import { generateCollectionTokenSetJob } from "@/jobs/flag-status/generate-collection-token-set-job";
-import MetadataProviderRouter from "@/metadata/metadata-provider-router";
 import { TokensEntityUpdateParams } from "@/models/tokens/tokens-entity";
 import { Tokens } from "@/models/tokens";
 import { nonFlaggedFloorQueueJob } from "@/jobs/collection-updates/non-flagged-floor-queue-job";
 import { flagStatusProcessJob } from "@/jobs/flag-status/flag-status-process-job";
+import { openseaMetadataProvider } from "@/metadata/providers/opensea-metadata-provider";
 
 export type FlagStatusSyncJobPayload = {
   contract: string;
   collectionId: string;
+  force?: boolean;
 };
 
 export class FlagStatusSyncJob extends AbstractRabbitMqJobHandler {
@@ -22,91 +19,77 @@ export class FlagStatusSyncJob extends AbstractRabbitMqJobHandler {
   maxRetries = 10;
   concurrency = 1;
   lazyMode = true;
-  tokensLimit = 40;
+  tokensLimit = 25000;
+  sleepTime = 60; // in minutes
   useSharedChannel = true;
 
   protected async process(payload: FlagStatusSyncJobPayload) {
-    const { collectionId, contract } = payload;
+    const { collectionId, contract, force } = payload;
 
-    let delay = 0;
-
-    // Get the tokens from the list
-    const pendingFlagStatusSyncTokensQueue = new PendingFlagStatusSyncTokens(collectionId);
-    const pendingSyncFlagStatusTokens = await pendingFlagStatusSyncTokensQueue.get(
-      this.tokensLimit
-    );
-
-    if (pendingSyncFlagStatusTokens.length == 0) {
+    // check last update time, skip if it's too early (less than sleepTime)
+    const lastUpdate = await Tokens.getLastFlagUpdate(contract);
+    if (
+      !force &&
+      lastUpdate &&
+      new Date().getTime() - new Date(lastUpdate).getTime() < this.sleepTime * 60 * 1000
+    ) {
       logger.info(
         this.queueName,
-        `Sync completed. collectionId:${collectionId}, contract:${contract}`
+        `Flag Status Skip. collectionId:${collectionId}, contract:${contract}, lastUpdate:${lastUpdate}`
       );
-
-      await releaseLock(this.getLockName());
-
-      await flagStatusProcessJob.addToQueue();
-      await generateCollectionTokenSetJob.addToQueue({ contract, collectionId });
 
       return;
     }
 
-    const pendingSyncFlagStatusTokensChunks = _.chunk(pendingSyncFlagStatusTokens, 20);
+    let continuation;
+    let tokens: { contract: string; tokenId: string; flagged: boolean }[] = [];
+    let isDone = false;
+    while (!isDone && tokens.length < this.tokensLimit) {
+      const result = await openseaMetadataProvider._getTokensFlagStatus(contract, continuation);
+
+      tokens = tokens.concat(result.data);
+      continuation = result.continuation;
+
+      if (!continuation) {
+        isDone = true;
+        break;
+      }
+    }
 
     await Promise.all(
-      pendingSyncFlagStatusTokensChunks.map(async (pendingSyncFlagStatusTokensChunk) => {
+      tokens.map(async (token) => {
         try {
-          const tokensMetadata = await MetadataProviderRouter.getTokensMetadata(
-            pendingSyncFlagStatusTokensChunk
-          );
+          const isFlagged = Number(token.flagged);
 
-          for (const pendingSyncFlagStatusToken of pendingSyncFlagStatusTokensChunk) {
-            const tokenMetadata = tokensMetadata.find(
-              (tokenMetadata) => tokenMetadata.tokenId === pendingSyncFlagStatusToken.tokenId
+          const currentUtcTime = new Date().toISOString();
+
+          const fields: TokensEntityUpdateParams = {
+            isFlagged,
+            lastFlagUpdate: currentUtcTime,
+          };
+
+          const result = await Tokens.updateFlagStatus(contract, token.tokenId, fields);
+
+          if (result) {
+            logger.info(
+              this.queueName,
+              `Flag Status Diff. collectionId:${collectionId}, contract:${contract}, tokenId: ${token.tokenId}, tokenIsFlagged:${token.flagged}, isFlagged:${isFlagged}`
             );
 
-            if (!tokenMetadata) {
-              logger.warn(
-                this.queueName,
-                `Missing Token Metadata. collectionId:${collectionId}, contract:${contract}, tokenId: ${pendingSyncFlagStatusToken.tokenId}, tokenIsFlagged:${pendingSyncFlagStatusToken.isFlagged}`
-              );
-
-              continue;
-            }
-
-            const isFlagged = Number(tokenMetadata.flagged);
-
-            const currentUtcTime = new Date().toISOString();
-
-            const fields: TokensEntityUpdateParams = {
-              isFlagged,
-              lastFlagUpdate: currentUtcTime,
-              lastFlagChange:
-                pendingSyncFlagStatusToken.isFlagged != isFlagged ? currentUtcTime : undefined,
-            };
-
-            await Tokens.update(contract, pendingSyncFlagStatusToken.tokenId, fields);
-
-            if (pendingSyncFlagStatusToken.isFlagged != isFlagged) {
-              logger.info(
-                this.queueName,
-                `Flag Status Diff. collectionId:${collectionId}, contract:${contract}, tokenId: ${pendingSyncFlagStatusToken.tokenId}, tokenIsFlagged:${pendingSyncFlagStatusToken.isFlagged}, isFlagged:${isFlagged}`
-              );
-
-              await nonFlaggedFloorQueueJob.addToQueue([
-                {
-                  kind: "revalidation",
-                  contract,
-                  tokenId: pendingSyncFlagStatusToken.tokenId,
-                  txHash: null,
-                  txTimestamp: null,
-                },
-              ]);
-            } else {
-              logger.info(
-                this.queueName,
-                `Flag Status No Change. collectionId:${collectionId}, contract:${contract}, tokenId: ${pendingSyncFlagStatusToken.tokenId}, tokenIsFlagged:${pendingSyncFlagStatusToken.isFlagged}, isFlagged:${isFlagged}`
-              );
-            }
+            await nonFlaggedFloorQueueJob.addToQueue([
+              {
+                kind: "revalidation",
+                contract,
+                tokenId: token.tokenId,
+                txHash: null,
+                txTimestamp: null,
+              },
+            ]);
+          } else {
+            logger.info(
+              this.queueName,
+              `Flag Status No Change. collectionId:${collectionId}, contract:${contract}, tokenId: ${token.tokenId}, tokenIsFlagged:${token.flagged}, isFlagged:${isFlagged}`
+            );
           }
         } catch (error) {
           if ((error as any).response?.status === 429) {
@@ -116,10 +99,6 @@ export class FlagStatusSyncJob extends AbstractRabbitMqJobHandler {
                 (error as any).response.data
               )}`
             );
-
-            delay = 60 * 1000;
-
-            await pendingFlagStatusSyncTokensQueue.add(pendingSyncFlagStatusTokensChunk);
           } else {
             logger.error(
               this.queueName,
@@ -130,7 +109,7 @@ export class FlagStatusSyncJob extends AbstractRabbitMqJobHandler {
       })
     );
 
-    await this.addToQueue({ collectionId, contract }, delay);
+    await flagStatusProcessJob.addToQueue();
   }
 
   public getLockName() {

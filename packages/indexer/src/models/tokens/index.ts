@@ -126,6 +126,37 @@ export class Tokens {
     return await idb.none(query, replacementValues);
   }
 
+  public static async updateFlagStatus(
+    contract: string,
+    tokenId: string,
+    fields: TokensEntityUpdateParams
+  ) {
+    let updateString = "";
+    const replacementValues = {
+      contract: toBuffer(contract),
+      tokenId,
+    };
+
+    _.forEach(fields, (value, fieldName) => {
+      updateString += `${_.snakeCase(fieldName)} = $/${fieldName}/,`;
+      (replacementValues as any)[fieldName] = value;
+    });
+
+    updateString = _.trimEnd(updateString, ",");
+
+    const query = `UPDATE tokens
+      SET updated_at = now(),
+          ${updateString},
+          lastFlagChange = CASE WHEN isFlagged IS DISTINCT FROM $/isFlagged/ THEN now() ELSE lastFlagChange END
+      WHERE contract = $/contract/ 
+      AND token_id = $/tokenId/
+      AND (isFlagged IS DISTINCT FROM $/isFlagged/)
+      RETURNING token_id;`;
+
+    const result = await idb.oneOrNone(query, replacementValues);
+    return result ? result.token_id : null;
+  }
+
   public static async getTokenAttributes(contract: string, tokenId: string, maxTokenCount = 0) {
     const query = `SELECT attribute_id AS "attributeId", token_attributes.key, token_attributes.value, attribute_key_id AS "attributeKeyId",
                           token_attributes.collection_id AS "collectionId", floor_sell_value AS "floorSellValue", token_count AS "tokenCount"
@@ -254,6 +285,24 @@ export class Tokens {
     }
 
     return tokenIds;
+  }
+
+  public static async getLastFlagUpdate(contract: string) {
+    const query = `SELECT last_flag_update
+                    FROM tokens 
+                    WHERE contract = $/contract/
+                    ORDER BY last_flag_update DESC
+                    LIMIT 1`;
+
+    const result = await idb.oneOrNone(query, {
+      contract: toBuffer(contract),
+    });
+
+    if (result) {
+      return result.last_flag_update;
+    }
+
+    return null;
   }
 
   /**

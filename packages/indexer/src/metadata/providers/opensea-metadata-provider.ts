@@ -163,6 +163,54 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
     };
   }
 
+  async _getTokensFlagStatus(
+    contract: string,
+    continuation?: string
+  ): Promise<{
+    data: { contract: string; tokenId: string; flagged: boolean }[];
+    continuation?: string;
+  }> {
+    const searchParams = new URLSearchParams();
+    searchParams.append("asset_contract_addresses", contract);
+    if (continuation) {
+      searchParams.append("cursor", continuation);
+    }
+    searchParams.append("include_orders", "false");
+    searchParams.append("order_direction", "desc");
+    searchParams.append("limit", "200");
+
+    const url = `${
+      !this.isOSTestnet() ? "https://api.opensea.io" : "https://testnets-api.opensea.io"
+    }/api/v1/assets?${searchParams.toString()}`;
+
+    const data = await axios
+      .get(!this.isOSTestnet() ? config.openSeaApiUrl || url : url, {
+        headers: !this.isOSTestnet()
+          ? {
+              url,
+              "X-API-KEY": config.openSeaApiKey.trim(),
+              Accept: "application/json",
+            }
+          : {
+              Accept: "application/json",
+            },
+      })
+      .then((response) => response.data)
+      .catch((error) => {
+        // eslint-disable-next-line
+        console.log(error);
+      });
+
+    return {
+      data: data.assets.map((asset: any) => ({
+        contract: asset.asset_contract.address,
+        tokenId: asset.token_id,
+        flagged: !asset.supports_wyvern,
+      })),
+      continuation: data.next ?? undefined,
+    };
+  }
+
   handleError(error: any) {
     if (error.response?.status === 429 || error.response?.status === 503) {
       let delay = 1;

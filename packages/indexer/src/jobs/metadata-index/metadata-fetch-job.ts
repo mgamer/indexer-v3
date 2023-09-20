@@ -9,8 +9,7 @@ import { PendingRefreshTokensBySlug } from "@/models/pending-refresh-tokens-by-s
 import { AddressZero } from "@ethersproject/constants";
 import { metadataIndexProcessJob } from "@/jobs/metadata-index/metadata-process-job";
 import { metadataIndexProcessBySlugJob } from "@/jobs/metadata-index/metadata-process-by-slug-job";
-import { PendingFlagStatusRefreshTokens } from "@/models/pending-flag-status-refresh-tokens";
-import { flagStatusRefreshJob } from "../flag-status/flag-status-refresh-job";
+import { flagStatusSyncJob } from "../flag-status/flag-status-sync-job";
 
 export type MetadataIndexFetchJobPayload =
   | {
@@ -126,24 +125,13 @@ export class MetadataIndexFetchJob extends AbstractRabbitMqJobHandler {
       });
     }
 
+    // Add the tokens to the list
+    const pendingRefreshTokens = new PendingRefreshTokens(data.method);
+    await pendingRefreshTokens.add(refreshTokens, prioritized);
+
     // Dont add the tokens to the list if the flag status refresh job is disabled or if the indexer is running in liquidity-only mode
     if (!config.disableFlagStatusRefreshJob || !config.liquidityOnly) {
-      // Add the tokens to the list
-      const pendingRefreshTokens = new PendingRefreshTokens(data.method);
-      await pendingRefreshTokens.add(refreshTokens, prioritized);
-
-      // Add the tokens to the flag status refresh queue
-      const pendingFlagStatusRefreshTokens = new PendingFlagStatusRefreshTokens(data.collection);
-      await pendingFlagStatusRefreshTokens.add(
-        refreshTokens.map((r) => ({
-          collectionId: data.collection,
-          contract: r.contract,
-          tokenId: r.tokenId,
-          isFlagged: 0,
-        }))
-      );
-
-      await flagStatusRefreshJob.addToQueue({
+      await flagStatusSyncJob.addToQueue({
         collectionId: data.collection,
         contract: contract,
       });
