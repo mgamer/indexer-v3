@@ -116,7 +116,9 @@ export class OrderRevalidationsJob extends AbstractRabbitMqJobHandler {
                       ? "AND orders.conduit NOT IN ($/whitelistedOperators:list/)"
                       : ""
                   }
-                RETURNING x.id, y.created_at
+                RETURNING
+                  x.id,
+                  (SELECT y.created_at FROM y) AS created_at
               `,
               {
                 contract: toBuffer(contract),
