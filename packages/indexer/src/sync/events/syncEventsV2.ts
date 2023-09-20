@@ -464,20 +464,22 @@ export const checkForOrphanedBlock = async (block: number) => {
   await blocksModel.deleteBlock(block, orphanedBlock.hash);
 };
 
-export const checkForMissingBlocks = async (block: number, minAllowedDiff = 1) => {
+export const checkForMissingBlocks = async (block: number) => {
   // lets set the latest block to the block we are syncing if it is higher than the current latest block by 1. If it is higher than 1, we create a job to sync the missing blocks
   // if its lower than the current latest block, we dont update the latest block in redis, but we still sync the block (this is for when we are catching up on missed blocks, or when we are syncing a block that is older than the current latest block)
   const latestBlock = await redis.get("latest-block-realtime");
+
   if (latestBlock) {
     const latestBlockNumber = Number(latestBlock);
-    if (block - latestBlockNumber > minAllowedDiff) {
+    if (block - latestBlockNumber > 1) {
       // if we are missing more than 1 block, we need to sync the missing blocks
       for (let i = latestBlockNumber + 1; i <= block; i++) {
+        await eventsSyncRealtimeJob.addToQueue({ block: i });
+
         logger.info(
           "sync-events-realtime",
-          `Found missing block: ${i} latest block ${block} latestBlock ${latestBlockNumber} minAllowedDiff ${minAllowedDiff}`
+          `Found missing block: ${i} latest block ${block} latestBlock ${latestBlockNumber}`
         );
-        await eventsSyncRealtimeJob.addToQueue({ block: i });
       }
     }
   } else {

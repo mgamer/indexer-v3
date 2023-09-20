@@ -40,6 +40,7 @@ if (config.doBackgroundWork && config.catchup) {
               logger.info("events-sync-catchup", `Catching up events for block ${block}`);
               await eventsSyncRealtimeJob.addToQueue({ block });
             }
+
             await checkForMissingBlocks(block);
           } catch (error) {
             logger.error("events-sync-catchup", `Failed to catch up events: ${error}`);
@@ -64,7 +65,7 @@ if (config.doBackgroundWork && config.catchup) {
         try {
           await eventsSyncRealtimeJob.addToQueue({ block });
           if (![137].includes(config.chainId)) {
-            await checkForMissingBlocks(block, 0);
+            await checkForMissingBlocks(block);
           } else {
             await redis.set("latest-block-realtime", block);
           }
