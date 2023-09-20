@@ -37,14 +37,6 @@ export class FetchCollectionMetadataJob extends AbstractRabbitMqJobHandler {
   protected async process(payload: FetchCollectionMetadataJobPayload) {
     const { contract, tokenId, mintedTimestamp, newCollection, oldCollectionId } = payload;
 
-    if (
-      contract === "0x4e9edbb6fa91a4859d14f98627dba991d16c9f10" ||
-      contract === "0xd7f566aeba20453e9bab7ea2fd737bfaec70cc69" ||
-      contract === "0x95a2c45003b86235bb3e05b6f3b8b7781e562f2b"
-    ) {
-      return;
-    }
-
     try {
       // Fetch collection metadata
       let collection = await MetadataApi.getCollectionMetadata(contract, tokenId, "", {
@@ -53,6 +45,7 @@ export class FetchCollectionMetadataJob extends AbstractRabbitMqJobHandler {
 
       if (
         ![
+          "0x4e9edbb6fa91a4859d14f98627dba991d16c9f10",
           "0x95a2c45003b86235bb3e05b6f3b8b7781e562f2b",
           "0xd7f566aeba20453e9bab7ea2fd737bfaec70cc69",
         ].includes(contract)
