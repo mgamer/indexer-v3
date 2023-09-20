@@ -178,7 +178,7 @@ export class TopBidWebSocketEventsTriggerJob extends AbstractRabbitMqJobHandler 
               event: "top-bid.changed",
               tags: {
                 contract: fromBuffer(order.contract),
-                source: payload?.order?.source?.domain || "unknown",
+                source: payload?.order?.source.domain || "unknown",
               },
               data: payload,
             })
