@@ -133,9 +133,15 @@ export const getCollectionsV7Options: RouteOptions = {
       limit: Joi.number()
         .integer()
         .min(1)
-        .max(20)
+        .when("sortBy", {
+          is: "updatedAt",
+          then: Joi.number().integer().max(100),
+          otherwise: Joi.number().integer().max(20),
+        })
         .default(20)
-        .description("Amount of items returned in response. Default and max limit is 20."),
+        .description(
+          "Amount of items returned in response. Default and max limit is 20, unless sorting by updatedAt which has a max limit of 100."
+        ),
       continuation: Joi.string().description(
         "Use continuation token to request next offset of items."
       ),
