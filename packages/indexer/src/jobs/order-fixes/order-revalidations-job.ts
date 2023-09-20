@@ -93,7 +93,7 @@ export class OrderRevalidationsJob extends AbstractRabbitMqJobHandler {
                       AND orders.side = $/side/
                       AND orders.fillability_status = 'fillable'
                       AND orders.approval_status = 'approved'
-                      ${createdAtContinutation ? "AND orders.createdAt < $/createdAt/" : ""}
+                      ${createdAtContinutation ? "AND orders.created_at < $/createdAt/" : ""}
                       ORDER BY orders.created_at DESC
                     LIMIT $/limit/
                   ),
