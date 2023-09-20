@@ -91,14 +91,14 @@ export const getSourcesV1Options: RouteOptions = {
         rawResult.map(async (r) => {
           const source = new SourcesEntity(r);
           return {
-            id: source.address ?? null,
-            name: source?.getTitle() ?? null,
-            description: source?.metadata.description ?? null,
-            socialImage: source?.metadata.socialImage ?? null,
-            twitterUsername: source?.metadata.twitterUsername ?? null,
-            icon: source?.getIcon() ?? null,
-            domain: source.domain ?? null,
-            tokenUrl: sources.getTokenUrl(source) ?? null,
+            id: source.address ?? undefined,
+            name: source?.getTitle(),
+            description: source?.metadata.description,
+            socialImage: source?.metadata.socialImage,
+            twitterUsername: source?.metadata.twitterUsername,
+            icon: source?.getIcon(),
+            domain: source.domain ?? undefined,
+            tokenUrl: sources.getTokenUrl(source),
           };
         })
       );
