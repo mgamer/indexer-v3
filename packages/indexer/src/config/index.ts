@@ -21,7 +21,7 @@ export const config = {
   openseaIndexerApiBaseUrl: String(process.env.OPENSEA_INDEXER_API_BASE_URL),
 
   // When running in liquidity-only mode, all metadata processes are disabled
-  liquidityOnly: process.env.LIQUIDITY_ONLY ? Boolean(Number(process.env.LIQUIDITY_ONLY)) : false,
+  liquidityOnly: !process.env.METADATA_API_BASE_URL,
   metadataIndexingMethod: String(process.env.METADATA_INDEXING_METHOD || "opensea"),
   metadataIndexingMethodCollection: String(
     process.env.METADATA_INDEXING_METHOD_COLLECTION ||
@@ -84,8 +84,6 @@ export const config = {
 
   looksRareApiKey: String(process.env.LOOKSRARE_API_KEY),
   openSeaApiKey: String(process.env.OPENSEA_API_KEY),
-  openSeaSlugApiKey: String(process.env.OPENSEA_SLUG_API_KEY),
-  openSeaSlugApiHeaders: process.env.OPENSEA_SLUG_API_HEADERS,
   openSeaSlugBaseUrl: String(process.env.OPENSEA_SLUG_BASE_URL),
   openSeaApiUrl: String(process.env.OPENSEA_API_URL || ""),
 
