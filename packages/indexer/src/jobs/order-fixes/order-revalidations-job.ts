@@ -112,12 +112,12 @@ export class OrderRevalidationsJob extends AbstractRabbitMqJobHandler {
                 WHERE orders.id = x.id
                   ${
                     blacklistedOperators
-                      ? "AND orders.conduit IN ($/blacklistedOperators:list/)"
+                      ? "AND orders.conduit = ANY(ARRAY[$/blacklistedOperators:list/]::BYTEA[])"
                       : ""
                   }
                   ${
                     whitelistedOperators
-                      ? "AND orders.conduit NOT IN ($/whitelistedOperators:list/)"
+                      ? "AND orders.conduit <> ALL(ARRAY[$/whitelistedOperators:list/]::BYTEA[])"
                       : ""
                   }
                 RETURNING
