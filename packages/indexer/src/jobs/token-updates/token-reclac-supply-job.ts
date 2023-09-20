@@ -24,6 +24,10 @@ export class TokenReclacSupplyJob extends AbstractRabbitMqJobHandler {
   protected async process(payload: TokenRecalcSupplyPayload) {
     const { contract, tokenId } = payload;
 
+    if (contract === "0x4e9edbb6fa91a4859d14f98627dba991d16c9f10") {
+      return;
+    }
+
     const token = await Tokens.getByContractAndTokenId(contract, tokenId);
 
     // For large supply tokens calc once a day

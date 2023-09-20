@@ -37,6 +37,10 @@ export class FetchCollectionMetadataJob extends AbstractRabbitMqJobHandler {
   protected async process(payload: FetchCollectionMetadataJobPayload) {
     const { contract, tokenId, mintedTimestamp, newCollection, oldCollectionId } = payload;
 
+    if (contract === "0x4e9edbb6fa91a4859d14f98627dba991d16c9f10") {
+      return;
+    }
+
     try {
       // Fetch collection metadata
       let collection = await MetadataApi.getCollectionMetadata(contract, tokenId, "", {
