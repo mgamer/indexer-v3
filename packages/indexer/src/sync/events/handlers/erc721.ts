@@ -1,6 +1,7 @@
 import * as Sdk from "@reservoir0x/sdk";
 
 import { bn } from "@/common/utils";
+import { logger } from "@/common/logger";
 import { config } from "@/config/index";
 import { getNetworkSettings } from "@/config/network";
 import { getEventData } from "@/events-sync/data";
@@ -124,6 +125,12 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
 
         // For safety, add a limit
         if (toNumber - fromNumber > 100) {
+          logger.info(
+            "erc721-handler",
+            `Skipping consecutive-transfer range (size = ${toNumber - fromNumber}) for tx (${
+              baseEventParams.txHash
+            })`
+          );
           break;
         }
 
