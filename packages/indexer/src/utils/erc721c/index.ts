@@ -186,7 +186,7 @@ export const refreshERC721COperatorWhitelist = async (transferValidator: string,
   // Invalid any orders relying on the blacklisted operator
   logger.info(
     "revalidation-debug",
-    `DATA: ${JSON.stringify(
+    `DATA (blacklist): ${JSON.stringify(
       relevantContracts.map((c) => ({
         by: "operator",
         data: {

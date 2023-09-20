@@ -156,7 +156,7 @@ const updateMarketplaceBlacklist = async (contract: string) => {
   // Invalid any orders relying on the blacklisted operator
   logger.info(
     "revalidation-debug",
-    `DATA: ${JSON.stringify({
+    `DATA (whitelist): ${JSON.stringify({
       by: "operator",
       data: {
         contract,
