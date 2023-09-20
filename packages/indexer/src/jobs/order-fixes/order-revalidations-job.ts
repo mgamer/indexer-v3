@@ -144,6 +144,13 @@ export class OrderRevalidationsJob extends AbstractRabbitMqJobHandler {
               }
             );
 
+            logger.info(
+              this.queueName,
+              JSON.stringify({
+                results,
+              })
+            );
+
             // Recheck the orders
             await orderUpdatesByIdJob.addToQueue(
               results.map(
