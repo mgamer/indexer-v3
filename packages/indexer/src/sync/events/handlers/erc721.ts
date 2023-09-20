@@ -121,6 +121,12 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
 
         const fromNumber = Number(fromTokenId);
         const toNumber = Number(toTokenId);
+
+        // For safety, add a limit
+        if (toNumber - fromNumber > 10000) {
+          break;
+        }
+
         for (let i = fromNumber; i <= toNumber; i++) {
           const tokenId = i.toString();
 
