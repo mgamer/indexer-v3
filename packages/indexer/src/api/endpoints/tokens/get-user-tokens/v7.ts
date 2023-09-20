@@ -19,9 +19,11 @@ import { config } from "@/config/index";
 import {
   getJoiPriceObject,
   getJoiSaleObject,
+  getJoiSourceObject,
   JoiAttributeValue,
   JoiPrice,
   JoiSale,
+  JoiSource,
 } from "@/common/joi";
 import { Sources } from "@/models/sources";
 import _ from "lodash";
@@ -181,7 +183,7 @@ export const getUserTokensV7Options: RouteOptions = {
             topBid: Joi.object({
               id: Joi.string().allow(null),
               price: JoiPrice.allow(null),
-              source: Joi.object().allow(null),
+              source: JoiSource.allow(null),
             })
               .optional()
               .description("Can be null if not active bids."),
@@ -214,7 +216,7 @@ export const getUserTokensV7Options: RouteOptions = {
               kind: Joi.string().allow(null),
               validFrom: Joi.number().unsafe().allow(null),
               validUntil: Joi.number().unsafe().allow(null),
-              source: Joi.object().allow(null),
+              source: JoiSource.allow(null),
               rawData: Joi.object().optional().allow(null),
               isNativeOffChainCancellable: Joi.boolean().optional(),
             }).description("Can be null if no asks."),
@@ -746,7 +748,7 @@ export const getUserTokensV7Options: RouteOptions = {
                         query.displayCurrency
                       )
                     : null,
-                  source: sources.getFullSourceObject(topBidSource),
+                  source: getJoiSourceObject(topBidSource),
                 }
               : undefined,
             lastAppraisalValue: r.last_token_appraisal_value
@@ -792,7 +794,7 @@ export const getUserTokensV7Options: RouteOptions = {
               kind: r.floor_sell_kind,
               validFrom: r.floor_sell_value ? r.floor_sell_valid_from : null,
               validUntil: r.floor_sell_value ? r.floor_sell_valid_to : null,
-              source: sources.getFullSourceObject(floorSellSource),
+              source: getJoiSourceObject(floorSellSource),
               rawData: query.includeRawData ? r.floor_sell_raw_data : undefined,
               isNativeOffChainCancellable: query.includeRawData
                 ? r.floor_sell_raw_data?.zone ===

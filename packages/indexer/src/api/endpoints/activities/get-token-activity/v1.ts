@@ -9,6 +9,7 @@ import { formatEth, regex } from "@/common/utils";
 import { Sources } from "@/models/sources";
 import { ActivityType } from "@/elasticsearch/indexes/activities/base";
 import * as ActivitiesIndex from "@/elasticsearch/indexes/activities";
+import { JoiSource, getJoiSourceObject } from "@/common/joi";
 
 const version = "v1";
 
@@ -79,7 +80,7 @@ export const getTokenActivityV1Options: RouteOptions = {
           txHash: Joi.string().lowercase().pattern(regex.bytes32).allow(null),
           logIndex: Joi.number().allow(null),
           batchIndex: Joi.number().allow(null),
-          source: Joi.object().allow(null),
+          source: JoiSource.allow(null),
         })
       ),
     }).label(`getTokenActivity${version.toUpperCase()}Response`),
@@ -134,7 +135,7 @@ export const getTokenActivityV1Options: RouteOptions = {
           txHash: activity.event?.txHash,
           logIndex: activity.event?.logIndex,
           batchIndex: activity.event?.batchIndex,
-          source: sources.getSourceObject(source),
+          source: getJoiSourceObject(source, false),
         };
       });
 

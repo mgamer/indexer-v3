@@ -669,7 +669,7 @@ export const getJoiOrderObject = async (order: {
       ? null
       : undefined,
     criteria: order.criteria,
-    source: sources.getFullSourceObject(source),
+    source: getJoiSourceObject(source),
     feeBps: Number(feeBps.toString()),
     feeBreakdown: feeBreakdown,
     expiration: Math.floor(Number(order.expiration)),
@@ -710,13 +710,7 @@ export const getJoiActivityOrderObject = async (order: {
   return {
     id: order.id,
     side: order.side ? (order.side === "sell" ? "ask" : "bid") : undefined,
-    source: orderSource
-      ? {
-          domain: orderSource?.domain ?? null,
-          name: orderSource?.getTitle() ?? null,
-          icon: orderSource?.getIcon() ?? null,
-        }
-      : undefined,
+    source: getJoiSourceObject(orderSource, false),
     criteria: order.criteria,
   };
 };
@@ -985,3 +979,23 @@ export const JoiExecuteFee = Joi.object({
   amount: Joi.number().unsafe(),
   rawAmount: Joi.string().pattern(regex.number),
 });
+
+// --- Sources ---
+
+export const JoiSource = Joi.object({
+  id: Joi.string().allow(null),
+  domain: Joi.string().required(),
+  name: Joi.string().required(),
+  icon: Joi.string().required(),
+  url: Joi.string().allow(null),
+});
+
+export const getJoiSourceObject = (source: SourcesEntity | undefined, full = true) => {
+  return {
+    id: !full ? undefined : source?.address ?? null,
+    domain: source?.domain ?? null,
+    name: source?.getTitle() ?? null,
+    icon: source?.getIcon() ?? null,
+    url: !full ? undefined : source?.metadata.url ?? null,
+  };
+};

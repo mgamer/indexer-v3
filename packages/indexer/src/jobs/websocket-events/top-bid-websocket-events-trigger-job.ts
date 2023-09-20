@@ -4,7 +4,7 @@ import { idb, ridb } from "@/common/db";
 import { Orders } from "@/utils/orders";
 import { logger } from "@/common/logger";
 import { Sources } from "@/models/sources";
-import { getJoiPriceObject } from "@/common/joi";
+import { getJoiPriceObject, getJoiSourceObject } from "@/common/joi";
 import { formatEth, fromBuffer } from "@/common/utils";
 import { publishWebsocketEvent } from "@/common/websocketPublisher";
 import { config } from "@/config/index";
@@ -144,7 +144,7 @@ export class TopBidWebSocketEventsTriggerJob extends AbstractRabbitMqJobHandler 
             createdAt: new Date(order.created_at).toISOString(),
             validFrom: order.valid_from,
             validUntil: order.valid_until,
-            source: sources.getFullSourceObject(source),
+            source: getJoiSourceObject(source),
             price: {
               currency: price.currency,
               amount: price.amount,
@@ -178,7 +178,7 @@ export class TopBidWebSocketEventsTriggerJob extends AbstractRabbitMqJobHandler 
               event: "top-bid.changed",
               tags: {
                 contract: fromBuffer(order.contract),
-                source: payload?.order?.source.domain || "unknown",
+                source: payload?.order?.source?.domain || "unknown",
               },
               data: payload,
             })

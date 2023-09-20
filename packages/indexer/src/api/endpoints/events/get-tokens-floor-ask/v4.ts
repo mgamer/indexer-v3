@@ -15,7 +15,7 @@ import {
   toBuffer,
 } from "@/common/utils";
 import { Sources } from "@/models/sources";
-import { getJoiPriceObject, JoiPrice } from "@/common/joi";
+import { getJoiPriceObject, getJoiSourceObject, JoiPrice, JoiSource } from "@/common/joi";
 import * as Sdk from "@reservoir0x/sdk";
 import { config } from "@/config/index";
 
@@ -82,7 +82,7 @@ export const getTokensFloorAskV4Options: RouteOptions = {
             price: JoiPrice.allow(null),
             validFrom: Joi.number().unsafe().allow(null),
             validUntil: Joi.number().unsafe().allow(null),
-            source: Joi.object().allow(null),
+            source: JoiSource.allow(null),
             dynamicPricing: Joi.object({
               kind: Joi.string().valid("dutch", "pool"),
               data: Joi.object(),
@@ -348,7 +348,7 @@ export const getTokensFloorAskV4Options: RouteOptions = {
                 : null,
               validFrom: r.price ? Number(r.valid_from) : null,
               validUntil: r.price ? Number(r.valid_until) : null,
-              source: sources.getFullSourceObject(source),
+              source: getJoiSourceObject(source),
               dynamicPricing,
               isDynamic: Boolean(r.dynamic),
             },
