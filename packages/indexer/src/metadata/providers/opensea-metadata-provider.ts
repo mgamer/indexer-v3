@@ -92,7 +92,7 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
         headers: !this.isOSTestnet()
           ? {
               url,
-              "X-API-KEY": config.openSeaApiKey.trim(),
+              "X-API-KEY": config.openseaTokenMetadataApiKey.trim(),
               Accept: "application/json",
             }
           : {
@@ -137,7 +137,7 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
         headers: !this.isOSTestnet()
           ? {
               url,
-              "X-API-KEY": config.openSeaSlugApiKey.trim(),
+              "X-API-KEY": config.openseaTokenMetadataBySlugApiKey.trim(),
               Accept: "application/json",
             }
           : {
@@ -449,7 +449,7 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
     const headers = !this.isOSTestnet()
       ? {
           url,
-          "X-API-KEY": config.openSeaCollectionApiKey.trim(),
+          "X-API-KEY": config.openseaCollectionMetadataApiKey.trim(),
           Accept: "application/json",
         }
       : {
