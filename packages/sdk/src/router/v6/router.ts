@@ -2496,30 +2496,24 @@ export class Router {
           .reduce((a, b) => a.add(b), bn(0));
         const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
         const totalPrice = price.add(feeAmount);
-        const tokenOut = orders[0].params.erc20Token;
-        const currencyIsETH = isETH(this.chainId, tokenOut);
 
         executions.push({
           module: module.address,
           data:
             orders.length === 1
-              ? module.interface.encodeFunctionData(
-                  !currencyIsETH ? "acceptERC20ListingERC721" : "acceptETHListingERC721",
-                  [
-                    orders[0].getRaw(),
-                    orders[0].params,
-                    {
-                      fillTo: taker,
-                      refundTo: relayer,
-                      revertIfIncomplete: Boolean(!options?.partial),
-                      amount: price,
-                      token: orders[0].params.erc20Token,
-                    },
-                    fees,
-                  ]
-                )
+              ? module.interface.encodeFunctionData("acceptETHListingERC721", [
+                  orders[0].getRaw(),
+                  orders[0].params,
+                  {
+                    fillTo: taker,
+                    refundTo: relayer,
+                    revertIfIncomplete: Boolean(!options?.partial),
+                    amount: price,
+                  },
+                  fees,
+                ])
               : this.contracts.zeroExV4Module.interface.encodeFunctionData(
-                  !currencyIsETH ? "acceptERC20ListingsERC721" : "acceptETHListingsERC721",
+                  "acceptETHListingsERC721",
                   [
                     orders.map((order) => order.getRaw()),
                     orders.map((order) => order.params),
@@ -2528,18 +2522,17 @@ export class Router {
                       refundTo: relayer,
                       revertIfIncomplete: Boolean(!options?.partial),
                       amount: price,
-                      token: orders[0].params.erc20Token,
                     },
                     fees,
                   ]
                 ),
-          value: currencyIsETH ? totalPrice : 0,
+          value: totalPrice,
         });
 
         // Track any possibly required swap
         swapDetails.push({
           tokenIn: buyInCurrency,
-          tokenOut,
+          tokenOut: Sdk.Common.Addresses.Native[this.chainId],
           tokenOutAmount: totalPrice,
           recipient: module.address,
           refundTo: relayer,
@@ -2605,31 +2598,25 @@ export class Router {
           .reduce((a, b) => a.add(b), bn(0));
         const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
         const totalPrice = price.add(feeAmount);
-        const currency = orders[0].params.erc20Token;
-        const currencyIsETH = isETH(this.chainId, currency);
 
         executions.push({
           module: module.address,
           data:
             orders.length === 1
-              ? module.interface.encodeFunctionData(
-                  `accept${currencyIsETH ? "ETH" : "ERC20"}ListingERC1155`,
-                  [
-                    orders[0].getRaw(),
-                    orders[0].params,
-                    zeroexV4Erc1155Details[0].amount ?? 1,
-                    {
-                      fillTo: taker,
-                      refundTo: relayer,
-                      revertIfIncomplete: Boolean(!options?.partial),
-                      amount: price,
-                      token: currency,
-                    },
-                    fees,
-                  ]
-                )
+              ? module.interface.encodeFunctionData("acceptETHListingERC1155", [
+                  orders[0].getRaw(),
+                  orders[0].params,
+                  zeroexV4Erc1155Details[0].amount ?? 1,
+                  {
+                    fillTo: taker,
+                    refundTo: relayer,
+                    revertIfIncomplete: Boolean(!options?.partial),
+                    amount: price,
+                  },
+                  fees,
+                ])
               : this.contracts.zeroExV4Module.interface.encodeFunctionData(
-                  `accept${currencyIsETH ? "ETH" : "ERC20"}ListingsERC1155`,
+                  "acceptETHListingsERC1155",
                   [
                     orders.map((order) => order.getRaw()),
                     orders.map((order) => order.params),
@@ -2639,7 +2626,6 @@ export class Router {
                       refundTo: relayer,
                       revertIfIncomplete: Boolean(!options?.partial),
                       amount: price,
-                      token: currency,
                     },
                     fees,
                   ]
@@ -2650,7 +2636,7 @@ export class Router {
         // Track any possibly required swap
         swapDetails.push({
           tokenIn: buyInCurrency,
-          tokenOut: currency,
+          tokenOut: Sdk.Common.Addresses.Native[this.chainId],
           tokenOutAmount: totalPrice,
           recipient: module.address,
           refundTo: relayer,
