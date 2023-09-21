@@ -303,6 +303,13 @@ export const getUSDAndNativePrices = async (
     nativePrice = price;
   }
 
+  if (!usdPrice) {
+    usdPrice = "10000";
+  }
+  if (!nativePrice) {
+    nativePrice = "10000";
+  }
+
   return { usdPrice, nativePrice };
 };
 

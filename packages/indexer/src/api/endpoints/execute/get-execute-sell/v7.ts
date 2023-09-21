@@ -206,6 +206,17 @@ export const getExecuteSellV7Options: RouteOptions = {
             .items(JoiExecuteFee)
             .description("Can be marketplace fees or royalties"),
           feesOnTop: Joi.array().items(JoiExecuteFee).description("Can be referral fees."),
+          permitApproval: Joi.object({
+            token: Joi.string(),
+            owner: Joi.string(),
+            spender: Joi.string(),
+            value: Joi.string(),
+            nonce: Joi.string(),
+            deadline: Joi.string(),
+            signature: Joi.string(),
+          })
+            .optional()
+            .description("Permit Approval"),
         })
       ),
     }).label(`getExecuteSell${version.toUpperCase()}Response`),
@@ -246,6 +257,7 @@ export const getExecuteSellV7Options: RouteOptions = {
         totalRawPrice: string;
         builtInFees: ExecuteFee[];
         feesOnTop: ExecuteFee[];
+        permitApproval?: PermitApproval;
       }[] = [];
 
       // Keep track of dynamically-priced orders (eg. from pools like Sudoswap and NFTX)
@@ -391,6 +403,7 @@ export const getExecuteSellV7Options: RouteOptions = {
               rawAmount: bn(f.amount).toString(),
             })),
           ],
+          permitApproval,
         });
 
         bidDetails.push(
@@ -667,6 +680,27 @@ export const getExecuteSellV7Options: RouteOptions = {
             }
           }
 
+          // post check
+          const permitApproval = result.permit_id
+            ? {
+                token: fromBuffer(result.currency),
+                owner: fromBuffer(result.permit_bidding_owner),
+                spender: fromBuffer(result.permit_bidding_spender),
+                value: result.permit_bidding_value,
+                deadline: result.permit_bidding_deadline,
+                nonce: result.permit_bidding_nonce,
+                signature: result.permit_bidding_signature,
+              }
+            : undefined;
+
+          // post check
+          const permitApprovalExpired = permitApproval
+            ? bn(permitApproval.deadline).lte(now())
+            : false;
+          if (permitApprovalExpired) {
+            throw getExecuteError("Permit bidding expired");
+          }
+
           await addToPath(
             {
               id: result.id,
@@ -686,17 +720,7 @@ export const getExecuteSellV7Options: RouteOptions = {
               quantity: item.quantity,
               owner,
             },
-            result.permit_id
-              ? {
-                  token: fromBuffer(result.currency),
-                  owner: fromBuffer(result.permit_bidding_owner),
-                  spender: fromBuffer(result.permit_bidding_spender),
-                  value: result.permit_bidding_value,
-                  deadline: result.permit_bidding_deadline,
-                  nonce: result.permit_bidding_nonce,
-                  signature: result.permit_bidding_signature,
-                }
-              : undefined
+            permitApprovalExpired ? undefined : permitApproval
           );
         }
 

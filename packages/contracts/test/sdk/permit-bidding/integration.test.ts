@@ -9,6 +9,10 @@ import * as Sdk from "@reservoir0x/sdk/src";
 import * as indexerHelper from "../../indexer-helper";
 import { getChainId, bn, setupNFTs } from "../../utils";
 import { parseEther, parseUnits } from "@ethersproject/units";
+import { expect } from "chai";
+import { MaxUint256 } from "@ethersproject/constants";
+import { splitSignature } from "@ethersproject/bytes";
+import { Interface } from "@ethersproject/abi";
 
 describe("PermitBidding - Indexer Integration Test", () => {
   const chainId = getChainId();
@@ -30,7 +34,7 @@ describe("PermitBidding - Indexer Integration Test", () => {
     // await reset();
   });
 
-  const testCase = async () => {
+  const testCase = async (isCancel = false, isExpire = false) => {
     const buyer = alice;
     const seller = bob;
 
@@ -122,13 +126,11 @@ describe("PermitBidding - Indexer Integration Test", () => {
         }
       ],
       maker: buyer.address,
+      usePermitBidding: true,
+      permitBiddingLifetime: isExpire ? 1 : 86400 * 7
     }
 
     const bidResponse = await indexerHelper.executeBidV5(bidParams);
-
-    const saveOrderStep = bidResponse.steps[3];
-    const orderSignature = saveOrderStep.items[0];
-
     const {
       steps
     } = bidResponse;
@@ -145,38 +147,11 @@ describe("PermitBidding - Indexer Integration Test", () => {
 
       // Store permit bidding signature
       const permitId = item.data.post.body.id;
-      const response = await indexerHelper.savePreSignature(signature, permitId);
-      // const {v, r, s} = splitSignature(signature);
-      // const permitTx = {
-      //   from: seller.address,
-      //   to: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      //   data: new Interface([
-      //     `function permit(
-      //       address owner,
-      //       address spender,
-      //       uint256 value,
-      //       uint256 deadline,
-      //       uint8 v,
-      //       bytes32 r,
-      //       bytes32 s
-      //     )`
-      //   ]).encodeFunctionData('permit', [
-      //     eipMessage.value.owner,
-      //     eipMessage.value.spender,
-      //     eipMessage.value.value,
-      //     eipMessage.value.deadline,
-      //     v,
-      //     r,
-      //     s
-      //   ])
-      // }
-
-      // console.log('permitTx', permitTx)
-      // const permitRes = await seller.sendTransaction(permitTx)
-      // console.log("permitRes", permitRes)
+      await indexerHelper.savePreSignature(signature, permitId);
     }
 
     const bidResponse2 = await indexerHelper.executeBidV5(bidParams);
+
     const saveOrderStep2 = bidResponse2.steps[3];
     const orderSignature2 = saveOrderStep2.items[0];
 
@@ -188,7 +163,50 @@ describe("PermitBidding - Indexer Integration Test", () => {
     );
 
     const postRequest = orderSignature2.data.post;
-    const orderInfo = postRequest.body.order.data;
+
+    if (isCancel) {
+      // Permit to others cause permit once changes
+      const permitData = await Sdk.Common.Helpers.createPermitMessage(
+        {
+          chainId: chainId,
+          token: Sdk.Common.Addresses.Usdc[chainId],
+          owner: buyer.address,
+          spender: Sdk.PaymentProcessor.Addresses.Exchange[chainId],
+          amount: MaxUint256.toString(),
+          deadline: String(Math.floor(Date.now() / 1000) + 86400 * 7),
+        },
+        ethers.provider
+      );
+
+      const permitSignature = await buyer._signTypedData(permitData.domain, permitData.types, permitData.value);
+      const {v, r, s} = splitSignature(permitSignature);
+        const permitTx = {
+          from: buyer.address,
+          to: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+          data: new Interface([
+            `function permit(
+              address owner,
+              address spender,
+              uint256 value,
+              uint256 deadline,
+              uint8 v,
+              bytes32 r,
+              bytes32 s
+            )`
+          ]).encodeFunctionData('permit', [
+            permitData.value.owner,
+            permitData.value.spender,
+            permitData.value.value,
+            permitData.value.deadline,
+            v,
+            r,
+            s
+          ])
+        }
+
+      const permitRes = await buyer.sendTransaction(permitTx)
+      await indexerHelper.doEventParsing(permitRes.hash)
+    }
 
     const orderSaveResult = await indexerHelper.callStepAPI(postRequest.endpoint, offerSignature, postRequest.body);
     const orderId = orderSaveResult.orderId;
@@ -201,19 +219,29 @@ describe("PermitBidding - Indexer Integration Test", () => {
           orderId
         },
       ],
+      partial: true,
       taker: seller.address,
       forceRouter: true,
     });
 
-    const allSteps = executeResponse.steps;
+    if (isExpire) {
+      expect(executeResponse.message.includes("expired")).to.eq(true);
+      return
+    }
 
+    const allSteps = executeResponse.steps;
     await seller.sendTransaction(allSteps[0].items[0].data);
 
+   
     const lastSetp = allSteps[allSteps.length - 1];
+    // const tx = await seller.sendTransaction(lastSetp.items[0].data);
+    // await tx.wait();
 
-    const tx = await seller.sendTransaction(lastSetp.items[0].data);
-    await tx.wait();
+    // bulkPermit
+    expect(lastSetp.items[0].data.data.includes("c7460d07")).to.eq(isExpire ? false : true);
   };
 
-  it("Create permit bidding and execute", async () => testCase());
+  // it("Create permit bidding and execute", async () => testCase());
+  // it("Create permit bidding and cancel", async () => testCase(true));
+  it("Create permit bidding and expires", async () => testCase(false, true));
 });

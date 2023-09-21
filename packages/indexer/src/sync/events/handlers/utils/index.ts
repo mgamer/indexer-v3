@@ -33,6 +33,10 @@ import {
 import { orderbookOrdersJob } from "@/jobs/orderbook/orderbook-orders-job";
 import _ from "lodash";
 import { transferUpdatesJob } from "@/jobs/transfer-updates/transfer-updates-job";
+import {
+  permitBiddingOrderApprovalChangeJob,
+  PermitBiddingOrderApprovalChangeJobPayload,
+} from "@/jobs/permit-bidding/order-approval-change-job";
 
 // Semi-parsed and classified event
 export type EnhancedEvent = {
@@ -75,6 +79,8 @@ export type OnChainData = {
   orderInfos: OrderUpdatesByIdJobPayload[];
   makerInfos: OrderUpdatesByMakerJobPayload[];
 
+  permitApprovalChanges: PermitBiddingOrderApprovalChangeJobPayload[];
+
   // Orders
   orders: GenericOrderInfo[];
 };
@@ -90,6 +96,7 @@ export const initOnChainData = (): OnChainData => ({
   nonceCancelEvents: [],
 
   nftApprovalEvents: [],
+  permitApprovalChanges: [],
 
   ftTransferEvents: [],
   nftTransferEvents: [],
@@ -166,6 +173,7 @@ export const processOnChainData = async (data: OnChainData, backfill?: boolean) 
       orderUpdatesByIdJob.addToQueue(data.orderInfos),
       orderUpdatesByMakerJob.addToQueue(data.makerInfos),
       orderbookOrdersJob.addToQueue(data.orders),
+      permitBiddingOrderApprovalChangeJob.addToQueue(data.permitApprovalChanges),
     ]);
   }
 
@@ -173,6 +181,7 @@ export const processOnChainData = async (data: OnChainData, backfill?: boolean) 
   await transferUpdatesJob.addToQueue(nonFillTransferEvents);
   await mintQueueJob.addToQueue(data.mintInfos);
   await fillUpdatesJob.addToQueue(data.fillInfos);
+
   if (!backfill) {
     await mintsProcessJob.addToQueue(data.mints);
   }

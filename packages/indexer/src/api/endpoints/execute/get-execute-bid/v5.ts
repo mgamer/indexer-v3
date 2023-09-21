@@ -82,6 +82,14 @@ export const getExecuteBidV5Options: RouteOptions = {
       blurAuth: Joi.string().description(
         "Advanced use case to pass personal blurAuthToken; the API will generate one if left empty."
       ),
+      usePermitBidding: Joi.boolean()
+        .default(false)
+        .description("Enable gasless bidding")
+        .optional(),
+      permitBiddingLifetime: Joi.number()
+        .default(86400 * 7)
+        .optional()
+        .description("Permit bidding's lifetime in seconds"),
       params: Joi.array()
         .items(
           Joi.object({
@@ -428,6 +436,8 @@ export const getExecuteBidV5Options: RouteOptions = {
         }
       }
 
+      const permitMessageDeadline = String(now() + payload.permitBiddingLifetime);
+
       const errors: { message: string; orderIndex: number }[] = [];
       await Promise.all(
         params.map(async (params, i) => {
@@ -549,9 +559,9 @@ export const getExecuteBidV5Options: RouteOptions = {
             const collection =
               collectionId && !attributeKey && !attributeValue ? collectionId : undefined;
 
-            const supportPermit = [Sdk.Common.Addresses.Usdc[config.chainId]].includes(
-              params.currency
-            );
+            const usePermitBidding =
+              [Sdk.Common.Addresses.Usdc[config.chainId]].includes(params.currency) &&
+              payload.usePermitBidding;
 
             switch (params.orderKind) {
               case "blur": {
@@ -727,7 +737,7 @@ export const getExecuteBidV5Options: RouteOptions = {
 
                 // Use ERC20-Permit
                 let permitId: string | undefined;
-                if (supportPermit && approvalTx) {
+                if (usePermitBidding && approvalTx) {
                   const permitData = await Sdk.Common.Helpers.createPermitMessage(
                     {
                       chainId: config.chainId,
@@ -735,7 +745,7 @@ export const getExecuteBidV5Options: RouteOptions = {
                       owner: maker,
                       spender: conduit,
                       amount: MaxUint256.toString(),
-                      deadline: String(now() + 86400 * 7),
+                      deadline: permitMessageDeadline,
                     },
                     baseProvider
                   );
@@ -777,7 +787,7 @@ export const getExecuteBidV5Options: RouteOptions = {
                   }
                 }
 
-                if (!supportPermit) {
+                if (!usePermitBidding) {
                   steps[2].items.push({
                     status: !approvalTx ? "complete" : "incomplete",
                     data: approvalTx,
@@ -882,7 +892,7 @@ export const getExecuteBidV5Options: RouteOptions = {
 
                 // Use ERC20-Permit
                 let permitId: string | undefined;
-                if (supportPermit && approvalTx) {
+                if (usePermitBidding && approvalTx) {
                   const permitData = await Sdk.Common.Helpers.createPermitMessage(
                     {
                       chainId: config.chainId,
@@ -890,7 +900,7 @@ export const getExecuteBidV5Options: RouteOptions = {
                       owner: maker,
                       spender: conduit,
                       amount: MaxUint256.toString(),
-                      deadline: String(now() + 86400 * 7),
+                      deadline: permitMessageDeadline,
                     },
                     baseProvider
                   );
@@ -932,7 +942,7 @@ export const getExecuteBidV5Options: RouteOptions = {
                   }
                 }
 
-                if (!supportPermit) {
+                if (!usePermitBidding) {
                   steps[2].items.push({
                     status: !approvalTx ? "complete" : "incomplete",
                     data: approvalTx,
@@ -1029,7 +1039,7 @@ export const getExecuteBidV5Options: RouteOptions = {
 
                 // Use ERC20-Permit
                 let permitId: string | undefined;
-                if (supportPermit && approvalTx) {
+                if (usePermitBidding && approvalTx) {
                   const permitData = await Sdk.Common.Helpers.createPermitMessage(
                     {
                       chainId: config.chainId,
@@ -1037,7 +1047,7 @@ export const getExecuteBidV5Options: RouteOptions = {
                       owner: maker,
                       spender: Sdk.ZeroExV4.Addresses.Exchange[config.chainId],
                       amount: MaxUint256.toString(),
-                      deadline: String(now() + 86400 * 7),
+                      deadline: permitMessageDeadline,
                     },
                     baseProvider
                   );
@@ -1081,7 +1091,7 @@ export const getExecuteBidV5Options: RouteOptions = {
                   }
                 }
 
-                if (!supportPermit) {
+                if (!usePermitBidding) {
                   steps[2].items.push({
                     status: !approvalTx ? "complete" : "incomplete",
                     data: approvalTx,
@@ -1179,7 +1189,7 @@ export const getExecuteBidV5Options: RouteOptions = {
 
                 // Use ERC20-Permit
                 let permitId: string | undefined;
-                if (supportPermit && approvalTx) {
+                if (usePermitBidding && approvalTx) {
                   const permitData = await Sdk.Common.Helpers.createPermitMessage(
                     {
                       chainId: config.chainId,
@@ -1187,7 +1197,7 @@ export const getExecuteBidV5Options: RouteOptions = {
                       owner: maker,
                       spender: Sdk.LooksRareV2.Addresses.Exchange[config.chainId],
                       amount: MaxUint256.toString(),
-                      deadline: String(now() + 86400 * 7),
+                      deadline: permitMessageDeadline,
                     },
                     baseProvider
                   );
@@ -1231,7 +1241,7 @@ export const getExecuteBidV5Options: RouteOptions = {
                   }
                 }
 
-                if (!supportPermit) {
+                if (!usePermitBidding) {
                   steps[2].items.push({
                     status: !approvalTx ? "complete" : "incomplete",
                     data: approvalTx,
@@ -1326,7 +1336,7 @@ export const getExecuteBidV5Options: RouteOptions = {
 
                 // Use ERC20-Permit
                 let permitId: string | undefined;
-                if (supportPermit && approvalTx) {
+                if (usePermitBidding && approvalTx) {
                   const permitData = await Sdk.Common.Helpers.createPermitMessage(
                     {
                       chainId: config.chainId,
@@ -1334,7 +1344,7 @@ export const getExecuteBidV5Options: RouteOptions = {
                       owner: maker,
                       spender: Sdk.X2Y2.Addresses.Exchange[config.chainId],
                       amount: MaxUint256.toString(),
-                      deadline: String(now() + 86400 * 7),
+                      deadline: permitMessageDeadline,
                     },
                     baseProvider
                   );
@@ -1378,7 +1388,7 @@ export const getExecuteBidV5Options: RouteOptions = {
                   }
                 }
 
-                if (!supportPermit) {
+                if (!usePermitBidding) {
                   steps[2].items.push({
                     status: !approvalTx ? "complete" : "incomplete",
                     data: approvalTx,
@@ -1468,7 +1478,7 @@ export const getExecuteBidV5Options: RouteOptions = {
 
                 // Use ERC20-Permit
                 let permitId: string | undefined;
-                if (supportPermit && approvalTx) {
+                if (usePermitBidding && approvalTx) {
                   const permitData = await Sdk.Common.Helpers.createPermitMessage(
                     {
                       chainId: config.chainId,
@@ -1476,7 +1486,7 @@ export const getExecuteBidV5Options: RouteOptions = {
                       owner: maker,
                       spender: Sdk.PaymentProcessor.Addresses.Exchange[config.chainId],
                       amount: MaxUint256.toString(),
-                      deadline: String(now() + 86400 * 7),
+                      deadline: permitMessageDeadline,
                     },
                     baseProvider
                   );
@@ -1520,7 +1530,7 @@ export const getExecuteBidV5Options: RouteOptions = {
                   }
                 }
 
-                if (!supportPermit) {
+                if (!usePermitBidding) {
                   steps[2].items.push({
                     status: !approvalTx ? "complete" : "incomplete",
                     data: approvalTx,
