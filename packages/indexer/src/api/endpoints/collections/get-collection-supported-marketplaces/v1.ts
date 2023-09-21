@@ -177,7 +177,7 @@ export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
           customFeesSupported: false,
           supportedBidCurrencies: [Sdk.Common.Addresses.WNative[config.chainId]],
           partialBidSupported: true,
-          traitBidSupported: true,
+          traitBidSupported: false,
         },
         {
           name: "X2Y2",
@@ -192,7 +192,7 @@ export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
           customFeesSupported: false,
           supportedBidCurrencies: [Sdk.Common.Addresses.WNative[config.chainId]],
           partialBidSupported: true,
-          traitBidSupported: true,
+          traitBidSupported: false,
         },
       ];
 
