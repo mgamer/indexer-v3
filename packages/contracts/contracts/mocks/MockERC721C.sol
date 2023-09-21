@@ -1,20 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@limitbreak/creator-token-contracts/contracts/erc721c/ERC721C.sol";
 import "@limitbreak/creator-token-contracts/contracts/access/OwnableBasic.sol";
+import "@limitbreak/creator-token-contracts/contracts/erc721c/ERC721C.sol";
 
-abstract contract ERC721CMetadata is 
-    OwnableBasic, 
-    ERC721C {
-    constructor(string memory name_, string memory symbol_)
-    ERC721OpenZeppelin(name_, symbol_) {}
-}
-
-contract MockERC721C is ERC721CMetadata {
+contract MockERC721C is OwnableBasic, ERC721C {
   uint256 public nextTokenId;
 
-  constructor() ERC721CMetadata("MyCollection", "MC") {}
+  constructor() ERC721OpenZeppelin("Mock", "MOCK") {}
 
   function mint(uint256 tokenId) external {
     _safeMint(msg.sender, tokenId);

@@ -6,7 +6,6 @@ import { AddressZero, HashZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import { _TypedDataEncoder } from "@ethersproject/hash";
 import { verifyTypedData } from "@ethersproject/wallet";
-import { Interface } from "@ethersproject/abi";
 
 import * as Addresses from "./addresses";
 import { Builders } from "./builders";
@@ -245,23 +244,6 @@ export class Order {
         throw new Error("no-approval");
       }
     }
-  }
-
-  public async isTransferAllowed(
-    provider: Provider,
-    token: string,
-    caller: string,
-    from: string,
-    to: string
-  ) {
-    const tv = new Contract(
-      token,
-      new Interface([
-        "function isTransferAllowed(address caller, address from, address to) external view returns (bool)",
-      ]),
-      provider
-    );
-    return tv.isTransferAllowed(caller, from, to);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

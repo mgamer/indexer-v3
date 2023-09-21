@@ -381,6 +381,7 @@ export class Router {
       options.partial = false;
     }
 
+    // We don't have a module for Manifold listings
     if (details.some(({ kind }) => kind === "manifold")) {
       if (options?.relayer) {
         throw new Error("Relayer not supported for Manifold orders");
@@ -423,17 +424,41 @@ export class Router {
       }
     }
 
-    if (details.some(({ kind }) => kind === "payment-processor")) {
+    // Detect which contracts block SCs via PaymentProcessor
+    const blockedPaymentProcessorDetails: ListingDetails[] = [];
+    for (const d of details.filter((d) => d.kind === "payment-processor")) {
+      const exchange = new Sdk.PaymentProcessor.Exchange(this.chainId);
+
+      const module = Sdk.RouterV6.Addresses.PaymentProcessorModule[this.chainId];
+      if (module) {
+        try {
+          // Ensure transferring via the module is allowed
+          const isAllowed = await exchange.isTransferAllowed(
+            this.provider,
+            d.contract,
+            module,
+            module,
+            exchange.contract.address
+          );
+          if (!isAllowed) {
+            blockedPaymentProcessorDetails.push(d);
+          }
+        } catch {
+          blockedPaymentProcessorDetails.push(d);
+        }
+      }
+    }
+
+    // Fill directly PaymentProcessor listings for which SCs are blocked
+    if (blockedPaymentProcessorDetails.length) {
       if (options?.relayer) {
         throw new Error("Relayer not supported for PaymentProcessor orders");
       }
 
-      const ownDetails = details.filter(({ kind }) => kind === "payment-processor");
-
       const exchange = new Sdk.PaymentProcessor.Exchange(this.chainId);
       const operator = exchange.contract.address;
 
-      for (const d of ownDetails) {
+      for (const d of blockedPaymentProcessorDetails) {
         if (buyInCurrency !== d.currency) {
           swapDetails.push({
             tokenIn: buyInCurrency,
@@ -448,7 +473,7 @@ export class Router {
       }
 
       const approvals: FTApproval[] = [];
-      for (const { currency, price } of ownDetails) {
+      for (const { currency, price } of blockedPaymentProcessorDetails) {
         if (!isETH(this.chainId, currency)) {
           approvals.push({
             currency,
@@ -461,7 +486,7 @@ export class Router {
       }
 
       const preSignatures: PreSignature[] = [];
-      const orders: Sdk.PaymentProcessor.Order[] = ownDetails.map(
+      const orders: Sdk.PaymentProcessor.Order[] = blockedPaymentProcessorDetails.map(
         (c) => c.order as Sdk.PaymentProcessor.Order
       );
 
@@ -470,9 +495,9 @@ export class Router {
       // - all listings are for the same collection
       // - all listings have the same payment token
       const useSweepCollection =
-        ownDetails.length > 1 &&
-        ownDetails.every((c) => c.contract === details[0].contract) &&
-        ownDetails.every((c) => c.currency === details[0].currency);
+        blockedPaymentProcessorDetails.length > 1 &&
+        blockedPaymentProcessorDetails.every((c) => c.contract === details[0].contract) &&
+        blockedPaymentProcessorDetails.every((c) => c.currency === details[0].currency);
 
       if (useSweepCollection) {
         const bundledOrder = Sdk.PaymentProcessor.Order.createBundledOfferOrder(orders, {
@@ -495,7 +520,7 @@ export class Router {
           permits: [],
           preSignatures: preSignatures,
           txData: exchange.sweepCollectionTx(taker, bundledOrder, orders),
-          orderIds: ownDetails.map((d) => d.orderId),
+          orderIds: blockedPaymentProcessorDetails.map((d) => d.orderId),
         });
       } else {
         const takeOrders: Sdk.PaymentProcessor.Order[] = [];
@@ -521,11 +546,11 @@ export class Router {
           permits: [],
           preSignatures: preSignatures,
           txData: exchange.fillOrdersTx(taker, orders, takeOrders),
-          orderIds: ownDetails.map((d) => d.orderId),
+          orderIds: blockedPaymentProcessorDetails.map((d) => d.orderId),
         });
       }
 
-      for (const { orderId } of ownDetails) {
+      for (const { orderId } of blockedPaymentProcessorDetails) {
         success[orderId] = true;
       }
     }
@@ -2891,17 +2916,19 @@ export class Router {
     if (Object.keys(paymentProcessorDetails).length) {
       for (const currency of Object.keys(paymentProcessorDetails)) {
         const currencyDetails = paymentProcessorDetails[currency];
+
         const orders = currencyDetails.map((d) => d.order as Sdk.PaymentProcessor.Order);
         const module = this.contracts.paymentProcessorModule;
-        const fees = getFees(currencyDetails);
-        const currencyIsETH = isETH(this.chainId, currency);
 
+        const fees = getFees(currencyDetails);
         const price = orders
           .map((order) => bn(order.params.price))
           .reduce((a, b) => a.add(b), bn(0));
         const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
         const totalPrice = price.add(feeAmount);
 
+        const currencyIsETH = isETH(this.chainId, currency);
+        const buyInCurrencyIsETH = isETH(this.chainId, buyInCurrency);
         executions.push({
           module: module.address,
           data: module.interface.encodeFunctionData(
@@ -2921,12 +2948,13 @@ export class Router {
                 refundTo: relayer,
                 revertIfIncomplete: Boolean(!options?.partial),
                 amount: price,
+                // Only needed for ERC20 listings
                 token: currency,
               },
               fees,
             ]
           ),
-          value: currencyIsETH ? totalPrice : 0,
+          value: buyInCurrencyIsETH && currencyIsETH ? totalPrice : 0,
         });
 
         // Track any possibly required swap

@@ -7,10 +7,11 @@ import {IERC1155} from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 
 import {BaseExchangeModule} from "./BaseExchangeModule.sol";
 import {BaseModule} from "../BaseModule.sol";
+
 import {IPaymentProcessor} from "../../../interfaces/IPaymentProcessor.sol";
 
 // Notes:
-// - only supports filling listings (ETH-denominated)
+// - only supports filling listings (both ETH and ERC20)
 
 contract PaymentProcessorModule is BaseExchangeModule {
   // --- Fields ---
@@ -96,7 +97,6 @@ contract PaymentProcessorModule is BaseExchangeModule {
     refundERC20Leftover(params.refundTo, params.token)
     chargeERC20Fees(fees, params.token, params.amount)
   {
-    
     // Approve the exchange if needed
     _approveERC20IfNeeded(params.token, address(EXCHANGE), params.amount);
 

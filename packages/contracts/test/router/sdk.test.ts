@@ -1,5 +1,5 @@
 import { Contract } from "@ethersproject/contracts";
-import { parseEther, parseUnits, formatUnits } from "@ethersproject/units";
+import { parseEther, parseUnits } from "@ethersproject/units";
 import * as Sdk from "@reservoir0x/sdk/src";
 import { BidDetails, ListingDetails } from "@reservoir0x/sdk/src/router/v6/types";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
@@ -28,15 +28,14 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
   let emily: SignerWithAddress;
 
   let erc721: Contract;
-  let erc721c: Contract;
   let erc1155: Contract;
-  let erc721cBlock: Contract;
+  let erc721cWithWhitelist: Contract;
 
   beforeEach(async () => {
     [deployer, alice, bob, carol, dan, emily] = await ethers.getSigners();
 
-    ({ erc721, erc1155, erc721c, erc721cBlock } = await setupNFTs(deployer, [
-      Sdk.PaymentProcessor.Addresses.Exchange[chainId]
+    ({ erc721, erc1155, erc721cWithWhitelist } = await setupNFTs(deployer, [
+      Sdk.PaymentProcessor.Addresses.Exchange[chainId],
     ]));
     await setupRouterWithModules(chainId, deployer);
   });
@@ -164,13 +163,18 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
 
     const router = new Sdk.RouterV6.Router(chainId, ethers.provider);
 
-    const tx = await router.fillListingsTx(listings, buyer.address, Sdk.Common.Addresses.Native[chainId], {
-      source: "reservoir.market",
-    });
+    const tx = await router.fillListingsTx(
+      listings,
+      buyer.address,
+      Sdk.Common.Addresses.Native[chainId],
+      {
+        source: "reservoir.market",
+      }
+    );
 
     const {
       txs: [{ txData }],
-    } = tx
+    } = tx;
 
     await buyer.sendTransaction(txData);
 
@@ -2005,10 +2009,7 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
       await buyer.sendTransaction(approval.txData);
     }
 
-    await buyer.sendTransaction({
-      ...tx.txs[0].txData,
-      gasLimit: 1000000,
-    });
+    await buyer.sendTransaction(tx.txs[0].txData);
 
     const seller1EthBalanceAfter = await seller1.getBalance();
     const seller2UsdcBalanceAfter = await usdc.getBalance(seller2.address);
@@ -2267,7 +2268,7 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
     expect(await weth.getBalance(router.contracts.swapModule.address)).to.eq(0);
   });
 
-  it("Fill multiple cross-currency listings by split into multi-transactions", async () => {
+  it("Fill multiple cross-currency listings - multi-transaction", async () => {
     const router = new Sdk.RouterV6.Router(chainId, ethers.provider);
 
     // Get some USDC
@@ -2548,13 +2549,13 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
 
     // expect(tx.txs.length).to.eq(2);
 
-    for(const transcation of tx.txs) {
+    for (const transaction of tx.txs) {
       // Trigger approvals
-      for (const approval of transcation.approvals) {
+      for (const approval of transaction.approvals) {
         await buyer.sendTransaction(approval.txData);
       }
 
-      await buyer.sendTransaction(transcation.txData);
+      await buyer.sendTransaction(transaction.txData);
     }
 
     const seller1EthBalanceAfter = await seller1.getBalance();
@@ -2572,9 +2573,7 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
     expect(seller2UsdcBalanceAfter.sub(seller2UsdcBalanceBefore)).to.eq(
       price2.sub(price2.mul(fee2).div(10000))
     );
-    expect(seller3DaiBalanceAfter.sub(seller3DaiBalanceBefore)).to.eq(
-      price3
-    );
+    expect(seller3DaiBalanceAfter.sub(seller3DaiBalanceBefore)).to.eq(price3);
     expect(token1OwnerAfter).to.eq(buyer.address);
     expect(token2OwnerAfter).to.eq(buyer.address);
     expect(token3OwnerAfter).to.eq(buyer.address);
@@ -2593,7 +2592,7 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
     expect(await dai.getBalance(router.contracts.swapModule.address)).to.eq(0);
   });
 
-  it("Fill multiple cross-currency listings with USDC by split into multi-transactions case2", async () => {
+  it("Fill multiple cross-currency listings with USDC - multi-transaction", async () => {
     const router = new Sdk.RouterV6.Router(chainId, ethers.provider);
 
     // Get some USDC
@@ -2854,7 +2853,6 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
 
     const seller1EthBalanceBefore = await seller1.getBalance();
     const seller2UsdcBalanceBefore = await usdc.getBalance(seller2.address);
-    const seller3DaiBalanceBefore = await dai.getBalance(seller3.address);
     const token1OwnerBefore = await erc721.ownerOf(tokenId1);
     const token2OwnerBefore = await erc721.ownerOf(tokenId2);
     const token3OwnerBefore = await erc721.ownerOf(tokenId3);
@@ -2872,18 +2870,16 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
       }
     );
 
-    // expect(tx.txs.length).to.eq(2);
-    for(const transcation of tx.txs) {
+    for (const transaction of tx.txs) {
       // Trigger approvals
-      for (const approval of transcation.approvals) {
+      for (const approval of transaction.approvals) {
         await buyer.sendTransaction(approval.txData);
       }
-      await buyer.sendTransaction(transcation.txData);
+      await buyer.sendTransaction(transaction.txData);
     }
 
     const seller1EthBalanceAfter = await seller1.getBalance();
     const seller2UsdcBalanceAfter = await usdc.getBalance(seller2.address);
-    // const seller3DaiBalanceAfter = await dai.getBalance(seller3.address);
 
     const token1OwnerAfter = await erc721.ownerOf(tokenId1);
     const token2OwnerAfter = await erc721.ownerOf(tokenId2);
@@ -2896,9 +2892,6 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
     expect(seller2UsdcBalanceAfter.sub(seller2UsdcBalanceBefore)).to.eq(
       price2.sub(price2.mul(fee2).div(10000))
     );
-    // expect(seller3DaiBalanceAfter.sub(seller3DaiBalanceBefore)).to.eq(
-    //   price3
-    // );
     expect(token1OwnerAfter).to.eq(buyer.address);
     expect(token2OwnerAfter).to.eq(buyer.address);
     expect(token3OwnerAfter).to.eq(buyer.address);
@@ -2917,7 +2910,7 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
     expect(await dai.getBalance(router.contracts.swapModule.address)).to.eq(0);
   });
 
-  it("Fill blocked payment-processor listings by split into multi-transactions", async () => {
+  it("Fill blocked payment-processor listings - multi-transactions", async () => {
     const router = new Sdk.RouterV6.Router(chainId, ethers.provider);
     const buyer = dan;
 
@@ -2929,9 +2922,9 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
     const price1 = parseUnits("1.5", 6);
     {
       // Mint erc721c to seller
-      await erc721cBlock.connect(seller1).mint(tokenId1);
+      await erc721cWithWhitelist.connect(seller1).mint(tokenId1);
       // Approve the exchange
-      await erc721cBlock
+      await erc721cWithWhitelist
         .connect(seller1)
         .setApprovalForAll(Sdk.PaymentProcessor.Addresses.Exchange[chainId], true);
 
@@ -2950,7 +2943,7 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
         maxRoyaltyFeeNumerator: "0",
         privateTaker: constants.AddressZero,
         trader: seller1.address,
-        tokenAddress: erc721cBlock.address,
+        tokenAddress: erc721cWithWhitelist.address,
         tokenId: tokenId1,
         amount: "1",
         price: price1,
@@ -2973,7 +2966,7 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
         orderId: "1",
         kind: "payment-processor",
         contractKind: "erc721",
-        contract: erc721cBlock.address,
+        contract: erc721cWithWhitelist.address,
         tokenId: tokenId1.toString(),
         order: sellOrder,
         currency: Sdk.Common.Addresses.Native[chainId],
@@ -3039,7 +3032,7 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
     const dai = new Sdk.Common.Helpers.Erc20(ethers.provider, Sdk.Common.Addresses.Dai[chainId]);
     const weth = new Sdk.Common.Helpers.WNative(ethers.provider, chainId);
 
-    const token1OwnerBefore = await erc721cBlock.ownerOf(tokenId1);
+    const token1OwnerBefore = await erc721cWithWhitelist.ownerOf(tokenId1);
     const token4OwnerBefore = await erc721.ownerOf(tokenId4);
 
     expect(token1OwnerBefore).to.eq(seller1.address);
@@ -3053,14 +3046,13 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
         source: "reservoir.market",
       }
     );
-
     expect(tx.txs.length).to.eq(2);
 
     const exchange = new Sdk.PaymentProcessor.Exchange(chainId);
 
-    for(const transcation of tx.txs) {
+    for (const transaction of tx.txs) {
       const preSignatures: string[] = [];
-      for (const { data: preSignature, kind } of transcation.preSignatures) {
+      for (const { data: preSignature, kind } of transaction.preSignatures) {
         if (kind === "payment-processor-take-order") {
           const signature = await buyer._signTypedData(
             preSignature.domain,
@@ -3072,20 +3064,20 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
       }
 
       if (preSignatures.length) {
-        transcation.txData.data = exchange.attachTakerSignatures(transcation.txData.data, preSignatures);
+        transaction.txData.data = exchange.attachTakerSignatures(
+          transaction.txData.data,
+          preSignatures
+        );
       }
 
       // Trigger approvals
-      for (const approval of transcation.approvals) {
+      for (const approval of transaction.approvals) {
         await buyer.sendTransaction(approval.txData);
       }
-      await buyer.sendTransaction({
-        ...transcation.txData,
-        gasLimit: 1000000
-      });
+      await buyer.sendTransaction(transaction.txData);
     }
 
-    const token1OwnerAfter = await erc721cBlock.ownerOf(tokenId1);
+    const token1OwnerAfter = await erc721cWithWhitelist.ownerOf(tokenId1);
     const token4OwnerAfter = await erc721.ownerOf(tokenId4);
 
     expect(token1OwnerAfter).to.eq(buyer.address);
@@ -3104,7 +3096,7 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
     expect(await dai.getBalance(router.contracts.swapModule.address)).to.eq(0);
   });
 
-  it("Fill multiple-currency listings - payment-processor && seaport ", async () => {
+  it("Fill multiple cross-currency listings - payment-processor && seaport", async () => {
     const router = new Sdk.RouterV6.Router(chainId, ethers.provider);
     const buyer = dan;
 
@@ -3242,9 +3234,9 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
     );
 
     const exchange = new Sdk.PaymentProcessor.Exchange(chainId);
-    for(const transcation of tx.txs) {
+    for (const transaction of tx.txs) {
       const preSignatures: string[] = [];
-      for (const { data: preSignature, kind } of transcation.preSignatures) {
+      for (const { data: preSignature, kind } of transaction.preSignatures) {
         if (kind === "payment-processor-take-order") {
           const signature = await buyer._signTypedData(
             preSignature.domain,
@@ -3256,17 +3248,18 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
       }
 
       if (preSignatures.length) {
-        transcation.txData.data = exchange.attachTakerSignatures(transcation.txData.data, preSignatures);
+        transaction.txData.data = exchange.attachTakerSignatures(
+          transaction.txData.data,
+          preSignatures
+        );
       }
 
       // Trigger approvals
-      for (const approval of transcation.approvals) {
+      for (const approval of transaction.approvals) {
         await buyer.sendTransaction(approval.txData);
       }
-      await buyer.sendTransaction({
-        ...transcation.txData,
-        gasLimit: 1000000
-      });
+
+      await buyer.sendTransaction(transaction.txData);
     }
 
     const token1OwnerAfter = await erc721.ownerOf(tokenId1);
@@ -3287,5 +3280,4 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
     expect(await usdc.getBalance(router.contracts.swapModule.address)).to.eq(0);
     expect(await dai.getBalance(router.contracts.swapModule.address)).to.eq(0);
   });
-
 });
