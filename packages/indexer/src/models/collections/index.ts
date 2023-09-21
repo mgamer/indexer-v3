@@ -26,6 +26,8 @@ import {
   TopBidCollectionJobPayload,
 } from "@/jobs/collection-updates/top-bid-collection-job";
 import { recalcTokenCountQueueJob } from "@/jobs/collection-updates/recalc-token-count-queue-job";
+import { Contracts } from "@/models/contracts";
+import * as registry from "@/utils/royalties/registry";
 
 export class Collections {
   public static async getById(collectionId: string, readReplica = false) {
@@ -95,7 +97,26 @@ export class Collections {
   }
 
   public static async updateCollectionCache(contract: string, tokenId: string, community = "") {
-    const collectionExists = await idb.oneOrNone(
+    if (contract === "0x495f947276749ce646f68ac8c248420045cb7b5e") {
+      logger.info(
+        "updateCollectionCache",
+        JSON.stringify({
+          topic: "post-refresh-collection",
+          message: `Start. contract=${contract}, tokenId=${tokenId}`,
+        })
+      );
+    }
+
+    try {
+      await Contracts.updateContractMetadata(contract);
+    } catch (error) {
+      logger.error(
+        "updateCollectionCache",
+        `updateContractMetadataError. contract=${contract}, tokenId=${tokenId}, community=${community}`
+      );
+    }
+
+    const collectionResult = await idb.oneOrNone(
       `
         SELECT
           collections.id
@@ -111,20 +132,40 @@ export class Collections {
       }
     );
 
-    if (!collectionExists) {
+    if (!collectionResult.id) {
       // If the collection doesn't exist, push a job to retrieve it
       await fetchCollectionMetadataJob.addToQueue([
         {
           contract,
           tokenId,
-          context: "updateCollectionCache",
         },
       ]);
 
       return;
     }
 
+    try {
+      await registry.refreshRegistryRoyalties(collectionResult.id);
+      await royalties.refreshDefaultRoyalties(collectionResult.id);
+    } catch (error) {
+      logger.error(
+        "updateCollectionCache",
+        `refreshRegistryRoyaltiesError. contract=${contract}, tokenId=${tokenId}, community=${community}`
+      );
+    }
+
     const collection = await MetadataApi.getCollectionMetadata(contract, tokenId, community);
+
+    if (contract === "0x495f947276749ce646f68ac8c248420045cb7b5e") {
+      logger.info(
+        "updateCollectionCache",
+        JSON.stringify({
+          topic: "post-refresh-collection",
+          message: `getCollectionMetadata. contract=${contract}, tokenId=${tokenId}`,
+          collection,
+        })
+      );
+    }
 
     if (collection.isCopyrightInfringement) {
       collection.name = collection.id;
@@ -194,10 +235,21 @@ export class Collections {
 
     const result = await idb.oneOrNone(query, values);
 
+    if (contract === "0x495f947276749ce646f68ac8c248420045cb7b5e") {
+      logger.info(
+        "updateCollectionCache",
+        JSON.stringify({
+          topic: "post-refresh-collection",
+          message: `collectionUpdated. contract=${contract}, tokenId=${tokenId}`,
+          collection,
+        })
+      );
+    }
+
     try {
       if (
         result?.old_metadata.name != collection.name ||
-        result?.old_metadata.metadata.imageUrl != (collection.metadata as any)?.imageUrl
+        result?.old_metadata.metadata?.imageUrl != (collection.metadata as any)?.imageUrl
       ) {
         await refreshActivitiesCollectionMetadataJob.addToQueue({
           collectionId: collection.id,
@@ -221,8 +273,9 @@ export class Collections {
       collection.id,
       collection.royalties as royalties.Royalty[] | undefined,
       collection.openseaRoyalties as royalties.Royalty[] | undefined,
-      "updateCollectionCache"
+      false
     );
+
     await royalties.refreshDefaultRoyalties(collection.id);
 
     // Refresh Blur royalties (which get stored separately)
