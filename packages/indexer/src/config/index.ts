@@ -88,6 +88,7 @@ export const config = {
 
   openSeaSlugApiKey: String(process.env.OPENSEA_SLUG_API_KEY),
   openSeaCollectionApiKey: String(process.env.OPENSEA_COLLECTION_API_KEY),
+  openSeaTokensApiKey: String(process.env.OPENSEA_TOKENS_API_KEY),
 
   openSeaCrossPostingApiKey: String(
     process.env.OPENSEA_CROSS_POSTING_API_KEY || process.env.OPENSEA_API_KEY

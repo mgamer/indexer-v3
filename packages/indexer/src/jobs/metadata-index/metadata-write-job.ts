@@ -18,6 +18,34 @@ import { rarityQueueJob } from "@/jobs/collection-updates/rarity-queue-job";
 import { resyncAttributeCountsJob } from "@/jobs/update-attribute/update-attribute-counts-job";
 import { TokenMetadata } from "@/metadata/types";
 
+export type MetadataIndexWriteJobPayload = {
+  collection: string;
+  contract: string;
+  tokenId: string;
+  name?: string;
+  description?: string;
+  originalMetadata?: JSON;
+  imageUrl?: string;
+  imageOriginalUrl?: string;
+  imageProperties?: {
+    width?: number;
+    height?: number;
+    size?: number;
+    mime_type?: string;
+  };
+  animationOriginalUrl?: string;
+  metadataOriginalUrl?: string;
+  mediaUrl?: string;
+  flagged?: boolean;
+  isCopyrightInfringement?: boolean;
+  attributes: {
+    key: string;
+    value: string;
+    kind: "string" | "number" | "date" | "range";
+    rank?: number;
+  }[];
+};
+
 export class MetadataIndexWriteJob extends AbstractRabbitMqJobHandler {
   queueName = "metadata-index-write-queue";
   maxRetries = 10;
@@ -29,7 +57,7 @@ export class MetadataIndexWriteJob extends AbstractRabbitMqJobHandler {
     delay: 20000,
   } as BackoffStrategy;
 
-  protected async process(payload: any) {
+  protected async process(payload: MetadataIndexWriteJobPayload) {
     // const startTime = Date.now();
 
     const tokenAttributeCounter = {};
