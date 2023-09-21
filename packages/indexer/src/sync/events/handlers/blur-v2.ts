@@ -194,6 +194,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
               fillSourceId: attributionData.fillSource?.id,
               baseEventParams: {
                 ...baseEventParams,
+                // TODO: The log index is wrong (should be taken from `relevantEvent`)
                 logIndex: baseEventParams.logIndex + i,
               },
             });
