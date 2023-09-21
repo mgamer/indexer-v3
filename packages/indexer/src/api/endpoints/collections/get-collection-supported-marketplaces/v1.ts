@@ -176,7 +176,7 @@ export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
           minimumBidExpiry: 15 * 60,
           customFeesSupported: false,
           supportedBidCurrencies: [Sdk.Common.Addresses.WNative[config.chainId]],
-          partialBidSupported: true,
+          partialBidSupported: false,
           traitBidSupported: false,
         },
         {
@@ -191,7 +191,7 @@ export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
           listingEnabled: false,
           customFeesSupported: false,
           supportedBidCurrencies: [Sdk.Common.Addresses.WNative[config.chainId]],
-          partialBidSupported: true,
+          partialBidSupported: false,
           traitBidSupported: false,
         },
       ];
@@ -294,7 +294,7 @@ export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
             minimumBidExpiry: 10 * 24 * 60 * 60,
             supportedBidCurrencies: [Sdk.Blur.Addresses.Beth[config.chainId]],
             partialBidSupported: true,
-            traitBidSupported: true,
+            traitBidSupported: false,
           });
         }
       }
