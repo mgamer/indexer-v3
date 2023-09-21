@@ -869,7 +869,7 @@ export const getExecuteSellV7Options: RouteOptions = {
       }
 
       const ordersEligibleForGlobalFees = bidDetails
-        .filter((b) => !b.isProtected && b.source !== "blur.io")
+        .filter((b) => b.source !== "blur.io")
         .map((b) => b.orderId);
 
       const addGlobalFee = async (
@@ -970,8 +970,8 @@ export const getExecuteSellV7Options: RouteOptions = {
         },
         {
           id: "pre-signatures",
-          action: "Sign orders",
-          description: "Some marketplaces require signing additional orders before filling",
+          action: "Sign data",
+          description: "Some exchanges require signing additional data before filling",
           kind: "signature",
           items: [],
         },
@@ -1065,6 +1065,11 @@ export const getExecuteSellV7Options: RouteOptions = {
               },
             });
 
+            // Remove any 'pre-signature' steps
+            if (bidDetails.every((d) => d.kind !== "payment-processor")) {
+              steps = steps.filter((s) => s.id !== "pre-signatures");
+            }
+
             // Force the client to poll
             steps[1].items.push({
               status: "incomplete",
@@ -1094,6 +1099,11 @@ export const getExecuteSellV7Options: RouteOptions = {
                 maxPriorityFeePerGas,
               },
             });
+          }
+
+          // Remove any 'pre-signature' steps
+          if (bidDetails.every((d) => d.kind !== "payment-processor")) {
+            steps = steps.filter((s) => s.id !== "pre-signatures");
           }
 
           // Force the client to poll

@@ -10,7 +10,6 @@ import {
   CollectionsEntityParams,
   CollectionsEntityUpdateParams,
 } from "@/models/collections/collections-entity";
-import { Tokens } from "@/models/tokens";
 import { updateBlurRoyalties } from "@/utils/blur";
 import * as erc721c from "@/utils/erc721c";
 import * as marketplaceBlacklist from "@/utils/marketplace-blacklists";
@@ -26,7 +25,7 @@ import {
   topBidCollectionJob,
   TopBidCollectionJobPayload,
 } from "@/jobs/collection-updates/top-bid-collection-job";
-import { config } from "@/config/index";
+import { recalcTokenCountQueueJob } from "@/jobs/collection-updates/recalc-token-count-queue-job";
 
 export class Collections {
   public static async getById(collectionId: string, readReplica = false) {
@@ -127,20 +126,6 @@ export class Collections {
 
     const collection = await MetadataApi.getCollectionMetadata(contract, tokenId, community);
 
-    if (config.chainId === 43114) {
-      logger.info(
-        "updateCollectionCache",
-        JSON.stringify({
-          topic: "debugAvalancheCollectionMetadataMissing",
-          message: `Collection metadata debug. contract=${contract}, tokenId=${tokenId}, community=${community}`,
-          contract,
-          tokenId,
-          community,
-          collection,
-        })
-      );
-    }
-
     if (collection.isCopyrightInfringement) {
       collection.name = collection.id;
       collection.metadata = null;
@@ -169,8 +154,7 @@ export class Collections {
       }
     }
 
-    const tokenCount = await Tokens.countTokensInCollection(collection.id);
-
+    await recalcTokenCountQueueJob.addToQueue({ collection: collection.id });
     await recalcOwnerCountQueueJob.addToQueue([
       {
         context: "updateCollectionCache",
@@ -184,7 +168,6 @@ export class Collections {
         metadata = $/metadata:json/,
         name = $/name/,
         slug = $/slug/,
-        token_count = $/tokenCount/,
         payment_tokens = $/paymentTokens/,
         creator = $/creator/,
         updated_at = now()
@@ -205,31 +188,40 @@ export class Collections {
       metadata: collection.metadata || {},
       name: collection.name,
       slug: collection.slug,
-      tokenCount,
       paymentTokens: collection.paymentTokens ? { opensea: collection.paymentTokens } : {},
       creator: collection.creator ? toBuffer(collection.creator) : null,
     };
 
     const result = await idb.oneOrNone(query, values);
 
-    if (
-      result?.old_metadata.name != collection.name ||
-      result?.old_metadata.metadata.imageUrl != (collection.metadata as any)?.imageUrl
-    ) {
-      await refreshActivitiesCollectionMetadataJob.addToQueue({
-        collectionId: collection.id,
-        collectionUpdateData: {
-          name: collection.name || null,
-          image: (collection.metadata as any)?.imageUrl || null,
-        },
-      });
+    try {
+      if (
+        result?.old_metadata.name != collection.name ||
+        result?.old_metadata.metadata.imageUrl != (collection.metadata as any)?.imageUrl
+      ) {
+        await refreshActivitiesCollectionMetadataJob.addToQueue({
+          collectionId: collection.id,
+          collectionUpdateData: {
+            name: collection.name || null,
+            image: (collection.metadata as any)?.imageUrl || null,
+          },
+        });
+      }
+    } catch (error) {
+      logger.error(
+        "updateCollectionCache",
+        `refreshActivitiesCollectionMetadataJobError. contract=${contract}, tokenId=${tokenId}, community=${community}, collection=${JSON.stringify(
+          collection
+        )}, result=${JSON.stringify(result)}`
+      );
     }
 
     // Refresh all royalty specs and the default royalties
     await royalties.refreshAllRoyaltySpecs(
       collection.id,
       collection.royalties as royalties.Royalty[] | undefined,
-      collection.openseaRoyalties as royalties.Royalty[] | undefined
+      collection.openseaRoyalties as royalties.Royalty[] | undefined,
+      "updateCollectionCache"
     );
     await royalties.refreshDefaultRoyalties(collection.id);
 

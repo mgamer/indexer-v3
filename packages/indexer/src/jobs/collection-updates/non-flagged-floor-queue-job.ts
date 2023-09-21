@@ -1,8 +1,11 @@
-import { idb, redb } from "@/common/db";
+import { idb } from "@/common/db";
 import { toBuffer } from "@/common/utils";
 import { AbstractRabbitMqJobHandler, BackoffStrategy } from "@/jobs/abstract-rabbit-mq-job-handler";
 import { Collections } from "@/models/collections";
 import { metadataIndexFetchJob } from "@/jobs/metadata-index/metadata-fetch-job";
+import { acquireLock, doesLockExist, releaseLock } from "@/common/redis";
+import { logger } from "@/common/logger";
+import { config } from "@/config/index";
 
 export type NonFlaggedFloorQueueJobPayload = {
   kind: string;
@@ -16,7 +19,7 @@ export class NonFlaggedFloorQueueJob extends AbstractRabbitMqJobHandler {
   queueName = "collection-updates-non-flagged-floor-ask-queue";
   maxRetries = 10;
   concurrency = 5;
-  consumerTimeout = 60000;
+  timeout = 5 * 60 * 1000;
   backoff = {
     type: "exponential",
     delay: 20000,
@@ -25,10 +28,13 @@ export class NonFlaggedFloorQueueJob extends AbstractRabbitMqJobHandler {
 
   protected async process(payload: NonFlaggedFloorQueueJobPayload) {
     // First, retrieve the token's associated collection.
-    const collectionResult = await redb.oneOrNone(
+    const collectionResult = await idb.oneOrNone(
       `
-            SELECT tokens.collection_id, collections.community FROM tokens
-            JOIN collections ON collections.id = tokens.collection_id
+            SELECT
+                tokens.collection_id,
+                collections.community
+            FROM tokens
+            LEFT JOIN collections ON tokens.collection_id = collections.id
             WHERE tokens.contract = $/contract/
               AND tokens.token_id = $/tokenId/
           `,
@@ -41,6 +47,46 @@ export class NonFlaggedFloorQueueJob extends AbstractRabbitMqJobHandler {
     if (!collectionResult?.collection_id) {
       // Skip if the token is not associated to a collection.
       return;
+    }
+
+    let acquiredLock;
+
+    if ([5, 11155111].includes(config.chainId)) {
+      if (!["revalidation"].includes(payload.kind)) {
+        acquiredLock = await acquireLock(
+          `${this.queueName}-lock:${collectionResult.collection_id}`,
+          300
+        );
+
+        if (!acquiredLock) {
+          const acquiredRevalidationLock = await acquireLock(
+            `${this.queueName}-revalidation-lock:${collectionResult.collection_id}`,
+            300
+          );
+
+          if (acquiredRevalidationLock) {
+            logger.info(
+              this.queueName,
+              JSON.stringify({
+                message: `Got revalidation lock. kind=${payload.kind}, collection=${collectionResult.collection_id}, tokenId=${payload.tokenId}`,
+                payload,
+                collectionId: collectionResult.collection_id,
+              })
+            );
+          }
+
+          return;
+        }
+      }
+
+      logger.info(
+        this.queueName,
+        JSON.stringify({
+          message: `Recalculating floor ask. kind=${payload.kind}, collection=${collectionResult.collection_id}, tokenId=${payload.tokenId}`,
+          payload,
+          collectionId: collectionResult.collection_id,
+        })
+      );
     }
 
     const nonFlaggedCollectionFloorAsk = await idb.oneOrNone(
@@ -149,6 +195,46 @@ export class NonFlaggedFloorQueueJob extends AbstractRabbitMqJobHandler {
       }
     );
 
+    if (acquiredLock) {
+      await releaseLock(`${this.queueName}-lock:${collectionResult.collection_id}`);
+
+      logger.info(
+        this.queueName,
+        JSON.stringify({
+          message: `Released lock. kind=${payload.kind}, collection=${collectionResult.collection_id}, tokenId=${payload.tokenId}`,
+          payload,
+          collectionId: collectionResult.collection_id,
+        })
+      );
+
+      const revalidationLockExists = await doesLockExist(
+        `${this.queueName}-revalidation-lock:${collectionResult.collection_id}`
+      );
+
+      if (revalidationLockExists) {
+        await releaseLock(`${this.queueName}-revalidation-lock:${collectionResult.collection_id}`);
+
+        logger.info(
+          this.queueName,
+          JSON.stringify({
+            message: `Trigger revalidation. kind=${payload.kind}, collection=${collectionResult.collection_id}, tokenId=${payload.tokenId}`,
+            payload,
+            collectionId: collectionResult.collection_id,
+          })
+        );
+
+        await this.addToQueue([
+          {
+            kind: "revalidation",
+            contract: payload.contract,
+            tokenId: payload.tokenId,
+            txHash: null,
+            txTimestamp: null,
+          },
+        ]);
+      }
+    }
+
     if (nonFlaggedCollectionFloorAsk?.token_id) {
       const collection = await Collections.getById(collectionResult.collection_id);
 
@@ -170,8 +256,8 @@ export class NonFlaggedFloorQueueJob extends AbstractRabbitMqJobHandler {
     }
   }
 
-  public async addToQueue(params: NonFlaggedFloorQueueJobPayload[]) {
-    await this.sendBatch(params.map((info) => ({ payload: info })));
+  public async addToQueue(params: NonFlaggedFloorQueueJobPayload[], delay = 0) {
+    await this.sendBatch(params.map((info) => ({ payload: info, delay })));
   }
 }
 

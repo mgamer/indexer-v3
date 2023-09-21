@@ -256,7 +256,7 @@ export const processOnChainData = async (data: OnChainData, backfill?: boolean) 
     return {
       kind: ProcessActivityEventKind.fillEvent,
       data: {
-        transactionHash: event.baseEventParams.txHash,
+        txHash: event.baseEventParams.txHash,
         logIndex: event.baseEventParams.logIndex,
         batchIndex: event.baseEventParams.batchIndex,
       },
@@ -276,7 +276,7 @@ export const processOnChainData = async (data: OnChainData, backfill?: boolean) 
       const fillActivityInfoData = fillActivityInfo.data;
 
       return (
-        fillActivityInfoData.transactionHash === event.baseEventParams.txHash &&
+        fillActivityInfoData.txHash === event.baseEventParams.txHash &&
         fillActivityInfoData.logIndex === event.baseEventParams.logIndex &&
         fillActivityInfoData.batchIndex === event.baseEventParams.batchIndex
       );
@@ -288,7 +288,7 @@ export const processOnChainData = async (data: OnChainData, backfill?: boolean) 
     (event) => ({
       kind: ProcessActivityEventKind.nftTransferEvent,
       data: {
-        transactionHash: event.baseEventParams.txHash,
+        txHash: event.baseEventParams.txHash,
         logIndex: event.baseEventParams.logIndex,
         batchIndex: event.baseEventParams.batchIndex,
       },

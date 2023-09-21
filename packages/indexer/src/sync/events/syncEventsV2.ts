@@ -15,6 +15,8 @@ import { BlockWithTransactions } from "@ethersproject/abstract-provider";
 import { Block } from "@/models/blocks";
 import { removeUnsyncedEventsActivitiesJob } from "@/jobs/activities/remove-unsynced-events-activities-job";
 import { blockCheckJob } from "@/jobs/events-sync/block-check-queue-job";
+import { redis } from "@/common/redis";
+import { eventsSyncRealtimeJob } from "@/jobs/events-sync/events-sync-realtime-job";
 
 export const extractEventsBatches = (enhancedEvents: EnhancedEvent[]): EventsBatch[] => {
   const txHashToEvents = new Map<string, EnhancedEvent[]>();
@@ -277,6 +279,49 @@ const _saveBlockTransactions = async (blockData: BlockWithTransactions) => {
   return timerEnd - timerStart;
 };
 
+export const syncTraces = async (block: number) => {
+  const startSyncTime = Date.now();
+  const startGetBlockTime = Date.now();
+  const blockData = await syncEventsUtils.fetchBlock(block);
+  if (!blockData) {
+    throw new Error(`Block ${block} not found with RPC provider`);
+  }
+
+  const { traces, getTransactionTracesTime } = await syncEventsUtils._getTransactionTraces(
+    blockData.transactions,
+    block
+  );
+
+  const endGetBlockTime = Date.now();
+
+  // Do what we want with traces here
+  await Promise.all([syncEventsUtils.processContractAddresses(traces, blockData.timestamp)]);
+
+  const endSyncTime = Date.now();
+
+  logger.info(
+    "sync-traces-timing",
+    JSON.stringify({
+      message: `Traces realtime syncing block ${block}`,
+      block,
+      syncTime: endSyncTime - startSyncTime,
+      blockSyncTime: endSyncTime - startSyncTime,
+
+      traces: {
+        count: traces.length,
+        getTransactionTracesTime,
+      },
+      blocks: {
+        count: 1,
+        getBlockTime: endGetBlockTime - startGetBlockTime,
+        blockMinedTimestamp: blockData.timestamp,
+        startJobTimestamp: startSyncTime,
+        getBlockTimestamp: endGetBlockTime,
+      },
+    })
+  );
+};
+
 export const syncEvents = async (block: number) => {
   const startSyncTime = Date.now();
 
@@ -338,11 +383,6 @@ export const syncEvents = async (block: number) => {
 
   const startProcessLogs = Date.now();
 
-  // const processEventsLatencies = await Promise.all(
-  //   eventsBatches.map(async (eventsBatch) => {
-  //     await processEventsBatchV2([eventsBatch]);
-  //   })
-  // );
   const processEventsLatencies = await processEventsBatchV2(eventsBatches);
 
   const endProcessLogs = Date.now();
@@ -363,6 +403,7 @@ export const syncEvents = async (block: number) => {
         getLogsTime,
         processLogs: endProcessLogs - startProcessLogs,
       },
+
       blocks: {
         count: 1,
         getBlockTime: endGetBlockTime - startGetBlockTime,
@@ -417,6 +458,31 @@ export const checkForOrphanedBlock = async (block: number) => {
   // TODO: add block hash to transactions table and delete transactions associated to the orphaned block
   // await deleteBlockTransactions(block);
 
+  // TODO: add block hash to contracts table, and delete contracts / tokens associated to the orphaned block
+
   // delete the block data
   await blocksModel.deleteBlock(block, orphanedBlock.hash);
+};
+
+export const checkForMissingBlocks = async (block: number) => {
+  // lets set the latest block to the block we are syncing if it is higher than the current latest block by 1. If it is higher than 1, we create a job to sync the missing blocks
+  // if its lower than the current latest block, we dont update the latest block in redis, but we still sync the block (this is for when we are catching up on missed blocks, or when we are syncing a block that is older than the current latest block)
+  const latestBlock = await redis.get("latest-block-realtime");
+
+  if (latestBlock) {
+    const latestBlockNumber = Number(latestBlock);
+    if (block - latestBlockNumber > 1) {
+      // if we are missing more than 1 block, we need to sync the missing blocks
+      for (let i = latestBlockNumber + 1; i <= block; i++) {
+        await eventsSyncRealtimeJob.addToQueue({ block: i });
+
+        logger.info(
+          "sync-events-realtime",
+          `Found missing block: ${i} latest block ${block} latestBlock ${latestBlockNumber}`
+        );
+      }
+    }
+  } else {
+    await redis.set("latest-block-realtime", block);
+  }
 };

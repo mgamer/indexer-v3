@@ -35,7 +35,6 @@ import { getNFTTransferEvents } from "@/orderbook/mints/simulation";
 import { getPermitId, getPermit, savePermit } from "@/utils/permits";
 import { getPreSignatureId, getPreSignature, savePreSignature } from "@/utils/pre-signatures";
 import { getUSDAndCurrencyPrices } from "@/utils/prices";
-import { MintComment } from "@/orderbook/mints/calldata";
 
 const version = "v7";
 
@@ -171,6 +170,10 @@ export const getExecuteBuyV7Options: RouteOptions = {
         .description(
           "Choose a specific swapping provider when buying in a different currency (defaults to `uniswap`)"
         ),
+      referrer: Joi.string()
+        .pattern(regex.address)
+        .optional()
+        .description("Referrer address where supported"),
       // Various authorization keys
       x2y2ApiKey: Joi.string().description("Optional X2Y2 API key used for filling."),
       openseaApiKey: Joi.string().description(
@@ -483,7 +486,6 @@ export const getExecuteBuyV7Options: RouteOptions = {
         orderId: string;
         txData: TxData;
         fees: Fee[];
-        mintComment?: MintComment;
       }[] = [];
 
       // Keep track of the maximum quantity available per item
@@ -494,6 +496,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
       }[] = [];
       const preview = payload.onlyPath && payload.partial && items.every((i) => !i.quantity);
 
+      let lastError: string | undefined;
       for (let i = 0; i < items.length; i++) {
         const item = items[i];
         const itemIndex =
@@ -563,10 +566,11 @@ export const getExecuteBuyV7Options: RouteOptions = {
             if (response.orderId) {
               item.orderId = response.orderId;
             } else {
+              lastError = "Raw order failed to get processed";
               if (payload.partial) {
                 continue;
               } else {
-                throw getExecuteError("Raw order failed to get processed");
+                throw getExecuteError(lastError);
               }
             }
           }
@@ -660,10 +664,11 @@ export const getExecuteBuyV7Options: RouteOptions = {
           }
 
           if (error) {
+            lastError = error;
             if (payload.partial) {
               continue;
             } else {
-              throw getExecuteError(error);
+              throw getExecuteError(lastError);
             }
           }
 
@@ -700,6 +705,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
         // Scenario 3: fill via `collection`
         if (item.collection) {
           let mintAvailable = false;
+          let hasActiveMints = false;
           if (item.fillType === "mint" || item.fillType === "preferMint") {
             const collectionData = await idb.oneOrNone(
               `
@@ -739,18 +745,20 @@ export const getExecuteBuyV7Options: RouteOptions = {
                   }
 
                   if (quantityToMint > 0) {
-                    const { txData, price, mintComment } = await generateCollectionMintTxData(
+                    const { txData, price } = await generateCollectionMintTxData(
                       mint,
                       payload.taker,
                       quantityToMint,
-                      payload.comment
+                      {
+                        comment: payload.comment,
+                        referrer: payload.referrer,
+                      }
                     );
 
                     const orderId = `mint:${item.collection}`;
                     mintTxs.push({
                       orderId,
                       txData,
-                      mintComment,
                       fees: [],
                     });
 
@@ -789,7 +797,22 @@ export const getExecuteBuyV7Options: RouteOptions = {
                     item.quantity -= quantityToMint;
                     mintAvailable = true;
                   }
+
+                  hasActiveMints = true;
                 }
+              }
+            }
+
+            if (item.quantity > 0) {
+              if (!hasActiveMints) {
+                lastError = "Collection has no eligible mints";
+              } else {
+                lastError =
+                  "Unable to mint requested quantity (max mints per wallet possibly exceeded)";
+              }
+
+              if (!payload.partial && mintAvailable) {
+                throw getExecuteError(lastError);
               }
             }
           }
@@ -877,8 +900,9 @@ export const getExecuteBuyV7Options: RouteOptions = {
             }
 
             if (tokenResults.length < item.quantity) {
+              lastError = "Unable to fill requested quantity";
               if (!payload.partial) {
-                throw getExecuteError("Unable to fill requested quantity");
+                throw getExecuteError(lastError);
               }
             }
           }
@@ -889,6 +913,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
           const [contract, tokenId] = item.token.split(":");
 
           let mintAvailable = false;
+          let hasActiveMints = false;
           if (item.fillType === "mint" || item.fillType === "preferMint") {
             const collectionData = await idb.oneOrNone(
               `
@@ -927,18 +952,20 @@ export const getExecuteBuyV7Options: RouteOptions = {
                   ).toNumber();
 
                   if (quantityToMint > 0) {
-                    const { txData, price, mintComment } = await generateCollectionMintTxData(
+                    const { txData, price } = await generateCollectionMintTxData(
                       mint,
                       payload.taker,
                       quantityToMint,
-                      payload.comment
+                      {
+                        comment: payload.comment,
+                        referrer: payload.referrer,
+                      }
                     );
 
                     const orderId = `mint:${collectionData.id}`;
                     mintTxs.push({
                       orderId,
                       txData,
-                      mintComment,
                       fees: [],
                     });
 
@@ -974,7 +1001,22 @@ export const getExecuteBuyV7Options: RouteOptions = {
                     item.quantity -= quantityToMint;
                     mintAvailable = true;
                   }
+
+                  hasActiveMints = true;
                 }
+              }
+            }
+
+            if (item.quantity > 0) {
+              if (!hasActiveMints) {
+                lastError = "Token has no eligible mints";
+              } else {
+                lastError =
+                  "Unable to mint requested quantity (max mints per wallet possibly exceeded)";
+              }
+
+              if (!payload.partial && mintAvailable) {
+                throw getExecuteError(lastError);
               }
             }
           }
@@ -1119,12 +1161,14 @@ export const getExecuteBuyV7Options: RouteOptions = {
             }
 
             if (quantityToFill > 0) {
+              if (makerEqualsTakerQuantity >= quantityToFill) {
+                lastError = "No fillable orders (taker cannot fill own orders)";
+              } else {
+                lastError = "Unable to fill requested quantity";
+              }
+
               if (!payload.partial) {
-                if (makerEqualsTakerQuantity >= quantityToFill) {
-                  throw getExecuteError("No fillable orders (taker cannot fill own orders)");
-                } else {
-                  throw getExecuteError("Unable to fill requested quantity");
-                }
+                throw getExecuteError(lastError);
               }
             }
 
@@ -1141,7 +1185,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
       }
 
       if (!path.length) {
-        throw getExecuteError("No fillable orders");
+        throw getExecuteError(lastError ?? "No fillable orders");
       }
 
       let buyInCurrency = payload.currency;
@@ -1319,8 +1363,8 @@ export const getExecuteBuyV7Options: RouteOptions = {
         },
         {
           id: "pre-signatures",
-          action: "Sign orders",
-          description: "Some marketplaces require signing additional orders before filling",
+          action: "Sign data",
+          description: "Some exchanges require signing additional data before filling",
           kind: "signature",
           items: [],
         },
@@ -1512,6 +1556,11 @@ export const getExecuteBuyV7Options: RouteOptions = {
         throw getExecuteError("No fillable orders");
       }
 
+      // Cannot skip balance checking when filling Blur orders
+      if (payload.skipBalanceCheck && path.some((p) => p.source === "blur.io")) {
+        payload.skipBalanceCheck = false;
+      }
+
       // Custom gas settings
       const maxFeePerGas = payload.maxFeePerGas
         ? bn(payload.maxFeePerGas).toHexString()
@@ -1520,7 +1569,8 @@ export const getExecuteBuyV7Options: RouteOptions = {
         ? bn(payload.maxPriorityFeePerGas).toHexString()
         : undefined;
 
-      for (const { txData, approvals, permits, orderIds, preSignatures } of txs) {
+      const permitHandler = new PermitHandler(config.chainId, baseProvider);
+      for (const { txData, approvals, permits, preSignatures } of txs) {
         // Handle approvals
         for (const approval of approvals) {
           const approvedAmount = await onChainData
@@ -1541,7 +1591,6 @@ export const getExecuteBuyV7Options: RouteOptions = {
         }
 
         // Handle permits
-        const permitHandler = new PermitHandler(config.chainId, baseProvider);
         for (const permit of permits) {
           const id = getPermitId(request.payload as object, {
             token: permit.data.token,
@@ -1619,11 +1668,6 @@ export const getExecuteBuyV7Options: RouteOptions = {
           txData.data = exchange.attachTakerSignatures(txData.data, signaturesPaymentProcessor);
         }
 
-        // Cannot skip balance checking when filling Blur orders
-        if (payload.skipBalanceCheck && path.some((p) => p.source === "blur.io")) {
-          payload.skipBalanceCheck = false;
-        }
-
         // Check that the transaction sender has enough funds to fill all requested tokens
         const txSender = payload.relayer ?? payload.taker;
         if (buyInCurrency === Sdk.Common.Addresses.Native[config.chainId]) {
@@ -1646,7 +1690,9 @@ export const getExecuteBuyV7Options: RouteOptions = {
             throw getExecuteError("Balance too low to proceed with transaction");
           }
         }
+      }
 
+      for (const { txData, orderIds, permits } of txs) {
         steps[4].items.push({
           status: "incomplete",
           orderIds,

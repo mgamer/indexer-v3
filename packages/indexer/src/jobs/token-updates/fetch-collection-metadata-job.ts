@@ -38,22 +38,25 @@ export class FetchCollectionMetadataJob extends AbstractRabbitMqJobHandler {
     const { contract, tokenId, mintedTimestamp, newCollection, oldCollectionId } = payload;
 
     try {
-      if (config.chainId === 43114) {
-        logger.info(
-          "updateCollectionCache",
-          JSON.stringify({
-            topic: "debugAvalancheCollectionMetadataMissing",
-            message: `FetchCollectionMetadataJob debug. contract=${contract}, tokenId=${tokenId}, newCollection=${newCollection}`,
-            contract,
-            tokenId,
-          })
-        );
-      }
-
       // Fetch collection metadata
-      const collection = await MetadataApi.getCollectionMetadata(contract, tokenId, "", {
-        allowFallback: !newCollection,
+      let collection = await MetadataApi.getCollectionMetadata(contract, tokenId, "", {
+        allowFallback: true,
       });
+
+      if (
+        ![
+          "0x4e9edbb6fa91a4859d14f98627dba991d16c9f10",
+          "0x95a2c45003b86235bb3e05b6f3b8b7781e562f2b",
+          "0xd7f566aeba20453e9bab7ea2fd737bfaec70cc69",
+        ].includes(contract)
+      ) {
+        if (newCollection && collection?.isFallback) {
+          collection = await MetadataApi.getCollectionMetadata(contract, tokenId, "", {
+            allowFallback: false,
+            indexingMethod: "simplehash",
+          });
+        }
+      }
 
       let tokenIdRange: string | null = null;
       if (collection.tokenIdRange) {
@@ -189,7 +192,8 @@ export class FetchCollectionMetadataJob extends AbstractRabbitMqJobHandler {
       await royalties.refreshAllRoyaltySpecs(
         collection.id,
         collection.royalties as royalties.Royalty[] | undefined,
-        collection.openseaRoyalties as royalties.Royalty[] | undefined
+        collection.openseaRoyalties as royalties.Royalty[] | undefined,
+        this.queueName
       );
       await royalties.refreshDefaultRoyalties(collection.id);
 

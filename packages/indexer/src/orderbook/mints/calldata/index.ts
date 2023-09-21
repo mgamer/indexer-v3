@@ -39,6 +39,10 @@ export type AbiParam =
   | {
       kind: "custom";
       abiType: string;
+    }
+  | {
+      kind: "referrer";
+      abiType: string;
     };
 
 export type MintTxSchema = {
@@ -55,7 +59,10 @@ export const generateCollectionMintTxData = async (
   collectionMint: CollectionMint,
   minter: string,
   quantity: number,
-  comment?: string
+  options?: {
+    comment?: string;
+    referrer?: string;
+  }
 ): Promise<{ txData: TxData; price: string }> => {
   // For `allowlist` mints
   const allowlistData =
@@ -120,7 +127,16 @@ export const generateCollectionMintTxData = async (
       case "comment": {
         abiData.push({
           abiType: p.abiType,
-          abiValue: comment ?? "",
+          abiValue: options?.comment ?? "",
+        });
+
+        break;
+      }
+
+      case "referrer": {
+        abiData.push({
+          abiType: p.abiType,
+          abiValue: options?.referrer ?? AddressZero,
         });
 
         break;
@@ -192,6 +208,17 @@ export const generateCollectionMintTxData = async (
               abiValue = await mints.foundation.generateProofValue(collectionMint, minter);
             }
 
+            break;
+          }
+
+          case "mintdotfun": {
+            if (allowlistItemIndex === 0) {
+              abiValue = await mints.mintdotfun.generateProofValue(
+                collectionMint,
+                minter,
+                options?.referrer ?? AddressZero
+              );
+            }
             break;
           }
 
@@ -296,6 +323,8 @@ export const refreshMintsForCollection = async (collection: string) => {
         return mints.foundation.refreshByCollection(collection);
       case "manifold":
         return mints.manifold.refreshByCollection(collection);
+      case "mintdotfun":
+        return mints.mintdotfun.refreshByCollection(collection);
       case "seadrop-v1.0":
         return mints.seadrop.refreshByCollection(collection);
       case "thirdweb":

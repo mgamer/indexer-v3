@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { HashZero } from "@ethersproject/constants";
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
@@ -7,10 +8,13 @@ import Joi from "joi";
 
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
+import { fromBuffer } from "@/common/utils";
 import { config } from "@/config/index";
-import { getNetworkSettings } from "@/config/network";
+import { getNetworkSettings, getSubDomain } from "@/config/network";
 import { getOrUpdateBlurRoyalties } from "@/utils/blur";
+import { checkMarketplaceIsFiltered } from "@/utils/erc721c";
 import * as marketplaceFees from "@/utils/marketplace-fees";
+import * as registry from "@/utils/royalties/registry";
 
 type PaymentToken = {
   address: string;
@@ -44,6 +48,10 @@ type Marketplace = {
 const version = "v1";
 
 export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
+  cache: {
+    privacy: "public",
+    expiresIn: 60000,
+  },
   description: "Supported marketplaces by collection",
   notes:
     "The ReservoirKit `ListModal` client utilizes this API to identify the marketplace(s) it can list on.",
@@ -61,6 +69,11 @@ export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
         .description(
           "Filter to a particular collection, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
         ),
+    }),
+    query: Joi.object({
+      tokenId: Joi.string()
+        .optional()
+        .description("When set, token-level royalties will be returned in the response"),
     }),
   },
   response: {
@@ -113,7 +126,13 @@ export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
             collections.marketplace_fees,
             collections.payment_tokens,
             collections.contract,
-            collections.token_count
+            collections.token_count,
+            (
+              SELECT
+                kind
+              FROM contracts
+              WHERE contracts.address = collections.contract
+            ) AS contract_kind
           FROM collections
           JOIN contracts
             ON collections.contract = contracts.address
@@ -127,13 +146,21 @@ export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
         throw Boom.badRequest(`Collection ${params.collection} not found`);
       }
 
+      let defaultRoyalties = (collectionResult.royalties ?? []) as Royalty[];
+      if (params.tokenId) {
+        defaultRoyalties = await registry.getRegistryRoyalties(
+          fromBuffer(collectionResult.contract),
+          params.tokenId
+        );
+      }
+
       const ns = getNetworkSettings();
 
       const marketplaces: Marketplace[] = [
         {
           name: "LooksRare",
           domain: "looksrare.org",
-          imageUrl: `https://${ns.subDomain}.reservoir.tools/redirect/sources/looksrare/logo/v2`,
+          imageUrl: `https://${getSubDomain()}.reservoir.tools/redirect/sources/looksrare/logo/v2`,
           fee: {
             bps: 50,
           },
@@ -147,7 +174,7 @@ export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
         {
           name: "X2Y2",
           domain: "x2y2.io",
-          imageUrl: `https://${ns.subDomain}.reservoir.tools/redirect/sources/x2y2/logo/v2`,
+          imageUrl: `https://${getSubDomain()}.reservoir.tools/redirect/sources/x2y2/logo/v2`,
           fee: {
             bps: 50,
           },
@@ -163,10 +190,10 @@ export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
 
       // Handle Reservoir
       {
-        const royalties: Royalty[] = collectionResult.royalties ?? [];
+        const royalties = defaultRoyalties;
         marketplaces.push({
           name: "Reservoir",
-          imageUrl: `https://${ns.subDomain}.reservoir.tools/redirect/sources/reservoir/logo/v2`,
+          imageUrl: `https://${getSubDomain()}.reservoir.tools/redirect/sources/reservoir/logo/v2`,
           fee: {
             bps: 0,
           },
@@ -205,7 +232,7 @@ export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
         marketplaces.push({
           name: "OpenSea",
           domain: "opensea.io",
-          imageUrl: `https://${ns.subDomain}.reservoir.tools/redirect/sources/opensea/logo/v2`,
+          imageUrl: `https://${getSubDomain()}.reservoir.tools/redirect/sources/opensea/logo/v2`,
           fee: {
             bps: openseaMarketplaceFees[0]?.bps ?? 0,
           },
@@ -232,7 +259,7 @@ export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
           marketplaces.push({
             name: "Blur",
             domain: "blur.io",
-            imageUrl: `https://${ns.subDomain}.reservoir.tools/redirect/sources/blur.io/logo/v2`,
+            imageUrl: `https://${getSubDomain()}.reservoir.tools/redirect/sources/blur.io/logo/v2`,
             fee: {
               bps: 0,
             },
@@ -256,19 +283,19 @@ export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
         }
       }
 
-      marketplaces.forEach((marketplace) => {
-        let listableOrderbooks = ["reservoir"];
+      for await (const marketplace of marketplaces) {
+        let supportedOrderbooks = ["reservoir"];
         switch (config.chainId) {
           case 1: {
-            listableOrderbooks = ["reservoir", "opensea", "looks-rare", "x2y2", "blur"];
+            supportedOrderbooks = ["reservoir", "opensea", "looks-rare", "x2y2", "blur"];
             break;
           }
           case 4: {
-            listableOrderbooks = ["reservoir", "opensea", "looks-rare"];
+            supportedOrderbooks = ["reservoir", "opensea", "looks-rare"];
             break;
           }
           case 5: {
-            listableOrderbooks = ["reservoir", "opensea", "looks-rare", "x2y2"];
+            supportedOrderbooks = ["reservoir", "opensea", "looks-rare", "x2y2"];
             break;
           }
           case 10:
@@ -282,15 +309,78 @@ export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
           case 84531:
           case 999:
           case 137: {
-            listableOrderbooks = ["reservoir", "opensea"];
+            supportedOrderbooks = ["reservoir", "opensea"];
             break;
           }
         }
 
         marketplace.listingEnabled = !!(
-          marketplace.orderbook && listableOrderbooks.includes(marketplace.orderbook)
+          marketplace.orderbook && supportedOrderbooks.includes(marketplace.orderbook)
         );
-      });
+
+        // Check if the exchange is filtered
+        if (marketplace.listingEnabled) {
+          let operators: string[] = [];
+          const seaportOperators = [
+            Sdk.SeaportV15.Addresses.Exchange[config.chainId],
+            new Sdk.SeaportBase.ConduitController(config.chainId).deriveConduit(
+              // Default to cover chains where there's no OpenSea conduit
+              Sdk.SeaportBase.Addresses.OpenseaConduitKey[config.chainId] ?? HashZero
+            ),
+          ];
+
+          switch (marketplace.orderKind) {
+            case "blur": {
+              operators = [
+                Sdk.BlurV2.Addresses.Exchange[config.chainId],
+                Sdk.BlurV2.Addresses.Delegate[config.chainId],
+              ];
+              break;
+            }
+
+            case "seaport-v1.5": {
+              operators = seaportOperators;
+              break;
+            }
+
+            case "x2y2": {
+              operators = [
+                Sdk.X2Y2.Addresses.Exchange[config.chainId],
+                collectionResult.contract_kind === "erc1155"
+                  ? Sdk.X2Y2.Addresses.Erc1155Delegate[config.chainId]
+                  : Sdk.X2Y2.Addresses.Erc721Delegate[config.chainId],
+              ];
+              break;
+            }
+
+            case "looks-rare-v2": {
+              operators = [
+                Sdk.LooksRareV2.Addresses.Exchange[config.chainId],
+                Sdk.LooksRareV2.Addresses.TransferManager[config.chainId],
+              ];
+              break;
+            }
+          }
+
+          const blocked = await checkMarketplaceIsFiltered(params.collection, operators);
+          if (blocked && marketplace.orderbook === "reservoir") {
+            marketplace.orderKind = "payment-processor";
+          } else if (blocked && marketplace.orderbook === "looks-rare") {
+            const seaportBlocked = await checkMarketplaceIsFiltered(
+              params.collection,
+              seaportOperators
+            );
+
+            if (!seaportBlocked) {
+              marketplace.orderKind = "seaport-v1.5";
+            } else {
+              marketplace.listingEnabled = false;
+            }
+          } else if (blocked) {
+            marketplace.listingEnabled = false;
+          }
+        }
+      }
 
       return { marketplaces };
     } catch (error) {

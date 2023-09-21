@@ -69,42 +69,6 @@ export const savePartialListings = async (
         return;
       }
 
-      const sources = await Sources.getInstance();
-
-      // There is a subtle bug in the Blur ingestion service where sometimes
-      // OpenSea orders get marked as coming from Blur and so we ingest them
-      // as Blur orders while also having the original OpenSea orders. A fix
-      // for this is to check the existence of a matching OpenSea order, and
-      // if that's the case then we simply skip processing the Blur order in
-      // this method (since with high likelyhood it's not coming from Blur).
-      if (orderParams.createdAt?.endsWith("000Z")) {
-        const existsMatchingOpenSeaOrder = await idb.oneOrNone(
-          `
-            SELECT
-              1
-            FROM orders
-            WHERE orders.token_set_id = $/tokenSetId/
-              AND orders.side = 'sell'
-              AND orders.fillability_status = 'fillable'
-              AND orders.approval_status = 'approved'
-              AND lower(orders.valid_between) = $/createdAt/
-              AND orders.source_id_int = $/sourceId/
-            LIMIT 1
-          `,
-          {
-            tokenSetId: `token:${orderParams.collection}:${orderParams.tokenId}`,
-            createdAt: orderParams.createdAt,
-            sourceId: (await sources.getOrInsert("opensea.io")).id,
-          }
-        );
-        if (existsMatchingOpenSeaOrder) {
-          return results.push({
-            id: "unknown",
-            status: "redundant",
-          });
-        }
-      }
-
       // Fetch current owner
       const owner = await idb
         .oneOrNone(
@@ -137,6 +101,7 @@ export const savePartialListings = async (
       }
 
       // Handle: source
+      const sources = await Sources.getInstance();
       const source = await sources.getOrInsert("blur.io");
 
       const isFiltered = await checkMarketplaceIsFiltered(orderParams.collection, [
@@ -216,7 +181,6 @@ export const savePartialListings = async (
       }
 
       const id = getBlurListingId(orderParams, owner);
-
       if (isFiltered) {
         return results.push({
           id,
@@ -286,7 +250,7 @@ export const savePartialListings = async (
           approval_status: "approved",
           token_set_id: tokenSetId,
           token_set_schema_hash: toBuffer(schemaHash),
-          maker: toBuffer(owner),
+          maker: toBuffer((orderParams.owner ?? owner).toLowerCase()),
           taker: toBuffer(AddressZero),
           price: price.toString(),
           value: price.toString(),
@@ -338,8 +302,7 @@ export const savePartialListings = async (
               updated_at = now(),
               raw_data = $/rawData:json/
             WHERE orders.id = $/id/
-              AND orders.fillability_status != 'fillable'
-              AND orders.approval_status = 'approved'
+              AND (orders.fillability_status != 'fillable' OR orders.approval_status != 'approved')
             RETURNING orders.id
           `,
           {
@@ -683,6 +646,9 @@ export const savePartialBids = async (
                 fillability_status = 'fillable',
                 price = $/price/,
                 currency_price = $/price/,
+                normalized_value = null,
+                currency_normalized_value = null,
+                missing_royalties = null,
                 value = $/value/,
                 currency_value = $/value/,
                 quantity_remaining = $/totalQuantity/,
