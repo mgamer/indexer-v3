@@ -34,7 +34,7 @@ export class MetadataProviderRouter {
       indexingMethod
     ].getCollectionMetadata(contract, tokenId);
 
-    if (collection.isFallback && !options?.allowFallback) {
+    if (collection?.isFallback && !options?.allowFallback) {
       throw new Error("Fallback collection data not acceptable");
     }
 

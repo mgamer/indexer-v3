@@ -54,8 +54,6 @@ export abstract class AbstractBaseMetadataProvider {
 
     // merge custom metadata with metadata-api metadata
     const allMetadata: TokenMetadata[] = [...metadataFromProvider, ...filteredCustomMetadata];
-    // eslint-disable-next-line
-    console.log(allMetadata);
     // extend metadata
     const extendedMetadata = await Promise.all(
       allMetadata.map(async (metadata) => {
