@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { HashZero } from "@ethersproject/constants";
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
@@ -7,12 +8,13 @@ import Joi from "joi";
 
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
+import { fromBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { getNetworkSettings, getSubDomain } from "@/config/network";
 import { getOrUpdateBlurRoyalties } from "@/utils/blur";
-import * as marketplaceFees from "@/utils/marketplace-fees";
 import { checkMarketplaceIsFiltered } from "@/utils/erc721c";
-import { HashZero } from "@ethersproject/constants";
+import * as marketplaceFees from "@/utils/marketplace-fees";
+import * as registry from "@/utils/royalties/registry";
 
 type PaymentToken = {
   address: string;
@@ -68,6 +70,11 @@ export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
           "Filter to a particular collection, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
         ),
     }),
+    query: Joi.object({
+      tokenId: Joi.string()
+        .optional()
+        .description("When set, token-level royalties will be returned in the response"),
+    }),
   },
   response: {
     schema: Joi.object({
@@ -113,27 +120,38 @@ export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
     try {
       const collectionResult = await redb.oneOrNone(
         `
-        SELECT
-        collections.royalties,
-        collections.new_royalties,
-        collections.marketplace_fees,
-        collections.payment_tokens,
-        collections.contract,
-        collections.token_count,
-        (
-          SELECT kind FROM contracts WHERE contracts.address = collections.contract
-        )  as contract_kind
-      FROM collections
-      JOIN contracts
-        ON collections.contract = contracts.address
-      WHERE collections.id = $/collection/
-      LIMIT 1
+          SELECT
+            collections.royalties,
+            collections.new_royalties,
+            collections.marketplace_fees,
+            collections.payment_tokens,
+            collections.contract,
+            collections.token_count,
+            (
+              SELECT
+                kind
+              FROM contracts
+              WHERE contracts.address = collections.contract
+            ) AS contract_kind
+          FROM collections
+          JOIN contracts
+            ON collections.contract = contracts.address
+          WHERE collections.id = $/collection/
+          LIMIT 1
         `,
         { collection: params.collection }
       );
 
       if (!collectionResult) {
         throw Boom.badRequest(`Collection ${params.collection} not found`);
+      }
+
+      let defaultRoyalties = (collectionResult.royalties ?? []) as Royalty[];
+      if (params.tokenId) {
+        defaultRoyalties = await registry.getRegistryRoyalties(
+          fromBuffer(collectionResult.contract),
+          params.tokenId
+        );
       }
 
       const ns = getNetworkSettings();
@@ -172,7 +190,7 @@ export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
 
       // Handle Reservoir
       {
-        const royalties: Royalty[] = collectionResult.royalties ?? [];
+        const royalties = defaultRoyalties;
         marketplaces.push({
           name: "Reservoir",
           imageUrl: `https://${getSubDomain()}.reservoir.tools/redirect/sources/reservoir/logo/v2`,
@@ -300,7 +318,7 @@ export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
           marketplace.orderbook && supportedOrderbooks.includes(marketplace.orderbook)
         );
 
-        //Check if exchange is filtered
+        // Check if the exchange is filtered
         if (marketplace.listingEnabled) {
           let operators: string[] = [];
           const seaportOperators = [
@@ -310,6 +328,7 @@ export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
               Sdk.SeaportBase.Addresses.OpenseaConduitKey[config.chainId] ?? HashZero
             ),
           ];
+
           switch (marketplace.orderKind) {
             case "blur": {
               operators = [
@@ -318,10 +337,12 @@ export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
               ];
               break;
             }
+
             case "seaport-v1.5": {
               operators = seaportOperators;
               break;
             }
+
             case "x2y2": {
               operators = [
                 Sdk.X2Y2.Addresses.Exchange[config.chainId],
@@ -331,6 +352,7 @@ export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
               ];
               break;
             }
+
             case "looks-rare-v2": {
               operators = [
                 Sdk.LooksRareV2.Addresses.Exchange[config.chainId],
@@ -339,6 +361,7 @@ export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
               break;
             }
           }
+
           const blocked = await checkMarketplaceIsFiltered(params.collection, operators);
           if (blocked && marketplace.orderbook === "reservoir") {
             marketplace.orderKind = "payment-processor";
@@ -347,6 +370,7 @@ export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
               params.collection,
               seaportOperators
             );
+
             if (!seaportBlocked) {
               marketplace.orderKind = "seaport-v1.5";
             } else {

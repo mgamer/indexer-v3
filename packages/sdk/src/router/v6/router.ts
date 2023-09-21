@@ -362,7 +362,7 @@ export class Router {
   ): Promise<FillListingsResult> {
     // Assume the listing details are consistent with the underlying order object
 
-    const txs: {
+    let txs: {
       approvals: FTApproval[];
       permits: { kind: "erc20"; data: PermitWithTransfers }[];
       preSignatures: PreSignature[];
@@ -370,6 +370,9 @@ export class Router {
       orderIds: string[];
     }[] = [];
     const success: { [orderId: string]: boolean } = {};
+
+    // Keep track of any swaps that need to be executed
+    const swapDetails: SwapDetail[] = [];
 
     // When filling a single order in partial mode, propagate any errors back directly
     if (options?.partial && details.length === 1) {
@@ -387,6 +390,18 @@ export class Router {
 
         const amountFilled = Number(detail.amount) ?? 1;
         const orderPrice = bn(order.params.details.initialAmount).mul(amountFilled).toString();
+
+        if (buyInCurrency !== Sdk.Common.Addresses.Native[this.chainId]) {
+          swapDetails.push({
+            tokenIn: buyInCurrency,
+            tokenOut: Sdk.Common.Addresses.Native[this.chainId],
+            tokenOutAmount: orderPrice,
+            recipient: taker,
+            refundTo: taker,
+            details: [detail],
+            txIndex: txs.length,
+          });
+        }
 
         txs.push({
           approvals: [],
@@ -415,6 +430,20 @@ export class Router {
 
       const exchange = new Sdk.PaymentProcessor.Exchange(this.chainId);
       const operator = exchange.contract.address;
+
+      for (const d of ownDetails) {
+        if (buyInCurrency !== d.currency) {
+          swapDetails.push({
+            tokenIn: buyInCurrency,
+            tokenOut: d.currency,
+            tokenOutAmount: d.price,
+            recipient: taker,
+            refundTo: taker,
+            details: [d],
+            txIndex: txs.length,
+          });
+        }
+      }
 
       const approvals: FTApproval[] = [];
       for (const { currency, price } of ownDetails) {
@@ -590,6 +619,18 @@ export class Router {
             // Mark the orders handled by Blur as successful
             const orderIds: string[] = [];
             for (const d of successfulBlurCompatibleListings) {
+              if (buyInCurrency !== d.currency) {
+                swapDetails.push({
+                  tokenIn: buyInCurrency,
+                  tokenOut: d.currency,
+                  tokenOutAmount: d.price,
+                  recipient: taker,
+                  refundTo: taker,
+                  details: [d],
+                  txIndex: txs.length,
+                });
+              }
+
               success[d.orderId] = true;
               orderIds.push(d.orderId);
             }
@@ -631,14 +672,6 @@ export class Router {
       if (!options?.partial) {
         throw new Error("Could not fetch calldata for all Blur listings");
       }
-    }
-
-    // Return early if all listings were covered by Blur
-    if (details.every((d) => success[d.orderId])) {
-      return {
-        txs,
-        success,
-      };
     }
 
     // Handle partial seaport orders:
@@ -980,6 +1013,7 @@ export class Router {
         case "midaswap":
           detailsRef = midaswapDetails;
           break;
+
         case "caviar-v1":
           detailsRef = caviarV1Details;
           break;
@@ -1030,7 +1064,6 @@ export class Router {
 
     // Generate router executions
     let executions: ExecutionInfo[] = [];
-    const swapDetails: SwapDetail[] = [];
 
     // Handle Element ERC721 listings
     if (elementErc721Details.length) {
@@ -2888,6 +2921,7 @@ export class Router {
 
     const successfulSwapInfos: SwapInfo[] = [];
     const unsuccessfulDependentExecutionIndexes: number[] = [];
+    const unsuccessfulDependentTxIndexes: number[] = [];
     if (swapDetails.length) {
       // Aggregate any swap details for the same token pair
       const aggregatedSwapDetails = swapDetails.reduce((perPoolDetails, current) => {
@@ -3024,7 +3058,13 @@ export class Router {
                   });
                 }
               }
-              unsuccessfulDependentExecutionIndexes.push(s.executionIndex);
+
+              if (s.executionIndex) {
+                unsuccessfulDependentExecutionIndexes.push(s.executionIndex);
+              }
+              if (s.txIndex) {
+                unsuccessfulDependentTxIndexes.push(s.txIndex);
+              }
             })
           );
 
@@ -3035,10 +3075,11 @@ export class Router {
       }
     }
 
-    // Filter out any executions that depend on failed swaps
+    // Filter out any executions / txs that depend on failed swaps
     executions = executions.filter((_, i) => !unsuccessfulDependentExecutionIndexes.includes(i));
+    txs = txs.filter((_, i) => !unsuccessfulDependentTxIndexes.includes(i));
 
-    if (executions.length) {
+    if (executions.length || successfulSwapInfos.length) {
       // Prepend any swap executions
       executions = [
         ...mergeSwapInfos(this.chainId, successfulSwapInfos).map((info) => info.execution),
@@ -3058,32 +3099,36 @@ export class Router {
           throw new Error("Buying with permit not supported");
         }
 
-        txs.push({
-          approvals: [],
-          preSignatures: [],
-          permits: await new PermitHandler(this.chainId, this.provider)
-            .generate(relayer, ftTransferItems)
-            .then((permits) =>
-              permits.map((p) => ({
-                kind: "erc20",
-                data: p,
-              }))
-            ),
-          txData: {
-            from: relayer,
-            ...{
-              to: this.contracts.router.address,
-              data:
-                this.contracts.router.interface.encodeFunctionData("execute", [executions]) +
-                generateSourceBytes(options?.source),
-              value: executions
-                .map((e) => bn(e.value))
-                .reduce((a, b) => a.add(b))
-                .toHexString(),
+        // The swap execution should always be the first tx in the list
+        txs = [
+          {
+            approvals: [],
+            preSignatures: [],
+            permits: await new PermitHandler(this.chainId, this.provider)
+              .generate(relayer, ftTransferItems)
+              .then((permits) =>
+                permits.map((p) => ({
+                  kind: "erc20",
+                  data: p,
+                }))
+              ),
+            txData: {
+              from: relayer,
+              ...{
+                to: this.contracts.router.address,
+                data:
+                  this.contracts.router.interface.encodeFunctionData("execute", [executions]) +
+                  generateSourceBytes(options?.source),
+                value: executions
+                  .map((e) => bn(e.value))
+                  .reduce((a, b) => a.add(b))
+                  .toHexString(),
+              },
             },
+            orderIds,
           },
-          orderIds,
-        });
+          ...txs,
+        ];
       } else {
         // Filter out any duplicate approvals
         const uniqueApprovals: { [id: string]: FTApproval } = {};
@@ -3094,38 +3139,42 @@ export class Router {
           }
         }
 
-        txs.push({
-          approvals: Object.values(uniqueApprovals),
-          permits: [],
-          preSignatures: [],
-          txData: {
-            from: relayer,
-            ...(ftTransferItems.length
-              ? {
-                  to: this.contracts.approvalProxy.address,
-                  data:
-                    this.contracts.approvalProxy.interface.encodeFunctionData(
-                      "bulkTransferWithExecute",
-                      [
-                        ftTransferItems,
-                        executions,
-                        Sdk.SeaportBase.Addresses.ReservoirConduitKey[this.chainId],
-                      ]
-                    ) + generateSourceBytes(options?.source),
-                }
-              : {
-                  to: this.contracts.router.address,
-                  data:
-                    this.contracts.router.interface.encodeFunctionData("execute", [executions]) +
-                    generateSourceBytes(options?.source),
-                  value: executions
-                    .map((e) => bn(e.value))
-                    .reduce((a, b) => a.add(b))
-                    .toHexString(),
-                }),
+        // The swap execution should always be the first tx in the list
+        txs = [
+          {
+            approvals: Object.values(uniqueApprovals),
+            permits: [],
+            preSignatures: [],
+            txData: {
+              from: relayer,
+              ...(ftTransferItems.length
+                ? {
+                    to: this.contracts.approvalProxy.address,
+                    data:
+                      this.contracts.approvalProxy.interface.encodeFunctionData(
+                        "bulkTransferWithExecute",
+                        [
+                          ftTransferItems,
+                          executions,
+                          Sdk.SeaportBase.Addresses.ReservoirConduitKey[this.chainId],
+                        ]
+                      ) + generateSourceBytes(options?.source),
+                  }
+                : {
+                    to: this.contracts.router.address,
+                    data:
+                      this.contracts.router.interface.encodeFunctionData("execute", [executions]) +
+                      generateSourceBytes(options?.source),
+                    value: executions
+                      .map((e) => bn(e.value))
+                      .reduce((a, b) => a.add(b))
+                      .toHexString(),
+                  }),
+            },
+            orderIds,
           },
-          orderIds,
-        });
+          ...txs,
+        ];
       }
     }
 
