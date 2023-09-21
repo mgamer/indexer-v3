@@ -993,11 +993,11 @@ export const JoiSource = Joi.object({
 export const getJoiSourceObject = (source: SourcesEntity | undefined, full = true) => {
   return source
     ? {
-        id: !full ? undefined : source.address,
+        id: full ? source.address : undefined,
         domain: source.domain,
         name: source.getTitle(),
         icon: source.getIcon(),
-        url: !full ? undefined : source.metadata.url,
+        url: full ? source.metadata.url : undefined,
       }
     : null;
 };
