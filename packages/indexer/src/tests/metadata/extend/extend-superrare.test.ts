@@ -74,7 +74,7 @@ describe("Extend - superrare", () => {
             symbol: "WHALE",
           },
         ],
-        creator: "0xb0c6596d32b90d390077f7af7dcc97ffcbd5bde0",
+        creator: "0xb0c6596d32b90d390077f7af7dcC97FfCBD5BdE0",
       })
     );
   });
