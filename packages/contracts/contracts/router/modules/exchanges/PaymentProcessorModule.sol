@@ -11,7 +11,8 @@ import {BaseModule} from "../BaseModule.sol";
 import {IPaymentProcessor} from "../../../interfaces/IPaymentProcessor.sol";
 
 // Notes:
-// - only supports filling listings (both ETH and ERC20)
+// - supports filling listings (both ETH and ERC20)
+// - supports filling offers
 
 contract PaymentProcessorModule is BaseExchangeModule {
   // --- Fields ---
