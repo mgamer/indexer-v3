@@ -257,7 +257,7 @@ export class Router {
     if (
       !Addresses.MintModule[this.chainId] ||
       options?.forceDirectFilling ||
-      (details.length === 1 && !details[0].fees?.length)
+      (details.length === 1 && !details[0].fees?.length && !details[0].comment)
     ) {
       // Under some conditions, we simply return that transaction data back to the caller
 
