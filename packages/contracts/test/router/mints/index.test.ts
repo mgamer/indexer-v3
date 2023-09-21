@@ -1,4 +1,5 @@
 import { Interface } from "@ethersproject/abi";
+import { Log } from "@ethersproject/abstract-provider";
 import { Contract } from "@ethersproject/contracts";
 import { parseEther } from "@ethersproject/units";
 import * as Sdk from "@reservoir0x/sdk/src";
@@ -63,6 +64,7 @@ describe("[ReservoirV6_0_1] Mints", () => {
     chargeFees: boolean,
     // Whether to revert or not in case of any failures
     revertIfIncomplete: boolean,
+    // Mint comment to include
     mintComment = ""
   ) => {
     const iface = new Interface([
@@ -72,13 +74,13 @@ describe("[ReservoirV6_0_1] Mints", () => {
             address to,
             bytes data,
             uint256 value,
-            address tokenContract,
-            string comment,
-            uint256 quantity,
             (
               address recipient,
               uint256 amount
-            )[] fees
+            )[] fees,
+            address token,
+            uint256 quantity,
+            string comment
           )[] mintDetails,
           (
             address refundTo,
@@ -87,7 +89,7 @@ describe("[ReservoirV6_0_1] Mints", () => {
         )
       `,
       "function mint(address minter, bytes data)",
-      "event MintComment(address tokenContract, uint256 quantity, string comment)"
+      "event MintComment(address token, uint256 quantity, string comment)",
     ]);
 
     const [tokenId1, amount1, price1, revert1, fees1] = [
@@ -121,13 +123,13 @@ describe("[ReservoirV6_0_1] Mints", () => {
               ? erc721.interface.encodeFunctionData("fail", [])
               : erc721.interface.encodeFunctionData("mintWithPrice", [price1]),
             value: price1,
-            tokenContract: erc721.address,
-            comment: mintComment,
-            quantity: 1,
             fees: fees1.map((fee) => ({
               recipient: bob.address,
               amount: fee,
             })),
+            token: erc721.address,
+            quantity: 1,
+            comment: mintComment,
           },
           {
             to: erc721.address,
@@ -135,13 +137,13 @@ describe("[ReservoirV6_0_1] Mints", () => {
               ? erc721.interface.encodeFunctionData("fail", [])
               : erc721.interface.encodeFunctionData("mintWithPrice", [price2]),
             value: price2,
-            tokenContract: erc721.address,
-            comment: mintComment,
-            quantity: 1,
             fees: fees2.map((fee) => ({
               recipient: bob.address,
               amount: fee,
             })),
+            token: erc721.address,
+            quantity: 1,
+            comment: mintComment,
           },
         ],
         {
@@ -158,13 +160,13 @@ describe("[ReservoirV6_0_1] Mints", () => {
               ? erc1155.interface.encodeFunctionData("fail", [])
               : erc1155.interface.encodeFunctionData("mintWithPrice", [amount1, price1]),
             value: price1.mul(amount1),
-            tokenContract: erc1155.address,
-            comment: mintComment,
-            quantity: 1,
             fees: fees1.map((fee) => ({
               recipient: bob.address,
               amount: fee,
             })),
+            token: erc721.address,
+            quantity: 1,
+            comment: mintComment,
           },
           {
             to: erc1155.address,
@@ -172,13 +174,13 @@ describe("[ReservoirV6_0_1] Mints", () => {
               ? erc1155.interface.encodeFunctionData("fail", [])
               : erc1155.interface.encodeFunctionData("mintWithPrice", [amount2, price2]),
             value: price2.mul(amount2),
-            tokenContract: erc1155.address,
-            comment: mintComment,
-            quantity: 1,
             fees: fees2.map((fee) => ({
               recipient: bob.address,
               amount: fee,
             })),
+            token: erc721.address,
+            quantity: 1,
+            comment: mintComment,
           },
         ],
         {
@@ -225,20 +227,22 @@ describe("[ReservoirV6_0_1] Mints", () => {
       { value: totalPrice }
     );
 
-    const txRecepiet = await tx.wait();
-    const mintCommentEvents = txRecepiet.logs.filter(c => c.topics.includes(iface.getEventTopic('MintComment')));
-    if (mintComment != "") {
-      const mintCommentEvent = mintCommentEvents[0];
-      if (mintCommentEvent) {
-        const parsedEvent = iface.parseLog(mintCommentEvent);
-        expect(parsedEvent.args['comment']).eq(mintComment);
-      }
-      console.log(mintCommentEvent)
-      if (chargeFees && !partial) {
-        expect(mintCommentEvents.length).gte(1);
-      }
+    if (mintComment.length) {
+      const txReceipt = await tx.wait();
+      const mintCommentEvents = (txReceipt.logs as Log[]).filter((log) =>
+        log.topics.includes(iface.getEventTopic("MintComment"))
+      );
+
+      expect(
+        mintCommentEvents.every((e) => {
+          const parsedEvent = iface.parseLog(e);
+          return parsedEvent.args["comment"] === mintComment;
+        })
+      );
+
+      expect(mintCommentEvents.length).eq(Number(!revert1) + Number(!revert2));
     }
-    
+
     // Fetch post-state
     const ethBalancesAfter = await getBalances(Sdk.Common.Addresses.Native[chainId]);
 
@@ -272,15 +276,21 @@ describe("[ReservoirV6_0_1] Mints", () => {
     for (const partial of [false, true]) {
       for (const chargeFees of [false, true]) {
         for (const revertIfIncomplete of [false, true]) {
-          for(const comment of ["", "mint comment"]) {
+          for (const comment of ["", "comment"]) {
             it(
               `[${standard}]` +
                 `${partial ? "[partial]" : "[full]"}` +
                 `${chargeFees ? "[fees]" : "[no-fees]"}` +
                 `${revertIfIncomplete ? "[reverts]" : "[skip-reverts]"}` +
-                `${comment == "" ? "[no-comment]" : "[mint-comment]"}`,
+                `${comment === "" ? "[no-comment]" : "[mint-comment]"}`,
               async () =>
-                testMints(standard as "erc721" | "erc1155", partial, chargeFees, revertIfIncomplete, comment)
+                testMints(
+                  standard as "erc721" | "erc1155",
+                  partial,
+                  chargeFees,
+                  revertIfIncomplete,
+                  comment
+                )
             );
           }
         }

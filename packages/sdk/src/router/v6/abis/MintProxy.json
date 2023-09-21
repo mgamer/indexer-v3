@@ -30,7 +30,7 @@
       {
         "indexed": false,
         "internalType": "address",
-        "name": "tokenContract",
+        "name": "token",
         "type": "address"
       },
       {
@@ -105,21 +105,6 @@
             "type": "uint256"
           },
           {
-            "internalType": "address",
-            "name": "tokenContract",
-            "type": "address"
-          },
-          {
-            "internalType": "string",
-            "name": "comment",
-            "type": "string"
-          },
-          {
-            "internalType": "uint256",
-            "name": "quantity",
-            "type": "uint256"
-          },
-          {
             "components": [
               {
                 "internalType": "address",
@@ -135,6 +120,21 @@
             "internalType": "struct MintProxy.Fee[]",
             "name": "fees",
             "type": "tuple[]"
+          },
+          {
+            "internalType": "address",
+            "name": "token",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "quantity",
+            "type": "uint256"
+          },
+          {
+            "internalType": "string",
+            "name": "comment",
+            "type": "string"
           }
         ],
         "internalType": "struct MintProxy.MintDetail[]",
