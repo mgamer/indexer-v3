@@ -1549,6 +1549,11 @@ export const getExecuteBuyV7Options: RouteOptions = {
         throw getExecuteError("No fillable orders");
       }
 
+      // Cannot skip balance checking when filling Blur orders
+      if (payload.skipBalanceCheck && path.some((p) => p.source === "blur.io")) {
+        payload.skipBalanceCheck = false;
+      }
+
       // Custom gas settings
       const maxFeePerGas = payload.maxFeePerGas
         ? bn(payload.maxFeePerGas).toHexString()
@@ -1557,7 +1562,8 @@ export const getExecuteBuyV7Options: RouteOptions = {
         ? bn(payload.maxPriorityFeePerGas).toHexString()
         : undefined;
 
-      for (const { txData, approvals, permits, orderIds, preSignatures } of txs) {
+      const permitHandler = new PermitHandler(config.chainId, baseProvider);
+      for (const { txData, approvals, permits, preSignatures } of txs) {
         // Handle approvals
         for (const approval of approvals) {
           const approvedAmount = await onChainData
@@ -1578,7 +1584,6 @@ export const getExecuteBuyV7Options: RouteOptions = {
         }
 
         // Handle permits
-        const permitHandler = new PermitHandler(config.chainId, baseProvider);
         for (const permit of permits) {
           const id = getPermitId(request.payload as object, {
             token: permit.data.token,
@@ -1656,11 +1661,6 @@ export const getExecuteBuyV7Options: RouteOptions = {
           txData.data = exchange.attachTakerSignatures(txData.data, signaturesPaymentProcessor);
         }
 
-        // Cannot skip balance checking when filling Blur orders
-        if (payload.skipBalanceCheck && path.some((p) => p.source === "blur.io")) {
-          payload.skipBalanceCheck = false;
-        }
-
         // Check that the transaction sender has enough funds to fill all requested tokens
         const txSender = payload.relayer ?? payload.taker;
         if (buyInCurrency === Sdk.Common.Addresses.Native[config.chainId]) {
@@ -1683,7 +1683,9 @@ export const getExecuteBuyV7Options: RouteOptions = {
             throw getExecuteError("Balance too low to proceed with transaction");
           }
         }
+      }
 
+      for (const { txData, orderIds, permits } of txs) {
         steps[4].items.push({
           status: "incomplete",
           orderIds,
