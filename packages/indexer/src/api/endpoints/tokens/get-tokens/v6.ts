@@ -226,7 +226,18 @@ export const getTokensV6Options: RouteOptions = {
           "Input any ERC20 address to return result in given currency. Applies to `topBid` and `floorAsk`."
         ),
     })
-      .or("collection", "contract", "tokens", "tokenSetId", "community", "collectionsSetId")
+      .when(".sortBy", {
+        is: "updatedAt",
+        then: undefined,
+        otherwise: Joi.object().or(
+          "collection",
+          "contract",
+          "tokens",
+          "tokenSetId",
+          "community",
+          "collectionsSetId"
+        ),
+      })
       .oxor("collection", "contract", "tokens", "tokenSetId", "community", "collectionsSetId")
       .oxor("source", "nativeSource")
       .with("attributes", "collection")
@@ -818,7 +829,8 @@ export const getTokensV6Options: RouteOptions = {
           query.attributes ||
           query.tokenSetId ||
           query.collectionsSetId ||
-          query.tokens
+          query.tokens ||
+          query.sortBy === "updatedAt"
         ) {
           switch (query.sortBy) {
             case "rarity": {
@@ -928,9 +940,11 @@ export const getTokensV6Options: RouteOptions = {
             }`;
           }
           case "updatedAt": {
-            return ` ORDER BY t_updated_at ${query.sortDirection || "ASC"}, t_contract ${
+            return ` ORDER BY ${union ? "t_" : "t."}updated_at ${
               query.sortDirection || "ASC"
-            }, t_token_id ${query.sortDirection || "ASC"}`;
+            }, t_contract ${query.sortDirection || "ASC"}, t_token_id ${
+              query.sortDirection || "ASC"
+            }`;
           }
           case "floorAskPrice":
           default: {
@@ -958,7 +972,8 @@ export const getTokensV6Options: RouteOptions = {
         query.tokenSetId ||
         query.rarity ||
         (query.collectionsSetId && collections.length > 20) ||
-        query.tokens
+        query.tokens ||
+        query.sortBy === "updatedAt"
       ) {
         baseQuery += getSort(query.sortBy, false);
       }
@@ -1067,7 +1082,8 @@ export const getTokensV6Options: RouteOptions = {
           query.attributes ||
           query.tokenSetId ||
           query.collectionsSetId ||
-          query.tokens
+          query.tokens ||
+          query.sortBy === "updatedAt"
         ) {
           switch (query.sortBy) {
             case "rarity":
