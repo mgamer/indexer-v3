@@ -2,7 +2,7 @@ import { idb, pgp, PgPromiseQuery } from "@/common/db";
 import { toBuffer } from "@/common/utils";
 import { AbstractRabbitMqJobHandler, BackoffStrategy } from "@/jobs/abstract-rabbit-mq-job-handler";
 import { logger } from "@/common/logger";
-import MetadataProviderRouter from "@/metadata/metadata-provider-router";
+import MetadataApi from "@/utils/metadata-api";
 import { recalcTokenCountQueueJob } from "@/jobs/collection-updates/recalc-token-count-queue-job";
 import { recalcOwnerCountQueueJob } from "@/jobs/collection-updates/recalc-owner-count-queue-job";
 import { config } from "@/config/index";
@@ -46,25 +46,15 @@ export class NewCollectionForTokenJob extends AbstractRabbitMqJobHandler {
       // If collection not found in the DB
       if (!collection) {
         // Fetch collection metadata
-        let collectionMetadata = await MetadataProviderRouter.getCollectionMetadata(
-          contract,
-          tokenId,
-          "",
-          {
-            allowFallback: true,
-          }
-        );
+        let collectionMetadata = await MetadataApi.getCollectionMetadata(contract, tokenId, "", {
+          allowFallback: true,
+        });
 
         if (collectionMetadata?.isFallback) {
-          collectionMetadata = await MetadataProviderRouter.getCollectionMetadata(
-            contract,
-            tokenId,
-            "",
-            {
-              allowFallback: false,
-              indexingMethod: "simplehash",
-            }
-          );
+          collectionMetadata = await MetadataApi.getCollectionMetadata(contract, tokenId, "", {
+            allowFallback: false,
+            indexingMethod: "simplehash",
+          });
         }
 
         let tokenIdRange: string | null = null;
@@ -140,8 +130,7 @@ export class NewCollectionForTokenJob extends AbstractRabbitMqJobHandler {
         await royalties.refreshAllRoyaltySpecs(
           collectionMetadata.id,
           collectionMetadata.royalties as royalties.Royalty[] | undefined,
-          collectionMetadata.openseaRoyalties as royalties.Royalty[] | undefined,
-          this.queueName
+          collectionMetadata.openseaRoyalties as royalties.Royalty[] | undefined
         );
         await royalties.refreshDefaultRoyalties(collectionMetadata.id);
 
