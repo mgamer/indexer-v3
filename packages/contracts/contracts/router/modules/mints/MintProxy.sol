@@ -30,7 +30,7 @@ contract MintProxy is ReentrancyGuard {
 
   // --- Events ---
 
-  event MintComment(address token, uint256 quantity, string comment);
+  event MintComment(address indexed token, uint256 quantity, string comment);
 
   // --- Errors ---
 

@@ -1,19 +1,22 @@
 import { Log } from "@ethersproject/abstract-provider";
+import { AddressZero } from "@ethersproject/constants";
+import _ from "lodash";
 
 import { concat } from "@/common/utils";
 import { EventKind, EventSubKind } from "@/events-sync/data";
-import { assignSourceToFillEvents } from "@/events-sync/handlers/utils/fills";
+import {
+  assignMintCommentToFillEvents,
+  assignSourceToFillEvents,
+} from "@/events-sync/handlers/utils/fills";
 import { BaseEventParams } from "@/events-sync/parser";
 import * as es from "@/events-sync/storage";
 
 import { GenericOrderInfo } from "@/jobs/orderbook/utils";
-import { AddressZero } from "@ethersproject/constants";
 import {
   recalcOwnerCountQueueJob,
   RecalcOwnerCountQueueJobPayload,
 } from "@/jobs/collection-updates/recalc-owner-count-queue-job";
 import { mintQueueJob, MintQueueJobPayload } from "@/jobs/token-updates/mint-queue-job";
-
 import {
   processActivityEventJob,
   EventKind as ProcessActivityEventKind,
@@ -31,7 +34,6 @@ import {
   OrderUpdatesByMakerJobPayload,
 } from "@/jobs/order-updates/order-updates-by-maker-job";
 import { orderbookOrdersJob } from "@/jobs/orderbook/orderbook-orders-job";
-import _ from "lodash";
 import { transferUpdatesJob } from "@/jobs/transfer-updates/transfer-updates-job";
 
 // Semi-parsed and classified event
@@ -43,8 +45,9 @@ export type EnhancedEvent = {
 };
 
 export type MintComment = {
-  tokenContract: string;
+  token: string;
   tokenId?: string;
+  quantity: number;
   comment: string;
   baseEventParams: BaseEventParams;
 };
@@ -113,44 +116,6 @@ export const initOnChainData = (): OnChainData => ({
   orders: [],
 });
 
-export function assignMintComments(allFillEvents: es.fills.Event[], data: OnChainData) {
-  let lastCustomCommentIndex = -1;
-  allFillEvents.forEach((event) => {
-    const sameTxComments = data.mintComments
-      .filter((c) => c.baseEventParams.txHash === event.baseEventParams.txHash)
-      .sort((c, b) => c.baseEventParams.logIndex - b.baseEventParams.logIndex);
-
-    const fullMatchComment = sameTxComments.find(
-      (c) => c.tokenContract === event.contract && c.tokenId === event.tokenId
-    );
-
-    if (fullMatchComment) {
-      event.comment = fullMatchComment.comment;
-    } else {
-      let matchComment: MintComment | undefined;
-
-      for (let index = 0; index < sameTxComments.length; index++) {
-        const curComment = sameTxComments[index];
-        const curLogIndex = curComment.baseEventParams.logIndex;
-
-        if (
-          curComment.tokenContract === event.contract &&
-          curLogIndex > event.baseEventParams.logIndex &&
-          index > lastCustomCommentIndex
-        ) {
-          matchComment = curComment;
-          lastCustomCommentIndex = index;
-          break;
-        }
-      }
-
-      if (matchComment) {
-        event.comment = matchComment.comment;
-      }
-    }
-  });
-}
-
 // Process on-chain data (save to db, trigger any further processes, ...)
 export const processOnChainData = async (data: OnChainData, backfill?: boolean) => {
   // Post-process fill events
@@ -169,10 +134,11 @@ export const processOnChainData = async (data: OnChainData, backfill?: boolean) 
     );
   });
 
-  if (data.mintComments.length) {
-    // Merge the mint comment with fillEvent
-    assignMintComments(allFillEvents, data);
+  const startAssignMintCommentToFillEvents = Date.now();
+  if (!backfill) {
+    await Promise.all([assignMintCommentToFillEvents(allFillEvents, data.mintComments)]);
   }
+  const endAssignMintCommentToFillEvents = Date.now();
 
   const startAssignSourceToFillEvents = Date.now();
   if (!backfill) {
@@ -300,7 +266,9 @@ export const processOnChainData = async (data: OnChainData, backfill?: boolean) 
   const endProcessTransferActivityEvent = Date.now();
 
   return {
-    // return the time it took to process each step
+    // Return the time it took to process each step
+    assignMintCommentToFillEvents:
+      endAssignMintCommentToFillEvents - startAssignMintCommentToFillEvents,
     assignSourceToFillEvents: endAssignSourceToFillEvents - startAssignSourceToFillEvents,
     persistEvents: endPersistEvents - startPersistEvents,
     persistOtherEvents: endPersistOtherEvents - startPersistOtherEvents,
@@ -309,7 +277,7 @@ export const processOnChainData = async (data: OnChainData, backfill?: boolean) 
     processTransferActivityEvent:
       endProcessTransferActivityEvent - startProcessTransferActivityEvent,
 
-    // return the number of events processed
+    // Return the number of events processed
     fillEvents: data.fillEvents.length,
     fillEventsPartial: data.fillEventsPartial.length,
     fillEventsOnChain: data.fillEventsOnChain.length,
@@ -325,6 +293,7 @@ export const processOnChainData = async (data: OnChainData, backfill?: boolean) 
     makerInfos: data.makerInfos.length,
     orders: data.orders.length,
     mints: data.mints.length,
+    mintComments: data.mintComments.length,
     mintInfos: data.mintInfos.length,
   };
 };

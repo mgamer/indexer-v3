@@ -153,12 +153,13 @@ export const mintComment: EventData = {
   ]),
 };
 
+// This should not have the kind set as `zora`
 export const customMintComment: EventData = {
   kind: "zora",
   subKind: "zora-custom-mint-comment",
   topic: "0x2910744449a1123a8844cbafb0eb9444d337afddbf9fa11116964067fd248128",
   numTopics: 1,
   abi: new Interface([
-    `event MintComment(address tokenContract, uint256 quantity, string comment)`,
+    "event MintComment(address indexed tokenContract, uint256 quantity, string comment)",
   ]),
 };

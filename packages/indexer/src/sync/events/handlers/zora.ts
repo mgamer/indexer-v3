@@ -274,32 +274,31 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
       case "zora-custom-mint-comment":
       case "zora-mint-comment": {
         const { args } = eventData.abi.parseLog(log);
-        const isCustom = subKind === "zora-custom-mint-comment";
-        const tokenContract = args["tokenContract"].toLowerCase();
+        const token = args["tokenContract"].toLowerCase();
         const comment = args["comment"];
-        const quantity = args["quantity"].toNumber();
+        const quantity = args["quantity"].toString();
 
-        if (isCustom) {
-          for (let index = 0; index < quantity; index++) {
+        if (subKind === "zora-custom-mint-comment") {
+          for (let i = 0; i < quantity; i++) {
             onChainData.mintComments.push({
-              tokenContract,
+              token,
+              quantity,
               comment,
               baseEventParams,
             });
           }
-          break;
-        }
-
-        const firstMintedTokenId = args["tokenId"];
-
-        for (let index = 0; index < quantity; index++) {
-          const tokenId = firstMintedTokenId.add(index + 1);
-          onChainData.mintComments.push({
-            tokenContract,
-            tokenId: tokenId.toString(),
-            comment,
-            baseEventParams,
-          });
+        } else {
+          const firstMintedTokenId = args["tokenId"];
+          for (let i = 0; i < Number(quantity); i++) {
+            const tokenId = firstMintedTokenId.add(i + 1);
+            onChainData.mintComments.push({
+              token,
+              tokenId: tokenId.toString(),
+              quantity,
+              comment,
+              baseEventParams,
+            });
+          }
         }
 
         break;
