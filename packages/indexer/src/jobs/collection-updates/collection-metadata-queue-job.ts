@@ -2,6 +2,7 @@ import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handle
 import { acquireLock, releaseLock } from "@/common/redis";
 import { logger } from "@/common/logger";
 import { Collections } from "@/models/collections";
+
 import _ from "lodash";
 
 export type CollectionMetadataInfo = {
@@ -28,13 +29,28 @@ export class CollectionMetadataQueueJob extends AbstractRabbitMqJobHandler {
   protected async process(payload: MetadataQueueJobPayload) {
     const { contract, tokenId, community, forceRefresh } = payload;
 
+    if (contract === "0x495f947276749ce646f68ac8c248420045cb7b5e") {
+      logger.info(
+        this.queueName,
+        JSON.stringify({
+          topic: "post-refresh-collection",
+          message: `Start. contract=${contract}, tokenId=${tokenId}`,
+          payload,
+        })
+      );
+    }
+
     if (forceRefresh || (await acquireLock(`${this.queueName}:${contract}`, 5 * 60))) {
       if (await acquireLock(this.queueName, 1)) {
         try {
-          if (isNaN(Number(tokenId)) || tokenId == null) {
-            logger.error(
+          if (contract === "0x495f947276749ce646f68ac8c248420045cb7b5e") {
+            logger.info(
               this.queueName,
-              `Invalid tokenId. contract=${contract}, tokenId=${tokenId}, community=${community}`
+              JSON.stringify({
+                topic: "debugCollectionRefresh",
+                message: `updateCollectionCache. contract=${contract}, tokenId=${tokenId}`,
+                payload,
+              })
             );
           }
 
@@ -43,40 +59,45 @@ export class CollectionMetadataQueueJob extends AbstractRabbitMqJobHandler {
           logger.error(
             this.queueName,
             JSON.stringify({
-              message: `updateCollectionCache error. contract=${contract}, tokenId=${tokenId}, community=${community}, forceRefresh=${forceRefresh}, error=${JSON.stringify(
-                error
-              )}`,
-              jobData: payload,
+              message: `updateCollectionCache error. contract=${contract}, tokenId=${tokenId}, community=${community}, forceRefresh=${forceRefresh}, error=${error}`,
+              payload,
               error,
             })
           );
         }
       } else {
+        if (contract === "0x495f947276749ce646f68ac8c248420045cb7b5e") {
+          logger.info(
+            this.queueName,
+            JSON.stringify({
+              topic: "debugCollectionRefresh",
+              message: `Unable to take queue lock. contract=${contract}, tokenId=${tokenId}`,
+              payload,
+            })
+          );
+        }
+
         if (!forceRefresh) {
           await releaseLock(`${this.queueName}:${contract}`);
         }
 
         await this.addToQueue(payload, 1000);
       }
+    } else {
+      if (contract === "0x495f947276749ce646f68ac8c248420045cb7b5e") {
+        logger.info(
+          this.queueName,
+          JSON.stringify({
+            topic: "debugCollectionRefresh",
+            message: `Unable to take lock. contract=${contract}, tokenId=${tokenId}`,
+            payload,
+          })
+        );
+      }
     }
   }
 
-  public async addToQueueBulk(
-    collectionMetadataInfos: CollectionMetadataInfo[],
-    delay = 0,
-    context?: string
-  ) {
-    collectionMetadataInfos.forEach((collectionMetadataInfo) => {
-      if (isNaN(Number(collectionMetadataInfo.tokenId)) || collectionMetadataInfo.tokenId == null) {
-        logger.error(
-          this.queueName,
-          `Invalid tokenId. collectionMetadataInfo=${JSON.stringify(
-            collectionMetadataInfo
-          )}, context=${context}`
-        );
-      }
-    });
-
+  public async addToQueueBulk(collectionMetadataInfos: CollectionMetadataInfo[], delay = 0) {
     await this.sendBatch(collectionMetadataInfos.map((params) => ({ payload: params, delay })));
   }
 
@@ -84,18 +105,11 @@ export class CollectionMetadataQueueJob extends AbstractRabbitMqJobHandler {
     params: {
       contract: string | { contract: string; community: string }[];
       tokenId?: string;
-      community?: string;
+      community?: string | null;
       forceRefresh?: boolean;
     },
-    delay = 0,
-    context?: string
+    delay = 0
   ) {
-    if (isNaN(Number(params.tokenId)) || params.tokenId == null) {
-      logger.error(
-        this.queueName,
-        `Invalid tokenId. contract=${params.contract}, tokenId=${params.tokenId}, community=${params.community}, context=${context}`
-      );
-    }
     params.tokenId = params.tokenId ?? "1";
     params.community = params.community ?? "";
     params.forceRefresh = params.forceRefresh ?? false;

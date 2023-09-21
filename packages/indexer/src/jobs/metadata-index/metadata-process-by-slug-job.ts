@@ -26,7 +26,7 @@ export class MetadataIndexProcessBySlugJob extends AbstractRabbitMqJobHandler {
   concurrency = 1;
   singleActiveConsumer = true;
   lazyMode = true;
-  consumerTimeout = 5 * 60 * 1000;
+  timeout = 5 * 60 * 1000;
   backoff = {
     type: "fixed",
     delay: 5000,
@@ -167,16 +167,12 @@ export class MetadataIndexProcessBySlugJob extends AbstractRabbitMqJobHandler {
           ],
           true
         ),
-        collectionMetadataQueueJob.addToQueue(
-          {
-            contract: refreshTokenBySlug.contract,
-            tokenId,
-            community: collection.community,
-            forceRefresh: false,
-          },
-          0,
-          this.queueName
-        ),
+        collectionMetadataQueueJob.addToQueue({
+          contract: refreshTokenBySlug.contract,
+          tokenId,
+          community: collection.community,
+          forceRefresh: false,
+        }),
       ]);
     }
   }

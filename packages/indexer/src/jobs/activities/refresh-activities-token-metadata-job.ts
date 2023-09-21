@@ -4,7 +4,6 @@ import * as ActivitiesIndex from "@/elasticsearch/indexes/activities";
 import _ from "lodash";
 import { Tokens } from "@/models/tokens";
 import crypto from "crypto";
-import { logger } from "@/common/logger";
 import { RabbitMQMessage } from "@/common/rabbit-mq";
 
 export type RefreshActivitiesTokenMetadataJobPayload = {
@@ -36,13 +35,6 @@ export class RefreshActivitiesTokenMetadataJob extends AbstractRabbitMqJobHandle
       );
 
       if (keepGoing) {
-        logger.info(
-          this.queueName,
-          `KeepGoing. contract=${contract}, tokenId=${tokenId}, tokenUpdateData=${JSON.stringify(
-            tokenUpdateData
-          )}`
-        );
-
         addToQueue = true;
       }
     }

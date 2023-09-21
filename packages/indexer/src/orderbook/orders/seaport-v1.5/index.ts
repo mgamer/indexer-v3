@@ -289,13 +289,6 @@ export const save = async (
         } else if (error.message === "no-balance") {
           fillabilityStatus = "no-balance";
         } else {
-          if (config.chainId === 137) {
-            logger.info(
-              "orders-seaport-v1.5-save",
-              `not fillable order. orderId=${id}, contract=${info.contract}, error=${error}`
-            );
-          }
-
           return results.push({
             id,
             status: "not-fillable",
@@ -676,17 +669,6 @@ export const save = async (
           const collectionTopBidValue = await topBidsCache.getCollectionTopBidValue(
             info.contract,
             Number(tokenId)
-          );
-
-          logger.debug(
-            "orders-seaport-v1.5-save",
-            JSON.stringify({
-              topic: "validateBidValue",
-              collectionTopBidValue,
-              contract: info.contract,
-              tokenId,
-              value: value.toString(),
-            })
           );
 
           if (collectionTopBidValue) {

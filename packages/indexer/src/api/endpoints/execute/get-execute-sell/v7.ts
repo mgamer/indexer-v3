@@ -869,7 +869,7 @@ export const getExecuteSellV7Options: RouteOptions = {
       }
 
       const ordersEligibleForGlobalFees = bidDetails
-        .filter((b) => !b.isProtected && b.source !== "blur.io")
+        .filter((b) => b.source !== "blur.io")
         .map((b) => b.orderId);
 
       const addGlobalFee = async (
@@ -970,8 +970,8 @@ export const getExecuteSellV7Options: RouteOptions = {
         },
         {
           id: "pre-signatures",
-          action: "Sign orders",
-          description: "Some marketplaces require signing additional orders before filling",
+          action: "Sign data",
+          description: "Some exchanges require signing additional data before filling",
           kind: "signature",
           items: [],
         },

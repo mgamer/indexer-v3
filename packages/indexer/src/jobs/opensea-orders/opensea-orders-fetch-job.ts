@@ -21,7 +21,7 @@ export class OpenseaOrdersFetchJob extends AbstractRabbitMqJobHandler {
   maxRetries = 10;
   concurrency = 1;
   lazyMode = true;
-  consumerTimeout = 5 * 60 * 1000;
+  timeout = 5 * 60 * 1000;
   singleActiveConsumer = true;
   backoff = {
     type: "fixed",
@@ -85,16 +85,12 @@ export class OpenseaOrdersFetchJob extends AbstractRabbitMqJobHandler {
               refreshOpenseaCollectionOffersCollections[0].collection
             );
 
-            await collectionMetadataQueueJob.addToQueue(
-              {
-                contract: collectionResult!.contract,
-                tokenId,
-                community: collectionResult!.community,
-                forceRefresh: false,
-              },
-              0,
-              this.queueName
-            );
+            await collectionMetadataQueueJob.addToQueue({
+              contract: collectionResult!.contract,
+              tokenId,
+              community: collectionResult!.community,
+              forceRefresh: false,
+            });
           } catch {
             // Skip on any errors
           }

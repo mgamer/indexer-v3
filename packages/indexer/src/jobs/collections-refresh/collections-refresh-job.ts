@@ -15,7 +15,7 @@ export class CollectionRefreshJob extends AbstractRabbitMqJobHandler {
   maxRetries = 10;
   concurrency = 1;
   useSharedChannel = true;
-  consumerTimeout = 120000;
+  timeout = 120000;
 
   protected async process() {
     let collections: CollectionsEntity[] = [];
@@ -78,7 +78,7 @@ export class CollectionRefreshJob extends AbstractRabbitMqJobHandler {
         } as CollectionMetadataInfo)
     );
 
-    await collectionMetadataQueueJob.addToQueueBulk(infos, 0, this.queueName);
+    await collectionMetadataQueueJob.addToQueueBulk(infos);
   }
 
   public async addToQueue() {

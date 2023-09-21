@@ -69,6 +69,9 @@ export const getNetworkName = () => {
     case 59144:
       return "linea";
 
+    case 1101:
+      return "polygon-zkevm";
+
     default:
       return "unknown";
   }
@@ -138,6 +141,12 @@ export const getServiceName = () => {
   return `indexer-${config.version}-${getNetworkName()}`;
 };
 
+export const getSubDomain = () => {
+  return `${config.chainId === 1 ? "api" : `api-${getNetworkName()}`}${
+    config.environment === "dev" ? ".dev" : ""
+  }`;
+};
+
 type NetworkSettings = {
   enableWebSocket: boolean;
   enableReorgCheck: boolean;
@@ -165,7 +174,6 @@ type NetworkSettings = {
     networkId: string;
   };
   onStartup?: () => Promise<void>;
-  subDomain: string;
   elasticsearch?: {
     numberOfShards?: number;
     indexes?: { [index: string]: ElasticsearchIndexSettings };
@@ -207,7 +215,6 @@ export const getNetworkSettings = (): NetworkSettings => {
       [Sdk.Common.Addresses.WNative[config.chainId]?.toLowerCase()]: true,
       [Sdk.Common.Addresses.Usdc[config.chainId]?.toLowerCase()]: true,
     },
-    subDomain: "api",
     elasticsearch: {
       numberOfShards: 2,
       indexes: {
@@ -290,7 +297,6 @@ export const getNetworkSettings = (): NetworkSettings => {
           // Nifty Gateway Omnibus
           "0xe052113bd7d7700d623414a0a4585bcae754e9d5",
         ],
-
         trendingExcludedContracts: [
           "0x57f1887a8bf19b14fc0df6fd9b2acc9af147ea85", // ens
           "0xd4416b13d2b3a9abae7acd5d6c2bbdbe25686401", // ens
@@ -304,6 +310,18 @@ export const getNetworkSettings = (): NetworkSettings => {
               name: "Worms",
               symbol: "WORMS",
               decimals: 18,
+            },
+          ],
+          [
+            "0x55818be03e5103e74f96df7343dd1862a6d215f2",
+            {
+              contract: "0x55818be03e5103e74f96df7343dd1862a6d215f2",
+              name: "BIDENIA",
+              symbol: "BIE",
+              decimals: 8,
+              metadata: {
+                image: "https://i.ibb.co/9GP6X1R/bidenia-Token.png",
+              },
             },
           ],
           [
@@ -452,7 +470,6 @@ export const getNetworkSettings = (): NetworkSettings => {
         ...defaultNetworkSettings,
         isTestnet: true,
         backfillBlockBatchSize: 32,
-        subDomain: "api-goerli",
         mintsAsSalesBlacklist: [
           ...defaultNetworkSettings.mintsAsSalesBlacklist,
           // Uniswap V3: Positions NFT
@@ -522,7 +539,6 @@ export const getNetworkSettings = (): NetworkSettings => {
         lastBlockLatency: 15,
         backfillBlockBatchSize: 60,
         reorgCheckFrequency: [30],
-        subDomain: "api-optimism",
         coingecko: {
           networkId: "optimistic-ethereum",
         },
@@ -567,7 +583,6 @@ export const getNetworkSettings = (): NetworkSettings => {
         realtimeSyncFrequencySeconds: 5,
         lastBlockLatency: 5,
         headBlockDelay: 10,
-        subDomain: "api-bsc",
         coingecko: {
           networkId: "binance-smart-chain",
         },
@@ -615,7 +630,6 @@ export const getNetworkSettings = (): NetworkSettings => {
         headBlockDelay: 0,
         backfillBlockBatchSize: 32,
         reorgCheckFrequency: [30],
-        subDomain: "api-polygon",
         whitelistedCurrencies: new Map([
           [
             "0xba777ae3a3c91fcd83ef85bfe65410592bdd0f7c",
@@ -695,7 +709,6 @@ export const getNetworkSettings = (): NetworkSettings => {
         realtimeSyncMaxBlockLag: 32,
         realtimeSyncFrequencySeconds: 5,
         lastBlockLatency: 5,
-        subDomain: "api-zksync",
         onStartup: async () => {
           // Insert the native currency
           await Promise.all([
@@ -729,7 +742,6 @@ export const getNetworkSettings = (): NetworkSettings => {
         realtimeSyncFrequencySeconds: 5,
         lastBlockLatency: 5,
         headBlockDelay: 10,
-        subDomain: "api-arbitrum",
         washTradingExcludedContracts: [
           // Prohibition Contracts - ArtBlocks Engine
           "0x47a91457a3a1f700097199fd63c039c4784384ab",
@@ -778,12 +790,11 @@ export const getNetworkSettings = (): NetworkSettings => {
       return {
         ...defaultNetworkSettings,
         isTestnet: true,
-        enableWebSocket: true,
+        enableWebSocket: false,
         realtimeSyncMaxBlockLag: 32,
         realtimeSyncFrequencySeconds: 5,
         lastBlockLatency: 5,
         headBlockDelay: 10,
-        subDomain: "api-scroll-alpha",
         onStartup: async () => {
           // Insert the native currency
           await Promise.all([
@@ -816,7 +827,6 @@ export const getNetworkSettings = (): NetworkSettings => {
         realtimeSyncFrequencySeconds: 5,
         lastBlockLatency: 5,
         headBlockDelay: 10,
-        subDomain: "api-mantle-testnet",
         onStartup: async () => {
           // Insert the native currency
           await Promise.all([
@@ -849,7 +859,6 @@ export const getNetworkSettings = (): NetworkSettings => {
         realtimeSyncFrequencySeconds: 5,
         lastBlockLatency: 5,
         headBlockDelay: 10,
-        subDomain: "api-linea-testnet",
         onStartup: async () => {
           await Promise.all([
             idb.none(
@@ -887,7 +896,6 @@ export const getNetworkSettings = (): NetworkSettings => {
           // PaymentProcessor WETH
           "0xfff9976782d46cc05630d1f6ebab18b2324d6b14": true,
         },
-        subDomain: "api-sepolia",
         onStartup: async () => {
           // Insert the native currency
           await Promise.all([
@@ -926,7 +934,6 @@ export const getNetworkSettings = (): NetworkSettings => {
           "0xa6fa4fb5f76172d178d61b04b0ecd319c5d1c0aa": true,
         },
         lastBlockLatency: 5,
-        subDomain: "api-mumbai",
         elasticsearch: {
           indexes: {
             activities: {
@@ -968,7 +975,6 @@ export const getNetworkSettings = (): NetworkSettings => {
         realtimeSyncMaxBlockLag: 32,
         realtimeSyncFrequencySeconds: 5,
         lastBlockLatency: 5,
-        subDomain: "api-base-goerli",
         onStartup: async () => {
           // Insert the native currency
           await Promise.all([
@@ -1001,7 +1007,6 @@ export const getNetworkSettings = (): NetworkSettings => {
         realtimeSyncMaxBlockLag: 32,
         realtimeSyncFrequencySeconds: 5,
         lastBlockLatency: 5,
-        subDomain: "api-arbitrum-nova",
         coingecko: {
           networkId: "arbitrum-nova",
         },
@@ -1038,7 +1043,6 @@ export const getNetworkSettings = (): NetworkSettings => {
         realtimeSyncMaxBlockLag: 32,
         realtimeSyncFrequencySeconds: 5,
         lastBlockLatency: 5,
-        subDomain: "api-zora-testnet",
         onStartup: async () => {
           // Insert the native currency
           await Promise.all([
@@ -1071,7 +1075,6 @@ export const getNetworkSettings = (): NetworkSettings => {
         realtimeSyncMaxBlockLag: 32,
         realtimeSyncFrequencySeconds: 5,
         lastBlockLatency: 5,
-        subDomain: "api-zora",
         onStartup: async () => {
           // Insert the native currency
           await Promise.all([
@@ -1105,7 +1108,6 @@ export const getNetworkSettings = (): NetworkSettings => {
         realtimeSyncMaxBlockLag: 32,
         realtimeSyncFrequencySeconds: 5,
         lastBlockLatency: 5,
-        subDomain: "api-avalanche",
         coingecko: {
           networkId: "avalanche",
         },
@@ -1141,7 +1143,6 @@ export const getNetworkSettings = (): NetworkSettings => {
         realtimeSyncMaxBlockLag: 32,
         realtimeSyncFrequencySeconds: 5,
         lastBlockLatency: 5,
-        subDomain: "api-base",
         coingecko: {
           networkId: "base",
         },
@@ -1185,7 +1186,6 @@ export const getNetworkSettings = (): NetworkSettings => {
         realtimeSyncMaxBlockLag: 32,
         realtimeSyncFrequencySeconds: 5,
         lastBlockLatency: 5,
-        subDomain: "api-linea",
         coingecko: {
           networkId: "linea",
         },
@@ -1206,6 +1206,41 @@ export const getNetworkSettings = (): NetworkSettings => {
                   'ETH',
                   18,
                   '{"coingeckoCurrencyId": "wrapped-ether-linea", "image": "https://assets.coingecko.com/coins/images/31019/large/download_%2817%29.png"}'
+                ) ON CONFLICT DO NOTHING
+              `
+            ),
+          ]);
+        },
+      };
+    }
+    // Polygon zkEVM
+    case 1101: {
+      return {
+        ...defaultNetworkSettings,
+        enableWebSocket: true,
+        realtimeSyncMaxBlockLag: 32,
+        realtimeSyncFrequencySeconds: 5,
+        lastBlockLatency: 5,
+        coingecko: {
+          networkId: "polygon-zkevm",
+        },
+        onStartup: async () => {
+          // Insert the native currency
+          await Promise.all([
+            idb.none(
+              `
+                INSERT INTO currencies (
+                  contract,
+                  name,
+                  symbol,
+                  decimals,
+                  metadata
+                ) VALUES (
+                  '\\x0000000000000000000000000000000000000000',
+                  'Matic',
+                  'MATIC',
+                  18,
+                  '{"coingeckoCurrencyId": "matic-network"}'
                 ) ON CONFLICT DO NOTHING
               `
             ),

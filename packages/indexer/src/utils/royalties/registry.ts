@@ -2,10 +2,12 @@ import { Interface } from "@ethersproject/abi";
 import { Contract } from "@ethersproject/contracts";
 import * as Sdk from "@reservoir0x/sdk";
 
+import { idb } from "@/common/db";
+import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
+import { redis } from "@/common/redis";
 import { bn, fromBuffer } from "@/common/utils";
 import { config } from "@/config/index";
-import { idb } from "@/common/db";
 import { Royalty, updateRoyaltySpec } from "@/utils/royalties";
 
 const DEFAULT_PRICE = "1000000000000000000";
@@ -37,12 +39,9 @@ export const refreshRegistryRoyalties = async (collection: string) => {
     `,
     { collection }
   );
-  if (!tokenResult?.token_id) {
-    return;
-  }
 
   const token = fromBuffer(collectionResult.contract);
-  const tokenId = tokenResult.token_id;
+  const tokenId = tokenResult?.token_id || "0";
 
   const latestRoyalties = await getRegistryRoyalties(token, tokenId);
 
@@ -54,7 +53,7 @@ export const refreshRegistryRoyalties = async (collection: string) => {
   );
 };
 
-export const getRegistryRoyalties = async (token: string, tokenId: string) => {
+const internalGetRegistryRoyalties = async (token: string, tokenId: string) => {
   const latestRoyalties: Royalty[] = [];
   if (Sdk.Common.Addresses.RoyaltyEngine[config.chainId]) {
     const royaltyEngine = new Contract(
@@ -91,10 +90,31 @@ export const getRegistryRoyalties = async (token: string, tokenId: string) => {
         const bps = Math.round(bn(amount).mul(10000).div(DEFAULT_PRICE).toNumber());
         latestRoyalties.push({ recipient, bps });
       }
-    } catch {
-      // Skip errors
+    } catch (error) {
+      logger.error(
+        "getRegistryRoyalties",
+        JSON.stringify({
+          topic: "debugRoyalties",
+          message: `Error. token=${token}, tokenId=${tokenId}, error=${error}`,
+        })
+      );
     }
   }
 
   return latestRoyalties;
+};
+
+export const getRegistryRoyalties = async (contract: string, tokenId: string) => {
+  const cacheKey = `token-royalties:${contract}:${tokenId}`;
+
+  let result = await redis
+    .get(cacheKey)
+    .then((r) => (r ? (JSON.parse(r) as Royalty[]) : undefined));
+
+  if (!result) {
+    result = await internalGetRegistryRoyalties(contract, tokenId);
+    await redis.set(cacheKey, JSON.stringify(result), "EX", 5 * 60);
+  }
+
+  return result;
 };
