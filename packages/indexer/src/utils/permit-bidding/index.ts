@@ -8,6 +8,7 @@ export type PermitMessage = {
   nonce: string;
   deadline: string;
   signature?: string;
+  token: string;
 };
 
 export const savePermitBidding = async (
@@ -19,6 +20,7 @@ export const savePermitBidding = async (
     `
       INSERT INTO permit_biddings(
         id,
+        token,
         owner,
         spender,
         value,
@@ -27,6 +29,7 @@ export const savePermitBidding = async (
         signature
       ) VALUES (
         $/id/,
+        $/token/,
         $/owner/,
         $/spender/,
         $/value/,
@@ -39,6 +42,7 @@ export const savePermitBidding = async (
       id: permitId,
       owner: toBuffer(message.owner),
       spender: toBuffer(message.spender),
+      token: toBuffer(message.token),
       nonce: message.nonce,
       deadline: message.deadline,
       signature: signature,
@@ -64,9 +68,33 @@ export const getPermitBidding = async (permitId: string): Promise<PermitMessage 
   return {
     owner: fromBuffer(result.owner),
     spender: fromBuffer(result.spender),
+    token: fromBuffer(result.token),
     value: result.value,
     nonce: result.nonce,
     deadline: result.deadline,
     signature: result.signature,
   };
+};
+
+export const getActiveOrdersMaxNonce = async (
+  owner: string,
+  token: string
+): Promise<string | undefined> => {
+  const result = await redb.oneOrNone(
+    `
+      SELECT
+        max(permit_biddings.nonce) as nonce
+      FROM permit_biddings
+      LEFT JOIN orders ON orders.permit_id = permit_biddings.id
+      WHERE permit_biddings.owner = $/owner/
+      AND permit_biddings.token = $/token/
+      AND orders.fillability_status = 'fillable'
+    `,
+    { owner: toBuffer(owner), token: toBuffer(token) }
+  );
+
+  if (!result) {
+    return undefined;
+  }
+  return result.nonce as string;
 };

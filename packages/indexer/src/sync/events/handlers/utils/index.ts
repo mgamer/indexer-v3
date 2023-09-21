@@ -34,8 +34,8 @@ import { orderbookOrdersJob } from "@/jobs/orderbook/orderbook-orders-job";
 import _ from "lodash";
 import { transferUpdatesJob } from "@/jobs/transfer-updates/transfer-updates-job";
 import {
-  permitBiddingOrderApprovalChangeJob,
-  PermitBiddingOrderApprovalChangeJobPayload,
+  permitBiddingOrderNonceChangeJob,
+  PermitBiddingOrderNonceChangeJobPayload,
 } from "@/jobs/permit-bidding/order-approval-change-job";
 
 // Semi-parsed and classified event
@@ -79,7 +79,7 @@ export type OnChainData = {
   orderInfos: OrderUpdatesByIdJobPayload[];
   makerInfos: OrderUpdatesByMakerJobPayload[];
 
-  permitApprovalChanges: PermitBiddingOrderApprovalChangeJobPayload[];
+  permitNonceChanges: PermitBiddingOrderNonceChangeJobPayload[];
 
   // Orders
   orders: GenericOrderInfo[];
@@ -96,7 +96,7 @@ export const initOnChainData = (): OnChainData => ({
   nonceCancelEvents: [],
 
   nftApprovalEvents: [],
-  permitApprovalChanges: [],
+  permitNonceChanges: [],
 
   ftTransferEvents: [],
   nftTransferEvents: [],
@@ -173,7 +173,7 @@ export const processOnChainData = async (data: OnChainData, backfill?: boolean) 
       orderUpdatesByIdJob.addToQueue(data.orderInfos),
       orderUpdatesByMakerJob.addToQueue(data.makerInfos),
       orderbookOrdersJob.addToQueue(data.orders),
-      permitBiddingOrderApprovalChangeJob.addToQueue(data.permitApprovalChanges),
+      permitBiddingOrderNonceChangeJob.addToQueue(data.permitNonceChanges),
     ]);
   }
 

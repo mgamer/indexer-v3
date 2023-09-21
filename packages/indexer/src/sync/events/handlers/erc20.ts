@@ -2,12 +2,12 @@ import { AddressZero } from "@ethersproject/constants";
 
 import { getEventData } from "@/events-sync/data";
 import { EnhancedEvent, OnChainData } from "@/events-sync/handlers/utils";
-import * as utils from "@/events-sync/utils";
-import { searchForCall } from "@georgeroman/evm-tx-simulator";
 
 import { Interface } from "@ethersproject/abi";
 import { Contract } from "@ethersproject/contracts";
 import { baseProvider } from "@/common/provider";
+import * as permitBidding from "@/utils/permit-bidding";
+import { bn } from "@/common/utils";
 
 export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChainData) => {
   // Handle the events
@@ -84,46 +84,23 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           },
         });
 
-        let calledByPermit = false;
-        const txHash = baseEventParams.txHash;
-        const transaction = await utils.fetchTransaction(txHash);
-
-        // Direct permit call
-        // 0x8fcbaf0c DAI
-        // 0xd505accf ERC20-Permit
-        if (transaction.data.includes("0xd505accf")) {
-          calledByPermit = true;
-        }
-
-        // TODO: need to make sure the approval event is inside of a permit call
-        // Nestetd permit call
-        if (!calledByPermit) {
-          const txTrace = await utils.fetchTransactionTrace(txHash);
-          if (!txTrace) {
-            break;
-          }
-
-          for (let i = 0; i < 20; i++) {
-            const permitCall = searchForCall(txTrace.calls, { sigHashes: ["0xd505accf"] }, i);
-            if (permitCall) {
-              calledByPermit = true;
-            }
-          }
-        }
-
-        if (calledByPermit) {
+        const token = baseEventParams.address.toLowerCase();
+        const permitBiddingMaxNonce = await permitBidding.getActiveOrdersMaxNonce(owner, token);
+        if (permitBiddingMaxNonce) {
           const tokenContract = new Contract(
             baseEventParams.address,
             new Interface(["function nonces(address owner) external view returns (uint256)"]),
             baseProvider
           );
-          const nonce = await tokenContract.nonces(owner);
-          // Cancel all the linked permit-bidding orders below the current nonce
-          onChainData.permitApprovalChanges.push({
-            owner,
-            spender,
-            nonce: nonce.toString(),
-          });
+          const nonce = (await tokenContract.nonces(owner)).toString();
+          if (bn(permitBiddingMaxNonce).lte(nonce)) {
+            onChainData.permitNonceChanges.push({
+              token,
+              owner,
+              spender,
+              nonce,
+            });
+          }
         }
 
         break;

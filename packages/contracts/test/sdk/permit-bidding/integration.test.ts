@@ -164,6 +164,9 @@ describe("PermitBidding - Indexer Integration Test", () => {
 
     const postRequest = orderSignature2.data.post;
 
+    const orderSaveResult = await indexerHelper.callStepAPI(postRequest.endpoint, offerSignature, postRequest.body);
+    const orderId = orderSaveResult.orderId;
+
     if (isCancel) {
       // Permit to others cause permit once changes
       const permitData = await Sdk.Common.Helpers.createPermitMessage(
@@ -205,11 +208,9 @@ describe("PermitBidding - Indexer Integration Test", () => {
         }
 
       const permitRes = await buyer.sendTransaction(permitTx)
-      await indexerHelper.doEventParsing(permitRes.hash)
+      const parsedResult = await indexerHelper.doEventParsing(permitRes.hash, false)
+      expect(parsedResult.onChainData[0].permitNonceChanges.length).to.eq(1);
     }
-
-    const orderSaveResult = await indexerHelper.callStepAPI(postRequest.endpoint, offerSignature, postRequest.body);
-    const orderId = orderSaveResult.orderId;
 
     const executeResponse = await indexerHelper.executeSellV7({
       items: [
@@ -229,19 +230,22 @@ describe("PermitBidding - Indexer Integration Test", () => {
       return
     }
 
+    if (isCancel) {
+      expect(executeResponse.message.includes("No fillable orders")).to.eq(true);
+      return
+    }
+
     const allSteps = executeResponse.steps;
     await seller.sendTransaction(allSteps[0].items[0].data);
 
-   
     const lastSetp = allSteps[allSteps.length - 1];
     // const tx = await seller.sendTransaction(lastSetp.items[0].data);
     // await tx.wait();
-
     // bulkPermit
     expect(lastSetp.items[0].data.data.includes("c7460d07")).to.eq(isExpire ? false : true);
   };
 
-  // it("Create permit bidding and execute", async () => testCase());
-  // it("Create permit bidding and cancel", async () => testCase(true));
-  it("Create permit bidding and expires", async () => testCase(false, true));
+  it("create and execute", async () => testCase());
+  it("create and cancel", async () => testCase(true));
+  it("create and expired", async () => testCase(false, true));
 });

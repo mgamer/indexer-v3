@@ -148,7 +148,7 @@ import { askWebsocketEventsTriggerQueueJob } from "@/jobs/websocket-events/ask-w
 import { bidWebsocketEventsTriggerQueueJob } from "@/jobs/websocket-events/bid-websocket-events-trigger-job";
 import { tokenWebsocketEventsTriggerJob } from "@/jobs/websocket-events/token-websocket-events-trigger-job";
 import { blockGapCheckJob } from "@/jobs/events-sync/block-gap-check";
-import { permitBiddingOrderApprovalChangeJob } from "@/jobs/permit-bidding/order-approval-change-job";
+import { permitBiddingOrderNonceChangeJob } from "@/jobs/permit-bidding/order-approval-change-job";
 import { orderUpdatesExpiredPermitBiddingOrderJob } from "@/jobs/permit-bidding/cron/expired-orders-job";
 
 export const allJobQueues = [
@@ -281,7 +281,7 @@ export class RabbitMqJobsConsumer {
       bidWebsocketEventsTriggerQueueJob,
       tokenWebsocketEventsTriggerJob,
       blockGapCheckJob,
-      permitBiddingOrderApprovalChangeJob,
+      permitBiddingOrderNonceChangeJob,
       orderUpdatesExpiredPermitBiddingOrderJob,
     ];
   }

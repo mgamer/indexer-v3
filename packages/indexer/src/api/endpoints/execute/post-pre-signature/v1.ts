@@ -64,7 +64,14 @@ export const postPreSignatureV1Options: RouteOptions = {
 
           // Save permit bidding
           if (preSignature.kind === "permit-bidding") {
-            await savePermitBidding(payload.id, preSignature.data.value, preSignature.signature!);
+            await savePermitBidding(
+              payload.id,
+              {
+                ...preSignature.data.value,
+                token: preSignature.data.domain.verifyingContract.toLowerCase(),
+              },
+              preSignature.signature!
+            );
           }
 
           break;
