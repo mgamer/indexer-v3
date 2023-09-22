@@ -426,28 +426,32 @@ export class Router {
 
     // Detect which contracts block SCs via PaymentProcessor
     const blockedPaymentProcessorDetails: ListingDetails[] = [];
-    for (const d of details.filter((d) => d.kind === "payment-processor")) {
-      const exchange = new Sdk.PaymentProcessor.Exchange(this.chainId);
+    await Promise.all(
+      details
+        .filter((d) => d.kind === "payment-processor")
+        .map(async (d) => {
+          const exchange = new Sdk.PaymentProcessor.Exchange(this.chainId);
 
-      const module = Sdk.RouterV6.Addresses.PaymentProcessorModule[this.chainId];
-      if (module) {
-        try {
-          // Ensure transferring via the module is allowed
-          const isAllowed = await exchange.isTransferAllowed(
-            this.provider,
-            d.contract,
-            module,
-            module,
-            exchange.contract.address
-          );
-          if (!isAllowed) {
-            blockedPaymentProcessorDetails.push(d);
+          const module = Sdk.RouterV6.Addresses.PaymentProcessorModule[this.chainId];
+          if (module) {
+            try {
+              // Ensure transferring via the module is allowed
+              const isAllowed = await exchange.isTransferAllowed(
+                this.provider,
+                d.contract,
+                module,
+                module,
+                exchange.contract.address
+              );
+              if (!isAllowed) {
+                blockedPaymentProcessorDetails.push(d);
+              }
+            } catch {
+              blockedPaymentProcessorDetails.push(d);
+            }
           }
-        } catch {
-          blockedPaymentProcessorDetails.push(d);
-        }
-      }
-    }
+        })
+    );
 
     // Fill directly PaymentProcessor listings for which SCs are blocked
     if (blockedPaymentProcessorDetails.length) {
