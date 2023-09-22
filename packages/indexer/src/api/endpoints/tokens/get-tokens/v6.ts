@@ -166,12 +166,12 @@ export const getTokensV6Options: RouteOptions = {
         .min(1)
         .when("sortBy", {
           is: "updatedAt",
-          then: Joi.number().integer().max(500),
+          then: Joi.number().integer().max(1000),
           otherwise: Joi.number().integer().max(100),
         })
         .default(20)
         .description(
-          "Amount of items returned in response. Max limit is 100, except when sorting by `updatedAt` which has a limit of 500."
+          "Amount of items returned in response. Max limit is 100, except when sorting by `updatedAt` which has a limit of 1000."
         ),
       startTimestamp: Joi.number()
         .when("sortBy", {
