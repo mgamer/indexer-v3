@@ -1848,6 +1848,10 @@ export const getExecuteBuyV7Options: RouteOptions = {
         // methods (eg. ERC721C)
         steps = steps.filter((s) => s.id !== "auth");
       }
+      if (!unverifiedERC721CTransferValidators.length) {
+        // For now only ERC721C uses the auth transaction step
+        steps = steps.filter((s) => s.id !== "auth-transaction");
+      }
       if (!listingDetails.some((d) => d.kind === "payment-processor")) {
         // For now, pre-signatures are only needed for `payment-processor` orders
         steps = steps.filter((s) => s.id !== "pre-signatures");
