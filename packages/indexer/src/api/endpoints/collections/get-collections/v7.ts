@@ -586,13 +586,12 @@ export const getCollectionsV7Options: RouteOptions = {
       }
 
       let orderBy = "";
+      const sign = query.sortDirection === "asc" ? ">" : "<";
       switch (query.sortBy) {
         case "1DayVolume": {
           if (query.continuation) {
             conditions.push(
-              `(collections.day1_volume, collections.id) ${
-                query.sortDirection === "asc" ? ">" : "<"
-              } ($/contParam/, $/contId/)`
+              `(collections.day1_volume, collections.id) ${sign} ($/contParam/, $/contId/)`
             );
           }
           orderBy = ` ORDER BY collections.day1_volume ${query.sortDirection}, collections.id ${query.sortDirection}`;
@@ -603,9 +602,7 @@ export const getCollectionsV7Options: RouteOptions = {
         case "7DayVolume": {
           if (query.continuation) {
             conditions.push(
-              `(collections.day7_volume, collections.id) ${
-                query.sortDirection === "asc" ? ">" : "<"
-              } ($/contParam/, $/contId/)`
+              `(collections.day7_volume, collections.id) ${sign} ($/contParam/, $/contId/)`
             );
           }
           orderBy = ` ORDER BY collections.day7_volume ${query.sortDirection}, collections.id ${query.sortDirection}`;
@@ -616,9 +613,7 @@ export const getCollectionsV7Options: RouteOptions = {
         case "30DayVolume": {
           if (query.continuation) {
             conditions.push(
-              `(collections.day30_volume, collections.id) ${
-                query.sortDirection === "asc" ? ">" : "<"
-              } ($/contParam/, $/contId/)`
+              `(collections.day30_volume, collections.id) ${sign} ($/contParam/, $/contId/)`
             );
           }
           orderBy = ` ORDER BY collections.day30_volume ${query.sortDirection}, collections.id ${query.sortDirection}`;
@@ -629,9 +624,7 @@ export const getCollectionsV7Options: RouteOptions = {
         case "createdAt": {
           if (query.continuation) {
             conditions.push(
-              `(collections.created_at, collections.id) ${
-                query.sortDirection === "asc" ? ">" : "<"
-              } (to_timestamp($/contParam/), $/contId/)`
+              `(collections.created_at, collections.id) ${sign} (to_timestamp($/contParam/), $/contId/)`
             );
           }
           orderBy = ` ORDER BY collections.created_at ${query.sortDirection}, collections.id ${query.sortDirection}`;
@@ -642,9 +635,7 @@ export const getCollectionsV7Options: RouteOptions = {
         case "updatedAt": {
           if (query.continuation) {
             conditions.push(
-              `(collections.updated_at, collections.id) ${
-                query.sortDirection === "asc" ? ">" : "<"
-              } (to_timestamp($/contParam/), $/contId/)`
+              `(collections.updated_at, collections.id) ${sign} (to_timestamp($/contParam/), $/contId/)`
             );
           }
           orderBy = ` ORDER BY collections.updated_at ${query.sortDirection}, collections.id ${query.sortDirection}`;
@@ -656,13 +647,11 @@ export const getCollectionsV7Options: RouteOptions = {
           if (query.continuation) {
             if (query.contParam !== "null") {
               conditions.push(
-                `(collections.floor_sell_value, collections.id) ${
-                  query.sortDirection === "asc" ? ">" : "<"
-                } ($/contParam/, $/contId/) OR (collections.floor_sell_value IS null)`
+                `(collections.floor_sell_value, collections.id) ${sign} ($/contParam/, $/contId/) OR (collections.floor_sell_value IS null)`
               );
             } else {
               conditions.push(
-                `(collections.id) > ($/contId/) AND (collections.floor_sell_value IS null)`
+                `(collections.id) ${sign} ($/contId/) AND (collections.floor_sell_value IS null)`
               );
             }
           }
@@ -675,9 +664,7 @@ export const getCollectionsV7Options: RouteOptions = {
         default: {
           if (query.continuation) {
             conditions.push(
-              `(collections.all_time_volume, collections.id) ${
-                query.sortDirection === "asc" ? ">" : "<"
-              } ($/contParam/, $/contId/)`
+              `(collections.all_time_volume, collections.id) ${sign} ($/contParam/, $/contId/)`
             );
           }
 
