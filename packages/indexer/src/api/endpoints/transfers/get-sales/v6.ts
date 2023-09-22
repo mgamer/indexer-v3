@@ -62,7 +62,7 @@ export const getSalesV6Options: RouteOptions = {
       attributes: Joi.object()
         .unknown()
         .description(
-          "Filter to a particular attribute. Attributes are case sensitive. Note: Our docs do not support this parameter correctly. To test, you can use the following URL in your browser. Example: `https://api.reservoir.tools/sales/v4?collection=0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63&attributes[Type]=Original` or `https://api.reservoir.tools/sales/v4?collection=0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63&attributes[Type]=Original&attributes[Type]=Sibling`"
+          "Filter to a particular attribute. Attributes are case sensitive. Note: Our docs do not support this parameter correctly. To test, you can use the following URL in your browser. Example: `https://api.reservoir.tools/sales/v6?collection=0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63&attributes[Type]=Original` or `https://api.reservoir.tools/sales/v6?collection=0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63&attributes[Type]=Original&attributes[Type]=Sibling`"
         ),
       sortBy: Joi.string()
         .valid("price", "time", "updatedAt")
@@ -217,7 +217,7 @@ export const getSalesV6Options: RouteOptions = {
       `;
       } else if (query.sortBy && query.sortBy === "updatedAt") {
         paginationFilter = `
-        AND (extract(epoch from fill_events_2.updated_at), fill_events_2.log_index, fill_events_2.batch_index) ${inequalitySymbol} ($/timestamp/, $/logIndex/, $/batchIndex/)
+        AND (fill_events_2.updated_at, fill_events_2.log_index, fill_events_2.batch_index) ${inequalitySymbol} (to_timestamp($/timestamp/), $/logIndex/, $/batchIndex/)
         `;
       } else {
         paginationFilter = `

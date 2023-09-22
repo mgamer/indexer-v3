@@ -272,7 +272,10 @@ export type FillBidsResult = {
 export type MintDetails = {
   orderId: string;
   txData: TxData;
-  fees?: Fee[];
+  fees: Fee[];
+  token: string;
+  quantity: number;
+  comment?: string;
 };
 
 export type FillMintsResult = {
@@ -305,5 +308,6 @@ export type SwapDetail = {
   recipient: string;
   refundTo: string;
   details: ListingDetails[];
-  executionIndex: number;
+  txIndex?: number;
+  executionIndex?: number;
 };

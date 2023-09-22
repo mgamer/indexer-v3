@@ -6,7 +6,6 @@ import { config } from "@/config/index";
 import { logger } from "@/common/logger";
 import { idb, ridb } from "@/common/db";
 import { toBuffer } from "@/common/utils";
-import { refreshActivitiesTokenMetadataJob } from "@/jobs/activities/refresh-activities-token-metadata-job";
 import { updateCollectionDailyVolumeJob } from "@/jobs/collection-updates/update-collection-daily-volume-job";
 import { replaceActivitiesCollectionJob } from "@/jobs/activities/replace-activities-collection-job";
 import { fetchCollectionMetadataJob } from "@/jobs/token-updates/fetch-collection-metadata-job";
@@ -38,6 +37,7 @@ export type MetadataIndexWriteJobPayload = {
   mediaUrl?: string;
   flagged?: boolean;
   isCopyrightInfringement?: boolean;
+  isFromWebhook?: boolean;
   attributes: {
     key: string;
     value: string;
@@ -76,7 +76,7 @@ export class MetadataIndexWriteJob extends AbstractRabbitMqJobHandler {
       metadataOriginalUrl,
       mediaUrl,
       flagged,
-      isCopyrightInfringement,
+      isFromWebhook,
       attributes,
     } = payload;
 
@@ -145,15 +145,6 @@ export class MetadataIndexWriteJob extends AbstractRabbitMqJobHandler {
       return;
     }
 
-    if (
-      isCopyrightInfringement ||
-      result.old_metadata.name != name ||
-      result.old_metadata.image != imageUrl ||
-      result.old_metadata.media != mediaUrl
-    ) {
-      await refreshActivitiesTokenMetadataJob.addToQueue(contract, tokenId);
-    }
-
     // If the new collection ID is different from the collection ID currently stored
     if (
       result.collection_id !=
@@ -162,7 +153,7 @@ export class MetadataIndexWriteJob extends AbstractRabbitMqJobHandler {
     ) {
       logger.info(
         this.queueName,
-        `New collection ${collection} for contract=${contract}, tokenId=${tokenId}, old collection=${result.collection_id}`
+        `New collection ${collection} for contract=${contract}, tokenId=${tokenId}, old collection=${result.collection_id} isFromWebhook ${isFromWebhook}`
       );
 
       if (this.updateActivities(contract)) {
@@ -190,7 +181,6 @@ export class MetadataIndexWriteJob extends AbstractRabbitMqJobHandler {
             mintedTimestamp: getUnixTime(new Date(result.created_at)),
             newCollection: true,
             oldCollectionId: result.collection_id,
-            context: "write-queue",
           },
         ],
         `${contract}:${tokenId}`
@@ -374,7 +364,11 @@ export class MetadataIndexWriteJob extends AbstractRabbitMqJobHandler {
 
       if (!attributeResult?.id) {
         // Otherwise, fail (and retry)
-        throw new Error(`Could not fetch/save attribute "${value}"`);
+        throw new Error(
+          `Could not fetch/save attribute keyId ${
+            attributeKeysIdsMap.get(key)?.id
+          } key ${key} value ${value} attributeResult ${JSON.stringify(attributeResult)}`
+        );
       }
 
       attributeIds.push(attributeResult.id);
