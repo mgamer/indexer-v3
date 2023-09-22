@@ -13,6 +13,7 @@ import {
 import { estimateGas } from "@reservoir0x/sdk/dist/router/v6/utils";
 import axios from "axios";
 import Joi from "joi";
+import _ from "lodash";
 
 import { inject } from "@/api/index";
 import { idb } from "@/common/db";
@@ -24,18 +25,20 @@ import { config } from "@/config/index";
 import { ApiKeyManager } from "@/models/api-keys";
 import { FeeRecipients } from "@/models/fee-recipients";
 import { Sources } from "@/models/sources";
+import * as mints from "@/orderbook/mints";
+import { generateCollectionMintTxData } from "@/orderbook/mints/calldata";
+import { getNFTTransferEvents } from "@/orderbook/mints/simulation";
 import { OrderKind, generateListingDetailsV6 } from "@/orderbook/orders";
 import { fillErrorCallback, getExecuteError } from "@/orderbook/orders/errors";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import * as nftx from "@/orderbook/orders/nftx";
 import * as sudoswap from "@/orderbook/orders/sudoswap";
 import * as b from "@/utils/auth/blur";
+import * as e from "@/utils/auth/erc721c";
 import { getCurrency } from "@/utils/currencies";
+import * as erc721c from "@/utils/erc721c";
 import { ExecutionsBuffer } from "@/utils/executions";
 import * as onChainData from "@/utils/on-chain-data";
-import * as mints from "@/orderbook/mints";
-import { generateCollectionMintTxData } from "@/orderbook/mints/calldata";
-import { getNFTTransferEvents } from "@/orderbook/mints/simulation";
 import { getPermitId, getPermit, savePermit } from "@/utils/permits";
 import { getPreSignatureId, getPreSignature, savePreSignature } from "@/utils/pre-signatures";
 import { getUSDAndCurrencyPrices } from "@/utils/prices";
@@ -1352,7 +1355,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
       }[] = [
         {
           id: "auth",
-          action: "Sign in to Blur",
+          action: "Sign in",
           description: "Some marketplaces require signing an auth message before filling",
           kind: "signature",
           items: [],
@@ -1372,10 +1375,17 @@ export const getExecuteBuyV7Options: RouteOptions = {
           items: [],
         },
         {
-          id: "pre-signatures",
+          id: "pre-signature",
           action: "Sign data",
           description: "Some exchanges require signing additional data before filling",
           kind: "signature",
+          items: [],
+        },
+        {
+          id: "auth-transaction",
+          action: "On-chain verification",
+          description: "Some marketplaces require triggering an auth transaction before filling",
+          kind: "transaction",
           items: [],
         },
         {
@@ -1443,6 +1453,84 @@ export const getExecuteBuyV7Options: RouteOptions = {
               path,
             };
           }
+        }
+
+        steps[0].items.push({
+          status: "complete",
+        });
+      }
+
+      // Handle ERC721C authentication
+      const unverifiedERC721CTransferValidators: string[] = [];
+      await Promise.all(
+        listingDetails.map(async (d) => {
+          try {
+            const config = await erc721c.getERC721CConfigFromDB(d.contract);
+            if (config && [4, 6].includes(config.transferSecurityLevel)) {
+              const isVerified = await erc721c.isVerifiedEOA(
+                config.transferValidator,
+                payload.taker
+              );
+              if (!isVerified) {
+                unverifiedERC721CTransferValidators.push(config.transferValidator);
+              }
+            }
+          } catch {
+            // Skip errors
+          }
+        })
+      );
+      if (unverifiedERC721CTransferValidators.length) {
+        const erc721cAuthId = e.getAuthId(payload.taker);
+
+        const erc721cAuth = await e.getAuth(erc721cAuthId);
+        if (!erc721cAuth) {
+          const erc721cAuthChallengeId = e.getAuthChallengeId(payload.taker);
+
+          let erc721cAuthChallenge = await e.getAuthChallenge(erc721cAuthChallengeId);
+          if (!erc721cAuthChallenge) {
+            erc721cAuthChallenge = {
+              message: "EOA",
+              walletAddress: payload.taker,
+            };
+
+            await e.saveAuthChallenge(
+              erc721cAuthChallengeId,
+              erc721cAuthChallenge,
+              // Give a 10 minute buffer for the auth challenge to expire
+              10 * 60
+            );
+          }
+
+          steps[0].items.push({
+            status: "incomplete",
+            data: {
+              sign: {
+                signatureKind: "eip191",
+                message: erc721cAuthChallenge.message,
+              },
+              post: {
+                endpoint: "/execute/auth-signature/v1",
+                method: "POST",
+                body: {
+                  kind: "erc721c",
+                  id: erc721cAuthChallengeId,
+                },
+              },
+            },
+          });
+
+          // Force the client to poll
+          steps[1].items.push({
+            status: "incomplete",
+            tip: "This step is dependent on a previous step. Once you've completed it, re-call the API to get the data for this step.",
+          });
+
+          // Return early since any next steps are dependent on the ERC721C auth
+          return {
+            steps,
+            path,
+          };
         }
 
         steps[0].items.push({
@@ -1702,11 +1790,30 @@ export const getExecuteBuyV7Options: RouteOptions = {
         }
       }
 
-      for (const { txData, txTags, orderIds, permits } of txs) {
+      // Handle on-chain authentication
+      for (const tv of _.uniq(unverifiedERC721CTransferValidators)) {
+        const erc721cAuthId = e.getAuthId(payload.taker);
+        const erc721cAuth = await e.getAuth(erc721cAuthId);
+
         steps[4].items.push({
           status: "incomplete",
+          // Do not return unless all previous steps are completed
+          data:
+            !steps[2].items.length && !steps[3].items.length
+              ? new Sdk.Common.Helpers.ERC721C().generateVerificationTxData(
+                  tv,
+                  payload.taker,
+                  erc721cAuth!.signature
+                )
+              : undefined,
+        });
+      }
+
+      for (const { txData, txTags, orderIds, permits } of txs) {
+        steps[5].items.push({
+          status: "incomplete",
           orderIds,
-          // Do not return the final step unless all previous steps are completed
+          // Do not return unless all previous steps are completed
           data:
             !steps[2].items.length && !steps[3].items.length
               ? {
@@ -1734,11 +1841,16 @@ export const getExecuteBuyV7Options: RouteOptions = {
         // Permits are only used when explicitly requested
         steps = steps.filter((s) => s.id !== "currency-permit");
       }
-      if (!blurAuth) {
+      if (!blurAuth && !unverifiedERC721CTransferValidators.length) {
         // If we reached this point and the Blur auth is missing then we
         // can be sure that no Blur orders were requested and it is safe
-        // to remove the auth step
+        // to remove the auth step - we also handle other authentication
+        // methods (eg. ERC721C)
         steps = steps.filter((s) => s.id !== "auth");
+      }
+      if (!unverifiedERC721CTransferValidators.length) {
+        // For now only ERC721C uses the auth transaction step
+        steps = steps.filter((s) => s.id !== "auth-transaction");
       }
       if (!listingDetails.some((d) => d.kind === "payment-processor")) {
         // For now, pre-signatures are only needed for `payment-processor` orders
