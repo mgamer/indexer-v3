@@ -13,7 +13,7 @@ import { ConduitController } from "../../seaport-base";
 import { constructOfferCounterOrderAndFulfillments } from "../../seaport-base/helpers";
 
 import * as Sdk from "../../index";
-import { TxData, bn, generateSourceBytes, getErrorMessage, uniqBy } from "../../utils";
+import { bn, generateSourceBytes, getErrorMessage, uniqBy } from "../../utils";
 import * as Addresses from "./addresses";
 import * as ApprovalProxy from "./approval-proxy";
 import { PermitHandler } from "./permit";
@@ -388,10 +388,6 @@ export class Router {
       }
 
       for (const detail of details.filter(({ kind }) => kind === "manifold")) {
-        if (detail.fees?.length) {
-          throw new Error("Fees not supported for Manifold orders");
-        }
-
         const order = detail.order as Sdk.Manifold.Order;
         const exchange = new Sdk.Manifold.Exchange(this.chainId);
 
@@ -3378,13 +3374,7 @@ export class Router {
       options.partial = false;
     }
 
-    const txs: {
-      approvals: NFTApproval[];
-      txData: TxData;
-      txTags: TxTags;
-      orderIds: string[];
-      preSignatures: PreSignature[];
-    }[] = [];
+    const txs: FillBidsResult["txs"][0][] = [];
     const success: { [orderId: string]: boolean } = {};
 
     // CASE 1
