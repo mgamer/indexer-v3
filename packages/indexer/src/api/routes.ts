@@ -210,6 +210,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
+    path: "/admin/trigger-rabbit-job",
+    options: adminEndpoints.postTriggerRabbitJobOptions,
+  });
+
+  server.route({
+    method: "POST",
     path: "/admin/resync-source",
     options: adminEndpoints.postResyncSourceOptions,
   });
@@ -464,6 +470,12 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/collections/v6",
     options: collectionsEndpoints.getCollectionsV6Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/collections/v7",
+    options: collectionsEndpoints.getCollectionsV7Options,
   });
 
   server.route({

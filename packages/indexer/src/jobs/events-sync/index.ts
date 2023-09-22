@@ -2,7 +2,7 @@ import cron from "node-cron";
 
 import { logger } from "@/common/logger";
 import { baseProvider, safeWebSocketSubscription } from "@/common/provider";
-import { redlock } from "@/common/redis";
+import { redis, redlock } from "@/common/redis";
 import { config } from "@/config/index";
 import { getNetworkSettings } from "@/config/network";
 import { eventsSyncRealtimeJob } from "@/jobs/events-sync/events-sync-realtime-job";
@@ -40,6 +40,7 @@ if (config.doBackgroundWork && config.catchup) {
               logger.info("events-sync-catchup", `Catching up events for block ${block}`);
               await eventsSyncRealtimeJob.addToQueue({ block });
             }
+
             await checkForMissingBlocks(block);
           } catch (error) {
             logger.error("events-sync-catchup", `Failed to catch up events: ${error}`);
@@ -63,7 +64,11 @@ if (config.doBackgroundWork && config.catchup) {
 
         try {
           await eventsSyncRealtimeJob.addToQueue({ block });
-          await checkForMissingBlocks(block);
+          if (![137].includes(config.chainId)) {
+            await checkForMissingBlocks(block);
+          } else {
+            await redis.set("latest-block-realtime", block);
+          }
         } catch (error) {
           logger.error("events-sync-catchup", `Failed to catch up events: ${error}`);
         }

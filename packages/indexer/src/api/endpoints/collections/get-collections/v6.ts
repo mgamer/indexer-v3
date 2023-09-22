@@ -32,10 +32,10 @@ export const getCollectionsV6Options: RouteOptions = {
   },
   description: "Collections",
   notes: "Use this API to explore a collection's metadata and statistics (sales, volume, etc).",
-  tags: ["api", "Collections"],
+  tags: ["api", "x-deprecated"],
   plugins: {
     "hapi-swagger": {
-      order: 3,
+      deprecated: true,
     },
   },
   validate: {
@@ -799,6 +799,7 @@ export const getCollectionsV6Options: RouteOptions = {
                   r.mint_stages.map(async (m: any) => ({
                     stage: m.stage,
                     kind: m.kind,
+                    tokenId: m.tokenId,
                     price: m.price
                       ? await getJoiPriceObject({ gross: { amount: m.price } }, m.currency)
                       : m.price,
