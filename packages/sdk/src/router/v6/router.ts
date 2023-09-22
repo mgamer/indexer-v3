@@ -16,11 +16,10 @@ import * as Sdk from "../../index";
 import { TxData, bn, generateSourceBytes, getErrorMessage, uniqBy } from "../../utils";
 import * as Addresses from "./addresses";
 import * as ApprovalProxy from "./approval-proxy";
-import { PermitHandler, PermitWithTransfers } from "./permit";
+import { PermitHandler } from "./permit";
 import {
   BidDetails,
   ExecutionInfo,
-  ExecutionExtendInfo,
   FTApproval,
   FillBidsResult,
   FillListingsResult,
@@ -30,10 +29,10 @@ import {
   NFTApproval,
   PerCurrencyListingDetails,
   PerPoolSwapDetails,
-  SwapDetail,
   PreSignature,
+  SwapDetail,
   TransfersResult,
-  TxAttribute,
+  TxTags,
 } from "./types";
 import { SwapInfo, generateSwapInfo, mergeSwapInfos } from "./swap/index";
 import { generateFTApprovalTxData, generateNFTApprovalTxData, isETH, isWETH } from "./utils";
@@ -84,46 +83,6 @@ type SetupOptions = {
   orderFetcherBaseUrl?: string;
   orderFetcherMetadata?: object;
 };
-
-function extractIdentifiersFromExections(
-  executions: ExecutionInfo[],
-  executionExtendInfos?: ExecutionExtendInfo[]
-) {
-  const tags: {
-    protocol: string;
-    count: number;
-  }[] = [];
-
-  let feesOnTop = 0;
-  let swaps = 0;
-
-  executions.forEach((execution, index) => {
-    const extendInfo = executionExtendInfos ? executionExtendInfos[index] : undefined;
-    if (extendInfo && extendInfo.protocol) {
-      const has = tags.find((c) => c.protocol === extendInfo?.protocol);
-      if (has) {
-        has.count++;
-      } else {
-        tags.push({
-          protocol: extendInfo.protocol!,
-          count: 1,
-        });
-      }
-    }
-
-    if (extendInfo) {
-      feesOnTop += extendInfo.feesSize;
-      if (extendInfo.tokenIn) {
-        swaps++;
-      }
-    }
-  });
-  return {
-    feesOnTop,
-    tags,
-    swaps,
-  };
-}
 
 export class Router {
   public chainId: number;
@@ -290,10 +249,7 @@ export class Router {
       forceDirectFilling?: boolean;
     }
   ): Promise<FillMintsResult> {
-    const txs: {
-      txData: TxData;
-      orderIds: string[];
-    }[] = [];
+    const txs: FillMintsResult["txs"][0][] = [];
     const success: { [orderId: string]: boolean } = {};
 
     if (
@@ -308,6 +264,10 @@ export class Router {
           txData: {
             ...txData,
             data: txData.data + generateSourceBytes(options?.source),
+          },
+          txTags: {
+            kind: "mint",
+            mints: 1,
           },
           orderIds: [orderId],
         });
@@ -361,6 +321,10 @@ export class Router {
             ]) + generateSourceBytes(options?.source),
           value,
         },
+        txTags: {
+          kind: "mint",
+          mints: details.length,
+        },
         orderIds: details.map((d) => d.orderId),
       });
 
@@ -406,14 +370,7 @@ export class Router {
     }
   ): Promise<FillListingsResult> {
     // Assume the listing details are consistent with the underlying order object
-    let txs: {
-      approvals: FTApproval[];
-      permits: { kind: "erc20"; data: PermitWithTransfers }[];
-      preSignatures: PreSignature[];
-      txData: TxData;
-      txTags: TxAttribute;
-      orderIds: string[];
-    }[] = [];
+    let txs: FillListingsResult["txs"][0][] = [];
     const success: { [orderId: string]: boolean } = {};
 
     // Keep track of any swaps that need to be executed
@@ -459,12 +416,7 @@ export class Router {
           preSignatures: [],
           txTags: {
             kind: "sale",
-            listings: [
-              {
-                protocol: "manifold",
-                count: 1,
-              },
-            ],
+            listings: { manifold: 1 },
           },
           txData: exchange.fillOrderTx(
             taker,
@@ -580,12 +532,7 @@ export class Router {
           permits: [],
           txTags: {
             kind: "sale",
-            listings: [
-              {
-                protocol: "payment-processor-sweep",
-                count: orders.length,
-              },
-            ],
+            listings: { "payment-processor": orders.length },
           },
           preSignatures: preSignatures,
           txData: exchange.sweepCollectionTx(taker, bundledOrder, orders),
@@ -615,12 +562,7 @@ export class Router {
           permits: [],
           txTags: {
             kind: "sale",
-            listings: [
-              {
-                protocol: "payment-processor",
-                count: orders.length,
-              },
-            ],
+            listings: { "payment-processor": orders.length },
           },
           preSignatures: preSignatures,
           txData: exchange.fillOrdersTx(taker, orders, takeOrders),
@@ -746,16 +688,7 @@ export class Router {
               preSignatures: [],
               txTags: {
                 kind: "sale",
-                listings: [
-                  {
-                    protocol: "blur",
-                    count: orderIds.length,
-                  },
-                ],
-                feesOnTop: successfulBlurCompatibleListings.reduce(
-                  (total, detail) => total + (detail.fees?.length ?? 0),
-                  0
-                ),
+                listings: { blur: orderIds.length },
               },
               txData: {
                 from: data.from,
@@ -897,13 +830,7 @@ export class Router {
               preSignatures: [],
               txTags: {
                 kind: "sale",
-                listings: [
-                  {
-                    protocol: "seaport-v1.5",
-                    count: 1,
-                  },
-                ],
-                fees: order.getInfo()?.fees.length,
+                listings: { "seaport-v1.5": 1 },
               },
               txData: await exchange.fillOrderTx(
                 taker,
@@ -921,9 +848,6 @@ export class Router {
         };
       } else {
         const orders = details.map((d) => d.order as Sdk.SeaportV15.Order);
-        const totalFeesLength = orders.reduce((count, order) => {
-          return count + (order.getInfo()?.fees.length ?? 0);
-        }, 0);
 
         return {
           txs: [
@@ -933,13 +857,7 @@ export class Router {
               preSignatures: [],
               txTags: {
                 kind: "sale",
-                listings: [
-                  {
-                    protocol: "seaport-v1.5",
-                    count: details.length,
-                  },
-                ],
-                fees: totalFeesLength,
+                listings: { "seaport-v1.5": details.length },
               },
               txData: await exchange.fillOrdersTx(
                 taker,
@@ -1001,13 +919,7 @@ export class Router {
               preSignatures: [],
               txTags: {
                 kind: "sale",
-                listings: [
-                  {
-                    protocol: "alienswap",
-                    count: 1,
-                  },
-                ],
-                fees: order.getInfo()?.fees.length,
+                listings: { alienswap: 1 },
               },
               txData: await exchange.fillOrderTx(
                 taker,
@@ -1025,9 +937,7 @@ export class Router {
         };
       } else {
         const orders = details.map((d) => d.order as Sdk.Alienswap.Order);
-        const totalFeesLength = orders.reduce((count, order) => {
-          return count + (order.getInfo()?.fees.length ?? 0);
-        }, 0);
+
         return {
           txs: [
             {
@@ -1036,13 +946,7 @@ export class Router {
               preSignatures: [],
               txTags: {
                 kind: "sale",
-                listings: [
-                  {
-                    protocol: "alienswap",
-                    count: details.length,
-                  },
-                ],
-                fees: totalFeesLength,
+                listings: { alienswap: details.length },
               },
               txData: await exchange.fillOrdersTx(
                 taker,
@@ -1236,13 +1140,28 @@ export class Router {
     // Generate router executions
     let executions: ExecutionInfo[] = [];
 
-    // Extend infos for GAS stats
-    let executionExtendInfos: ExecutionExtendInfo[] = [];
+    // Keep track of tags for the router execution
+    const routerTxTags: TxTags = {
+      kind: "sale",
+      listings: {},
+      bids: {},
+      mints: 0,
+      swaps: 0,
+      feesOnTop: 0,
+    };
+    const addRouterTags = (orderKind: string, numListings: number, numFeesOnTop: number) => {
+      if (!routerTxTags.listings![orderKind]) {
+        routerTxTags.listings![orderKind] = 0;
+      }
+      routerTxTags.listings![orderKind] += numListings;
+      routerTxTags.feesOnTop! += numFeesOnTop;
+    };
 
     // Handle Element ERC721 listings
     if (elementErc721Details.length) {
       const orders = elementErc721Details.map((d) => d.order as Sdk.Element.Order);
       const module = this.contracts.elementModule;
+
       const fees = getFees(elementErc721Details);
       const price = orders.map((order) => order.getTotalPrice()).reduce((a, b) => a.add(b), bn(0));
       const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
@@ -1254,11 +1173,6 @@ export class Router {
         revertIfIncomplete: Boolean(!options?.partial),
         amount: price,
       };
-
-      executionExtendInfos.push({
-        protocol: elementErc721Details[0].kind,
-        feesSize: fees.length,
-      });
 
       executions.push({
         module: module.address,
@@ -1290,6 +1204,8 @@ export class Router {
         executionIndex: executions.length - 1,
       });
 
+      addRouterTags("element", orders.length, fees.length);
+
       // Mark the listings as successfully handled
       for (const { orderId } of elementErc721Details) {
         success[orderId] = true;
@@ -1313,11 +1229,6 @@ export class Router {
         revertIfIncomplete: Boolean(!options?.partial),
         amount: price,
       };
-
-      executionExtendInfos.push({
-        protocol: elementErc721V2Details[0].kind,
-        feesSize: fees.length,
-      });
 
       executions.push({
         module: module.address,
@@ -1347,6 +1258,8 @@ export class Router {
         executionIndex: executions.length - 1,
       });
 
+      addRouterTags("element", orders.length, fees.length);
+
       // Mark the listings as successfully handled
       for (const { orderId } of elementErc721V2Details) {
         success[orderId] = true;
@@ -1372,11 +1285,6 @@ export class Router {
         revertIfIncomplete: Boolean(!options?.partial),
         amount: price,
       };
-
-      executionExtendInfos.push({
-        protocol: elementErc1155Details[0].kind,
-        feesSize: fees.length,
-      });
 
       executions.push({
         module: module.address,
@@ -1410,6 +1318,8 @@ export class Router {
         executionIndex: executions.length - 1,
       });
 
+      addRouterTags("element", orders.length, fees.length);
+
       // Mark the listings as successfully handled
       for (const { orderId } of elementErc1155Details) {
         success[orderId] = true;
@@ -1426,11 +1336,6 @@ export class Router {
       const price = orders.map((order) => bn(order.params.price)).reduce((a, b) => a.add(b), bn(0));
       const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
       const totalPrice = price.add(feeAmount);
-
-      executionExtendInfos.push({
-        protocol: foundationDetails[0].kind,
-        feesSize: fees.length,
-      });
 
       executions.push({
         module: module.address,
@@ -1476,6 +1381,8 @@ export class Router {
         executionIndex: executions.length - 1,
       });
 
+      addRouterTags("foundation", orders.length, fees.length);
+
       // Mark the listings as successfully handled
       for (const { orderId } of foundationDetails) {
         success[orderId] = true;
@@ -1492,11 +1399,6 @@ export class Router {
       const price = orders.map((order) => bn(order.params.price)).reduce((a, b) => a.add(b), bn(0));
       const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
       const totalPrice = price.add(feeAmount);
-
-      executionExtendInfos.push({
-        protocol: looksRareV2Details[0].kind,
-        feesSize: fees.length,
-      });
 
       executions.push({
         module: module.address,
@@ -1540,6 +1442,8 @@ export class Router {
         executionIndex: executions.length - 1,
       });
 
+      addRouterTags("looks-rare-v2", orders.length, fees.length);
+
       // Mark the listings as successfully handled
       for (const { orderId } of looksRareV2Details) {
         success[orderId] = true;
@@ -1567,17 +1471,9 @@ export class Router {
           .reduce((a, b) => a.add(b), bn(0));
         const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
         const totalPrice = price.add(feeAmount);
-        const totalFeesLength = orders.reduce((count, order) => {
-          return count + (order.getInfo()?.fees.length ?? 0);
-        }, 0);
 
         const currencyIsETH = isETH(this.chainId, currency);
         const buyInCurrencyIsETH = isETH(this.chainId, buyInCurrency);
-
-        executionExtendInfos.push({
-          protocol: currencyDetails[0].kind,
-          feesSize: fees.length + totalFeesLength,
-        });
 
         executions.push({
           module: module.address,
@@ -1663,6 +1559,8 @@ export class Router {
           executionIndex: executions.length - 1,
         });
 
+        addRouterTags("seaport", orders.length, fees.length);
+
         // Mark the listings as successfully handled
         for (const { orderId } of currencyDetails) {
           success[orderId] = true;
@@ -1694,15 +1592,6 @@ export class Router {
 
         const currencyIsETH = isETH(this.chainId, currency);
         const buyInCurrencyIsETH = isETH(this.chainId, buyInCurrency);
-
-        const totalFeesLength = orders.reduce((count, order) => {
-          return count + (order.getInfo()?.fees.length ?? 0);
-        }, 0);
-
-        executionExtendInfos.push({
-          protocol: currencyDetails[0].kind,
-          feesSize: fees.length + totalFeesLength,
-        });
 
         executions.push({
           module: module.address,
@@ -1791,6 +1680,8 @@ export class Router {
           details: currencyDetails,
           executionIndex: executions.length - 1,
         });
+
+        addRouterTags("seaport-v1.4", orders.length, fees.length);
 
         // Mark the listings as successfully handled
         for (const { orderId } of currencyDetails) {
@@ -1824,15 +1715,6 @@ export class Router {
         const currencyIsETH = isETH(this.chainId, currency);
         const buyInCurrencyIsETH = isETH(this.chainId, buyInCurrency);
 
-        const totalFeesLength = orders.reduce((count, order) => {
-          return count + (order.getInfo()?.fees.length ?? 0);
-        }, 0);
-
-        executionExtendInfos.push({
-          protocol: currencyDetails[0].kind,
-          feesSize: fees.length + totalFeesLength,
-        });
-
         executions.push({
           module: module.address,
           data:
@@ -1920,6 +1802,8 @@ export class Router {
           details: currencyDetails,
           executionIndex: executions.length - 1,
         });
+
+        addRouterTags("seaport-v1.5", orders.length, fees.length);
 
         // Mark the listings as successfully handled
         for (const { orderId } of currencyDetails) {
@@ -1952,15 +1836,6 @@ export class Router {
         const currencyIsETH = isETH(this.chainId, currency);
         const buyInCurrencyIsETH = isETH(this.chainId, buyInCurrency);
 
-        const totalFeesLength = orders.reduce((count, order) => {
-          return count + (order.getInfo()?.fees.length ?? 0);
-        }, 0);
-
-        executionExtendInfos.push({
-          protocol: currencyDetails[0].kind,
-          feesSize: fees.length + totalFeesLength,
-        });
-
         executions.push({
           module: module.address,
           data:
@@ -2048,6 +1923,8 @@ export class Router {
           details: currencyDetails,
           executionIndex: executions.length - 1,
         });
+
+        addRouterTags("alienswap", orders.length, fees.length);
 
         // Mark the listings as successfully handled
         for (const { orderId } of currencyDetails) {
@@ -2101,11 +1978,6 @@ export class Router {
             amount: price,
           };
 
-      executionExtendInfos.push({
-        protocol: collectionXyzDetails[0].kind,
-        feesSize: fees.length,
-      });
-
       executions.push({
         module: module.address,
         data: module.interface.encodeFunctionData(functionName, [
@@ -2134,6 +2006,8 @@ export class Router {
         details: collectionXyzDetails,
         executionIndex: executions.length - 1,
       });
+
+      addRouterTags("collectionxyz", ordersAndTokens.length, fees.length);
 
       // Mark the listings as successfully handled
       for (const { orderId } of collectionXyzDetails) {
@@ -2175,6 +2049,8 @@ export class Router {
         executionIndex: executions.length - 1,
       });
 
+      addRouterTags("ditto", orders.length, fees.length);
+
       // Mark the listings as successfully handled
       for (const { orderId } of dittoDetails) {
         success[orderId] = true;
@@ -2203,11 +2079,6 @@ export class Router {
       const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
       const totalPrice = price.add(feeAmount);
 
-      executionExtendInfos.push({
-        protocol: sudoswapDetails[0].kind,
-        feesSize: fees.length,
-      });
-
       executions.push({
         module: module.address,
         data: module.interface.encodeFunctionData("buyWithETH", [
@@ -2235,6 +2106,8 @@ export class Router {
         details: sudoswapDetails,
         executionIndex: executions.length - 1,
       });
+
+      addRouterTags("sudoswap", orders.length, fees.length);
 
       // Mark the listings as successfully handled
       for (const { orderId } of sudoswapDetails) {
@@ -2275,11 +2148,6 @@ export class Router {
       const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
       const totalPrice = price.add(feeAmount);
 
-      executionExtendInfos.push({
-        protocol: sudoswapV2Details[0].kind,
-        feesSize: fees.length,
-      });
-
       executions.push({
         module: module.address,
         data: module.interface.encodeFunctionData("buyWithETH", [
@@ -2306,6 +2174,8 @@ export class Router {
         details: sudoswapV2Details,
         executionIndex: executions.length - 1,
       });
+
+      addRouterTags("sudoswap-v2", orders.length, fees.length);
 
       // Mark the listings as successfully handled
       for (const { orderId } of sudoswapV2Details) {
@@ -2345,11 +2215,6 @@ export class Router {
       const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
       const totalPrice = price.add(feeAmount);
 
-      executionExtendInfos.push({
-        protocol: midaswapDetails[0].kind,
-        feesSize: fees.length,
-      });
-
       executions.push({
         module: module.address,
         data: module.interface.encodeFunctionData("buyWithETH", [
@@ -2376,6 +2241,8 @@ export class Router {
         details: midaswapDetails,
         executionIndex: executions.length - 1,
       });
+
+      addRouterTags("midaswap", orders.length, fees.length);
 
       // Mark the listings as successfully handled
       for (const { orderId } of midaswapDetails) {
@@ -2407,13 +2274,7 @@ export class Router {
           )
         )
         .reduce((a, b) => a.add(b), bn(0));
-
       const totalPrice = price.add(feeAmount);
-
-      executionExtendInfos.push({
-        protocol: caviarV1Details[0].kind,
-        feesSize: fees.length,
-      });
 
       executions.push({
         module: module.address,
@@ -2441,6 +2302,8 @@ export class Router {
         details: caviarV1Details,
         executionIndex: executions.length - 1,
       });
+
+      addRouterTags("caviar-v1", orders.length, fees.length);
 
       // Mark the listings as successfully handled
       for (const { orderId } of caviarV1Details) {
@@ -2501,11 +2364,6 @@ export class Router {
       const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
       const totalPrice = price.add(feeAmount);
 
-      executionExtendInfos.push({
-        protocol: details[0].kind,
-        feesSize: fees.length,
-      });
-
       executions.push({
         module: module.address,
         data: module.interface.encodeFunctionData("buyWithETH", [
@@ -2532,6 +2390,8 @@ export class Router {
         executionIndex: executions.length - 1,
       });
 
+      addRouterTags("nftx", nftxDetails.length, fees.length);
+
       // Mark the listings as successfully handled
       for (const { orderId } of nftxDetails) {
         success[orderId] = true;
@@ -2553,11 +2413,6 @@ export class Router {
       const exchange = new Sdk.X2Y2.Exchange(this.chainId, String(this.options?.x2y2ApiKey));
       if (orders.length === 1) {
         try {
-          executionExtendInfos.push({
-            protocol: x2y2Details[0].kind,
-            feesSize: fees.length,
-          });
-
           executions.push({
             module: module.address,
             data: module.interface.encodeFunctionData("acceptETHListing", [
@@ -2650,10 +2505,6 @@ export class Router {
         );
 
         if (inputs.some(Boolean)) {
-          executionExtendInfos.push({
-            protocol: x2y2Details[0].kind,
-            feesSize: fees.length,
-          });
           executions.push({
             module: module.address,
             data: module.interface.encodeFunctionData("acceptETHListings", [
@@ -2679,6 +2530,8 @@ export class Router {
             details: x2y2Details,
             executionIndex: executions.length - 1,
           });
+
+          addRouterTags("x2y2", orders.length, fees.length);
 
           for (let i = 0; i < x2y2Details.length; i++) {
             if (inputs[i]) {
@@ -2738,15 +2591,6 @@ export class Router {
         const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
         const totalPrice = price.add(feeAmount);
 
-        const totalFeesLength = orders.reduce((count, order) => {
-          return count + (order.params.fees.length ?? 0);
-        }, 0);
-
-        executionExtendInfos.push({
-          protocol: zeroexV4Erc721Details[0].kind,
-          feesSize: fees.length + totalFeesLength,
-        });
-
         executions.push({
           module: module.address,
           data:
@@ -2789,6 +2633,8 @@ export class Router {
           details: zeroexV4Erc721Details,
           executionIndex: executions.length - 1,
         });
+
+        addRouterTags("zeroex-v4", orders.length, fees.length);
 
         // Mark the listings as successfully handled
         for (const { orderId } of zeroexV4Erc721Details) {
@@ -2849,14 +2695,6 @@ export class Router {
         const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
         const totalPrice = price.add(feeAmount);
 
-        const totalFeesLength = orders.reduce((count, order) => {
-          return count + (order.params.fees.length ?? 0);
-        }, 0);
-        executionExtendInfos.push({
-          protocol: zeroexV4Erc1155Details[0].kind,
-          feesSize: fees.length + totalFeesLength,
-        });
-
         executions.push({
           module: module.address,
           data:
@@ -2902,6 +2740,8 @@ export class Router {
           executionIndex: executions.length - 1,
         });
 
+        addRouterTags("zeroex-v4", orders.length, fees.length);
+
         // Mark the listings as successfully handled
         for (const { orderId } of zeroexV4Erc1155Details) {
           success[orderId] = true;
@@ -2921,11 +2761,6 @@ export class Router {
         .reduce((a, b) => a.add(b), bn(0));
       const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
       const totalPrice = price.add(feeAmount);
-
-      executionExtendInfos.push({
-        protocol: zoraDetails[0].kind,
-        feesSize: fees.length,
-      });
 
       executions.push({
         module: module.address,
@@ -2977,6 +2812,8 @@ export class Router {
         executionIndex: executions.length - 1,
       });
 
+      addRouterTags("zora", orders.length, fees.length);
+
       // Mark the listings as successfully handled
       for (const { orderId } of zoraDetails) {
         success[orderId] = true;
@@ -2995,11 +2832,6 @@ export class Router {
         .reduce((a, b) => a.add(b), bn(0));
       const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
       const totalPrice = price.add(feeAmount);
-
-      executionExtendInfos.push({
-        protocol: raribleDetails[0].kind,
-        feesSize: fees.length,
-      });
 
       executions.push({
         module: module.address,
@@ -3045,6 +2877,8 @@ export class Router {
         executionIndex: executions.length - 1,
       });
 
+      addRouterTags("rarible", orders.length, fees.length);
+
       // Mark the listings as successfully handled
       for (const { orderId } of raribleDetails) {
         success[orderId] = true;
@@ -3061,11 +2895,6 @@ export class Router {
       const price = orders.map((order) => bn(order.params.price)).reduce((a, b) => a.add(b), bn(0));
       const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
       const totalPrice = price.add(feeAmount);
-
-      executionExtendInfos.push({
-        protocol: superRareDetails[0].kind,
-        feesSize: fees.length,
-      });
 
       executions.push({
         module: module.address,
@@ -3117,6 +2946,8 @@ export class Router {
         executionIndex: executions.length - 1,
       });
 
+      addRouterTags("superrare", orders.length, fees.length);
+
       // Mark the listings as successfully handled
       for (const { orderId } of superRareDetails) {
         success[orderId] = true;
@@ -3133,11 +2964,6 @@ export class Router {
       const price = orders.map((order) => bn(order.params.price)).reduce((a, b) => a.add(b), bn(0));
       const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
       const totalPrice = price.add(feeAmount);
-
-      executionExtendInfos.push({
-        protocol: cryptoPunksDetails[0].kind,
-        feesSize: fees.length,
-      });
 
       executions.push({
         module: module.address,
@@ -3169,6 +2995,8 @@ export class Router {
         executionIndex: executions.length - 1,
       });
 
+      addRouterTags("cryptopunks", orders.length, fees.length);
+
       // Mark the listings as successfully handled
       for (const { orderId } of cryptoPunksDetails) {
         success[orderId] = true;
@@ -3193,11 +3021,6 @@ export class Router {
 
         const currencyIsETH = isETH(this.chainId, currency);
         const buyInCurrencyIsETH = isETH(this.chainId, buyInCurrency);
-
-        executionExtendInfos.push({
-          protocol: currencyDetails[0].kind,
-          feesSize: fees.length,
-        });
 
         executions.push({
           module: module.address,
@@ -3238,6 +3061,8 @@ export class Router {
           executionIndex: executions.length - 1,
         });
 
+        addRouterTags("payment-processor", currencyDetails.length, fees.length);
+
         // Mark the listings as successfully handled
         for (const { orderId } of currencyDetails) {
           success[orderId] = true;
@@ -3249,8 +3074,6 @@ export class Router {
     // Handle any needed swaps
 
     const successfulSwapInfos: SwapInfo[] = [];
-    const successfulSwapInfosExtend: ExecutionExtendInfo[] = [];
-
     const unsuccessfulDependentExecutionIndexes: number[] = [];
     const unsuccessfulDependentTxIndexes: number[] = [];
     if (swapDetails.length) {
@@ -3321,13 +3144,6 @@ export class Router {
                 revertIfIncomplete: Boolean(!options?.partial),
               }
             );
-
-            successfulSwapInfosExtend.push({
-              feesSize: 0,
-              transfers: transfers.length,
-              tokenIn,
-              tokenOut,
-            });
 
             successfulSwapInfos.push(swapInfo);
 
@@ -3417,14 +3233,14 @@ export class Router {
     executions = executions.filter((_, i) => !unsuccessfulDependentExecutionIndexes.includes(i));
     txs = txs.filter((_, i) => !unsuccessfulDependentTxIndexes.includes(i));
 
+    routerTxTags.swaps! += successfulSwapInfos.length;
+
     if (executions.length || successfulSwapInfos.length) {
       // Prepend any swap executions
       executions = [
         ...mergeSwapInfos(this.chainId, successfulSwapInfos).map((info) => info.execution),
         ...executions,
       ];
-
-      executionExtendInfos = [...successfulSwapInfosExtend, ...executionExtendInfos];
 
       // If the buy-in currency is not ETH then we won't need any `value` fields
       if (buyInCurrency !== Sdk.Common.Addresses.Native[this.chainId]) {
@@ -3433,7 +3249,6 @@ export class Router {
         });
       }
 
-      const info = extractIdentifiersFromExections(executions, executionExtendInfos);
       if (options?.usePermit) {
         const supportedPermitCurrencies = [Sdk.Common.Addresses.Usdc[this.chainId]];
         if (!supportedPermitCurrencies.includes(buyInCurrency)) {
@@ -3445,12 +3260,7 @@ export class Router {
           {
             approvals: [],
             preSignatures: [],
-            txTags: {
-              kind: "sale",
-              listings: info.tags,
-              feesOnTop: info.feesOnTop,
-              swaps: info.swaps,
-            },
+            txTags: routerTxTags,
             permits: await new PermitHandler(this.chainId, this.provider)
               .generate(relayer, ftTransferItems)
               .then((permits) =>
@@ -3492,12 +3302,7 @@ export class Router {
             approvals: Object.values(uniqueApprovals),
             permits: [],
             preSignatures: [],
-            txTags: {
-              kind: "sale",
-              listings: info.tags,
-              feesOnTop: info.feesOnTop,
-              swaps: info.swaps,
-            },
+            txTags: routerTxTags,
             txData: {
               from: relayer,
               ...(ftTransferItems.length
@@ -3576,7 +3381,7 @@ export class Router {
     const txs: {
       approvals: NFTApproval[];
       txData: TxData;
-      txTags: TxAttribute;
+      txTags: TxTags;
       orderIds: string[];
       preSignatures: PreSignature[];
     }[] = [];
@@ -3649,12 +3454,7 @@ export class Router {
               approvals: [],
               txTags: {
                 kind: "sale",
-                bids: [
-                  {
-                    protocol: "blur",
-                    count: blurDetails.length,
-                  },
-                ],
+                bids: { blur: blurDetails.length },
               },
               txData: {
                 from: data.from,
@@ -3739,12 +3539,7 @@ export class Router {
         preSignatures,
         txTags: {
           kind: "sale",
-          bids: [
-            {
-              protocol: "payment-processor",
-              count: orders.length,
-            },
-          ],
+          bids: { "payment-processor": orders.length },
         },
         txData: exchange.fillOrdersTx(taker, orders, takeOrders),
         orderIds: paymentProcessorDetails.map((d) => d.orderId),
@@ -3829,6 +3624,7 @@ export class Router {
           module = this.contracts.midaswapModule;
           break;
         }
+
         case "caviar-v1": {
           module = this.contracts.caviarV1Module;
           break;
@@ -3869,10 +3665,10 @@ export class Router {
           break;
         }
 
-        // case "payment-processor": {
-        //   module = this.contracts.paymentProcessorModule;
-        //   break;
-        // }
+        case "payment-processor": {
+          module = this.contracts.paymentProcessorModule;
+          break;
+        }
 
         default: {
           continue;
@@ -3911,6 +3707,23 @@ export class Router {
       execution: ExecutionInfo;
     }[] = [];
 
+    // Keep track of tags for the router execution
+    const routerTxTags: TxTags = {
+      kind: "sale",
+      listings: {},
+      bids: {},
+      mints: 0,
+      swaps: 0,
+      feesOnTop: 0,
+    };
+    const addRouterTags = (orderKind: string, numBids: number, numFeesOnTop: number) => {
+      if (!routerTxTags.bids![orderKind]) {
+        routerTxTags.bids![orderKind] = 0;
+      }
+      routerTxTags.bids![orderKind] += numBids;
+      routerTxTags.feesOnTop! += numFeesOnTop;
+    };
+
     for (let i = 0; i < details.length; i++) {
       const detail = details[i];
       if (success[detail.orderId]) {
@@ -3918,6 +3731,10 @@ export class Router {
       }
 
       const fees = getFees(detail);
+
+      if (detail.kind !== "seaport-v1.5-partial") {
+        addRouterTags(detail.kind, 1, fees.length);
+      }
 
       switch (detail.kind) {
         case "looks-rare-v2": {
@@ -4162,12 +3979,7 @@ export class Router {
               txs.push({
                 txTags: {
                   kind: "sale",
-                  bids: [
-                    {
-                      protocol: "seaport-v1.5-partial",
-                      count: 1,
-                    },
-                  ],
+                  bids: { "seaport-v1.5": 1 },
                 },
                 txData: {
                   from: taker,
@@ -4726,40 +4538,40 @@ export class Router {
           break;
         }
 
-        // case "payment-processor": {
-        //   const order = detail.order as Sdk.PaymentProcessor.Order;
-        //   const module = this.contracts.paymentProcessorModule;
+        case "payment-processor": {
+          const order = detail.order as Sdk.PaymentProcessor.Order;
+          const module = this.contracts.paymentProcessorModule;
 
-        //   const takerOrder = order.buildMatching({
-        //     taker: module.address,
-        //     takerMasterNonce: "0",
-        //     tokenId: order.params.collectionLevelOffer ? detail.tokenId : undefined,
-        //     maxRoyaltyFeeNumerator: detail.extraArgs?.maxRoyaltyFeeNumerator ?? "0",
-        //   });
-        //   const matchedOrder = order.getMatchedOrder(takerOrder);
+          const takerOrder = order.buildMatching({
+            taker: module.address,
+            takerMasterNonce: "0",
+            tokenId: order.params.collectionLevelOffer ? detail.tokenId : undefined,
+            maxRoyaltyFeeNumerator: detail.extraArgs?.maxRoyaltyFeeNumerator ?? "0",
+          });
+          const matchedOrder = order.getMatchedOrder(takerOrder);
 
-        //   executionsWithDetails.push({
-        //     detail,
-        //     execution: {
-        //       module: module.address,
-        //       data: module.interface.encodeFunctionData("acceptOffers", [
-        //         [matchedOrder],
-        //         [order.params],
-        //         {
-        //           fillTo: taker,
-        //           refundTo: taker,
-        //           revertIfIncomplete: Boolean(!options?.partial),
-        //         },
-        //         fees,
-        //       ]),
-        //       value: 0,
-        //     },
-        //   });
+          executionsWithDetails.push({
+            detail,
+            execution: {
+              module: module.address,
+              data: module.interface.encodeFunctionData("acceptOffers", [
+                [matchedOrder],
+                [order.params],
+                {
+                  fillTo: taker,
+                  refundTo: taker,
+                  revertIfIncomplete: Boolean(!options?.partial),
+                },
+                fees,
+              ]),
+              value: 0,
+            },
+          });
 
-        //   success[detail.orderId] = true;
+          success[detail.orderId] = true;
 
-        //   break;
-        // }
+          break;
+        }
       }
     }
 
@@ -4773,21 +4585,7 @@ export class Router {
 
       // Use the on-received ERC721/ERC1155 hooks for approval-less bid filling
       if (detail.contractKind === "erc721") {
-        const info = extractIdentifiersFromExections(
-          [execution],
-          [
-            {
-              protocol: detail.kind,
-              feesSize: detail.fees?.length ?? 0,
-            },
-          ]
-        );
         txs.push({
-          txTags: {
-            kind: "sale",
-            bids: info.tags,
-            feesOnTop: info.feesOnTop,
-          },
           txData: {
             from: taker,
             to: detail.contract,
@@ -4797,26 +4595,13 @@ export class Router {
                 [taker, execution.module, detail.tokenId, routerLevelTxData]
               ) + generateSourceBytes(options?.source),
           },
+          txTags: routerTxTags,
           approvals: [],
           preSignatures: [],
           orderIds: [detail.orderId],
         });
       } else {
-        const info = extractIdentifiersFromExections(
-          [execution],
-          [
-            {
-              protocol: detail.kind,
-              feesSize: detail.fees?.length ?? 0,
-            },
-          ]
-        );
         txs.push({
-          txTags: {
-            kind: "sale",
-            bids: info.tags,
-            feesOnTop: info.feesOnTop,
-          },
           txData: {
             from: taker,
             to: detail.contract,
@@ -4826,25 +4611,14 @@ export class Router {
                 [taker, execution.module, detail.tokenId, detail.amount ?? 1, routerLevelTxData]
               ) + generateSourceBytes(options?.source),
           },
+          txTags: routerTxTags,
           approvals: [],
           preSignatures: [],
           orderIds: [detail.orderId],
         });
       }
     } else if (executionsWithDetails.length >= 1) {
-      const info = extractIdentifiersFromExections(
-        executionsWithDetails.map(({ execution }) => execution),
-        executionsWithDetails.map(({ detail }) => ({
-          protocol: detail.kind,
-          feesSize: detail.fees?.length ?? 0,
-        }))
-      );
       txs.push({
-        txTags: {
-          kind: "sale",
-          bids: info.tags,
-          feesOnTop: info.feesOnTop,
-        },
         txData: {
           from: taker,
           to: this.contracts.approvalProxy.address,
@@ -4855,6 +4629,7 @@ export class Router {
               Sdk.SeaportBase.Addresses.ReservoirConduitKey[this.chainId],
             ]) + generateSourceBytes(options?.source),
         },
+        txTags: routerTxTags,
         // Ensure approvals are unique
         approvals: uniqBy(
           // TODO: Exclude approvals for unsuccessfull items

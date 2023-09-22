@@ -41,14 +41,6 @@ export type ExecutionInfo = {
   value: BigNumberish;
 };
 
-export type ExecutionExtendInfo = {
-  feesSize: number;
-  protocol?: string;
-  transfers?: number;
-  tokenIn?: string;
-  tokenOut?: string;
-};
-
 export type Fee = {
   recipient: string;
   amount: BigNumberish;
@@ -57,6 +49,30 @@ export type Fee = {
 export type Permit = {
   kind: "erc20";
   data: PermitWithTransfers;
+};
+
+export type PreSignature = {
+  kind: "payment-processor-take-order";
+  signer: string;
+  signature?: string;
+  uniqueId: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  data: any;
+};
+
+export type TxKind = "approval" | "sale" | "mint" | "swap";
+export type TxTags = {
+  kind: TxKind;
+  // Number of listings for each order kind
+  listings?: { [orderKind: string]: number };
+  // Number of bids for each order kind
+  bids?: { [orderKind: string]: number };
+  // Number of mints
+  mints?: number;
+  // Number of swaps
+  swaps?: number;
+  // Number of fees on top
+  feesOnTop?: number;
 };
 
 // Orders
@@ -194,38 +210,11 @@ export type PerCurrencyListingDetails = {
   [currency: string]: ListingDetails[];
 };
 
-export type PreSignature = {
-  kind: "payment-processor-take-order";
-  signer: string;
-  signature?: string;
-  uniqueId: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  data: any;
-};
-
-export type TxAttributeKind = "approval" | "sale" | "mint" | "swap";
-export type TxAttribute = {
-  kind: TxAttributeKind;
-  approvals?: number;
-  listings?: {
-    protocol: string;
-    count: number;
-  }[];
-  bids?: {
-    protocol: string;
-    count: number;
-  }[];
-  mints?: number;
-  swaps?: number;
-  feesOnTop?: number;
-  fees?: number;
-};
-
 export type FillListingsResult = {
   txs: {
     approvals: FTApproval[];
-    txTags: TxAttribute;
     txData: TxData;
+    txTags?: TxTags;
     orderIds: string[];
     permits: Permit[];
     preSignatures: PreSignature[];
@@ -259,7 +248,7 @@ export type FillBidsResult = {
   txs: {
     approvals: NFTApproval[];
     txData: TxData;
-    txTags: TxAttribute;
+    txTags?: TxTags;
     orderIds: string[];
     preSignatures: PreSignature[];
   }[];
@@ -281,6 +270,7 @@ export type MintDetails = {
 export type FillMintsResult = {
   txs: {
     txData: TxData;
+    txTags?: TxTags;
     orderIds: string[];
   }[];
   success: { [orderId: string]: boolean };

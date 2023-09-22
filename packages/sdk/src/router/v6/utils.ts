@@ -3,6 +3,7 @@ import { BigNumberish } from "@ethersproject/bignumber";
 
 import * as Sdk from "../../index";
 import { MaxUint256, TxData } from "../../utils";
+import { TxTags } from "./types";
 
 export const isETH = (chainId: number, address: string) =>
   [Sdk.Common.Addresses.Native[chainId], Sdk.ZeroExV4.Addresses.Native[chainId]].includes(
@@ -37,3 +38,36 @@ export const generateFTApprovalTxData = (
     [spender, amount ?? MaxUint256]
   ),
 });
+
+export const estimateGas = (txTags: TxTags) => {
+  const gasDb = {
+    listing: 80000,
+    bid: 80000,
+    swap: 150000,
+    mint: 50000,
+    feeOnTop: 30000,
+  };
+
+  let estimate = 0;
+
+  // Listings
+  for (const count of Object.keys(txTags.listings ?? {})) {
+    estimate += Number(count) * gasDb.listing;
+  }
+
+  // Bids
+  for (const count of Object.keys(txTags.bids ?? {})) {
+    estimate += Number(count) * gasDb.bid;
+  }
+
+  // Swaps
+  estimate += (txTags.swaps ?? 0) * gasDb.swap;
+
+  // Mints
+  estimate += (txTags.mints ?? 0) * gasDb.mint;
+
+  // Fees on top
+  estimate += (txTags.feesOnTop ?? 0) * gasDb.feeOnTop;
+
+  return estimate;
+};

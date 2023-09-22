@@ -10,6 +10,7 @@ import {
   ListingDetails,
   MintDetails,
 } from "@reservoir0x/sdk/dist/router/v6/types";
+import { estimateGas } from "@reservoir0x/sdk/src/router/v6/utils";
 import axios from "axios";
 import Joi from "joi";
 
@@ -38,7 +39,6 @@ import { getNFTTransferEvents } from "@/orderbook/mints/simulation";
 import { getPermitId, getPermit, savePermit } from "@/utils/permits";
 import { getPreSignatureId, getPreSignature, savePreSignature } from "@/utils/pre-signatures";
 import { getUSDAndCurrencyPrices } from "@/utils/prices";
-import { GasEstimationTranscation, getTotalEstimateGas } from "@/utils/gas-estimation";
 
 const version = "v7";
 
@@ -208,6 +208,9 @@ export const getExecuteBuyV7Options: RouteOptions = {
                 tip: Joi.string(),
                 orderIds: Joi.array().items(Joi.string()),
                 data: Joi.object(),
+                gasEstimate: Joi.number().description(
+                  "Approximation of gas used (only applies to `transaction` items)"
+                ),
               })
             )
             .required(),
@@ -250,7 +253,6 @@ export const getExecuteBuyV7Options: RouteOptions = {
           maxQuantity: Joi.string().pattern(regex.number).allow(null),
         })
       ),
-      totalEstimateGas: Joi.string().optional(),
     }).label(`getExecuteBuy${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(`get-execute-buy-${version}-handler`, `Wrong response schema: ${error}`);
@@ -1345,6 +1347,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
           tip?: string;
           orderIds?: string[];
           data?: object;
+          gasEstimate?: number;
         }[];
       }[] = [
         {
@@ -1483,10 +1486,6 @@ export const getExecuteBuyV7Options: RouteOptions = {
       }
 
       const { txs, success } = result;
-      const allTranscations: GasEstimationTranscation[] = txs.map(({ txData, txTags }) => ({
-        txData,
-        txTags,
-      }));
 
       // Add any mint transactions
       if (mintDetails.length) {
@@ -1554,10 +1553,6 @@ export const getExecuteBuyV7Options: RouteOptions = {
             approvals: [],
             permits: [],
             preSignatures: [],
-            txTags: {
-              kind: "mint",
-              mints: orderIds.length,
-            },
           }))
         );
 
@@ -1594,13 +1589,6 @@ export const getExecuteBuyV7Options: RouteOptions = {
 
           const isApproved = bn(approvedAmount).gte(approval.amount);
           if (!isApproved) {
-            allTranscations.push({
-              txTags: {
-                kind: "approval",
-                approvals: 1,
-              },
-              txData: approval.txData,
-            });
             steps[1].items.push({
               status: "incomplete",
               data: {
@@ -1714,7 +1702,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
         }
       }
 
-      for (const { txData, orderIds, permits } of txs) {
+      for (const { txData, txTags, orderIds, permits } of txs) {
         steps[4].items.push({
           status: "incomplete",
           orderIds,
@@ -1730,6 +1718,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
                   maxPriorityFeePerGas,
                 }
               : undefined,
+          gasEstimate: txTags ? estimateGas(txTags) : undefined,
         });
       }
 
@@ -1789,14 +1778,11 @@ export const getExecuteBuyV7Options: RouteOptions = {
         })
       );
 
-      const { totalEstimateGas } = await getTotalEstimateGas(allTranscations);
-
       return {
         requestId,
         steps: blurAuth ? [steps[0], ...steps.slice(1).filter((s) => s.items.length)] : steps,
         errors,
         path,
-        totalEstimateGas,
       };
     } catch (error) {
       if (!(error instanceof Boom.Boom)) {
