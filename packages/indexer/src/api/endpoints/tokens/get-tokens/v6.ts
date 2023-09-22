@@ -162,7 +162,7 @@ export const getTokensV6Options: RouteOptions = {
       limit: Joi.number()
         .integer()
         .min(1)
-        .max(100)
+        .max(1000)
         .default(20)
         .description("Amount of items returned in response. Max limit is 100."),
       includeTopBid: Joi.boolean()

@@ -147,7 +147,7 @@ export const getCollectionsV7Options: RouteOptions = {
         })
         .default(20)
         .description(
-          "Amount of items returned in response. Default and max limit is 20, unless sorting by `updatedAt` which has a max limit of 100."
+          "Amount of items returned in response. Default and max limit is 20, unless sorting by `updatedAt` which has a max limit of 1000."
         ),
       startTimestamp: Joi.number()
         .when("sortBy", {
