@@ -18,6 +18,7 @@ import { getExecuteError } from "@/orderbook/orders/errors";
 import { checkBlacklistAndFallback } from "@/orderbook/orders";
 import * as b from "@/utils/auth/blur";
 import { ExecutionsBuffer } from "@/utils/executions";
+import * as erc721c from "@/utils/erc721c";
 
 // Blur
 import * as blurBuyCollection from "@/orderbook/orders/blur/build/buy/collection";
@@ -701,6 +702,14 @@ export const getExecuteBidV5Options: RouteOptions = {
 
                 const exchange = new Sdk.SeaportV15.Exchange(config.chainId);
                 const conduit = exchange.deriveConduit(order.params.conduitKey);
+
+                // Check if is blocked by ERC721c
+                if (params.orderbook === "opensea" && collection) {
+                  const isBlocked = await erc721c.checkMarketplaceIsFiltered(collection, [conduit]);
+                  if (isBlocked) {
+                    throw getExecuteError("Seaport was blocked by erc721c's security policy");
+                  }
+                }
 
                 // Check the maker's approval
                 let approvalTx: TxData | undefined;
