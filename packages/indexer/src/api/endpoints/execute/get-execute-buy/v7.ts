@@ -10,6 +10,7 @@ import {
   ListingDetails,
   MintDetails,
 } from "@reservoir0x/sdk/dist/router/v6/types";
+import { estimateGas } from "@reservoir0x/sdk/dist/router/v6/utils";
 import axios from "axios";
 import Joi from "joi";
 
@@ -207,6 +208,9 @@ export const getExecuteBuyV7Options: RouteOptions = {
                 tip: Joi.string(),
                 orderIds: Joi.array().items(Joi.string()),
                 data: Joi.object(),
+                gasEstimate: Joi.number().description(
+                  "Approximation of gas used (only applies to `transaction` items)"
+                ),
               })
             )
             .required(),
@@ -1343,6 +1347,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
           tip?: string;
           orderIds?: string[];
           data?: object;
+          gasEstimate?: number;
         }[];
       }[] = [
         {
@@ -1697,7 +1702,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
         }
       }
 
-      for (const { txData, orderIds, permits } of txs) {
+      for (const { txData, txTags, orderIds, permits } of txs) {
         steps[4].items.push({
           status: "incomplete",
           orderIds,
@@ -1713,6 +1718,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
                   maxPriorityFeePerGas,
                 }
               : undefined,
+          gasEstimate: txTags ? estimateGas(txTags) : undefined,
         });
       }
 

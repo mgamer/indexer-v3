@@ -1,12 +1,12 @@
 import { Contract } from "@ethersproject/contracts";
+import { AddressZero } from "@ethersproject/constants";
 import { parseEther, parseUnits } from "@ethersproject/units";
 import * as Sdk from "@reservoir0x/sdk/src";
+import { PermitHandler } from "@reservoir0x/sdk/src/router/v6/permit";
 import { BidDetails, ListingDetails } from "@reservoir0x/sdk/src/router/v6/types";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import { constants } from "ethers";
-
 import {
   bn,
   getChainId,
@@ -15,7 +15,6 @@ import {
   setupNFTs,
   setupRouterWithModules,
 } from "../utils";
-import { PermitHandler } from "@reservoir0x/sdk/src/router/v6/permit";
 
 describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
   const chainId = getChainId();
@@ -162,19 +161,11 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
     expect(token3BuyerBalanceBefore).to.eq(0);
 
     const router = new Sdk.RouterV6.Router(chainId, ethers.provider);
-
-    const tx = await router.fillListingsTx(
-      listings,
-      buyer.address,
-      Sdk.Common.Addresses.Native[chainId],
-      {
-        source: "reservoir.market",
-      }
-    );
-
     const {
       txs: [{ txData }],
-    } = tx;
+    } = await router.fillListingsTx(listings, buyer.address, Sdk.Common.Addresses.Native[chainId], {
+      source: "reservoir.market",
+    });
 
     await buyer.sendTransaction(txData);
 
@@ -1399,7 +1390,7 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
 
       bids.push({
         // Irrelevant
-        orderId: "3",
+        orderId: "2",
         kind: "seaport",
         contractKind: "erc721",
         contract: erc721.address,
@@ -2938,10 +2929,10 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
       const orderParameters = {
         protocol: 0,
         sellerAcceptedOffer: false,
-        marketplace: constants.AddressZero,
+        marketplace: AddressZero,
         marketplaceFeeNumerator: "0",
         maxRoyaltyFeeNumerator: "0",
-        privateTaker: constants.AddressZero,
+        privateTaker: AddressZero,
         trader: seller1.address,
         tokenAddress: erc721cWithWhitelist.address,
         tokenId: tokenId1,
@@ -2949,7 +2940,7 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
         price: price1,
         expiration: (blockTime + 60 * 60).toString(),
         nonce: "0",
-        coin: constants.AddressZero,
+        coin: AddressZero,
         masterNonce: sellerMasterNonce,
       };
 
@@ -3124,10 +3115,10 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
       const orderParameters = {
         protocol: 0,
         sellerAcceptedOffer: false,
-        marketplace: constants.AddressZero,
+        marketplace: AddressZero,
         marketplaceFeeNumerator: "0",
         maxRoyaltyFeeNumerator: "0",
-        privateTaker: constants.AddressZero,
+        privateTaker: AddressZero,
         trader: seller1.address,
         tokenAddress: erc721.address,
         tokenId: tokenId1,
