@@ -48,26 +48,40 @@ export const estimateGas = (txTags: TxTags) => {
     feeOnTop: 30000,
   };
 
-  let estimate = 0;
+  // Base gas cost per tx kind
+  let estimate: number;
+  if (txTags.kind === "mint") {
+    estimate = 30000;
+  } else if (txTags.kind === "sale") {
+    estimate = 80000;
+  } else {
+    estimate = 150000;
+  }
 
   // Listings
-  for (const count of Object.keys(txTags.listings ?? {})) {
+  for (const count of Object.values(txTags.listings ?? {})) {
     estimate += Number(count) * gasDb.listing;
   }
 
   // Bids
-  for (const count of Object.keys(txTags.bids ?? {})) {
+  for (const count of Object.values(txTags.bids ?? {})) {
     estimate += Number(count) * gasDb.bid;
   }
 
   // Swaps
-  estimate += (txTags.swaps ?? 0) * gasDb.swap;
+  if (txTags.swaps) {
+    estimate += txTags.swaps * gasDb.swap;
+  }
 
   // Mints
-  estimate += (txTags.mints ?? 0) * gasDb.mint;
+  if (txTags.mints) {
+    estimate += txTags.mints * gasDb.mint;
+  }
 
   // Fees on top
-  estimate += (txTags.feesOnTop ?? 0) * gasDb.feeOnTop;
+  if (txTags.feesOnTop) {
+    estimate += txTags.feesOnTop * gasDb.mint;
+  }
 
   return estimate;
 };

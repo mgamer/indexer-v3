@@ -10,7 +10,7 @@ import {
   ListingDetails,
   MintDetails,
 } from "@reservoir0x/sdk/dist/router/v6/types";
-import { estimateGas } from "@reservoir0x/sdk/src/router/v6/utils";
+import { estimateGas } from "@reservoir0x/sdk/dist/router/v6/utils";
 import axios from "axios";
 import Joi from "joi";
 
