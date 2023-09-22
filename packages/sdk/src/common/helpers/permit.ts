@@ -3,7 +3,6 @@ import { Provider } from "@ethersproject/abstract-provider";
 import { hexZeroPad } from "@ethersproject/bytes";
 import { Contract } from "@ethersproject/contracts";
 import { Network, bn } from "../../utils";
-// import { keccak256 } from "@ethersproject/solidity";
 
 export type Permit = {
   chainId: number;
@@ -63,11 +62,6 @@ export async function createPermitMessage(permit: Permit, provider: Provider) {
       deadline: permit.deadline,
     },
   };
-
-  //   const id = keccak256(
-  //     ["string"],
-  //     [JSON.stringify(message)]
-  //   );
 
   return message;
 }
