@@ -1354,7 +1354,6 @@ export const getExecuteBuyV7Options: RouteOptions = {
         }[];
       }[] = [
         {
-          // TODO: Rename id to "auth-signature"
           id: "auth",
           action: "Sign in",
           description: "Some marketplaces require signing an auth message before filling",
