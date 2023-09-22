@@ -781,7 +781,6 @@ export class Router {
     // Direct filling for:
     // - seaport-1.5
     // - alienswap
-    // - payment-processor
 
     if (
       details.length &&
