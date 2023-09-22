@@ -1536,6 +1536,9 @@ export const getExecuteBuyV7Options: RouteOptions = {
         steps[0].items.push({
           status: "complete",
         });
+        steps[1].items.push({
+          status: "complete",
+        });
       }
 
       const router = new Sdk.RouterV6.Router(config.chainId, baseProvider, {
