@@ -92,7 +92,8 @@ export type EventKind =
   | "seadrop"
   | "blur-v2"
   | "erc721c"
-  | "joepeg";
+  | "joepeg"
+  | "metadata-update";
 
 // Event sub-kind in each of the above protocol/standard
 export type EventSubKind =
@@ -300,7 +301,10 @@ export type EventSubKind =
   | "joepeg-taker-bid"
   | "erc721c-set-allowlist"
   | "erc721c-set-transfer-security-level"
-  | "erc721c-transfer-validator-updated";
+  | "erc721c-transfer-validator-updated"
+  | "metadata-update-single-token"
+  | "metadata-update-batch-tokens"
+  | "metadata-update-uri";
 
 export type EventData = {
   kind: EventKind;
