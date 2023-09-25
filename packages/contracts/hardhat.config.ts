@@ -30,6 +30,9 @@ const getNetworkConfig = (chainId?: number) => {
       case 137:
         url = `https://polygon-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`;
         break;
+      case 1101:
+        url = "https://zkevm-rpc.com";
+        break;
       case 8453:
         url = "https://developer-access-mainnet.base.org";
         break;
@@ -126,6 +129,7 @@ const config: HardhatUserConfig = {
     optimism: getNetworkConfig(10),
     bsc: getNetworkConfig(56),
     polygon: getNetworkConfig(137),
+    polygonZkevm: getNetworkConfig(1101),
     base: getNetworkConfig(8453),
     arbitrum: getNetworkConfig(42161),
     arbitrumNova: getNetworkConfig(42170),
