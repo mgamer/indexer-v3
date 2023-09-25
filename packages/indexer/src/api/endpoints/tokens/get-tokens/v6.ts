@@ -29,6 +29,7 @@ import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
 import { Assets, ImageSize } from "@/utils/assets";
 import { CollectionSets } from "@/models/collection-sets";
+import { Collections } from "@/models/collections";
 
 const version = "v6";
 
@@ -461,13 +462,21 @@ export const getTokensV6Options: RouteOptions = {
         `;
     }
 
-    // Get the collections from the collection set
+    // Get the collections from the collection set or community
     let collections: any[] = [];
     if (query.collectionsSetId) {
       collections = await CollectionSets.getCollectionsIds(query.collectionsSetId);
 
       if (_.isEmpty(collections)) {
         throw Boom.badRequest(`No collections for collection set ${query.collectionsSetId}`);
+      }
+    }
+
+    if (query.community) {
+      collections = await Collections.getIdsByCommunity(query.community);
+
+      if (_.isEmpty(collections)) {
+        throw Boom.badRequest(`No collections for community ${query.community}`);
       }
     }
 
@@ -538,7 +547,7 @@ export const getTokensV6Options: RouteOptions = {
         );
 
         sourceConditions.push("contract IN ($/tokensContracts:csv/)");
-      } else if (query.collectionsSetId && !_.isEmpty(collections)) {
+      } else if ((query.collectionsSetId || query.community) && !_.isEmpty(collections)) {
         const tokensContracts = [];
 
         for (const collection of collections) {
@@ -555,12 +564,6 @@ export const getTokensV6Options: RouteOptions = {
         );
 
         sourceConditions.push("contract IN ($/tokensContracts:csv/)");
-      } else if (query.community) {
-        sourceConditions.push(`contract IN (
-            SELECT DISTINCT contract
-            FROM collections
-            WHERE community = $/community/
-          )`);
       }
 
       sourceCte = `
@@ -698,7 +701,7 @@ export const getTokensV6Options: RouteOptions = {
         conditions.push(`t.is_flagged = $/flagStatus/`);
       }
 
-      if (query.community) {
+      if (query.community && collections.length > 20) {
         conditions.push("c.community = $/community/");
       }
 
@@ -973,31 +976,31 @@ export const getTokensV6Options: RouteOptions = {
         query.rarity ||
         (query.collectionsSetId && collections.length > 20) ||
         query.tokens ||
-        query.sortBy === "updatedAt"
+        (query.sortBy === "updatedAt" && !query.collectionsSetId && !query.community)
       ) {
         baseQuery += getSort(query.sortBy, false);
       }
 
-      // Break query into UNION of results for each collectionId for sets up to 20 collections
-      if (query.collectionsSetId && collections.length <= 20) {
-        const collectionsSetQueries = [];
-        const collectionsSetSort = getSort(query.sortBy, true);
+      // Break query into UNION of results for each collectionId for sets/communities up to 20 collections
+      if ((query.collectionsSetId || query.community) && collections.length <= 20) {
+        const collectionsQueries = [];
+        const collectionsSort = getSort(query.sortBy, true);
 
         for (const i in collections) {
           (query as any)[`collection${i}`] = collections[i];
-          collectionsSetQueries.push(
+          collectionsQueries.push(
             `(
               ${baseQuery}
               ${conditions.length ? `AND ` : `WHERE `} t.collection_id = $/collection${i}/
-              ${collectionsSetSort}
+              ${collectionsSort}
               LIMIT $/limit/
             )`
           );
         }
 
         baseQuery = `
-          ${collectionsSetQueries.join(` UNION ALL `)}
-          ${collectionsSetSort}
+          ${collectionsQueries.join(` UNION ALL `)}
+          ${collectionsSort}
         `;
       }
 
