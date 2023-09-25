@@ -125,7 +125,9 @@ export class NewCollectionForTokenJob extends AbstractRabbitMqJobHandler {
         if (!collection) {
           logger.error(
             this.queueName,
-            `failed to fetch/create collection ${JSON.stringify(payload)}`
+            `failed to fetch/create collection ${JSON.stringify(
+              payload
+            )} collectionMetadata ${JSON.stringify(collectionMetadata)}`
           );
           return;
         }
