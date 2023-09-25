@@ -9,7 +9,7 @@ export const handleEvents = async (events: EnhancedEvent[]) => {
   for (const { subKind, baseEventParams, log } of events) {
     const eventData = getEventData([subKind])[0];
     switch (subKind) {
-      case "metadata-update-single-token": {
+      case "metadata-update-single-token-opensea": {
         const parsedLog = eventData.abi.parseLog(log);
         const tokenId = parsedLog.args["tokenId"].toString();
 
@@ -33,7 +33,7 @@ export const handleEvents = async (events: EnhancedEvent[]) => {
         break;
       }
 
-      case "metadata-update-batch-tokens": {
+      case "metadata-update-batch-tokens-opensea": {
         const parsedLog = eventData.abi.parseLog(log);
         const fromToken = parsedLog.args["_fromTokenId"].toString();
         const toToken = parsedLog.args["_toTokenId"].toString();
@@ -77,7 +77,9 @@ export const handleEvents = async (events: EnhancedEvent[]) => {
         break;
       }
 
-      case "metadata-update-uri": {
+      case "metadata-update-uri-opensea":
+      case "metadata-update-zora":
+      case "metadata-update-contract-uri-thirdweb":
         await metadataIndexFetchJob.addToQueue(
           [
             {
@@ -92,9 +94,6 @@ export const handleEvents = async (events: EnhancedEvent[]) => {
           true,
           15
         );
-
-        break;
-      }
     }
   }
 };

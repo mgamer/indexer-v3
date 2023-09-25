@@ -302,9 +302,11 @@ export type EventSubKind =
   | "erc721c-set-allowlist"
   | "erc721c-set-transfer-security-level"
   | "erc721c-transfer-validator-updated"
-  | "metadata-update-single-token"
-  | "metadata-update-batch-tokens"
-  | "metadata-update-uri";
+  | "metadata-update-single-token-opensea"
+  | "metadata-update-batch-tokens-opensea"
+  | "metadata-update-uri-opensea"
+  | "metadata-update-contract-uri-thirdweb"
+  | "metadata-update-zora";
 
 export type EventData = {
   kind: EventKind;
