@@ -10,8 +10,8 @@ export const Exchange: ChainIdToAddress = {
   [Network.BaseGoerli]: "0x9c390efb05e09982e23993ebfa3b32c190e25f4b",
   [Network.Base]: "0x878dd5e0c3dedfebff67046bb218fb03c26e3e47",
   [Network.EthereumSepolia]: "0x33c551effdf1dbde4ffeaa133b2757819bd1353d",
-  [Network.Arbitrum]: "0xB52fDd8f3821cc60ba4583A822f03317dE544BC2",
-  [Network.Optimism]: "0xB52fDd8f3821cc60ba4583A822f03317dE544BC2",
+  [Network.Arbitrum]: "0xb52fdd8f3821cc60ba4583a822f03317de544bc2",
+  [Network.Optimism]: "0xb52fdd8f3821cc60ba4583a822f03317de544bc2",
 };
 
 export const AlienswapConduitKey: ChainIdToAddress = {
@@ -24,6 +24,6 @@ export const AlienswapConduitKey: ChainIdToAddress = {
   [Network.BaseGoerli]: "0x7e727520b29773e7f23a8665649197aaf064cef1000000000000000000000000",
   [Network.Base]: "0xffa0cb9f057d077d85655be8823961c4fd4cb56a000000000000000000000000",
   [Network.EthereumSepolia]: "0x7e727520b29773e7f23a8665649197aaf064cef1000000000000000000000000",
-  [Network.Arbitrum]: "0xffa0cB9f057D077d85655bE8823961C4FD4cB56a000000000000000000000000",
-  [Network.Optimism]: "0xffa0cB9f057D077d85655bE8823961C4FD4cB56a000000000000000000000000",
+  [Network.Arbitrum]: "0xffa0cb9f057d077d85655be8823961c4fd4cb56a000000000000000000000000",
+  [Network.Optimism]: "0xffa0cb9f057d077d85655be8823961c4fd4cb56a000000000000000000000000",
 };
