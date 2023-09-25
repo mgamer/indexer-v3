@@ -112,6 +112,7 @@ export const getChainStatsFromActivity = async () => {
                       range: {
                         timestamp: {
                           gte: period.startTime,
+                          format: "epoch_second",
                         },
                       },
                     },
@@ -238,6 +239,7 @@ export const getTopSellingCollections = async (params: {
             timestamp: {
               gte: startTime,
               ...(endTime ? { lte: endTime } : {}),
+              format: "epoch_second",
             },
           },
         },
@@ -273,7 +275,6 @@ export const getTopSellingCollections = async (params: {
             field: "event.txHash",
           },
         },
-
         total_volume: {
           sum: {
             field: "pricing.priceDecimal",

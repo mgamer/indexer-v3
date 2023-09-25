@@ -91,7 +91,9 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
       !this.isOSTestnet() ? "https://api.opensea.io" : "https://testnets-api.opensea.io"
     }/api/v1/assets?${searchParams.toString()}`;
 
-    const API_KEY_TO_USE = options?.flagged ? config.openSeaApiKeyFlagged : config.openSeaApiKey;
+    const API_KEY_TO_USE = options?.flagged
+      ? config.openSeaApiKeyFlagged
+      : config.openSeaTokenMetadataApiKey;
 
     const data = await axios
       .get(!this.isOSTestnet() ? config.openSeaApiUrl || url : url, {
@@ -136,16 +138,14 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
     searchParams.append("limit", "200");
 
     const url = `${
-      !this.isOSTestnet()
-        ? config.openSeaSlugBaseUrl || "https://api.opensea.io"
-        : "https://rinkeby-api.opensea.io"
+      !this.isOSTestnet() ? "https://api.opensea.io" : "https://testnets-api.opensea.io"
     }/api/v1/assets?${searchParams.toString()}`;
     const data = await axios
       .get(!this.isOSTestnet() ? config.openSeaApiUrl || url : url, {
         headers: !this.isOSTestnet()
           ? {
               url,
-              "X-API-KEY": config.openSeaApiKey.trim(),
+              "X-API-KEY": config.openSeaTokenMetadataBySlugApiKey.trim(),
               Accept: "application/json",
             }
           : {
@@ -318,7 +318,7 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
     contract: string,
     tokenId: string
   ): Promise<{ creatorAddress: string; data: any }> {
-    if (!this.isOSTestnet()) {
+    if (config.chainId === 1) {
       const data = await this.getOSData("asset", contract, tokenId);
 
       return { data, creatorAddress: data?.creator?.address };
@@ -505,7 +505,7 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
     const headers = !this.isOSTestnet()
       ? {
           url,
-          "X-API-KEY": config.openSeaApiKey,
+          "X-API-KEY": config.openSeaCollectionMetadataApiKey.trim(),
           Accept: "application/json",
         }
       : {

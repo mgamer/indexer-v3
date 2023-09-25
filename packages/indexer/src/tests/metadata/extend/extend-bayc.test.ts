@@ -13,12 +13,12 @@ const tokens = [
 
 describe("Extend - bayc", () => {
   it("getCollectionMetadata", async () => {
-    const tokenMetadata = await MetadataProviderRouter.getCollectionMetadata(
+    const collectionMetadata = await MetadataProviderRouter.getCollectionMetadata(
       tokens[0].contract,
       tokens[0].tokenId
     );
 
-    expect(tokenMetadata).toEqual(
+    expect(collectionMetadata).toEqual(
       expect.objectContaining({
         id: "0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d",
         slug: "boredapeyachtclub",
@@ -74,11 +74,9 @@ describe("Extend - bayc", () => {
   });
 
   it("getTokensMetadata", async () => {
-    const collection = await MetadataProviderRouter.getTokensMetadata(tokens);
+    const tokenMetadata = await MetadataProviderRouter.getTokensMetadata(tokens);
 
-    // eslint-disable-next-line
-    console.log(collection);
-    expect(collection).toEqual(
+    expect(tokenMetadata).toEqual(
       expect.arrayContaining([
         {
           contract: "0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d",

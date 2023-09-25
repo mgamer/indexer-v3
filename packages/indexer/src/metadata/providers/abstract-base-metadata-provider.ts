@@ -1,4 +1,9 @@
-import { customHandleContractTokens, customHandleToken, hasCustomHandler } from "../custom";
+import {
+  customHandleCollection,
+  customHandleToken,
+  hasCustomCollectionHandler,
+  hasCustomHandler,
+} from "../custom";
 import { CollectionMetadata, TokenMetadata, TokenMetadataBySlugResult } from "../types";
 import { extendCollectionMetadata, extendMetadata, hasExtendHandler } from "../extend";
 
@@ -8,8 +13,11 @@ export abstract class AbstractBaseMetadataProvider {
   // Wrapper methods for internal methods, handles custom/extend logic so subclasses don't have to
   async getCollectionMetadata(contract: string, tokenId: string): Promise<CollectionMetadata> {
     // handle universal extend/custom logic here
-    if (hasCustomHandler(contract)) {
-      const result = await customHandleContractTokens(contract, tokenId);
+    if (hasCustomCollectionHandler(contract)) {
+      const result = await customHandleCollection({
+        contract,
+        tokenId: tokenId,
+      });
       return result;
     }
 
@@ -58,8 +66,6 @@ export abstract class AbstractBaseMetadataProvider {
 
     // merge custom metadata with metadata-api metadata
     const allMetadata: TokenMetadata[] = [...metadataFromProvider, ...filteredCustomMetadata];
-    // eslint-disable-next-line
-    console.log(allMetadata);
     // extend metadata
     const extendedMetadata = await Promise.all(
       allMetadata.map(async (metadata) => {

@@ -7,8 +7,6 @@ import { TokenMetadata } from "@/metadata/types";
 const POOL_ID = 1;
 
 export const extend = async (metadata: TokenMetadata) => {
-  // eslint-disable-next-line
-  console.log(metadata);
   const traitCount = metadata.attributes.length;
 
   let stakedAmountWei;
@@ -16,7 +14,6 @@ export const extend = async (metadata: TokenMetadata) => {
     const { tokenId } = metadata;
     stakedAmountWei = await getStakedAmountWei({ poolId: POOL_ID, tokenId: tokenId.toString() });
   } catch (error) {
-    // console.log(error);
     logger.error(
       "apecoin-extend",
       `Failed to get staked amount for tokenId ${metadata.tokenId}, poolId ${POOL_ID}, error: ${error}`

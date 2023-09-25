@@ -21,7 +21,7 @@ export const config = {
   openseaIndexerApiBaseUrl: String(process.env.OPENSEA_INDEXER_API_BASE_URL),
 
   // When running in liquidity-only mode, all metadata processes are disabled
-  liquidityOnly: process.env.LIQUIDITY_ONLY ? Boolean(Number(process.env.LIQUIDITY_ONLY)) : false,
+  liquidityOnly: !process.env.METADATA_API_BASE_URL,
   metadataIndexingMethod: String(process.env.METADATA_INDEXING_METHOD || "opensea"),
   metadataIndexingMethodCollection: String(
     process.env.METADATA_INDEXING_METHOD_COLLECTION ||
@@ -91,6 +91,10 @@ export const config = {
   openSeaSlugBaseUrl: String(process.env.OPENSEA_SLUG_BASE_URL),
   openSeaApiUrl: String(process.env.OPENSEA_API_URL || ""),
 
+  openSeaTokenMetadataBySlugApiKey: String(process.env.OPENSEA_SLUG_API_KEY),
+  openSeaCollectionMetadataApiKey: String(process.env.OPENSEA_COLLECTION_API_KEY),
+  openSeaTokenMetadataApiKey: String(process.env.OPENSEA_TOKENS_API_KEY),
+
   openSeaCrossPostingApiKey: String(
     process.env.OPENSEA_CROSS_POSTING_API_KEY || process.env.OPENSEA_API_KEY
   ),
@@ -135,11 +139,13 @@ export const config = {
   doElasticsearchWork: Boolean(Number(process.env.DO_ELASTICSEARCH_WORK)),
 
   // RabbitMq
-  rabbitMqUrl: `amqp://${String(process.env.RABBIT_URL)}:5672`,
-  rabbitHttpUrl: `http://${String(process.env.RABBIT_URL)}:15672`,
+  rabbitHttpUrl: `http://${String(process.env.RABBIT_USERNAME)}:${String(
+    process.env.RABBIT_PASSWORD
+  )}@${String(process.env.RABBIT_HOSTNAME)}:15672`,
   rabbitHostname: String(process.env.RABBIT_HOSTNAME),
   rabbitUsername: String(process.env.RABBIT_USERNAME),
   rabbitPassword: String(process.env.RABBIT_PASSWORD),
+  assertRabbitVhost: Boolean(Number(process.env.ASSERT_RABBIT_VHOST)),
   rabbitDisableQueuesConsuming: Boolean(Number(process.env.RABBIT_DISABLE_QUEUES_CONSUMING)),
   forceEnableRabbitJobsConsumer: Boolean(Number(process.env.FORCE_ENABLE_RABBIT_JOBS_CONSUMER)),
 };

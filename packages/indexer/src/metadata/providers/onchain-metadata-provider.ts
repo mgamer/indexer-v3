@@ -159,7 +159,7 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
     return {
       contract: metadata.contract,
       slug: null,
-      tokenId: metadata.token_id,
+      tokenId: metadata.tokenId,
       collection: _.toLower(metadata.contract),
       name: metadata?.name || null,
       flagged: null,

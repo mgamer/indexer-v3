@@ -1,7 +1,7 @@
 import { Collection, MapEntry, Metadata } from "../types";
 
 export const normalizeLink = (link: string) => {
-  if (link.startsWith("ipfs://")) {
+  if (link && link.startsWith("ipfs://")) {
     return `https://ipfs.io/ipfs/${link.slice(7)}`;
   }
 

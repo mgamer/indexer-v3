@@ -170,6 +170,10 @@ export class SimplehashMetadataProvider extends AbstractBaseMetadataProvider {
       return "polygon-mumbai";
     }
 
+    if (network == "sepolia") {
+      return "ethereum-sepolia";
+    }
+
     return network;
   }
 }

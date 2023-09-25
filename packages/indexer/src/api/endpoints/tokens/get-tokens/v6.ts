@@ -213,6 +213,7 @@ export const getTokensV6Options: RouteOptions = {
       tokens: Joi.array().items(
         Joi.object({
           token: Joi.object({
+            chainId: Joi.number().required(),
             contract: Joi.string().lowercase().pattern(regex.address).required(),
             tokenId: Joi.string().pattern(regex.number).required(),
             name: Joi.string().allow("", null),
@@ -416,7 +417,9 @@ export const getTokensV6Options: RouteOptions = {
           fe.royalty_fee_bps AS last_sale_royalty_fee_bps,
           fe.paid_full_royalty AS last_sale_paid_full_royalty,
           fe.royalty_fee_breakdown AS last_sale_royalty_fee_breakdown,
-          fe.marketplace_fee_breakdown AS last_sale_marketplace_fee_breakdown
+          fe.marketplace_fee_breakdown AS last_sale_marketplace_fee_breakdown,
+          fe.order_source_id_int AS last_sale_order_source_id_int,
+          fe.fill_source_id AS last_sale_fill_source_id
         FROM fill_events_2 fe
         WHERE fe.contract = t.contract AND fe.token_id = t.token_id AND fe.is_deleted = 0
         ORDER BY timestamp DESC LIMIT 1
@@ -786,7 +789,7 @@ export const getTokensV6Options: RouteOptions = {
           switch (query.sortBy) {
             case "rarity": {
               if (contArr.length !== 3) {
-                throw new Error("Invalid continuation string used");
+                throw Boom.badRequest("Invalid continuation string used");
               }
               query.sortDirection = query.sortDirection || "asc"; // Default sorting for rarity is ASC
               const sign = query.sortDirection == "desc" ? "<" : ">";
@@ -801,7 +804,7 @@ export const getTokensV6Options: RouteOptions = {
 
             case "tokenId": {
               if (contArr.length !== 2) {
-                throw new Error("Invalid continuation string used");
+                throw Boom.badRequest("Invalid continuation string used");
               }
               const sign = query.sortDirection == "desc" ? "<" : ">";
               conditions.push(`(t.contract, t.token_id) ${sign} ($/contContract/, $/contTokenId/)`);
@@ -813,7 +816,7 @@ export const getTokensV6Options: RouteOptions = {
 
             case "updatedAt": {
               if (contArr.length !== 3) {
-                throw new Error("Invalid continuation string used");
+                throw Boom.badRequest("Invalid continuation string used");
               }
               const sign = query.sortDirection == "desc" ? "<" : ">";
               conditions.push(
@@ -830,7 +833,7 @@ export const getTokensV6Options: RouteOptions = {
             default:
               {
                 if (contArr.length !== 3) {
-                  throw new Error("Invalid continuation string used");
+                  throw Boom.badRequest("Invalid continuation string used");
                 }
                 const sign = query.sortDirection == "desc" ? "<" : ">";
                 const sortColumn =
@@ -861,7 +864,7 @@ export const getTokensV6Options: RouteOptions = {
           }
         } else {
           if (contArr.length !== 2) {
-            throw new Error("Invalid continuation string used");
+            throw Boom.badRequest("Invalid continuation string used");
           }
           const sign = query.sortDirection == "desc" ? "<" : ">";
           conditions.push(`(t.contract, t.token_id) ${sign} ($/contContract/, $/contTokenId/)`);
@@ -1201,6 +1204,7 @@ export const getTokensV6Options: RouteOptions = {
 
         return {
           token: {
+            chainId: config.chainId,
             contract,
             tokenId,
             name: r.name,
@@ -1247,6 +1251,8 @@ export const getTokensV6Options: RouteOptions = {
                     },
                     currencyAddress: r.last_sale_currency,
                     timestamp: r.last_sale_timestamp,
+                    orderSourceId: r.last_sale_order_source_id_int,
+                    fillSourceId: r.last_sale_fill_source_id,
                   })
                 : undefined,
             owner: r.owner ? fromBuffer(r.owner) : null,

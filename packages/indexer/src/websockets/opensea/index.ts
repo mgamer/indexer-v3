@@ -29,7 +29,10 @@ import { handleEvent as handleOrderRevalidate } from "@/websockets/opensea/handl
 import { handleEvent as handleTraitOfferEvent } from "@/websockets/opensea/handlers/trait_offer";
 
 import { openseaBidsQueueJob } from "@/jobs/orderbook/opensea-bids-queue-job";
-import { metadataIndexWriteJob } from "@/jobs/metadata-index/metadata-write-job";
+import {
+  MetadataIndexWriteJobPayload,
+  metadataIndexWriteJob,
+} from "@/jobs/metadata-index/metadata-write-job";
 import { openseaListingsJob } from "@/jobs/orderbook/opensea-listings-job";
 import { getNetworkSettings } from "@/config/network";
 import { openseaMetadataProvider } from "@/metadata/providers/opensea-metadata-provider";
@@ -159,6 +162,7 @@ if (config.doWebsocketWork && config.openSeaApiKey) {
         const parsedMetadata = await openseaMetadataProvider.parseTokenMetadata(metadata);
 
         if (parsedMetadata) {
+          (parsedMetadata as MetadataIndexWriteJobPayload).isFromWebhook = true;
           await metadataIndexWriteJob.addToQueue([parsedMetadata]);
         }
       } catch (error) {
