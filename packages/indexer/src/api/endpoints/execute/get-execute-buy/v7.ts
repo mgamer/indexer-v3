@@ -28,7 +28,7 @@ import { Sources } from "@/models/sources";
 import * as mints from "@/orderbook/mints";
 import { CollectionMint } from "@/orderbook/mints";
 import {
-  createCollectionMintFromRawMintParam,
+  getCollectionMintFromRawMintParam,
   generateCollectionMintTxData,
   RawMintParam,
 } from "@/orderbook/mints/calldata";
@@ -98,8 +98,8 @@ export const getExecuteBuyV7Options: RouteOptions = {
                 "Optionally specify a particular fill method. Only relevant when filling via `collection`."
               ),
             rawMint: Joi.object({
-              signature: Joi.string().description("4byte method signature"),
-              price: Joi.string().description("Mint price").optional(),
+              signature: Joi.string().description("4byte signature"),
+              price: Joi.string().optional().description("Mint price").optional(),
               abiParams: Joi.array()
                 .items(
                   Joi.object({
@@ -764,7 +764,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
               let openMints: CollectionMint[] = [];
               if (item.rawMint) {
                 openMints.push(
-                  createCollectionMintFromRawMintParam({
+                  getCollectionMintFromRawMintParam({
                     ...item.rawMint,
                     currency: item.rawMint.currency ?? payload.currency,
                     collection: item.rawMint.collection ?? item.collection,
@@ -993,7 +993,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
               let openMints: CollectionMint[] = [];
               if (item.rawMint) {
                 openMints.push(
-                  createCollectionMintFromRawMintParam({
+                  getCollectionMintFromRawMintParam({
                     ...item.rawMint,
                     currency: item.rawMint.currency ?? payload.currency,
                     collection: item.rawMint.collection ?? item.collection,

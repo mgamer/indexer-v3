@@ -16,12 +16,12 @@ const DEFAULT_REFERRER = "0xf3d63166f0ca56c3c1a3508fce03ff0cf3fb691e";
 
 export type RawMintParam = {
   signature: string;
-  price: string;
   abiParams: AbiParam[];
   collection: string;
   to?: string;
   contract?: string;
   currency?: string;
+  price?: string;
 };
 
 export type AbiParam =
@@ -70,7 +70,7 @@ export type MintTxSchema = {
 
 export type CustomInfo = mints.manifold.Info;
 
-export const createCollectionMintFromRawMintParam = (mintRaw: RawMintParam): CollectionMint => {
+export const getCollectionMintFromRawMintParam = (mintRaw: RawMintParam): CollectionMint => {
   return {
     collection: mintRaw.collection ?? mintRaw.contract,
     contract: mintRaw.contract ?? mintRaw.collection,
@@ -88,7 +88,7 @@ export const createCollectionMintFromRawMintParam = (mintRaw: RawMintParam): Col
       },
     },
     currency: mintRaw.currency ?? Sdk.Common.Addresses.Native[config.chainId],
-    price: mintRaw.price,
+    price: mintRaw.price ?? "0",
   };
 };
 
