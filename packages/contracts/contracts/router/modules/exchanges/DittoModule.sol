@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
@@ -22,10 +20,13 @@ contract DittoModule is BaseExchangeModule {
   using SafeERC20 for IERC20;
 
   // --- Constructor ---
+
   constructor(address owner, address router) BaseModule(owner) BaseExchangeModule(router) {}
 
-  function poolTransferNftFrom(IERC721 nft, address from, address to, uint256 id) external {
-    nft.transferFrom(from, to, id);
+  // --- Helper methods ---
+
+  function poolTransferNftFrom(IERC721 token, address from, address to, uint256 tokenId) external {
+    token.transferFrom(from, to, tokenId);
   }
 
   function poolTransferErc20From(
@@ -34,7 +35,7 @@ contract DittoModule is BaseExchangeModule {
     address to,
     uint256 amount
   ) external virtual {
-    if(from == address(this)) {
+    if (from == address(this)) {
       token.safeTransfer(to, amount);
     } else {
       token.safeTransferFrom(from, to, amount);

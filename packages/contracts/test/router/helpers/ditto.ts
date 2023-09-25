@@ -7,7 +7,6 @@ import * as Sdk from "@reservoir0x/sdk/src";
 import Erc20Abi from "@reservoir0x/sdk/src/common/abis/Erc20.json";
 import Erc721Abi from "@reservoir0x/sdk/src/common/abis/Erc721.json";
 import DittoPoolFactoryAbi from "@reservoir0x/sdk/src/ditto/abis/DittoPoolFactory.json";
-import WethAbi from "@reservoir0x/sdk/src/ditto/abis/Weth.json";
 
 export const getDittoContracts = () => {
   const chainId = getChainId();
@@ -50,11 +49,5 @@ export const getDittoContracts = () => {
     ethers.provider
   );
 
-  const weth: Contract = new Contract(
-    Sdk.Common.Addresses.WNative[chainId],
-    WethAbi,
-    ethers.provider
-  );
-
-  return { nft, token, dittoPoolFactory, weth };
+  return { nft, token, dittoPoolFactory };
 };

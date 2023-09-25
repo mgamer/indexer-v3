@@ -2,6 +2,8 @@ import { BigNumber } from "@ethersproject/bignumber";
 import { Contract, ContractReceipt } from "@ethersproject/contracts";
 import { parseEther } from "@ethersproject/units";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
+import * as Sdk from "@reservoir0x/sdk/src";
+import { generateSwapInfo } from "@reservoir0x/sdk/src/router/v6/swap";
 import { expect } from "chai";
 import { ethers } from "hardhat";
 
@@ -9,8 +11,6 @@ import { getDittoContracts } from "../helpers/ditto";
 import { getChainId, reset } from "../../utils";
 
 import DittoPoolAbi from "@reservoir0x/sdk/src/ditto/abis/DittoPool.json";
-import { generateSwapInfo } from "@reservoir0x/sdk/src/router/v6/swap";
-import * as Sdk from "@reservoir0x/sdk/src";
 
 describe("DittoModule", () => {
   let chainId: number;
@@ -36,8 +36,12 @@ describe("DittoModule", () => {
 
   beforeEach(async () => {
     chainId = getChainId();
-    ({ nft, dittoPoolFactory, weth } = getDittoContracts());
-    // signers start off with 10,000 ETH
+
+    ({ nft, dittoPoolFactory } = getDittoContracts());
+
+    weth = new Sdk.Common.Helpers.WNative(ethers.provider, chainId).contract;
+
+    // Signers start off with 10,000 ETH
     [deployer, marketMaker, trader] = await ethers.getSigners();
     initialTokenBalance = parseEther("100");
 
@@ -60,8 +64,10 @@ describe("DittoModule", () => {
     await nft.connect(marketMaker).mint(marketMaker.address, tokenId00);
     await nft.connect(marketMaker).mint(marketMaker.address, tokenId01);
     await nft.connect(marketMaker).setApprovalForAll(dittoPoolFactory.address, true);
+
     const deposit = await weth.connect(marketMaker).deposit({ value: initialTokenBalance });
     await deposit.wait();
+
     await weth.connect(marketMaker).approve(dittoPoolFactory.address, ethers.constants.MaxUint256);
 
     // Create a pool to trade with, with the NFTs deposited into the pool
@@ -93,13 +99,16 @@ describe("DittoModule", () => {
     const creation = await dittoPoolFactory
       .connect(marketMaker)
       .createDittoPool(poolTemplate, poolManagerTemplate, permitterTemplate);
+
     const result: ContractReceipt = await creation.wait();
     result.events!.forEach((event) => {
       if (event.event === "DittoPoolFactoryDittoPoolCreated") {
         poolAddress = event.args!.dittoPool;
       }
     });
+
     const dittoPoolInterface = new ethers.utils.Interface(DittoPoolAbi);
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     result.logs.forEach((log: any) => {
       try {
@@ -107,10 +116,11 @@ describe("DittoModule", () => {
         if (event.name === "DittoPoolMarketMakeLiquidityCreated") {
           marketMakerLpId = event.args!.lpId;
         }
-      } catch (e) {
+      } catch {
         return;
       }
     });
+
     dittoPool = new ethers.Contract(poolAddress, DittoPoolAbi, trader);
   });
 
