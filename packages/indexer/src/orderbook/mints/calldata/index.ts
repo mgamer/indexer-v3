@@ -6,11 +6,23 @@ import { idb } from "@/common/db";
 import { bn, fromBuffer, toBuffer } from "@/common/utils";
 import { mintsProcessJob } from "@/jobs/mints/mints-process-job";
 import { CollectionMint } from "@/orderbook/mints";
+import * as Sdk from "@reservoir0x/sdk";
+import { config } from "@/config/index";
 
 import * as mints from "@/orderbook/mints/calldata/detector";
 
 // For now, use the deployer address
 const DEFAULT_REFERRER = "0xf3d63166f0ca56c3c1a3508fce03ff0cf3fb691e";
+
+export type RawMintParam = {
+  signature: string;
+  price: string;
+  abiParams: AbiParam[];
+  collection: string;
+  to?: string;
+  contract?: string;
+  currency?: string;
+};
 
 export type AbiParam =
   | {
@@ -57,6 +69,28 @@ export type MintTxSchema = {
 };
 
 export type CustomInfo = mints.manifold.Info;
+
+export const createCollectionMintFromRawMintParam = (mintRaw: RawMintParam): CollectionMint => {
+  return {
+    collection: mintRaw.collection ?? mintRaw.contract,
+    contract: mintRaw.contract ?? mintRaw.collection,
+    stage: "claim",
+    kind: "public",
+    status: "open",
+    standard: "unknown",
+    details: {
+      tx: {
+        to: mintRaw.to ?? mintRaw.collection,
+        data: {
+          signature: mintRaw.signature,
+          params: mintRaw.abiParams,
+        },
+      },
+    },
+    currency: mintRaw.currency ?? Sdk.Common.Addresses.Native[config.chainId],
+    price: mintRaw.price,
+  };
+};
 
 export const generateCollectionMintTxData = async (
   collectionMint: CollectionMint,
@@ -290,7 +324,7 @@ export const generateCollectionMintTxData = async (
       : "");
 
   let price = collectionMint.price;
-  if (!price) {
+  if (!price && allowlistData) {
     // If the price is not available on the main `CollectionMint`, get it from the allowlist
     price = allowlistData.actual_price!;
   }
