@@ -45,7 +45,6 @@ import * as zeroExV4Check from "@/orderbook/orders/zeroex-v4/check";
 // PaymentProcessor
 import * as paymentProcessorSellToken from "@/orderbook/orders/payment-processor/build/sell/token";
 import * as paymentProcessorCheck from "@/orderbook/orders/payment-processor/check";
-import * as erc721c from "@/utils/erc721c";
 
 const version = "v5";
 
@@ -599,16 +598,6 @@ export const getExecuteListV5Options: RouteOptions = {
 
                 // Check the order's fillability
                 const exchange = new Sdk.SeaportV15.Exchange(config.chainId);
-
-                // Check if is blocked by ERC721c
-                if (params.orderbook === "opensea") {
-                  const isBlocked = await erc721c.checkMarketplaceIsFiltered(contract, [
-                    exchange.deriveConduit(order.params.conduitKey),
-                  ]);
-                  if (isBlocked) {
-                    throw getExecuteError("Seaport was blocked by erc721c's security policy");
-                  }
-                }
 
                 try {
                   await seaportBaseCheck.offChainCheck(order, "seaport-v1.5", exchange, {

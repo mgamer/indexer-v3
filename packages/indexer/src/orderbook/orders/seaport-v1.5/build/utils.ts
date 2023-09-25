@@ -13,6 +13,7 @@ import {
 } from "@/orderbook/orders/seaport-base/build/utils";
 import * as marketplaceFees from "@/utils/marketplace-fees";
 import * as registry from "@/utils/royalties/registry";
+import * as erc721c from "@/utils/erc721c";
 
 export const getBuildInfo = async (
   options: BaseOrderBuildOptions,
@@ -53,6 +54,20 @@ export const getBuildInfo = async (
   // LooksRare requires their source in the salt
   if (options.orderbook === "looks-rare") {
     options.source = "looksrare.org";
+  }
+
+  // Check if is blocked by ERC721c
+  if (
+    options.orderbook === "opensea" &&
+    conduitKey === Sdk.SeaportBase.Addresses.OpenseaConduitKey[config.chainId]
+  ) {
+    const isBlocked = await erc721c.checkMarketplaceIsFiltered(
+      fromBuffer(collectionResult.contract),
+      [exchange.deriveConduit(conduitKey)]
+    );
+    if (isBlocked) {
+      throw new Error("Seaport was blocked by erc721c's security policyn");
+    }
   }
 
   // Generate the salt
