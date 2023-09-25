@@ -1,4 +1,4 @@
-import { AddressZero } from "@ethersproject/constants";
+import { AddressZero, HashZero } from "@ethersproject/constants";
 import * as Sdk from "@reservoir0x/sdk";
 import { getRandomBytes } from "@reservoir0x/sdk/dist/utils";
 
@@ -51,7 +51,7 @@ export const getBuildInfo = async (
     options.conduitKey ??
     Sdk.SeaportBase.Addresses.OpenseaConduitKey[config.chainId] ??
     Sdk.SeaportBase.Addresses.ReservoirConduitKey[config.chainId] ??
-    Sdk.SeaportV15.Addresses.Exchange[config.chainId];
+    HashZero;
 
   // LooksRare requires their source in the salt
   if (options.orderbook === "looks-rare") {
