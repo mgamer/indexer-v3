@@ -14,7 +14,7 @@ import { updateBlurRoyalties } from "@/utils/blur";
 import * as erc721c from "@/utils/erc721c";
 import * as marketplaceBlacklist from "@/utils/marketplace-blacklists";
 import * as marketplaceFees from "@/utils/marketplace-fees";
-import MetadataApi from "@/utils/metadata-api";
+import MetadataProviderRouter from "@/metadata/metadata-provider-router";
 import * as royalties from "@/utils/royalties";
 
 import { recalcOwnerCountQueueJob } from "@/jobs/collection-updates/recalc-owner-count-queue-job";
@@ -97,16 +97,6 @@ export class Collections {
   }
 
   public static async updateCollectionCache(contract: string, tokenId: string, community = "") {
-    if (contract === "0x27ca1486749ef528b97a7ea1857f0b6aaee2626a") {
-      logger.info(
-        "updateCollectionCache",
-        JSON.stringify({
-          topic: "debugRefreshRoyalties",
-          message: `Start. contract=${contract}, tokenId=${tokenId}`,
-        })
-      );
-    }
-
     try {
       await Contracts.updateContractMetadata(contract);
     } catch (error) {
@@ -144,16 +134,6 @@ export class Collections {
       return;
     }
 
-    if (contract === "0x27ca1486749ef528b97a7ea1857f0b6aaee2626a") {
-      logger.info(
-        "updateCollectionCache",
-        JSON.stringify({
-          topic: "debugRefreshRoyalties",
-          message: `refreshRegistryRoyalties. contract=${contract}, tokenId=${tokenId}`,
-        })
-      );
-    }
-
     try {
       await registry.refreshRegistryRoyalties(collectionResult.id);
       await royalties.refreshDefaultRoyalties(collectionResult.id);
@@ -164,7 +144,11 @@ export class Collections {
       );
     }
 
-    const collection = await MetadataApi.getCollectionMetadata(contract, tokenId, community);
+    const collection = await MetadataProviderRouter.getCollectionMetadata(
+      contract,
+      tokenId,
+      community
+    );
 
     if (collection.isCopyrightInfringement) {
       collection.name = collection.id;
@@ -265,17 +249,6 @@ export class Collections {
     );
 
     await royalties.refreshDefaultRoyalties(collection.id);
-
-    if (contract === "0x27ca1486749ef528b97a7ea1857f0b6aaee2626a") {
-      logger.info(
-        "updateCollectionCache",
-        JSON.stringify({
-          topic: "debugRefreshRoyalties",
-          message: `refreshDefaultRoyalties. contract=${contract}, tokenId=${tokenId}`,
-          collection,
-        })
-      );
-    }
 
     // Refresh Blur royalties (which get stored separately)
     await updateBlurRoyalties(collection.id, true);

@@ -73,6 +73,9 @@ const getNetworkConfig = (chainId?: number) => {
       case 11155111:
         url = `https://eth-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`;
         break;
+      case 2863311531:
+        url = "https://rpc-testnet.ancient8.gg/";
+        break;
       default:
         throw new Error("Unsupported chain id");
     }
@@ -138,6 +141,7 @@ const config: HardhatUserConfig = {
     baseGoerli: getNetworkConfig(84531),
     scrollAlpha: getNetworkConfig(534353),
     sepolia: getNetworkConfig(11155111),
+    ancient8Testnet: getNetworkConfig(2863311531),
   },
   etherscan: {
     apiKey: process.env.ETHERSCAN_API_KEY,
