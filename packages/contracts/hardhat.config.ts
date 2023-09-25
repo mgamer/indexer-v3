@@ -30,6 +30,9 @@ const getNetworkConfig = (chainId?: number) => {
       case 137:
         url = `https://polygon-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`;
         break;
+      case 1101:
+        url = "https://zkevm-rpc.com";
+        break;
       case 8453:
         url = "https://developer-access-mainnet.base.org";
         break;
@@ -72,6 +75,9 @@ const getNetworkConfig = (chainId?: number) => {
         break;
       case 11155111:
         url = `https://eth-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`;
+        break;
+      case 2863311531:
+        url = "https://rpc-testnet.ancient8.gg/";
         break;
       default:
         throw new Error("Unsupported chain id");
@@ -123,6 +129,7 @@ const config: HardhatUserConfig = {
     optimism: getNetworkConfig(10),
     bsc: getNetworkConfig(56),
     polygon: getNetworkConfig(137),
+    polygonZkevm: getNetworkConfig(1101),
     base: getNetworkConfig(8453),
     arbitrum: getNetworkConfig(42161),
     arbitrumNova: getNetworkConfig(42170),
@@ -138,6 +145,7 @@ const config: HardhatUserConfig = {
     baseGoerli: getNetworkConfig(84531),
     scrollAlpha: getNetworkConfig(534353),
     sepolia: getNetworkConfig(11155111),
+    ancient8Testnet: getNetworkConfig(2863311531),
   },
   etherscan: {
     apiKey: process.env.ETHERSCAN_API_KEY,

@@ -194,11 +194,10 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
   // helpers
 
   async detectTokenStandard(contractAddress: string) {
-    const provider = new ethers.providers.JsonRpcProvider(this.getRPC());
     const contract = new ethers.Contract(
       contractAddress,
       [...erc721Interface.fragments, ...erc1155Interface.fragments],
-      provider
+      baseProvider
     );
 
     try {
