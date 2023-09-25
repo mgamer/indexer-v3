@@ -87,8 +87,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
                   "rarible",
                   "sudoswap",
                   "nftx",
-                  "alienswap",
-                  "mint"
+                  "alienswap"
                 ),
               data: Joi.object(),
             }).description("Optional raw order to fill."),
