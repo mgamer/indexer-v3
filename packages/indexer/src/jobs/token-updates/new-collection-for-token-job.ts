@@ -17,6 +17,7 @@ import _ from "lodash";
 import * as royalties from "@/utils/royalties";
 import * as marketplaceFees from "@/utils/marketplace-fees";
 import MetadataProviderRouter from "@/metadata/metadata-provider-router";
+import PgPromise from "pg-promise";
 
 export type NewCollectionForTokenJobPayload = {
   contract: string;
@@ -114,7 +115,7 @@ export class NewCollectionForTokenJob extends AbstractRabbitMqJobHandler {
             ) ON CONFLICT DO NOTHING;
           `;
 
-        await idb.none(insertCollectionQuery, {
+        const values = {
           id: collectionMetadata.id,
           slug: collectionMetadata.slug,
           name: collectionMetadata.name,
@@ -128,7 +129,9 @@ export class NewCollectionForTokenJob extends AbstractRabbitMqJobHandler {
             ? { opensea: collectionMetadata.paymentTokens }
             : {},
           creator: collectionMetadata.creator ? toBuffer(collectionMetadata.creator) : null,
-        });
+        };
+
+        await idb.none(insertCollectionQuery, values);
 
         // Retrieve the newly created collection
         collection = await Collections.getByContractAndTokenId(contract, Number(tokenId));
@@ -139,7 +142,10 @@ export class NewCollectionForTokenJob extends AbstractRabbitMqJobHandler {
             this.queueName,
             `failed to fetch/create collection ${JSON.stringify(
               payload
-            )} collectionMetadata ${JSON.stringify(collectionMetadata)}`
+            )} collectionMetadata ${JSON.stringify(collectionMetadata)} query ${PgPromise.as.format(
+              insertCollectionQuery,
+              values
+            )}`
           );
           return;
         }
