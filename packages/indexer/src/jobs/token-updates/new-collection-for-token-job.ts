@@ -22,6 +22,7 @@ export type NewCollectionForTokenJobPayload = {
   contract: string;
   tokenId: string;
   mintedTimestamp?: number;
+  newCollectionId: string;
   oldCollectionId: string;
   context?: string;
 };
@@ -36,12 +37,12 @@ export class NewCollectionForTokenJob extends AbstractRabbitMqJobHandler {
   } as BackoffStrategy;
 
   protected async process(payload: NewCollectionForTokenJobPayload) {
-    const { contract, tokenId, mintedTimestamp, oldCollectionId } = payload;
+    const { contract, tokenId, mintedTimestamp, newCollectionId, oldCollectionId } = payload;
     const queries: PgPromiseQuery[] = [];
 
     try {
       // Fetch collection from local DB
-      let collection = await Collections.getByContractAndTokenId(contract, Number(tokenId));
+      let collection = await Collections.getById(newCollectionId);
 
       // If collection not found in the DB
       if (!collection) {
@@ -49,6 +50,7 @@ export class NewCollectionForTokenJob extends AbstractRabbitMqJobHandler {
           this.queueName,
           `collection for contract ${contract} tokenId ${tokenId} not found`
         );
+
         // Fetch collection metadata
         let collectionMetadata = await MetadataApi.getCollectionMetadata(contract, tokenId, "", {
           allowFallback: true,
