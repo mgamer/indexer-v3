@@ -57,17 +57,12 @@ export const getBuildInfo = async (
   }
 
   // Check if is blocked by ERC721c
-  if (
-    options.orderbook === "opensea" &&
-    conduitKey === Sdk.SeaportBase.Addresses.OpenseaConduitKey[config.chainId]
-  ) {
-    const isBlocked = await erc721c.checkMarketplaceIsFiltered(
-      fromBuffer(collectionResult.contract),
-      [exchange.deriveConduit(conduitKey)]
-    );
-    if (isBlocked) {
-      throw new Error("Seaport was blocked by erc721c's security policyn");
-    }
+  const isBlocked = await erc721c.checkMarketplaceIsFiltered(
+    fromBuffer(collectionResult.contract),
+    [exchange.deriveConduit(conduitKey)]
+  );
+  if (isBlocked) {
+    throw new Error("Blocked by ERC721C security policy");
   }
 
   // Generate the salt
