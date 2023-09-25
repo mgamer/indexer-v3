@@ -45,6 +45,10 @@ export class NewCollectionForTokenJob extends AbstractRabbitMqJobHandler {
 
       // If collection not found in the DB
       if (!collection) {
+        logger.info(
+          this.queueName,
+          `collection for contract ${contract} tokenId ${tokenId} not found`
+        );
         // Fetch collection metadata
         let collectionMetadata = await MetadataApi.getCollectionMetadata(contract, tokenId, "", {
           allowFallback: true,
@@ -157,6 +161,11 @@ export class NewCollectionForTokenJob extends AbstractRabbitMqJobHandler {
           oldCollectionId,
         });
       }
+
+      logger.info(
+        this.queueName,
+        `setting collection ${collection.id} for contract ${contract} tokenId ${tokenId} not found`
+      );
 
       // Update the token new collection
       queries.push({
