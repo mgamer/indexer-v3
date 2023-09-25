@@ -134,7 +134,7 @@ export class NewCollectionForTokenJob extends AbstractRabbitMqJobHandler {
         await idb.none(insertCollectionQuery, values);
 
         // Retrieve the newly created collection
-        collection = await Collections.getByContractAndTokenId(contract, Number(tokenId));
+        collection = await Collections.getById(collectionMetadata.id);
 
         // If still no collection
         if (!collection) {
