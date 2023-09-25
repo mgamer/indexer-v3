@@ -86,14 +86,12 @@ export const config = {
   looksRareApiKey: String(process.env.LOOKSRARE_API_KEY),
   openSeaApiKey: String(process.env.OPENSEA_API_KEY),
   openSeaApiKeyFlagged: String(process.env.OPENSEA_API_KEY_FLAGGED),
-  openSeaSlugApiKey: String(process.env.OPENSEA_SLUG_API_KEY),
-  openSeaSlugApiHeaders: process.env.OPENSEA_SLUG_API_HEADERS,
-  openSeaSlugBaseUrl: String(process.env.OPENSEA_SLUG_BASE_URL),
   openSeaApiUrl: String(process.env.OPENSEA_API_URL || ""),
 
   openSeaTokenMetadataBySlugApiKey: String(process.env.OPENSEA_SLUG_API_KEY),
   openSeaCollectionMetadataApiKey: String(process.env.OPENSEA_COLLECTION_API_KEY),
   openSeaTokenMetadataApiKey: String(process.env.OPENSEA_TOKENS_API_KEY),
+  openSeaFlaggedMetadataApiKey: String(process.env.OPENSEA_FLAGGED_API_KEY),
 
   openSeaCrossPostingApiKey: String(
     process.env.OPENSEA_CROSS_POSTING_API_KEY || process.env.OPENSEA_API_KEY

@@ -92,7 +92,7 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
     }/api/v1/assets?${searchParams.toString()}`;
 
     const API_KEY_TO_USE = options?.flagged
-      ? config.openSeaApiKeyFlagged
+      ? config.openSeaFlaggedMetadataApiKey
       : config.openSeaTokenMetadataApiKey;
 
     const data = await axios
