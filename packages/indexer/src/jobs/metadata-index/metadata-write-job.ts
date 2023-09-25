@@ -12,7 +12,9 @@ import { resyncAttributeKeyCountsJob } from "@/jobs/update-attribute/resync-attr
 import { resyncAttributeValueCountsJob } from "@/jobs/update-attribute/resync-attribute-value-counts-job";
 import { rarityQueueJob } from "@/jobs/collection-updates/rarity-queue-job";
 import { resyncAttributeCountsJob } from "@/jobs/update-attribute/update-attribute-counts-job";
+import { TokenMetadata } from "@/metadata/types";
 import { newCollectionForTokenJob } from "@/jobs/token-updates/new-collection-for-token-job";
+import { config } from "@/config/index";
 
 export type MetadataIndexWriteJobPayload = {
   collection: string;
@@ -476,7 +478,19 @@ export class MetadataIndexWriteJob extends AbstractRabbitMqJobHandler {
     // }
   }
 
-  public async addToQueue(tokenMetadataInfos: MetadataIndexWriteJobPayload[]) {
+  public updateActivities(contract: string) {
+    if (config.chainId === 1) {
+      return _.indexOf(["0x82c7a8f707110f5fbb16184a5933e9f78a34c6ab"], contract) === -1;
+    }
+
+    if (config.chainId === 137) {
+      return _.indexOf(["0x2953399124f0cbb46d2cbacd8a89cf0599974963"], contract) === -1;
+    }
+
+    return true;
+  }
+
+  public async addToQueue(tokenMetadataInfos: TokenMetadata[]) {
     await this.sendBatch(
       tokenMetadataInfos
         .map((tokenMetadataInfo) => ({
