@@ -167,6 +167,8 @@ export const AlienswapModule: ChainIdToAddress = {
   [Network.BaseGoerli]: "0x527534529577b57548a1dbc0d7fb0088705a1965",
   [Network.Base]: "0x25210757f799423c908e4dbf8141dd10d51afbc6",
   [Network.EthereumSepolia]: "0x54e9b4580f8c180e8020cec7a330f189658e1329",
+  [Network.Arbitrum]: "0x670ec3e840816c81fb8567c9a5368ab55f3d796a",
+  [Network.Optimism]: "0x670ec3e840816c81fb8567c9a5368ab55f3d796a",
 };
 
 export const SudoswapModule: ChainIdToAddress = {
