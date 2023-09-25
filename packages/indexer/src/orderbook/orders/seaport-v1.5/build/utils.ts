@@ -42,13 +42,15 @@ export const getBuildInfo = async (
   const exchange = new Sdk.SeaportV15.Exchange(config.chainId);
 
   // Priority of conduits:
-  // - requested one
-  // - OpenSea conduit
-  // - Reservoir conduit
+  // - requested conduit
+  // - opensea conduit
+  // - reservoir conduit
+  // - no conduit (exchange address)
   const conduitKey =
     options.conduitKey ??
     Sdk.SeaportBase.Addresses.OpenseaConduitKey[config.chainId] ??
-    Sdk.SeaportBase.Addresses.ReservoirConduitKey[config.chainId];
+    Sdk.SeaportBase.Addresses.ReservoirConduitKey[config.chainId] ??
+    Sdk.SeaportV15.Addresses.Exchange[config.chainId];
 
   // LooksRare requires their source in the salt
   if (options.orderbook === "looks-rare") {
