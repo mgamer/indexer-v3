@@ -29,7 +29,7 @@ export const metadataUpdateURIOpensea: EventData = {
 };
 
 // https://portal.thirdweb.com/contracts/ContractMetadata#contracturiupdated
-export const contractURIUpdatedOpensea: EventData = {
+export const contractURIUpdateThirdweb: EventData = {
   kind: "metadata-update",
   subKind: "metadata-update-contract-uri-thirdweb",
   topic: "0x3b9a9caad89c30f35f7d2f55a23b4ceaed9b54a64e2bff4fe2590f53308f94ec",

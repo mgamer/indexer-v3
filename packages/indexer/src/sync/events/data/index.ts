@@ -45,6 +45,7 @@ import * as blurV2 from "@/events-sync/data/blur-v2";
 import * as seadrop from "@/events-sync/data/seadrop";
 import * as erc721c from "@/events-sync/data/erc721c";
 import * as joepeg from "@/events-sync/data/joepeg";
+import * as metadataUpdate from "@/events-sync/data/metadata-update";
 
 // All events we're syncing should have an associated `EventData`
 // entry which dictates the way the event will be parsed and then
@@ -521,6 +522,11 @@ const allEventData = [
   erc721c.setAllowlist,
   joepeg.takerAsk,
   joepeg.takerBid,
+  metadataUpdate.metadataUpdateOpensea,
+  metadataUpdate.batchMetadataUpdateOpensea,
+  metadataUpdate.metadataUpdateURIOpensea,
+  metadataUpdate.contractURIUpdateThirdweb,
+  metadataUpdate.metadataUpdateURIZora,
 ];
 
 export const getEventData = (events?: string[]) => {
