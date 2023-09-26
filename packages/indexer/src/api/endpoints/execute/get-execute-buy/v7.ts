@@ -26,7 +26,6 @@ import { ApiKeyManager } from "@/models/api-keys";
 import { FeeRecipients } from "@/models/fee-recipients";
 import { Sources } from "@/models/sources";
 import * as mints from "@/orderbook/mints";
-import { CollectionMint } from "@/orderbook/mints";
 import {
   normalizeCollectionMint,
   generateCollectionMintTxData,
@@ -487,7 +486,6 @@ export const getExecuteBuyV7Options: RouteOptions = {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           data: any;
         };
-        // rawMint?: RawMintParam;
         quantity: number;
         preferredOrderSource?: string;
         exactOrderSource?: string;
@@ -807,7 +805,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
             );
             if (collectionData) {
               // Fetch any open mints on the collection which the taker is elligible for
-              const openMints: CollectionMint[] = await mints.getCollectionMints(item.collection, {
+              const openMints = await mints.getCollectionMints(item.collection, {
                 status: "open",
               });
 
@@ -1023,13 +1021,10 @@ export const getExecuteBuyV7Options: RouteOptions = {
             );
             if (collectionData) {
               // Fetch any open mints on the token which the taker is elligible for
-              const openMints: CollectionMint[] = await mints.getCollectionMints(
-                collectionData.id,
-                {
-                  status: "open",
-                  tokenId,
-                }
-              );
+              const openMints = await mints.getCollectionMints(collectionData.id, {
+                status: "open",
+                tokenId,
+              });
 
               for (const mint of openMints) {
                 if (!payload.currency || mint.currency === payload.currency) {

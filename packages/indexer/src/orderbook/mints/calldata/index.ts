@@ -19,16 +19,6 @@ export type RawMintParam = Pick<
   "collection" | "details" | "price" | "currency" | "contract"
 >;
 
-// {
-//   signature: string;
-//   abiParams: AbiParam[];
-//   collection: string;
-//   to?: string;
-//   contract?: string;
-//   currency?: string;
-//   price?: string;
-// };
-
 export type AbiParam =
   | {
       kind: "unknown";
