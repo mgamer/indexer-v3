@@ -188,7 +188,10 @@ export const getTransfersBulkV2Options: RouteOptions = {
           ) {
             const msg = `Continuation updatedAt ${_.floor(Number(updateAt))} out fo range ${
               query.startTimestamp
-            } - ${query.endTimestamp}`;
+            } - ${query.endTimestamp} request ${JSON.stringify(query)} x-api-key ${
+              request.headers["x-api-key"]
+            }`;
+
             logger.info("transfers-bulk", msg);
             throw Boom.badRequest(msg);
           }
