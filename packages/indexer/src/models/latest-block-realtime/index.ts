@@ -1,5 +1,6 @@
 import { redis } from "@/common/redis";
 import _ from "lodash";
+import { now } from "@/common/utils";
 
 export type LatestBlockRealtimePayload = {
   block: number;
@@ -11,7 +12,7 @@ export class LatestBlockRealtime {
   public key = "latest-block-realtime";
 
   public async set(latestBlock: LatestBlockRealtimePayload) {
-    latestBlock.timestamp = latestBlock.timestamp ?? _.now();
+    latestBlock.timestamp = latestBlock.timestamp ?? now();
     return await redis.set(this.key, JSON.stringify(latestBlock));
   }
 
