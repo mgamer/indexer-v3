@@ -66,7 +66,6 @@ if (config.doBackgroundWork && config.catchup) {
         try {
           await redis.set("latest-block-websocket-received", now());
           await eventsSyncRealtimeJob.addToQueue({ block });
-          await redis.set("latest-block-realtime", block);
 
           if (![137].includes(config.chainId)) {
             await checkForMissingBlocks(block);
