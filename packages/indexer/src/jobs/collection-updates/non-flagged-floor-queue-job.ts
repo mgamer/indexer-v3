@@ -1,10 +1,10 @@
 import { idb } from "@/common/db";
 import { toBuffer } from "@/common/utils";
 import { AbstractRabbitMqJobHandler, BackoffStrategy } from "@/jobs/abstract-rabbit-mq-job-handler";
-import { flagStatusSyncJob } from "../flag-status/flag-status-sync-job";
 import { acquireLock, doesLockExist, releaseLock } from "@/common/redis";
 import { logger } from "@/common/logger";
 import { config } from "@/config/index";
+import { PendingFlagStatusRefreshTokens } from "@/models/pending-flag-status-refresh-tokens";
 
 export type NonFlaggedFloorQueueJobPayload = {
   kind: string;
@@ -235,12 +235,12 @@ export class NonFlaggedFloorQueueJob extends AbstractRabbitMqJobHandler {
     }
 
     if (nonFlaggedCollectionFloorAsk?.token_id) {
-      await flagStatusSyncJob.addToQueue({
-        collectionId: collectionResult.collection_id,
-        contract: payload.contract,
-        kind: "single-token",
-        tokenIds: payload.kind === "single-token" ? [payload.tokenId] : undefined,
-      });
+      await PendingFlagStatusRefreshTokens.add([
+        {
+          contract: payload.contract,
+          tokenId: payload.tokenId,
+        },
+      ]);
     }
   }
 

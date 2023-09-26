@@ -9,7 +9,7 @@ import { PendingRefreshTokensBySlug } from "@/models/pending-refresh-tokens-by-s
 import { AddressZero } from "@ethersproject/constants";
 import { metadataIndexProcessJob } from "@/jobs/metadata-index/metadata-process-job";
 import { metadataIndexProcessBySlugJob } from "@/jobs/metadata-index/metadata-process-by-slug-job";
-import { flagStatusSyncJob } from "../flag-status/flag-status-sync-job";
+import { PendingFlagStatusRefreshTokens } from "@/models/pending-flag-status-refresh-tokens";
 
 export type MetadataIndexFetchJobPayload =
   | {
@@ -131,12 +131,12 @@ export class MetadataIndexFetchJob extends AbstractRabbitMqJobHandler {
 
     // Dont add the tokens to the list if the flag status refresh job is disabled or if the indexer is running in liquidity-only mode
     if (!config.disableFlagStatusRefreshJob || !config.liquidityOnly) {
-      await flagStatusSyncJob.addToQueue({
-        collectionId: data.collection,
-        contract: contract,
-        kind: payload.kind,
-        tokenIds: payload.kind === "single-token" ? [tokenId] : undefined,
-      });
+      await PendingFlagStatusRefreshTokens.add([
+        {
+          contract: contract,
+          tokenId: tokenId,
+        },
+      ]);
     }
 
     await metadataIndexProcessJob.addToQueue({ method: data.method });

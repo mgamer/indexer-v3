@@ -134,6 +134,8 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
     }
     if (slug) {
       searchParams.append("collection_slug", slug);
+    } else {
+      throw new Error("Missing slug");
     }
     searchParams.append("limit", "200");
 
