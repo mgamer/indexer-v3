@@ -28,7 +28,7 @@ import { Sources } from "@/models/sources";
 import * as mints from "@/orderbook/mints";
 import { CollectionMint } from "@/orderbook/mints";
 import {
-  getCollectionMintFromRawMintParam,
+  normalizeCollectionMint,
   generateCollectionMintTxData,
   RawMintParam,
 } from "@/orderbook/mints/calldata";
@@ -87,7 +87,8 @@ export const getExecuteBuyV7Options: RouteOptions = {
                   "rarible",
                   "sudoswap",
                   "nftx",
-                  "alienswap"
+                  "alienswap",
+                  "mint"
                 ),
               data: Joi.object(),
             }).description("Optional raw order to fill."),
@@ -97,33 +98,33 @@ export const getExecuteBuyV7Options: RouteOptions = {
               .description(
                 "Optionally specify a particular fill method. Only relevant when filling via `collection`."
               ),
-            rawMint: Joi.object({
-              signature: Joi.string().description("4byte signature"),
-              price: Joi.string().optional().description("Mint price").optional(),
-              abiParams: Joi.array()
-                .items(
-                  Joi.object({
-                    kind: Joi.string().valid(
-                      "unknown",
-                      "quantity",
-                      "recipient",
-                      "contract",
-                      "comment",
-                      "custom",
-                      "referrer"
-                    ),
-                    abiType: Joi.string(),
-                    abiValue: Joi.any().optional(),
-                  })
-                )
-                .default([]),
-              to: Joi.string()
-                .optional()
-                .description("Set minting contract if the address if not same with collection"),
-              contract: Joi.string()
-                .optional()
-                .description("Set the contract if the address if not same with collection"),
-            }).optional(),
+            // rawMint: Joi.object({
+            //   signature: Joi.string().description("4byte signature"),
+            //   price: Joi.string().optional().description("Mint price").optional(),
+            //   abiParams: Joi.array()
+            //     .items(
+            //       Joi.object({
+            //         kind: Joi.string().valid(
+            //           "unknown",
+            //           "quantity",
+            //           "recipient",
+            //           "contract",
+            //           "comment",
+            //           "custom",
+            //           "referrer"
+            //         ),
+            //         abiType: Joi.string(),
+            //         abiValue: Joi.any().optional(),
+            //       })
+            //     )
+            //     .default([]),
+            //   to: Joi.string()
+            //     .optional()
+            //     .description("Set minting contract if the address if not same with collection"),
+            //   contract: Joi.string()
+            //     .optional()
+            //     .description("Set the contract if the address if not same with collection"),
+            // }).optional(),
             preferredOrderSource: Joi.string()
               .lowercase()
               .pattern(regex.domain)
@@ -513,7 +514,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           data: any;
         };
-        rawMint?: RawMintParam;
+        // rawMint?: RawMintParam;
         quantity: number;
         preferredOrderSource?: string;
         exactOrderSource?: string;
@@ -762,12 +763,14 @@ export const getExecuteBuyV7Options: RouteOptions = {
             if (collectionData) {
               // Fetch any open mints on the collection which the taker is elligible for
               let openMints: CollectionMint[] = [];
-              if (item.rawMint) {
+              if (item.rawOrder && item.rawOrder.kind === "mint") {
+                const rawMint = item.rawOrder.data as RawMintParam;
                 openMints.push(
-                  getCollectionMintFromRawMintParam({
-                    ...item.rawMint,
-                    currency: item.rawMint.currency ?? payload.currency,
-                    collection: item.rawMint.collection ?? item.collection,
+                  normalizeCollectionMint({
+                    ...rawMint,
+                    currency: rawMint.currency ?? payload.currency,
+                    collection: rawMint.collection ?? item.collection,
+                    contract: rawMint.contract ?? item.collection,
                   })
                 );
               } else {
@@ -778,9 +781,10 @@ export const getExecuteBuyV7Options: RouteOptions = {
 
               for (const mint of openMints) {
                 if (!payload.currency || mint.currency === payload.currency) {
-                  const amountMintable = item.rawMint
-                    ? bn(item.quantity ?? 1)
-                    : await mints.getAmountMintableByWallet(mint, payload.taker);
+                  const amountMintable =
+                    item.rawOrder?.kind === "mint"
+                      ? bn(item.quantity ?? 1)
+                      : await mints.getAmountMintableByWallet(mint, payload.taker);
                   let quantityToMint = bn(
                     amountMintable
                       ? amountMintable.lt(item.quantity)
@@ -991,12 +995,15 @@ export const getExecuteBuyV7Options: RouteOptions = {
             if (collectionData) {
               // Fetch any open mints on the token which the taker is elligible for
               let openMints: CollectionMint[] = [];
-              if (item.rawMint) {
+
+              if (item.rawOrder && item.rawOrder.kind === "mint") {
+                const rawMint = item.rawOrder.data as RawMintParam;
                 openMints.push(
-                  getCollectionMintFromRawMintParam({
-                    ...item.rawMint,
-                    currency: item.rawMint.currency ?? payload.currency,
-                    collection: item.rawMint.collection ?? item.collection,
+                  normalizeCollectionMint({
+                    ...rawMint,
+                    currency: rawMint.currency ?? payload.currency,
+                    collection: rawMint.collection ?? item.collection,
+                    contract: rawMint.contract ?? item.collection,
                   })
                 );
               } else {
@@ -1007,9 +1014,10 @@ export const getExecuteBuyV7Options: RouteOptions = {
               }
               for (const mint of openMints) {
                 if (!payload.currency || mint.currency === payload.currency) {
-                  const amountMintable = item.rawMint
-                    ? bn(item.quantity ?? 1)
-                    : await mints.getAmountMintableByWallet(mint, payload.taker);
+                  const amountMintable =
+                    item.rawOrder?.kind === "mint"
+                      ? bn(item.quantity ?? 1)
+                      : await mints.getAmountMintableByWallet(mint, payload.taker);
 
                   const quantityToMint = bn(
                     amountMintable

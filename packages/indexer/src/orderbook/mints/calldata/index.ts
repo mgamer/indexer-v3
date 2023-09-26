@@ -14,15 +14,20 @@ import * as mints from "@/orderbook/mints/calldata/detector";
 // For now, use the deployer address
 const DEFAULT_REFERRER = "0xf3d63166f0ca56c3c1a3508fce03ff0cf3fb691e";
 
-export type RawMintParam = {
-  signature: string;
-  abiParams: AbiParam[];
-  collection: string;
-  to?: string;
-  contract?: string;
-  currency?: string;
-  price?: string;
-};
+export type RawMintParam = Pick<
+  CollectionMint,
+  "collection" | "details" | "price" | "currency" | "contract"
+>;
+
+// {
+//   signature: string;
+//   abiParams: AbiParam[];
+//   collection: string;
+//   to?: string;
+//   contract?: string;
+//   currency?: string;
+//   price?: string;
+// };
 
 export type AbiParam =
   | {
@@ -70,7 +75,7 @@ export type MintTxSchema = {
 
 export type CustomInfo = mints.manifold.Info;
 
-export const getCollectionMintFromRawMintParam = (mintRaw: RawMintParam): CollectionMint => {
+export const normalizeCollectionMint = (mintRaw: RawMintParam): CollectionMint => {
   return {
     collection: mintRaw.collection ?? mintRaw.contract,
     contract: mintRaw.contract ?? mintRaw.collection,
@@ -78,15 +83,7 @@ export const getCollectionMintFromRawMintParam = (mintRaw: RawMintParam): Collec
     kind: "public",
     status: "open",
     standard: "unknown",
-    details: {
-      tx: {
-        to: mintRaw.to ?? mintRaw.collection,
-        data: {
-          signature: mintRaw.signature,
-          params: mintRaw.abiParams,
-        },
-      },
-    },
+    details: mintRaw.details,
     currency: mintRaw.currency ?? Sdk.Common.Addresses.Native[config.chainId],
     price: mintRaw.price ?? "0",
   };
