@@ -548,59 +548,61 @@ export const getExecuteBuyV7Options: RouteOptions = {
               }
             );
 
-            const orderId = `mint:${collection}`;
-            const mint = normalizeCollectionMint({
-              ...rawMint,
-              currency: rawMint.currency ?? payload.currency,
-              collection: rawMint.collection ?? collection,
-              contract: rawMint.contract ?? collection,
-            });
-
-            const quantityToMint = 1;
-            const { txData, price } = await generateCollectionMintTxData(
-              mint,
-              payload.taker,
-              quantityToMint,
-              {
-                comment: payload.comment,
-                referrer: payload.referrer,
-              }
-            );
-
-            mintDetails.push({
-              orderId,
-              txData,
-              fees: [],
-              token: mint.contract,
-              quantity: quantityToMint,
-              comment: payload.comment,
-            });
-            await addToPath(
-              {
-                id: orderId,
-                kind: "mint",
-                maker: mint.contract,
-                nativePrice: price,
-                price: price,
-                sourceId: null,
-                currency: mint.currency,
-                rawData: {},
-                builtInFees: [],
-                additionalFees: [],
-              },
-              {
-                kind: collectionData.token_kind,
-                contract: mint.contract,
-                quantity: quantityToMint,
-              }
-            );
-
-            if (preview) {
-              // The max quantity is the amount mintable on the collection
-              maxQuantities.push({
-                itemIndex,
-                maxQuantity: mint.tokenId ? quantityToMint.toString() : "1",
+            if (collectionData) {
+              const orderId = `mint:${collection}`;
+              const openMint = normalizeCollectionMint({
+                ...rawMint,
+                currency: rawMint.currency ?? payload.currency,
+                collection: rawMint.collection ?? collection,
+                contract: rawMint.contract ?? collection,
               });
+
+              const quantityToMint = 1;
+              const { txData, price } = await generateCollectionMintTxData(
+                openMint,
+                payload.taker,
+                quantityToMint,
+                {
+                  comment: payload.comment,
+                  referrer: payload.referrer,
+                }
+              );
+
+              mintDetails.push({
+                orderId,
+                txData,
+                fees: [],
+                token: openMint.contract,
+                quantity: quantityToMint,
+                comment: payload.comment,
+              });
+              await addToPath(
+                {
+                  id: orderId,
+                  kind: "mint",
+                  maker: openMint.contract,
+                  nativePrice: price,
+                  price: price,
+                  sourceId: null,
+                  currency: openMint.currency,
+                  rawData: {},
+                  builtInFees: [],
+                  additionalFees: [],
+                },
+                {
+                  kind: collectionData.token_kind,
+                  contract: openMint.contract,
+                  quantity: quantityToMint,
+                }
+              );
+
+              if (preview) {
+                // The max quantity is the amount mintable on the collection
+                maxQuantities.push({
+                  itemIndex,
+                  maxQuantity: openMint.tokenId ? quantityToMint.toString() : "1",
+                });
+              }
             }
           } else if (order.kind === "sudoswap") {
             item.orderId = sudoswap.getOrderId(order.data.pair, "sell", order.data.tokenId);
