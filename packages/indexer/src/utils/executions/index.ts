@@ -90,7 +90,9 @@ export class ExecutionsBuffer {
     }
 
     if (values.length) {
-      await idb.none(pgp.helpers.insert(values, columns));
+      if (!process.env.LOCAL_TESTING) {
+        await idb.none(pgp.helpers.insert(values, columns));
+      }
     }
 
     return requestId;

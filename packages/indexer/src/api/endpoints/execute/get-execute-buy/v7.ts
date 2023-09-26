@@ -98,33 +98,6 @@ export const getExecuteBuyV7Options: RouteOptions = {
               .description(
                 "Optionally specify a particular fill method. Only relevant when filling via `collection`."
               ),
-            // rawMint: Joi.object({
-            //   signature: Joi.string().description("4byte signature"),
-            //   price: Joi.string().optional().description("Mint price").optional(),
-            //   abiParams: Joi.array()
-            //     .items(
-            //       Joi.object({
-            //         kind: Joi.string().valid(
-            //           "unknown",
-            //           "quantity",
-            //           "recipient",
-            //           "contract",
-            //           "comment",
-            //           "custom",
-            //           "referrer"
-            //         ),
-            //         abiType: Joi.string(),
-            //         abiValue: Joi.any().optional(),
-            //       })
-            //     )
-            //     .default([]),
-            //   to: Joi.string()
-            //     .optional()
-            //     .description("Set minting contract if the address if not same with collection"),
-            //   contract: Joi.string()
-            //     .optional()
-            //     .description("Set the contract if the address if not same with collection"),
-            // }).optional(),
             preferredOrderSource: Joi.string()
               .lowercase()
               .pattern(regex.domain)
@@ -559,7 +532,79 @@ export const getExecuteBuyV7Options: RouteOptions = {
           // of this same API rather than doing anything custom for it.
 
           // TODO: Handle any other on-chain orderbooks that cannot be "posted"
-          if (order.kind === "sudoswap") {
+          if (order.kind === "mint") {
+            const rawMint = order.data as RawMintParam;
+            const collection = rawMint.collection;
+
+            const collectionData = await idb.oneOrNone(
+              `
+                SELECT
+                  contracts.kind AS token_kind
+                FROM collections
+                JOIN contracts
+                  ON collections.contract = contracts.address
+                WHERE collections.id = $/id/
+              `,
+              {
+                id: collection,
+              }
+            );
+
+            const orderId = `mint:${collection}`;
+            const mint = normalizeCollectionMint({
+              ...rawMint,
+              currency: rawMint.currency ?? payload.currency,
+              collection: rawMint.collection ?? collection,
+              contract: rawMint.contract ?? collection,
+            });
+
+            const quantityToMint = 1;
+            const { txData, price } = await generateCollectionMintTxData(
+              mint,
+              payload.taker,
+              quantityToMint,
+              {
+                comment: payload.comment,
+                referrer: payload.referrer,
+              }
+            );
+
+            mintDetails.push({
+              orderId,
+              txData,
+              fees: [],
+              token: mint.contract,
+              quantity: quantityToMint,
+              comment: payload.comment,
+            });
+            await addToPath(
+              {
+                id: orderId,
+                kind: "mint",
+                maker: mint.contract,
+                nativePrice: price,
+                price: price,
+                sourceId: null,
+                currency: mint.currency,
+                rawData: {},
+                builtInFees: [],
+                additionalFees: [],
+              },
+              {
+                kind: collectionData.token_kind,
+                contract: mint.contract,
+                quantity: quantityToMint,
+              }
+            );
+
+            if (preview) {
+              // The max quantity is the amount mintable on the collection
+              maxQuantities.push({
+                itemIndex,
+                maxQuantity: mint.tokenId ? quantityToMint.toString() : "1",
+              });
+            }
+          } else if (order.kind === "sudoswap") {
             item.orderId = sudoswap.getOrderId(order.data.pair, "sell", order.data.tokenId);
           } else if (order.kind === "nftx") {
             item.orderId = nftx.getOrderId(order.data.pool, "sell", order.data.specificIds[0]);
@@ -762,29 +807,13 @@ export const getExecuteBuyV7Options: RouteOptions = {
             );
             if (collectionData) {
               // Fetch any open mints on the collection which the taker is elligible for
-              let openMints: CollectionMint[] = [];
-              if (item.rawOrder && item.rawOrder.kind === "mint") {
-                const rawMint = item.rawOrder.data as RawMintParam;
-                openMints.push(
-                  normalizeCollectionMint({
-                    ...rawMint,
-                    currency: rawMint.currency ?? payload.currency,
-                    collection: rawMint.collection ?? item.collection,
-                    contract: rawMint.contract ?? item.collection,
-                  })
-                );
-              } else {
-                openMints = await mints.getCollectionMints(item.collection, {
-                  status: "open",
-                });
-              }
+              const openMints: CollectionMint[] = await mints.getCollectionMints(item.collection, {
+                status: "open",
+              });
 
               for (const mint of openMints) {
                 if (!payload.currency || mint.currency === payload.currency) {
-                  const amountMintable =
-                    item.rawOrder?.kind === "mint"
-                      ? bn(item.quantity ?? 1)
-                      : await mints.getAmountMintableByWallet(mint, payload.taker);
+                  const amountMintable = await mints.getAmountMintableByWallet(mint, payload.taker);
                   let quantityToMint = bn(
                     amountMintable
                       ? amountMintable.lt(item.quantity)
@@ -994,30 +1023,17 @@ export const getExecuteBuyV7Options: RouteOptions = {
             );
             if (collectionData) {
               // Fetch any open mints on the token which the taker is elligible for
-              let openMints: CollectionMint[] = [];
-
-              if (item.rawOrder && item.rawOrder.kind === "mint") {
-                const rawMint = item.rawOrder.data as RawMintParam;
-                openMints.push(
-                  normalizeCollectionMint({
-                    ...rawMint,
-                    currency: rawMint.currency ?? payload.currency,
-                    collection: rawMint.collection ?? item.collection,
-                    contract: rawMint.contract ?? item.collection,
-                  })
-                );
-              } else {
-                openMints = await mints.getCollectionMints(collectionData.id, {
+              const openMints: CollectionMint[] = await mints.getCollectionMints(
+                collectionData.id,
+                {
                   status: "open",
                   tokenId,
-                });
-              }
+                }
+              );
+
               for (const mint of openMints) {
                 if (!payload.currency || mint.currency === payload.currency) {
-                  const amountMintable =
-                    item.rawOrder?.kind === "mint"
-                      ? bn(item.quantity ?? 1)
-                      : await mints.getAmountMintableByWallet(mint, payload.taker);
+                  const amountMintable = await mints.getAmountMintableByWallet(mint, payload.taker);
 
                   const quantityToMint = bn(
                     amountMintable
