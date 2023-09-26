@@ -1,7 +1,7 @@
 import _ from "lodash";
 import { redis } from "@/common/redis";
 
-export type RefreshCollection = {
+export type PendingFlagStatusRefreshCollection = {
   slug: string;
   continuation: string;
 };
@@ -9,10 +9,13 @@ export type RefreshCollection = {
 /**
  * Class that manage redis list of tokens, pending metadata refresh
  */
-export class PendingRefreshCollections {
+export class PendingFlagStatusRefreshCollections {
   public static key = "pending-flag-status-sync-collections";
 
-  public static async add(refreshCollection: RefreshCollection[], prioritized = false) {
+  public static async add(
+    refreshCollection: PendingFlagStatusRefreshCollection[],
+    prioritized = false
+  ) {
     if (prioritized) {
       return await redis.lpush(
         this.key,
@@ -26,12 +29,12 @@ export class PendingRefreshCollections {
     }
   }
 
-  public static async get(count = 20): Promise<RefreshCollection[]> {
+  public static async get(count = 20): Promise<PendingFlagStatusRefreshCollection[]> {
     const refreshCollections = await redis.lpop(this.key, count);
     if (refreshCollections) {
       return _.map(
         refreshCollections,
-        (refreshCollection) => JSON.parse(refreshCollection) as RefreshCollection
+        (refreshCollection) => JSON.parse(refreshCollection) as PendingFlagStatusRefreshCollection
       );
     }
 

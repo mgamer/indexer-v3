@@ -4,7 +4,7 @@ import { config } from "@/config/index";
 import { tokenFlagStatusSyncJob } from "@/jobs/flag-status/token-flag-status-sync-job";
 import { PendingFlagStatusRefreshTokens } from "@/models/pending-flag-status-refresh-tokens";
 import { collectionFlagStatusSyncJob } from "@/jobs/flag-status/collection-flag-status-sync-job";
-import { PendingRefreshCollections } from "@/models/pending-flag-status-sync-collections";
+import { PendingFlagStatusRefreshCollections } from "@/models/pending-flag-status-sync-collections";
 
 if (config.doBackgroundWork) {
   cron.schedule(
@@ -25,7 +25,7 @@ if (config.doBackgroundWork) {
 
           // check if we can acquire the lock for collections
           if (await acquireLock(collectionFlagStatusSyncJob.getLockName(), 60)) {
-            const collection = await PendingRefreshCollections.get();
+            const collection = await PendingFlagStatusRefreshCollections.get(1);
             await collectionFlagStatusSyncJob.addToQueue({
               ...collection[0],
             });
