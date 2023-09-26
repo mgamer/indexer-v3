@@ -1,40 +1,37 @@
 import _ from "lodash";
 import { redis } from "@/common/redis";
 
-export type PendingFlagStatusRefreshCollection = {
+export type PendingFlagStatusSyncCollection = {
   slug: string;
   continuation: string;
 };
 
 /**
- * Class that manage redis list of tokens, pending metadata refresh
+ * Class that manage redis list of tokens, pending metadata sync
  */
-export class PendingFlagStatusRefreshCollections {
+export class PendingFlagStatusSyncCollections {
   public static key = "pending-flag-status-sync-collections";
 
-  public static async add(
-    refreshCollection: PendingFlagStatusRefreshCollection[],
-    prioritized = false
-  ) {
+  public static async add(syncCollection: PendingFlagStatusSyncCollection[], prioritized = false) {
     if (prioritized) {
       return await redis.lpush(
         this.key,
-        _.map(refreshCollection, (token) => JSON.stringify(token))
+        _.map(syncCollection, (token) => JSON.stringify(token))
       );
     } else {
       return await redis.rpush(
         this.key,
-        _.map(refreshCollection, (token) => JSON.stringify(token))
+        _.map(syncCollection, (token) => JSON.stringify(token))
       );
     }
   }
 
-  public static async get(count = 20): Promise<PendingFlagStatusRefreshCollection[]> {
-    const refreshCollections = await redis.lpop(this.key, count);
-    if (refreshCollections) {
+  public static async get(count = 20): Promise<PendingFlagStatusSyncCollection[]> {
+    const syncCollections = await redis.lpop(this.key, count);
+    if (syncCollections) {
       return _.map(
-        refreshCollections,
-        (refreshCollection) => JSON.parse(refreshCollection) as PendingFlagStatusRefreshCollection
+        syncCollections,
+        (syncCollection) => JSON.parse(syncCollection) as PendingFlagStatusSyncCollection
       );
     }
 
