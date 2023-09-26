@@ -4,7 +4,7 @@ import { AbstractRabbitMqJobHandler, BackoffStrategy } from "@/jobs/abstract-rab
 import { acquireLock, doesLockExist, releaseLock } from "@/common/redis";
 import { logger } from "@/common/logger";
 import { config } from "@/config/index";
-import { PendingFlagStatusRefreshTokens } from "@/models/pending-flag-status-refresh-tokens";
+import { PendingFlagStatusSyncTokens } from "@/models/pending-flag-status-sync-tokens";
 
 export type NonFlaggedFloorQueueJobPayload = {
   kind: string;
@@ -235,7 +235,7 @@ export class NonFlaggedFloorQueueJob extends AbstractRabbitMqJobHandler {
     }
 
     if (nonFlaggedCollectionFloorAsk?.token_id) {
-      await PendingFlagStatusRefreshTokens.add([
+      await PendingFlagStatusSyncTokens.add([
         {
           contract: payload.contract,
           tokenId: payload.tokenId,
