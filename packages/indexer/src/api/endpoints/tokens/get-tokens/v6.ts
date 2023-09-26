@@ -530,7 +530,7 @@ export const getTokensV6Options: RouteOptions = {
         }
 
         (query as any).contract = contractString;
-        sourceConditions.push(`contract = $/contract/`);
+        sourceConditions.push(`contract IN ($/contract:csv/)`);
       } else if (query.tokens) {
         if (!_.isArray(query.tokens)) {
           query.tokens = [query.tokens];
