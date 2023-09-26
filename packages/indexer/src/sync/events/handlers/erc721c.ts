@@ -1,7 +1,6 @@
 import { getEventData } from "@/events-sync/data";
 import { EnhancedEvent } from "@/events-sync/handlers/utils";
 import * as erc721c from "@/utils/erc721c";
-import { logger } from "@/common/logger";
 
 export const handleEvents = async (events: EnhancedEvent[]) => {
   for (const { subKind, baseEventParams, log } of events) {
@@ -21,19 +20,11 @@ export const handleEvents = async (events: EnhancedEvent[]) => {
       case "erc721c-set-transfer-security-level": {
         const parsedLog = eventData.abi.parseLog(log);
         const collection = parsedLog.args["collection"].toLowerCase();
-        logger.info(
-          "refresh-erc721c-config",
-          `Satrt to refresh erc721c config after erc721c-set-transfer-security-level, contract=${collection}`
-        );
         await erc721c.refreshERC721CConfig(collection);
         break;
       }
 
       case "erc721c-transfer-validator-updated": {
-        logger.info(
-          "refresh-erc721c-config",
-          `Satrt to refresh erc721c config after erc721c-transfer-validator-updated, contract=${baseEventParams.address}`
-        );
         await erc721c.refreshERC721CConfig(baseEventParams.address);
         break;
       }
