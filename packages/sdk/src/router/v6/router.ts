@@ -98,7 +98,7 @@ export class Router {
 
     this.contracts = {
       // Initialize router
-      router: new Contract(Addresses.Router[chainId], RouterAbi, provider),
+      router: new Contract(Addresses.Router[chainId] ?? AddressZero, RouterAbi, provider),
       // Initialize approval proxy
       approvalProxy: new Contract(
         Addresses.ApprovalProxy[chainId] ?? AddressZero,
