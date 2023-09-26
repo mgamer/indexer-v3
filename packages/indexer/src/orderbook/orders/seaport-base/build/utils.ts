@@ -7,6 +7,7 @@ export interface BaseOrderBuildOptions {
   maker: string;
   contract?: string;
   weiPrice: string;
+  endPrice?: string;
   orderbook: "opensea" | "reservoir" | "looks-rare";
   useOffChainCancellation?: boolean;
   replaceOrderId?: string;

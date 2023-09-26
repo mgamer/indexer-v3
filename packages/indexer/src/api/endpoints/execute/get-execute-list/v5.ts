@@ -95,6 +95,12 @@ export const getExecuteListV5Options: RouteOptions = {
               .description(
                 "Amount seller is willing to sell for in the smallest denomination for the specific currency. Example: `1000000000000000000`"
               ),
+            endPrice: Joi.string()
+              .pattern(regex.number)
+              .optional()
+              .description(
+                "Dutch auction amount seller is willing to sell for in the smallest denomination for the specific currency. Example: `1000000000000000000`"
+              ),
             orderKind: Joi.string()
               .valid(
                 "blur",
@@ -233,6 +239,7 @@ export const getExecuteListV5Options: RouteOptions = {
       token: string;
       quantity?: number;
       weiPrice: string;
+      endPrice?: string;
       orderKind: string;
       orderbook: string;
       fees: string[];
