@@ -200,7 +200,9 @@ export const getTokensV6Options: RouteOptions = {
       displayCurrency: Joi.string()
         .lowercase()
         .pattern(regex.address)
-        .description("Input any ERC20 address to return result in given currency"),
+        .description(
+          "Input any ERC20 address to return result in given currency. Applies to `topBid` and `floorAsk`."
+        ),
     })
       .or("collection", "contract", "tokens", "tokenSetId", "community", "collectionsSetId")
       .oxor("collection", "contract", "tokens", "tokenSetId", "community", "collectionsSetId")
@@ -213,6 +215,7 @@ export const getTokensV6Options: RouteOptions = {
       tokens: Joi.array().items(
         Joi.object({
           token: Joi.object({
+            chainId: Joi.number().required(),
             contract: Joi.string().lowercase().pattern(regex.address).required(),
             tokenId: Joi.string().pattern(regex.number).required(),
             name: Joi.string().allow("", null),
@@ -416,12 +419,24 @@ export const getTokensV6Options: RouteOptions = {
           fe.royalty_fee_bps AS last_sale_royalty_fee_bps,
           fe.paid_full_royalty AS last_sale_paid_full_royalty,
           fe.royalty_fee_breakdown AS last_sale_royalty_fee_breakdown,
-          fe.marketplace_fee_breakdown AS last_sale_marketplace_fee_breakdown
+          fe.marketplace_fee_breakdown AS last_sale_marketplace_fee_breakdown,
+          fe.order_source_id_int AS last_sale_order_source_id_int,
+          fe.fill_source_id AS last_sale_fill_source_id
         FROM fill_events_2 fe
         WHERE fe.contract = t.contract AND fe.token_id = t.token_id AND fe.is_deleted = 0
         ORDER BY timestamp DESC LIMIT 1
         ) r ON TRUE
         `;
+    }
+
+    // Get the collections from the collection set
+    let collections: any[] = [];
+    if (query.collectionsSetId) {
+      collections = await CollectionSets.getCollectionsIds(query.collectionsSetId);
+
+      if (_.isEmpty(collections)) {
+        throw Boom.badRequest(`No collections for collection set ${query.collectionsSetId}`);
+      }
     }
 
     let sourceCte = "";
@@ -463,6 +478,7 @@ export const getTokensV6Options: RouteOptions = {
         sourceConditions.push(`currency IN ($/currenciesFilter:raw/)`);
       }
 
+      // Retrieve the contract from the different filters options
       if (query.contract) {
         sourceConditions.push(`contract = $/contract/`);
       } else if (query.collection) {
@@ -474,6 +490,45 @@ export const getTokensV6Options: RouteOptions = {
 
         (query as any).contract = contractString;
         sourceConditions.push(`contract = $/contract/`);
+      } else if (query.tokens) {
+        if (!_.isArray(query.tokens)) {
+          query.tokens = [query.tokens];
+        }
+
+        const tokensContracts = [];
+        for (const token of query.tokens) {
+          const [contract] = token.split(":");
+          tokensContracts.push(contract);
+        }
+
+        query.tokensContracts = _.uniq(tokensContracts).map((contract: string) =>
+          toBuffer(contract)
+        );
+
+        sourceConditions.push("contract IN ($/tokensContracts:csv/)");
+      } else if (query.collectionsSetId && !_.isEmpty(collections)) {
+        const tokensContracts = [];
+
+        for (const collection of collections) {
+          if (collection.includes(":")) {
+            const [contract, ,] = collection.split(":");
+            tokensContracts.push(contract);
+          } else {
+            tokensContracts.push(collection);
+          }
+        }
+
+        query.tokensContracts = _.uniq(tokensContracts).map((contract: string) =>
+          toBuffer(contract)
+        );
+
+        sourceConditions.push("contract IN ($/tokensContracts:csv/)");
+      } else if (query.community) {
+        sourceConditions.push(`contract IN (
+            SELECT DISTINCT contract
+            FROM collections
+            WHERE community = $/community/
+          )`);
       }
 
       sourceCte = `
@@ -553,7 +608,9 @@ export const getTokensV6Options: RouteOptions = {
         FROM tokens t
         ${
           sourceCte !== ""
-            ? "JOIN filtered_orders s ON s.contract = t.contract AND s.token_id = t.token_id"
+            ? `${
+                query.excludeEOA ? "LEFT " : ""
+              }JOIN filtered_orders s ON s.contract = t.contract AND s.token_id = t.token_id`
             : ""
         }
         ${includeQuantityQuery}
@@ -571,20 +628,11 @@ export const getTokensV6Options: RouteOptions = {
         `;
       }
 
-      let collections: any[] = [];
-      if (query.collectionsSetId) {
-        collections = await CollectionSets.getCollectionsIds(query.collectionsSetId);
-
-        if (_.isEmpty(collections)) {
-          throw Boom.badRequest(`No collections for collection set ${query.collectionsSetId}`);
-        }
-
-        if (collections.length > 20) {
-          baseQuery += `
+      if (collections.length > 20) {
+        baseQuery += `
             JOIN collections_sets_collections csc
               ON t.collection_id = csc.collection_id
           `;
-        }
       }
 
       if (query.attributes) {
@@ -638,7 +686,7 @@ export const getTokensV6Options: RouteOptions = {
       if (query.minFloorAskPrice !== undefined) {
         (query as any).minFloorSellValue = query.minFloorAskPrice * 10 ** 18;
         conditions.push(
-          `${query.nativeSource ? "s." : "t."}${
+          `${query.nativeSource || query.excludeEOA ? "s." : "t."}${
             query.normalizeRoyalties ? "normalized_" : ""
           }floor_sell_value >= $/minFloorSellValue/`
         );
@@ -647,7 +695,7 @@ export const getTokensV6Options: RouteOptions = {
       if (query.maxFloorAskPrice !== undefined) {
         (query as any).maxFloorSellValue = query.maxFloorAskPrice * 10 ** 18;
         conditions.push(
-          `${query.nativeSource ? "s." : "t."}${
+          `${query.nativeSource || query.excludeEOA ? "s." : "t."}${
             query.normalizeRoyalties ? "normalized_" : ""
           }floor_sell_value <= $/maxFloorSellValue/`
         );
@@ -715,7 +763,7 @@ export const getTokensV6Options: RouteOptions = {
 
         (query as any).currenciesFilter = _.join((query as any).currenciesFilter, ",");
 
-        if (query.nativeSource) {
+        if (query.nativeSource || query.excludeEOA) {
           // if nativeSource is passed in, then we have two floor_sell_currency columns
           conditions.push(`s.floor_sell_currency IN ($/currenciesFilter:raw/)`);
         } else {
@@ -743,7 +791,7 @@ export const getTokensV6Options: RouteOptions = {
           switch (query.sortBy) {
             case "rarity": {
               if (contArr.length !== 3) {
-                throw new Error("Invalid continuation string used");
+                throw Boom.badRequest("Invalid continuation string used");
               }
               query.sortDirection = query.sortDirection || "asc"; // Default sorting for rarity is ASC
               const sign = query.sortDirection == "desc" ? "<" : ">";
@@ -758,7 +806,7 @@ export const getTokensV6Options: RouteOptions = {
 
             case "tokenId": {
               if (contArr.length !== 2) {
-                throw new Error("Invalid continuation string used");
+                throw Boom.badRequest("Invalid continuation string used");
               }
               const sign = query.sortDirection == "desc" ? "<" : ">";
               conditions.push(`(t.contract, t.token_id) ${sign} ($/contContract/, $/contTokenId/)`);
@@ -770,7 +818,7 @@ export const getTokensV6Options: RouteOptions = {
 
             case "updatedAt": {
               if (contArr.length !== 3) {
-                throw new Error("Invalid continuation string used");
+                throw Boom.badRequest("Invalid continuation string used");
               }
               const sign = query.sortDirection == "desc" ? "<" : ">";
               conditions.push(
@@ -787,14 +835,15 @@ export const getTokensV6Options: RouteOptions = {
             default:
               {
                 if (contArr.length !== 3) {
-                  throw new Error("Invalid continuation string used");
+                  throw Boom.badRequest("Invalid continuation string used");
                 }
                 const sign = query.sortDirection == "desc" ? "<" : ">";
-                const sortColumn = query.nativeSource
-                  ? "s.floor_sell_value"
-                  : query.normalizeRoyalties
-                  ? "t.normalized_floor_sell_value"
-                  : "t.floor_sell_value";
+                const sortColumn =
+                  query.nativeSource || query.excludeEOA
+                    ? "s.floor_sell_value"
+                    : query.normalizeRoyalties
+                    ? "t.normalized_floor_sell_value"
+                    : "t.floor_sell_value";
 
                 if (contArr[0] !== "null") {
                   conditions.push(`(
@@ -817,7 +866,7 @@ export const getTokensV6Options: RouteOptions = {
           }
         } else {
           if (contArr.length !== 2) {
-            throw new Error("Invalid continuation string used");
+            throw Boom.badRequest("Invalid continuation string used");
           }
           const sign = query.sortDirection == "desc" ? "<" : ">";
           conditions.push(`(t.contract, t.token_id) ${sign} ($/contContract/, $/contTokenId/)`);
@@ -853,11 +902,12 @@ export const getTokensV6Options: RouteOptions = {
           }
           case "floorAskPrice":
           default: {
-            const sortColumn = query.nativeSource
-              ? `${union ? "" : "s."}floor_sell_value`
-              : query.normalizeRoyalties
-              ? `${union ? "" : "t."}normalized_floor_sell_value`
-              : `${union ? "" : "t."}floor_sell_value`;
+            const sortColumn =
+              query.nativeSource || query.excludeEOA
+                ? `${union ? "" : "s."}floor_sell_value`
+                : query.normalizeRoyalties
+                ? `${union ? "" : "t."}normalized_floor_sell_value`
+                : `${union ? "" : "t."}floor_sell_value`;
 
             return ` ORDER BY ${sortColumn} ${
               query.sortDirection || "ASC"
@@ -1141,8 +1191,22 @@ export const getTokensV6Options: RouteOptions = {
           }
         }
 
+        const metadata = {
+          imageOriginal: undefined,
+          mediaOriginal: undefined,
+        };
+
+        if (r.metadata?.image_original_url) {
+          metadata.imageOriginal = r.metadata.image_original_url;
+        }
+
+        if (r.metadata?.animation_original_url) {
+          metadata.mediaOriginal = r.metadata.animation_original_url;
+        }
+
         return {
           token: {
+            chainId: config.chainId,
             contract,
             tokenId,
             name: r.name,
@@ -1150,11 +1214,9 @@ export const getTokensV6Options: RouteOptions = {
             image: Assets.getLocalAssetsLink(r.image),
             imageSmall: Assets.getResizedImageUrl(r.image, ImageSize.small),
             imageLarge: Assets.getResizedImageUrl(r.image, ImageSize.large),
-            metadata: r.metadata?.image_original_url
-              ? {
-                  imageOriginal: r.metadata.image_original_url,
-                }
-              : undefined,
+            metadata: Object.values(metadata).every((el) => el === undefined)
+              ? undefined
+              : metadata,
             media: r.media,
             kind: r.kind,
             isFlagged: Boolean(Number(r.is_flagged)),
@@ -1191,6 +1253,8 @@ export const getTokensV6Options: RouteOptions = {
                     },
                     currencyAddress: r.last_sale_currency,
                     timestamp: r.last_sale_timestamp,
+                    orderSourceId: r.last_sale_order_source_id_int,
+                    fillSourceId: r.last_sale_fill_source_id,
                   })
                 : undefined,
             owner: r.owner ? fromBuffer(r.owner) : null,

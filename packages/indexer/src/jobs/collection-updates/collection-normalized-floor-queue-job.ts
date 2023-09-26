@@ -2,6 +2,7 @@ import { idb, redb } from "@/common/db";
 import { toBuffer } from "@/common/utils";
 import { AbstractRabbitMqJobHandler, BackoffStrategy } from "@/jobs/abstract-rabbit-mq-job-handler";
 import { config } from "@/config/index";
+import { acquireLock, doesLockExist, releaseLock } from "@/common/redis";
 
 export type CollectionNormalizedJobPayload = {
   kind: string;
@@ -41,6 +42,21 @@ export class CollectionNormalizedJob extends AbstractRabbitMqJobHandler {
     if (!collectionResult?.collection_id) {
       // Skip if the token is not associated to a collection.
       return;
+    }
+
+    let acquiredLock;
+
+    if ([5, 11155111, 137].includes(config.chainId)) {
+      if (!["revalidation"].includes(kind)) {
+        acquiredLock = await acquireLock(
+          `${this.queueName}-lock:${collectionResult.collection_id}`,
+          300
+        );
+
+        if (!acquiredLock) {
+          return;
+        }
+      }
     }
 
     await idb.none(
@@ -144,12 +160,29 @@ export class CollectionNormalizedJob extends AbstractRabbitMqJobHandler {
         txTimestamp,
       }
     );
+
+    if (acquiredLock) {
+      await releaseLock(`${this.queueName}-lock:${collectionResult.collection_id}`);
+
+      const revalidationLockExists = await doesLockExist(
+        `${this.queueName}-revalidation-lock:${collectionResult.collection_id}`
+      );
+
+      if (revalidationLockExists) {
+        await releaseLock(`${this.queueName}-revalidation-lock:${collectionResult.collection_id}`);
+
+        await this.addToQueue([
+          { kind: "revalidation", contract, tokenId, txHash: null, txTimestamp: null },
+        ]);
+      }
+    }
   }
 
-  public async addToQueue(params: CollectionNormalizedJobPayload[]) {
+  public async addToQueue(params: CollectionNormalizedJobPayload[], delay = 0) {
     await this.sendBatch(
       params.map((info) => ({
         payload: info,
+        delay,
         jobId: `${info.kind}${info.contract}${info.tokenId}${info.txHash}${info.txTimestamp}`,
       }))
     );
