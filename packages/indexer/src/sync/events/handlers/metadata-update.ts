@@ -1,4 +1,5 @@
 import { bn } from "@/common/utils";
+import { config } from "@/config/index";
 import { getEventData } from "@/events-sync/data";
 import { EnhancedEvent } from "@/events-sync/handlers/utils";
 import { metadataIndexFetchJob } from "@/jobs/metadata-index/metadata-fetch-job";
@@ -8,6 +9,11 @@ export const handleEvents = async (events: EnhancedEvent[]) => {
   // Handle the events
   for (const { subKind, baseEventParams, log } of events) {
     const eventData = getEventData([subKind])[0];
+    // skip opensea subkinds if chainId === 1
+    if (config.chainId === 1 && subKind.includes("opensea")) {
+      continue;
+    }
+
     switch (subKind) {
       case "metadata-update-single-token-opensea": {
         const parsedLog = eventData.abi.parseLog(log);
@@ -58,6 +64,11 @@ export const handleEvents = async (events: EnhancedEvent[]) => {
           );
         } else {
           // trigger a refresh for all tokens  fromToken to toToken of baseEventParams.address
+
+          // dont do this if the amount of tokens is bigger than maxTokenSetSize
+          if (parseInt(toToken) - parseInt(fromToken) > config.maxTokenSetSize) {
+            break;
+          }
           await metadataIndexFetchJob.addToQueue(
             _.range(parseInt(fromToken), parseInt(toToken) + 1).map((tokenId) => ({
               kind: "single-token",
