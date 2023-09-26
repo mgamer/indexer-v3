@@ -54,6 +54,7 @@ export class CollectionFlagStatusSyncJob extends AbstractRabbitMqJobHandler {
 
         // add back to queue with delay
         await this.send({ payload }, expiresIn * 1000);
+        return;
       } else {
         logger.error(this.queueName, `Error: ${JSON.stringify(error)}`);
       }
