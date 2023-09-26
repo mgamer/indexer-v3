@@ -259,10 +259,8 @@ describe("Extend - bayc", () => {
           discordUrl: "https://discord.gg/3P5K3dzgdB",
           twitterUsername: "BoredApeYC",
           externalUrl: "http://www.boredapeyachtclub.com/",
-          imageUrl:
-            "https://i.seadn.io/gae/Ju9CkWtV-1Okvf45wo8UctR-M9He2PjILP0oOvxE89AyiPPGtrR3gysu1Zgy0hjd2xKIgjJJtWIc0ybj4Vd7wv8t3pxDGHoJBzDB?w=500&auto=format",
-          bannerImageUrl:
-            "https://i.seadn.io/gae/i5dYZRkVCUK97bfprQ3WXyrT9BnLSZtVKGJlKQ919uaUB0sxbngVCioaiyu9r6snqfi2aaTyIvv6DHm4m2R3y7hMajbsv14pSZK8mhs?w=500&auto=format",
+          imageUrl: "https://ipfs.io/ipfs/QmPbxeGcXhYQQNgsC6a36dDyYUcHgMLnGKnF8pVFmGsvqi",
+          bannerImageUrl: "https://ipfs.io/ipfs/QmPbxeGcXhYQQNgsC6a36dDyYUcHgMLnGKnF8pVFmGsvqi",
           safelistRequestStatus: "verified",
           name: "Bored Ape Yacht Club",
           description:
@@ -317,10 +315,8 @@ describe("Extend - bayc", () => {
           name: null,
           flagged: false,
           description: null,
-          imageUrl:
-            "https://i.seadn.io/gae/9WkSu8CP7gZjaEmUy8cpaKG3mK6ScHeEDvQf8driDoRxuxy4GPAs_W_Dn_DQascQSGDkdUL4cjmsnRrL6xN-NDp-s_RNwN5pxiCo?w=500&auto=format",
-          imageOriginalUrl:
-            "https://opensea-private.mypinata.cloud/ipfs/QmPbxeGcXhYQQNgsC6a36dDyYUcHgMLnGKnF8pVFmGsvqi",
+          imageUrl: "https://ipfs.io/ipfs/QmPbxeGcXhYQQNgsC6a36dDyYUcHgMLnGKnF8pVFmGsvqi",
+          imageOriginalUrl: "https://ipfs.io/ipfs/QmPbxeGcXhYQQNgsC6a36dDyYUcHgMLnGKnF8pVFmGsvqi",
           animationOriginalUrl: null,
           metadataOriginalUrl: "ipfs://QmeSjSinHpPnmXmspMjwiXyN6zS4E9zccariGR3jxcaWtq/1",
           mediaUrl: null,
