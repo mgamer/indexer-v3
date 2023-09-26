@@ -66,7 +66,7 @@ export class EventsSyncRealtimeJob extends AbstractRabbitMqJobHandler {
   ) {
     if (processResult?.addToQueue) {
       logger.info(this.queueName, `Retry block ${message.payload.block}`);
-      await this.addToQueue({ block: message.payload.block }, processResult.delay);
+      await this.addToQueue(message.payload, processResult.delay);
     }
   }
 

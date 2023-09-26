@@ -64,7 +64,7 @@ if (config.doBackgroundWork && config.catchup) {
         logger.info("events-sync-catchup", `Detected new block ${block}`);
 
         try {
-          await eventsSyncRealtimeJob.addToQueue({ block });
+          await eventsSyncRealtimeJob.addToQueue({ block, receivedFromWebhook: true });
           if (![137].includes(config.chainId)) {
             await checkForMissingBlocks(block, true);
           } else {
