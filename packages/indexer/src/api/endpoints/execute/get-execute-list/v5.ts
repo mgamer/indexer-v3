@@ -99,7 +99,7 @@ export const getExecuteListV5Options: RouteOptions = {
               .pattern(regex.number)
               .optional()
               .description(
-                "Dutch auction amount seller is willing to sell for in the smallest denomination for the specific currency. Example: `1000000000000000000`"
+                "Amount seller is willing to sell for Dutch auction in the largest denomination for the specific currency. Example: `2000000000000000000`"
               ),
             orderKind: Joi.string()
               .valid(
