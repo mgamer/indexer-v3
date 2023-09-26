@@ -13,7 +13,7 @@ export class LatestBlockRealtime {
 
   public async set(latestBlock: LatestBlockRealtimePayload) {
     latestBlock.timestamp = latestBlock.timestamp ?? now();
-    return await redis.set(this.key, JSON.stringify(latestBlock));
+    return await redis.set(this.key, latestBlock.block);
   }
 
   public async get(): Promise<LatestBlockRealtimePayload | number | null> {
