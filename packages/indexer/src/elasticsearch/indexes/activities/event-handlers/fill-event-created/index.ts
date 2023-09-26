@@ -71,6 +71,7 @@ export class FillEventCreatedEventHandler extends BaseActivityEventHandler {
                   order_kind,
                   order_side,
                   order_source_id_int,
+                  fill_source_id,
                   maker AS "from",
                   taker AS "to",
                   amount,

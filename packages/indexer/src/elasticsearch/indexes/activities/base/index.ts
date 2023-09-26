@@ -43,6 +43,7 @@ export interface ActivityDocument extends BaseDocument {
     logIndex: number;
     batchIndex: number;
     blockHash: string;
+    fillSourceId?: number;
   };
   token?: {
     id: string;
@@ -124,6 +125,7 @@ export interface BuildActivityData extends BuildDocumentData {
     data: Record<string, unknown>;
   };
   created_ts: number;
+  fill_source_id?: number;
 }
 
 export class ActivityBuilder extends DocumentBuilder {
@@ -174,6 +176,7 @@ export class ActivityBuilder extends DocumentBuilder {
             logIndex: data.event_log_index,
             batchIndex: data.event_batch_index,
             blockHash: fromBuffer(data.event_block_hash!),
+            fillSourceId: data.fill_source_id,
           }
         : undefined,
       token: data.token_id
