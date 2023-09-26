@@ -7,7 +7,7 @@ import {
   getTokensFlagStatusWithTokenIds,
   handleTokenFlagStatusUpdate,
 } from "@/jobs/flag-status/utils";
-import { releaseLock } from "@/common/redis";
+import { acquireLock, doesLockExist, releaseLock } from "@/common/redis";
 import { logger } from "@/common/logger";
 
 export type TokenFlagStatusSyncJobPayload = {
@@ -25,6 +25,10 @@ export class TokenFlagStatusSyncJob extends AbstractRabbitMqJobHandler {
   protected async process(payload: TokenFlagStatusSyncJobPayload) {
     if (!payload.tokens) {
       throw new Error("Missing tokens");
+    }
+
+    if (!(await doesLockExist(this.getLockName()))) {
+      await acquireLock(this.getLockName(), 60);
     }
 
     try {

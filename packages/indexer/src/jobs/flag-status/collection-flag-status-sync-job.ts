@@ -6,7 +6,7 @@ import {
   getTokensFlagStatusForCollection,
   handleTokenFlagStatusUpdate,
 } from "@/jobs/flag-status/utils";
-import { releaseLock } from "@/common/redis";
+import { acquireLock, doesLockExist, extendLock, releaseLock } from "@/common/redis";
 import { logger } from "@/common/logger";
 
 export type CollectionFlagStatusSyncJobPayload = {
@@ -27,6 +27,10 @@ export class CollectionFlagStatusSyncJob extends AbstractRabbitMqJobHandler {
     const { slug } = payload;
     if (!slug) {
       throw new Error("Missing slug");
+    }
+
+    if (!(await doesLockExist(this.getLockName()))) {
+      await acquireLock(this.getLockName(), 60);
     }
 
     try {
@@ -52,6 +56,8 @@ export class CollectionFlagStatusSyncJob extends AbstractRabbitMqJobHandler {
 
         const expiresIn = (error as any).response.data.expires_in;
 
+        // extend lock
+        await extendLock(this.getLockName(), expiresIn * 1000 + 60000);
         // add back to queue with delay
         await this.send({ payload }, expiresIn * 1000);
         return;
