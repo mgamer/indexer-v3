@@ -110,6 +110,14 @@
     "v1": {
       "1": "0x428a6be88fc0d25778e3c3f6e09fcfdc9a526fad",
       "5": "0x428a6be88fc0d25778e3c3f6e09fcfdc9a526fad"
+    },
+    "v2": {
+      "1": "0xf9285462d0b9fc2988a90607fca706479e542eb0",
+      "5": "0xf9285462d0b9fc2988a90607fca706479e542eb0"
+    },
+    "v3": {
+      "1": "0x0ac4aa4e2b50b9a1638c046f2564a6552427d9e4",
+      "5": "0x0ac4aa4e2b50b9a1638c046f2564a6552427d9e4"
     }
   },
   "ReservoirApprovalProxy": {

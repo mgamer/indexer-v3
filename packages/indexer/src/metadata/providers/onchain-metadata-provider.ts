@@ -134,19 +134,43 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
   }
 
   async _getCollectionMetadata(contract: string): Promise<CollectionMetadata> {
-    const collection = await this.getCollectionMetadata(contract);
-    let collectionName = collection?.name ?? null;
+    try {
+      const collection = await this.getContractURI(contract);
+      let collectionName = collection?.name ?? null;
 
-    // Fallback for collection name if collection metadata not found
-    if (!collectionName) {
-      collectionName = (await this.getContractName(contract)) ?? contract;
+      // Fallback for collection name if collection metadata not found
+      if (!collectionName) {
+        collectionName = (await this.getContractName(contract)) ?? contract;
+      }
+
+      return this.parseCollection({
+        ...collection,
+        contract,
+        name: collectionName,
+      });
+    } catch (error) {
+      logger.error(
+        "onchain-fetcher",
+        JSON.stringify({
+          topic: "fetchCollectionError",
+          message: `Could not fetch collection.  contract=${contract}, error=${error}`,
+          contract,
+          error,
+        })
+      );
+
+      return {
+        id: contract,
+        slug: null,
+        name: contract,
+        community: null,
+        metadata: null,
+        contract,
+        tokenIdRange: null,
+        tokenSetId: `contract:${contract}`,
+        isFallback: true,
+      };
     }
-
-    return this.parseCollection({
-      ...collection,
-      contract,
-      name: collectionName,
-    });
   }
 
   async _getTokensMetadataBySlug(): Promise<TokenMetadataBySlugResult> {
@@ -289,7 +313,7 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
     }
   }
 
-  async getCollectionMetadata(contractAddress: string) {
+  async getContractURI(contractAddress: string) {
     try {
       const contract = new ethers.Contract(
         contractAddress,
@@ -320,7 +344,7 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
     } catch (e) {
       logger.error(
         "onchain-fetcher",
-        `getCollectionMetadata error. contractAddress:${contractAddress}, error:${e}`
+        `getContractURI error. contractAddress:${contractAddress}, error:${e}`
       );
       return null;
     }

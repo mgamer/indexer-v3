@@ -5,6 +5,7 @@ import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handle
 
 import { fromBuffer, now, toBuffer } from "@/common/utils";
 import { mintQueueJob } from "@/jobs/token-updates/mint-queue-job";
+import { logger } from "@/common/logger";
 
 export type CursorInfo = {
   contract: string;
@@ -33,7 +34,7 @@ export class BackfillTokensWithMissingCollectionJob extends AbstractRabbitMqJobH
     const limit = (await redis.get(`${this.queueName}-limit`)) || 1;
 
     if (contract) {
-      contractFilter = `tokens.contract = $/contract/`;
+      contractFilter = `AND tokens.contract = $/contract/`;
     }
 
     if (cursor) {
@@ -60,25 +61,32 @@ export class BackfillTokensWithMissingCollectionJob extends AbstractRabbitMqJobH
       }
     );
 
-    const currentTime = now();
+    if (results.length) {
+      const currentTime = now();
 
-    await mintQueueJob.addToQueue(
-      results.map((r) => ({
-        contract: fromBuffer(r.contract),
-        tokenId: r.token_id,
-        mintedTimestamp: currentTime,
-      }))
-    );
+      await mintQueueJob.addToQueue(
+        results.map((r) => ({
+          contract: fromBuffer(r.contract),
+          tokenId: r.token_id,
+          mintedTimestamp: currentTime,
+        }))
+      );
 
-    if (results.length >= limit) {
-      const lastResult = results[results.length - 1];
+      if (results.length >= limit) {
+        const lastResult = results[results.length - 1];
 
-      const nextCursor = {
-        contract: fromBuffer(lastResult.contract),
-        tokenId: lastResult.token_id,
-      };
+        const nextCursor = {
+          contract: fromBuffer(lastResult.contract),
+          tokenId: lastResult.token_id,
+        };
 
-      await this.addToQueue(contract, nextCursor);
+        await this.addToQueue(contract, nextCursor);
+      }
+
+      logger.info(
+        this.queueName,
+        `Processed ${results.length} tokens. cursor=${JSON.stringify(cursor)}`
+      );
     }
   }
 

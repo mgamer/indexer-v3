@@ -7,6 +7,7 @@ import { config } from "@/config/index";
 import { getNetworkSettings } from "@/config/network";
 import { eventsSyncRealtimeJob } from "@/jobs/events-sync/events-sync-realtime-job";
 import { checkForMissingBlocks } from "@/events-sync/syncEventsV2";
+import { now } from "@/common/utils";
 
 // For syncing events we have two separate job queues. One is for
 // handling backfilling of past event while the other one handles
@@ -63,7 +64,9 @@ if (config.doBackgroundWork && config.catchup) {
         logger.info("events-sync-catchup", `Detected new block ${block}`);
 
         try {
+          await redis.set("latest-block-websocket-received", now());
           await eventsSyncRealtimeJob.addToQueue({ block });
+
           if (![137].includes(config.chainId)) {
             await checkForMissingBlocks(block);
           } else {

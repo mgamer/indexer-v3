@@ -1,4 +1,4 @@
-import { AddressZero } from "@ethersproject/constants";
+import { AddressZero, HashZero } from "@ethersproject/constants";
 import * as Sdk from "@reservoir0x/sdk";
 import { getRandomBytes } from "@reservoir0x/sdk/dist/utils";
 
@@ -13,6 +13,7 @@ import {
 } from "@/orderbook/orders/seaport-base/build/utils";
 import * as marketplaceFees from "@/utils/marketplace-fees";
 import * as registry from "@/utils/royalties/registry";
+import * as erc721c from "@/utils/erc721c";
 
 export const getBuildInfo = async (
   options: BaseOrderBuildOptions,
@@ -50,11 +51,20 @@ export const getBuildInfo = async (
     options.conduitKey ??
     Sdk.SeaportBase.Addresses.OpenseaConduitKey[config.chainId] ??
     Sdk.SeaportBase.Addresses.ReservoirConduitKey[config.chainId] ??
-    Sdk.SeaportV15.Addresses.Exchange[config.chainId];
+    HashZero;
 
   // LooksRare requires their source in the salt
   if (options.orderbook === "looks-rare") {
     options.source = "looksrare.org";
+  }
+
+  // Check if is blocked by ERC721c
+  const isBlocked = await erc721c.checkMarketplaceIsFiltered(
+    fromBuffer(collectionResult.contract),
+    [exchange.deriveConduit(conduitKey)]
+  );
+  if (isBlocked) {
+    throw new Error("Blocked by ERC721C security policy");
   }
 
   // Generate the salt

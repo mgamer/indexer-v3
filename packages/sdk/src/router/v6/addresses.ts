@@ -23,6 +23,7 @@ export const Router: ChainIdToAddress = {
   [Network.Linea]: "0x1aed60a97192157fda7fb26267a439d523d09c5e",
   [Network.Avalanche]: "0xc2c862322e9c97d6244a3506655da95f05246fd8",
   [Network.PolygonZkevm]: "0xc2c862322e9c97d6244a3506655da95f05246fd8",
+  [Network.Zksync]: "0x952a21a21079d09d31b0dbf8a1702ea6004919ab",
 };
 
 // Approval proxy
@@ -155,6 +156,7 @@ export const SeaportV15Module: ChainIdToAddress = {
   [Network.Linea]: "0x4e9aaa72727a2f5aa5d2bef80ab5642661e29ef6",
   [Network.Avalanche]: "0x00ca04c45da318d5b7e7b14d5381ca59f09c73f0",
   [Network.PolygonZkevm]: "0x00ca04c45da318d5b7e7b14d5381ca59f09c73f0",
+  [Network.Zksync]: "0x07d8903aaf93e24a03e82fabb9ac9f501e9f6904",
 };
 
 export const AlienswapModule: ChainIdToAddress = {
@@ -213,8 +215,8 @@ export const NFTXZeroExModule: ChainIdToAddress = {
 };
 
 export const RaribleModule: ChainIdToAddress = {
-  [Network.Ethereum]: "0x428a6be88fc0d25778e3c3f6e09fcfdc9a526fad",
-  [Network.EthereumGoerli]: "0x428a6be88fc0d25778e3c3f6e09fcfdc9a526fad",
+  [Network.Ethereum]: "0x0ac4aa4e2b50b9a1638c046f2564a6552427d9e4",
+  [Network.EthereumGoerli]: "0x0ac4aa4e2b50b9a1638c046f2564a6552427d9e4",
 };
 
 export const SuperRareModule: ChainIdToAddress = {
