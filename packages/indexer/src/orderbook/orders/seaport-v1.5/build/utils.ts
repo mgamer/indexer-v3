@@ -92,7 +92,7 @@ export const getBuildInfo = async (
     // TODO: Fix types
     contract: options.contract!,
     price: options.weiPrice,
-    endPrice: options.endPrice,
+    endPrice: options.endWeiPrice,
     amount: options.quantity,
     paymentToken: options.currency
       ? options.currency

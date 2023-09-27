@@ -95,7 +95,7 @@ export const getExecuteListV5Options: RouteOptions = {
               .description(
                 "Amount seller is willing to sell for in the smallest denomination for the specific currency. Example: `1000000000000000000`"
               ),
-            endPrice: Joi.string()
+            endWeiPrice: Joi.string()
               .pattern(regex.number)
               .optional()
               .description(
@@ -239,7 +239,7 @@ export const getExecuteListV5Options: RouteOptions = {
       token: string;
       quantity?: number;
       weiPrice: string;
-      endPrice?: string;
+      endWeiPrice?: string;
       orderKind: string;
       orderbook: string;
       fees: string[];
