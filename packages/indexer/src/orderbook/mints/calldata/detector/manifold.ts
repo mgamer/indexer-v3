@@ -53,7 +53,7 @@ export const extractByCollectionERC721 = async (
     // Skip errors
   }
 
-  const isVersion3 = version && version === "3";
+  const hasContractVersion = version && parseInt(version) >= 3;
 
   const results: CollectionMint[] = [];
   for (const extension of extensions) {
@@ -138,7 +138,7 @@ export const extractByCollectionERC721 = async (
                   uint48 startDate,
                   uint48 endDate,
                   uint8 storageProtocol,
-                  ${isVersion3 ? "uint8 contractVersion," : ""}
+                  ${hasContractVersion ? "uint8 contractVersion," : ""}
                   bool identical,
                   bytes32 merkleRoot,
                   string location,
