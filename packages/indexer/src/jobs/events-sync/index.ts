@@ -21,7 +21,7 @@ import { now } from "@/common/utils";
 // concurrent upserts of the balances):
 // https://stackoverflow.com/questions/46366324/postgres-deadlocks-on-concurrent-upserts
 
-// BACKGROUND WORKER ONLY
+// MASTER ONLY
 if (config.master && config.catchup) {
   const networkSettings = getNetworkSettings();
 
@@ -52,7 +52,6 @@ if (config.master && config.catchup) {
         })
   );
 
-  // MASTER ONLY
   if (config.master && networkSettings.enableWebSocket) {
     // Besides the manual polling of events via the above cron job
     // we're also integrating WebSocket subscriptions to fetch the
