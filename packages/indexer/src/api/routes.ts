@@ -185,6 +185,12 @@ export const setupRoutes = (server: Server) => {
   });
 
   server.route({
+    method: "GET",
+    path: "/admin/metadata/{type}",
+    options: adminEndpoints.getMetadata,
+  });
+
+  server.route({
     method: "POST",
     path: "/admin/update-api-key",
     options: adminEndpoints.postUpdateApiKeyOptions,
