@@ -663,13 +663,6 @@ export const getTokensV6Options: RouteOptions = {
         `;
       }
 
-      if (collections.length > 20) {
-        baseQuery += `
-            JOIN collections_sets_collections csc
-              ON t.collection_id = csc.collection_id
-          `;
-      }
-
       if (query.attributes) {
         const attributes: { key: string; value: any }[] = [];
         Object.entries(query.attributes).forEach(([key, value]) => attributes.push({ key, value }));
@@ -701,16 +694,11 @@ export const getTokensV6Options: RouteOptions = {
         conditions.push(`t.is_flagged = $/flagStatus/`);
       }
 
-      if (query.community && collections.length > 20) {
-        conditions.push("c.community = $/community/");
-      }
-
       if (query.contract) {
         if (!Array.isArray(query.contract)) {
           query.contract = [query.contract];
         }
         query.contract = query.contract.map((contract: string) => toBuffer(contract));
-        conditions.push(`t.contract IN ($/contract:csv/)`);
       }
 
       if (query.minRarityRank) {
@@ -786,10 +774,6 @@ export const getTokensV6Options: RouteOptions = {
 
       if (query.tokenSetId) {
         conditions.push(`tst.token_set_id = $/tokenSetId/`);
-      }
-
-      if (query.collectionsSetId && collections.length > 20) {
-        conditions.push(`csc.collections_set_id = $/collectionsSetId/`);
       }
 
       if (query.currencies) {
@@ -969,39 +953,39 @@ export const getTokensV6Options: RouteOptions = {
 
       // Only allow sorting on floorSell when we filter by collection / attributes / tokenSetId / rarity
       if (
-        query.contract ||
         query.collection ||
         query.attributes ||
         query.tokenSetId ||
         query.rarity ||
-        (query.collectionsSetId && collections.length > 20) ||
         query.tokens ||
         (query.sortBy === "updatedAt" &&
-          !((query.collectionsSetId || query.community) && collections.length <= 20))
+          !(query.collectionsSetId || query.community || query.contract))
       ) {
         baseQuery += getSort(query.sortBy, false);
       }
 
-      // Break query into UNION of results for each collectionId for sets/communities up to 20 collections
-      if ((query.collectionsSetId || query.community) && collections.length <= 20) {
-        const collectionsQueries = [];
-        const collectionsSort = getSort(query.sortBy, true);
+      // Break query into UNION of results for each collectionId or contract
+      if (query.collectionsSetId || query.community || query.contract) {
+        const unionQueries = [];
+        const unionValues = query.contract ? query.contract : collections;
 
-        for (const i in collections) {
-          (query as any)[`collection${i}`] = collections[i];
-          collectionsQueries.push(
+        for (const i in unionValues) {
+          const unionType = query.contract ? "contract" : "collection";
+          const unionFilter = `${unionType}${i}`;
+          (query as any)[unionFilter] = unionValues[i];
+          unionQueries.push(
             `(
               ${baseQuery}
-              ${conditions.length ? `AND ` : `WHERE `} t.collection_id = $/collection${i}/
-              ${collectionsSort}
+              ${conditions.length ? `AND ` : `WHERE `} t.${unionType} = $/${unionFilter}/
+              ${getSort(query.sortBy, false)}
               LIMIT $/limit/
             )`
           );
         }
 
         baseQuery = `
-          ${collectionsQueries.join(` UNION ALL `)}
-          ${collectionsSort}
+          ${unionQueries.join(` UNION ALL `)}
+          ${getSort(query.sortBy, true)}
         `;
       }
 
