@@ -976,7 +976,8 @@ export const getTokensV6Options: RouteOptions = {
         query.rarity ||
         (query.collectionsSetId && collections.length > 20) ||
         query.tokens ||
-        (query.sortBy === "updatedAt" && !query.collectionsSetId && !query.community)
+        (query.sortBy === "updatedAt" &&
+          !((query.collectionsSetId || query.community) && collections.length <= 20))
       ) {
         baseQuery += getSort(query.sortBy, false);
       }
