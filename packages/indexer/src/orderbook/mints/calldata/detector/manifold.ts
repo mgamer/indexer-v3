@@ -35,13 +35,23 @@ export const extractByCollectionERC721 = async (
   instanceId: string,
   extension?: string
 ): Promise<CollectionMint[]> => {
-  const extensions = extension
-    ? [extension]
-    : await new Contract(
-        collection,
-        new Interface(["function getExtensions() view returns (address[])"]),
-        baseProvider
-      ).getExtensions();
+  const nft = new Contract(
+    collection,
+    new Interface([
+      "function getExtensions() view returns (address[])",
+      "function VERSION() view returns (uint256)",
+    ]),
+    baseProvider
+  );
+
+  const extensions = extension ? [extension] : await nft.getExtensions();
+
+  let version: string | undefined;
+  try {
+    version = (await nft.VERSION()).toString();
+  } catch {
+    // Skip errors
+  }
 
   const results: CollectionMint[] = [];
   for (const extension of extensions) {
@@ -63,6 +73,62 @@ export const extractByCollectionERC721 = async (
           mintFeeMerkle: string;
         }
       | undefined;
+
+    if (version && version === "3") {
+      try {
+        const cV3 = new Contract(
+          extension,
+          new Interface([
+            `
+              function getClaim(address creatorContractAddress, uint256 claimIndex) external view returns (
+                (
+                  uint32 total,
+                  uint32 totalMax,
+                  uint32 walletMax,
+                  uint48 startDate,
+                  uint48 endDate,
+                  uint8 storageProtocol,
+                  uint8 contractVersion,
+                  bool identical,
+                  bytes32 merkleRoot,
+                  string location,
+                  uint cost,
+                  address payable paymentReceiver,
+                  address erc20,
+                ) claim
+              )
+            `,
+            "function MINT_FEE() view returns (uint256)",
+            "function MINT_FEE_MERKLE() view returns (uint256)",
+          ]),
+          baseProvider
+        );
+
+        const [claim, mintFee, mintFeeMerkle] = await Promise.all([
+          cV3.getClaim(collection, instanceId),
+          cV3.MINT_FEE(),
+          cV3.MINT_FEE_MERKLE(),
+        ]);
+        claimConfig = {
+          total: claim.total,
+          totalMax: claim.totalMax,
+          walletMax: claim.walletMax,
+          startDate: claim.startDate,
+          endDate: claim.endDate,
+          storageProtocol: claim.storageProtocol,
+          identical: claim.identical,
+          merkleRoot: claim.merkleRoot,
+          location: claim.location,
+          cost: claim.cost.toString(),
+          paymentReceiver: claim.paymentReceiver,
+          erc20: claim.erc20,
+          mintFee: mintFee.toString(),
+          mintFeeMerkle: mintFeeMerkle.toString(),
+        };
+      } catch {
+        // Skip errors
+      }
+    }
 
     if (!claimConfig) {
       try {
