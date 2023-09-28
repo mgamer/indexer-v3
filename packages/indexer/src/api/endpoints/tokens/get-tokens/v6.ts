@@ -965,7 +965,7 @@ export const getTokensV6Options: RouteOptions = {
       }
 
       // Break query into UNION of results for each collectionId or contract
-      if (query.collectionsSetId || query.community || query.contract) {
+      if (query.collectionsSetId || query.community || (query.contract && !query.collection)) {
         const unionQueries = [];
         const unionValues = query.contract ? query.contract : collections;
 
