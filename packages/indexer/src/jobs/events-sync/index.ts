@@ -21,8 +21,8 @@ import { now } from "@/common/utils";
 // concurrent upserts of the balances):
 // https://stackoverflow.com/questions/46366324/postgres-deadlocks-on-concurrent-upserts
 
-// MASTER ONLY
-if (config.master && config.catchup) {
+// CATCHUP ONLY
+if (config.catchup) {
   const networkSettings = getNetworkSettings();
 
   // Keep up with the head of the blockchain by polling for new blocks every once in a while
@@ -52,6 +52,7 @@ if (config.master && config.catchup) {
         })
   );
 
+  // MASTER ONLY
   if (config.master && networkSettings.enableWebSocket) {
     // Besides the manual polling of events via the above cron job
     // we're also integrating WebSocket subscriptions to fetch the
