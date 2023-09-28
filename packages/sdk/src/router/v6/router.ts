@@ -3618,21 +3618,23 @@ export class Router {
         continue;
       }
 
-      const contract = detail.contract;
-      const owner = taker;
-      const conduitController = new Sdk.SeaportBase.ConduitController(this.chainId);
-      const operator = conduitController.deriveConduit(
-        Sdk.SeaportBase.Addresses.ReservoirConduitKey[this.chainId]
-      );
+      if (!(details.length === 1 && !options?.forceApprovalProxy)) {
+        const contract = detail.contract;
+        const owner = taker;
+        const conduitController = new Sdk.SeaportBase.ConduitController(this.chainId);
+        const operator = conduitController.deriveConduit(
+          Sdk.SeaportBase.Addresses.ReservoirConduitKey[this.chainId]
+        );
 
-      // Generate approval
-      approvals.push({
-        orderIds: [detail.orderId],
-        contract,
-        owner,
-        operator,
-        txData: generateNFTApprovalTxData(contract, owner, operator),
-      });
+        // Generate approval
+        approvals.push({
+          orderIds: [detail.orderId],
+          contract,
+          owner,
+          operator,
+          txData: generateNFTApprovalTxData(contract, owner, operator),
+        });
+      }
 
       // Generate permit item
       let module: Contract;
