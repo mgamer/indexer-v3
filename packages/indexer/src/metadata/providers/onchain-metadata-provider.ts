@@ -448,7 +448,13 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
     } catch (e) {
       logger.error(
         "onchain-fetcher",
-        `getTokenMetadataFromURI error. contract:${contract} tokenId:${tokenId} uri:${uri} error:${e}`
+        JSON.stringify({
+          message: "getTokenMetadataFromURI error",
+          contract,
+          tokenId,
+          uri,
+          error: e,
+        })
       );
       return [null, e];
     }
