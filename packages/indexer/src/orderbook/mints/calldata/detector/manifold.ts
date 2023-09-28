@@ -35,13 +35,25 @@ export const extractByCollectionERC721 = async (
   instanceId: string,
   extension?: string
 ): Promise<CollectionMint[]> => {
-  const extensions = extension
-    ? [extension]
-    : await new Contract(
-        collection,
-        new Interface(["function getExtensions() view returns (address[])"]),
-        baseProvider
-      ).getExtensions();
+  const nft = new Contract(
+    collection,
+    new Interface([
+      "function getExtensions() view returns (address[])",
+      "function VERSION() view returns (uint256)",
+    ]),
+    baseProvider
+  );
+
+  const extensions = extension ? [extension] : await nft.getExtensions();
+
+  let version: string | undefined;
+  try {
+    version = (await nft.VERSION()).toString();
+  } catch {
+    // Skip errors
+  }
+
+  const hasContractVersion = version && parseInt(version) >= 3;
 
   const results: CollectionMint[] = [];
   for (const extension of extensions) {
@@ -126,6 +138,7 @@ export const extractByCollectionERC721 = async (
                   uint48 startDate,
                   uint48 endDate,
                   uint8 storageProtocol,
+                  ${hasContractVersion ? "uint8 contractVersion," : ""}
                   bool identical,
                   bytes32 merkleRoot,
                   string location,
