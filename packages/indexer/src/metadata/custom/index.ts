@@ -27,9 +27,9 @@ export const customHandleToken = async (token: any) =>
 export const customHandleContractTokens = async (contract: string, continuation: string) =>
   custom[`${config.chainId},${contract}`].fetchContractTokens(null, continuation);
 
-/////////////////////
+//////////////////////
 // Custom Collections
-/////////////////////
+//////////////////////
 
 // Copyright Infringement
 customCollection["1,0x783a32eb03a1175160d210cc99c79e6370a48317"] = copyrightInfringement;
