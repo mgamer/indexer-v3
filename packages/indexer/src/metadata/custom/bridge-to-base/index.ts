@@ -16,7 +16,7 @@ export const fetchToken = async ({ contract, tokenId }: { contract: string; toke
       {
         key: "number",
         value: `${tokenId}`,
-        kind: "string",
+        kind: "number",
         rank: 1,
       },
       {
