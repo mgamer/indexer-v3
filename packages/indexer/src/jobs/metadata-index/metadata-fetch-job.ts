@@ -64,7 +64,7 @@ export class MetadataIndexFetchJob extends AbstractRabbitMqJobHandler {
     let refreshTokens: RefreshTokens[] = [];
 
     if (config.chainId === 10 && data.collection === "0x88d6c36e7aca7a8b011a7ab1fd443d17262dc3a9") {
-      data.method = "opensea";
+      data.method = "simplehash";
     }
 
     if (kind === "full-collection-by-slug") {
