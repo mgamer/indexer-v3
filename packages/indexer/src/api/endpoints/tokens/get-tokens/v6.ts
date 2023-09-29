@@ -699,6 +699,10 @@ export const getTokensV6Options: RouteOptions = {
           query.contract = [query.contract];
         }
         query.contract = query.contract.map((contract: string) => toBuffer(contract));
+
+        if (query.contract.length == 1) {
+          conditions.push(`t.contract IN ($/contract:csv/)`);
+        }
       }
 
       if (query.minRarityRank) {
@@ -959,13 +963,21 @@ export const getTokensV6Options: RouteOptions = {
         query.rarity ||
         query.tokens ||
         (query.sortBy === "updatedAt" &&
-          !(query.collectionsSetId || query.community || query.contract))
+          !(
+            query.collectionsSetId ||
+            query.community ||
+            (query.contract && query.contract.length > 1)
+          ))
       ) {
         baseQuery += getSort(query.sortBy, false);
       }
 
       // Break query into UNION of results for each collectionId or contract
-      if (query.collectionsSetId || query.community || (query.contract && !query.collection)) {
+      if (
+        query.collectionsSetId ||
+        query.community ||
+        (query.contract && query.contract.length > 1 && !query.collection)
+      ) {
         const unionQueries = [];
         const unionValues = query.contract ? query.contract : collections;
 
