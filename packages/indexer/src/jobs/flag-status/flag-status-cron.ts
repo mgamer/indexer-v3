@@ -15,7 +15,7 @@ if (config.doBackgroundWork) {
         .acquire(["flag-status-sync-cron"], (10 * 60 - 3) * 1000)
         .then(async () => {
           // check if we can acquire the lock for tokens
-          if (await acquireLock(tokenFlagStatusSyncJob.getLockName(), 60)) {
+          if (await acquireLock(tokenFlagStatusSyncJob.getLockName(), 1)) {
             // get up to 20 tokens from the queue
             const tokens = await PendingFlagStatusSyncTokens.get(20);
             await tokenFlagStatusSyncJob.addToQueue({
@@ -24,7 +24,7 @@ if (config.doBackgroundWork) {
           }
 
           // check if we can acquire the lock for collections
-          if (await acquireLock(collectionFlagStatusSyncJob.getLockName(), 60)) {
+          if (await acquireLock(collectionFlagStatusSyncJob.getLockName(), 1)) {
             const collection = await PendingFlagStatusSyncCollections.get(1);
             await collectionFlagStatusSyncJob.addToQueue({
               ...collection[0],
