@@ -41,11 +41,11 @@ export class EventsSyncRealtimeJob extends AbstractRabbitMqJobHandler {
       //eslint-disable-next-line
     } catch (error: any) {
       // if the error is block not found, add back to queue
-      if (error?.message.includes("not found with RPC provider")) {
-        logger.info(
-          this.queueName,
-          `Block ${block} not found with RPC provider, adding back to queue`
-        );
+      if (
+        error?.message.includes("not found with RPC provider") ||
+        error?.message.includes("No logs found")
+      ) {
+        logger.info(this.queueName, error?.message);
 
         return { addToQueue: true, delay: 1000 };
       } else if (error?.message.includes("unfinalized")) {
