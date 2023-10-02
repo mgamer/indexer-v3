@@ -388,6 +388,12 @@ export const syncEvents = async (block: number) => {
   const startProcessLogs = Date.now();
 
   const processEventsLatencies = await processEventsBatchV2(eventsBatches);
+  if (processEventsLatencies.processLogsTime == 0) {
+    logger.info(
+      "sync-events-no-logs",
+      `no logs for block ${block} blockData ${JSON.stringify(blockData)}`
+    );
+  }
 
   const endProcessLogs = Date.now();
 
