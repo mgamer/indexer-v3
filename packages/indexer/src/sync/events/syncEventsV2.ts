@@ -17,6 +17,7 @@ import { removeUnsyncedEventsActivitiesJob } from "@/jobs/activities/remove-unsy
 import { blockCheckJob } from "@/jobs/events-sync/block-check-queue-job";
 import { eventsSyncRealtimeJob } from "@/jobs/events-sync/events-sync-realtime-job";
 import { redis } from "@/common/redis";
+import { config } from "@/config/index";
 
 export const extractEventsBatches = (enhancedEvents: EnhancedEvent[]): EventsBatch[] => {
   const txHashToEvents = new Map<string, EnhancedEvent[]>();
@@ -388,7 +389,7 @@ export const syncEvents = async (block: number) => {
   const startProcessLogs = Date.now();
 
   const processEventsLatencies = await processEventsBatchV2(eventsBatches);
-  if (processEventsLatencies.processLogsTime == 0) {
+  if (config.chainId === 137 && processEventsLatencies.processLogsTime === 0) {
     logger.info(
       "sync-events-no-logs",
       `no logs for block ${block} blockData ${JSON.stringify(blockData)}`
