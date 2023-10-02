@@ -186,7 +186,7 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
-    path: "/admin/metadata/{type}",
+    path: "/admin/provider-metadata/{type}",
     options: adminEndpoints.getProviderMetadata,
   });
 
