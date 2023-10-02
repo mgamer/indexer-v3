@@ -261,9 +261,9 @@ export const getPoolNFTs = async (vault: string, provider: Provider) => {
 
 export const getPoolETHFees = async (address: string, provider: Provider) => {
   const iface = new Interface([
-    "function vaultId() view returns (uint256)",
     `
-      function vaultFees(uint256 vaultId)
+      function vaultFees()
+        external
         view
         returns (
             uint256 mintFee,
@@ -275,9 +275,7 @@ export const getPoolETHFees = async (address: string, provider: Provider) => {
   ]);
 
   const vault = new Contract(address, iface, provider);
-
-  const vaultId = await vault.vaultId();
-  const result = await vault.vaultFees(vaultId);
+  const result = await vault.vaultFees();
 
   const mintFee = (await vault.vTokenToETH(result.mintFee)) as BigNumber;
   const redeemFee = (await vault.vTokenToETH(result.redeemFee)) as BigNumber;
