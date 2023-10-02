@@ -394,7 +394,7 @@ export const syncEvents = async (block: number) => {
       "sync-events-no-logs",
       `no logs for block ${block} blockData ${JSON.stringify(
         blockData
-      )} eventsBatches ${JSON.stringify(eventsBatches)}`
+      )} eventsBatches ${JSON.stringify(eventsBatches)} logs ${JSON.stringify(logs)}`
     );
   }
 
