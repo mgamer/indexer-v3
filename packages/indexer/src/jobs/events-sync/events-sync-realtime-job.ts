@@ -45,6 +45,15 @@ export class EventsSyncRealtimeJob extends AbstractRabbitMqJobHandler {
         logger.info(this.queueName, error?.message);
 
         return { addToQueue: true, delay: 1000 };
+      } else if (error?.message.includes("No logs found for block")) {
+        logger.info(this.queueName, error?.message);
+
+        // If no logs keep checking
+        if (Number(this.rabbitMqMessage?.retryCount) < this.maxRetries) {
+          return { addToQueue: true, delay: 1000 };
+        } else {
+          logger.info(this.queueName, `max retries for fetching logs for block ${block}`);
+        }
       } else if (error?.message.includes("unfinalized")) {
         return { addToQueue: true, delay: 2000 };
       } else {
