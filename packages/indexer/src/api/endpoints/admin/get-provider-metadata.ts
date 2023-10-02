@@ -40,7 +40,6 @@ export const getProviderMetadata: RouteOptions = {
         )
         .required(),
       method: Joi.string().description("The indexing method to use"),
-      community: Joi.string().description("The community to use"),
     }),
   },
   handler: async (request: Request) => {
@@ -57,14 +56,9 @@ export const getProviderMetadata: RouteOptions = {
     try {
       if (params.type === "collection") {
         const [contract, tokenId] = query.tokens[0].split(":");
-        return await MetadataProviderRouter.getCollectionMetadata(
-          contract,
-          tokenId,
-          query.community ?? "",
-          {
-            indexingMethod: query.method,
-          }
-        );
+        return await MetadataProviderRouter.getCollectionMetadata(contract, tokenId, "", {
+          indexingMethod: query.method,
+        });
       } else {
         return await MetadataProviderRouter.getTokensMetadata(
           query.tokens.map((token: string) => {
