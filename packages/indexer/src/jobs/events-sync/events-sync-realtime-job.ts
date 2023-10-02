@@ -37,7 +37,9 @@ export class EventsSyncRealtimeJob extends AbstractRabbitMqJobHandler {
       }
 
       await traceSyncJob.addToQueue({ block: block });
-      await syncEvents(block);
+
+      const skipLogsCheck = Number(this.rabbitMqMessage?.retryCount) === this.maxRetries;
+      await syncEvents(block, skipLogsCheck);
       //eslint-disable-next-line
     } catch (error: any) {
       // if the error is block not found, add back to queue
