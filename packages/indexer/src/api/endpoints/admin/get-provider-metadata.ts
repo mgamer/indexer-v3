@@ -10,7 +10,7 @@ import { config } from "@/config/index";
 import { regex } from "@/common/utils";
 import MetadataProviderRouter from "@/metadata/metadata-provider-router";
 
-export const getMetadata: RouteOptions = {
+export const getProviderMetadata: RouteOptions = {
   description: "Get metadata for a token or collection",
   tags: ["api", "x-admin"],
   validate: {
@@ -75,7 +75,7 @@ export const getMetadata: RouteOptions = {
         );
       }
     } catch (error) {
-      logger.error("get-metadata-handler", `Handler failure: ${error}`);
+      logger.error("get-provider-metadata-handler", `Handler failure: ${error}`);
       throw error;
     }
   },
