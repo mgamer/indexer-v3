@@ -392,7 +392,9 @@ export const syncEvents = async (block: number) => {
   if (config.chainId === 137 && processEventsLatencies.processLogsTime === 0) {
     logger.info(
       "sync-events-no-logs",
-      `no logs for block ${block} blockData ${JSON.stringify(blockData)}`
+      `no logs for block ${block} blockData ${JSON.stringify(
+        blockData
+      )} eventsBatches ${JSON.stringify(eventsBatches)}`
     );
   }
 
