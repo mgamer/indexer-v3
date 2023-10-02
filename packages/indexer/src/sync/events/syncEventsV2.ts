@@ -18,6 +18,7 @@ import { blockCheckJob } from "@/jobs/events-sync/block-check-queue-job";
 import { eventsSyncRealtimeJob } from "@/jobs/events-sync/events-sync-realtime-job";
 import { redis } from "@/common/redis";
 import { config } from "@/config/index";
+import _ from "lodash";
 
 export const extractEventsBatches = (enhancedEvents: EnhancedEvent[]): EventsBatch[] => {
   const txHashToEvents = new Map<string, EnhancedEvent[]>();
@@ -346,16 +347,20 @@ export const syncEvents = async (block: number) => {
 
   const availableEventData = getEventData();
 
-  const [{ logs, getLogsTime }, { saveBlocksTime, endSaveBlocksTime }, saveBlockTransactionsTime] =
-    await Promise.all([
-      _getLogs(eventFilter),
-      _saveBlock({
-        number: block,
-        hash: blockData.hash,
-        timestamp: blockData.timestamp,
-      }),
-      _saveBlockTransactions(blockData),
-    ]);
+  // Get the logs from the RPC
+  const { logs, getLogsTime } = await _getLogs(eventFilter);
+  if (config.chainId === 137 && _.isEmpty(logs)) {
+    throw new Error(`No logs found for block ${block}`);
+  }
+
+  const [{ saveBlocksTime, endSaveBlocksTime }, saveBlockTransactionsTime] = await Promise.all([
+    _saveBlock({
+      number: block,
+      hash: blockData.hash,
+      timestamp: blockData.timestamp,
+    }),
+    _saveBlockTransactions(blockData),
+  ]);
 
   let enhancedEvents = logs
     .map((log) => {
