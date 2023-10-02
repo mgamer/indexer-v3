@@ -112,7 +112,7 @@ contract NFTXV3Module is BaseExchangeModule {
   ) internal {
     address collection = sellOrder.collection;
 
-    INFTXVault vault = INFTXVault(NFTX_V3_MARKETPLACE.nftxFactory().vault(sellOrder.vaultId));
+    INFTXVault vault = INFTXVault(NFTX_V3_MARKETPLACE.nftxVaultFactory().vault(sellOrder.vaultId));
 
     // Execute the sell
     if (!vault.is1155()) {
@@ -149,9 +149,9 @@ contract NFTXV3Module is BaseExchangeModule {
       }
 
       // Refund any ERC721 leftover
-      uint256 length = sellOrder.specificIds.length;
+      uint256 length = sellOrder.idsIn.length;
       for (uint256 i = 0; i < length; ) {
-        _sendAllERC721(receiver, IERC721(collection), sellOrder.specificIds[i]);
+        _sendAllERC721(receiver, IERC721(collection), sellOrder.idsIn[i]);
 
         unchecked {
           ++i;
@@ -190,9 +190,9 @@ contract NFTXV3Module is BaseExchangeModule {
       }
 
       // Refund any ERC1155 leftover
-      uint256 length = sellOrder.specificIds.length;
+      uint256 length = sellOrder.idsIn.length;
       for (uint256 i = 0; i < length; ) {
-        _sendAllERC1155(receiver, IERC1155(collection), sellOrder.specificIds[i]);
+        _sendAllERC1155(receiver, IERC1155(collection), sellOrder.idsIn[i]);
 
         unchecked {
           ++i;

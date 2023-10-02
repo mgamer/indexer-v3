@@ -48,6 +48,7 @@ export const getPoolPrice = async (
   slippage: number,
   feeTier: number,
   provider: Provider,
+  // for "buy" side
   tokenIds?: number[]
 ): Promise<BigNumberish> => {
   const chainId = await provider.getNetwork().then((n) => n.chainId);
@@ -169,7 +170,7 @@ export const getPoolPriceFromAPI = async (
   amounts?: string[]
 ): Promise<{
   price: BigNumberish;
-  executeCalldata: string;
+  executeCallData: string;
 }> => {
   const chainId = await provider.getNetwork().then((n) => n.chainId);
   const vaultContract = new Contract(
@@ -233,11 +234,11 @@ export const getPoolPriceFromAPI = async (
     }
   }
 
-  const executeCalldata = apiResponse.data.methodParameters.executeCalldata;
+  const executeCallData = apiResponse.data.methodParameters.executeCalldata;
 
   return {
     price,
-    executeCalldata,
+    executeCallData,
   };
 };
 

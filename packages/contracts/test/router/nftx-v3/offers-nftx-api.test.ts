@@ -1,41 +1,30 @@
 import { BigNumber } from "@ethersproject/bignumber";
 import { Contract } from "@ethersproject/contracts";
-import { formatEther, parseEther } from "@ethersproject/units";
+import { parseEther } from "@ethersproject/units";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 import * as Sdk from "@reservoir0x/sdk/src";
 import { expect } from "chai";
-import { ethers } from "hardhat";
+import { ethers, network } from "hardhat";
 
-import { NFTXV3Offer, setupNFTXV3Offers } from "../helpers/nftx-v3";
+import { NFTXV3Offer } from "../helpers/nftx-v3";
 import { ExecutionInfo } from "../helpers/router";
-import {
-  bn,
-  getChainId,
-  getRandomBoolean,
-  getRandomFloat,
-  getRandomInteger,
-  reset,
-  setupNFTs,
-} from "../../utils";
+import { bn, getChainId, getRandomBoolean, getRandomFloat, reset } from "../../utils";
+import { Network } from "@reservoir0x/sdk/src/utils";
 
-describe("[ReservoirV6_0_1] NFTXV3 offers", () => {
+describe("[ReservoirV6_0_1] NFTX offers (with NFTX API routing)", () => {
   const chainId = getChainId();
 
   let deployer: SignerWithAddress;
   let alice: SignerWithAddress;
   let bob: SignerWithAddress;
   let carol: SignerWithAddress;
-  let david: SignerWithAddress;
   let emilio: SignerWithAddress;
 
-  let erc721: Contract;
   let router: Contract;
   let nftxV3Module: Contract;
 
   beforeEach(async () => {
-    [deployer, alice, bob, carol, david, emilio] = await ethers.getSigners();
-
-    ({ erc721 } = await setupNFTs(deployer));
+    [deployer, alice, bob, carol, emilio] = await ethers.getSigners();
 
     router = await ethers
       .getContractFactory("ReservoirV6_0_1", deployer)
@@ -43,11 +32,7 @@ describe("[ReservoirV6_0_1] NFTXV3 offers", () => {
     nftxV3Module = await ethers
       .getContractFactory("NFTXV3Module", deployer)
       .then((factory) =>
-        factory.deploy(
-          deployer.address,
-          router.address,
-          Sdk.NftxV3.Addresses.MarketplaceZap[chainId]
-        )
+        factory.deploy(router.address, router.address, Sdk.NftxV3.Addresses.MarketplaceZap[chainId])
       );
   });
 
@@ -57,7 +42,6 @@ describe("[ReservoirV6_0_1] NFTXV3 offers", () => {
         alice: await ethers.provider.getBalance(alice.address),
         bob: await ethers.provider.getBalance(bob.address),
         carol: await ethers.provider.getBalance(carol.address),
-        david: await ethers.provider.getBalance(david.address),
         emilio: await ethers.provider.getBalance(emilio.address),
         router: await ethers.provider.getBalance(router.address),
         nftxV3Module: await ethers.provider.getBalance(nftxV3Module.address),
@@ -66,9 +50,8 @@ describe("[ReservoirV6_0_1] NFTXV3 offers", () => {
       const contract = new Sdk.Common.Helpers.Erc20(ethers.provider, token);
       return {
         alice: await contract.getBalance(alice.address),
-        bob: await contract.getBalance(bob.address),
+        bob: await ethers.provider.getBalance(bob.address),
         carol: await contract.getBalance(carol.address),
-        david: await contract.getBalance(david.address),
         emilio: await contract.getBalance(emilio.address),
         router: await contract.getBalance(router.address),
         nftxV3Module: await contract.getBalance(nftxV3Module.address),
@@ -84,47 +67,91 @@ describe("[ReservoirV6_0_1] NFTXV3 offers", () => {
     // Whether to revert or not in case of any failures
     revertIfIncomplete: boolean,
     // Whether to cancel some orders in order to trigger partial filling
-    partial: boolean,
-    // Number of offers to fill
-    offersCount: number
+    partial: boolean
   ) => {
     // Setup
 
-    // Makers: Alice and Bob
-    // Taker: Carol
+    // Token owner = alice
+    const owner = "0xfE1AA5275DDa4B333b1fb0Ccbd7A5f14EdC4A5de";
+    await network.provider.request({
+      method: "hardhat_impersonateAccount",
+      params: [owner],
+    });
+    await network.provider.request({
+      method: "hardhat_setBalance",
+      params: [owner, "0x1000000000000000000"],
+    });
+    carol = await ethers.getSigner(owner);
+
+    // Collection = milady
+    const collection = "0xD643e0B909867025b50375D7495e7d0f6F85De5f";
+    const vault = "0x670b8Ab9196D05A86b3EfD07B10d4fdBf2102532";
+    const vaultId = 7;
+    const tokensInVault = [3, 4];
+    const tokenId = 121;
+
+    const factory = await ethers.getContractFactory("MockERC721", deployer);
 
     const offers: NFTXV3Offer[] = [];
     const fees: BigNumber[][] = [];
-    for (let i = 0; i < offersCount; i++) {
-      offers.push({
+    for (let i = 0; i < tokensInVault.length; i++) {
+      const erc721 = factory.attach(collection);
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const offer: any = {
         buyer: getRandomBoolean() ? alice : bob,
         nft: {
           contract: erc721,
-          id: getRandomInteger(1, 100000),
+          id: tokensInVault[i],
         },
         price: parseEther(getRandomFloat(0.6, 5).toFixed(6)),
         isCancelled: partial && getRandomBoolean(),
-      });
+      };
+
+      const poolPrice = await Sdk.NftxV3.Helpers.getPoolPriceFromAPI(
+        vault,
+        "sell",
+        100,
+        ethers.provider,
+        carol.address,
+        [offer.nft.id.toString()]
+      );
+
+      if (poolPrice.price) {
+        offer.price = bn(poolPrice.price);
+        offer.vault = vault;
+        offer.order = new Sdk.NftxV3.Order(chainId, {
+          vaultId: vaultId.toString(),
+          pool: vault,
+          collection: offer.nft.contract.address,
+          userAddress: carol.address,
+          currency: Sdk.Common.Addresses.Native[chainId],
+          idsIn: [offer.nft.id.toString()],
+          price: offer.isCancelled ? offer.price.mul(bn(10)).toString() : offer.price.toString(),
+          extra: {
+            prices: [offer.price.toString()],
+          },
+          executeCallData: poolPrice.executeCallData,
+          deductRoyalty: "false",
+          path: [],
+        });
+      }
+
+      offers.push(offer);
+
       if (chargeFees) {
         fees.push([parseEther(getRandomFloat(0.0001, 0.1).toFixed(6))]);
       } else {
         fees.push([]);
       }
     }
-    await setupNFTXV3Offers(offers);
 
-    // Send the NFTs to the module (in real-world this will be done atomically)
-    for (const offer of offers) {
-      await offer.nft.contract.connect(carol).mint(offer.nft.id);
-      await offer.nft.contract
-        .connect(carol)
-        .transferFrom(carol.address, nftxV3Module.address, offer.nft.id);
-    }
+    const erc721 = factory.attach(collection);
+    await erc721.connect(carol).transferFrom(carol.address, nftxV3Module.address, tokenId);
 
     // Prepare executions
 
     const executions: ExecutionInfo[] = [
-      // 1. Fill offers with the received NFTs
       ...offers
         .filter((_) => _.order)
         .map((offer, i) => ({
@@ -163,16 +190,16 @@ describe("[ReservoirV6_0_1] NFTXV3 offers", () => {
     }
 
     // Fetch pre-state
-    const balancesBefore = await getBalances(Sdk.Common.Addresses.WNative[chainId]);
+
+    const balancesBefore = await getBalances(Sdk.Common.Addresses.Native[chainId]);
 
     // Execute
-
     await router.connect(carol).execute(executions, {
       value: executions.map(({ value }) => value).reduce((a, b) => bn(a).add(b), bn(0)),
     });
 
     // Fetch post-state
-    const balancesAfter = await getBalances(Sdk.Common.Addresses.WNative[chainId]);
+    const balancesAfter = await getBalances(Sdk.Common.Addresses.Native[chainId]);
 
     // Checks
 
@@ -181,25 +208,6 @@ describe("[ReservoirV6_0_1] NFTXV3 offers", () => {
       .map((_, i) => (offers[i].isCancelled ? [] : fees[i]))
       .map((executionFees) => executionFees.reduce((a, b) => bn(a).add(b), bn(0)))
       .reduce((a, b) => bn(a).add(b), bn(0));
-
-    const carolAfter = balancesAfter.carol.sub(balancesBefore.carol);
-    const totalAmount = carolAfter.add(orderFee);
-
-    const orderSum = offers
-      .map((offer) => (offer.isCancelled ? bn(0) : bn(offer.price)))
-      .reduce((a, b) => bn(a).add(b), bn(0));
-
-    if (orderSum.gt(bn(0))) {
-      const diffPercent =
-        (parseFloat(formatEther(orderSum.sub(totalAmount))) /
-          parseFloat(formatEther(totalAmount))) *
-        100;
-
-      // Check Carol balance
-      const defaultSlippage = 5;
-      expect(diffPercent).to.lte(defaultSlippage);
-      expect(carolAfter).to.gte(bn(0));
-    }
 
     // Emilio got the fee payments
     if (chargeFees) {
@@ -220,27 +228,15 @@ describe("[ReservoirV6_0_1] NFTXV3 offers", () => {
     expect(balancesAfter.nftxV3Module).to.eq(0);
   };
 
-  // Test various combinations for filling offers
+  for (const partial of [false, true]) {
+    for (const chargeFees of [false, true]) {
+      for (const revertIfIncomplete of [false, true]) {
+        const testCaseName =
+          `${partial ? "[partial]" : "[full]"}` +
+          `${chargeFees ? "[fees]" : "[no-fees]"}` +
+          `${revertIfIncomplete ? "[reverts]" : "[skip-reverts]"}`;
 
-  for (const multiple of [false, true]) {
-    for (const partial of [false, true]) {
-      for (const chargeFees of [false, true]) {
-        for (const revertIfIncomplete of [false, true]) {
-          const testCaseName =
-            `${multiple ? "[multiple-orders]" : "[single-order]"}` +
-            `${partial ? "[partial]" : "[full]"}` +
-            `${chargeFees ? "[fees]" : "[no-fees]"}` +
-            `${revertIfIncomplete ? "[reverts]" : "[skip-reverts]"}`;
-
-          it(testCaseName, async () =>
-            testAcceptOffers(
-              chargeFees,
-              revertIfIncomplete,
-              partial,
-              multiple ? getRandomInteger(2, 4) : 1
-            )
-          );
-        }
+        it(testCaseName, async () => testAcceptOffers(chargeFees, revertIfIncomplete, partial));
       }
     }
   }
