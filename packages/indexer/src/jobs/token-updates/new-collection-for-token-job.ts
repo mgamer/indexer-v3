@@ -134,7 +134,7 @@ export class NewCollectionForTokenJob extends AbstractRabbitMqJobHandler {
         await idb.none(insertCollectionQuery, values);
 
         // Retrieve the newly created collection
-        collection = await Collections.getByContractAndTokenId(contract, Number(tokenId));
+        collection = await Collections.getById(collectionMetadata.id);
 
         // If still no collection
         if (!collection) {
@@ -262,7 +262,15 @@ export class NewCollectionForTokenJob extends AbstractRabbitMqJobHandler {
 
   public updateActivities(contract: string) {
     if (config.chainId === 1) {
-      return _.indexOf(["0x82c7a8f707110f5fbb16184a5933e9f78a34c6ab"], contract) === -1;
+      return (
+        _.indexOf(
+          [
+            "0x82c7a8f707110f5fbb16184a5933e9f78a34c6ab",
+            "0x495f947276749ce646f68ac8c248420045cb7b5e",
+          ],
+          contract
+        ) === -1
+      );
     }
 
     if (config.chainId === 137) {
