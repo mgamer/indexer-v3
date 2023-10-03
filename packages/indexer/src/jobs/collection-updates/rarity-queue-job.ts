@@ -81,6 +81,8 @@ export class RarityQueueJob extends AbstractRabbitMqJobHandler {
         await idb.none(updateQuery, replacementParams);
       }
     }
+
+    logger.info(this.queueName, `Done calculating rarity for collection ${collectionId}`);
   }
 
   public async addToQueue(params: { collectionId: string | string[] }, delay = 60 * 60 * 1000) {
