@@ -75,14 +75,12 @@ export class RarityQueueJob extends AbstractRabbitMqJobHandler {
                                FROM (VALUES ${updateTokensString}) AS x(tokenId, rarityTraitSum, rarityTraitSumRank)
                                WHERE contract = $/contract/
                                AND token_id = x.tokenId
-                               AND (rarity_score <> x.rarityTraitSum OR rarity_rank <> x.rarityTraitSumRank)
+                               AND (rarity_score IS NULL OR rarity_rank IS NULL OR rarity_score <> x.rarityTraitSum OR rarity_rank <> x.rarityTraitSumRank)
                                `;
 
         await idb.none(updateQuery, replacementParams);
       }
     }
-
-    logger.info(this.queueName, `Done calculating rarity for collection ${collectionId}`);
   }
 
   public async addToQueue(params: { collectionId: string | string[] }, delay = 60 * 60 * 1000) {
