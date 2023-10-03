@@ -984,9 +984,9 @@ export const JoiExecuteFee = Joi.object({
 
 export const JoiSource = Joi.object({
   id: Joi.string().allow(null),
-  domain: Joi.string().required(),
-  name: Joi.string().required(),
-  icon: Joi.string().required(),
+  domain: Joi.string().allow(null),
+  name: Joi.string().allow(null),
+  icon: Joi.string().allow(null),
   url: Joi.string().allow(null),
 });
 
