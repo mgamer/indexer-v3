@@ -215,7 +215,6 @@ export class NewCollectionForTokenJob extends AbstractRabbitMqJobHandler {
       // Update the old collection's token count
       await recalcTokenCountQueueJob.addToQueue({
         collection: oldCollectionId,
-        force: true,
       });
 
       // If this is a new collection, recalculate floor price
