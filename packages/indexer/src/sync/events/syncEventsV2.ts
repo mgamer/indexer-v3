@@ -17,6 +17,8 @@ import { removeUnsyncedEventsActivitiesJob } from "@/jobs/activities/remove-unsy
 import { blockCheckJob } from "@/jobs/events-sync/block-check-queue-job";
 import { eventsSyncRealtimeJob } from "@/jobs/events-sync/events-sync-realtime-job";
 import { redis } from "@/common/redis";
+import { config } from "@/config/index";
+import _ from "lodash";
 
 export const extractEventsBatches = (enhancedEvents: EnhancedEvent[]): EventsBatch[] => {
   const txHashToEvents = new Map<string, EnhancedEvent[]>();
@@ -326,7 +328,7 @@ export const syncTraces = async (block: number) => {
   );
 };
 
-export const syncEvents = async (block: number) => {
+export const syncEvents = async (block: number, skipLogsCheck = false) => {
   const startSyncTime = Date.now();
 
   const startGetBlockTime = Date.now();
@@ -345,16 +347,27 @@ export const syncEvents = async (block: number) => {
 
   const availableEventData = getEventData();
 
-  const [{ logs, getLogsTime }, { saveBlocksTime, endSaveBlocksTime }, saveBlockTransactionsTime] =
-    await Promise.all([
-      _getLogs(eventFilter),
-      _saveBlock({
-        number: block,
-        hash: blockData.hash,
-        timestamp: blockData.timestamp,
-      }),
-      _saveBlockTransactions(blockData),
-    ]);
+  // Get the logs from the RPC
+  const { logs, getLogsTime } = await _getLogs(eventFilter);
+
+  // Check if there are transactions but no longs
+  if (
+    config.chainId === 137 &&
+    !skipLogsCheck &&
+    !_.isEmpty(blockData.transactions) &&
+    _.isEmpty(logs)
+  ) {
+    throw new Error(`No logs found for block ${block}`);
+  }
+
+  const [{ saveBlocksTime, endSaveBlocksTime }, saveBlockTransactionsTime] = await Promise.all([
+    _saveBlock({
+      number: block,
+      hash: blockData.hash,
+      timestamp: blockData.timestamp,
+    }),
+    _saveBlockTransactions(blockData),
+  ]);
 
   let enhancedEvents = logs
     .map((log) => {
@@ -388,6 +401,14 @@ export const syncEvents = async (block: number) => {
   const startProcessLogs = Date.now();
 
   const processEventsLatencies = await processEventsBatchV2(eventsBatches);
+  if (config.chainId === 137 && processEventsLatencies.processLogsTime === 0) {
+    logger.info(
+      "sync-events-no-logs",
+      `no logs for block ${block} blockData ${JSON.stringify(
+        blockData
+      )} eventsBatches ${JSON.stringify(eventsBatches)} logs ${JSON.stringify(logs)}`
+    );
+  }
 
   const endProcessLogs = Date.now();
 

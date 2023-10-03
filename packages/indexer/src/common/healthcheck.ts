@@ -3,6 +3,7 @@ import { redis } from "@/common/redis";
 import { hdb } from "@/common/db";
 import { config } from "@/config/index";
 import { now } from "@/common/utils";
+import { getNetworkSettings } from "@/config/network";
 
 export class HealthCheck {
   static async check(): Promise<boolean> {
@@ -20,7 +21,7 @@ export class HealthCheck {
       return false;
     }
 
-    if (config.master) {
+    if (config.master && getNetworkSettings().enableWebSocket) {
       const timestamp = await redis.get("latest-block-websocket-received");
       const currentTime = now();
       if (timestamp && Number(timestamp) < currentTime - 60) {

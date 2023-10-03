@@ -36,6 +36,10 @@ export class MetadataIndexProcessJob extends AbstractRabbitMqJobHandler {
       case "simplehash":
         count = 50;
         break;
+
+      case "onchain":
+        count = 1;
+        break;
     }
 
     const countTotal = method !== "soundxyz" ? config.maxParallelTokenRefreshJobs * count : count;
@@ -68,7 +72,8 @@ export class MetadataIndexProcessJob extends AbstractRabbitMqJobHandler {
               `Too Many Requests. method=${method}, error=${JSON.stringify(error.response.data)}`
             );
 
-            rateLimitExpiredIn = Math.max(rateLimitExpiredIn, error.response.data.expires_in, 5);
+            // rateLimitExpiredIn = Math.max(rateLimitExpiredIn, error.response.data.expires_in, 5);
+            rateLimitExpiredIn = 5;
 
             await pendingRefreshTokens.add(refreshTokensChunk, true);
           } else {

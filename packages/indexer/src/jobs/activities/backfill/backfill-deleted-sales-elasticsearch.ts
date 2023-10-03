@@ -36,9 +36,7 @@ if (config.doBackgroundWork && config.doElasticsearchWork) {
       );
 
       if (results.length) {
-        const toBeDeletedActivityIds: string[] = [];
-
-        results.forEach((result) => {
+        for (const result of results) {
           const query = {
             bool: {
               must_not: [
@@ -82,21 +80,22 @@ if (config.doBackgroundWork && config.doElasticsearchWork) {
             size: 1,
           });
 
-          const activities = esResult.hits.hits.map((hit) => hit._source!);
-
-          logger.info(
-            QUEUE_NAME,
-            `Debug: activityId=${activities[0].id} txHash=${fromBuffer(result.tx_hash)} logIndex=${
-              result.log_index
-            } batchIndex=${result.batch_index}`
+          const pendingDeleteDocuments: { id: string; index: string }[] = esResult.hits.hits.map(
+            (hit) => ({ id: hit._source!.id, index: hit._index })
           );
 
-          toBeDeletedActivityIds.push(activities[0].id);
-        });
+          for (const pendingDeleteDocument of pendingDeleteDocuments) {
+            logger.info(
+              QUEUE_NAME,
+              `Debug: pendingDeleteDocumentId=${pendingDeleteDocument.id}, index=${pendingDeleteDocument.index}`
+            );
 
-        logger.info(QUEUE_NAME, `Debug2: toBeDeletedActivityIds=${toBeDeletedActivityIds.length}`);
-
-        await ActivitiesIndex.deleteActivitiesById(toBeDeletedActivityIds);
+            await elasticsearch.delete({
+              index: pendingDeleteDocument.index,
+              id: pendingDeleteDocument.id,
+            });
+          }
+        }
       }
     },
     { connection: redis.duplicate(), concurrency: 1 }
