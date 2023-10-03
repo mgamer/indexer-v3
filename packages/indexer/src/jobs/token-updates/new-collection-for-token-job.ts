@@ -31,7 +31,7 @@ export type NewCollectionForTokenJobPayload = {
 export class NewCollectionForTokenJob extends AbstractRabbitMqJobHandler {
   queueName = "new-collection-for-token";
   maxRetries = 10;
-  concurrency = 5;
+  concurrency = 1;
   backoff = {
     type: "exponential",
     delay: 10000,
