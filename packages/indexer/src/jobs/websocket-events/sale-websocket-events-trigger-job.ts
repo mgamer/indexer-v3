@@ -143,6 +143,8 @@ export class SaleWebsocketEventsTriggerQueueJob extends AbstractRabbitMqJobHandl
           contract: data.after.contract,
           maker: data.after.maker,
           taker: data.after.taker,
+          fillSource: result.fillSource ?? "",
+          orderSource: result.orderSource ?? "",
         },
         changed,
         data: result,
