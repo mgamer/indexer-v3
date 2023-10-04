@@ -39,6 +39,8 @@ export class CollectionFlagStatusSyncJob extends AbstractRabbitMqJobHandler {
       tokens = data.tokens;
       nextContinuation = data.nextContinuation;
     } catch (error) {
+      // add back to redis queue
+      await PendingFlagStatusSyncCollections.add(collectionToGetFlagStatusFor, true);
       if ((error as any).response?.status === 429) {
         logger.info(
           this.queueName,
@@ -47,13 +49,11 @@ export class CollectionFlagStatusSyncJob extends AbstractRabbitMqJobHandler {
 
         const expiresIn = (error as any).response.data.expires_in;
 
-        // extend lock
         await acquireLock(this.getLockName(), expiresIn * 1000);
-        // add back to redis queue
-        await PendingFlagStatusSyncCollections.add(collectionToGetFlagStatusFor, true);
         return;
       } else {
         logger.error(this.queueName, `Error: ${JSON.stringify(error)}`);
+        throw error;
       }
     }
 

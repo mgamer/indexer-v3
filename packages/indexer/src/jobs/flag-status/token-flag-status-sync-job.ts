@@ -46,10 +46,6 @@ export class TokenFlagStatusSyncJob extends AbstractRabbitMqJobHandler {
         return;
       } else {
         logger.error(this.queueName, `Error: ${error}`);
-
-        // add back to redis queue
-        await PendingFlagStatusSyncTokens.add(tokensToGetFlagStatusFor, true);
-        // throw the error so that the job is retried, and it will be retried until the max retries is reached
         throw error;
       }
     }
