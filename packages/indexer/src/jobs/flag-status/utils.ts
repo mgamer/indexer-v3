@@ -78,7 +78,7 @@ export const getTokensFlagStatusForCollection = async (
   continuation?: string
 ): Promise<{
   tokens: { contract: string; tokenId: string; flagged: boolean | null }[];
-  continuation?: string;
+  nextContinuation: string | null;
 }> => {
   const result = await openseaMetadataProvider.getTokensMetadataBySlug(slug, continuation || "");
 
@@ -88,7 +88,7 @@ export const getTokensFlagStatusForCollection = async (
     flagged: token.flagged,
   }));
 
-  continuation = result.continuation;
+  const nextContinuation = result.continuation;
 
-  return { tokens: parsedTokens, continuation };
+  return { tokens: parsedTokens, nextContinuation: nextContinuation || null };
 };

@@ -6,13 +6,9 @@ import {
   getTokensFlagStatusForCollection,
   handleTokenFlagStatusUpdate,
 } from "@/jobs/flag-status/utils";
-import { acquireLock, doesLockExist, extendLock, releaseLock } from "@/common/redis";
+import { acquireLock, doesLockExist } from "@/common/redis";
 import { logger } from "@/common/logger";
-
-export type CollectionFlagStatusSyncJobPayload = {
-  slug: string;
-  continuation: string;
-};
+import { PendingFlagStatusSyncCollections } from "@/models/pending-flag-status-sync-collections";
 
 export class CollectionFlagStatusSyncJob extends AbstractRabbitMqJobHandler {
   queueName = "collection-flag-status-sync-queue";
@@ -21,32 +17,27 @@ export class CollectionFlagStatusSyncJob extends AbstractRabbitMqJobHandler {
   lazyMode = true;
   useSharedChannel = true;
   disableConsuming = !config.disableFlagStatusRefreshJob || !config.liquidityOnly;
+  singleActiveConsumer = true;
 
-  protected async process(payload: CollectionFlagStatusSyncJobPayload) {
-    const { slug } = payload;
-    if (!slug) {
-      logger.warn(this.queueName, "Missing slug in payload");
+  protected async process() {
+    // check redis to see if we have a lock for this job saying we are sleeping due to rate limiting. This lock only exists if we have been rate limited.
+    if (await doesLockExist(this.getLockName())) {
+      logger.info(this.queueName, "Sleeping due to rate limiting");
       return;
     }
 
-    if (!(await doesLockExist(this.getLockName()))) {
-      await acquireLock(this.getLockName(), 60);
-    }
+    const collectionToGetFlagStatusFor = await PendingFlagStatusSyncCollections.get();
+
+    let tokens: { contract: string; tokenId: string; flagged: boolean | null }[] = [];
+    let nextContinuation: string | null = null;
 
     try {
-      const { tokens, continuation: nextContinuation } = await getTokensFlagStatusForCollection(
-        slug,
-        payload.continuation
+      const data = await getTokensFlagStatusForCollection(
+        collectionToGetFlagStatusFor[0].slug,
+        collectionToGetFlagStatusFor[0].continuation
       );
-
-      await Promise.all(
-        tokens.map(async (token) => handleTokenFlagStatusUpdate({ context: this.queueName, token }))
-      );
-
-      if (nextContinuation) {
-        await this.send({ payload: { slug, continuation: nextContinuation } }, 1000);
-        return;
-      }
+      tokens = data.tokens;
+      nextContinuation = data.nextContinuation;
     } catch (error) {
       if ((error as any).response?.status === 429) {
         logger.info(
@@ -57,23 +48,38 @@ export class CollectionFlagStatusSyncJob extends AbstractRabbitMqJobHandler {
         const expiresIn = (error as any).response.data.expires_in;
 
         // extend lock
-        await extendLock(this.getLockName(), expiresIn * 1000 + 60000);
-        // add back to queue with delay
-        await this.send({ payload }, expiresIn * 1000);
+        await acquireLock(this.getLockName(), expiresIn * 1000);
+        // add back to redis queue
+        await PendingFlagStatusSyncCollections.add(collectionToGetFlagStatusFor, true);
         return;
       } else {
         logger.error(this.queueName, `Error: ${JSON.stringify(error)}`);
       }
     }
-    await releaseLock(this.getLockName());
+
+    await Promise.all(
+      tokens.map(async (token) => handleTokenFlagStatusUpdate({ context: this.queueName, token }))
+    );
+
+    if (nextContinuation) {
+      await PendingFlagStatusSyncCollections.add(
+        [
+          {
+            slug: collectionToGetFlagStatusFor[0].slug,
+            continuation: nextContinuation,
+          },
+        ],
+        true
+      );
+    }
   }
 
   public getLockName() {
     return `${this.queueName}-lock`;
   }
 
-  public async addToQueue(params: CollectionFlagStatusSyncJobPayload, delay = 0) {
-    await this.send({ payload: params }, delay);
+  public async addToQueue(delay = 0) {
+    await this.send({}, delay);
   }
 }
 

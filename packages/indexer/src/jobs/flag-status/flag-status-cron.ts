@@ -1,5 +1,5 @@
 import cron from "node-cron";
-import { acquireLock, redlock } from "@/common/redis";
+import { doesLockExist, redlock } from "@/common/redis";
 import { config } from "@/config/index";
 import { tokenFlagStatusSyncJob } from "@/jobs/flag-status/token-flag-status-sync-job";
 import { collectionFlagStatusSyncJob } from "@/jobs/flag-status/collection-flag-status-sync-job";
@@ -8,27 +8,22 @@ import { PendingFlagStatusSyncTokens } from "@/models/pending-flag-status-sync-t
 
 if (config.doBackgroundWork) {
   cron.schedule(
-    // Every 5 seconds
-    "*/5 * * * * *",
+    // Every second
+    "*/1 * * * * *",
     async () =>
       await redlock
         .acquire(["flag-status-sync-cron"], (10 * 60 - 3) * 1000)
         .then(async () => {
-          // check if we can acquire the lock for tokens
-          if (await acquireLock(tokenFlagStatusSyncJob.getLockName(), 60)) {
-            // get up to 20 tokens from the queue
-            const tokens = await PendingFlagStatusSyncTokens.get(20);
-            await tokenFlagStatusSyncJob.addToQueue({
-              tokens,
-            });
+          // check if a lock exists for tokens due to rate limiting
+          if (!(await doesLockExist(tokenFlagStatusSyncJob.getLockName()))) {
+            const tokensCount = await PendingFlagStatusSyncTokens.count();
+            if (tokensCount > 0) await tokenFlagStatusSyncJob.addToQueue();
           }
 
-          // check if we can acquire the lock for collections
-          if (await acquireLock(collectionFlagStatusSyncJob.getLockName(), 60)) {
-            const collection = await PendingFlagStatusSyncCollections.get(1);
-            await collectionFlagStatusSyncJob.addToQueue({
-              ...collection[0],
-            });
+          // check if a lock exists for collections due to rate limiting
+          if (!(await doesLockExist(collectionFlagStatusSyncJob.getLockName()))) {
+            const collectionsCount = await PendingFlagStatusSyncCollections.count();
+            if (collectionsCount > 0) await collectionFlagStatusSyncJob.addToQueue();
           }
         })
         .catch(() => {
