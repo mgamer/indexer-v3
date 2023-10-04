@@ -30,7 +30,7 @@ export abstract class AbstractBaseMetadataProvider {
   async getTokensMetadata(
     tokens: { contract: string; tokenId: string }[],
     options?: {
-      flagged?: boolean;
+      isRequestForFlaggedMetadata?: boolean;
     }
   ): Promise<TokenMetadata[]> {
     const customMetadata = await Promise.all(
@@ -95,7 +95,7 @@ export abstract class AbstractBaseMetadataProvider {
   protected abstract _getTokensMetadata(
     tokens: { contract: string; tokenId: string }[],
     options?: {
-      flagged?: boolean;
+      isRequestForFlaggedMetadata?: boolean;
     }
   ): Promise<TokenMetadata[]>;
 

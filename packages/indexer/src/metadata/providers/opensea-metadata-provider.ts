@@ -77,7 +77,7 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
   protected async _getTokensMetadata(
     tokens: { contract: string; tokenId: string }[],
     options?: {
-      flagged?: boolean;
+      isRequestForFlaggedMetadata?: boolean;
     }
   ): Promise<TokenMetadata[]> {
     const searchParams = new URLSearchParams();
@@ -90,7 +90,7 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
       !this.isOSTestnet() ? "https://api.opensea.io" : "https://testnets-api.opensea.io"
     }/api/v1/assets?${searchParams.toString()}`;
 
-    const API_KEY_TO_USE = options?.flagged
+    const API_KEY_TO_USE = options?.isRequestForFlaggedMetadata
       ? config.openSeaFlaggedMetadataApiKey
       : config.openSeaTokenMetadataApiKey;
 
