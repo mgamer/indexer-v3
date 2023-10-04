@@ -15,6 +15,7 @@ import { metadataIndexFetchJob } from "@/jobs/metadata-index/metadata-fetch-job"
 import { collectionMetadataQueueJob } from "@/jobs/collection-updates/collection-metadata-queue-job";
 import { RabbitMQMessage } from "@/common/rabbit-mq";
 import { openseaMetadataProvider } from "@/metadata/providers/opensea-metadata-provider";
+import { PendingFlagStatusSyncCollections } from "@/models/pending-flag-status-sync-collections";
 
 export type MetadataIndexProcessBySlugJobPayload = {
   method: string;
@@ -106,6 +107,13 @@ export class MetadataIndexProcessBySlugJob extends AbstractRabbitMqJobHandler {
             ],
             true
           );
+
+          await PendingFlagStatusSyncCollections.add([
+            {
+              slug: refreshTokenBySlug.slug,
+              continuation: null,
+            },
+          ]);
         }
       }
     }

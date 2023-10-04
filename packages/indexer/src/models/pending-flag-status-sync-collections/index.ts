@@ -3,7 +3,7 @@ import { redis } from "@/common/redis";
 
 export type PendingFlagStatusSyncCollection = {
   slug: string;
-  continuation: string;
+  continuation: string | null;
 };
 
 /**
