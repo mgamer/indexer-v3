@@ -190,7 +190,7 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
         headers: !this.isOSTestnet()
           ? {
               url,
-              "X-API-KEY": config.openSeaApiKey.trim(),
+              "X-API-KEY": config.openSeaTokenMetadataBySlugApiKey.trim(),
               Accept: "application/json",
             }
           : {
