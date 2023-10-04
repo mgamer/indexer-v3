@@ -87,7 +87,6 @@ export class MetadataIndexFetchJob extends AbstractRabbitMqJobHandler {
       const [contract, tokenId] = data.continuation
         ? data.continuation.split(":")
         : [AddressZero, "0"];
-
       refreshTokens = await this.getTokensForCollection(data.collection, contract, tokenId, limit);
 
       // If no more tokens found
