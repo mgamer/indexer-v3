@@ -14,6 +14,7 @@ import { resyncAttributeCountsJob } from "@/jobs/update-attribute/update-attribu
 import { TokenMetadata } from "@/metadata/types";
 import { newCollectionForTokenJob } from "@/jobs/token-updates/new-collection-for-token-job";
 import { config } from "@/config/index";
+import { flagStatusUpdateJob } from "@/jobs/flag-status/flag-status-update-job";
 
 export type MetadataIndexWriteJobPayload = {
   collection: string;
@@ -73,6 +74,7 @@ export class MetadataIndexWriteJob extends AbstractRabbitMqJobHandler {
       animationOriginalUrl,
       metadataOriginalUrl,
       mediaUrl,
+      flagged,
       isFromWebhook,
       attributes,
     } = payload;
@@ -170,6 +172,16 @@ export class MetadataIndexWriteJob extends AbstractRabbitMqJobHandler {
 
       // Stop processing the token metadata
       return;
+    }
+
+    if (flagged != null) {
+      await flagStatusUpdateJob.addToQueue([
+        {
+          contract,
+          tokenId,
+          isFlagged: Boolean(flagged),
+        },
+      ]);
     }
 
     // const startHandleTokenAttributesTime = Date.now();
