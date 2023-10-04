@@ -47,15 +47,8 @@ export const handleTokenFlagStatusUpdate = async ({
     }
   } catch (error) {
     // eslint-disable-next-line
-    if ((error as any).response?.status === 429) {
-      logger.info(
-        context,
-        // eslint-disable-next-line
-        `Too Many Requests.  error: ${JSON.stringify((error as any).response.data)}`
-      );
-    } else {
-      logger.error(context, `getTokenMetadata error.contract:${token.contract}, error:${error}`);
-    }
+
+    logger.error(context, `getTokenMetadata error.contract:${token.contract}, error:${error}`);
   }
 };
 
