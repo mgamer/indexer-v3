@@ -1,15 +1,18 @@
+import { BigNumber } from "@ethersproject/bignumber";
 import * as Sdk from "@reservoir0x/sdk";
-import { config } from "@/config/index";
+
 import { baseProvider } from "@/common/provider";
 import { redis } from "@/common/redis";
+import { config } from "@/config/index";
 
 export type PaymentProcessorConfig = {
-  paymentCoin: string;
-  securityPolicyId: number;
-  policy?: SecurityPolicy;
+  securityPolicy: SecurityPolicy;
+  paymentCoin?: string;
+  pricingBounds?: PricingBounds;
 };
 
 export type SecurityPolicy = {
+  id: string;
   enforceExchangeWhitelist: boolean;
   enforcePaymentMethodWhitelist: boolean;
   enforcePricingConstraints: boolean;
@@ -25,21 +28,26 @@ export type PricingBounds = {
   ceilingPrice: string;
 };
 
-export const getSecurityPolicy = async (
-  securityPolicyId: string,
+export const getSecurityPolicyById = async (
+  id: string,
   refresh?: boolean
 ): Promise<SecurityPolicy | undefined> => {
-  const cacheKey = `payment-processor-security-policy-id:${securityPolicyId}`;
+  const cacheKey = `payment-processor-security-policy-by-id:${id}`;
+
   let result = await redis
     .get(cacheKey)
     .then((r) => (r ? (JSON.parse(r) as SecurityPolicy) : undefined));
-  if (result == undefined || refresh) {
+
+  if (!result || refresh) {
     try {
+      // TODO: Better be explicit and write down the interfaces that are being used
       const exchange = new Sdk.PaymentProcessor.Exchange(config.chainId).contract.connect(
         baseProvider
       );
-      const securityPolicy = await exchange.getSecurityPolicy(securityPolicyId);
+
+      const securityPolicy = await exchange.getSecurityPolicy(id);
       result = {
+        id,
         enforceExchangeWhitelist: securityPolicy.enforceExchangeWhitelist,
         enforcePaymentMethodWhitelist: securityPolicy.enforcePaymentMethodWhitelist,
         enforcePricingConstraints: securityPolicy.enforcePricingConstraints,
@@ -49,6 +57,7 @@ export const getSecurityPolicy = async (
         disableExchangeWhitelistEOABypass: securityPolicy.disableExchangeWhitelistEOABypass,
         pushPaymentGasLimit: securityPolicy.pushPaymentGasLimit,
       };
+
       await redis.set(cacheKey, JSON.stringify(result), "EX", 24 * 3600);
     } catch {
       // Skip errors
@@ -58,60 +67,54 @@ export const getSecurityPolicy = async (
   return result;
 };
 
-export const getContractSecurityPolicy = async (
+export const getConfigByContract = async (
   contract: string,
   refresh?: boolean
 ): Promise<PaymentProcessorConfig | undefined> => {
-  const cacheKey = `payment-processor-security-policy:${contract}`;
+  const cacheKey = `payment-processor-config-by-contract:${contract}`;
+
   let result = await redis
     .get(cacheKey)
     .then((r) => (r ? (JSON.parse(r) as PaymentProcessorConfig) : undefined));
-  if (result == undefined || refresh) {
+  if (!result || refresh) {
     try {
+      // TODO: Better be explicit and write down the interfaces that are being used
       const exchange = new Sdk.PaymentProcessor.Exchange(config.chainId).contract.connect(
         baseProvider
       );
-      const securityPolicyId = await exchange.getTokenSecurityPolicyId(contract);
-      const paymentCoin = await exchange.collectionPaymentCoins(contract);
-      result = {
-        paymentCoin,
-        securityPolicyId: securityPolicyId.toString(),
-        policy: await getSecurityPolicy(securityPolicyId, refresh),
-      };
-      await redis.set(cacheKey, JSON.stringify(result), "EX", 24 * 3600);
-    } catch {
-      // Skip errors
-    }
-  }
-  return result;
-};
 
-export const getContractPricingBounds = async (
-  contract: string,
-  tokenId: string,
-  refresh?: boolean
-): Promise<PricingBounds | undefined> => {
-  const cacheKey = `payment-processor-pricing-bounds:${contract}${tokenId}`;
-  let result = await redis
-    .get(cacheKey)
-    .then((r) => (r ? (JSON.parse(r) as PricingBounds) : undefined));
-  if (result == undefined || refresh) {
-    try {
-      const exchange = new Sdk.PaymentProcessor.Exchange(config.chainId).contract.connect(
-        baseProvider
-      );
-      const [floorPrice, ceilingPrice] = await Promise.all([
-        exchange.getFloorPrice(contract, tokenId),
-        exchange.getCeilingPrice(contract, tokenId),
-      ]);
-      result = {
-        floorPrice: floorPrice.toString(),
-        ceilingPrice: ceilingPrice.toString(),
-      };
-      await redis.set(cacheKey, JSON.stringify(result), "EX", 60 * 10);
+      const securityPolicyId = await exchange.getTokenSecurityPolicyId(contract);
+      const securityPolicy = await getSecurityPolicyById(securityPolicyId);
+      if (securityPolicy?.enforcePricingConstraints) {
+        const paymentCoin = await exchange.collectionPaymentCoins(contract);
+        // Assume all tokens have the same pricing bounds
+        const pricingBounds = {
+          floorPrice: await exchange
+            .getFloorPrice(contract, "0")
+            .then((p: BigNumber) => p.toString()),
+          ceilingPrice: await exchange
+            .getCeilingPrice(contract, "0")
+            .then((p: BigNumber) => p.toString()),
+        };
+
+        result = {
+          securityPolicy,
+          paymentCoin,
+          pricingBounds,
+        };
+      } else if (securityPolicy) {
+        result = {
+          securityPolicy,
+        };
+      }
+
+      if (result) {
+        await redis.set(cacheKey, JSON.stringify(result), "EX", 24 * 3600);
+      }
     } catch {
       // Skip errors
     }
   }
+
   return result;
 };

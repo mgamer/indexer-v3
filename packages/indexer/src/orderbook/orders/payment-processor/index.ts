@@ -20,9 +20,9 @@ import { DbOrder, OrderMetadata, generateSchemaHash } from "@/orderbook/orders/u
 import * as tokenSet from "@/orderbook/token-sets";
 import * as erc721c from "@/utils/erc721c";
 import { checkMarketplaceIsFiltered } from "@/utils/marketplace-blacklists";
+import * as paymentProcessor from "@/utils/payment-processor";
 import { getUSDAndNativePrices } from "@/utils/prices";
 import * as royalties from "@/utils/royalties";
-import * as paymentProcessor from "@/utils/payment-processor";
 
 export type OrderInfo = {
   orderParams: Sdk.PaymentProcessor.Types.BaseOrder;
@@ -68,57 +68,42 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         });
       }
 
-      const contractSecurityPolicy = await paymentProcessor.getContractSecurityPolicy(
-        order.params.tokenAddress
-      );
-      if (contractSecurityPolicy && contractSecurityPolicy.policy) {
+      const ppConfig = await paymentProcessor.getConfigByContract(order.params.tokenAddress);
+      if (ppConfig && ppConfig.securityPolicy.enforcePricingConstraints) {
+        if (order.params.coin.toLowerCase() != ppConfig.paymentCoin!.toLowerCase()) {
+          return results.push({
+            id,
+            status: "payment-token-not-whitelisted",
+          });
+        }
+
+        const price = bn(order.params.price).div(order.params.amount);
+        if (price.lt(ppConfig.pricingBounds!.floorPrice)) {
+          return results.push({
+            id,
+            status: "sale-price-below-configured-floor-price",
+          });
+        }
+        if (price.gt(ppConfig.pricingBounds!.ceilingPrice)) {
+          return results.push({
+            id,
+            status: "sale-price-above-configured-ceiling-price",
+          });
+        }
+      } else if (ppConfig?.securityPolicy.enforcePaymentMethodWhitelist) {
         const exchange = new Sdk.PaymentProcessor.Exchange(config.chainId).contract.connect(
           baseProvider
         );
-        const { policy: securityPolicy } = contractSecurityPolicy;
-        if (securityPolicy.enforcePricingConstraints) {
-          const paymentCoin = await exchange.collectionPaymentCoins(order.params.tokenAddress);
-          if (order.params.coin.toLowerCase() != paymentCoin.toLowerCase()) {
-            return results.push({
-              id,
-              status: "payment-token-not-whitelisted",
-            });
-          }
-          const currencyPrice = bn(order.params.price).div(order.params.amount);
-          const pricingBounds = await paymentProcessor.getContractPricingBounds(
-            order.params.tokenAddress,
-            order.params.tokenId ?? "0"
-          );
-          if (pricingBounds) {
-            const { floorPrice, ceilingPrice } = pricingBounds;
-            if (currencyPrice.lt(floorPrice)) {
-              return results.push({
-                id,
-                status: "sale-price-below-minium-floor",
-              });
-            }
 
-            if (currencyPrice.gt(ceilingPrice)) {
-              return results.push({
-                id,
-                status: "sale-price-above-maximum-floor",
-              });
-            }
-          }
-        } else if (
-          securityPolicy.enforcePaymentMethodWhitelist &&
-          order.params.coin !== Sdk.Common.Addresses.Native[config.chainId]
-        ) {
-          const isWhitelisted = await exchange.isPaymentMethodApproved(
-            contractSecurityPolicy.securityPolicyId,
-            order.params.coin
-          );
-          if (!isWhitelisted) {
-            return results.push({
-              id,
-              status: "payment-token-not-whitelisted",
-            });
-          }
+        const isWhitelisted = await exchange.isPaymentMethodApproved(
+          ppConfig.securityPolicy.id,
+          order.params.coin
+        );
+        if (!isWhitelisted) {
+          return results.push({
+            id,
+            status: "payment-token-not-whitelisted",
+          });
         }
       }
 
