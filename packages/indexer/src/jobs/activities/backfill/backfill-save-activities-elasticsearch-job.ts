@@ -34,7 +34,7 @@ export type BackfillSaveActivitiesElasticsearchJobPayload = {
 export class BackfillSaveActivitiesElasticsearchJob extends AbstractRabbitMqJobHandler {
   queueName = "backfill-save-activities-elasticsearch-queue";
   maxRetries = 10;
-  concurrency = 2;
+  concurrency = 1;
   persistent = true;
   lazyMode = true;
   timeout = 60000;
@@ -58,6 +58,8 @@ export class BackfillSaveActivitiesElasticsearchJob extends AbstractRabbitMqJobH
     let addToQueue = false;
     let addToQueueCursor: OrderCursorInfo | EventCursorInfo | undefined;
 
+    const limit = Number(await redis.get(`${this.queueName}-limit`)) || 1000;
+
     const lockId = crypto
       .createHash("sha256")
       .update(
@@ -68,7 +70,22 @@ export class BackfillSaveActivitiesElasticsearchJob extends AbstractRabbitMqJobH
     const acquiredLock = await acquireLock(lockId, 120);
 
     if (acquiredLock) {
-      const limit = Number(await redis.get(`${this.queueName}-limit`)) || 1000;
+      logger.info(
+        this.queueName,
+        JSON.stringify({
+          topic: "backfill-activities",
+          message: `Acquired lock. type=${type}, fromTimestamp=${fromTimestampISO}, toTimestamp=${toTimestampISO}, keepGoing=${keepGoing}`,
+          type,
+          fromTimestamp,
+          fromTimestampISO,
+          toTimestamp,
+          toTimestampISO,
+          cursor,
+          indexName,
+          keepGoing,
+          lockId,
+        })
+      );
 
       try {
         const { activities, nextCursor } = await getActivities(
@@ -80,8 +97,10 @@ export class BackfillSaveActivitiesElasticsearchJob extends AbstractRabbitMqJobH
         );
 
         if (activities.length) {
-          addToQueue = true;
-          addToQueueCursor = nextCursor;
+          if (activities.length === limit) {
+            addToQueue = true;
+            addToQueueCursor = nextCursor;
+          }
 
           const bulkResponse = await elasticsearch.bulk({
             body: activities.flatMap((activity) => [
@@ -147,29 +166,6 @@ export class BackfillSaveActivitiesElasticsearchJob extends AbstractRabbitMqJobH
 
           addToQueue = true;
           addToQueueCursor = cursor;
-        } else {
-          logger.info(
-            this.queueName,
-            JSON.stringify({
-              topic: "backfill-activities",
-              message: `End. type=${type}, fromTimestamp=${fromTimestampISO}, toTimestamp=${toTimestampISO}, keepGoing=${keepGoing}, limit=${limit}`,
-              type,
-              fromTimestamp,
-              fromTimestampISO,
-              toTimestamp,
-              toTimestampISO,
-              cursor,
-              indexName,
-              keepGoing,
-              lockId,
-            })
-          );
-
-          await redis.hdel(
-            `backfill-activities-elasticsearch-job:${type}`,
-            `${fromTimestamp}:${toTimestamp}`
-          );
-          await redis.decr(`backfill-activities-elasticsearch-job-count:${type}`);
         }
       } catch (error) {
         logger.error(
@@ -195,9 +191,30 @@ export class BackfillSaveActivitiesElasticsearchJob extends AbstractRabbitMqJobH
       }
 
       await releaseLock(lockId);
-    } else {
+
       const lockExists = await doesLockExist(lockId);
 
+      if (lockExists) {
+        await releaseLock(lockId);
+
+        logger.info(
+          this.queueName,
+          JSON.stringify({
+            topic: "backfill-activities",
+            message: `Retry to release lock. type=${type}, fromTimestamp=${fromTimestampISO}, toTimestamp=${toTimestampISO}, keepGoing=${keepGoing}`,
+            type,
+            fromTimestamp,
+            fromTimestampISO,
+            toTimestamp,
+            toTimestampISO,
+            cursor,
+            indexName,
+            keepGoing,
+            lockId,
+          })
+        );
+      }
+    } else {
       logger.info(
         this.queueName,
         JSON.stringify({
@@ -212,9 +229,10 @@ export class BackfillSaveActivitiesElasticsearchJob extends AbstractRabbitMqJobH
           indexName,
           keepGoing,
           lockId,
-          lockExists,
         })
       );
+
+      return;
     }
 
     if (addToQueue) {
@@ -226,6 +244,29 @@ export class BackfillSaveActivitiesElasticsearchJob extends AbstractRabbitMqJobH
         indexName,
         keepGoing
       );
+    } else {
+      logger.info(
+        this.queueName,
+        JSON.stringify({
+          topic: "backfill-activities",
+          message: `End. type=${type}, fromTimestamp=${fromTimestampISO}, toTimestamp=${toTimestampISO}, keepGoing=${keepGoing}, limit=${limit}`,
+          type,
+          fromTimestamp,
+          fromTimestampISO,
+          toTimestamp,
+          toTimestampISO,
+          cursor,
+          indexName,
+          keepGoing,
+          lockId,
+        })
+      );
+
+      await redis.hdel(
+        `backfill-activities-elasticsearch-job:${type}`,
+        `${fromTimestamp}:${toTimestamp}`
+      );
+      await redis.decr(`backfill-activities-elasticsearch-job-count:${type}`);
     }
 
     // return { addToQueue, nextCursor: addToQueueCursor };
@@ -276,7 +317,7 @@ export class BackfillSaveActivitiesElasticsearchJob extends AbstractRabbitMqJobH
         payload: { type, cursor, fromTimestamp, toTimestamp, indexName, keepGoing },
         // jobId,
       },
-      5000
+      keepGoing ? 5000 : 0
     );
   }
 }

@@ -21,6 +21,7 @@ import * as Sdk from "@reservoir0x/sdk";
 import { Collections } from "@/models/collections";
 import { redis } from "@/common/redis";
 import { redb } from "@/common/db";
+import { Sources } from "@/models/sources";
 
 const version = "v6";
 
@@ -159,6 +160,7 @@ export const getUserActivityV6Options: RouteOptions = {
             .description("Txn hash from the blockchain."),
           logIndex: Joi.number().allow(null),
           batchIndex: Joi.number().allow(null),
+          fillSource: Joi.object().allow(null),
           order: JoiActivityOrder,
           createdAt: Joi.string(),
         })
@@ -218,14 +220,10 @@ export const getUserActivityV6Options: RouteOptions = {
       });
 
       let tokensMetadata: any[] = [];
-      let tokensToFetch: any[] = [];
-      let nonCachedTokensToFetch: string[] = [];
 
-      query.getRealtimeTokensMetadata = query.includeMetadata && config.enableActivitiesTokenCache;
-
-      if (query.getRealtimeTokensMetadata) {
+      if (query.includeMetadata) {
         try {
-          tokensToFetch = activities
+          let tokensToFetch = activities
             .filter((activity) => activity.token)
             .map((activity) => `token-cache:${activity.contract}:${activity.token?.id}`);
 
@@ -238,7 +236,7 @@ export const getUserActivityV6Options: RouteOptions = {
               .filter((token) => token)
               .map((token) => JSON.parse(token));
 
-            nonCachedTokensToFetch = tokensToFetch.filter((tokenToFetch) => {
+            const nonCachedTokensToFetch = tokensToFetch.filter((tokenToFetch) => {
               const [, contract, tokenId] = tokenToFetch.split(":");
 
               return (
@@ -272,7 +270,7 @@ export const getUserActivityV6Options: RouteOptions = {
               );
 
               if (tokensResult?.length) {
-                tokensMetadata.concat(
+                tokensMetadata = tokensMetadata.concat(
                   tokensResult.map((token) => ({
                     contract: fromBuffer(token.contract),
                     token_id: token.token_id,
@@ -340,7 +338,7 @@ export const getUserActivityV6Options: RouteOptions = {
 
             if (activity.order.criteria.kind === "token") {
               (orderCriteria as any).data.token = {
-                tokenId: tokenMetadata ? tokenMetadata.id : activity.token?.id,
+                tokenId: activity.token?.id,
                 name: tokenMetadata ? tokenMetadata.name : activity.token?.name,
                 image: tokenMetadata ? tokenMetadata.image : activity.token?.image,
               };
@@ -369,6 +367,11 @@ export const getUserActivityV6Options: RouteOptions = {
               })
             : undefined;
         }
+
+        const sources = await Sources.getInstance();
+        const fillSource = activity.event?.fillSourceId
+          ? sources.get(activity.event?.fillSourceId)
+          : undefined;
 
         return {
           type: activity.type,
@@ -413,6 +416,13 @@ export const getUserActivityV6Options: RouteOptions = {
           txHash: activity.event?.txHash,
           logIndex: activity.event?.logIndex,
           batchIndex: activity.event?.batchIndex,
+          fillSource: fillSource
+            ? {
+                domain: fillSource?.domain,
+                name: fillSource?.getTitle(),
+                icon: fillSource?.getIcon(),
+              }
+            : undefined,
           order,
         };
       });

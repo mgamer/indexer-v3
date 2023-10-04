@@ -185,6 +185,12 @@ export const setupRoutes = (server: Server) => {
   });
 
   server.route({
+    method: "GET",
+    path: "/admin/provider-metadata/{type}",
+    options: adminEndpoints.getProviderMetadata,
+  });
+
+  server.route({
     method: "POST",
     path: "/admin/update-api-key",
     options: adminEndpoints.postUpdateApiKeyOptions,
@@ -206,6 +212,12 @@ export const setupRoutes = (server: Server) => {
     method: "POST",
     path: "/admin/trigger-job",
     options: adminEndpoints.postTriggerJobOptions,
+  });
+
+  server.route({
+    method: "POST",
+    path: "/admin/trigger-rabbit-job",
+    options: adminEndpoints.postTriggerRabbitJobOptions,
   });
 
   server.route({
