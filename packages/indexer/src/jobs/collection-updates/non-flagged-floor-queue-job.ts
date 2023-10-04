@@ -235,12 +235,15 @@ export class NonFlaggedFloorQueueJob extends AbstractRabbitMqJobHandler {
     }
 
     if (nonFlaggedCollectionFloorAsk?.token_id) {
-      await PendingFlagStatusSyncTokens.add([
-        {
-          contract: payload.contract,
-          tokenId: payload.tokenId,
-        },
-      ]);
+      await PendingFlagStatusSyncTokens.add(
+        [
+          {
+            contract: payload.contract,
+            tokenId: payload.tokenId,
+          },
+        ],
+        true
+      );
     }
   }
 
