@@ -19,7 +19,6 @@ export class CollectionFlagStatusSyncJob extends AbstractRabbitMqJobHandler {
   maxRetries = 10;
   concurrency = 1;
   lazyMode = true;
-  tokensLimit = 25000;
   useSharedChannel = true;
   disableConsuming = !config.disableFlagStatusRefreshJob || !config.liquidityOnly;
 
