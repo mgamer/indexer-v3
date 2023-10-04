@@ -48,8 +48,8 @@ const normalize = (order: Types.OrderParams): Types.OrderParams => {
     amounts: order.amounts ? order.amounts.map(s) : [],
     currency: s(order.currency),
     path: order.path ? order.path.map(s) : [],
-    executeCallData: order.executeCallData ? lc(order.executeCallData) : undefined,
-    deductRoyalty: order.deductRoyalty ? "true" : "false",
+    executeCallData: lc(order.executeCallData),
+    deductRoyalty: order.deductRoyalty,
     vTokenPremiumLimit: s(order.vTokenPremiumLimit),
     price: s(order.price),
     extra: {

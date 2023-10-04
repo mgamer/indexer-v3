@@ -7,7 +7,7 @@ export type OrderParams = {
   idsOut?: string[];
   amounts?: string[];
   path: string[];
-  executeCallData?: string;
+  executeCallData: string;
   vTokenPremiumLimit?: string;
   deductRoyalty: string;
   currency?: string;

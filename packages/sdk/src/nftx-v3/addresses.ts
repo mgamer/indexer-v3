@@ -8,6 +8,10 @@ export const MarketplaceZap: ChainIdToAddress = {
   [Network.EthereumGoerli]: "0x5A40C0288d23E83a23bb16C29B790F7e49e49ee6",
 };
 
+export const NFTXUniversalRouter: ChainIdToAddress = {
+  [Network.EthereumGoerli]: "0xF7c4FC5C2e30258e1E4d1197fc63aeDE371508f3",
+};
+
 export const CreateVaultZap: ChainIdToAddress = {
   [Network.EthereumGoerli]: "0x040fE06ABc3c099772DEe413dE138937bf053543",
 };

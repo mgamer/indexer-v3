@@ -107,7 +107,7 @@ export const setupNFTXV3Listings = async (listings: NFTXV3Listing[]) => {
     ]);
 
     if (poolPrice) {
-      listing.price = bn(poolPrice);
+      listing.price = bn(poolPrice.price);
       listing.vault = vaultAddress;
       listing.order = new Sdk.NftxV3.Order(chainId, {
         vaultId: _vaultId.toString(),
@@ -116,7 +116,9 @@ export const setupNFTXV3Listings = async (listings: NFTXV3Listing[]) => {
         userAddress: seller.address,
         idsOut: [newId.toString()],
         path: [Sdk.Common.Addresses.WNative[chainId], vaultAddress],
+        executeCallData: poolPrice.executeCallData,
         deductRoyalty: "false",
+        vTokenPremiumLimit: ethers.constants.MaxUint256.toString(),
         price: isCancelled ? "0" : listing.price.toString(),
         extra: {
           prices: [listing.price.toString()],
@@ -223,7 +225,7 @@ export const setupNFTXV3Offers = async (offers: NFTXV3Offer[]) => {
     ]);
 
     if (poolPrice) {
-      offer.price = bn(poolPrice);
+      offer.price = bn(poolPrice.price);
       offer.vault = vaultAddress;
       offer.order = new Sdk.NftxV3.Order(chainId, {
         vaultId: _vaultId.toString(),
@@ -233,6 +235,7 @@ export const setupNFTXV3Offers = async (offers: NFTXV3Offer[]) => {
         currency: Sdk.Common.Addresses.WNative[chainId],
         idsIn: [newId.toString()],
         price: isCancelled ? offer.price.mul(bn(10)).toString() : offer.price.toString(),
+        executeCallData: poolPrice.executeCallData,
         deductRoyalty: "false",
         extra: {
           prices: [offer.price.toString()],

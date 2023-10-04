@@ -6,11 +6,12 @@ import { Provider } from "@ethersproject/abstract-provider";
 import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
 import { Contract } from "@ethersproject/contracts";
 import { parseEther } from "@ethersproject/units";
+import { ethers } from "ethers";
 import axios from "axios";
 
 import * as Addresses from "./addresses";
 import * as Common from "../common";
-import { bn } from "../utils";
+import { bn, getCurrentTimestamp } from "../utils";
 import QuoterV2ABI from "./abis/QuoterV2.json";
 
 const NFTX_ENDPOINT = "https://api-v3.nftx.xyz";
@@ -50,7 +51,10 @@ export const getPoolPrice = async (
   provider: Provider,
   // for "buy" side
   tokenIds?: number[]
-): Promise<BigNumberish> => {
+): Promise<{
+  price: BigNumberish;
+  executeCallData: string;
+}> => {
   const chainId = await provider.getNetwork().then((n) => n.chainId);
   const weth = Common.Addresses.WNative[chainId];
 
@@ -58,6 +62,9 @@ export const getPoolPrice = async (
   const fees = await getPoolETHFees(vault, provider);
 
   const quoter = new Contract(Addresses.QuoterV2[chainId], QuoterV2ABI, provider);
+  const nftxUniversalRouterIFace = new Interface([
+    `function execute(bytes calldata commands, bytes[] calldata inputs, uint256 deadline) external payable`,
+  ]);
 
   if (side === "buy") {
     const vaultContract = new Contract(
@@ -141,7 +148,37 @@ export const getPoolPrice = async (
       price = price.add(price.mul(slippage).div(10000));
     }
 
-    return price;
+    const executeCallData = nftxUniversalRouterIFace.encodeFunctionData("execute", [
+      "0x01", // V3_SWAP_EXACT_OUT
+      [
+        ethers.utils.AbiCoder.prototype.encode(
+          ["address", "uint256", "uint256", "bytes", "bool"],
+          [
+            // recipient
+            Addresses.MarketplaceZap[chainId],
+            // amountOut
+            localAmount,
+            // amountInMax
+            slippage
+              ? bn(wethRequired).add(bn(wethRequired).mul(slippage).div(10000))
+              : wethRequired,
+            // path
+            ethers.utils.solidityPack(
+              ["address", "uint24", "address"],
+              [
+                weth, // tokenIn
+                feeTier,
+                vault, // tokenOut
+              ]
+            ),
+            true, // payerIsUser
+          ]
+        ),
+      ],
+      getCurrentTimestamp(100),
+    ]);
+
+    return { price, executeCallData };
   } else {
     const { amountOut: wethAmount }: { amountOut: BigNumberish } =
       await quoter.callStatic.quoteExactInputSingle({
@@ -156,7 +193,35 @@ export const getPoolPrice = async (
       price = price.sub(price.mul(slippage).div(10000));
     }
 
-    return price;
+    const executeCallData = nftxUniversalRouterIFace.encodeFunctionData("execute", [
+      "0x00", // V3_SWAP_EXACT_IN
+      [
+        ethers.utils.AbiCoder.prototype.encode(
+          ["address", "uint256", "uint256", "bytes", "bool"],
+          [
+            // recipient
+            Addresses.MarketplaceZap[chainId],
+            // amountIn
+            localAmount,
+            // amountOutMin
+            slippage ? bn(wethAmount).sub(bn(wethAmount).mul(slippage).div(10000)) : wethAmount,
+            // path
+            ethers.utils.solidityPack(
+              ["address", "uint24", "address"],
+              [
+                vault, // tokenIn
+                feeTier,
+                weth, // tokenOut
+              ]
+            ),
+            true, // payerIsUser
+          ]
+        ),
+      ],
+      getCurrentTimestamp(100),
+    ]);
+
+    return { price, executeCallData };
   }
 };
 

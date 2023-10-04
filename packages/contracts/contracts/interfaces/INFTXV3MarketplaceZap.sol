@@ -24,7 +24,6 @@ interface INFTXV3MarketplaceZap {
     uint256 vaultId;
     address collection;
     uint256[] idsOut;
-    uint256 amount;
     uint256 price;
     bytes executeCallData;
     uint256 vTokenPremiumLimit;
