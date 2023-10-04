@@ -3,10 +3,12 @@ import { AddressZero, HashZero, MaxUint256 } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import { keccak256 } from "@ethersproject/keccak256";
 import { keccak256 as solidityKeccak256 } from "@ethersproject/solidity";
+import * as Sdk from "@reservoir0x/sdk";
 import MerkleTree from "merkletreejs";
 
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
+import { config } from "@/config/index";
 import { Transaction } from "@/models/transactions";
 import {
   CollectionMint,
@@ -123,7 +125,7 @@ export const extractByCollectionERC721 = async (collection: string): Promise<Col
                 },
               },
             },
-            currency: NATIVE_CURRENCY,
+            currency: Sdk.Common.Addresses.Native[config.chainId],
             price,
             maxMintsPerWallet,
             maxSupply,
@@ -208,7 +210,7 @@ export const extractByCollectionERC721 = async (collection: string): Promise<Col
                   },
                 },
               },
-              currency: NATIVE_CURRENCY,
+              currency: Sdk.Common.Addresses.Native[config.chainId],
               maxSupply,
               startTime: toSafeTimestamp(claimCondition.startTimestamp),
               allowlistId: claimCondition.merkleRoot,
@@ -340,7 +342,7 @@ export const extractByCollectionERC1155 = async (
                 },
               },
             },
-            currency: NATIVE_CURRENCY,
+            currency: Sdk.Common.Addresses.Native[config.chainId],
             price,
             tokenId,
             maxMintsPerWallet,
@@ -431,7 +433,7 @@ export const extractByCollectionERC1155 = async (
                   },
                 },
               },
-              currency: NATIVE_CURRENCY,
+              currency: Sdk.Common.Addresses.Native[config.chainId],
               tokenId,
               maxSupply,
               startTime: toSafeTimestamp(claimCondition.startTimestamp),
