@@ -25,7 +25,8 @@ export class CollectionFlagStatusSyncJob extends AbstractRabbitMqJobHandler {
   protected async process(payload: CollectionFlagStatusSyncJobPayload) {
     const { slug } = payload;
     if (!slug) {
-      throw new Error("Missing slug");
+      logger.warn(this.queueName, "Missing slug in payload");
+      return;
     }
 
     if (!(await doesLockExist(this.getLockName()))) {
