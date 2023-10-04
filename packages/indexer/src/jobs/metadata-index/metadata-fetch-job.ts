@@ -62,8 +62,6 @@ export class MetadataIndexFetchJob extends AbstractRabbitMqJobHandler {
     const prioritized = !_.isUndefined(this.rabbitMqMessage?.prioritized);
     const limit = 1000;
     let refreshTokens: RefreshTokens[] = [];
-    let contract = kind === "single-token" ? data.contract : AddressZero;
-    let tokenId = kind === "single-token" ? data.tokenId : "0";
 
     if (kind === "full-collection-by-slug") {
       logger.info(this.queueName, `Full collection by slug. data=${JSON.stringify(data)}`);
@@ -86,7 +84,9 @@ export class MetadataIndexFetchJob extends AbstractRabbitMqJobHandler {
       logger.info(this.queueName, `Full collection. data=${JSON.stringify(data)}`);
 
       // Get batch of tokens for the collection
-      [contract, tokenId] = data.continuation ? data.continuation.split(":") : [AddressZero, "0"];
+      const [contract, tokenId] = data.continuation
+        ? data.continuation.split(":")
+        : [AddressZero, "0"];
 
       refreshTokens = await this.getTokensForCollection(data.collection, contract, tokenId, limit);
 
