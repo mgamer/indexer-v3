@@ -18,6 +18,19 @@ const NFTX_ENDPOINT = "https://api-v3.nftx.xyz";
 
 export const REWARD_FEE_TIER = 3_000;
 
+const sortTokens = (tokenA: string, tokenB: string) => {
+  let token0, token1;
+  if (BigNumber.from(tokenA).lt(BigNumber.from(tokenB))) {
+    token0 = tokenA;
+    token1 = tokenB;
+  } else {
+    token0 = tokenB;
+    token1 = tokenA;
+  }
+
+  return { token0, token1 };
+};
+
 export const getPoolFeatures = async (address: string, provider: Provider) => {
   const iface = new Interface([
     "function assetAddress() view returns (address)",
@@ -148,6 +161,8 @@ export const getPoolPrice = async (
       price = price.add(price.mul(slippage).div(10000));
     }
 
+    const { token0, token1 } = sortTokens(weth, vault);
+
     const executeCallData = nftxUniversalRouterIFace.encodeFunctionData("execute", [
       "0x01", // V3_SWAP_EXACT_OUT
       [
@@ -163,19 +178,12 @@ export const getPoolPrice = async (
               ? bn(wethRequired).add(bn(wethRequired).mul(slippage).div(10000))
               : wethRequired,
             // path
-            ethers.utils.solidityPack(
-              ["address", "uint24", "address"],
-              [
-                weth, // tokenIn
-                feeTier,
-                vault, // tokenOut
-              ]
-            ),
+            ethers.utils.solidityPack(["address", "uint24", "address"], [token0, feeTier, token1]),
             true, // payerIsUser
           ]
         ),
       ],
-      getCurrentTimestamp(100),
+      getCurrentTimestamp(60 * 60),
     ]);
 
     return { price, executeCallData };
@@ -193,6 +201,8 @@ export const getPoolPrice = async (
       price = price.sub(price.mul(slippage).div(10000));
     }
 
+    const { token0, token1 } = sortTokens(weth, vault);
+
     const executeCallData = nftxUniversalRouterIFace.encodeFunctionData("execute", [
       "0x00", // V3_SWAP_EXACT_IN
       [
@@ -206,19 +216,12 @@ export const getPoolPrice = async (
             // amountOutMin
             slippage ? bn(wethAmount).sub(bn(wethAmount).mul(slippage).div(10000)) : wethAmount,
             // path
-            ethers.utils.solidityPack(
-              ["address", "uint24", "address"],
-              [
-                vault, // tokenIn
-                feeTier,
-                weth, // tokenOut
-              ]
-            ),
+            ethers.utils.solidityPack(["address", "uint24", "address"], [token0, feeTier, token1]),
             true, // payerIsUser
           ]
         ),
       ],
-      getCurrentTimestamp(100),
+      getCurrentTimestamp(60 * 60),
     ]);
 
     return { price, executeCallData };
