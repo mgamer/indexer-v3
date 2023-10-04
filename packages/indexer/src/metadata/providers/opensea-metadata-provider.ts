@@ -77,7 +77,6 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
   protected async _getTokensMetadata(
     tokens: { contract: string; tokenId: string }[],
     options?: {
-      allowFallback?: boolean;
       flagged?: boolean;
     }
   ): Promise<TokenMetadata[]> {
