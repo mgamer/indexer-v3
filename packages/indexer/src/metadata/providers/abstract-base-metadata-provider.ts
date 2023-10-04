@@ -30,7 +30,6 @@ export abstract class AbstractBaseMetadataProvider {
   async getTokensMetadata(
     tokens: { contract: string; tokenId: string }[],
     options?: {
-      allowFallback?: boolean;
       flagged?: boolean;
     }
   ): Promise<TokenMetadata[]> {
@@ -96,7 +95,6 @@ export abstract class AbstractBaseMetadataProvider {
   protected abstract _getTokensMetadata(
     tokens: { contract: string; tokenId: string }[],
     options?: {
-      allowFallback?: boolean;
       flagged?: boolean;
     }
   ): Promise<TokenMetadata[]>;

@@ -45,7 +45,6 @@ export class MetadataProviderRouter {
     tokens: { contract: string; tokenId: string }[],
     method = "",
     options?: {
-      allowFallback?: boolean;
       flagged?: boolean;
     }
   ): Promise<TokenMetadata[]> {
