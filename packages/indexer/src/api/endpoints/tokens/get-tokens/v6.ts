@@ -784,8 +784,13 @@ export const getTokensV6Options: RouteOptions = {
       }
 
       if (query.tokenName) {
+        if (!isNaN(query.tokenName)) {
+          conditions.push(`t.token_id::text LIKE $/tokenName/ OR t.name ILIKE $/tokenName/`);
+        } else {
+          conditions.push(`t.name ILIKE $/tokenName/`);
+        }
+
         query.tokenName = "%" + query.tokenName + "%";
-        conditions.push(`t.name ILIKE $/tokenName/`);
       }
 
       if (query.tokenSetId) {
