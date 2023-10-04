@@ -954,7 +954,7 @@ export const getNetworkSettings = (): NetworkSettings => {
               symbol: "FEWL",
               decimals: 18,
             },
-          ]
+          ],
         ]),
         onStartup: async () => {
           // Insert the native currency
