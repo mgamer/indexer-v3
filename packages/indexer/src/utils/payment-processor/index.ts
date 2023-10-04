@@ -3,6 +3,7 @@ import * as Sdk from "@reservoir0x/sdk";
 
 import { baseProvider } from "@/common/provider";
 import { redis } from "@/common/redis";
+import { bn } from "@/common/utils";
 import { config } from "@/config/index";
 
 export type PaymentProcessorConfig = {
@@ -47,7 +48,7 @@ export const getSecurityPolicyById = async (
 
       const securityPolicy = await exchange.getSecurityPolicy(id);
       result = {
-        id,
+        id: bn(id).toString(),
         enforceExchangeWhitelist: securityPolicy.enforceExchangeWhitelist,
         enforcePaymentMethodWhitelist: securityPolicy.enforcePaymentMethodWhitelist,
         enforcePricingConstraints: securityPolicy.enforcePricingConstraints,
