@@ -100,7 +100,6 @@ export abstract class AbstractBaseMetadataProvider {
   ): Promise<TokenMetadata[]>;
 
   protected abstract _getTokensMetadataBySlug(
-    contract: string,
     slug: string,
     continuation?: string
   ): Promise<TokenMetadataBySlugResult>;

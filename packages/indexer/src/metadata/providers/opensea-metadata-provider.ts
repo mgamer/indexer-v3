@@ -168,7 +168,7 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
     contract: string,
     continuation?: string
   ): Promise<{
-    data: { contract: string; tokenId: string; flagged: boolean }[];
+    data: { contract: string; tokenId: string; isFlagged: boolean }[];
     continuation?: string;
   }> {
     const searchParams = new URLSearchParams();
@@ -189,7 +189,7 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
         headers: !this.isOSTestnet()
           ? {
               url,
-              "X-API-KEY": config.openSeaTokenMetadataBySlugApiKey.trim(),
+              "X-API-KEY": config.openSeaFlaggedMetadataApiKey.trim(),
               Accept: "application/json",
             }
           : {
@@ -206,7 +206,7 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
       data: data.assets.map((asset: any) => ({
         contract: asset.asset_contract.address,
         tokenId: asset.token_id,
-        flagged: !asset.supports_wyvern,
+        isFlagged: !asset.supports_wyvern,
       })),
       continuation: data.next ?? undefined,
     };
