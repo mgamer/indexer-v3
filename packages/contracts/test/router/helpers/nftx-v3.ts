@@ -49,12 +49,14 @@ export const setupNFTXV3Listings = async (listings: NFTXV3Listing[]) => {
 
     await nft.contract.connect(seller).setApprovalForAll(createVaultZap.address, true);
 
+    const pricePerToken = bn(price).div(bn(poolIds.length));
+
     const args = {
       vaultInfo: {
         assetAddress: nft.contract.address,
         is1155: false,
         allowAllItems: true,
-        name: "TestNFT",
+        name: "TestNFT_" + new Date(), // adding timestamp so that multiple vaults can be deployed, without revert
         symbol: "TEST",
       },
       eligibilityStorage: {
@@ -70,21 +72,22 @@ export const setupNFTXV3Listings = async (listings: NFTXV3Listing[]) => {
         swapFee: 3000000,
       },
       liquidityParams: {
-        lowerNFTPriceInETH: parseEther("0.1"),
-        upperNFTPriceInETH: parseEther("0.3"),
+        lowerNFTPriceInETH: pricePerToken.sub(pricePerToken.mul(50).div(100)), // 50% lower
+        upperNFTPriceInETH: pricePerToken.add(pricePerToken.mul(50).div(100)), // 50% higher
         fee: Sdk.NftxV3.Helpers.REWARD_FEE_TIER,
-        currentNFTPriceInETH: parseEther("0.2"),
+        currentNFTPriceInETH: pricePerToken,
         vTokenMin: 0,
         wethMin: 0,
-        deadline: (await getCurrentTimestamp(ethers.provider)) + 100,
+        deadline: (await getCurrentTimestamp(ethers.provider)) + 60 * 60,
       },
     };
 
-    const _vaultId = await createVaultZap
-      .connect(seller)
-      .callStatic.createVault(args, { value: price });
+    // TODO: determine actual ETH value
+    const value = bn(price).mul(100);
 
-    await createVaultZap.connect(seller).createVault(args, { value: price });
+    const _vaultId = await createVaultZap.connect(seller).callStatic.createVault(args, { value });
+
+    await createVaultZap.connect(seller).createVault(args, { value });
 
     const factory = new Contract(
       Sdk.NftxV3.Addresses.VaultFactory[chainId],
@@ -93,36 +96,27 @@ export const setupNFTXV3Listings = async (listings: NFTXV3Listing[]) => {
     );
     const vaultAddress = await factory.vault(_vaultId.toString());
 
-    const [poolPrice] = await Promise.all([
-      Sdk.NftxV3.Helpers.getPoolPrice(
-        vaultAddress,
-        1,
-        "buy",
-        100,
-        Sdk.NftxV3.Helpers.REWARD_FEE_TIER,
-        ethers.provider,
-        [poolIds[0]]
-      ),
-      Sdk.NftxV3.Helpers.getPoolNFTs(vaultAddress, ethers.provider),
-    ]);
+    const poolPrice = await Sdk.NftxV3.Helpers.getPoolPrice(
+      vaultAddress,
+      1,
+      "buy",
+      100,
+      Sdk.NftxV3.Helpers.REWARD_FEE_TIER,
+      ethers.provider,
+      [nft.id]
+    );
 
     if (poolPrice) {
       listing.price = bn(poolPrice.price);
       listing.vault = vaultAddress;
-      listing.order = new Sdk.NftxV3.Order(chainId, {
+      listing.order = new Sdk.NftxV3.Order(chainId, vaultAddress, seller.address, {
         vaultId: _vaultId.toString(),
-        pool: vaultAddress,
         collection: nft.contract.address,
-        userAddress: seller.address,
-        idsOut: [newId.toString()],
-        path: [Sdk.Common.Addresses.WNative[chainId], vaultAddress],
-        executeCallData: poolPrice.executeCallData,
-        deductRoyalty: "false",
-        vTokenPremiumLimit: ethers.constants.MaxUint256.toString(),
+        idsOut: [nft.id.toString()],
         price: isCancelled ? "0" : listing.price.toString(),
-        extra: {
-          prices: [listing.price.toString()],
-        },
+        executeCallData: poolPrice.executeCallData,
+        vTokenPremiumLimit: ethers.constants.MaxUint256.toString(),
+        deductRoyalty: false,
       });
     }
   }
@@ -227,20 +221,15 @@ export const setupNFTXV3Offers = async (offers: NFTXV3Offer[]) => {
     if (poolPrice) {
       offer.price = bn(poolPrice.price);
       offer.vault = vaultAddress;
-      offer.order = new Sdk.NftxV3.Order(chainId, {
+      offer.order = new Sdk.NftxV3.Order(chainId, vaultAddress, buyer.address, {
         vaultId: _vaultId.toString(),
-        pool: vaultAddress,
         collection: nft.contract.address,
-        userAddress: buyer.address,
         currency: Sdk.Common.Addresses.WNative[chainId],
-        idsIn: [newId.toString()],
+        idsIn: [nft.id.toString()],
+        amounts: [],
         price: isCancelled ? offer.price.mul(bn(10)).toString() : offer.price.toString(),
         executeCallData: poolPrice.executeCallData,
-        deductRoyalty: "false",
-        extra: {
-          prices: [offer.price.toString()],
-        },
-        path: [vaultAddress, Sdk.Common.Addresses.WNative[chainId]],
+        deductRoyalty: false,
       });
     }
   }

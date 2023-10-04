@@ -166,38 +166,14 @@ describe("[ReservoirV6_0_1] NFTXV3 listings", () => {
       return;
     }
 
-    // // Fetch pre-state
-    // const getPairBalances = async () => {
-    //   const balances = [];
-    //   for (let index = 0; index < listings.length; index++) {
-    //     const listing = listings[index];
-    //     if (listing.lpToken) {
-    //       const contract = new Sdk.Common.Helpers.Erc20(
-    //         ethers.provider,
-    //         Sdk.Common.Addresses.WNative[chainId]
-    //       );
-    //       const pairWETH = await contract.getBalance(listing.lpToken);
-    //       balances.push({
-    //         pair: listing.lpToken,
-    //         balance: formatEther(pairWETH),
-    //       });
-    //     }
-    //   }
-    //   return balances;
-    // };
-
     const ethBalancesBefore = await getBalances(Sdk.Common.Addresses.Native[chainId]);
 
-    // const pairBalancesBefore = await getPairBalances();
-
     // Execute
-
     await router.connect(carol).execute(executions, {
       value: executions.map(({ value }) => value).reduce((a, b) => bn(a).add(b), bn(0)),
     });
 
     // Fetch post-state
-
     const ethBalancesAfter = await getBalances(Sdk.Common.Addresses.Native[chainId]);
 
     const aliceOrderList = listings.filter(
@@ -228,31 +204,6 @@ describe("[ReservoirV6_0_1] NFTXV3 listings", () => {
     // Check Carol balance
     const defaultSlippage = 5;
     expect(diffPercent).to.lte(defaultSlippage);
-
-    // const pairBalancesAfter = await getPairBalances();
-    // const lpFee = 281; // 281 / 10000
-
-    // for (let index = 0; index < listings.length; index++) {
-    //   const listing = listings[index];
-    //   if (listing.isCancelled) continue;
-    //   if (listing.lpToken) {
-    //     const before = pairBalancesBefore.find(
-    //       (c) => c.pair === listing.lpToken
-    //     );
-    //     const after = pairBalancesAfter.find((c) => c.pair === listing.lpToken);
-    //     if (before && after) {
-    //       const change = parseEther(after.balance).sub(
-    //         parseEther(before.balance)
-    //       );
-    //       const diffPercent = bn(listing.price)
-    //         .sub(change)
-    //         .mul(bn(10000))
-    //         .div(listing.price);
-    //       // Check pair balance change
-    //       expect(diffPercent).to.eq(bn(lpFee));
-    //     }
-    //   }
-    // }
 
     // Emilio got the fee payments
     if (chargeFees) {
@@ -309,4 +260,24 @@ describe("[ReservoirV6_0_1] NFTXV3 listings", () => {
       }
     }
   }
+
+  const multiple = false;
+  const partial = false;
+  const chargeFees = false;
+  const revertIfIncomplete = true;
+
+  const testName =
+    "[eth]" +
+    `${multiple ? "[multiple-orders]" : "[single-order]"}` +
+    `${partial ? "[partial]" : "[full]"}` +
+    `${chargeFees ? "[fees]" : "[no-fees]"}` +
+    `${revertIfIncomplete ? "[reverts]" : "[skip-reverts]"}`;
+  it.only(testName, async () =>
+    testAcceptListings(
+      chargeFees,
+      revertIfIncomplete,
+      partial,
+      multiple ? getRandomInteger(2, 6) : 1
+    )
+  );
 });
