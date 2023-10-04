@@ -2,13 +2,11 @@
 
 import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handler";
 import { config } from "@/config/index";
-import {
-  getTokensFlagStatusForCollection,
-  handleTokenFlagStatusUpdate,
-} from "@/jobs/flag-status/utils";
+import { getTokensFlagStatusForCollection } from "@/jobs/flag-status/utils";
 import { acquireLock, doesLockExist } from "@/common/redis";
 import { logger } from "@/common/logger";
 import { PendingFlagStatusSyncCollections } from "@/models/pending-flag-status-sync-collections";
+import { flagStatusUpdateJob } from "@/jobs/flag-status/flag-status-update-job";
 
 export class CollectionFlagStatusSyncJob extends AbstractRabbitMqJobHandler {
   queueName = "collection-flag-status-sync-queue";
@@ -28,7 +26,7 @@ export class CollectionFlagStatusSyncJob extends AbstractRabbitMqJobHandler {
 
     const collectionToGetFlagStatusFor = await PendingFlagStatusSyncCollections.get();
 
-    let tokens: { contract: string; tokenId: string; flagged: boolean | null }[] = [];
+    let tokens: { contract: string; tokenId: string; isFlagged: boolean | null }[] = [];
     let nextContinuation: string | null = null;
 
     try {
@@ -57,9 +55,7 @@ export class CollectionFlagStatusSyncJob extends AbstractRabbitMqJobHandler {
       }
     }
 
-    await Promise.all(
-      tokens.map(async (token) => handleTokenFlagStatusUpdate({ context: this.queueName, token }))
-    );
+    await flagStatusUpdateJob.addToQueue(tokens);
 
     if (nextContinuation) {
       await PendingFlagStatusSyncCollections.add(

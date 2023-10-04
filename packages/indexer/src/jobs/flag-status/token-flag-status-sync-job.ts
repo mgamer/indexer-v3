@@ -3,13 +3,11 @@
 import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handler";
 
 import { config } from "@/config/index";
-import {
-  getTokensFlagStatusWithTokenIds,
-  handleTokenFlagStatusUpdate,
-} from "@/jobs/flag-status/utils";
+import { getTokensFlagStatusWithTokenIds } from "@/jobs/flag-status/utils";
 import { acquireLock, doesLockExist } from "@/common/redis";
 import { logger } from "@/common/logger";
 import { PendingFlagStatusSyncTokens } from "@/models/pending-flag-status-sync-tokens";
+import { flagStatusUpdateJob } from "@/jobs/flag-status/flag-status-update-job";
 
 export class TokenFlagStatusSyncJob extends AbstractRabbitMqJobHandler {
   queueName = "token-flag-status-sync-queue";
@@ -28,7 +26,7 @@ export class TokenFlagStatusSyncJob extends AbstractRabbitMqJobHandler {
     }
 
     const tokensToGetFlagStatusFor = await PendingFlagStatusSyncTokens.get(20);
-    let tokens: { contract: string; tokenId: string; flagged: boolean | null }[] = [];
+    let tokens: { contract: string; tokenId: string; isFlagged: boolean | null }[] = [];
     try {
       tokens = await getTokensFlagStatusWithTokenIds(tokensToGetFlagStatusFor);
     } catch (error) {
@@ -50,14 +48,7 @@ export class TokenFlagStatusSyncJob extends AbstractRabbitMqJobHandler {
       }
     }
 
-    await Promise.all(
-      tokens.map(async (token) =>
-        handleTokenFlagStatusUpdate({
-          context: this.queueName,
-          token,
-        })
-      )
-    );
+    await flagStatusUpdateJob.addToQueue(tokens);
   }
 
   public getLockName() {
