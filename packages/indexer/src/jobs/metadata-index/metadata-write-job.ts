@@ -177,6 +177,7 @@ export class MetadataIndexWriteJob extends AbstractRabbitMqJobHandler {
       return;
     }
 
+    // If this is a new token and there's still no metadata
     if (
       _.isNull(result.image) &&
       isAfter(add(new Date(result.created_at), { days: 5 }), Date.now())
