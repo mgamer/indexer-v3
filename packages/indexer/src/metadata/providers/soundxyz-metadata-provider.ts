@@ -9,6 +9,7 @@ import * as soundxyz from "../extend/soundxyz/index";
 import { RequestWasThrottledError } from "./utils";
 import { openseaMetadataProvider } from "./opensea-metadata-provider";
 import { AbstractBaseMetadataProvider } from "./abstract-base-metadata-provider";
+import { SoundNftQuery } from "../extend/soundxyz/index";
 
 export class SoundxyzMetadataProvider extends AbstractBaseMetadataProvider {
   method = "soundxyz";
@@ -16,16 +17,16 @@ export class SoundxyzMetadataProvider extends AbstractBaseMetadataProvider {
   async _getCollectionMetadata(contract: string, tokenId: string): Promise<CollectionMetadata> {
     const {
       data: {
-        data: { releaseFromToken },
+        data: { nft },
       },
-    } = await soundxyz.getContractSlug(contract, tokenId);
+    } = await soundxyz.getMetadataFromSoundApi(contract, tokenId);
 
     const openseaRoyalties = await openseaMetadataProvider
       .getCollectionMetadata(contract, tokenId)
       .then((m) => m.openseaRoyalties)
       .catch(() => []);
 
-    return this.parseCollection(releaseFromToken, contract, openseaRoyalties);
+    return this.parseCollection(nft.release, contract, openseaRoyalties);
   }
 
   async _getTokensMetadata(
@@ -36,12 +37,12 @@ export class SoundxyzMetadataProvider extends AbstractBaseMetadataProvider {
     for (const { contract, tokenId } of tokens) {
       try {
         const [response, collection] = await Promise.all([
-          soundxyz.getContractSlug(contract, tokenId),
+          soundxyz.getMetadataFromSoundApi(contract, tokenId),
           this.getCollectionId(contract, tokenId),
         ]);
 
         data.push(
-          this.parseToken(response.data.data.releaseFromToken, contract, tokenId, collection)
+          this.parseToken(response.data.data.nft, contract, tokenId, collection)
         );
       } catch (error) {
         logger.error(
@@ -73,22 +74,19 @@ export class SoundxyzMetadataProvider extends AbstractBaseMetadataProvider {
     // Shared contract logic
     const {
       data: {
-        data: { releaseFromToken },
+        data: { nft },
       },
-    } = await soundxyz.getContractSlug(contract, tokenId);
-    return `${contract}:soundxyz-${releaseFromToken.id}`;
+    } = await soundxyz.getMetadataFromSoundApi(contract, tokenId);
+    return `${contract}:soundxyz-${nft.release.id}`;
   }
 
-  parseToken(metadata: any, contract: string, tokenId: string, collection: any): TokenMetadata {
-    const isGoldenEgg = metadata.eggGame?.nft.tokenId === tokenId;
-    let imageUrl =
-      metadata.animatedCoverImage?.url ??
-      metadata.coverImage?.url ??
-      metadata.staticCoverImage?.url;
+  parseToken(metadata: SoundNftQuery['nft'], contract: string, tokenId: string, collection: any): TokenMetadata {
+    const isGoldenEgg = metadata.isGoldenEgg;
+    let imageUrl = metadata.coverImage.url;
     if (isGoldenEgg) {
       imageUrl =
-        metadata.eggGame.animatedGoldenEggImageOptimized?.url ??
-        metadata.eggGame.goldenEggImage?.url;
+        metadata.release.eggGame?.animatedGoldenEggImageOptimized?.url ||
+        metadata.release.eggGame?.goldenEggImage?.url || '';
     }
 
     return {
@@ -98,14 +96,12 @@ export class SoundxyzMetadataProvider extends AbstractBaseMetadataProvider {
       slug: null,
       name: metadata.title,
       flagged: false,
-      description: metadata.behindTheMusic,
+      description: metadata.release.behindTheMusic,
       imageUrl,
-      mediaUrl: metadata.track.revealedAudio.url,
+      mediaUrl: metadata.audioUrl,
       attributes: (
-        (isGoldenEgg
-          ? metadata.eggGame.nft.openSeaMetadataAttributes
-          : metadata.baseMetadataAttributes) || []
-      ).map((trait: any) => ({
+        metadata.openSeaMetadataAttributes
+      ).map((trait) => ({
         key: trait.traitType ?? "property",
         value: trait.value,
         kind: typeof trait.value == "number" ? "number" : "string",
@@ -114,7 +110,7 @@ export class SoundxyzMetadataProvider extends AbstractBaseMetadataProvider {
     };
   }
 
-  parseCollection(metadata: any, contract: string, openseaRoyalties?: object): CollectionMetadata {
+  parseCollection(metadata: SoundNftQuery['nft']['release'], contract: string, openseaRoyalties?: object): CollectionMetadata {
     const royalties = [];
 
     if (metadata.fundingAddress && metadata.royaltyBps) {
@@ -131,8 +127,8 @@ export class SoundxyzMetadataProvider extends AbstractBaseMetadataProvider {
       community: "sound.xyz",
       metadata: {
         imageUrl: metadata.coverImage.url,
-        description: metadata.description,
-        externalUrl: `https://sound.xyz/${metadata.artist.soundHandle}/${metadata.titleSlug}`,
+        description: metadata.behindTheMusic,
+        externalUrl: metadata.webappUri,
       },
       royalties,
       openseaRoyalties: openseaRoyalties,
