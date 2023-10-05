@@ -177,11 +177,12 @@ export class MetadataIndexWriteJob extends AbstractRabbitMqJobHandler {
       return;
     }
 
-    // If this is a new token and there's still no metadata
+    // If this is a new token and there's still no metadata (exclude mainnet)
     if (
+      config.chainId !== 1 &&
       _.isNull(result.image) &&
       _.isNull(result.name) &&
-      isAfter(add(new Date(result.created_at), { minutes: 30 }), Date.now())
+      isAfter(add(new Date(result.created_at), { minutes: 60 }), Date.now())
     ) {
       logger.warn(this.queueName, `no metadata fetched for ${JSON.stringify(payload)}`);
 
@@ -199,7 +200,7 @@ export class MetadataIndexWriteJob extends AbstractRabbitMqJobHandler {
           },
         ],
         false,
-        5 * 60
+        10 * 60
       );
     }
 
