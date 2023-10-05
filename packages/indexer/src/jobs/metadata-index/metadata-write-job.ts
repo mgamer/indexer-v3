@@ -16,6 +16,7 @@ import { TokenMetadata } from "@/metadata/types";
 import { newCollectionForTokenJob } from "@/jobs/token-updates/new-collection-for-token-job";
 import { config } from "@/config/index";
 import { metadataIndexFetchJob } from "@/jobs/metadata-index/metadata-fetch-job";
+import { redis } from "@/common/redis";
 
 export type MetadataIndexWriteJobPayload = {
   collection: string;
@@ -184,6 +185,7 @@ export class MetadataIndexWriteJob extends AbstractRabbitMqJobHandler {
       _.isNull(result.name) &&
       isAfter(add(new Date(result.created_at), { minutes: 60 }), Date.now())
     ) {
+      await redis.set(`retry-metadata${contract}-${tokenId}`, "locked", "EX", 60 * 60);
       logger.warn(this.queueName, `no metadata fetched for ${JSON.stringify(payload)}`);
 
       // Requeue the token for metadata fetching and stop processing
@@ -202,6 +204,10 @@ export class MetadataIndexWriteJob extends AbstractRabbitMqJobHandler {
         false,
         10 * 60
       );
+    }
+
+    if (await redis.get(`retry-metadata-${contract}-${tokenId}`)) {
+      logger.info(this.queueName, `metadata fetched for ${JSON.stringify(payload)}`);
     }
 
     if (flagged != null) {
