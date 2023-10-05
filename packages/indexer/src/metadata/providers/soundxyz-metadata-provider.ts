@@ -40,9 +40,7 @@ export class SoundxyzMetadataProvider extends AbstractBaseMetadataProvider {
           this.getCollectionId(contract, tokenId),
         ]);
 
-        data.push(
-          this.parseToken(response.data.data.nft, contract, tokenId, collection)
-        );
+        data.push(this.parseToken(response.data.data.nft, contract, tokenId, collection));
       } catch (error) {
         logger.error(
           "soundxyz-fetcher",
@@ -79,7 +77,12 @@ export class SoundxyzMetadataProvider extends AbstractBaseMetadataProvider {
     return `${contract}:soundxyz-${nft.release.id}`;
   }
 
-  parseToken(nft: SoundNftQuery['nft'], contract: string, tokenId: string, collection: any): TokenMetadata {
+  parseToken(
+    nft: SoundNftQuery["nft"],
+    contract: string,
+    tokenId: string,
+    collection: any
+  ): TokenMetadata {
     return {
       contract: contract,
       tokenId: tokenId,
@@ -90,9 +93,7 @@ export class SoundxyzMetadataProvider extends AbstractBaseMetadataProvider {
       description: nft.release.behindTheMusic,
       imageUrl: nft.coverImage.url,
       mediaUrl: nft.audioUrl,
-      attributes: (
-        nft.openSeaMetadataAttributes
-      ).map((trait) => ({
+      attributes: nft.openSeaMetadataAttributes.map((trait) => ({
         key: trait.traitType ?? "property",
         value: trait.value,
         kind: typeof trait.value == "number" ? "number" : "string",
@@ -101,7 +102,11 @@ export class SoundxyzMetadataProvider extends AbstractBaseMetadataProvider {
     };
   }
 
-  parseCollection(release: SoundNftQuery['nft']['release'], contract: string, openseaRoyalties?: object): CollectionMetadata {
+  parseCollection(
+    release: SoundNftQuery["nft"]["release"],
+    contract: string,
+    openseaRoyalties?: object
+  ): CollectionMetadata {
     const royalties = [];
 
     if (release.fundingAddress && release.royaltyBps) {

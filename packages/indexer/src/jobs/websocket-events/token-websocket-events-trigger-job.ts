@@ -233,16 +233,6 @@ export class TokenWebsocketEventsTriggerJob extends AbstractRabbitMqJobHandler {
         }
       }
 
-      logger.info(
-        this.queueName,
-        JSON.stringify({
-          topic: "processCDCEvent",
-          message: `Processed cdc event. contract=${contract}, tokenId=${tokenId}`,
-          resultJson: JSON.stringify(result),
-          token: `${contract}:${tokenId}`,
-        })
-      );
-
       await publishWebsocketEvent({
         event: eventType,
         tags: {

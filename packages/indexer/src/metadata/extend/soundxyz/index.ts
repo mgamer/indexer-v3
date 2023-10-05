@@ -14,38 +14,40 @@ export const SoundxyzReleaseContracts = ReleaseContracts.map((c) => c.toLowerCas
 // generated from graphql:codegen outside this repo
 export type SoundNftQuery = {
   nft: {
+    title: string;
+    audioUrl: string | null;
+    coverImage: {
+      id: string;
+      url: string;
+    };
+    openSeaMetadataAttributes: {
+      traitType: string | null;
+      value: string;
+    }[];
+    release: {
+      id: string;
       title: string;
-      audioUrl: string | null;
+      titleSlug: string;
+      behindTheMusic: string;
+      royaltyBps: number;
+      fundingAddress: string;
+      webappUri: string;
+      artist: {
+        id: string;
+        name: string;
+      };
       coverImage: {
-          id: string;
-          url: string;
+        id: string;
+        url: string;
       };
-      openSeaMetadataAttributes: {
-          traitType: string | null;
-          value: string;
-      }[];
-      release: {
-          id: string;
-          title: string;
-          titleSlug: string;
-          behindTheMusic: string;
-          royaltyBps: number;
-          fundingAddress: string;
-          webappUri: string;
-          artist: {
-              id: string;
-              name: string;
-          };
-          coverImage: {
-              id: string;
-              url: string;
-          };
-      };
+    };
   };
-}
+};
 
-
-export const getMetadataFromSoundApi = async (contract: string, _tokenId: string): Promise<{data: {data: SoundNftQuery}}> => {
+export const getMetadataFromSoundApi = async (
+  contract: string,
+  _tokenId: string
+): Promise<{ data: { data: SoundNftQuery } }> => {
   const apiUrl = ![4, 5].includes(config.chainId)
     ? "https://api.sound.xyz/graphql?x-sound-client-name=firstmate"
     : "https://staging.api.sound.xyz/graphql";
@@ -112,19 +114,17 @@ export const getMetadataFromSoundApi = async (contract: string, _tokenId: string
 export const extend = async (metadata: TokenMetadata) => {
   const {
     data: {
-      data: {nft},
+      data: { nft },
     },
   } = await getMetadataFromSoundApi(metadata.contract, metadata.tokenId);
 
-  const {release, openSeaMetadataAttributes} = nft;
+  const { release, openSeaMetadataAttributes } = nft;
 
   metadata.name = nft.title;
   metadata.collection = `${metadata.contract}:soundxyz-${release.id}`;
   metadata.description = release.behindTheMusic;
   metadata.imageUrl = nft.coverImage.url;
-  metadata.attributes = (
-    openSeaMetadataAttributes
-  ).map((trait) => ({
+  metadata.attributes = openSeaMetadataAttributes.map((trait) => ({
     key: trait.traitType ?? "property",
     value: trait.value,
     kind: typeof trait.value == "number" ? "number" : "string",
@@ -141,11 +141,11 @@ export const extendCollection = async (metadata: CollectionMetadata, _tokenId = 
 
   const {
     data: {
-      data: {nft},
+      data: { nft },
     },
   } = await getMetadataFromSoundApi(metadata.contract, _tokenId);
 
-  const {release} = nft;
+  const { release } = nft;
 
   const royalties = [];
 
