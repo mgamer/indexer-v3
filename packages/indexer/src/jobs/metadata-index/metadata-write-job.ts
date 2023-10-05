@@ -17,6 +17,7 @@ import { newCollectionForTokenJob } from "@/jobs/token-updates/new-collection-fo
 import { config } from "@/config/index";
 import { metadataIndexFetchJob } from "@/jobs/metadata-index/metadata-fetch-job";
 import { redis } from "@/common/redis";
+import { tokenWebsocketEventsTriggerJob } from "@/jobs/websocket-events/token-websocket-events-trigger-job";
 
 export type MetadataIndexWriteJobPayload = {
   collection: string;
@@ -83,8 +84,6 @@ export class MetadataIndexWriteJob extends AbstractRabbitMqJobHandler {
       metadataMethod,
     } = payload;
 
-    // const startSaveTokenMetadataTime = Date.now();
-
     // Update the token's metadata
     const result = await idb.oneOrNone(
       `
@@ -140,8 +139,6 @@ export class MetadataIndexWriteJob extends AbstractRabbitMqJobHandler {
         media: mediaUrl || null,
       }
     );
-
-    // const endSaveTokenMetadataTime = Date.now();
 
     // Skip if there is no associated entry in the `tokens` table
     if (!result) {
@@ -219,8 +216,6 @@ export class MetadataIndexWriteJob extends AbstractRabbitMqJobHandler {
         },
       ]);
     }
-
-    // const startHandleTokenAttributesTime = Date.now();
 
     // Fetch all existing keys
     const addedTokenAttributes = [];
@@ -468,8 +463,6 @@ export class MetadataIndexWriteJob extends AbstractRabbitMqJobHandler {
       }
     );
 
-    // const endHandleTokenAttributesTime = Date.now();
-
     // Schedule attribute refresh
     _.forEach(removedTokenAttributes, (attribute) => {
       (tokenAttributeCounter as any)[attribute.attribute_id] = -1;
@@ -490,28 +483,22 @@ export class MetadataIndexWriteJob extends AbstractRabbitMqJobHandler {
     // If any attributes changed
     if (!_.isEmpty(attributesToRefresh)) {
       await rarityQueueJob.addToQueue({ collectionId: collection }); // Recalculate the collection rarity
+
+      await tokenWebsocketEventsTriggerJob.addToQueue([
+        {
+          kind: "ForcedChange",
+          data: {
+            contract,
+            tokenId,
+            changed: ["attributes"],
+          },
+        },
+      ]);
     }
 
     if (!_.isEmpty(tokenAttributeCounter)) {
       await resyncAttributeCountsJob.addToQueue({ tokenAttributeCounter });
     }
-
-    // const endTime = Date.now();
-    //
-    // if (config.chainId === 8453) {
-    //   logger.info(
-    //     this.queueName,
-    //     JSON.stringify({
-    //       message: `Latencies`,
-    //       payload,
-    //       times: {
-    //         saveTokenMetadataTime: endSaveTokenMetadataTime - startSaveTokenMetadataTime,
-    //         handleTokenAttributesTime: endHandleTokenAttributesTime - startHandleTokenAttributesTime,
-    //         totalTime: endTime - startTime,
-    //       }
-    //     })
-    //   );
-    // }
   }
 
   public updateActivities(contract: string) {
