@@ -177,7 +177,10 @@ export class MetadataIndexWriteJob extends AbstractRabbitMqJobHandler {
       return;
     }
 
-    if (_.isNull(result.image) && isAfter(add(new Date(result.result), { days: 5 }), Date.now())) {
+    if (
+      _.isNull(result.image) &&
+      isAfter(add(new Date(result.created_at), { days: 5 }), Date.now())
+    ) {
       logger.warn(this.queueName, `no metadata fetched for ${JSON.stringify(payload)}`);
 
       // Requeue the token for metadata fetching and stop processing
