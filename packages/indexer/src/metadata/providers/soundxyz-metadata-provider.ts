@@ -4,7 +4,6 @@ import { CollectionMetadata, TokenMetadata, TokenMetadataBySlugResult } from "..
 import { logger } from "@/common/logger";
 
 import _ from "lodash";
-import slugify from "slugify";
 import * as soundxyz from "../extend/soundxyz/index";
 import { RequestWasThrottledError } from "./utils";
 import { openseaMetadataProvider } from "./opensea-metadata-provider";
@@ -114,7 +113,7 @@ export class SoundxyzMetadataProvider extends AbstractBaseMetadataProvider {
 
     return {
       id: `${contract}`,
-      slug: slugify(release.titleSlug, { lower: true }),
+      slug: release.titleSlug,
       name: `${release.artist.name} - ${release.title}`,
       community: "sound.xyz",
       metadata: {
