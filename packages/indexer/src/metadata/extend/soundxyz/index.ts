@@ -40,15 +40,6 @@ export type SoundNftQuery = {
               id: string;
               url: string;
           };
-          eggGame: {
-              id: string;
-              goldenEggImage: {
-                  url: string;
-              } | null;
-              animatedGoldenEggImageOptimized: {
-                  url: string;
-              } | null;
-          } | null;
       };
   };
 }
@@ -90,15 +81,6 @@ export const getMetadataFromSoundApi = async (contract: string, _tokenId: string
               coverImage {
                 id
                 url
-              }
-              eggGame {
-                id
-                goldenEggImage {
-                  url
-                }
-                animatedGoldenEggImageOptimized {
-                  url
-                }
               }
             }
           }
