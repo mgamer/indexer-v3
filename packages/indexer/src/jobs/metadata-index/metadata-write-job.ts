@@ -180,7 +180,7 @@ export class MetadataIndexWriteJob extends AbstractRabbitMqJobHandler {
     // If this is a new token and there's still no metadata
     if (
       _.isNull(result.image) &&
-      isAfter(add(new Date(result.created_at), { minutes: 60 }), Date.now())
+      isAfter(add(new Date(result.created_at), { minutes: 30 }), Date.now())
     ) {
       logger.warn(this.queueName, `no metadata fetched for ${JSON.stringify(payload)}`);
 
