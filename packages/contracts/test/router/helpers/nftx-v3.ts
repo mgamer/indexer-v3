@@ -36,20 +36,23 @@ export const setupNFTXV3Listings = async (listings: NFTXV3Listing[]) => {
 
   for (const listing of listings) {
     const { seller, nft, price, isCancelled } = listing;
+    const pricePerToken = bn(price);
 
     const newId = nft.id;
-    const newId2 = nft.id + 10002;
-    const newId3 = nft.id + 10003;
-    const newId4 = nft.id + 10004;
 
-    const poolIds = [newId, newId2, newId3, newId4];
+    const poolIds = [
+      newId,
+      ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19].map(
+        (i) => nft.id + 10000 + i
+      ),
+    ];
 
     const txs = await Promise.all(poolIds.map((c) => nft.contract.connect(seller).mint(c)));
     await Promise.all(txs.map((c) => c.wait()));
 
     await nft.contract.connect(seller).setApprovalForAll(createVaultZap.address, true);
 
-    const pricePerToken = bn(price).div(bn(poolIds.length));
+    // console.log({ pricePerToken: pricePerToken.toString() });
 
     const args = {
       vaultInfo: {
@@ -72,8 +75,8 @@ export const setupNFTXV3Listings = async (listings: NFTXV3Listing[]) => {
         swapFee: 3000000,
       },
       liquidityParams: {
-        lowerNFTPriceInETH: pricePerToken.sub(pricePerToken.mul(50).div(100)), // 50% lower
-        upperNFTPriceInETH: pricePerToken.add(pricePerToken.mul(50).div(100)), // 50% higher
+        lowerNFTPriceInETH: pricePerToken.sub(pricePerToken.mul(10).div(100)), // 10% lower
+        upperNFTPriceInETH: pricePerToken.add(pricePerToken.mul(10).div(100)), // 10% higher
         fee: Sdk.NftxV3.Helpers.REWARD_FEE_TIER,
         currentNFTPriceInETH: pricePerToken,
         vTokenMin: 0,
@@ -153,8 +156,25 @@ export const setupNFTXV3Offers = async (offers: NFTXV3Offer[]) => {
     const newId2 = nft.id + 10002;
     const newId3 = nft.id + 10003;
     const newId4 = nft.id + 10004;
+    const newId5 = nft.id + 10005;
+    const newId6 = nft.id + 10006;
+    const newId7 = nft.id + 10007;
+    const newId8 = nft.id + 10008;
+    const newId9 = nft.id + 10009;
+    const newId10 = nft.id + 10010;
 
-    const poolIds = [newId2, newId3, newId4];
+    const poolIds = [
+      newId,
+      newId2,
+      newId3,
+      newId4,
+      newId5,
+      newId6,
+      newId7,
+      newId8,
+      newId9,
+      newId10,
+    ];
 
     // Approve the factory contract
     const txs = await Promise.all(poolIds.map((c) => nft.contract.connect(buyer).mint(c)));

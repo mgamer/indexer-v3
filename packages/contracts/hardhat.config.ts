@@ -149,6 +149,15 @@ const config: HardhatUserConfig = {
       chainId: networkConfig.chainId,
       url: "http://127.0.0.1:8545",
     },
+    tenderly: {
+      chainId: networkConfig.chainId,
+      url: "https://rpc.tenderly.co/fork/47f6edb2-b172-49be-9c99-b94d6daf4f83",
+      accounts: {
+        // Custom mnemonic so that the wallets have no initial state
+        mnemonic:
+          "void forward involve old phone resource sentence fall friend wait strike copper urge reduce chapter",
+      },
+    },
     // Mainnets
     mainnet: getNetworkConfig(1),
     optimism: getNetworkConfig(10),

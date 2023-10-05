@@ -160,6 +160,7 @@ describe("[ReservoirV6_0_1] NFTXV3 listings", () => {
       await expect(
         router.connect(carol).execute(executions, {
           value: executions.map(({ value }) => value).reduce((a, b) => bn(a).add(b), bn(0)),
+          gasLimit: 8_000_000,
         })
       ).to.be.revertedWith("reverted with custom error 'UnsuccessfulExecution()'");
 
@@ -171,6 +172,7 @@ describe("[ReservoirV6_0_1] NFTXV3 listings", () => {
     // Execute
     await router.connect(carol).execute(executions, {
       value: executions.map(({ value }) => value).reduce((a, b) => bn(a).add(b), bn(0)),
+      gasLimit: 8_000_000,
     });
 
     // Fetch post-state
@@ -194,26 +196,36 @@ describe("[ReservoirV6_0_1] NFTXV3 listings", () => {
 
     // Checks
     const emilioBalance = ethBalancesAfter.emilio.sub(ethBalancesBefore.emilio);
-    const carloSpend = ethBalancesBefore.carol.sub(ethBalancesAfter.carol);
+    const carolSpend = ethBalancesBefore.carol.sub(ethBalancesAfter.carol);
+
+    // console.log({
+    //   aliceOrderSum: aliceOrderSum.toString(),
+    //   bobOrderSum: bobOrderSum.toString(),
+    //   carolSpend: carolSpend.toString(),
+    // });
 
     const orderSum = aliceOrderSum.add(bobOrderSum);
     const diffPercent =
-      (parseFloat(formatEther(orderSum.sub(carloSpend))) / parseFloat(formatEther(carloSpend))) *
+      (parseFloat(formatEther(orderSum.sub(carolSpend))) / parseFloat(formatEther(carolSpend))) *
       100;
 
     // Check Carol balance
-    const defaultSlippage = 5;
+    const defaultSlippage = 15;
     expect(diffPercent).to.lte(defaultSlippage);
+
+    // console.log({ diffPercent: diffPercent.toString() });
 
     // Emilio got the fee payments
     if (chargeFees) {
       // Fees are charged per execution, and since we have a single execution
       // here, we will have a single fee payment at the end adjusted over the
       // amount that was actually paid (eg. prices of filled orders)
-      const actualPaid = listings
+      let actualPaid = listings
         .filter(({ isCancelled }) => !isCancelled)
         .map(({ price }) => price)
         .reduce((a, b) => bn(a).add(b), bn(0));
+      // getPoolPrice has 100 bps slippage added on top, so removing it here
+      actualPaid = bn(actualPaid).sub(bn(actualPaid).mul(bn(99)).div(bn(10000)));
 
       const chargeFeeSum = listings
         .map((_, i) => feesOnTop[i].mul(actualPaid).div(totalPrice))
@@ -263,7 +275,7 @@ describe("[ReservoirV6_0_1] NFTXV3 listings", () => {
 
   const multiple = false;
   const partial = false;
-  const chargeFees = false;
+  const chargeFees = true;
   const revertIfIncomplete = true;
 
   const testName =

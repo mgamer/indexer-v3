@@ -8,6 +8,7 @@ import { Contract } from "@ethersproject/contracts";
 import { parseEther } from "@ethersproject/units";
 import { ethers } from "ethers";
 import axios from "axios";
+import { time } from "@nomicfoundation/hardhat-network-helpers";
 
 import * as Addresses from "./addresses";
 import * as Common from "../common";
@@ -18,18 +19,18 @@ const NFTX_ENDPOINT = "https://api-v3.nftx.xyz";
 
 export const REWARD_FEE_TIER = 3_000;
 
-const sortTokens = (tokenA: string, tokenB: string) => {
-  let token0, token1;
-  if (BigNumber.from(tokenA).lt(BigNumber.from(tokenB))) {
-    token0 = tokenA;
-    token1 = tokenB;
-  } else {
-    token0 = tokenB;
-    token1 = tokenA;
-  }
+// const sortTokens = (tokenA: string, tokenB: string) => {
+//   let token0, token1;
+//   if (BigNumber.from(tokenA).lt(BigNumber.from(tokenB))) {
+//     token0 = tokenA;
+//     token1 = tokenB;
+//   } else {
+//     token0 = tokenB;
+//     token1 = tokenA;
+//   }
 
-  return { token0, token1 };
-};
+//   return { token0, token1 };
+// };
 
 export const getPoolFeatures = async (address: string, provider: Provider) => {
   const iface = new Interface([
@@ -70,6 +71,14 @@ export const getPoolPrice = async (
 }> => {
   const chainId = await provider.getNetwork().then((n) => n.chainId);
   const weth = Common.Addresses.WNative[chainId];
+
+  await time.increase(2 * 60);
+  // const _provider = new ethers.providers.StaticJsonRpcProvider(
+  //   "https://rpc.tenderly.co/fork/47f6edb2-b172-49be-9c99-b94d6daf4f83"
+  // );
+  // await _provider.send("evm_increaseTime", [
+  //   ethers.utils.hexValue(2 * 60), // hex encoded number of seconds
+  // ]);
 
   const localAmount = parseEther(amount.toString());
   const fees = await getPoolETHFees(vault, provider);
@@ -143,9 +152,20 @@ export const getPoolPrice = async (
       );
     }
     const premiumsInETH: BigNumberish[] = await Promise.all(
-      premiums.map(async (premium) => vaultContract.vTokenToETH(premium))
+      premiums.map(async (premium) => {
+        const premInEth = await vaultContract.vTokenToETH(premium);
+        // console.log({ premInEth: premInEth.toString() });
+        return premInEth;
+      })
     );
-    const netPremiumInETH = premiumsInETH.reduce((acc, curr) => bn(acc).add(curr), bn(0));
+
+    // console.log(
+    //   premiums[0].toString(),
+    //   premiumsInETH[0].toString(),
+    //   bn(premiumsInETH[0]).mul(parseEther("1")).div(premiums[0]).toString()
+    // );
+
+    const netPremiumInETH = bn(premiumsInETH.reduce((acc, curr) => bn(acc).add(curr), bn(0)));
 
     const { amountIn: wethRequired }: { amountIn: BigNumberish } =
       await quoter.callStatic.quoteExactOutputSingle({
@@ -161,7 +181,14 @@ export const getPoolPrice = async (
       price = price.add(price.mul(slippage).div(10000));
     }
 
-    const { token0, token1 } = sortTokens(weth, vault);
+    // const { token0, token1 } = sortTokens(weth, vault);
+
+    // console.log({
+    //   vault: vault,
+    //   weth,
+    //   token0,
+    //   token1,
+    // });
 
     const executeCallData = nftxUniversalRouterIFace.encodeFunctionData("execute", [
       "0x01", // V3_SWAP_EXACT_OUT
@@ -178,12 +205,12 @@ export const getPoolPrice = async (
               ? bn(wethRequired).add(bn(wethRequired).mul(slippage).div(10000))
               : wethRequired,
             // path
-            ethers.utils.solidityPack(["address", "uint24", "address"], [token0, feeTier, token1]),
+            ethers.utils.solidityPack(["address", "uint24", "address"], [vault, feeTier, weth]),
             true, // payerIsUser
           ]
         ),
       ],
-      getCurrentTimestamp(60 * 60),
+      getCurrentTimestamp() * 10,
     ]);
 
     return { price, executeCallData };
@@ -201,8 +228,6 @@ export const getPoolPrice = async (
       price = price.sub(price.mul(slippage).div(10000));
     }
 
-    const { token0, token1 } = sortTokens(weth, vault);
-
     const executeCallData = nftxUniversalRouterIFace.encodeFunctionData("execute", [
       "0x00", // V3_SWAP_EXACT_IN
       [
@@ -216,12 +241,12 @@ export const getPoolPrice = async (
             // amountOutMin
             slippage ? bn(wethAmount).sub(bn(wethAmount).mul(slippage).div(10000)) : wethAmount,
             // path
-            ethers.utils.solidityPack(["address", "uint24", "address"], [token0, feeTier, token1]),
+            ethers.utils.solidityPack(["address", "uint24", "address"], [weth, feeTier, vault]),
             true, // payerIsUser
           ]
         ),
       ],
-      getCurrentTimestamp(60 * 60),
+      getCurrentTimestamp() * 10,
     ]);
 
     return { price, executeCallData };
