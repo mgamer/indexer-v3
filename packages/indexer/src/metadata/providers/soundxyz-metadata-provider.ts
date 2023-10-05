@@ -80,27 +80,19 @@ export class SoundxyzMetadataProvider extends AbstractBaseMetadataProvider {
     return `${contract}:soundxyz-${nft.release.id}`;
   }
 
-  parseToken(metadata: SoundNftQuery['nft'], contract: string, tokenId: string, collection: any): TokenMetadata {
-    const isGoldenEgg = metadata.isGoldenEgg;
-    let imageUrl = metadata.coverImage.url;
-    if (isGoldenEgg) {
-      imageUrl =
-        metadata.release.eggGame?.animatedGoldenEggImageOptimized?.url ||
-        metadata.release.eggGame?.goldenEggImage?.url || '';
-    }
-
+  parseToken(nft: SoundNftQuery['nft'], contract: string, tokenId: string, collection: any): TokenMetadata {
     return {
       contract: contract,
       tokenId: tokenId,
       collection,
       slug: null,
-      name: metadata.title,
+      name: nft.title,
       flagged: false,
-      description: metadata.release.behindTheMusic,
-      imageUrl,
-      mediaUrl: metadata.audioUrl,
+      description: nft.release.behindTheMusic,
+      imageUrl: nft.coverImage.url,
+      mediaUrl: nft.audioUrl,
       attributes: (
-        metadata.openSeaMetadataAttributes
+        nft.openSeaMetadataAttributes
       ).map((trait) => ({
         key: trait.traitType ?? "property",
         value: trait.value,
@@ -110,25 +102,25 @@ export class SoundxyzMetadataProvider extends AbstractBaseMetadataProvider {
     };
   }
 
-  parseCollection(metadata: SoundNftQuery['nft']['release'], contract: string, openseaRoyalties?: object): CollectionMetadata {
+  parseCollection(release: SoundNftQuery['nft']['release'], contract: string, openseaRoyalties?: object): CollectionMetadata {
     const royalties = [];
 
-    if (metadata.fundingAddress && metadata.royaltyBps) {
+    if (release.fundingAddress && release.royaltyBps) {
       royalties.push({
-        recipient: _.toLower(metadata.fundingAddress),
-        bps: metadata.royaltyBps,
+        recipient: _.toLower(release.fundingAddress),
+        bps: release.royaltyBps,
       });
     }
 
     return {
       id: `${contract}`,
-      slug: slugify(metadata.titleSlug, { lower: true }),
-      name: `${metadata.artist.name} - ${metadata.title}`,
+      slug: slugify(release.titleSlug, { lower: true }),
+      name: `${release.artist.name} - ${release.title}`,
       community: "sound.xyz",
       metadata: {
-        imageUrl: metadata.coverImage.url,
-        description: metadata.behindTheMusic,
-        externalUrl: metadata.webappUri,
+        imageUrl: release.coverImage.url,
+        description: release.behindTheMusic,
+        externalUrl: release.webappUri,
       },
       royalties,
       openseaRoyalties: openseaRoyalties,

@@ -16,7 +16,6 @@ export type SoundNftQuery = {
   nft: {
       title: string;
       audioUrl: string | null;
-      isGoldenEgg: boolean;
       coverImage: {
           id: string;
           url: string;
@@ -68,7 +67,6 @@ export const getMetadataFromSoundApi = async (contract: string, _tokenId: string
           ) {
             title
             audioUrl
-            isGoldenEgg
             coverImage {
               id
               url
@@ -136,19 +134,12 @@ export const extend = async (metadata: TokenMetadata) => {
     },
   } = await getMetadataFromSoundApi(metadata.contract, metadata.tokenId);
 
-  const {release, isGoldenEgg, openSeaMetadataAttributes} = nft;
-
-  let imageUrl =
-    nft.coverImage.url;
-  if (isGoldenEgg) {
-    imageUrl =
-      release.eggGame?.animatedGoldenEggImageOptimized?.url || release.eggGame?.goldenEggImage?.url || nft.coverImage.url;
-  }
+  const {release, openSeaMetadataAttributes} = nft;
 
   metadata.name = nft.title;
   metadata.collection = `${metadata.contract}:soundxyz-${release.id}`;
   metadata.description = release.behindTheMusic;
-  metadata.imageUrl = imageUrl;
+  metadata.imageUrl = nft.coverImage.url;
   metadata.attributes = (
     openSeaMetadataAttributes
   ).map((trait) => ({
