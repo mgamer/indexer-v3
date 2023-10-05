@@ -110,7 +110,7 @@ export class MetadataIndexWriteJob extends AbstractRabbitMqJobHandler {
           metadata_updated_at = now()
         WHERE tokens.contract = $/contract/
         AND tokens.token_id = $/tokenId/
-        RETURNING collection_id, created_at, image, (
+        RETURNING collection_id, created_at, image, name, (
           SELECT
           json_build_object(
             'name', tokens.name,
@@ -180,6 +180,7 @@ export class MetadataIndexWriteJob extends AbstractRabbitMqJobHandler {
     // If this is a new token and there's still no metadata
     if (
       _.isNull(result.image) &&
+      _.isNull(result.name) &&
       isAfter(add(new Date(result.created_at), { minutes: 30 }), Date.now())
     ) {
       logger.warn(this.queueName, `no metadata fetched for ${JSON.stringify(payload)}`);
