@@ -5,7 +5,7 @@ import _ from "lodash";
 import { logger } from "@/common/logger";
 import { idb, ridb } from "@/common/db";
 import { toBuffer } from "@/common/utils";
-import { getUnixTime } from "date-fns";
+import { add, getUnixTime, isAfter } from "date-fns";
 import { flagStatusUpdateJob } from "@/jobs/flag-status/flag-status-update-job";
 import PgPromise from "pg-promise";
 import { resyncAttributeKeyCountsJob } from "@/jobs/update-attribute/resync-attribute-key-counts-job";
@@ -15,6 +15,7 @@ import { resyncAttributeCountsJob } from "@/jobs/update-attribute/update-attribu
 import { TokenMetadata } from "@/metadata/types";
 import { newCollectionForTokenJob } from "@/jobs/token-updates/new-collection-for-token-job";
 import { config } from "@/config/index";
+import { metadataIndexFetchJob } from "@/jobs/metadata-index/metadata-fetch-job";
 
 export type MetadataIndexWriteJobPayload = {
   collection: string;
@@ -43,6 +44,7 @@ export type MetadataIndexWriteJobPayload = {
     kind: "string" | "number" | "date" | "range";
     rank?: number;
   }[];
+  metadataMethod?: string;
 };
 
 export class MetadataIndexWriteJob extends AbstractRabbitMqJobHandler {
@@ -77,6 +79,7 @@ export class MetadataIndexWriteJob extends AbstractRabbitMqJobHandler {
       flagged,
       isFromWebhook,
       attributes,
+      metadataMethod,
     } = payload;
 
     // const startSaveTokenMetadataTime = Date.now();
@@ -107,7 +110,7 @@ export class MetadataIndexWriteJob extends AbstractRabbitMqJobHandler {
           metadata_updated_at = now()
         WHERE tokens.contract = $/contract/
         AND tokens.token_id = $/tokenId/
-        RETURNING collection_id, created_at, (
+        RETURNING collection_id, created_at, image, (
           SELECT
           json_build_object(
             'name', tokens.name,
@@ -172,6 +175,27 @@ export class MetadataIndexWriteJob extends AbstractRabbitMqJobHandler {
 
       // Stop processing the token metadata
       return;
+    }
+
+    if (_.isNull(result.image) && isAfter(add(new Date(result.result), { days: 5 }), Date.now())) {
+      logger.warn(this.queueName, `no metadata fetched for ${JSON.stringify(payload)}`);
+
+      // Requeue the token for metadata fetching and stop processing
+      return metadataIndexFetchJob.addToQueue(
+        [
+          {
+            kind: "single-token",
+            data: {
+              method: metadataMethod || config.metadataIndexingMethod,
+              contract,
+              tokenId,
+              collection,
+            },
+          },
+        ],
+        false,
+        5 * 60
+      );
     }
 
     if (flagged != null) {
