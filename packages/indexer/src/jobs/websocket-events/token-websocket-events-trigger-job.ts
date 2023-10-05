@@ -440,18 +440,6 @@ export class TokenWebsocketEventsTriggerJob extends AbstractRabbitMqJobHandler {
         },
       };
 
-      logger.info(
-        this.queueName,
-        JSON.stringify({
-          topic: "processForcedUpdate",
-          message: `Publish forced update event. contract=${contract}, tokenId=${tokenId}, changed=${JSON.stringify(
-            changed
-          )}`,
-          resultJson: JSON.stringify(result),
-          token: `${contract}:${tokenId}`,
-        })
-      );
-
       await publishWebsocketEvent({
         event: eventType,
         tags: {
