@@ -359,8 +359,6 @@ export const getTokensV6Options: RouteOptions = {
   handler: async (request: Request) => {
     const query = request.query as any;
 
-    let nullsPosition = "LAST";
-
     // Include attributes
     let selectAttributes = "";
     if (query.includeAttributes) {
@@ -901,7 +899,11 @@ export const getTokensV6Options: RouteOptions = {
 
                 if (contArr[0] !== "null") {
                   conditions.push(`(
-                    (${sortColumn}, t.contract, t.token_id) ${sign} ($/floorSellValue/, $/contContract/, $/contTokenId/)
+                    (${sortColumn}, ${
+                    !query.collection ? `t.contract, ` : ""
+                  }t.token_id) ${sign} ($/floorSellValue/, ${
+                    !query.collection ? `$/contContract/, ` : ""
+                  }$/contTokenId/)
                     OR (${sortColumn} IS null)
                   )`);
                   (query as any).floorSellValue = contArr[0];
@@ -909,9 +911,12 @@ export const getTokensV6Options: RouteOptions = {
                   (query as any).contTokenId = contArr[2];
                 } else {
                   conditions.push(
-                    `(${sortColumn} is null AND (t.contract, t.token_id) ${sign} ($/contContract/, $/contTokenId/))`
+                    `(${sortColumn} is null AND (${
+                      !query.collection ? `t.contract, ` : ""
+                    }t.token_id) ${sign} (${
+                      !query.collection ? `$/contContract/, ` : ""
+                    }$/contTokenId/))`
                   );
-                  nullsPosition = "FIRST";
                   (query as any).contContract = toBuffer(contArr[1]);
                   (query as any).contTokenId = contArr[2];
                 }
@@ -940,7 +945,7 @@ export const getTokensV6Options: RouteOptions = {
           case "rarity": {
             return ` ORDER BY ${union ? "" : "t."}rarity_rank ${
               query.sortDirection || "ASC"
-            } NULLS ${nullsPosition}, t_contract ${query.sortDirection || "ASC"}, t_token_id ${
+            } NULLS LAST, t_contract ${query.sortDirection || "ASC"}, t_token_id ${
               query.sortDirection || "ASC"
             }`;
           }
@@ -965,11 +970,9 @@ export const getTokensV6Options: RouteOptions = {
                 ? `${union ? "" : "t."}normalized_floor_sell_value`
                 : `${union ? "" : "t."}floor_sell_value`;
 
-            return ` ORDER BY ${sortColumn} ${
-              query.sortDirection || "ASC"
-            } NULLS ${nullsPosition}, t_contract ${query.sortDirection || "ASC"}, t_token_id ${
-              query.sortDirection || "ASC"
-            }`;
+            return ` ORDER BY ${sortColumn} ${query.sortDirection || "ASC"} NULLS LAST, ${
+              !query.collection ? `t_contract ${query.sortDirection || "ASC"}, ` : ""
+            }t_token_id ${query.sortDirection || "ASC"}`;
           }
         }
       };
