@@ -1256,10 +1256,10 @@ export const getNetworkSettings = (): NetworkSettings => {
                   metadata
                 ) VALUES (
                   '\\x0000000000000000000000000000000000000000',
-                  'Matic',
-                  'MATIC',
+                  'Ether',
+                  'ETH',
                   18,
-                  '{"coingeckoCurrencyId": "matic-network"}'
+                  '{"coingeckoCurrencyId": "ethereum", "image": "https://assets.coingecko.com/coins/images/279/large/ethereum.png"}'
                 ) ON CONFLICT DO NOTHING
               `
             ),
