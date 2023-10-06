@@ -157,6 +157,7 @@ const config: HardhatUserConfig = {
         mnemonic:
           "void forward involve old phone resource sentence fall friend wait strike copper urge reduce chapter",
       },
+      timeout: 60000 * 100,
     },
     // Mainnets
     mainnet: getNetworkConfig(1),

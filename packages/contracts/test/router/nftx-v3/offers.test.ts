@@ -156,6 +156,7 @@ describe("[ReservoirV6_0_1] NFTXV3 offers", () => {
       await expect(
         router.connect(carol).execute(executions, {
           value: executions.map(({ value }) => value).reduce((a, b) => bn(a).add(b), bn(0)),
+          gasLimit: 8_000_000,
         })
       ).to.be.revertedWith("reverted with custom error 'UnsuccessfulExecution()'");
 
@@ -163,16 +164,17 @@ describe("[ReservoirV6_0_1] NFTXV3 offers", () => {
     }
 
     // Fetch pre-state
-    const balancesBefore = await getBalances(Sdk.Common.Addresses.WNative[chainId]);
+    const balancesBefore = await getBalances(Sdk.Common.Addresses.Native[chainId]);
 
     // Execute
 
     await router.connect(carol).execute(executions, {
       value: executions.map(({ value }) => value).reduce((a, b) => bn(a).add(b), bn(0)),
+      gasLimit: 8_000_000,
     });
 
     // Fetch post-state
-    const balancesAfter = await getBalances(Sdk.Common.Addresses.WNative[chainId]);
+    const balancesAfter = await getBalances(Sdk.Common.Addresses.Native[chainId]);
 
     // Checks
 
@@ -195,6 +197,14 @@ describe("[ReservoirV6_0_1] NFTXV3 offers", () => {
           parseFloat(formatEther(totalAmount))) *
         100;
 
+      console.log({
+        orderSum: formatEther(orderSum),
+        totalAmount: formatEther(totalAmount),
+        diffPercent,
+        carol: carol.address,
+        carolAfter: carolAfter.toString(),
+      });
+
       // Check Carol balance
       const defaultSlippage = 5;
       expect(diffPercent).to.lte(defaultSlippage);
@@ -206,8 +216,27 @@ describe("[ReservoirV6_0_1] NFTXV3 offers", () => {
       expect(balancesAfter.emilio.sub(balancesBefore.emilio)).to.eq(orderFee);
     }
 
+    console.log(
+      offers.map((offer) => ({
+        isCancelled: offer.isCancelled,
+        nft: {
+          address: offer.nft.contract.address,
+          id: offer.nft.id,
+        },
+        idsIn: offer.order?.params.idsIn,
+      }))
+    );
+
     // Alice and Bob got the NFTs of the filled orders
     for (const { nft, isCancelled, vault } of offers) {
+      console.log({
+        nft: {
+          address: nft.contract.address,
+          id: nft.id,
+        },
+        isCancelled,
+      });
+
       if (!isCancelled) {
         expect(await nft.contract.ownerOf(nft.id)).to.eq(vault);
       } else {
@@ -244,4 +273,19 @@ describe("[ReservoirV6_0_1] NFTXV3 offers", () => {
       }
     }
   }
+
+  const multiple = true;
+  const partial = true;
+  const chargeFees = false;
+  const revertIfIncomplete = false;
+
+  const testName =
+    "[eth]" +
+    `${multiple ? "[multiple-orders]" : "[single-order]"}` +
+    `${partial ? "[partial]" : "[full]"}` +
+    `${chargeFees ? "[fees]" : "[no-fees]"}` +
+    `${revertIfIncomplete ? "[reverts]" : "[skip-reverts]"}`;
+  it.skip(testName, async () =>
+    testAcceptOffers(chargeFees, revertIfIncomplete, partial, multiple ? getRandomInteger(2, 6) : 1)
+  );
 });

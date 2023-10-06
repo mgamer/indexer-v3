@@ -2,13 +2,14 @@ import { config as dotEnvConfig } from "dotenv";
 dotEnvConfig();
 
 import { Interface } from "@ethersproject/abi";
-import { Provider } from "@ethersproject/abstract-provider";
+import { JsonRpcProvider } from "@ethersproject/providers";
 import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
 import { Contract } from "@ethersproject/contracts";
 import { parseEther } from "@ethersproject/units";
 import { ethers } from "ethers";
 import axios from "axios";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
+import { Network } from "hardhat/types";
 
 import * as Addresses from "./addresses";
 import * as Common from "../common";
@@ -62,7 +63,8 @@ export const getPoolPrice = async (
   side: "sell" | "buy",
   slippage: number,
   feeTier: number,
-  provider: Provider,
+  provider: JsonRpcProvider,
+  network: Network,
   // for "buy" side
   tokenIds?: number[]
 ): Promise<{
@@ -72,13 +74,13 @@ export const getPoolPrice = async (
   const chainId = await provider.getNetwork().then((n) => n.chainId);
   const weth = Common.Addresses.WNative[chainId];
 
-  await time.increase(2 * 60);
-  // const _provider = new ethers.providers.StaticJsonRpcProvider(
-  //   "https://rpc.tenderly.co/fork/47f6edb2-b172-49be-9c99-b94d6daf4f83"
-  // );
-  // await _provider.send("evm_increaseTime", [
-  //   ethers.utils.hexValue(2 * 60), // hex encoded number of seconds
-  // ]);
+  if (network.name === "tenderly") {
+    await network.provider.send("evm_increaseTime", [
+      ethers.utils.hexValue(2 * 60), // hex encoded number of seconds
+    ]);
+  } else {
+    await time.increase(2 * 60);
+  }
 
   const localAmount = parseEther(amount.toString());
   const fees = await getPoolETHFees(vault, provider);
@@ -241,7 +243,7 @@ export const getPoolPrice = async (
             // amountOutMin
             slippage ? bn(wethAmount).sub(bn(wethAmount).mul(slippage).div(10000)) : wethAmount,
             // path
-            ethers.utils.solidityPack(["address", "uint24", "address"], [weth, feeTier, vault]),
+            ethers.utils.solidityPack(["address", "uint24", "address"], [vault, feeTier, weth]),
             true, // payerIsUser
           ]
         ),

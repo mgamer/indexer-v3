@@ -2,7 +2,7 @@ import { BigNumberish } from "@ethersproject/bignumber";
 import { Contract } from "@ethersproject/contracts";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 import * as Sdk from "@reservoir0x/sdk/src";
-import { ethers } from "hardhat";
+import { ethers, network } from "hardhat";
 
 import { getChainId, bn, getCurrentTimestamp } from "../../utils";
 
@@ -38,11 +38,8 @@ export const setupNFTXV3Listings = async (listings: NFTXV3Listing[]) => {
     const { seller, nft, price, isCancelled } = listing;
     const pricePerToken = bn(price);
 
-    const newId = nft.id;
-
     const poolIds = [
-      newId,
-      ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19].map(
+      ...[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19].map(
         (i) => nft.id + 10000 + i
       ),
     ];
@@ -70,9 +67,9 @@ export const setupNFTXV3Listings = async (listings: NFTXV3Listing[]) => {
       nftAmounts: [],
       vaultFeaturesFlag: 111,
       vaultFees: {
-        mintFee: 3000000,
-        redeemFee: 3000000,
-        swapFee: 3000000,
+        mintFee: parseEther("0.05"), // 5%
+        redeemFee: parseEther("0.05"),
+        swapFee: parseEther("0.05"),
       },
       liquidityParams: {
         lowerNFTPriceInETH: pricePerToken.sub(pricePerToken.mul(10).div(100)), // 10% lower
@@ -106,6 +103,7 @@ export const setupNFTXV3Listings = async (listings: NFTXV3Listing[]) => {
       100,
       Sdk.NftxV3.Helpers.REWARD_FEE_TIER,
       ethers.provider,
+      network,
       [nft.id]
     );
 
@@ -151,29 +149,17 @@ export const setupNFTXV3Offers = async (offers: NFTXV3Offer[]) => {
 
   for (const offer of offers) {
     const { buyer, nft, price, isCancelled } = offer;
+    const pricePerToken = bn(price);
 
-    const newId = nft.id;
-    const newId2 = nft.id + 10002;
-    const newId3 = nft.id + 10003;
-    const newId4 = nft.id + 10004;
-    const newId5 = nft.id + 10005;
-    const newId6 = nft.id + 10006;
-    const newId7 = nft.id + 10007;
-    const newId8 = nft.id + 10008;
-    const newId9 = nft.id + 10009;
-    const newId10 = nft.id + 10010;
+    console.log({
+      pricePerToken: ethers.utils.formatEther(pricePerToken),
+    });
 
+    // not providing nft.id here
     const poolIds = [
-      newId,
-      newId2,
-      newId3,
-      newId4,
-      newId5,
-      newId6,
-      newId7,
-      newId8,
-      newId9,
-      newId10,
+      ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20].map(
+        (i) => nft.id + 10000 + i
+      ),
     ];
 
     // Approve the factory contract
@@ -187,7 +173,7 @@ export const setupNFTXV3Offers = async (offers: NFTXV3Offer[]) => {
         assetAddress: nft.contract.address,
         is1155: false,
         allowAllItems: true,
-        name: "TestNFT",
+        name: "TestNFT_" + new Date(), // adding timestamp so that multiple vaults can be deployed, without revert
         symbol: "TEST",
       },
       eligibilityStorage: {
@@ -198,26 +184,27 @@ export const setupNFTXV3Offers = async (offers: NFTXV3Offer[]) => {
       nftAmounts: [],
       vaultFeaturesFlag: 111,
       vaultFees: {
-        mintFee: 3000000,
-        redeemFee: 3000000,
-        swapFee: 3000000,
+        mintFee: parseEther("0.05"), // 5%
+        redeemFee: parseEther("0.05"),
+        swapFee: parseEther("0.05"),
       },
       liquidityParams: {
-        lowerNFTPriceInETH: parseEther("0.1"),
-        upperNFTPriceInETH: parseEther("0.3"),
+        lowerNFTPriceInETH: pricePerToken.sub(pricePerToken.mul(10).div(100)), // 10% lower
+        upperNFTPriceInETH: pricePerToken.add(pricePerToken.mul(10).div(100)), // 10% higher
         fee: Sdk.NftxV3.Helpers.REWARD_FEE_TIER,
-        currentNFTPriceInETH: parseEther("0.2"),
+        currentNFTPriceInETH: pricePerToken,
         vTokenMin: 0,
         wethMin: 0,
         deadline: (await getCurrentTimestamp(ethers.provider)) + 100,
       },
     };
 
-    const _vaultId = await createVaultZap
-      .connect(buyer)
-      .callStatic.createVault(args, { value: price });
+    // TODO: determine actual ETH value
+    const value = bn(price).mul(100);
 
-    await createVaultZap.connect(buyer).createVault(args, { value: price });
+    const _vaultId = await createVaultZap.connect(buyer).callStatic.createVault(args, { value });
+
+    await createVaultZap.connect(buyer).createVault(args, { value });
 
     const factory = new Contract(
       Sdk.NftxV3.Addresses.VaultFactory[chainId],
@@ -226,17 +213,15 @@ export const setupNFTXV3Offers = async (offers: NFTXV3Offer[]) => {
     );
     const vaultAddress = await factory.vault(_vaultId.toString());
 
-    const [poolPrice] = await Promise.all([
-      Sdk.NftxV3.Helpers.getPoolPrice(
-        vaultAddress,
-        1,
-        "sell",
-        100,
-        Sdk.NftxV3.Helpers.REWARD_FEE_TIER,
-        ethers.provider
-      ),
-      Sdk.NftxV3.Helpers.getPoolNFTs(vaultAddress, ethers.provider),
-    ]);
+    const poolPrice = await Sdk.NftxV3.Helpers.getPoolPrice(
+      vaultAddress,
+      1,
+      "sell",
+      100,
+      Sdk.NftxV3.Helpers.REWARD_FEE_TIER,
+      ethers.provider,
+      network
+    );
 
     if (poolPrice) {
       offer.price = bn(poolPrice.price);
@@ -247,8 +232,8 @@ export const setupNFTXV3Offers = async (offers: NFTXV3Offer[]) => {
         currency: Sdk.Common.Addresses.WNative[chainId],
         idsIn: [nft.id.toString()],
         amounts: [],
-        price: isCancelled ? offer.price.mul(bn(10)).toString() : offer.price.toString(),
-        executeCallData: poolPrice.executeCallData,
+        price: isCancelled ? "0" : offer.price.toString(),
+        executeCallData: isCancelled ? "0x00" : poolPrice.executeCallData,
         deductRoyalty: false,
       });
     }
