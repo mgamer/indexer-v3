@@ -33,7 +33,7 @@ export const REWARD_FEE_TIER = 3_000;
 //   return { token0, token1 };
 // };
 
-export const getPoolFeatures = async (address: string, provider: Provider) => {
+export const getPoolFeatures = async (address: string, provider: JsonRpcProvider) => {
   const iface = new Interface([
     "function assetAddress() view returns (address)",
     "function is1155() view returns (bool)",
@@ -259,7 +259,7 @@ export const getPoolPriceFromAPI = async (
   vault: string,
   side: "sell" | "buy",
   slippage: number,
-  provider: Provider,
+  provider: JsonRpcProvider,
   userAddress: string,
   tokenIds: string[],
   amounts?: string[]
@@ -337,7 +337,7 @@ export const getPoolPriceFromAPI = async (
   };
 };
 
-export const getPoolNFTs = async (vault: string, provider: Provider) => {
+export const getPoolNFTs = async (vault: string, provider: JsonRpcProvider) => {
   const tokenIds: string[] = [];
   const iface = new Interface(["function allHoldings() view returns (uint256[] memory)"]);
 
@@ -354,7 +354,7 @@ export const getPoolNFTs = async (vault: string, provider: Provider) => {
   return tokenIds;
 };
 
-export const getPoolETHFees = async (address: string, provider: Provider) => {
+export const getPoolETHFees = async (address: string, provider: JsonRpcProvider) => {
   const iface = new Interface([
     `
       function vaultFees()

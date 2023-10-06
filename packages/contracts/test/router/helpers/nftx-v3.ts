@@ -39,7 +39,8 @@ export const setupNFTXV3Listings = async (listings: NFTXV3Listing[]) => {
     const pricePerToken = bn(price);
 
     const poolIds = [
-      ...[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19].map(
+      nft.id,
+      ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19].map(
         (i) => nft.id + 10000 + i
       ),
     ];
@@ -115,7 +116,7 @@ export const setupNFTXV3Listings = async (listings: NFTXV3Listing[]) => {
         collection: nft.contract.address,
         idsOut: [nft.id.toString()],
         price: isCancelled ? "0" : listing.price.toString(),
-        executeCallData: poolPrice.executeCallData,
+        executeCallData: isCancelled ? "0x00" : poolPrice.executeCallData,
         vTokenPremiumLimit: ethers.constants.MaxUint256.toString(),
         deductRoyalty: false,
       });
@@ -151,9 +152,9 @@ export const setupNFTXV3Offers = async (offers: NFTXV3Offer[]) => {
     const { buyer, nft, price, isCancelled } = offer;
     const pricePerToken = bn(price);
 
-    console.log({
-      pricePerToken: ethers.utils.formatEther(pricePerToken),
-    });
+    // console.log({
+    //   pricePerToken: ethers.utils.formatEther(pricePerToken),
+    // });
 
     // not providing nft.id here
     const poolIds = [

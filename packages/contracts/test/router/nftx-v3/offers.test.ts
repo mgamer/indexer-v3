@@ -197,13 +197,13 @@ describe("[ReservoirV6_0_1] NFTXV3 offers", () => {
           parseFloat(formatEther(totalAmount))) *
         100;
 
-      console.log({
-        orderSum: formatEther(orderSum),
-        totalAmount: formatEther(totalAmount),
-        diffPercent,
-        carol: carol.address,
-        carolAfter: carolAfter.toString(),
-      });
+      // console.log({
+      //   orderSum: formatEther(orderSum),
+      //   totalAmount: formatEther(totalAmount),
+      //   diffPercent,
+      //   carol: carol.address,
+      //   carolAfter: carolAfter.toString(),
+      // });
 
       // Check Carol balance
       const defaultSlippage = 5;
@@ -216,26 +216,26 @@ describe("[ReservoirV6_0_1] NFTXV3 offers", () => {
       expect(balancesAfter.emilio.sub(balancesBefore.emilio)).to.eq(orderFee);
     }
 
-    console.log(
-      offers.map((offer) => ({
-        isCancelled: offer.isCancelled,
-        nft: {
-          address: offer.nft.contract.address,
-          id: offer.nft.id,
-        },
-        idsIn: offer.order?.params.idsIn,
-      }))
-    );
+    // console.log(
+    //   offers.map((offer) => ({
+    //     isCancelled: offer.isCancelled,
+    //     nft: {
+    //       address: offer.nft.contract.address,
+    //       id: offer.nft.id,
+    //     },
+    //     idsIn: offer.order?.params.idsIn,
+    //   }))
+    // );
 
     // Alice and Bob got the NFTs of the filled orders
     for (const { nft, isCancelled, vault } of offers) {
-      console.log({
-        nft: {
-          address: nft.contract.address,
-          id: nft.id,
-        },
-        isCancelled,
-      });
+      // console.log({
+      //   nft: {
+      //     address: nft.contract.address,
+      //     id: nft.id,
+      //   },
+      //   isCancelled,
+      // });
 
       if (!isCancelled) {
         expect(await nft.contract.ownerOf(nft.id)).to.eq(vault);

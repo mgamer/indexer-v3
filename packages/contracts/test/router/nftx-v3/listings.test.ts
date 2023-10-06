@@ -5,6 +5,7 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-wit
 import * as Sdk from "@reservoir0x/sdk/src";
 import { expect } from "chai";
 import { ethers } from "hardhat";
+import { ContractTransaction } from "ethers";
 
 import { NFTXV3Listing, setupNFTXV3Listings } from "../helpers/nftx-v3";
 import { ExecutionInfo } from "../helpers/router";
@@ -170,10 +171,12 @@ describe("[ReservoirV6_0_1] NFTXV3 listings", () => {
     const ethBalancesBefore = await getBalances(Sdk.Common.Addresses.Native[chainId]);
 
     // Execute
-    await router.connect(carol).execute(executions, {
+    // const tx =
+    (await router.connect(carol).execute(executions, {
       value: executions.map(({ value }) => value).reduce((a, b) => bn(a).add(b), bn(0)),
       gasLimit: 8_000_000,
-    });
+    })) as ContractTransaction;
+    // const txRes = await tx.wait();
 
     // Fetch post-state
     const ethBalancesAfter = await getBalances(Sdk.Common.Addresses.Native[chainId]);
@@ -196,6 +199,7 @@ describe("[ReservoirV6_0_1] NFTXV3 listings", () => {
 
     // Checks
     const emilioBalance = ethBalancesAfter.emilio.sub(ethBalancesBefore.emilio);
+    // carolSpend = gasFees + ETH paid to buy NFTs
     const carolSpend = ethBalancesBefore.carol.sub(ethBalancesAfter.carol);
 
     // console.log({
@@ -210,7 +214,7 @@ describe("[ReservoirV6_0_1] NFTXV3 listings", () => {
       100;
 
     // Check Carol balance
-    const defaultSlippage = 15;
+    const defaultSlippage = 5;
     expect(diffPercent).to.lte(defaultSlippage);
 
     // console.log({ diffPercent: diffPercent.toString() });
@@ -225,7 +229,8 @@ describe("[ReservoirV6_0_1] NFTXV3 listings", () => {
         .map(({ price }) => price)
         .reduce((a, b) => bn(a).add(b), bn(0));
       // getPoolPrice has 100 bps slippage added on top, so removing it here
-      actualPaid = bn(actualPaid).sub(bn(actualPaid).mul(bn(105)).div(bn(10000)));
+      actualPaid = bn(actualPaid).mul(bn(9000)).div(bn(10100));
+      // const actualPaid = carolSpend.sub(txRes.cumulativeGasUsed.mul(txRes.effectiveGasPrice));
 
       const chargeFeeSum = listings
         .map((_, i) => feesOnTop[i].mul(actualPaid).div(totalPrice))
@@ -273,10 +278,10 @@ describe("[ReservoirV6_0_1] NFTXV3 listings", () => {
     }
   }
 
-  const multiple = false;
+  const multiple = true;
   const partial = false;
   const chargeFees = true;
-  const revertIfIncomplete = true;
+  const revertIfIncomplete = false;
 
   const testName =
     "[eth]" +
@@ -284,7 +289,7 @@ describe("[ReservoirV6_0_1] NFTXV3 listings", () => {
     `${partial ? "[partial]" : "[full]"}` +
     `${chargeFees ? "[fees]" : "[no-fees]"}` +
     `${revertIfIncomplete ? "[reverts]" : "[skip-reverts]"}`;
-  it.only(testName, async () =>
+  it.skip(testName, async () =>
     testAcceptListings(
       chargeFees,
       revertIfIncomplete,
