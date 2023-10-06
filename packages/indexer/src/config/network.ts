@@ -304,6 +304,11 @@ export const getNetworkSettings = (): NetworkSettings => {
           "0xd4416b13d2b3a9abae7acd5d6c2bbdbe25686401", // ens
           "0xc36442b4a4522e871399cd717abdd847ab11fe88", // uniswap positions
         ],
+        supportedBidCurrencies: {
+          ...defaultNetworkSettings.supportedBidCurrencies,
+          // Prime
+          "0xb23d80f5fefcddaa212212f028021b41ded428cf": true,
+        },
         whitelistedCurrencies: new Map([
           [
             "0xceb726e6383468dd8ac0b513c8330cc9fb4024a8",
