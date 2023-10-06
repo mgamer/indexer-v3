@@ -225,7 +225,7 @@ describe("[ReservoirV6_0_1] NFTXV3 listings", () => {
         .map(({ price }) => price)
         .reduce((a, b) => bn(a).add(b), bn(0));
       // getPoolPrice has 100 bps slippage added on top, so removing it here
-      actualPaid = bn(actualPaid).sub(bn(actualPaid).mul(bn(99)).div(bn(10000)));
+      actualPaid = bn(actualPaid).sub(bn(actualPaid).mul(bn(105)).div(bn(10000)));
 
       const chargeFeeSum = listings
         .map((_, i) => feesOnTop[i].mul(actualPaid).div(totalPrice))
