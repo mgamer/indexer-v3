@@ -822,6 +822,9 @@ export const getTokensV6Options: RouteOptions = {
         }
       }
 
+      // Determine whether we need to order by contract or not
+      const contractSort = !(query.collection || (query.contract && query.contract.length == 1));
+
       // Continue with the next page, this depends on the sorting used
       if (query.continuation && !query.token) {
         let contArr = splitContinuation(
@@ -900,10 +903,10 @@ export const getTokensV6Options: RouteOptions = {
                 if (contArr[0] !== "null") {
                   conditions.push(`(
                     (${sortColumn}, ${
-                    !query.collection ? `t.contract, ` : ""
-                  }t.token_id) ${sign} ($/floorSellValue/, ${
-                    !query.collection ? `$/contContract/, ` : ""
-                  }$/contTokenId/)
+                    contractSort
+                      ? `t.contract, t.token_id) ${sign} ($/floorSellValue/, $/contContract/, $/contTokenId/)`
+                      : `t.token_id) ${sign} ($/floorSellValue/, $/contTokenId/)`
+                  }
                     OR (${sortColumn} IS null)
                   )`);
                   (query as any).floorSellValue = contArr[0];
@@ -911,11 +914,11 @@ export const getTokensV6Options: RouteOptions = {
                   (query as any).contTokenId = contArr[2];
                 } else {
                   conditions.push(
-                    `(${sortColumn} is null AND (${
-                      !query.collection ? `t.contract, ` : ""
-                    }t.token_id) ${sign} (${
-                      !query.collection ? `$/contContract/, ` : ""
-                    }$/contTokenId/))`
+                    `(${sortColumn} is null AND ${
+                      contractSort
+                        ? `(t.contract, t.token_id) ${sign} ($/contContract/, $/contTokenId/))`
+                        : `(t.token_id) ${sign} ($/contTokenId/))`
+                    }`
                   );
                   (query as any).contContract = toBuffer(contArr[1]);
                   (query as any).contTokenId = contArr[2];
@@ -971,7 +974,7 @@ export const getTokensV6Options: RouteOptions = {
                 : `${union ? "" : "t."}floor_sell_value`;
 
             return ` ORDER BY ${sortColumn} ${query.sortDirection || "ASC"} NULLS LAST, ${
-              !query.collection ? `t_contract ${query.sortDirection || "ASC"}, ` : ""
+              contractSort ? `t_contract ${query.sortDirection || "ASC"}, ` : ""
             }t_token_id ${query.sortDirection || "ASC"}`;
           }
         }
