@@ -1,16 +1,16 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handler";
-import { logger } from "@/common/logger";
 import _ from "lodash";
-import { PendingFlagStatusSyncTokens } from "@/models/pending-flag-status-sync-tokens";
+
+import { logger } from "@/common/logger";
 import { releaseLock } from "@/common/redis";
-import { generateCollectionTokenSetJob } from "@/jobs/flag-status/generate-collection-token-set-job";
-import MetadataProviderRouter from "@/metadata/metadata-provider-router";
-import { TokensEntityUpdateParams } from "@/models/tokens/tokens-entity";
-import { Tokens } from "@/models/tokens";
+import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handler";
 import { nonFlaggedFloorQueueJob } from "@/jobs/collection-updates/non-flagged-floor-queue-job";
 import { flagStatusProcessJob } from "@/jobs/flag-status/flag-status-process-job";
+import MetadataProviderRouter from "@/metadata/metadata-provider-router";
+import { PendingFlagStatusSyncTokens } from "@/models/pending-flag-status-sync-tokens";
+import { Tokens } from "@/models/tokens";
+import { TokensEntityUpdateParams } from "@/models/tokens/tokens-entity";
 
 export type FlagStatusSyncJobPayload = {
   contract: string;
@@ -45,7 +45,6 @@ export class FlagStatusSyncJob extends AbstractRabbitMqJobHandler {
       await releaseLock(this.getLockName());
 
       await flagStatusProcessJob.addToQueue();
-      await generateCollectionTokenSetJob.addToQueue({ contract, collectionId });
 
       return;
     }

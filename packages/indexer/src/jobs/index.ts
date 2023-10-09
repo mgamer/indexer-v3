@@ -104,7 +104,6 @@ import { collectionFloorJob } from "@/jobs/collection-updates/collection-floor-q
 import { eventsSyncProcessRealtimeJob } from "@/jobs/events-sync/process/events-sync-process-realtime";
 import { fillUpdatesJob } from "@/jobs/fill-updates/fill-updates-job";
 import { fillPostProcessJob } from "@/jobs/fill-updates/fill-post-process-job";
-import { generateCollectionTokenSetJob } from "@/jobs/flag-status/generate-collection-token-set-job";
 import { flagStatusUpdateJob } from "@/jobs/flag-status/flag-status-update-job";
 import { flagStatusProcessJob } from "@/jobs/flag-status/flag-status-process-job";
 import { metadataIndexFetchJob } from "@/jobs/metadata-index/metadata-fetch-job";
@@ -240,7 +239,6 @@ export class RabbitMqJobsConsumer {
       eventsSyncProcessRealtimeJob,
       fillUpdatesJob,
       fillPostProcessJob,
-      generateCollectionTokenSetJob,
       flagStatusUpdateJob,
       flagStatusProcessJob,
       metadataIndexFetchJob,
