@@ -25,6 +25,12 @@ export const simulateCollectionMint = async (
     return collectionMint.status === "open";
   }
 
+  // Some network don't support the RPC calls the simulation depends on,
+  // so in this case we only let through mints having a known standard
+  if ([Network.PolygonZkevm, Network.Zksync].includes(config.chainId)) {
+    return collectionMint.standard !== "unknown";
+  }
+
   // Fetch the collection's contract and kind
   const collectionResult = await idb.oneOrNone(
     `
