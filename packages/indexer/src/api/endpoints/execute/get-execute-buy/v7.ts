@@ -885,8 +885,8 @@ export const getExecuteBuyV7Options: RouteOptions = {
                       WHERE tokens.collection_id = $/collection/
                         AND ${
                           payload.normalizeRoyalties
-                            ? "tokens.normalized_floor_sell_id"
-                            : "tokens.floor_sell_id"
+                            ? "tokens.normalized_floor_sell_value"
+                            : "tokens.floor_sell_value"
                         } IS NOT NULL
                     `,
                     {
