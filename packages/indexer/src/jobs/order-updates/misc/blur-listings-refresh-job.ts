@@ -148,7 +148,7 @@ if (config.doBackgroundWork) {
     "*/60 * * * *",
     async () =>
       await redlock
-        .acquire(["blur-bids-refresh-retry-lock"], (60 * 60 - 3) * 1000)
+        .acquire(["blur-listings-refresh-retry-lock"], (60 * 60 - 3) * 1000)
         .then(async () => {
           await RabbitMqJobsConsumer.retryQueue(blurListingsRefreshJob.queueName);
         })
