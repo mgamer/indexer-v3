@@ -5,6 +5,7 @@ export type PendingFlagStatusSyncCollection = {
   slug: string | null;
   contract: string;
   continuation: string | null;
+  collectionId: string;
 };
 
 /**

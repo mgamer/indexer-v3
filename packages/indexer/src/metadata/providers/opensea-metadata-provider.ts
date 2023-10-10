@@ -7,7 +7,7 @@ import { Contract } from "ethers";
 import { Interface } from "ethers/lib/utils";
 import { baseProvider } from "@/common/provider";
 import axios from "axios";
-import { RequestWasThrottledError, normalizeMetadata } from "./utils";
+import { CollectionNotFoundError, RequestWasThrottledError, normalizeMetadata } from "./utils";
 import _ from "lodash";
 import { AbstractBaseMetadataProvider } from "./abstract-base-metadata-provider";
 import { customHandleToken, hasCustomHandler } from "../custom";
@@ -204,6 +204,22 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
             error.config?.url
           )}, headers:${JSON.stringify(error.config?.headers?.url)}`
         );
+        // if (error.response.data.errors.includes("not found")) {
+        //   // slug is wrong, refresh the collection cache
+        //   await collectionMetadataQueueJob.addToQueue({
+        //     contract: collection.contract,
+        //     tokenId,
+        //     community: collection.community,
+        //     forceRefresh: true,
+        //   });
+
+        //   // slug is wrong, try to get the collection only based on the contract.
+        //   if (slug && contract && hasExtendCollectionHandler(contract)) {
+        //     return this._getTokensFlagStatusByCollectionPagination(null, contract, continuation);
+        //   } else {
+        //     // contract + slug are wrong, refresh t
+        //   }
+        // }
 
         this.handleError(error);
       });
@@ -219,9 +235,16 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
   }
 
   handleError(error: any) {
-    if (error.response?.status === 429 || error.response?.status === 503) {
+    if (
+      error.response?.status === 429 ||
+      error.response?.status === 503 ||
+      error.response?.status === 400
+    ) {
       let delay = 1;
 
+      if (error.response.data.errors.includes("not found")) {
+        throw new CollectionNotFoundError(error.response.data.errors);
+      }
       if (error.response.data.detail?.startsWith("Request was throttled. Expected available in")) {
         try {
           delay = error.response.data.detail.split(" ")[6];

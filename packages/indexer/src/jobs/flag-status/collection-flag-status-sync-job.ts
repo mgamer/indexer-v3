@@ -38,6 +38,7 @@ export class CollectionFlagStatusSyncJob extends AbstractRabbitMqJobHandler {
       const data = await getTokensFlagStatusForCollection(
         collectionToGetFlagStatusFor[0].slug,
         collectionToGetFlagStatusFor[0].contract,
+        collectionToGetFlagStatusFor[0].collectionId,
         collectionToGetFlagStatusFor[0].continuation
       );
       tokens = data.tokens;
@@ -68,6 +69,7 @@ export class CollectionFlagStatusSyncJob extends AbstractRabbitMqJobHandler {
           {
             slug: collectionToGetFlagStatusFor[0].slug,
             contract: collectionToGetFlagStatusFor[0].contract,
+            collectionId: collectionToGetFlagStatusFor[0].collectionId,
             continuation: nextContinuation,
           },
         ],

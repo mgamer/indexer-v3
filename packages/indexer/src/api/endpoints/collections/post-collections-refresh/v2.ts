@@ -25,6 +25,9 @@ import { blurBidsRefreshJob } from "@/jobs/order-updates/misc/blur-bids-refresh-
 import { blurListingsRefreshJob } from "@/jobs/order-updates/misc/blur-listings-refresh-job";
 import { openseaOrdersProcessJob } from "@/jobs/opensea-orders/opensea-orders-process-job";
 import { PendingFlagStatusSyncCollections } from "@/models/pending-flag-status-sync-collections";
+import { hasExtendCollectionHandler } from "@/metadata/extend";
+import { config } from "@/config/index";
+import { getCollectionTokensAndAddToFlagStatusTokenRefresh } from "@/jobs/flag-status/utils";
 
 const version = "v2";
 
@@ -242,13 +245,20 @@ export const postCollectionsRefreshV2Options: RouteOptions = {
           // Refresh the collection tokens metadata
           await metadataIndexFetchJob.addToQueue([metadataIndexInfo], true);
 
-          await PendingFlagStatusSyncCollections.add([
-            {
-              slug: collection.slug,
-              contract: collection.contract,
-              continuation: null,
-            },
-          ]);
+          if (config.metadataIndexingMethod === "opensea") {
+            if (!hasExtendCollectionHandler(collection.contract)) {
+              await PendingFlagStatusSyncCollections.add([
+                {
+                  slug: collection.slug,
+                  contract: collection.contract,
+                  collectionId: collection.id,
+                  continuation: null,
+                },
+              ]);
+            } else {
+              await getCollectionTokensAndAddToFlagStatusTokenRefresh(collection.id);
+            }
+          }
         }
       }
 
