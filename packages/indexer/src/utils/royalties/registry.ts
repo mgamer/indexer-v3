@@ -1,6 +1,8 @@
 import { Interface } from "@ethersproject/abi";
 import { Contract } from "@ethersproject/contracts";
 import * as Sdk from "@reservoir0x/sdk";
+import stringify from "json-stable-stringify";
+import _ from "lodash";
 
 import { idb } from "@/common/db";
 import { logger } from "@/common/logger";
@@ -41,22 +43,35 @@ export const refreshRegistryRoyalties = async (collection: string) => {
     return;
   }
 
-  // Fetch a random token from the collection
-  const tokenResult = await idb.oneOrNone(
+  // Fetch 10 random tokens from the collection
+  const tokenResults = await idb.manyOrNone(
     `
       SELECT
         tokens.token_id
       FROM tokens
       WHERE tokens.collection_id = $/collection/
-      LIMIT 1
+      LIMIT 10
     `,
     { collection }
   );
 
   const token = fromBuffer(collectionResult.contract);
-  const tokenId = tokenResult?.token_id || "0";
 
-  const latestRoyalties = await getRegistryRoyalties(token, tokenId);
+  // Get the royalties of all selected tokens
+  const tokenRoyalties = await Promise.all(
+    tokenResults.map(async (r) => getRegistryRoyalties(token, r.token_id))
+  );
+  const uniqueRoyalties = _.uniqBy(tokenRoyalties, (r) => stringify(r));
+
+  let latestRoyalties: Royalty[] = [];
+  if (uniqueRoyalties.length === 1) {
+    // Here all royalties are the same, so we take that as the collection-level royalty
+    latestRoyalties = uniqueRoyalties[0];
+  } else {
+    // Here we got non-unique royalties, so we don't have any collection-level royalty
+    // (this means that the collection has per-token royalties)
+    latestRoyalties = [];
+  }
 
   if (collection === "0x27ca1486749ef528b97a7ea1857f0b6aaee2626a") {
     logger.info(
