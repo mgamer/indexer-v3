@@ -68,9 +68,26 @@ export const refreshRegistryRoyalties = async (collection: string) => {
     // Here all royalties are the same, so we take that as the collection-level royalty
     latestRoyalties = uniqueRoyalties[0];
   } else {
-    // Here we got non-unique royalties, so we don't have any collection-level royalty
-    // (this means that the collection has per-token royalties)
-    latestRoyalties = [];
+    // Here we got non-unique royalties
+
+    // However, before assuming there are no collection-level royalties we query one
+    // more random (hopefully inexistent token id). If that returns a value found in
+    // the `uniqueRoyalties` array then we assume that is the collection-level value
+    // and the non-unique royalties were just one-offs (eg. just a few single tokens
+    // had the royalties changed), which we want to filter out.
+
+    try {
+      const randomTokenId = String(Math.floor(Math.random() * 10000000000000));
+      const randomTokenRoyalties = await getRegistryRoyalties(token, randomTokenId);
+      if (uniqueRoyalties.find((r) => stringify(r) === stringify(randomTokenRoyalties))) {
+        latestRoyalties = randomTokenRoyalties;
+      } else {
+        latestRoyalties = [];
+      }
+    } catch {
+      // Protect against the case where querying the royalties of a non-existent token reverts
+      latestRoyalties = [];
+    }
   }
 
   if (collection === "0x27ca1486749ef528b97a7ea1857f0b6aaee2626a") {
