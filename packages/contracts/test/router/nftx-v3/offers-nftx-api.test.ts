@@ -8,11 +8,10 @@ import { ethers, network } from "hardhat";
 
 import { NFTXV3Offer } from "../helpers/nftx-v3";
 import { ExecutionInfo } from "../helpers/router";
-import { bn, getChainId, getRandomBoolean, getRandomFloat, reset } from "../../utils";
-import { Network } from "@reservoir0x/sdk/src/utils";
+import { bn, getRandomBoolean, getRandomFloat, reset } from "../../utils";
 
 describe("[ReservoirV6_0_1] NFTX offers (with NFTX API routing)", () => {
-  const chainId = getChainId();
+  const chainId = 5;
 
   let deployer: SignerWithAddress;
   let alice: SignerWithAddress;
@@ -71,8 +70,8 @@ describe("[ReservoirV6_0_1] NFTX offers (with NFTX API routing)", () => {
   ) => {
     // Setup
 
-    // Token owner = alice
-    const owner = "0xfE1AA5275DDa4B333b1fb0Ccbd7A5f14EdC4A5de";
+    // Token owner = carol
+    const owner = "0x4eAc46c2472b32dc7158110825A7443D35a90168";
     await network.provider.request({
       method: "hardhat_impersonateAccount",
       params: [owner],
@@ -83,70 +82,62 @@ describe("[ReservoirV6_0_1] NFTX offers (with NFTX API routing)", () => {
     });
     carol = await ethers.getSigner(owner);
 
-    // Collection = milady
-    const collection = "0xD643e0B909867025b50375D7495e7d0f6F85De5f";
-    const vault = "0x670b8Ab9196D05A86b3EfD07B10d4fdBf2102532";
-    const vaultId = 7;
-    const tokensInVault = [3, 4];
-    const tokenId = 121;
+    // Collection = CryptoPunks
+    const collection = "0xbB12Ad601d0024aE2cD6B763a823aD3E6A53e1e7";
+    const vault = "0x65696CFa2e38AEadF3FEF5f3Ed0cA6bC79468530";
+    const vaultId = 8;
+    const tokenId = 7;
 
     const factory = await ethers.getContractFactory("MockERC721", deployer);
 
     const offers: NFTXV3Offer[] = [];
     const fees: BigNumber[][] = [];
-    for (let i = 0; i < tokensInVault.length; i++) {
-      const erc721 = factory.attach(collection);
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const offer: any = {
-        buyer: getRandomBoolean() ? alice : bob,
-        nft: {
-          contract: erc721,
-          id: tokensInVault[i],
-        },
-        price: parseEther(getRandomFloat(0.6, 5).toFixed(6)),
-        isCancelled: partial && getRandomBoolean(),
-      };
-
-      const poolPrice = await Sdk.NftxV3.Helpers.getPoolPriceFromAPI(
-        vault,
-        "sell",
-        100,
-        ethers.provider,
-        carol.address,
-        [offer.nft.id.toString()]
-      );
-
-      if (poolPrice.price) {
-        offer.price = bn(poolPrice.price);
-        offer.vault = vault;
-        offer.order = new Sdk.NftxV3.Order(chainId, {
-          vaultId: vaultId.toString(),
-          pool: vault,
-          collection: offer.nft.contract.address,
-          userAddress: carol.address,
-          currency: Sdk.Common.Addresses.Native[chainId],
-          idsIn: [offer.nft.id.toString()],
-          price: offer.isCancelled ? offer.price.mul(bn(10)).toString() : offer.price.toString(),
-          extra: {
-            prices: [offer.price.toString()],
-          },
-          executeCallData: poolPrice.executeCallData,
-          deductRoyalty: "false",
-          path: [],
-        });
-      }
-
-      offers.push(offer);
-
-      if (chargeFees) {
-        fees.push([parseEther(getRandomFloat(0.0001, 0.1).toFixed(6))]);
-      } else {
-        fees.push([]);
-      }
-    }
 
     const erc721 = factory.attach(collection);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const offer: any = {
+      buyer: getRandomBoolean() ? alice : bob,
+      nft: {
+        contract: erc721,
+        id: tokenId,
+      },
+      price: parseEther(getRandomFloat(0.6, 5).toFixed(6)),
+      isCancelled: partial && getRandomBoolean(),
+    };
+
+    const poolPrice = await Sdk.NftxV3.Helpers.getPoolPriceFromAPI(
+      vault,
+      "sell",
+      100,
+      ethers.provider,
+      carol.address,
+      [offer.nft.id.toString()]
+    );
+
+    if (poolPrice.price) {
+      offer.price = bn(poolPrice.price);
+      offer.vault = vault;
+      offer.order = new Sdk.NftxV3.Order(chainId, vault, carol.address, {
+        vaultId: vaultId.toString(),
+        collection: offer.nft.contract.address,
+        currency: Sdk.Common.Addresses.WNative[chainId],
+        idsIn: [offer.nft.id.toString()],
+        amounts: [],
+        price: offer.isCancelled ? "0" : offer.price.toString(),
+        executeCallData: offer.isCancelled ? "0x00" : poolPrice.executeCallData,
+        deductRoyalty: false,
+      });
+    }
+
+    offers.push(offer);
+
+    if (chargeFees) {
+      fees.push([parseEther(getRandomFloat(0.0001, 0.1).toFixed(6))]);
+    } else {
+      fees.push([]);
+    }
+
     await erc721.connect(carol).transferFrom(carol.address, nftxV3Module.address, tokenId);
 
     // Prepare executions
@@ -230,7 +221,7 @@ describe("[ReservoirV6_0_1] NFTX offers (with NFTX API routing)", () => {
 
   for (const partial of [false, true]) {
     for (const chargeFees of [false, true]) {
-      for (const revertIfIncomplete of [false, true]) {
+      for (const revertIfIncomplete of [true, false]) {
         const testCaseName =
           `${partial ? "[partial]" : "[full]"}` +
           `${chargeFees ? "[fees]" : "[no-fees]"}` +
