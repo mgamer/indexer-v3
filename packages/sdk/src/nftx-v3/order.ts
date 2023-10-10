@@ -1,4 +1,5 @@
 import { Provider } from "@ethersproject/abstract-provider";
+import { JsonRpcProvider } from "@ethersproject/providers";
 
 import { getPoolPriceFromAPI } from "./helpers";
 import * as Types from "./types";
@@ -28,7 +29,7 @@ export class Order {
       this.vault,
       side,
       slippage,
-      provider,
+      provider as JsonRpcProvider,
       this.userAddress,
       side === "buy" ? this.params.idsOut! : this.params.idsIn!,
       this.params.amounts

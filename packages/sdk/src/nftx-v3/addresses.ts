@@ -19,3 +19,7 @@ export const CreateVaultZap: ChainIdToAddress = {
 export const QuoterV2: ChainIdToAddress = {
   [Network.EthereumGoerli]: "0xBb473dbEF3363b5d7CDD5f12429Fd1C5F0c10499",
 };
+
+export const NFTXV3Module: ChainIdToAddress = {
+  [Network.EthereumGoerli]: "0xfe6A828fF94A0F027402A56711F71526593422e5",
+};
