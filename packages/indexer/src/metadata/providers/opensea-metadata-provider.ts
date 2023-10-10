@@ -125,7 +125,7 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
 
   protected async _getTokensMetadataBySlug(
     slug: string,
-    continuation?: string
+    continuation?: string | null
   ): Promise<TokenMetadataBySlugResult> {
     const searchParams = new URLSearchParams();
     if (continuation) {
@@ -164,12 +164,12 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
     };
   }
 
-  async _getTokensFlagStatus(
+  async _getTokensFlagStatusByContract(
     contract: string,
     continuation?: string
   ): Promise<{
     data: { contract: string; tokenId: string; isFlagged: boolean }[];
-    continuation?: string;
+    continuation: string | null;
   }> {
     const searchParams = new URLSearchParams();
     searchParams.append("asset_contract_addresses", contract);

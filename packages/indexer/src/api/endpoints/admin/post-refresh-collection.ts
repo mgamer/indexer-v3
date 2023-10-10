@@ -191,6 +191,7 @@ export const postRefreshCollectionOptions: RouteOptions = {
         await PendingFlagStatusSyncCollections.add([
           {
             slug: collection.slug,
+            contract: collection.contract,
             continuation: null,
           },
         ]);

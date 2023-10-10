@@ -111,6 +111,7 @@ export class MetadataIndexProcessBySlugJob extends AbstractRabbitMqJobHandler {
           await PendingFlagStatusSyncCollections.add([
             {
               slug: refreshTokenBySlug.slug,
+              contract: refreshTokenBySlug.contract,
               continuation: null,
             },
           ]);

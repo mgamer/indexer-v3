@@ -18,20 +18,33 @@ export const getTokensFlagStatusWithTokenIds = async (
 
 export const getTokensFlagStatusForCollection = async (
   slug: string,
+  contract: string,
   continuation: string | null
 ): Promise<{
   tokens: { contract: string; tokenId: string; isFlagged: boolean | null }[];
   nextContinuation: string | null;
 }> => {
-  const result = await openseaMetadataProvider.getTokensMetadataBySlug(slug, continuation || "");
+  let parsedTokens: { contract: string; tokenId: string; isFlagged: boolean | null }[] = [];
+  let nextContinuation: string | null = null;
+  if (slug) {
+    const result = await openseaMetadataProvider.getTokensMetadataBySlug(slug, continuation || "");
 
-  const parsedTokens = result.metadata.map((token) => ({
-    contract: token.contract,
-    tokenId: token.tokenId,
-    isFlagged: token.flagged,
-  }));
+    parsedTokens = result.metadata.map((token) => ({
+      contract: token.contract,
+      tokenId: token.tokenId,
+      isFlagged: token.flagged,
+    }));
 
-  const nextContinuation = result.continuation;
+    nextContinuation = result.continuation;
+  } else if (contract) {
+    const result = await openseaMetadataProvider._getTokensFlagStatusByContract(
+      contract,
+      continuation || ""
+    );
+
+    parsedTokens = result.data;
+    nextContinuation = result.continuation;
+  }
 
   return { tokens: parsedTokens, nextContinuation: nextContinuation || null };
 };
