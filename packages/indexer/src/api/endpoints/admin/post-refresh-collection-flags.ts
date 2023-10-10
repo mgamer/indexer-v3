@@ -8,7 +8,7 @@ import { logger } from "@/common/logger";
 import { config } from "@/config/index";
 import { regex } from "@/common/utils";
 
-import { PendingFlagStatusSyncJobs } from "@/models/pending-flag-status-sync-jobs";
+import { PendingFlagStatusSyncCollections } from "@/models/pending-flag-status-sync-collections";
 
 export const postRefreshCollectionFlagsOptions: RouteOptions = {
   description: "Refresh tokens flag status for the given collection",
@@ -36,14 +36,11 @@ export const postRefreshCollectionFlagsOptions: RouteOptions = {
     const payload = request.payload as any;
 
     try {
-      const pendingFlagStatusSyncJobs = new PendingFlagStatusSyncJobs();
-      await pendingFlagStatusSyncJobs.add([
+      await PendingFlagStatusSyncCollections.add([
         {
-          kind: "collection",
-          data: {
-            collectionId: payload.collection,
-            backfill: payload.backfill,
-          },
+          slug: null,
+          contract: payload.collection,
+          continuation: null,
         },
       ]);
 

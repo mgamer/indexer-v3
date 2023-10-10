@@ -9,7 +9,7 @@ import { logger } from "@/common/logger";
 import { config } from "@/config/index";
 import { fromBuffer, toBuffer } from "@/common/utils";
 import { idb } from "@/common/db";
-import { PendingFlagStatusSyncJobs } from "@/models/pending-flag-status-sync-jobs";
+import { PendingFlagStatusSyncTokens } from "@/models/pending-flag-status-sync-tokens";
 
 export const postFlagAddressOptions: RouteOptions = {
   description: "Update address flag status",
@@ -59,23 +59,15 @@ export const postFlagAddressOptions: RouteOptions = {
 
           for (const collectionId in tokensByCollection) {
             const contract = fromBuffer(tokensByCollection[collectionId][0].contract);
-
-            const pendingFlagStatusSyncJobs = new PendingFlagStatusSyncJobs();
-            await pendingFlagStatusSyncJobs.add(
-              [
-                {
-                  kind: "tokens",
-                  data: {
-                    collectionId,
+            await Promise.all(
+              _.map(tokensByCollection[collectionId], async ({ token_id }) => {
+                await PendingFlagStatusSyncTokens.add([
+                  {
                     contract,
-                    tokens: tokensByCollection[collectionId].map(({ token_id, is_flagged }) => ({
-                      tokenId: token_id,
-                      tokenIsFlagged: is_flagged,
-                    })),
+                    tokenId: token_id,
                   },
-                },
-              ],
-              true
+                ]);
+              })
             );
           }
         }
