@@ -24,29 +24,14 @@ export const getTokensFlagStatusForCollection = async (
   tokens: { contract: string; tokenId: string; isFlagged: boolean | null }[];
   nextContinuation: string | null;
 }> => {
-  let parsedTokens: { contract: string; tokenId: string; isFlagged: boolean | null }[] = [];
-  let nextContinuation: string | null = null;
-  if (slug) {
-    const result = await openseaMetadataProvider.getTokensMetadataBySlug(slug, continuation || "", {
-      isRequestForFlaggedMetadata: true,
-    });
+  const result = await openseaMetadataProvider._getTokensFlagStatusByCollectionPagination(
+    slug,
+    contract,
+    continuation || ""
+  );
 
-    parsedTokens = result.metadata.map((token) => ({
-      contract: token.contract,
-      tokenId: token.tokenId,
-      isFlagged: token.flagged,
-    }));
-
-    nextContinuation = result.continuation;
-  } else if (contract) {
-    const result = await openseaMetadataProvider._getTokensFlagStatusByContract(
-      contract,
-      continuation || ""
-    );
-
-    parsedTokens = result.data;
-    nextContinuation = result.continuation;
-  }
+  const parsedTokens = result.data;
+  const nextContinuation = result.continuation;
 
   return { tokens: parsedTokens, nextContinuation: nextContinuation || null };
 };

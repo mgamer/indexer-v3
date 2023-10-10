@@ -125,10 +125,7 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
 
   protected async _getTokensMetadataBySlug(
     slug: string,
-    continuation?: string | null,
-    options?: {
-      isRequestForFlaggedMetadata?: boolean;
-    }
+    continuation?: string | null
   ): Promise<TokenMetadataBySlugResult> {
     const searchParams = new URLSearchParams();
     if (continuation) {
@@ -141,10 +138,6 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
     }
     searchParams.append("limit", "200");
 
-    const API_KEY_TO_USE = options?.isRequestForFlaggedMetadata
-      ? config.openSeaFlaggedMetadataApiKey
-      : config.openSeaTokenMetadataBySlugApiKey;
-
     const url = `${
       !this.isOSTestnet() ? "https://api.opensea.io" : "https://testnets-api.opensea.io"
     }/api/v1/assets?${searchParams.toString()}`;
@@ -153,7 +146,7 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
         headers: !this.isOSTestnet()
           ? {
               url,
-              "X-API-KEY": API_KEY_TO_USE,
+              "X-API-KEY": config.openSeaTokenMetadataBySlugApiKey,
               Accept: "application/json",
             }
           : {
@@ -171,15 +164,21 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
     };
   }
 
-  async _getTokensFlagStatusByContract(
-    contract: string,
+  async _getTokensFlagStatusByCollectionPagination(
+    slug: string | null,
+    contract: string | null,
     continuation?: string
   ): Promise<{
     data: { contract: string; tokenId: string; isFlagged: boolean }[];
     continuation: string | null;
   }> {
     const searchParams = new URLSearchParams();
-    searchParams.append("asset_contract_addresses", contract);
+    if (contract) {
+      searchParams.append("asset_contract_addresses", contract);
+    } else if (slug) {
+      searchParams.append("collection_slug", slug);
+    }
+
     if (continuation) {
       searchParams.append("cursor", continuation);
     }
@@ -205,8 +204,16 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
       })
       .then((response) => response.data)
       .catch((error) => {
-        // eslint-disable-next-line
-        console.log(error);
+        logger.error(
+          "opensea-fetcher",
+          `fetchTokensFlagStatusByContract error. url:${url}, message:${error.message},  status:${
+            error.response?.status
+          }, data:${JSON.stringify(error.response?.data)}, url:${JSON.stringify(
+            error.config?.url
+          )}, headers:${JSON.stringify(error.config?.headers?.url)}`
+        );
+
+        this.handleError(error);
       });
 
     return {

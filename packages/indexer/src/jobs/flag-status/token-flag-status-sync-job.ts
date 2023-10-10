@@ -8,6 +8,7 @@ import { acquireLock, doesLockExist, getLockExpiration } from "@/common/redis";
 import { logger } from "@/common/logger";
 import { PendingFlagStatusSyncTokens } from "@/models/pending-flag-status-sync-tokens";
 import { flagStatusUpdateJob } from "@/jobs/flag-status/flag-status-update-job";
+import { RequestWasThrottledError } from "../orderbook/post-order-external/api/errors";
 
 export class TokenFlagStatusSyncJob extends AbstractRabbitMqJobHandler {
   queueName = "token-flag-status-sync-queue";
@@ -35,9 +36,7 @@ export class TokenFlagStatusSyncJob extends AbstractRabbitMqJobHandler {
     try {
       tokens = await getTokensFlagStatusWithTokenIds(tokensToGetFlagStatusFor);
     } catch (error) {
-      // add back to redis queue
-      await PendingFlagStatusSyncTokens.add(tokensToGetFlagStatusFor, true);
-      if ((error as any).response?.status === 429) {
+      if (error instanceof RequestWasThrottledError) {
         logger.info(
           this.queueName,
           `Too Many Requests.  error: ${JSON.stringify((error as any).response.data)}`
@@ -46,6 +45,7 @@ export class TokenFlagStatusSyncJob extends AbstractRabbitMqJobHandler {
         const expiresIn = (error as any).response.data.expires_in;
 
         await acquireLock(this.getLockName(), expiresIn * 1000);
+        await PendingFlagStatusSyncTokens.add(tokensToGetFlagStatusFor, true);
         return;
       } else {
         logger.error(this.queueName, `Error: ${error}`);
