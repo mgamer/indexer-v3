@@ -4,6 +4,7 @@ import { CollectionNotFoundError } from "@/metadata/providers/utils";
 import { collectionMetadataQueueJob } from "../collection-updates/collection-metadata-queue-job";
 import { Collections } from "@/models/collections";
 import { PendingFlagStatusSyncTokens } from "@/models/pending-flag-status-sync-tokens";
+import { CollectionsEntity } from "@/models/collections/collections-entity";
 
 export const getTokensFlagStatusWithTokenIds = async (
   tokens: { contract: string; tokenId: string }[]
@@ -44,9 +45,12 @@ export const getTokensFlagStatusForCollection = async (
   } catch (error) {
     if (error instanceof CollectionNotFoundError && contract) {
       // refresh the collection slug, ours might be wrong.
+      const collection = await Collections.getById(collectionId);
+      if (!collection) throw "Collection not found by id: " + collectionId;
+
       await collectionMetadataQueueJob.addToQueue({
         contract: contract,
-        tokenId: "1",
+        tokenId: collection?.tokenIdRange[0].toString() || "",
         forceRefresh: true,
       });
 
@@ -62,16 +66,16 @@ export const getTokensFlagStatusForCollection = async (
         nextContinuation = result.continuation;
       } else {
         // if its a shared collection, we need to only refresh the tokens that are in the collection
-        await getCollectionTokensAndAddToFlagStatusTokenRefresh(collectionId);
+        await getCollectionTokensAndAddToFlagStatusTokenRefresh(collection);
       }
     } else throw error;
   }
   return { tokens: parsedTokens, nextContinuation: nextContinuation || null };
 };
 
-export const getCollectionTokensAndAddToFlagStatusTokenRefresh = async (collectionId: string) => {
-  const collection = await Collections.getById(collectionId);
-
+export const getCollectionTokensAndAddToFlagStatusTokenRefresh = async (
+  collection: CollectionsEntity
+) => {
   const startTokenId = collection?.tokenIdRange[0];
   const endTokenId = collection?.tokenIdRange[1];
 
