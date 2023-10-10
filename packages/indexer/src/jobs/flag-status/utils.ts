@@ -17,6 +17,7 @@ export const getTokensFlagStatusWithTokenIds = async (
 };
 
 export const getTokensFlagStatusForCollection = async (
+  slug: string | null,
   contract: string | null,
   continuation: string | null
 ): Promise<{
@@ -24,6 +25,7 @@ export const getTokensFlagStatusForCollection = async (
   nextContinuation: string | null;
 }> => {
   const result = await openseaMetadataProvider._getTokensFlagStatusByCollectionPagination(
+    slug,
     contract,
     continuation || ""
   );

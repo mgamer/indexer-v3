@@ -165,6 +165,7 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
   }
 
   async _getTokensFlagStatusByCollectionPagination(
+    slug: string | null,
     contract: string | null,
     continuation?: string
   ): Promise<{
@@ -176,9 +177,10 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
     if (continuation) searchParams.append("next", continuation);
     searchParams.append("limit", "50");
 
-    const url = `${
-      !this.isOSTestnet() ? "https://api.opensea.io" : "https://testnets-api.opensea.io"
-    }/api/v2/chain/${this.getOSNetworkName()}/contract/${contract}/nfts?${searchParams.toString()}`;
+    const domain = !this.isOSTestnet() ? "opensea.io" : "testnets-api.opensea.io";
+    const api = slug ? "collection" : "contract";
+    const apiValue = slug ? slug : contract;
+    const url = `${domain}/api/v2/chain/${this.getOSNetworkName()}/${api}/${apiValue}/nfts?${searchParams.toString()}`;
 
     const data = await axios
       .get(!this.isOSTestnet() ? config.openSeaApiUrl || url : url, {

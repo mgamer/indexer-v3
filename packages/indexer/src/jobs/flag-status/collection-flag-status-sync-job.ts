@@ -36,6 +36,7 @@ export class CollectionFlagStatusSyncJob extends AbstractRabbitMqJobHandler {
 
     try {
       const data = await getTokensFlagStatusForCollection(
+        collectionToGetFlagStatusFor[0].slug,
         collectionToGetFlagStatusFor[0].contract,
         collectionToGetFlagStatusFor[0].continuation
       );
@@ -65,6 +66,7 @@ export class CollectionFlagStatusSyncJob extends AbstractRabbitMqJobHandler {
       await PendingFlagStatusSyncCollections.add(
         [
           {
+            slug: collectionToGetFlagStatusFor[0].slug,
             contract: collectionToGetFlagStatusFor[0].contract,
             continuation: nextContinuation,
           },

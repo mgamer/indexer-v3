@@ -2,6 +2,7 @@ import _ from "lodash";
 import { redis } from "@/common/redis";
 
 export type PendingFlagStatusSyncCollection = {
+  slug: string | null;
   contract: string;
   continuation: string | null;
 };
