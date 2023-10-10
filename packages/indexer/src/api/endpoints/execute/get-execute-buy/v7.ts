@@ -27,9 +27,9 @@ import { FeeRecipients } from "@/models/fee-recipients";
 import { Sources } from "@/models/sources";
 import * as mints from "@/orderbook/mints";
 import {
-  normalizeCollectionMint,
+  PartialCollectionMint,
   generateCollectionMintTxData,
-  RawMintParam,
+  normalizePartialCollectionMint,
 } from "@/orderbook/mints/calldata";
 import { getNFTTransferEvents } from "@/orderbook/mints/simulation";
 import { OrderKind, generateListingDetailsV6 } from "@/orderbook/orders";
@@ -531,8 +531,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
 
           // TODO: Handle any other on-chain orderbooks that cannot be "posted"
           if (order.kind === "mint") {
-            const rawMint = order.data as RawMintParam;
-            const collection = rawMint.collection;
+            const rawMint = order.data as PartialCollectionMint;
 
             const collectionData = await idb.oneOrNone(
               `
@@ -544,55 +543,49 @@ export const getExecuteBuyV7Options: RouteOptions = {
                 WHERE collections.id = $/id/
               `,
               {
-                id: collection,
+                id: rawMint.collection,
               }
             );
-
             if (collectionData) {
-              const orderId = `mint:${collection}`;
-              const openMint = normalizeCollectionMint({
-                ...rawMint,
-                currency: rawMint.currency ?? payload.currency,
-                collection: rawMint.collection ?? collection,
-                contract: rawMint.contract ?? collection,
-              });
+              const collectionMint = normalizePartialCollectionMint(rawMint);
 
-              const quantityToMint = 1;
               const { txData, price } = await generateCollectionMintTxData(
-                openMint,
+                collectionMint,
                 payload.taker,
-                quantityToMint,
+                item.quantity,
                 {
                   comment: payload.comment,
                   referrer: payload.referrer,
                 }
               );
 
+              const orderId = `mint:${collectionMint.collection}`;
               mintDetails.push({
                 orderId,
                 txData,
                 fees: [],
-                token: openMint.contract,
-                quantity: quantityToMint,
+                token: collectionMint.contract,
+                quantity: item.quantity,
                 comment: payload.comment,
               });
+
               await addToPath(
                 {
                   id: orderId,
                   kind: "mint",
-                  maker: openMint.contract,
+                  maker: collectionMint.contract,
                   nativePrice: price,
                   price: price,
                   sourceId: null,
-                  currency: openMint.currency,
+                  currency: collectionMint.currency,
                   rawData: {},
                   builtInFees: [],
                   additionalFees: [],
                 },
                 {
                   kind: collectionData.token_kind,
-                  contract: openMint.contract,
-                  quantity: quantityToMint,
+                  contract: collectionMint.contract,
+                  quantity: item.quantity,
                 }
               );
 
@@ -600,7 +593,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
                 // The max quantity is the amount mintable on the collection
                 maxQuantities.push({
                   itemIndex,
-                  maxQuantity: openMint.tokenId ? quantityToMint.toString() : "1",
+                  maxQuantity: null,
                 });
               }
             }

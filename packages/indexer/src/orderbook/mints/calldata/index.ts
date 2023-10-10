@@ -1,23 +1,18 @@
 import { defaultAbiCoder } from "@ethersproject/abi";
 import { AddressZero } from "@ethersproject/constants";
+import * as Sdk from "@reservoir0x/sdk";
 import { TxData } from "@reservoir0x/sdk/dist/utils";
 
 import { idb } from "@/common/db";
 import { bn, fromBuffer, toBuffer } from "@/common/utils";
+import { config } from "@/config/index";
 import { mintsProcessJob } from "@/jobs/mints/mints-process-job";
 import { CollectionMint } from "@/orderbook/mints";
-import * as Sdk from "@reservoir0x/sdk";
-import { config } from "@/config/index";
 
 import * as mints from "@/orderbook/mints/calldata/detector";
 
 // For now, use the deployer address
 const DEFAULT_REFERRER = "0xf3d63166f0ca56c3c1a3508fce03ff0cf3fb691e";
-
-export type RawMintParam = Pick<
-  CollectionMint,
-  "collection" | "details" | "price" | "currency" | "contract"
->;
 
 export type AbiParam =
   | {
@@ -65,17 +60,24 @@ export type MintTxSchema = {
 
 export type CustomInfo = mints.manifold.Info;
 
-export const normalizeCollectionMint = (mintRaw: RawMintParam): CollectionMint => {
+export type PartialCollectionMint = Pick<
+  CollectionMint,
+  "collection" | "details" | "price" | "contract"
+>;
+
+export const normalizePartialCollectionMint = (
+  partialCm: PartialCollectionMint
+): CollectionMint => {
   return {
-    collection: mintRaw.collection ?? mintRaw.contract,
-    contract: mintRaw.contract ?? mintRaw.collection,
+    collection: partialCm.collection ?? partialCm.contract,
+    contract: partialCm.contract ?? partialCm.collection,
     stage: "claim",
     kind: "public",
     status: "open",
     standard: "unknown",
-    details: mintRaw.details,
-    currency: mintRaw.currency ?? Sdk.Common.Addresses.Native[config.chainId],
-    price: mintRaw.price ?? "0",
+    details: partialCm.details,
+    currency: Sdk.Common.Addresses.Native[config.chainId],
+    price: partialCm.price ?? "0",
   };
 };
 
