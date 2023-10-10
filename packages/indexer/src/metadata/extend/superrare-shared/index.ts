@@ -1,12 +1,8 @@
 import { Contract, utils } from "ethers";
 import { baseProvider } from "@/common/provider";
 import axios from "axios";
-import { CollectionMetadata, TokenMetadata } from "@/utils/metadata-api";
-export const extendCollection = async (
-  _chainId: number,
-  metadata: CollectionMetadata,
-  _tokenId: number
-) => {
+import { CollectionMetadata, TokenMetadata } from "@/metadata/types";
+export const extendCollection = async (metadata: CollectionMetadata, _tokenId: number) => {
   const nft = new Contract(
     metadata.contract,
     new utils.Interface([
@@ -20,7 +16,7 @@ export const extendCollection = async (
   const tokenURI = await nft.tokenURI(_tokenId);
 
   if (creatorAddress && tokenURI) {
-    metadata.id = `${metadata.contract}:superrare-shared-${creatorAddress}`;
+    metadata.id = `${metadata.contract}:superrare-shared-${creatorAddress}`.toLowerCase();
     metadata.creator = creatorAddress;
     await axios.get(tokenURI).then((rawMetadata) => {
       metadata.name = `SuperRare 1/1s: ${rawMetadata.data.createdBy}`;
@@ -33,7 +29,7 @@ export const extendCollection = async (
   return metadata;
 };
 
-export const extend = async (_chainId: number, metadata: TokenMetadata) => {
+export const extend = async (metadata: TokenMetadata) => {
   const nft = new Contract(
     metadata.contract,
     new utils.Interface(["function tokenCreator(uint256 _tokenId) view returns (address)"]),
@@ -43,7 +39,7 @@ export const extend = async (_chainId: number, metadata: TokenMetadata) => {
   const creatorAddress = await nft.tokenCreator(metadata.tokenId);
 
   if (creatorAddress) {
-    metadata.collection = `${metadata.contract}:superrare-shared-${creatorAddress}`;
+    metadata.collection = `${metadata.contract}:superrare-shared-${creatorAddress}`.toLowerCase();
     return {
       ...metadata,
     };

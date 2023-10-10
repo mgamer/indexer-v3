@@ -49,7 +49,7 @@ export const WNative: ChainIdToAddress = {
   [Network.MantleTestnet]: "0xbaafec4b6ef4f5e0bafa850cbc48364b953efcf9",
   [Network.Zksync]: "0x5aea5775959fbc2557cc8789bc1bf90a239d9a91",
   [Network.PolygonZkevm]: "0x4f9a0e7fd2bf6067db6994cf12e4495df938e6e9",
-  [Network.Ancient8Testnet]: "0x4200000000000000000000000000000000000015",
+  [Network.Ancient8Testnet]: "0x4200000000000000000000000000000000000006",
 };
 
 export const Usdc: ChainIdToAddress = {
@@ -87,6 +87,8 @@ export const RoyaltyEngine: ChainIdToAddress = {
   [Network.Base]: "0x8755310f937528173e7c5a106131d79a3601c9d9",
   [Network.Linea]: "0x8755310f937528173e7c5a106131d79a3601c9d9",
   [Network.Avalanche]: "0x60b433ee91680189deb2c94b0b062ea283f6b4dd",
+  [Network.PolygonZkevm]: "0x60b433ee91680189deb2c94b0b062ea283f6b4dd",
+  [Network.Ancient8Testnet]: "0x8755310f937528173e7c5a106131d79a3601c9d9",
 };
 
 // Uniswap's `SwapRouter02`
@@ -118,6 +120,8 @@ export const Create3Factory: ChainIdToAddress = {
   [Network.Zora]: "0x0000000000000a9efe52e741bcb25da0e4438e71",
   [Network.Base]: "0x0000000000000a9efe52e741bcb25da0e4438e71",
   [Network.Linea]: "0x0000000000000a9efe52e741bcb25da0e4438e71",
+  [Network.PolygonZkevm]: "0x0000000000000a9efe52e741bcb25da0e4438e71",
+  [Network.Ancient8Testnet]: "0x0000000000000a9efe52e741bcb25da0e4438e71",
 };
 
 export const GelatoRelay1BalanceERC2771: ChainIdToAddress = {

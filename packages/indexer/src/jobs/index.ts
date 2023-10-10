@@ -10,7 +10,6 @@ import "@/jobs/daily-volumes";
 import "@/jobs/data-archive";
 import "@/jobs/events-sync";
 import "@/jobs/oracle";
-import "@/jobs/websocket-events";
 import "@/jobs/metrics";
 import "@/jobs/opensea-orders";
 import "@/jobs/monitoring";
@@ -31,13 +30,13 @@ import * as backfillExpiredOrders from "@/jobs/backfill/backfill-expired-orders"
 import * as backfillExpiredOrders2 from "@/jobs/backfill/backfill-expired-orders-2";
 import * as backfillRefreshCollectionMetadata from "@/jobs/backfill/backfill-refresh-collections-metadata";
 import * as backfillSaleRoyalties from "@/jobs/backfill/backfill-sale-royalties";
-import * as tokenWebsocketEventsTriggerQueue from "@/jobs/websocket-events/token-websocket-events-trigger-queue";
 import * as backfillSalePricingDecimalElasticsearch from "@/jobs/activities/backfill/backfill-sales-pricing-decimal-elasticsearch";
 import * as backfillRefreshCollectionsCreator from "@/jobs/backfill/backfill-refresh-collections-creator";
 import * as backfillLooksrareSeaportOrders from "@/jobs/backfill/backfill-looksrare-seaport-orders";
 import * as backfillSalesUsdPrice from "@/jobs/backfill/backfill-sales-usd-price";
 import * as backfillSales from "@/jobs/backfill/backfill-sales";
 import * as backfillReorgBlocks from "@/jobs/backfill/backfill-reorg-blocks";
+import * as backfillDeletedSalesElasticsearch from "@/jobs/activities/backfill/backfill-deleted-sales-elasticsearch";
 
 import amqplib from "amqplib";
 import { config } from "@/config/index";
@@ -154,6 +153,8 @@ import { blockGapCheckJob } from "@/jobs/events-sync/block-gap-check";
 import { traceSyncJob } from "@/jobs/events-sync/trace-sync-job";
 import { backfillTokensTimeToMetadataJob } from "@/jobs/backfill/backfill-tokens-time-to-metadata-job";
 import { topSellingCollectionsJob } from "@/jobs/top-selling-collections-cache/save-top-selling-collections-job";
+import { newCollectionForTokenJob } from "@/jobs/token-updates/new-collection-for-token-job";
+import { backfillTokensWithMissingCollectionJob } from "@/jobs/backfill/backfill-tokens-with-missing-collection-job";
 
 export const allJobQueues = [
   backfillWrongNftBalances.queue,
@@ -161,13 +162,13 @@ export const allJobQueues = [
   backfillExpiredOrders2.queue,
   backfillRefreshCollectionMetadata.queue,
   backfillSaleRoyalties.queue,
-  tokenWebsocketEventsTriggerQueue.queue,
   backfillSalePricingDecimalElasticsearch.queue,
   backfillRefreshCollectionsCreator.queue,
   backfillLooksrareSeaportOrders.queue,
   backfillSalesUsdPrice.queue,
   backfillSales.queue,
   backfillReorgBlocks.queue,
+  backfillDeletedSalesElasticsearch.queue,
 ];
 
 export class RabbitMqJobsConsumer {
@@ -290,6 +291,8 @@ export class RabbitMqJobsConsumer {
       blockGapCheckJob,
       backfillTokensTimeToMetadataJob,
       topSellingCollectionsJob,
+      newCollectionForTokenJob,
+      backfillTokensWithMissingCollectionJob,
     ];
   }
 
