@@ -292,36 +292,48 @@ export const getPoolPriceFromAPI = async (
   };
   let price: BigNumber;
   if (side === "buy") {
-    apiResponse = await axios.get(`${NFTX_ENDPOINT}/${chainId}/quote`, {
-      params: {
-        type: side,
-        vaultId: vaultId.toString(),
-        userAddress,
-        buyTokenIds: tokenIds,
-        buyAmounts: is1155 ? amounts : [],
-      },
-      headers: {
-        Authorization: process.env.NFTX_API_KEY,
-      },
-    });
+    let tokenIdsQuery = "";
+    let tokenAmountsQuery = "";
+    for (const tokenId of tokenIds) {
+      tokenIdsQuery += `&buyTokenIds=${tokenId}`;
+    }
+    if (is1155 && amounts) {
+      for (const amount of amounts) {
+        tokenAmountsQuery += `&buyAmounts=${amount}`;
+      }
+    }
+    apiResponse = await axios.get(
+      `${NFTX_ENDPOINT}/${chainId}/quote?type=${side}&vaultId=${vaultId.toString()}&userAddress=${userAddress}${tokenIdsQuery}${tokenAmountsQuery}`,
+      {
+        headers: {
+          Authorization: process.env.NFTX_API_KEY,
+        },
+      }
+    );
 
     price = bn(apiResponse.data.price);
     if (slippage) {
       price = price.add(price.mul(slippage).div(100000));
     }
   } else {
-    apiResponse = await axios.get(`${NFTX_ENDPOINT}/${chainId}/quote`, {
-      params: {
-        type: side,
-        vaultId: vaultId.toString(),
-        userAddress,
-        sellTokenIds: tokenIds,
-        sellAmounts: is1155 ? amounts : [],
-      },
-      headers: {
-        Authorization: process.env.NFTX_API_KEY,
-      },
-    });
+    let tokenIdsQuery = "";
+    let tokenAmountsQuery = "";
+    for (const tokenId of tokenIds) {
+      tokenIdsQuery += `&sellTokenIds=${tokenId}`;
+    }
+    if (is1155 && amounts) {
+      for (const amount of amounts) {
+        tokenAmountsQuery += `&sellAmounts=${amount}`;
+      }
+    }
+    apiResponse = await axios.get(
+      `${NFTX_ENDPOINT}/${chainId}/quote?type=${side}&vaultId=${vaultId.toString()}&userAddress=${userAddress}${tokenIdsQuery}${tokenAmountsQuery}`,
+      {
+        headers: {
+          Authorization: process.env.NFTX_API_KEY,
+        },
+      }
+    );
 
     price = bn(apiResponse.data.price);
     if (slippage) {

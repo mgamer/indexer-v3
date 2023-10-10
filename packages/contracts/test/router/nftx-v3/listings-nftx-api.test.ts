@@ -8,11 +8,11 @@ import { ethers, network } from "hardhat";
 
 import { NFTXV3Listing } from "../helpers/nftx-v3";
 import { ExecutionInfo } from "../helpers/router";
-import { bn, getChainId, getRandomBoolean, getRandomFloat, reset } from "../../utils";
+import { bn, getRandomBoolean, getRandomFloat, reset } from "../../utils";
 import { Network } from "@reservoir0x/sdk/src/utils";
 
 describe("[ReservoirV6_0_1] NFTXV3 listings (with NFTX API routing)", () => {
-  const chainId = getChainId();
+  const chainId = 5;
 
   let deployer: SignerWithAddress;
   let alice: SignerWithAddress;
@@ -72,23 +72,12 @@ describe("[ReservoirV6_0_1] NFTXV3 listings (with NFTX API routing)", () => {
   ) => {
     // Setup
 
-    // Token owner = alice
-    const owner = "0xfE1AA5275DDa4B333b1fb0Ccbd7A5f14EdC4A5de";
-    await network.provider.request({
-      method: "hardhat_impersonateAccount",
-      params: [owner],
-    });
-    await network.provider.request({
-      method: "hardhat_setBalance",
-      params: [owner, "0x1000000000000000000"],
-    });
-    alice = await ethers.getSigner(owner);
-
-    // Collection = BoredApe
-    const collection = "0xD643e0B909867025b50375D7495e7d0f6F85De5f";
-    const vault = "0x670b8Ab9196D05A86b3EfD07B10d4fdBf2102532";
-    const vaultId = 7;
-    const tokensInVault = [3, 4];
+    // Collection = CryptoPunks
+    const collection = "0xbB12Ad601d0024aE2cD6B763a823aD3E6A53e1e7";
+    const vault = "0x65696CFa2e38AEadF3FEF5f3Ed0cA6bC79468530";
+    const vaultId = 8;
+    const poolNFTs = await Sdk.NftxV3.Helpers.getPoolNFTs(vault, ethers.provider);
+    const tokensInVault = [poolNFTs[0]];
 
     const listings: NFTXV3Listing[] = [];
     const feesOnTop: BigNumber[] = [];
@@ -128,19 +117,14 @@ describe("[ReservoirV6_0_1] NFTXV3 listings (with NFTX API routing)", () => {
 
       listing.price = bn(poolPrice.price);
       listing.vault = vault;
-      listing.order = new Sdk.NftxV3.Order(chainId, {
+      listing.order = new Sdk.NftxV3.Order(chainId, vault, alice.address, {
         vaultId: vaultId.toString(),
-        pool: vault,
         collection: listing.nft.contract.address,
-        userAddress: alice.address,
         idsOut: [listing.nft.id.toString()],
-        path: [],
-        executeCallData: poolPrice.executeCallData,
-        deductRoyalty: "false",
         price: listing.isCancelled ? "0" : listing.price.toString(),
-        extra: {
-          prices: [listing.price.toString()],
-        },
+        executeCallData: listing.isCancelled ? "0x00" : poolPrice.executeCallData,
+        vTokenPremiumLimit: ethers.constants.MaxUint256.toString(),
+        deductRoyalty: false,
       });
 
       listings.push(listing);
@@ -195,6 +179,7 @@ describe("[ReservoirV6_0_1] NFTXV3 listings (with NFTX API routing)", () => {
       await expect(
         router.connect(carol).execute(executions, {
           value: executions.map(({ value }) => value).reduce((a, b) => bn(a).add(b), bn(0)),
+          gasLimit: 8_000_000,
         })
       ).to.be.revertedWith("reverted with custom error 'UnsuccessfulExecution()'");
 
@@ -205,6 +190,7 @@ describe("[ReservoirV6_0_1] NFTXV3 listings (with NFTX API routing)", () => {
 
     await router.connect(carol).execute(executions, {
       value: executions.map(({ value }) => value).reduce((a, b) => bn(a).add(b), bn(0)),
+      gasLimit: 8_000_000,
     });
 
     // Fetch post-state

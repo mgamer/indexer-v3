@@ -137,7 +137,7 @@ const config: HardhatUserConfig = {
       chainId: networkConfig.chainId,
       forking: {
         url: networkConfig.url,
-        blockNumber: Number(process.env.BLOCK_NUMBER),
+        blockNumber: process.env.BLOCK_NUMBER ? Number(process.env.BLOCK_NUMBER) : undefined,
       },
       accounts: {
         // Custom mnemonic so that the wallets have no initial state
@@ -148,6 +148,16 @@ const config: HardhatUserConfig = {
     localhost: {
       chainId: networkConfig.chainId,
       url: "http://127.0.0.1:8545",
+    },
+    tenderly: {
+      chainId: networkConfig.chainId,
+      url: process.env.TENDERLY_RPC_URL,
+      accounts: {
+        // Custom mnemonic so that the wallets have no initial state
+        mnemonic:
+          "void forward involve old phone resource sentence fall friend wait strike copper urge reduce chapter",
+      },
+      timeout: 1000000,
     },
     // Mainnets
     mainnet: getNetworkConfig(1),
@@ -332,7 +342,7 @@ const config: HardhatUserConfig = {
     enabled: Boolean(Number(process.env.REPORT_GAS)),
   },
   mocha: {
-    timeout: 60000 * 10,
+    timeout: 1000000,
   },
 };
 
