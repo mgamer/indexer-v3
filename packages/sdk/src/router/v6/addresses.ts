@@ -23,6 +23,8 @@ export const Router: ChainIdToAddress = {
   [Network.Linea]: "0x1aed60a97192157fda7fb26267a439d523d09c5e",
   [Network.Avalanche]: "0xc2c862322e9c97d6244a3506655da95f05246fd8",
   [Network.PolygonZkevm]: "0xc2c862322e9c97d6244a3506655da95f05246fd8",
+  [Network.Zksync]: "0x952a21a21079d09d31b0dbf8a1702ea6004919ab",
+  [Network.Ancient8Testnet]: "0x1aed60a97192157fda7fb26267a439d523d09c5e",
 };
 
 // Approval proxy
@@ -47,6 +49,7 @@ export const ApprovalProxy: ChainIdToAddress = {
   [Network.Linea]: "0x224ecb4eae96d31372d1090c3b0233c8310dbbab",
   [Network.Avalanche]: "0x79ce8f93063f8be4573a58f250b003859ebb7a24",
   [Network.PolygonZkevm]: "0x79ce8f93063f8be4573a58f250b003859ebb7a24",
+  [Network.Ancient8Testnet]: "0x224ecb4eae96d31372d1090c3b0233c8310dbbab",
 };
 
 // Permit proxy
@@ -94,6 +97,7 @@ export const MintModule: ChainIdToAddress = {
   [Network.Zora]: "0xe3de16f7ed5a124686cc27571898e394959e8b39",
   [Network.Avalanche]: "0x849ef788b40af342e2883c3112dd636f03a4203e",
   [Network.PolygonZkevm]: "0x849ef788b40af342e2883c3112dd636f03a4203e",
+  [Network.Ancient8Testnet]: "0xe3de16f7ed5a124686cc27571898e394959e8b39",
 };
 
 export const CollectionXyzModule: ChainIdToAddress = {
@@ -103,6 +107,7 @@ export const CollectionXyzModule: ChainIdToAddress = {
 
 export const DittoModule: ChainIdToAddress = {
   [Network.EthereumGoerli]: "0x1090afe10281912678a05d89fabd5fbe77d7f97f",
+  [Network.EthereumSepolia]: "0x2da6ebbdb78b6df0802c4d32afa6d8277c479552",
 };
 
 export const FoundationModule: ChainIdToAddress = {
@@ -155,6 +160,8 @@ export const SeaportV15Module: ChainIdToAddress = {
   [Network.Linea]: "0x4e9aaa72727a2f5aa5d2bef80ab5642661e29ef6",
   [Network.Avalanche]: "0x00ca04c45da318d5b7e7b14d5381ca59f09c73f0",
   [Network.PolygonZkevm]: "0x00ca04c45da318d5b7e7b14d5381ca59f09c73f0",
+  [Network.Zksync]: "0x07d8903aaf93e24a03e82fabb9ac9f501e9f6904",
+  [Network.Ancient8Testnet]: "0x4e9aaa72727a2f5aa5d2bef80ab5642661e29ef6",
 };
 
 export const AlienswapModule: ChainIdToAddress = {
@@ -213,8 +220,8 @@ export const NFTXZeroExModule: ChainIdToAddress = {
 };
 
 export const RaribleModule: ChainIdToAddress = {
-  [Network.Ethereum]: "0x428a6be88fc0d25778e3c3f6e09fcfdc9a526fad",
-  [Network.EthereumGoerli]: "0x428a6be88fc0d25778e3c3f6e09fcfdc9a526fad",
+  [Network.Ethereum]: "0x0ac4aa4e2b50b9a1638c046f2564a6552427d9e4",
+  [Network.EthereumGoerli]: "0x0ac4aa4e2b50b9a1638c046f2564a6552427d9e4",
 };
 
 export const SuperRareModule: ChainIdToAddress = {

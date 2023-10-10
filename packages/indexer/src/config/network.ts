@@ -223,7 +223,6 @@ export const getNetworkSettings = (): NetworkSettings => {
       indexes: {
         activities: {
           numberOfShards: 2,
-          disableMappingsUpdate: true,
           configName: "CONFIG_1689873821",
         },
       },
@@ -305,6 +304,11 @@ export const getNetworkSettings = (): NetworkSettings => {
           "0xd4416b13d2b3a9abae7acd5d6c2bbdbe25686401", // ens
           "0xc36442b4a4522e871399cd717abdd847ab11fe88", // uniswap positions
         ],
+        supportedBidCurrencies: {
+          ...defaultNetworkSettings.supportedBidCurrencies,
+          // Prime
+          "0xb23d80f5fefcddaa212212f028021b41ded428cf": true,
+        },
         whitelistedCurrencies: new Map([
           [
             "0xceb726e6383468dd8ac0b513c8330cc9fb4024a8",
@@ -441,6 +445,7 @@ export const getNetworkSettings = (): NetworkSettings => {
           indexes: {
             activities: {
               numberOfShards: 50,
+              configName: "CONFIG_DEFAULT",
             },
           },
         },
@@ -945,6 +950,17 @@ export const getNetworkSettings = (): NetworkSettings => {
             },
           },
         },
+        whitelistedCurrencies: new Map([
+          [
+            "0x9e9fce924fe52869d13944e9eef02e4db0b2db7d",
+            {
+              contract: "0x9e9fce924fe52869d13944e9eef02e4db0b2db7d",
+              name: "FEWL",
+              symbol: "FEWL",
+              decimals: 18,
+            },
+          ],
+        ]),
         onStartup: async () => {
           // Insert the native currency
           await Promise.all([
@@ -1240,10 +1256,10 @@ export const getNetworkSettings = (): NetworkSettings => {
                   metadata
                 ) VALUES (
                   '\\x0000000000000000000000000000000000000000',
-                  'Matic',
-                  'MATIC',
+                  'Ether',
+                  'ETH',
                   18,
-                  '{"coingeckoCurrencyId": "matic-network"}'
+                  '{"coingeckoCurrencyId": "ethereum", "image": "https://assets.coingecko.com/coins/images/279/large/ethereum.png"}'
                 ) ON CONFLICT DO NOTHING
               `
             ),

@@ -50,7 +50,7 @@ if (config.doWebsocketWork && config.openSeaApiKey) {
       transport: WebSocket,
     },
     onError: async (error) => {
-      logger.warn("opensea-websocket", `network=${network}, error=${error}`);
+      logger.warn("opensea-websocket", `network=${network}, error=${JSON.stringify(error)}`);
     },
   });
 
@@ -163,6 +163,7 @@ if (config.doWebsocketWork && config.openSeaApiKey) {
 
         if (parsedMetadata) {
           (parsedMetadata as MetadataIndexWriteJobPayload).isFromWebhook = true;
+          (parsedMetadata as MetadataIndexWriteJobPayload).metadataMethod = "opensea";
           await metadataIndexWriteJob.addToQueue([parsedMetadata]);
         }
       } catch (error) {
