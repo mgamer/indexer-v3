@@ -165,7 +165,6 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
   }
 
   async _getTokensFlagStatusByCollectionPagination(
-    slug: string | null,
     contract: string | null,
     continuation?: string
   ): Promise<{
@@ -173,22 +172,13 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
     continuation: string | null;
   }> {
     const searchParams = new URLSearchParams();
-    if (contract) {
-      searchParams.append("asset_contract_addresses", contract);
-    } else if (slug) {
-      searchParams.append("collection_slug", slug);
-    }
 
-    if (continuation) {
-      searchParams.append("cursor", continuation);
-    }
-    searchParams.append("include_orders", "false");
-    searchParams.append("order_direction", "desc");
-    searchParams.append("limit", "200");
+    if (continuation) searchParams.append("next", continuation);
+    searchParams.append("limit", "50");
 
     const url = `${
       !this.isOSTestnet() ? "https://api.opensea.io" : "https://testnets-api.opensea.io"
-    }/api/v1/assets?${searchParams.toString()}`;
+    }/api/v2/chain/${this.getOSNetworkName()}/contract/${contract}/nfts?${searchParams.toString()}`;
 
     const data = await axios
       .get(!this.isOSTestnet() ? config.openSeaApiUrl || url : url, {
@@ -217,10 +207,10 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
       });
 
     return {
-      data: data.assets.map((asset: any) => ({
-        contract: asset.asset_contract.address,
-        tokenId: asset.token_id,
-        isFlagged: !asset.supports_wyvern,
+      data: data.nfts.map((asset: any) => ({
+        contract: asset.contract,
+        tokenId: asset.identifier,
+        isFlagged: !asset.is_disabled,
       })),
       continuation: data.next ?? undefined,
     };
