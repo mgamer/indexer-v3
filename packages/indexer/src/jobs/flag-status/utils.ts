@@ -17,8 +17,8 @@ export const getTokensFlagStatusWithTokenIds = async (
 };
 
 export const getTokensFlagStatusForCollection = async (
-  slug: string,
-  contract: string,
+  slug: string | null,
+  contract: string | null,
   continuation: string | null
 ): Promise<{
   tokens: { contract: string; tokenId: string; isFlagged: boolean | null }[];

@@ -6,7 +6,7 @@ import { collectionFlagStatusSyncJob } from "@/jobs/flag-status/collection-flag-
 import { PendingFlagStatusSyncCollections } from "@/models/pending-flag-status-sync-collections";
 import { PendingFlagStatusSyncTokens } from "@/models/pending-flag-status-sync-tokens";
 
-if (config.doBackgroundWork) {
+if (config.doBackgroundWork && !config.disableFlagStatusRefreshJob) {
   cron.schedule(
     // Every second
     "*/1 * * * * *",
