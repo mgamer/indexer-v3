@@ -26,6 +26,8 @@ export class CollectionFlagStatusSyncJob extends AbstractRabbitMqJobHandler {
 
     const collectionToGetFlagStatusFor = await PendingFlagStatusSyncCollections.get();
 
+    if (!collectionToGetFlagStatusFor.length) return;
+
     let tokens: { contract: string; tokenId: string; isFlagged: boolean | null }[] = [];
     let nextContinuation: string | null = null;
 
