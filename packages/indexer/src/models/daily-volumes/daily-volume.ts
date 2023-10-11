@@ -362,6 +362,135 @@ export class DailyVolume {
   }
 
   /**
+   * update the all time volume for all collections by calculating the volume since the most recent daily_volume entry for each collection, and then adding it to the sum of all_time_volume from summing all daily_volume entries for each collection
+   *
+   **/
+  public static async updateAllTimeVolume(collectionId = ""): Promise<boolean> {
+    try {
+      // Step 1: Get the most recent timestamp for each collection from daily_volumes
+      const mostRecentTimestamps = await redb.manyOrNone(
+        `
+        SELECT collection_id, MAX(timestamp) as recent_timestamp
+        FROM daily_volumes
+        WHERE collection_id != '-1'
+        ${collectionId ? "AND collection_id = $/collectionId/" : ""}
+        GROUP BY collection_id
+      `,
+        { collectionId }
+      );
+
+      // Step 2: Calculate the volume since the most recent timestamp for each collection
+      const recentVolumes = await Promise.all(
+        mostRecentTimestamps.map(async (row: any) => {
+          const volumeSinceRecent = await redb.oneOrNone(
+            `
+            SELECT SUM(volume) as volume_since_recent
+            FROM "fill_events_2" "fe"
+            JOIN "tokens" "t" ON "fe"."token_id" = "t"."token_id" AND "fe"."contract" = "t"."contract"
+            WHERE "fe"."timestamp" > $/recentTimestamp/
+              AND "t"."collection_id" = $/collectionId/
+              AND fe.price > 0
+              AND fe.is_deleted = 0
+              AND fe.is_primary IS NOT TRUE
+          `,
+            {
+              recentTimestamp: row.recent_timestamp,
+              collectionId: row.collection_id,
+            }
+          );
+
+          const totalVolume = await redb.oneOrNone(
+            `
+              SELECT SUM(volume) as total_volume
+              FROM daily_volumes
+              WHERE collection_id != '-1'
+                AND collection_id = $/collectionId/
+              GROUP BY collection_id
+            `,
+            {
+              collectionId: row.collection_id,
+            }
+          );
+
+          const weekVolume = await redb.oneOrNone(
+            `
+              SELECT SUM(volume) as week_volume
+              FROM daily_volumes
+              WHERE collection_id != '-1'
+                AND collection_id = $/collectionId/
+                AND timestamp >= $/weekTimestamp/
+            `,
+            {
+              collectionId: row.collection_id,
+              weekTimestamp: row.recent_timestamp - 7 * 24 * 3600,
+            }
+          );
+
+          const monthVolume = await redb.oneOrNone(
+            `
+              SELECT SUM(volume) as month_volume
+              FROM daily_volumes
+              WHERE collection_id != '-1'
+                AND collection_id = $/collectionId/
+                AND timestamp >= $/monthTimestamp/
+            `,
+            {
+              collectionId: row.collection_id,
+              monthTimestamp: row.recent_timestamp - 30 * 24 * 3600,
+            }
+          );
+
+          return {
+            collection_id: row.collection_id,
+            volume_since_recent: volumeSinceRecent ? volumeSinceRecent.volume_since_recent : 0,
+            past_7day_volume: weekVolume ? weekVolume.week_volume : 0,
+            past_30day_volume: monthVolume ? monthVolume.month_volume : 0,
+            past_total_volume: totalVolume ? totalVolume.total_volume : 0,
+            total_new_volume: totalVolume + volumeSinceRecent.volume_since_recent,
+            total_new_volume_7day: weekVolume + volumeSinceRecent.volume_since_recent,
+            total_new_volume_30day: monthVolume + volumeSinceRecent.volume_since_recent,
+          };
+        })
+      );
+
+      // Step 3: Update the volumes in collections
+      const queries: PgPromiseQuery[] = [];
+      recentVolumes.forEach((values: any) => {
+        queries.push({
+          query: `
+          UPDATE collections
+          SET all_time_volume = $/total_new_volume/
+          ${
+            values.past_7day_volume < values.volume_since_recent
+              ? ", 7day_volume = $/total_new_volume_7day/"
+              : ""
+          }
+          ${
+            values.past_30day_volume < values.volume_since_recent
+              ? ", 30day_volume = $/total_new_volume_30day/"
+              : ""
+          }
+          WHERE id = $/collection_id/
+        `,
+          values: values,
+        });
+      });
+
+      const concat = pgp.helpers.concat(queries);
+      await idb.none(concat);
+
+      return true;
+    } catch (error: any) {
+      logger.error(
+        "all-time-volumes",
+        `Error while updating all time volumes. collectionId=${collectionId}, error=${error}`
+      );
+
+      return false;
+    }
+  }
+
+  /**
    * Update the collections table (fields day1_volume, day1_rank, etc) with latest values we have from daily_volumes
    *
    * @return boolean Returns false when it fails to update the collection, will need to reschedule the job
