@@ -370,5 +370,11 @@ export const getUSDAndCurrencyPrices = async (
     currencyPrice = price;
   }
 
+  // Set community tokens native/usd value to 0
+  if (isWhitelistedCurrency(fromCurrencyAddress)) {
+    usdPrice = "0";
+    currencyPrice = "0";
+  }
+
   return { usdPrice, currencyPrice };
 };
