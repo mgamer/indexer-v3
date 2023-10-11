@@ -448,9 +448,15 @@ export class DailyVolume {
             past_7day_volume: weekVolume ? weekVolume.week_volume : 0,
             past_30day_volume: monthVolume ? monthVolume.month_volume : 0,
             past_total_volume: totalVolume ? totalVolume.total_volume : 0,
-            total_new_volume: totalVolume + volumeSinceRecent.volume_since_recent,
-            total_new_volume_7day: weekVolume + volumeSinceRecent.volume_since_recent,
-            total_new_volume_30day: monthVolume + volumeSinceRecent.volume_since_recent,
+            total_new_volume: totalVolume
+              ? totalVolume.total_volume + volumeSinceRecent.volume_since_recent
+              : volumeSinceRecent.volume_since_recent,
+            total_new_volume_7day: weekVolume
+              ? weekVolume.week_volume + volumeSinceRecent.volume_since_recent
+              : volumeSinceRecent.volume_since_recent,
+            total_new_volume_30day: monthVolume
+              ? monthVolume.month_volume
+              : volumeSinceRecent.volume_since_recent,
           };
         })
       );
