@@ -4,7 +4,7 @@ import { Request, RouteOptions } from "@hapi/hapi";
 import _ from "lodash";
 import Joi from "joi";
 import { logger } from "@/common/logger";
-import { fromBuffer, regex } from "@/common/utils";
+import { fromBuffer, regex, toBuffer } from "@/common/utils";
 import { redb } from "@/common/db";
 import * as Sdk from "@reservoir0x/sdk";
 import { config } from "@/config/index";
@@ -24,12 +24,11 @@ const version = "v2";
 
 export const getTopSellingCollectionsV2Options: RouteOptions = {
   cache: {
-    expiresIn: 60 * 1000,
     privacy: "public",
   },
   description: "Top Selling Collections",
   notes: "Get top selling and minting collections",
-  tags: ["api", "x-deprecated"],
+  tags: ["api", "Collections"],
   plugins: {
     "hapi-swagger": {
       order: 3,
@@ -214,14 +213,13 @@ export const getTopSellingCollectionsV2Options: RouteOptions = {
       let collections = [];
 
       if (collectionsResult.length) {
-        const collectionIdList = collectionsResult
-          .map((collection: any) => `'${collection.id}'`)
-          .join(", ");
+        request.query.contract = collectionsResult.map((collection: any) =>
+          toBuffer(collection.primaryContract)
+        );
 
         const baseQuery = `
         SELECT
           collections.id,
-          collections.name,
           collections.contract,
           collections.token_count,
           collections.owner_count,
@@ -229,14 +227,13 @@ export const getTopSellingCollectionsV2Options: RouteOptions = {
           collections.day7_volume_change,
           collections.day30_volume_change,
           (collections.metadata ->> 'bannerImageUrl')::TEXT AS "banner",
-          (collections.metadata ->> 'imageUrl')::TEXT AS "image",
           (collections.metadata ->> 'description')::TEXT AS "description",
           ${floorAskSelectQuery}
           FROM collections
-          WHERE collections.id IN (${collectionIdList})
+          WHERE collections.contract IN ($/contract:csv/)
       `;
 
-        const resultsPromise = redb.manyOrNone(baseQuery);
+        const resultsPromise = redb.manyOrNone(baseQuery, request.query);
         const recentSalesPromise = collectionsResult.map(async (collection: any) => {
           return {
             ...collection,
@@ -273,14 +270,14 @@ export const getTopSellingCollectionsV2Options: RouteOptions = {
         const collectionsMetadata: Record<string, any> = {};
         if (collectionMetadataResponse && Array.isArray(collectionMetadataResponse)) {
           collectionMetadataResponse.forEach((metadata: any) => {
-            collectionsMetadata[metadata.id] = metadata;
+            collectionsMetadata[fromBuffer(metadata.contract)] = metadata;
           });
         }
         const sources = await Sources.getInstance();
 
         collections = await Promise.all(
           responses.map(async (response: any) => {
-            const metadata = collectionsMetadata[(response as any).id] || {};
+            const metadata = collectionsMetadata[(response as any).primaryContract] || {};
             let floorAsk;
             if (metadata) {
               const floorAskCurrency = metadata.floor_sell_currency
@@ -310,10 +307,8 @@ export const getTopSellingCollectionsV2Options: RouteOptions = {
                 "7day": metadata.day7_volume_change,
                 "30day": metadata.day30_volume_change,
               },
-              name: metadata.name,
               tokenCount: Number(metadata.token_count || 0),
               ownerCount: Number(metadata.owner_count || 0),
-              image: metadata.image,
               banner: metadata.banner,
               description: metadata.description,
               floorAsk,

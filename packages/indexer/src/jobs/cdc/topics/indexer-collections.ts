@@ -1,8 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { KafkaEventHandler } from "./KafkaEventHandler";
-import { redis } from "@/common/redis";
-
-import { logger } from "@/common/logger";
 import {
   WebsocketEventKind,
   WebsocketEventRouter,
@@ -39,11 +36,6 @@ export class IndexerCollectionsHandler extends KafkaEventHandler {
       },
       eventKind: WebsocketEventKind.CollectionEvent,
     });
-    logger.info("top-selling-collections", `updating collection ${payload.after.id}`);
-
-    await redis.set(`collection-cache:v1:${payload.after.id}`, JSON.stringify(payload.after), "XX");
-
-    logger.info("top-selling-collections", `updated collection ${payload.after.id}`);
   }
 
   protected async handleDelete(): Promise<void> {
