@@ -200,6 +200,7 @@ export const X2Y2Module: ChainIdToAddress = {
 export const ZeroExV4Module: ChainIdToAddress = {
   [Network.Ethereum]: "0xb6c0cf204d7872fff613fa090f723d9d520ede2a",
   [Network.EthereumGoerli]: "0xb6c0cf204d7872fff613fa090f723d9d520ede2a",
+  [Network.Polygon]: "0xb6c0cf204d7872fff613fa090f723d9d520ede2a",
   [Network.Bsc]: "0xb6c0cf204d7872fff613fa090f723d9d520ede2a",
 };
 
