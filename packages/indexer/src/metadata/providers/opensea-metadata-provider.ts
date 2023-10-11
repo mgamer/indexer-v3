@@ -204,22 +204,6 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
             error.config?.url
           )}, headers:${JSON.stringify(error.config?.headers?.url)}`
         );
-        // if (error.response.data.errors.includes("not found")) {
-        //   // slug is wrong, refresh the collection cache
-        //   await collectionMetadataQueueJob.addToQueue({
-        //     contract: collection.contract,
-        //     tokenId,
-        //     community: collection.community,
-        //     forceRefresh: true,
-        //   });
-
-        //   // slug is wrong, try to get the collection only based on the contract.
-        //   if (slug && contract && hasExtendCollectionHandler(contract)) {
-        //     return this._getTokensFlagStatusByCollectionPagination(null, contract, continuation);
-        //   } else {
-        //     // contract + slug are wrong, refresh t
-        //   }
-        // }
 
         this.handleError(error);
       });

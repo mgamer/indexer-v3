@@ -188,16 +188,14 @@ export const postRefreshCollectionOptions: RouteOptions = {
         // Refresh the collection tokens metadata
         await metadataIndexFetchJob.addToQueue([metadataIndexInfo], true);
 
-        if (config.metadataIndexingMethod === "opensea") {
-          await PendingFlagStatusSyncCollections.add([
-            {
-              slug: collection.slug,
-              contract: collection.contract,
-              collectionId: collection.id,
-              continuation: null,
-            },
-          ]);
-        }
+        await PendingFlagStatusSyncCollections.add([
+          {
+            slug: collection.slug,
+            contract: collection.contract,
+            collectionId: collection.id,
+            continuation: null,
+          },
+        ]);
       }
 
       return { message: "Request accepted" };
