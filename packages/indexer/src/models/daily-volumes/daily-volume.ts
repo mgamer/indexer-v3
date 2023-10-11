@@ -372,7 +372,9 @@ export class DailyVolume {
         `
         SELECT collection_id, MAX(timestamp) as recent_timestamp
         FROM daily_volumes
+        JOIN collections ON collections.id = daily_volumes.collection_id
         WHERE collection_id != '-1'
+        AND collections.day1_volume > 0
         ${collectionId ? "AND collection_id = $/collectionId/" : ""}
         GROUP BY collection_id
       `,
