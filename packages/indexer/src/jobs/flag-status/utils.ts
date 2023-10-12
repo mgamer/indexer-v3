@@ -7,6 +7,7 @@ import { PendingFlagStatusSyncTokens } from "@/models/pending-flag-status-sync-t
 import { CollectionsEntity } from "@/models/collections/collections-entity";
 import { logger } from "ethers";
 import { Tokens } from "@/models/tokens";
+import { PendingFlagStatusSyncContracts } from "@/models/pending-flag-status-sync-contracts";
 
 export const getTokensFlagStatusWithTokenIds = async (
   contract: string,
@@ -17,8 +18,8 @@ export const getTokensFlagStatusWithTokenIds = async (
   return result.data;
 };
 
-export const getTokensFlagStatusForCollection = async (
-  slug: string | null,
+export const getTokensFlagStatusForCollectionBySlug = async (
+  slug: string,
   contract: string,
   collectionId: string,
   continuation: string | null
@@ -33,22 +34,10 @@ export const getTokensFlagStatusForCollection = async (
     continuation: string | null;
   } = { data: [], continuation: null };
   try {
-    if (slug) {
-      await openseaMetadataProvider._getTokensFlagStatusByCollectionPaginationViaSlug(
-        slug,
-        continuation || ""
-      );
-    } else if (contract && !hasExtendCollectionHandler(contract)) {
-      result = await openseaMetadataProvider._getTokensFlagStatusByCollectionPaginationViaContract(
-        contract,
-        continuation || ""
-      );
-    } else {
-      // if its a shared collection, we need to only refresh the tokens that are in the collection
-      // for now, just log that we are refreshing all tokens
-      logger.info("getTokensFlagStatusForCollection", "Shared collection, refreshing all tokens");
-      return { tokens: [], nextContinuation: null };
-    }
+    result = await openseaMetadataProvider._getTokensFlagStatusByCollectionPaginationViaSlug(
+      slug,
+      continuation || ""
+    );
 
     parsedTokens = result.data;
     nextContinuation = result.continuation;
@@ -69,20 +58,58 @@ export const getTokensFlagStatusForCollection = async (
 
       // slug is wrong, try to get the collection only based on the contract if its not a shared collection
       if (!hasExtendCollectionHandler(contract)) {
-        const result =
-          await openseaMetadataProvider._getTokensFlagStatusByCollectionPaginationViaContract(
-            contract,
-            continuation || ""
-          );
-
-        parsedTokens = result.data;
-        nextContinuation = result.continuation;
+        await PendingFlagStatusSyncContracts.add(
+          [
+            {
+              contract: contract,
+              collectionId: collectionId,
+              continuation: nextContinuation,
+            },
+          ],
+          true
+        );
+        return { tokens: [], nextContinuation: null };
       } else {
         // if its a shared collection, we need to only refresh the tokens that are in the collection
         await getCollectionTokensAndAddToFlagStatusTokenRefresh(collection);
       }
     } else throw error;
   }
+  return { tokens: parsedTokens, nextContinuation: nextContinuation || null };
+};
+
+export const getTokensFlagStatusForCollectionByContract = async (
+  contract: string,
+  continuation: string | null
+): Promise<{
+  tokens: { contract: string; tokenId: string; isFlagged: boolean | null }[];
+  nextContinuation: string | null;
+}> => {
+  let parsedTokens: { contract: string; tokenId: string; isFlagged: boolean | null }[] = [];
+  let nextContinuation: string | null = null;
+  let result: {
+    data: { contract: string; tokenId: string; isFlagged: boolean }[];
+    continuation: string | null;
+  } = { data: [], continuation: null };
+
+  if (!hasExtendCollectionHandler(contract)) {
+    result = await openseaMetadataProvider._getTokensFlagStatusByCollectionPaginationViaContract(
+      contract,
+      continuation || ""
+    );
+  } else {
+    // if its a shared collection, we need to only refresh the tokens that are in the collection
+    // for now, just log that we are refreshing all tokens
+    logger.info(
+      "getTokensFlagStatusForCollection",
+      "Shared collection, stopping processing for now"
+    );
+    return { tokens: [], nextContinuation: null };
+  }
+
+  parsedTokens = result.data;
+  nextContinuation = result.continuation;
+
   return { tokens: parsedTokens, nextContinuation: nextContinuation || null };
 };
 

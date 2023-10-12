@@ -2,8 +2,7 @@ import _ from "lodash";
 import { redis } from "@/common/redis";
 import { config } from "@/config/index";
 
-export type PendingFlagStatusSyncCollection = {
-  slug: string | null;
+export type PendingFlagStatusSync = {
   contract: string;
   continuation: string | null;
   collectionId: string;
@@ -12,10 +11,10 @@ export type PendingFlagStatusSyncCollection = {
 /**
  * Class that manage redis list of tokens, pending metadata sync
  */
-export class PendingFlagStatusSyncCollections {
-  public static key = "pending-flag-status-sync-collections";
+export class PendingFlagStatusSyncContracts {
+  public static key = "pending-flag-status-sync-contract";
 
-  public static async add(syncCollection: PendingFlagStatusSyncCollection[], prioritized = false) {
+  public static async add(syncCollection: PendingFlagStatusSync[], prioritized = false) {
     if (config.metadataIndexingMethodCollection !== "opensea") {
       return;
     }
@@ -32,12 +31,12 @@ export class PendingFlagStatusSyncCollections {
     }
   }
 
-  public static async get(count = 20): Promise<PendingFlagStatusSyncCollection[]> {
+  public static async get(count = 20): Promise<PendingFlagStatusSync[]> {
     const syncCollections = await redis.lpop(this.key, count);
     if (syncCollections) {
       return _.map(
         syncCollections,
-        (syncCollection) => JSON.parse(syncCollection) as PendingFlagStatusSyncCollection
+        (syncCollection) => JSON.parse(syncCollection) as PendingFlagStatusSync
       );
     }
 

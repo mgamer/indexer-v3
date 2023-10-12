@@ -2,15 +2,15 @@
 
 import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handler";
 import { config } from "@/config/index";
-import { getTokensFlagStatusForCollection } from "@/jobs/flag-status/utils";
 import { acquireLock, getLockExpiration } from "@/common/redis";
 import { logger } from "@/common/logger";
-import { PendingFlagStatusSyncCollections } from "@/models/pending-flag-status-sync-collections";
 import { flagStatusUpdateJob } from "@/jobs/flag-status/flag-status-update-job";
 import { RequestWasThrottledError } from "../orderbook/post-order-external/api/errors";
+import { PendingFlagStatusSyncContracts } from "@/models/pending-flag-status-sync-contracts";
+import { getTokensFlagStatusForCollectionByContract } from "./utils";
 
-export class CollectionFlagStatusSyncJob extends AbstractRabbitMqJobHandler {
-  queueName = "collection-flag-status-sync-queue";
+export class ContractFlagStatusSyncJob extends AbstractRabbitMqJobHandler {
+  queueName = "contract-flag-status-sync-queue";
   maxRetries = 10;
   concurrency = 1;
   lazyMode = true;
@@ -27,7 +27,7 @@ export class CollectionFlagStatusSyncJob extends AbstractRabbitMqJobHandler {
       return;
     }
 
-    const collectionToGetFlagStatusFor = await PendingFlagStatusSyncCollections.get();
+    const collectionToGetFlagStatusFor = await PendingFlagStatusSyncContracts.get();
 
     if (!collectionToGetFlagStatusFor.length) return;
 
@@ -35,10 +35,8 @@ export class CollectionFlagStatusSyncJob extends AbstractRabbitMqJobHandler {
     let nextContinuation: string | null = null;
 
     try {
-      const data = await getTokensFlagStatusForCollection(
-        collectionToGetFlagStatusFor[0].slug,
+      const data = await getTokensFlagStatusForCollectionByContract(
         collectionToGetFlagStatusFor[0].contract,
-        collectionToGetFlagStatusFor[0].collectionId,
         collectionToGetFlagStatusFor[0].continuation
       );
       tokens = data.tokens;
@@ -53,7 +51,7 @@ export class CollectionFlagStatusSyncJob extends AbstractRabbitMqJobHandler {
         const expiresIn = error.delay;
 
         await acquireLock(this.getLockName(), expiresIn * 1000);
-        await PendingFlagStatusSyncCollections.add(collectionToGetFlagStatusFor, true);
+        await PendingFlagStatusSyncContracts.add(collectionToGetFlagStatusFor, true);
         return;
       } else {
         logger.error(this.queueName, `Error: ${JSON.stringify(error)}`);
@@ -64,10 +62,9 @@ export class CollectionFlagStatusSyncJob extends AbstractRabbitMqJobHandler {
     await flagStatusUpdateJob.addToQueue(tokens);
 
     if (nextContinuation) {
-      await PendingFlagStatusSyncCollections.add(
+      await PendingFlagStatusSyncContracts.add(
         [
           {
-            slug: collectionToGetFlagStatusFor[0].slug,
             contract: collectionToGetFlagStatusFor[0].contract,
             collectionId: collectionToGetFlagStatusFor[0].collectionId,
             continuation: nextContinuation,
@@ -87,4 +84,4 @@ export class CollectionFlagStatusSyncJob extends AbstractRabbitMqJobHandler {
   }
 }
 
-export const collectionFlagStatusSyncJob = new CollectionFlagStatusSyncJob();
+export const contractFlugStatusSyncJob = new ContractFlagStatusSyncJob();
