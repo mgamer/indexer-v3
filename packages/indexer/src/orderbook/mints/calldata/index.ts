@@ -58,7 +58,7 @@ export type MintTxSchema = {
   };
 };
 
-export type CustomInfo = mints.manifold.Info;
+export type CustomInfo = mints.manifold.Info | mints.soundxyz.Info;
 
 export type PartialCollectionMint = Pick<
   CollectionMint,
@@ -244,6 +244,13 @@ export const generateCollectionMintTxData = async (
                 minter,
                 options?.referrer ?? DEFAULT_REFERRER
               );
+            }
+            break;
+          }
+
+          case "lanyard": {
+            if (allowlistItemIndex === 0) {
+              abiValue = await mints.soundxyz.generateProofValue(collectionMint, minter);
             }
             break;
           }

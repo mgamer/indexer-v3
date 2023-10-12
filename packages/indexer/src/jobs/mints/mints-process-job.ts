@@ -212,6 +212,15 @@ export class MintsProcessJob extends AbstractRabbitMqJobHandler {
 
             break;
           }
+
+          case "soundxyz": {
+            collectionMints = await detector.soundxyz.extractByCollection(
+              data.collection,
+              data.additionalInfo.mintId,
+              data.additionalInfo.minter
+            );
+            break;
+          }
         }
 
         // Also refresh (to clean up any old stages)
