@@ -2,9 +2,6 @@ import { hasExtendCollectionHandler } from "@/metadata/extend";
 import { openseaMetadataProvider } from "@/metadata/providers/opensea-metadata-provider";
 import { CollectionNotFoundError } from "@/metadata/providers/utils";
 import { collectionMetadataQueueJob } from "../collection-updates/collection-metadata-queue-job";
-import { Collections } from "@/models/collections";
-import { PendingFlagStatusSyncTokens } from "@/models/pending-flag-status-sync-tokens";
-import { CollectionsEntity } from "@/models/collections/collections-entity";
 import { logger } from "ethers";
 import { Tokens } from "@/models/tokens";
 import { PendingFlagStatusSyncContracts } from "@/models/pending-flag-status-sync-contracts";
@@ -44,8 +41,6 @@ export const getTokensFlagStatusForCollectionBySlug = async (
   } catch (error) {
     if (error instanceof CollectionNotFoundError && contract) {
       // refresh the collection slug, ours might be wrong.
-      const collection = await Collections.getById(collectionId);
-      if (!collection) throw "Collection not found by id: " + collectionId;
 
       const tokenId = await Tokens.getSingleToken(collectionId);
       if (!tokenId) throw "Collection has no tokens: " + collectionId;
@@ -70,7 +65,11 @@ export const getTokensFlagStatusForCollectionBySlug = async (
         return { tokens: [], nextContinuation: null };
       } else {
         // if its a shared collection, we need to only refresh the tokens that are in the collection
-        await getCollectionTokensAndAddToFlagStatusTokenRefresh(collection);
+        logger.info(
+          "getCollectionTokensAndAddToFlagStatusTokenRefresh",
+          "Shared collection, not refreshing tokens"
+        );
+        return { tokens: [], nextContinuation: null };
       }
     } else throw error;
   }
@@ -110,27 +109,4 @@ export const getTokensFlagStatusForCollectionByContract = async (
   nextContinuation = result.continuation;
 
   return { tokens: parsedTokens, nextContinuation: nextContinuation || null };
-};
-
-export const getCollectionTokensAndAddToFlagStatusTokenRefresh = async (
-  collection: CollectionsEntity
-) => {
-  logger.info(
-    "getCollectionTokensAndAddToFlagStatusTokenRefresh",
-    "Shared collection, refreshing all tokens"
-  );
-
-  // dont do this for now
-  return;
-  const startTokenId = collection?.tokenIdRange[0];
-  const endTokenId = collection?.tokenIdRange[1];
-
-  const MAX_COLLECTION_SIZE = 25000;
-  if (startTokenId && endTokenId && endTokenId - startTokenId < MAX_COLLECTION_SIZE) {
-    const tokens = [];
-    for (let i = startTokenId; i <= endTokenId; i++) {
-      tokens.push({ contract: collection.contract, tokenId: i.toString() });
-    }
-    await PendingFlagStatusSyncTokens.add(tokens, true);
-  }
 };
