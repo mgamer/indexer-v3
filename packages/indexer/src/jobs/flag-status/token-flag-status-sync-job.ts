@@ -45,7 +45,7 @@ export class TokenFlagStatusSyncJob extends AbstractRabbitMqJobHandler {
           `Too Many Requests.  error: ${JSON.stringify((error as any).response.data)}`
         );
 
-        const expiresIn = (error as any).response.data.expires_in;
+        const expiresIn = error.delay;
 
         await acquireLock(this.getLockName(), expiresIn * 1000);
         await PendingFlagStatusSyncTokens.add(tokensToGetFlagStatusFor, true);
