@@ -6,6 +6,7 @@ import { Collections } from "@/models/collections";
 import { PendingFlagStatusSyncTokens } from "@/models/pending-flag-status-sync-tokens";
 import { CollectionsEntity } from "@/models/collections/collections-entity";
 import { logger } from "ethers";
+import { Tokens } from "@/models/tokens";
 
 export const getTokensFlagStatusWithTokenIds = async (
   contract: string,
@@ -57,9 +58,12 @@ export const getTokensFlagStatusForCollection = async (
       const collection = await Collections.getById(collectionId);
       if (!collection) throw "Collection not found by id: " + collectionId;
 
+      const tokenId = await Tokens.getSingleToken(collectionId);
+      if (!tokenId) throw "Collection has no tokens: " + collectionId;
+
       await collectionMetadataQueueJob.addToQueue({
         contract: contract,
-        tokenId: collection?.tokenIdRange[0].toString() || "",
+        tokenId: tokenId,
         forceRefresh: true,
       });
 
