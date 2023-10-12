@@ -248,7 +248,7 @@ export const generateCollectionMintTxData = async (
             break;
           }
 
-          case "lanyard": {
+          case "soundxyz": {
             if (allowlistItemIndex === 0) {
               abiValue = await mints.soundxyz.generateProofValue(collectionMint, minter);
             }
