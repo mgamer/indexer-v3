@@ -386,7 +386,7 @@ export class DailyVolume {
         mostRecentTimestamps.map(async (row: any) => {
           const volumeSinceRecent = await redb.oneOrNone(
             `
-            SELECT SUM(volume) as volume_since_recent
+            SELECT SUM("fe"."price") as volume_since_recent
             FROM "fill_events_2" "fe"
             JOIN "tokens" "t" ON "fe"."token_id" = "t"."token_id" AND "fe"."contract" = "t"."contract"
             WHERE "fe"."timestamp" > $/recentTimestamp/
