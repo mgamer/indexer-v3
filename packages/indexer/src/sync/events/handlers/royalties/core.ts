@@ -347,11 +347,12 @@ export async function extractRoyalties(
       // Skip errors
     }
   }
+
   for (const address in state) {
     const { tokenBalanceState } = state[address];
     const globalChange = globalState[address];
 
-    const balanceChange =
+    let balanceChange =
       currency === ETH
         ? // The fill event will map any BETH fills to ETH so we need to cover that here
           tokenBalanceState[`native:${ETH}`] || tokenBalanceState[`erc20:${BETH}`]
@@ -391,6 +392,37 @@ export async function extractRoyalties(
     const matchRangePayment = currentFillEvent?.relatedPayments.find(
       (c) => c.to.toLowerCase() === address.toLowerCase()
     );
+
+    const multipleTransfers = paymentsToAnalyze.filter(
+      (c) => c.to === address && c.token === `native:${ETH}`
+    );
+
+    // If there have multiple transfers to the same address
+    if (multipleTransfers.length > 1) {
+      const totalAmount = multipleTransfers.reduce(
+        (total, item) => total.add(bn(item.amount)),
+        bn(0)
+      );
+      const sortedTransfers = multipleTransfers.sort((c, b) =>
+        bn(c.amount).gte(bn(b.amount)) ? -1 : 1
+      );
+      const maxTransferPercent = bn(sortedTransfers[0].amount)
+        .mul(PRECISION_BASE)
+        .div(fillEvent.price)
+        .toNumber();
+
+      // totalAmount match with sale price and the largest amount of transfer grater than bps limit
+      if (totalAmount.eq(fillEvent.price) && maxTransferPercent > BPS_LIMIT) {
+        // Exclude the largest one as balanceChange
+        balanceChange = sortedTransfers
+          .slice(1)
+          .reduce((total, item) => total.add(bn(item.amount)), bn(0))
+          .toString();
+        if (notRoyaltyRecipients.has(address)) {
+          notRoyaltyRecipients.delete(address);
+        }
+      }
+    }
 
     // If the balance change is positive that means a payment was received
     if (balanceChange && !balanceChange.startsWith("-")) {
