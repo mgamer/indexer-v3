@@ -53,7 +53,6 @@ export const getTokensFlagStatusForCollectionBySlug = async (
       await collectionMetadataQueueJob.addToQueue({
         contract: contract,
         tokenId: tokenId,
-        forceRefresh: true,
       });
 
       // slug is wrong, try to get the collection only based on the contract if its not a shared collection
