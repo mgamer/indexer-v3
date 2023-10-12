@@ -397,7 +397,7 @@ export class DailyVolume {
               AND coalesce(fe.wash_trading_score, 0) = 0
           `,
             {
-              recentTimestamp: row.recent_timestamp,
+              recentTimestamp: row?.recent_timestamp ?? 0,
               collectionId: row.collection_id,
             }
           );
