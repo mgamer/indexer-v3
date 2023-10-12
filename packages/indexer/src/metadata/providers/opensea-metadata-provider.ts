@@ -164,6 +164,50 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
     };
   }
 
+  async _getTokenFlagStatus(
+    contract: string,
+    tokenId: string
+  ): Promise<{
+    data: { contract: string; tokenId: string; isFlagged: boolean };
+  }> {
+    const domain = !this.isOSTestnet() ? "opensea.io" : "testnets-api.opensea.io";
+    const url = `${domain}/api/v2/chain/${this.getOSNetworkName()}/contract/${contract}/nfts/${tokenId}`;
+
+    const data = await axios
+      .get(!this.isOSTestnet() ? config.openSeaApiUrl || url : url, {
+        headers: !this.isOSTestnet()
+          ? {
+              url,
+              "X-API-KEY": config.openSeaFlaggedMetadataApiKey.trim(),
+              Accept: "application/json",
+            }
+          : {
+              Accept: "application/json",
+            },
+      })
+      .then((response) => response.data)
+      .catch((error) => {
+        logger.error(
+          "opensea-fetcher",
+          `fetchTokensFlagStatusByContract error. url:${url}, message:${error.message},  status:${
+            error.response?.status
+          }, data:${JSON.stringify(error.response?.data)}, url:${JSON.stringify(
+            error.config?.url
+          )}, headers:${JSON.stringify(error.config?.headers?.url)}`
+        );
+
+        this.handleError(error);
+      });
+
+    return {
+      data: {
+        contract: data.nft.contract,
+        tokenId: data.nft.identifier,
+        isFlagged: !data.nft.is_disabled,
+      },
+    };
+  }
+
   async _getTokensFlagStatusByCollectionPaginationViaSlug(
     slug: string,
     continuation?: string

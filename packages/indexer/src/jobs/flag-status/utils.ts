@@ -8,19 +8,12 @@ import { CollectionsEntity } from "@/models/collections/collections-entity";
 import { logger } from "ethers";
 
 export const getTokensFlagStatusWithTokenIds = async (
-  tokens: { contract: string; tokenId: string }[]
-): Promise<{ contract: string; tokenId: string; isFlagged: boolean | null }[]> => {
-  const result = await openseaMetadataProvider.getTokensMetadata(tokens, {
-    isRequestForFlaggedMetadata: true,
-  });
+  contract: string,
+  tokenId: string
+): Promise<{ contract: string; tokenId: string; isFlagged: boolean | null }> => {
+  const result = await openseaMetadataProvider._getTokenFlagStatus(contract, tokenId);
 
-  const parsedResults = result.map((token) => ({
-    contract: token.contract,
-    tokenId: token.tokenId,
-    isFlagged: token.flagged,
-  }));
-
-  return parsedResults;
+  return result.data;
 };
 
 export const getTokensFlagStatusForCollection = async (

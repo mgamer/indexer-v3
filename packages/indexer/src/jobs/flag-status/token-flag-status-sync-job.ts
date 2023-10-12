@@ -28,13 +28,16 @@ export class TokenFlagStatusSyncJob extends AbstractRabbitMqJobHandler {
       return;
     }
 
-    const tokensToGetFlagStatusFor = await PendingFlagStatusSyncTokens.get(20);
+    const tokensToGetFlagStatusFor = await PendingFlagStatusSyncTokens.get(1);
 
     if (!tokensToGetFlagStatusFor.length) return;
 
-    let tokens: { contract: string; tokenId: string; isFlagged: boolean | null }[] = [];
+    let tokens: { contract: string; tokenId: string; isFlagged: boolean | null };
     try {
-      tokens = await getTokensFlagStatusWithTokenIds(tokensToGetFlagStatusFor);
+      tokens = await getTokensFlagStatusWithTokenIds(
+        tokensToGetFlagStatusFor[0].contract,
+        tokensToGetFlagStatusFor[0].tokenId
+      );
     } catch (error) {
       if (error instanceof RequestWasThrottledError) {
         logger.info(
@@ -53,7 +56,7 @@ export class TokenFlagStatusSyncJob extends AbstractRabbitMqJobHandler {
       }
     }
 
-    await flagStatusUpdateJob.addToQueue(tokens);
+    await flagStatusUpdateJob.addToQueue([tokens]);
   }
 
   public getLockName() {
