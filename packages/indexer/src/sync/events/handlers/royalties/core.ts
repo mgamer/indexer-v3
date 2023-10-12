@@ -406,18 +406,17 @@ export async function extractRoyalties(
       const sortedTransfers = multipleTransfers.sort((c, b) =>
         bn(c.amount).gte(bn(b.amount)) ? -1 : 1
       );
-      const maxTransferPercent = bn(sortedTransfers[0].amount)
-        .mul(PRECISION_BASE)
-        .div(fillEvent.price)
-        .toNumber();
+
+      const otherAmount = sortedTransfers
+        .slice(1)
+        .reduce((total, item) => total.add(bn(item.amount)), bn(0));
+
+      const otherBps = otherAmount.mul(PRECISION_BASE).div(fillEvent.price).toNumber();
 
       // totalAmount match with sale price and the largest amount of transfer grater than bps limit
-      if (totalAmount.eq(fillEvent.price) && maxTransferPercent > BPS_LIMIT) {
+      if (totalAmount.eq(fillEvent.price) && otherBps < BPS_LIMIT) {
         // Exclude the largest one as balanceChange
-        balanceChange = sortedTransfers
-          .slice(1)
-          .reduce((total, item) => total.add(bn(item.amount)), bn(0))
-          .toString();
+        balanceChange = otherAmount.toString();
         if (notRoyaltyRecipients.has(address)) {
           notRoyaltyRecipients.delete(address);
         }
