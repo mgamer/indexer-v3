@@ -52,7 +52,7 @@ export const getTokensFlagStatusForCollection = async (
     parsedTokens = result.data;
     nextContinuation = result.continuation;
   } catch (error) {
-    if (error instanceof CollectionNotFoundError && contract && !slug) {
+    if (error instanceof CollectionNotFoundError && contract) {
       // refresh the collection slug, ours might be wrong.
       const collection = await Collections.getById(collectionId);
       if (!collection) throw "Collection not found by id: " + collectionId;
