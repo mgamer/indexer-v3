@@ -12,6 +12,7 @@ import _ from "lodash";
 import { AbstractBaseMetadataProvider } from "./abstract-base-metadata-provider";
 import { customHandleToken, hasCustomHandler } from "../custom";
 import { extendMetadata, hasExtendHandler } from "../extend";
+import { getOpenseaNetworkName } from "@/config/network";
 
 class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
   method = "opensea";
@@ -171,7 +172,7 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
     data: { contract: string; tokenId: string; isFlagged: boolean };
   }> {
     const domain = !this.isOSTestnet() ? "opensea.io" : "testnets-api.opensea.io";
-    const url = `${domain}/api/v2/chain/${this.getOSNetworkName()}/contract/${contract}/nfts/${tokenId}`;
+    const url = `${domain}/api/v2/chain/${getOpenseaNetworkName()}/contract/${contract}/nfts/${tokenId}`;
 
     const data = await axios
       .get(!this.isOSTestnet() ? config.openSeaApiUrl || url : url, {
@@ -221,7 +222,7 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
     searchParams.append("limit", "50");
 
     const domain = !this.isOSTestnet() ? "opensea.io" : "testnets-api.opensea.io";
-    const url = `${domain}/api/v2/chain/${this.getOSNetworkName()}/collection/${slug}/nfts?${searchParams.toString()}`;
+    const url = `${domain}/api/v2/chain/${getOpenseaNetworkName()}/collection/${slug}/nfts?${searchParams.toString()}`;
 
     const data = await axios
       .get(!this.isOSTestnet() ? config.openSeaApiUrl || url : url, {
@@ -272,7 +273,7 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
     searchParams.append("limit", "50");
 
     const domain = !this.isOSTestnet() ? "opensea.io" : "testnets-api.opensea.io";
-    const url = `${domain}/api/v2/chain/${this.getOSNetworkName()}/contract/${contract}/nfts?${searchParams.toString()}`;
+    const url = `${domain}/api/v2/chain/${getOpenseaNetworkName()}/contract/${contract}/nfts?${searchParams.toString()}`;
 
     const data = await axios
       .get(!this.isOSTestnet() ? config.openSeaApiUrl || url : url, {
@@ -524,43 +525,6 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
     };
   }
 
-  getOSNetworkName(): string {
-    switch (config.chainId) {
-      case 1:
-        return "ethereum";
-      case 4:
-        return "rinkeby";
-      case 5:
-        return "goerli";
-      case 10:
-        return "optimism";
-      case 56:
-        return "bsc";
-      case 137:
-        return "matic";
-      case 42161:
-        return "arbitrum";
-      case 42170:
-        return "arbitrum_nova";
-      case 43114:
-        return "avalanche";
-      case 8453:
-        return "base";
-      case 7777777:
-        return "zora";
-      case 11155111:
-        return "sepolia";
-      case 80001:
-        return "mumbai";
-      case 84531:
-        return "base_goerli";
-      case 999:
-        return "zora_testnet";
-      default:
-        throw new Error(`Unknown chainId for metadata provider opensea: ${config.chainId}`);
-    }
-  }
-
   isOSTestnet(): boolean {
     switch (config.chainId) {
       case 4:
@@ -605,7 +569,7 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
   }
 
   async getOSData(api: string, contract: string, tokenId?: string, slug?: string): Promise<any> {
-    const network = this.getOSNetworkName();
+    const network = getOpenseaNetworkName();
     const url = this.getUrlForApi(api, contract, tokenId, network, slug);
 
     const headers = !this.isOSTestnet()
