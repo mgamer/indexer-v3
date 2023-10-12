@@ -341,6 +341,167 @@ export const getTopSellingCollections = async (params: {
   );
 };
 
+export const getRecentSalesByCollection = async (
+  collections: string[],
+  fillType: TopSellingFillOptions
+) => {
+  const salesQuery = {
+    bool: {
+      filter: [
+        {
+          terms: {
+            "collection.id": collections,
+          },
+        },
+        {
+          terms: {
+            type: fillType == "any" ? ["sale", "mint"] : [fillType],
+          },
+        },
+      ],
+    },
+  } as any;
+
+  const collectionAggregation = {
+    collections: {
+      terms: {
+        field: "collection.id",
+      },
+      aggs: {
+        recent_sales: {
+          top_hits: {
+            sort: [
+              {
+                timestamp: {
+                  order: "desc",
+                },
+              },
+            ],
+            _source: {
+              includes: [
+                "contract",
+                "collection.name",
+                "collection.image",
+                "collection.id",
+                "name",
+                "toAddress",
+                "token.id",
+                "token.name",
+                "token.image",
+                "type",
+                "timestamp",
+                "pricing.price",
+                "pricing.priceDecimal",
+                "pricing.currencyPrice",
+                "pricing.usdPrice",
+                "pricing.feeBps",
+                "pricing.currency",
+                "pricing.value",
+                "pricing.valueDecimal",
+                "pricing.currencyValue",
+                "pricing.normalizedValue",
+                "pricing.normalizedValueDecimal",
+                "pricing.currencyNormalizedValue",
+              ],
+            },
+            size: 8,
+          },
+        },
+      },
+    },
+  } as any;
+
+  const esResult = (await elasticsearch.search({
+    index: INDEX_NAME,
+    size: 0,
+    body: {
+      query: salesQuery,
+      aggs: collectionAggregation,
+    },
+  })) as any;
+
+  const result = esResult?.aggregations?.collections?.buckets?.reduce((acc: any, bucket: any) => {
+    acc[bucket.key] = bucket.recent_sales.hits.hits.map((hit: any) => hit._source);
+    return acc;
+  }, {});
+
+  return result;
+};
+
+const getPastResults = async (
+  collections: string[],
+  startTime: number,
+  fillType: TopSellingFillOptions
+) => {
+  const now = Math.floor(new Date().getTime() / 1000);
+  const period = now - startTime;
+  const previousPeriodStartTime = startTime - period;
+
+  const salesQuery = {
+    bool: {
+      filter: [
+        {
+          terms: {
+            "collection.id": collections,
+          },
+        },
+
+        {
+          terms: {
+            type: fillType == "any" ? ["sale", "mint"] : [fillType],
+          },
+        },
+        {
+          range: {
+            timestamp: {
+              gte: previousPeriodStartTime,
+              lte: startTime,
+              format: "epoch_second",
+            },
+          },
+        },
+      ],
+    },
+  } as any;
+
+  const collectionAggregation = {
+    collections: {
+      terms: {
+        field: "collection.id",
+      },
+      aggs: {
+        total_sales: {
+          value_count: {
+            field: "id",
+          },
+        },
+        total_volume: {
+          sum: {
+            field: "pricing.priceDecimal",
+          },
+        },
+      },
+    },
+  } as any;
+
+  const esResult = (await elasticsearch.search({
+    index: INDEX_NAME,
+    size: 0,
+    body: {
+      query: salesQuery,
+      aggs: collectionAggregation,
+    },
+  })) as any;
+
+  return esResult?.aggregations?.collections?.buckets?.map((bucket: any) => {
+    return {
+      volume: bucket?.total_volume?.value,
+      count: bucket?.total_sales.value,
+      id: bucket.key,
+    };
+  });
+};
+
 export const getTopSellingCollectionsV2 = async (params: {
   startTime: number;
   fillType: TopSellingFillOptions;
@@ -417,10 +578,27 @@ export const getTopSellingCollectionsV2 = async (params: {
     },
   })) as any;
 
+  const collections = esResult?.aggregations?.collections?.buckets;
+  const pastResults = await getPastResults(
+    collections.map((collection: any) => collection.key),
+    startTime,
+    fillType
+  );
+
   return esResult?.aggregations?.collections?.buckets?.map((bucket: any) => {
+    const pastResult = pastResults.find((result: any) => result.id == bucket.key);
+
     return {
       volume: bucket?.total_volume?.value,
+      volumePercentChange: _.round(
+        ((bucket?.total_volume?.value || 0) / (pastResult?.volume || 1)) * 100 - 100,
+        2
+      ),
       count: bucket?.total_sales.value,
+      countPercentChange: _.round(
+        ((bucket?.total_sales.value || 0) / (pastResult?.count || 1)) * 100 - 100,
+        2
+      ),
       id: bucket.key,
     };
   });

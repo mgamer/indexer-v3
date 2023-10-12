@@ -81,6 +81,8 @@ export const getTrendingCollectionsV1Options: RouteOptions = {
           primaryContract: Joi.string().lowercase().pattern(regex.address),
           count: Joi.number().integer(),
           volume: Joi.number(),
+          volumePercentChange: Joi.number().unsafe().allow(null),
+          countPercentChange: Joi.number().unsafe().allow(null),
           creator: Joi.string().allow("", null),
           floorAsk: {
             id: Joi.string().allow(null),
@@ -316,7 +318,7 @@ async function getCollectionsResult(request: Request) {
   const fillType = TopSellingFillOptions.sale;
   let collectionsResult = [];
   const period = request.query.period === "24h" ? "1d" : request.query.period;
-  const cacheKey = `topSellingCollections:v2:${period}:${fillType}:${sortBy}`;
+  const cacheKey = `top-selling-collections:v2:${period}:${fillType}:${sortBy}`;
   const cachedResults = await redis.get(cacheKey);
 
   if (cachedResults) {

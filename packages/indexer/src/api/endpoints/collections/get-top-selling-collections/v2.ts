@@ -13,8 +13,9 @@ import { getStartTime } from "@/models/top-selling-collections/top-selling-colle
 import { redis } from "@/common/redis";
 
 import {
-  getTopSellingCollections,
+  getTopSellingCollectionsV2 as getTopSellingCollections,
   TopSellingFillOptions,
+  getRecentSalesByCollection,
 } from "@/elasticsearch/indexes/activities";
 
 import { getJoiPriceObject, JoiPrice } from "@/common/joi";
@@ -84,6 +85,8 @@ export const getTopSellingCollectionsV2Options: RouteOptions = {
           primaryContract: Joi.string().lowercase().pattern(regex.address),
           count: Joi.number().integer(),
           volume: Joi.number(),
+          volumePercentChange: Joi.number().unsafe().allow(null),
+          countPercentChange: Joi.number().unsafe().allow(null),
           floorAsk: {
             id: Joi.string().allow(null),
             sourceDomain: Joi.string().allow("", null),
@@ -153,7 +156,7 @@ export const getTopSellingCollectionsV2Options: RouteOptions = {
       let collectionsResult = [];
       const period = request.query.period === "24h" ? "1d" : request.query.period;
 
-      const cacheKey = `topSellingCollections:v2:${period}:${fillType}:${sortBy}`;
+      const cacheKey = `top-selling-collections:v2:${period}:${fillType}:${sortBy}`;
 
       const cachedResults = await redis.get(cacheKey);
 
@@ -170,7 +173,6 @@ export const getTopSellingCollectionsV2Options: RouteOptions = {
           startTime,
           fillType,
           limit,
-          includeRecentSales,
           sortBy,
         });
 
@@ -236,13 +238,24 @@ export const getTopSellingCollectionsV2Options: RouteOptions = {
           WHERE collections.id IN (${collectionIdList})
       `;
 
+        let recentSalesPerCollection: any = {};
+
+        if (includeRecentSales) {
+          recentSalesPerCollection = await getRecentSalesByCollection(
+            collectionsResult.map((collection: any) => collection.id),
+            fillType
+          );
+        }
+
         const resultsPromise = redb.manyOrNone(baseQuery);
         const recentSalesPromise = collectionsResult.map(async (collection: any) => {
+          const recentSales = recentSalesPerCollection[collection.id] || [];
+
           return {
             ...collection,
-            recentSales: includeRecentSales
+            recentSales: recentSales
               ? await Promise.all(
-                  collection.recentSales.map(async (sale: any) => {
+                  recentSales.map(async (sale: any) => {
                     const { pricing, ...salesData } = sale;
                     const price = pricing
                       ? await getJoiPriceObject(

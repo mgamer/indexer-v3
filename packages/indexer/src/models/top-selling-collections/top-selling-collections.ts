@@ -61,7 +61,7 @@ export const getStartTime = (period: Period): number => {
 
 export class TopSellingCollections {
   public static async updateTopSellingCollections(): Promise<TopSellingCollectionWindow[]> {
-    const periods: Period[] = ["6h", "1d", "7d", "30d"];
+    const periods: Period[] = ["1h", "6h", "1d", "7d", "30d"];
     const fillSorts: FillSort[] = ["volume", "sales"];
 
     const tasks = fillSorts.flatMap((fillSort) => {
@@ -87,7 +87,7 @@ export class TopSellingCollections {
     const pipeline = redis.pipeline();
 
     results.forEach(({ period, collections, fillSort }: TopSellingCollectionWindow) => {
-      const key = `topSellingCollections:${VERSION}:${period}:sale:${fillSort}`;
+      const key = `top-selling-collections:${VERSION}:${period}:sale:${fillSort}`;
       const value = JSON.stringify(collections);
       pipeline.set(key, value, "EX", expireTimeInSeconds);
     });
