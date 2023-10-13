@@ -413,9 +413,8 @@ export async function extractRoyalties(
 
       const otherBps = otherAmount.mul(PRECISION_BASE).div(fillEvent.price).toNumber();
 
-      // totalAmount match with sale price and the largest amount of transfer grater than bps limit
+      // If totalAmount match with sale price then fix the balanceChange by exclude the largest one
       if (totalAmount.eq(fillEvent.price) && otherBps < BPS_LIMIT) {
-        // fix the balanceChange by exclude the largest one
         balanceChange = otherAmount.toString();
       }
     }
