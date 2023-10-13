@@ -8,7 +8,6 @@ import { bn, fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { mintsProcessJob } from "@/jobs/mints/mints-process-job";
 import { CollectionMint } from "@/orderbook/mints";
-
 import * as mints from "@/orderbook/mints/calldata/detector";
 
 // For now, use the deployer address
@@ -42,11 +41,11 @@ export type AbiParam =
       abiType: string;
     }
   | {
-      kind: "custom";
+      kind: "referrer";
       abiType: string;
     }
   | {
-      kind: "referrer";
+      kind: "custom";
       abiType: string;
     };
 
@@ -360,6 +359,8 @@ export const refreshMintsForCollection = async (collection: string) => {
         return mints.mintdotfun.refreshByCollection(collection);
       case "seadrop-v1.0":
         return mints.seadrop.refreshByCollection(collection);
+      case "soundxyz":
+        return mints.soundxyz.refreshByCollection(collection);
       case "thirdweb":
         return mints.thirdweb.refreshByCollection(collection);
       case "unknown":

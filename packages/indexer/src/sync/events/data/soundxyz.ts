@@ -1,4 +1,5 @@
 import { Interface } from "@ethersproject/abi";
+
 import { EventData } from "@/events-sync/data";
 
 export const rangeEditionMintCreated: EventData = {
@@ -18,7 +19,7 @@ export const rangeEditionMintCreated: EventData = {
       uint32 maxMintableLower,
       uint32 maxMintableUpper,
       uint32 maxMintablePerAccount
-  )`,
+    )`,
   ]),
 };
 

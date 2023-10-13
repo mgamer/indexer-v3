@@ -42,11 +42,10 @@ export const extractByCollection = async (
   );
 
   let moduleInterfaceId: string | undefined;
-
   try {
     moduleInterfaceId = await contract.moduleInterfaceId();
   } catch {
-    // Skip error
+    // Skip errors
   }
 
   try {
@@ -58,32 +57,31 @@ export const extractByCollection = async (
             address edition,
             uint128 mintId,
             uint32 quantity
-          ) view
-            returns (
-                uint256 total,
-                uint256 subTotal,
-                uint256 platformFlatFeeTotal,
-                uint256 platformFee,
-                uint256 affiliateFee
+          ) view returns (
+            uint256 total,
+            uint256 subTotal,
+            uint256 platformFlatFeeTotal,
+            uint256 platformFee,
+            uint256 affiliateFee
           )`,
           `function mintInfo(address collection, uint128 mintId) view returns (
-             (
-                 uint32 startTime,
-                 uint32 endTime,
-                 uint16 affiliateFeeBPS,
-                 bool mintPaused,
-                 uint96 price,
-                 uint32 maxMintableUpper,
-                 uint32 maxMintableLower,
-                 uint32 maxMintablePerAccount,
-                 uint32 totalMinted,
-                 uint32 cutoffTime,
-                 bytes32 affiliateMerkleRoot,
-                 uint16 platformFeeBPS,
-                 uint96 platformFlatFee,
-                 uint96 platformPerTxFlatFee,
-             ) info
-            )`,
+            (
+              uint32 startTime,
+              uint32 endTime,
+              uint16 affiliateFeeBPS,
+              bool mintPaused,
+              uint96 price,
+              uint32 maxMintableUpper,
+              uint32 maxMintableLower,
+              uint32 maxMintablePerAccount,
+              uint32 totalMinted,
+              uint32 cutoffTime,
+              bytes32 affiliateMerkleRoot,
+              uint16 platformFeeBPS,
+              uint96 platformFlatFee,
+              uint96 platformPerTxFlatFee
+            ) info
+          )`,
         ]),
         baseProvider
       );
@@ -95,6 +93,7 @@ export const extractByCollection = async (
       if (!mintInfo.mintPaused) {
         // Include the Manifold mint fee into the price
         const price = totalPrice.total.toString();
+
         return [
           {
             collection,
@@ -155,31 +154,30 @@ export const extractByCollection = async (
             address edition,
             uint128 mintId,
             uint32 quantity
-          ) view
-            returns (
-                uint256 total,
-                uint256 subTotal,
-                uint256 platformFlatFeeTotal,
-                uint256 platformFee,
-                uint256 affiliateFee
+          ) view returns (
+            uint256 total,
+            uint256 subTotal,
+            uint256 platformFlatFeeTotal,
+            uint256 platformFee,
+            uint256 affiliateFee
           )`,
           `function mintInfo(address collection, uint128 mintId) view returns (
-             (
-                uint32 startTime,
-                uint32 endTime,
-                uint16 affiliateFeeBPS,
-                bool mintPaused,
-                uint96 price,
-                uint32 maxMintable,
-                uint32 maxMintablePerAccount,
-                uint32 totalMinted,
-                bytes32 merkleRootHash,
-                bytes32 affiliateMerkleRoot,
-                uint16 platformFeeBPS,
-                uint96 platformFlatFee,
-                uint96 platformPerTxFlatFee,
-             ) info
-            )`,
+            (
+              uint32 startTime,
+              uint32 endTime,
+              uint16 affiliateFeeBPS,
+              bool mintPaused,
+              uint96 price,
+              uint32 maxMintable,
+              uint32 maxMintablePerAccount,
+              uint32 totalMinted,
+              bytes32 merkleRootHash,
+              bytes32 affiliateMerkleRoot,
+              uint16 platformFeeBPS,
+              uint96 platformFlatFee,
+              uint96 platformPerTxFlatFee
+            ) info
+          )`,
         ]),
         baseProvider
       );
@@ -188,9 +186,10 @@ export const extractByCollection = async (
       const totalPrice = await minter.totalPriceAndFees(collection, mintId, 1);
 
       // Allowlist sale
-      if (mintInfo.merkleRootHash != HashZero && !mintInfo.mintPaused) {
+      if (mintInfo.merkleRootHash !== HashZero && !mintInfo.mintPaused) {
         // Include the Manifold mint fee into the price
         const price = totalPrice.total.toString();
+
         return [
           {
             collection,
@@ -278,18 +277,18 @@ export const extractByTx = async (
   ) {
     try {
       const parsed = new Interface([
-        "function mint(address edition,uint128 mintId,uint32 quantity,address affiliate)",
-        "function mint(address edition,uint128 mintId,uint32 quantity,bytes32[] proof,address affiliate)",
-        "function mintTo(address edition,uint128 mintId,address to,uint32 quantity,address affiliate,bytes32[] affiliateProof,uint256 attributionId)",
-        "function mintTo(address edition,uint128 mintId,address to,uint32 quantity,address allowlisted,bytes32[] proof,address affiliate,bytes32[] affiliateProof,uint256 attributionId)",
+        "function mint(address edition, uint128 mintId, uint32 quantity, address affiliate)",
+        "function mint(address edition, uint128 mintId, uint32 quantity, bytes32[] proof, address affiliate)",
+        "function mintTo(address edition, uint128 mintId, address to, uint32 quantity, address affiliate, bytes32[] affiliateProof, uint256 attributionId)",
+        "function mintTo(address edition, uint128 mintId, address to, uint32 quantity, address allowlisted, bytes32[] proof, address affiliate, bytes32[] affiliateProof, uint256 attributionId)",
       ]).parseTransaction({
         data: tx.data,
       });
 
       const mintId = parsed.args.mintId.toString();
       return extractByCollection(collection, mintId, tx.to);
-    } catch (err) {
-      // Parse error
+    } catch {
+      // Skip errors
     }
   }
 
