@@ -6,7 +6,6 @@ import { logger } from "@/common/logger";
 import { idb, ridb } from "@/common/db";
 import { toBuffer } from "@/common/utils";
 import { add, getUnixTime, isAfter } from "date-fns";
-import { flagStatusUpdateJob } from "@/jobs/flag-status/flag-status-update-job";
 import PgPromise from "pg-promise";
 import { resyncAttributeKeyCountsJob } from "@/jobs/update-attribute/resync-attribute-key-counts-job";
 import { resyncAttributeValueCountsJob } from "@/jobs/update-attribute/resync-attribute-value-counts-job";
@@ -15,6 +14,7 @@ import { resyncAttributeCountsJob } from "@/jobs/update-attribute/update-attribu
 import { TokenMetadata } from "@/metadata/types";
 import { newCollectionForTokenJob } from "@/jobs/token-updates/new-collection-for-token-job";
 import { config } from "@/config/index";
+import { flagStatusUpdateJob } from "@/jobs/flag-status/flag-status-update-job";
 import { metadataIndexFetchJob } from "@/jobs/metadata-index/metadata-fetch-job";
 import { redis } from "@/common/redis";
 import { tokenWebsocketEventsTriggerJob } from "@/jobs/websocket-events/token-websocket-events-trigger-job";
@@ -181,7 +181,7 @@ export class MetadataIndexWriteJob extends AbstractRabbitMqJobHandler {
       config.chainId !== 1 &&
       _.isNull(result.image) &&
       _.isNull(result.name) &&
-      isAfter(add(new Date(result.created_at), { minutes: 60 }), Date.now())
+      isAfter(add(new Date(result.created_at), { minutes: 25 }), Date.now())
     ) {
       await redis.set(keyName, _.now(), "EX", 2 * 60 * 60);
 

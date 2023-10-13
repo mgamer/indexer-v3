@@ -105,7 +105,10 @@ import { eventsSyncProcessRealtimeJob } from "@/jobs/events-sync/process/events-
 import { fillUpdatesJob } from "@/jobs/fill-updates/fill-updates-job";
 import { fillPostProcessJob } from "@/jobs/fill-updates/fill-post-process-job";
 import { flagStatusUpdateJob } from "@/jobs/flag-status/flag-status-update-job";
-import { flagStatusProcessJob } from "@/jobs/flag-status/flag-status-process-job";
+import { tokenFlagStatusSyncJob } from "@/jobs/flag-status/token-flag-status-sync-job";
+import { collectionSlugFlugStatusSyncJob } from "@/jobs/flag-status/collection-slug-flag-status";
+import { contractFlugStatusSyncJob } from "./flag-status/contract-flag-status";
+
 import { metadataIndexFetchJob } from "@/jobs/metadata-index/metadata-fetch-job";
 import { metadataIndexProcessJob } from "@/jobs/metadata-index/metadata-process-job";
 import { metadataIndexWriteJob } from "@/jobs/metadata-index/metadata-write-job";
@@ -240,7 +243,9 @@ export class RabbitMqJobsConsumer {
       fillUpdatesJob,
       fillPostProcessJob,
       flagStatusUpdateJob,
-      flagStatusProcessJob,
+      tokenFlagStatusSyncJob,
+      collectionSlugFlugStatusSyncJob,
+      contractFlugStatusSyncJob,
       metadataIndexFetchJob,
       metadataIndexProcessJob,
       metadataIndexWriteJob,
