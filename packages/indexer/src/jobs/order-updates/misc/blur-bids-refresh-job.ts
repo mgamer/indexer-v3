@@ -27,6 +27,10 @@ export class BlurBidsRefreshJob extends AbstractRabbitMqJobHandler {
   protected async process(payload: BlurBidsRefreshJobPayload) {
     const { collection } = payload;
 
+    if (config.chainId !== 1) {
+      return;
+    }
+
     try {
       const pricePoints = await axios
         .get(`${config.orderFetcherBaseUrl}/api/blur-collection-bids?collection=${collection}`)

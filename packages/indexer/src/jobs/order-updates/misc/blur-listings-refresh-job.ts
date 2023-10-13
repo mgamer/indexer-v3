@@ -28,6 +28,10 @@ export class BlurListingsRefreshJob extends AbstractRabbitMqJobHandler {
   protected async process(payload: BlurListingsRefreshJobPayload) {
     const { collection } = payload;
 
+    if (config.chainId !== 1) {
+      return;
+    }
+
     try {
       // First fetch the most up-to-date state of the listings
       const blurListings = await axios
