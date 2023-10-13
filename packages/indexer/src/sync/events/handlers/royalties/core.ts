@@ -415,11 +415,8 @@ export async function extractRoyalties(
 
       // totalAmount match with sale price and the largest amount of transfer grater than bps limit
       if (totalAmount.eq(fillEvent.price) && otherBps < BPS_LIMIT) {
-        // Exclude the largest one as balanceChange
+        // fix the balanceChange by exclude the largest one
         balanceChange = otherAmount.toString();
-        if (notRoyaltyRecipients.has(address)) {
-          notRoyaltyRecipients.delete(address);
-        }
       }
     }
 
@@ -517,12 +514,15 @@ export async function extractRoyalties(
 
         const excludeOtherRecipients = shareSameRecipient ? true : notInOtherDef;
         const matchFee = feeRecipient.getByAddress(address, "marketplace");
+
+        const inRoyaltyRecipient = royalties.find((c) => c.find((d) => d.recipient === address));
+
         const recipientIsEligible =
           bps > 0 &&
           bps < BPS_LIMIT &&
           !matchFee &&
           excludeOtherRecipients &&
-          !notRoyaltyRecipients.has(address);
+          (!notRoyaltyRecipients.has(address) || inRoyaltyRecipient);
 
         // For multiple sales, we should check if the current payment is
         // in the range of payments associated to the current fill event
