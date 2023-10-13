@@ -14,7 +14,6 @@ if (config.doBackgroundWork && !config.disableFlagStatusRefreshJob) {
       await redlock
         .acquire(["flag-status-sync-cron"], (10 * 60 - 3) * 1000)
         .then(async () => {
-          logger.info("flag-status-sync-cron", "Starting flag status sync cron");
           await tokenFlagStatusSyncJob.addToQueue();
 
           await collectionSlugFlugStatusSyncJob.addToQueue();
