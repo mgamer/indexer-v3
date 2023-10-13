@@ -4,7 +4,6 @@ import { config } from "@/config/index";
 import { tokenFlagStatusSyncJob } from "@/jobs/flag-status/token-flag-status-sync-job";
 import { collectionSlugFlugStatusSyncJob } from "./collection-slug-flag-status";
 import { contractFlugStatusSyncJob } from "./contract-flag-status";
-import { logger } from "@/common/logger";
 
 if (config.doBackgroundWork && !config.disableFlagStatusRefreshJob) {
   cron.schedule(
@@ -20,8 +19,8 @@ if (config.doBackgroundWork && !config.disableFlagStatusRefreshJob) {
 
           await contractFlugStatusSyncJob.addToQueue();
         })
-        .catch((error) => {
-          logger.error("flag-status-sync-cron", `Error: ${error}`);
+        .catch(() => {
+          // do nothing
         })
   );
 }
