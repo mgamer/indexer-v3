@@ -13,14 +13,11 @@ import {
   simulateAndUpsertCollectionMint,
 } from "@/orderbook/mints";
 
-import { getStatus, toSafeTimestamp } from "@/orderbook/mints/calldata/helpers";
-
 const STANDARD = "mintdotfun";
 
 const MINT_DOT_FUN_DEPLOYER = "0x56d7303fb0d0781c2fbef962d7f9461bf416916f";
-const BasicMintModule = "0x000000000f30984de6843bbc1d109c95ea6242ac";
 
-export const extractCustomByCollection = async (collection: string): Promise<CollectionMint[]> => {
+export const extractByCollection = async (collection: string): Promise<CollectionMint[]> => {
   const results: CollectionMint[] = [];
   try {
     const nft = new Contract(
@@ -76,93 +73,6 @@ export const extractCustomByCollection = async (collection: string): Promise<Col
   return results;
 };
 
-export const extractByCollection = async (
-  collection: string,
-  module: string
-): Promise<CollectionMint[]> => {
-  const results: CollectionMint[] = [];
-  try {
-    const mintModule = new Contract(
-      module,
-      new Interface([
-        `function configuration(address _contract) external view returns (
-          (
-            uint256 price,
-            uint64 mintStart,
-            uint64 mintEnd,
-            uint32 maxPerWallet,
-            uint32 maxPerTransaction,
-            uint32 maxForModule,
-            uint32 maxSupply,
-          ) config
-        )`,
-      ]),
-      baseProvider
-    );
-
-    const configuration = await mintModule.configuration(collection);
-    const price = configuration.price.toString();
-    const maxSupply = configuration.maxSupply.toString();
-    const maxPerWallet = configuration.maxPerWallet.toString();
-
-    results.push({
-      collection,
-      contract: collection,
-      stage: `claim-${module.toLowerCase()}-${collection}`,
-      kind: "public",
-      status: "open",
-      standard: STANDARD,
-      details: {
-        tx: {
-          to: module,
-          data: {
-            // `mint`
-            signature: "0x00000000",
-            params: [
-              {
-                kind: "contract",
-                abiType: "address",
-              },
-              {
-                kind: "recipient",
-                abiType: "address",
-              },
-              {
-                kind: "referrer",
-                abiType: "address",
-              },
-              {
-                kind: "quantity",
-                abiType: "uint256",
-              },
-            ],
-          },
-        },
-      },
-      currency: Sdk.Common.Addresses.Native[config.chainId],
-      price: price,
-      maxMintsPerWallet: maxPerWallet === "0" ? undefined : maxPerWallet,
-      maxSupply: maxSupply === "0" ? undefined : maxSupply,
-      startTime: toSafeTimestamp(configuration.mintStart),
-      endTime: toSafeTimestamp(configuration.mintEnd),
-    });
-  } catch {
-    // Skip errors
-  }
-
-  // Update the status of each collection mint
-  await Promise.all(
-    results.map(async (cm) => {
-      await getStatus(cm).then(({ status, reason }) => {
-        cm.status = status;
-        cm.statusReason = reason;
-      });
-    })
-  );
-
-  return results;
-};
-
 export const extractByTx = async (
   collection: string,
   tx: Transaction
@@ -172,16 +82,7 @@ export const extractByTx = async (
       "0xb510391f", // `mint`
     ].some((bytes4) => tx.data.startsWith(bytes4))
   ) {
-    return extractCustomByCollection(collection);
-  }
-
-  if (
-    [
-      "0x00000000", // `mint`
-    ].some((bytes4) => tx.data.startsWith(bytes4)) &&
-    tx.to === BasicMintModule
-  ) {
-    return extractByCollection(collection, tx.to);
+    return extractByCollection(collection);
   }
 
   return [];
@@ -190,12 +91,9 @@ export const extractByTx = async (
 export const refreshByCollection = async (collection: string) => {
   const existingCollectionMints = await getCollectionMints(collection, { standard: STANDARD });
 
-  for (const { collection, stage } of existingCollectionMints) {
+  for (const { collection } of existingCollectionMints) {
     // Fetch and save/update the currently available mints
-    const latestCollectionMints =
-      stage === "allowlist-sale"
-        ? await extractCustomByCollection(collection)
-        : await extractByCollection(collection, BasicMintModule);
+    const latestCollectionMints = await extractByCollection(collection);
     for (const collectionMint of latestCollectionMints) {
       await simulateAndUpsertCollectionMint(collectionMint);
     }
@@ -205,7 +103,10 @@ export const refreshByCollection = async (collection: string) => {
     for (const existing of existingCollectionMints) {
       if (
         !latestCollectionMints.find(
-          (latest) => latest.collection === existing.collection && latest.stage === existing.stage
+          (latest) =>
+            latest.collection === existing.collection &&
+            latest.stage === existing.stage &&
+            latest.tokenId === existing.tokenId
         )
       ) {
         await simulateAndUpsertCollectionMint({
