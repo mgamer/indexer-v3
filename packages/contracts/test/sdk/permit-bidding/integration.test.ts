@@ -133,7 +133,7 @@ describe("PermitBidding - Indexer Integration Test", () => {
     }
 
     const bidResponse = await indexerHelper.executeBidV5(bidParams);
-    console.log("bidResponse", bidResponse)
+    console.log("bidResponse", bidResponse, bidParams)
     const {
       steps
     } = bidResponse;
@@ -228,6 +228,7 @@ describe("PermitBidding - Indexer Integration Test", () => {
 
       const permitRes = await buyer.sendTransaction(permitTx)
       const parsedResult = await indexerHelper.doEventParsing(permitRes.hash, false)
+      console.log('parsedResult', parsedResult.onChainData)
       expect(parsedResult.onChainData[0].permitNonceChanges.length).to.eq(1);
     }
 
@@ -268,7 +269,7 @@ describe("PermitBidding - Indexer Integration Test", () => {
     expect(lastSetp.items[0].data.data.includes("c7460d07")).to.eq(isExpire ? false : true);
   };
 
-  it("create and execute", async () => testCase());
+  // it("create and execute", async () => testCase());
   // it("create and cancel", async () => testCase(true));
-  // it("create and expired", async () => testCase(false, true));
+  it("create and expired", async () => testCase(false, true));
 });
