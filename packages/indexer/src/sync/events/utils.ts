@@ -234,8 +234,6 @@ export const extractAttributionData = async (
       aggregatorSource = await sources.getOrInsert("alphasharks.io");
     } else if (source === "magically.gg") {
       aggregatorSource = await sources.getOrInsert("magically.gg");
-    } else if (router) {
-      aggregatorSource = router;
     }
     fillSource = await sources.getOrInsert(source);
   } else if (router) {
@@ -248,6 +246,10 @@ export const extractAttributionData = async (
   const viaReservoir = secondSource?.domain === "reservoir.tools";
   if (viaReservoir) {
     aggregatorSource = secondSource;
+  }
+
+  if (!aggregatorSource && router) {
+    aggregatorSource = router;
   }
 
   return {
