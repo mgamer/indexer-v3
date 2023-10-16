@@ -439,6 +439,19 @@ export const getNetworkSettings = (): NetworkSettings => {
               },
             },
           ],
+          [
+            "0x011e128ec62840186f4a07e85e3ace28858c5606",
+            {
+              contract: "0x011e128ec62840186f4a07e85e3ace28858c5606",
+              name: "Val",
+              symbol: "$VAL",
+              decimals: 2,
+              metadata: {
+                image:
+                  "https://i.ibb.co/s1k4Qvz/valeria-logo.png",
+              },
+            },
+          ],
         ]),
         coingecko: {
           networkId: "ethereum",
