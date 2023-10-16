@@ -28,7 +28,7 @@ export class PermitBiddingOrderNonceChangeJob extends AbstractRabbitMqJobHandler
       const efftectedOrders = await idb.manyOrNone(
         `
         WITH permit_orders as (
-          SELECT orders.id, trim(both '"' from cast(raw_data->'permitId' as text)) as     permit_id FROM orders 
+          SELECT orders.id, trim(both '"' from cast(raw_data->'permitId' as text)) as permit_id FROM orders 
           WHERE maker = $/owner/
           AND side = 'buy'
           AND fillability_status = 'fillable'
