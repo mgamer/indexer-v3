@@ -137,4 +137,4 @@ custom["1,0x57f1887a8bf19b14fc0df6fd9b2acc9af147ea85"] = ens;
 custom["8453,0xea2a41c02fa86a4901826615f9796e603c6a4491"] = bridgeToBase;
 
 // Mint test
-custom["999,0xbf8be64aa2730978a5dd7e3f8b9d5af52ef00fe8"] = mintTest;
+custom["999,0xe6a65c982ffa589a934fa93ab59e6e9646f25763"] = mintTest;
