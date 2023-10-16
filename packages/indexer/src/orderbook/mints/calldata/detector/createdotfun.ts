@@ -1,10 +1,8 @@
 import { Interface } from "@ethersproject/abi";
 import { Contract } from "@ethersproject/contracts";
 import * as Sdk from "@reservoir0x/sdk";
-import axios from "axios";
 
 import { baseProvider } from "@/common/provider";
-import { redis } from "@/common/redis";
 import { config } from "@/config/index";
 import { Transaction } from "@/models/transactions";
 import {
@@ -147,29 +145,4 @@ export const refreshByCollection = async (collection: string) => {
       }
     }
   }
-};
-
-type ProofValue = string;
-
-export const generateProofValue = async (
-  collectionMint: CollectionMint,
-  address: string,
-  referrer: string
-): Promise<ProofValue> => {
-  const cacheKey = `${collectionMint.collection}-${collectionMint.stage}-${address}`;
-
-  let result: ProofValue = await redis
-    .get(cacheKey)
-    .then((response) => (response ? JSON.parse(response) : undefined));
-  if (!result) {
-    result = await axios
-      .get(`https://mint.fun/api/mintfun/fundrop/mint?address=${address}&referrer=${referrer}`)
-      .then(({ data }: { data: { signature: string } }) => data.signature);
-
-    if (result) {
-      await redis.set(cacheKey, JSON.stringify(result), "EX", 300);
-    }
-  }
-
-  return result;
 };
