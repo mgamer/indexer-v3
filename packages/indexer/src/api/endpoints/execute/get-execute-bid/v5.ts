@@ -659,7 +659,7 @@ export const getExecuteBidV5Options: RouteOptions = {
               collectionId && !attributeKey && !attributeValue ? collectionId : undefined;
 
             const usePermitBidding =
-              // [Sdk.Common.Addresses.Usdc[config.chainId]].includes(params.currency) &&
+              Sdk.Common.Addresses.Usdc[config.chainId].includes(params.currency) &&
               payload.usePermitBidding;
 
             switch (params.orderKind) {
