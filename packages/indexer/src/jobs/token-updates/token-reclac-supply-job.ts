@@ -1,13 +1,15 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { Tokens } from "@/models/tokens";
-import { redb } from "@/common/db";
+import { idb, redb } from "@/common/db";
 import { toBuffer } from "@/common/utils";
 import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handler";
 import _ from "lodash";
 import { acquireLock } from "@/common/redis";
 import { getNetworkSettings } from "@/config/network";
 import { logger } from "@/common/logger";
+import { config } from "@/config/index";
+import { Network } from "@reservoir0x/sdk/dist/utils";
 
 export type TokenRecalcSupplyPayload = {
   contract: string;
@@ -45,10 +47,34 @@ export class TokenReclacSupplyJob extends AbstractRabbitMqJobHandler {
       );
     }
 
-    await Tokens.update(contract, tokenId, {
-      supply: totalSupply,
-      remainingSupply: Math.min(totalSupply, totalRemainingSupply),
-    });
+    await idb.none(
+      `
+              UPDATE tokens SET
+                supply = $/totalSupply/,
+                remaining_supply = $/totalRemainingSupply/,
+                updated_at = now()
+              WHERE tokens.contract = $/contract/
+                AND tokens.token_id = $/tokenId/
+                AND (supply IS DISTINCT FROM $/totalSupply/ OR remaining_supply IS DISTINCT FROM $/totalRemainingSupply/)
+            `,
+      {
+        contract: toBuffer(contract),
+        tokenId,
+        totalSupply,
+        totalRemainingSupply,
+      }
+    );
+
+    if (config.chainId === Network.Polygon) {
+      logger.info(
+        this.queueName,
+        JSON.stringify({
+          topic: "debugTokenUpdate",
+          message: `Update token. contract=${contract}, tokenId=${tokenId}`,
+          token: `${contract}:${tokenId}`,
+        })
+      );
+    }
   }
 
   public async calcRemainingSupply(contract: string, tokenId: string) {
