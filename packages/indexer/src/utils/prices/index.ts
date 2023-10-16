@@ -301,11 +301,6 @@ export const getUSDAndNativePrices = async (
     nativePrice = price;
   }
 
-  return {
-    usdPrice: price,
-    nativePrice: price,
-  };
-
   return { usdPrice, nativePrice };
 };
 

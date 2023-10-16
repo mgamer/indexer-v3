@@ -133,10 +133,10 @@ export const save = async (
       if (
         !(await isOpen(order.params.conduitKey, Sdk.SeaportV15.Addresses.Exchange[config.chainId]))
       ) {
-        // return results.push({
-        //   id,
-        //   status: "unsupported-conduit",
-        // });
+        return results.push({
+          id,
+          status: "unsupported-conduit",
+        });
       }
 
       // Check: order has a non-zero price

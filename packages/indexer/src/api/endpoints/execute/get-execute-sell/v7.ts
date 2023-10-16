@@ -683,11 +683,7 @@ export const getExecuteSellV7Options: RouteOptions = {
             : undefined;
 
           // Post check
-          const permitApprovalExpired = permitApproval
-            ? bn(permitApproval.deadline).lte(now())
-            : false;
-
-          if (permitApprovalExpired) {
+          if (permitApproval && bn(permitApproval.deadline).lte(now())) {
             throw getExecuteError("Permit approval expired");
           }
 
@@ -853,11 +849,7 @@ export const getExecuteSellV7Options: RouteOptions = {
               : undefined;
 
             // Post check
-            const permitApprovalExpired = permitApproval
-              ? bn(permitApproval.deadline).lte(now())
-              : false;
-
-            if (permitApprovalExpired) {
+            if (permitApproval && bn(permitApproval.deadline).lte(now())) {
               throw getExecuteError("Permit approval expired");
             }
 
