@@ -2,6 +2,7 @@ import _ from "lodash";
 import { MergeRefs, ReqRefDefaults } from "@hapi/hapi";
 import jwt from "jsonwebtoken";
 import { config } from "../config";
+import { logger } from "@/common/logger";
 
 export enum ImageSize {
   small = 250,
@@ -52,8 +53,12 @@ export class Assets {
   }
 
   public static getResizedImageUrl(imageUrl: string, size: number): string {
-    if (config.enableImageResizing) {
-      return Assets.signImage(imageUrl, size);
+    try {
+      if (config.enableImageResizing) {
+        return Assets.signImage(imageUrl, size);
+      }
+    } catch (error) {
+      logger.error("getResizedImageUrl", `Error: ${error}`);
     }
 
     if (imageUrl?.includes("lh3.googleusercontent.com")) {
@@ -76,6 +81,11 @@ export class Assets {
   }
 
   public static signImage(imageUrl: string, width: number): string {
+    if (config.imageResizingBaseUrl == null) {
+      throw new Error("Image resizing base URL is not set");
+    } else if (config.privateImageResizingSigningKey == null) {
+      throw new Error("Private image resizing signing key is not set");
+    }
     const token = jwt.sign(
       {
         image: imageUrl,
@@ -84,6 +94,7 @@ export class Assets {
         // exp: Math.floor(Date.now() / 1000) + 2 * (60 * 60), // Expires: Now + 2h
       },
       config.privateImageResizingSigningKey,
+
       {
         algorithm: "RS256",
       }
