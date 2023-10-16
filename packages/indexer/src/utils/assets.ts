@@ -1,5 +1,7 @@
 import _ from "lodash";
 import { MergeRefs, ReqRefDefaults } from "@hapi/hapi";
+import jwt from "jsonwebtoken";
+import { config } from "../config";
 
 export enum ImageSize {
   small = 250,
@@ -50,6 +52,10 @@ export class Assets {
   }
 
   public static getResizedImageUrl(imageUrl: string, size: number): string {
+    if (config.enableImageResizing) {
+      return Assets.signImage(imageUrl, size);
+    }
+
     if (imageUrl?.includes("lh3.googleusercontent.com")) {
       if (imageUrl.match(/=s\d+$/)) {
         return imageUrl.replace(/=s\d+$/, `=s${size}`);
@@ -67,5 +73,21 @@ export class Assets {
     }
 
     return imageUrl;
+  }
+
+  public static signImage(imageUrl: string, width: number): string {
+    const token = jwt.sign(
+      {
+        image: imageUrl,
+        width: width,
+        exp: Math.floor(Date.now() / 1000) + 2 * (60 * 60), // Expires: Now + 2h
+      },
+      config.privateImageResizingSigningKey,
+      {
+        algorithm: "RS256",
+      }
+    );
+
+    return `${config.imageResizingBaseUrl}?token=${token}`;
   }
 }
