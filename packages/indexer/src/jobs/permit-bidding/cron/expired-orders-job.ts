@@ -4,7 +4,7 @@ import { now } from "@/common/utils";
 import cron from "node-cron";
 import { redlock } from "@/common/redis";
 import { config } from "@/config/index";
-import { idb } from "@/common/db";
+import { idb, pgp } from "@/common/db";
 
 export class OrderUpdatesExpiredPermitBiddingOrderJob extends AbstractRabbitMqJobHandler {
   queueName = "permit-bidding-expired-orders";
@@ -22,27 +22,52 @@ export class OrderUpdatesExpiredPermitBiddingOrderJob extends AbstractRabbitMqJo
     logger.info(this.queueName, "Invalidating expired orders");
     const timestamp = now();
     try {
-      const expiredOrders: { id: string }[] = await idb.manyOrNone(
+      const efftectedOrders = await idb.manyOrNone(
         `
-          WITH x AS (
-            SELECT
-              permit_biddings.id
-            FROM permit_biddings
-            WHERE deadline < $/timestamp/
-          )
-          UPDATE orders SET
-            fillability_status = 'expired',
-            updated_at = now()
-          FROM x
-          WHERE orders.permit_id = x.id
-          AND orders.fillability_status = 'fillable'
-          RETURNING orders.id
+        WITH permit_orders as (
+          SELECT orders.id, trim(both '"' from cast(raw_data->'permitId' as text)) as permit_id FROM orders 
+          WHERE side = 'buy'
+          AND fillability_status = 'fillable'
+          AND (raw_data->'permitId') is not null
+        ),
+        efftected_orders as (
+          SELECT permit_orders.id, permit_orders.permit_id from permit_orders left join permits on permits.id = permit_orders.permit_id
+          WHERE deadline < $/timestamp/
+        )
+        SELECT * from efftected_orders
         `,
-        { timestamp }
+        {
+          timestamp,
+        }
       );
 
-      if (expiredOrders.length) {
-        logger.info(this.queueName, `Invalidated ${expiredOrders.length} orders`);
+      const cancelledValues = efftectedOrders.map(({ id }) => ({
+        id,
+        fillability_status: "cancelled",
+      }));
+
+      // Cancel any orders if needed
+      if (cancelledValues.length) {
+        const columns = new pgp.helpers.ColumnSet(["id", "fillability_status"], {
+          table: "orders",
+        });
+
+        await idb.none(
+          `
+            UPDATE orders SET
+              fillability_status = x.fillability_status::order_fillability_status_t,
+              updated_at = now()
+            FROM (VALUES ${pgp.helpers.values(
+              cancelledValues,
+              columns
+            )}) AS x(id, fillability_status)
+            WHERE orders.id = x.id::TEXT
+          `
+        );
+      }
+
+      if (cancelledValues.length) {
+        logger.info(this.queueName, `Invalidated ${cancelledValues.length} orders`);
       }
     } catch (error) {
       logger.error(

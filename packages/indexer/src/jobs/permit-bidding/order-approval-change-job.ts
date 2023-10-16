@@ -1,4 +1,4 @@
-import { idb } from "@/common/db";
+import { idb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
 import { toBuffer } from "@/common/utils";
 import { AbstractRabbitMqJobHandler, BackoffStrategy } from "@/jobs/abstract-rabbit-mq-job-handler";
@@ -25,19 +25,22 @@ export class PermitBiddingOrderNonceChangeJob extends AbstractRabbitMqJobHandler
   protected async process(payload: PermitBiddingOrderNonceChangeJobPayload) {
     const { owner, spender, nonce, token } = payload;
     try {
-      await idb.none(
+      const efftectedOrders = await idb.manyOrNone(
         `
-          UPDATE orders SET
-            fillability_status = 'cancelled',
-            approval_status = 'disabled',
-            updated_at = now()
-          FROM orders as t
-          LEFT JOIN permit_biddings as c on c.id = t.permit_id
-          WHERE c.owner = $/owner/ 
-          AND c.token = $/token/
-          AND c.spender != $/spender/
-          AND c.nonce < $/nonce/
-          AND t.fillability_status = 'fillable'
+        WITH permit_orders as (
+          SELECT orders.id, trim(both '"' from cast(raw_data->'permitId' as text)) as     permit_id FROM orders 
+          WHERE maker = $/owner/
+          AND side = 'buy'
+          AND fillability_status = 'fillable'
+          AND (raw_data->'permitId') is not null
+        ),
+        efftected_orders as (
+          SELECT permit_orders.id, permit_orders.permit_id from permit_orders left join permits on permits.id = permit_orders.permit_id
+          WHERE token = $/token/
+          AND spender != $/spender/
+          AND nonce < $/nonce/
+        )
+        select * from efftected_orders
         `,
         {
           owner: toBuffer(owner),
@@ -46,6 +49,31 @@ export class PermitBiddingOrderNonceChangeJob extends AbstractRabbitMqJobHandler
           nonce,
         }
       );
+
+      const cancelledValues = efftectedOrders.map(({ id }) => ({
+        id,
+        fillability_status: "cancelled",
+      }));
+
+      // Cancel any orders if needed
+      if (cancelledValues.length) {
+        const columns = new pgp.helpers.ColumnSet(["id", "fillability_status"], {
+          table: "orders",
+        });
+
+        await idb.none(
+          `
+            UPDATE orders SET
+              fillability_status = x.fillability_status::order_fillability_status_t,
+              updated_at = now()
+            FROM (VALUES ${pgp.helpers.values(
+              cancelledValues,
+              columns
+            )}) AS x(id, fillability_status)
+            WHERE orders.id = x.id::TEXT
+          `
+        );
+      }
     } catch (error) {
       logger.error(
         this.queueName,
@@ -63,6 +91,7 @@ export class PermitBiddingOrderNonceChangeJob extends AbstractRabbitMqJobHandler
       for (const job of orderRevalidationInfos) {
         await this.process(job);
       }
+      return;
     }
     await this.sendBatch(orderRevalidationInfos.map((info) => ({ payload: info })));
   }

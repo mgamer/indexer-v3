@@ -84,10 +84,8 @@ export const getActiveOrdersMaxNonce = async (
       SELECT
         max(permits.nonce) as nonce
       FROM permits
-      LEFT JOIN orders ON orders.permit_id = permits.id
       WHERE permits.owner = $/owner/
       AND permits.token = $/token/
-      AND orders.fillability_status = 'fillable'
     `,
     { owner: toBuffer(owner), token: toBuffer(token) }
   );
