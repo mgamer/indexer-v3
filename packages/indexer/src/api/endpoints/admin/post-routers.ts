@@ -70,6 +70,7 @@ export const postRoutersOptions: RouteOptions = {
           router: address,
           fromBlock: deploymentBlock,
           toBlock: await baseProvider.getBlock("latest").then((b) => b.number),
+          blockRange: 100,
         });
       }
 
