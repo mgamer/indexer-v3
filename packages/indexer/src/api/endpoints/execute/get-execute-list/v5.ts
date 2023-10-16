@@ -67,6 +67,13 @@ export const getExecuteListV5Options: RouteOptions = {
         .description(
           "Address of wallet making the order. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00`"
         ),
+      taker: Joi.string()
+        .lowercase()
+        .pattern(regex.address)
+        .description(
+          "Address of wallet taker the private order. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00`"
+        )
+        .optional(),
       source: Joi.string()
         .lowercase()
         .pattern(regex.domain)
@@ -584,6 +591,7 @@ export const getExecuteListV5Options: RouteOptions = {
                   ...options,
                   orderbook: params.orderbook as "reservoir" | "opensea",
                   maker,
+                  taker: payload.taker,
                   contract,
                   tokenId,
                   source,
