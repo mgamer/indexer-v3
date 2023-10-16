@@ -50,8 +50,7 @@ describe("PermitBidding - Indexer Integration Test", () => {
     await erc721.connect(seller).mint(boughtTokenId);
 
     // Store collection
-    console.log("save order")
-    const res = await indexerHelper.doOrderSaving({
+    await indexerHelper.doOrderSaving({
       contract: erc721.address,
       kind: "erc721",
       nfts: [
@@ -64,8 +63,6 @@ describe("PermitBidding - Indexer Integration Test", () => {
       orders: [
       ],
     });
-
-    console.log("res", res);
 
     const router = new Sdk.RouterV6.Router(chainId, ethers.provider);
 
@@ -133,14 +130,12 @@ describe("PermitBidding - Indexer Integration Test", () => {
     }
 
     const bidResponse = await indexerHelper.executeBidV5(bidParams);
-    console.log("bidResponse", bidResponse, bidParams)
     const {
       steps
     } = bidResponse;
 
     // Handle permit approval
     const permitApproval = steps.find((c: any) => c.id === "permit-approval");
-    console.log("permitApproval", permitApproval)
     for(const item of permitApproval.items) {
       const eipMessage = item.data.sign;
       const signature = await buyer._signTypedData(
@@ -151,17 +146,15 @@ describe("PermitBidding - Indexer Integration Test", () => {
 
       // Store permit bidding signature
       const permitId = item.data.post.body.id;
-      const saveResult = await indexerHelper.savePreSignature(signature, permitId);
-      console.log("saveResult", saveResult, item)
+      await indexerHelper.savePreSignature(signature, permitId);
     }
 
     const bidResponse2 = await indexerHelper.executeBidV5(bidParams);
-    console.log("bidResponse2", bidResponse2);
 
     const saveOrderStep2 = bidResponse2.steps.find((c: any) => c.id === "order-signature");
 
     if (!saveOrderStep2) {
-      console.log('order failed')
+      // console.log('order failed')
       return
     }
 
@@ -180,7 +173,7 @@ describe("PermitBidding - Indexer Integration Test", () => {
     const orderId = orderSaveResult.orderId;
 
     if (orderSaveResult.error) {
-      console.log("save order failed", orderSaveResult)
+      // console.log("save order failed", orderSaveResult)
       return;
     }
 
@@ -228,7 +221,6 @@ describe("PermitBidding - Indexer Integration Test", () => {
 
       const permitRes = await buyer.sendTransaction(permitTx)
       const parsedResult = await indexerHelper.doEventParsing(permitRes.hash, false)
-      console.log('parsedResult', parsedResult.onChainData)
       expect(parsedResult.onChainData[0].permitNonceChanges.length).to.eq(1);
     }
 
@@ -257,10 +249,9 @@ describe("PermitBidding - Indexer Integration Test", () => {
 
     const allSteps = executeResponse.steps;
     if (!allSteps) {
-      console.log("getExecute failed", executeResponse)
+      // console.log("getExecute failed", executeResponse)
     }
     await seller.sendTransaction(allSteps[0].items[0].data);
-    console.log("allSteps", allSteps)
 
     const lastSetp = allSteps[allSteps.length - 1];
     // const tx = await seller.sendTransaction(lastSetp.items[0].data);
@@ -269,7 +260,7 @@ describe("PermitBidding - Indexer Integration Test", () => {
     expect(lastSetp.items[0].data.data.includes("c7460d07")).to.eq(isExpire ? false : true);
   };
 
-  // it("create and execute", async () => testCase());
-  // it("create and cancel", async () => testCase(true));
+  it("create and execute", async () => testCase());
+  it("create and cancel", async () => testCase(true));
   it("create and expired", async () => testCase(false, true));
 });
