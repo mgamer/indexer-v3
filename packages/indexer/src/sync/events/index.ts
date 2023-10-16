@@ -267,8 +267,12 @@ export const extractEventsBatches = async (
             data: kindToEvents.get("metadata-update") ?? [],
           },
           {
-            kind: "mintdotfun",
-            data: kindToEvents.get("mintdotfun") ?? [],
+            kind: "soundxyz",
+            data: kindToEvents.get("soundxyz") ?? [],
+          },
+          {
+            kind: "createdotfun",
+            data: kindToEvents.get("createdotfun") ?? [],
           },
         ];
 

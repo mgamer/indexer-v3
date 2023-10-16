@@ -728,9 +728,9 @@ export class Router {
 
     await Promise.all(
       details.map(async (detail, i) => {
-        if (["seaport-v1.4-partial", "seaport-v1.5-partial"].includes(detail.kind)) {
-          const protocolVersion = detail.kind === "seaport-v1.4-partial" ? "v1.4" : "v1.5";
-          const order = detail.order as Sdk.SeaportBase.Types.PartialOrder;
+        if (["seaport-v1.5-partial"].includes(detail.kind)) {
+          const protocolVersion = "v1.5";
+          const order = detail.order as Sdk.SeaportBase.Types.OpenseaPartialOrder;
 
           try {
             const result = await axios.post(`${this.options?.orderFetcherBaseUrl}/api/listing`, {
@@ -748,19 +748,52 @@ export class Router {
             // Override the details
             details[i] = {
               ...detail,
-              ...(protocolVersion === "v1.4"
-                ? {
-                    kind: "seaport-v1.4",
-                    order: new Sdk.SeaportV14.Order(this.chainId, result.data.order),
-                  }
-                : {
-                    kind: "seaport-v1.5",
-                    order: new Sdk.SeaportV15.Order(this.chainId, result.data.order),
-                  }),
+              kind: "seaport-v1.5",
+              order: new Sdk.SeaportV15.Order(this.chainId, result.data.order),
             };
           } catch (error) {
             if (options?.onError) {
               options.onError("order-fetcher-opensea-listing", error, {
+                orderId: detail.orderId,
+                additionalInfo: {
+                  detail,
+                  taker,
+                },
+              });
+            }
+
+            if (!options?.partial) {
+              throw new Error(getErrorMessage(error));
+            }
+          }
+        } else if (["seaport-v1.5-partial-okx"].includes(detail.kind)) {
+          const order = detail.order as Sdk.SeaportBase.Types.OkxPartialOrder;
+
+          try {
+            const result = await axios.post(
+              `${this.options?.orderFetcherBaseUrl}/api/okx-listing`,
+              {
+                okxOrderId: order.okxId,
+                orderHash: order.id,
+                taker,
+                chainId: this.chainId,
+                metadata: this.options?.orderFetcherMetadata,
+              }
+            );
+
+            // Override the details
+            details[i] = {
+              ...detail,
+              kind: "seaport-v1.5",
+              order: new Sdk.SeaportV15.Order(this.chainId, result.data.order),
+              extraArgs: {
+                ...details[i].extraArgs,
+                extraData: result.data.extraData,
+              },
+            };
+          } catch (error) {
+            if (options?.onError) {
+              options.onError("order-fetcher-okx-listing", error, {
                 orderId: detail.orderId,
                 additionalInfo: {
                   detail,
@@ -831,7 +864,10 @@ export class Router {
               txData: await exchange.fillOrderTx(
                 taker,
                 order,
-                order.buildMatching({ amount: details[0].amount }),
+                {
+                  ...order.buildMatching({ amount: details[0].amount }),
+                  extraData: details[0].extraArgs?.extraData,
+                },
                 {
                   ...options,
                   conduitKey,
@@ -858,7 +894,10 @@ export class Router {
               txData: await exchange.fillOrdersTx(
                 taker,
                 orders,
-                orders.map((order, i) => order.buildMatching({ amount: details[i].amount })),
+                orders.map((order, i) => ({
+                  ...order.buildMatching({ amount: details[i].amount }),
+                  extraData: details[i].extraArgs?.extraData,
+                })),
                 {
                   ...options,
                   conduitKey,
@@ -1743,6 +1782,7 @@ export class Router {
                         signature: orders[0].params.signature,
                         extraData: await exchange.getExtraData(orders[0], {
                           amount: currencyDetails[0].amount ?? 1,
+                          extraData: currencyDetails[0].extraArgs?.extraData,
                         }),
                       },
                       {
@@ -1772,8 +1812,9 @@ export class Router {
                             numerator: filledAmount,
                             denominator: totalAmount,
                             signature: order.params.signature,
-                            extraData: await exchange.getExtraData(orders[0], {
+                            extraData: await exchange.getExtraData(order, {
                               amount: filledAmount,
+                              extraData: currencyDetails[i].extraArgs?.extraData,
                             }),
                           };
 
@@ -3650,8 +3691,7 @@ export class Router {
           break;
         }
 
-        case "seaport-v1.4":
-        case "seaport-v1.4-partial": {
+        case "seaport-v1.4": {
           module = this.contracts.seaportV14Module;
           break;
         }
@@ -3978,7 +4018,7 @@ export class Router {
         }
 
         case "seaport-v1.5-partial": {
-          const order = detail.order as Sdk.SeaportBase.Types.PartialOrder;
+          const order = detail.order as Sdk.SeaportBase.Types.OpenseaPartialOrder;
           const module = this.contracts.seaportV15Module;
 
           try {

@@ -113,7 +113,7 @@ export const getOpenseaNetworkName = () => {
     case 999:
       return "zora_testnet";
     default:
-      return null;
+      throw new Error(`Unsupported chainId ${config.chainId}`);
   }
 };
 
@@ -446,8 +446,8 @@ export const getNetworkSettings = (): NetworkSettings => {
         elasticsearch: {
           indexes: {
             activities: {
+              ...defaultNetworkSettings.elasticsearch?.indexes?.activities,
               numberOfShards: 50,
-              configName: "CONFIG_DEFAULT",
             },
           },
         },

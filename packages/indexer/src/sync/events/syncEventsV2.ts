@@ -248,8 +248,12 @@ export const extractEventsBatches = (enhancedEvents: EnhancedEvent[]): EventsBat
         data: kindToEvents.get("erc721c") ?? [],
       },
       {
-        kind: "mintdotfun",
-        data: kindToEvents.get("mintdotfun") ?? [],
+        kind: "soundxyz",
+        data: kindToEvents.get("soundxyz") ?? [],
+      },
+      {
+        kind: "createdotfun",
+        data: kindToEvents.get("createdotfun") ?? [],
       },
     ];
 

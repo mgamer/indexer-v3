@@ -21,6 +21,7 @@ export type CollectionMintStandard =
   | "foundation"
   | "lanyard"
   | "mintdotfun"
+  | "soundxyz"
   | "createdotfun";
 
 export type CollectionMintDetails = {

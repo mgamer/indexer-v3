@@ -46,7 +46,8 @@ import * as seadrop from "@/events-sync/data/seadrop";
 import * as erc721c from "@/events-sync/data/erc721c";
 import * as joepeg from "@/events-sync/data/joepeg";
 import * as metadataUpdate from "@/events-sync/data/metadata-update";
-import * as mintdotfun from "@/events-sync/data/mintdotfun";
+import * as soundxyz from "@/events-sync/data/soundxyz";
+import * as createdotfun from "@/events-sync/data/createdotfun";
 
 // All events we're syncing should have an associated `EventData`
 // entry which dictates the way the event will be parsed and then
@@ -96,7 +97,8 @@ export type EventKind =
   | "erc721c"
   | "joepeg"
   | "metadata-update"
-  | "mintdotfun";
+  | "soundxyz"
+  | "createdotfun";
 
 // Event sub-kind in each of the above protocol/standard
 export type EventSubKind =
@@ -313,8 +315,10 @@ export type EventSubKind =
   | "metadata-update-uri-opensea"
   | "metadata-update-contract-uri-thirdweb"
   | "metadata-update-zora"
-  | "mintdotfun-metadata-renderer-updated"
-  | "mintdotfun-module-added";
+  | "soundxyz-range-edition-mint-created"
+  | "soundxyz-merkle-drop-mint-created"
+  | "createdotfun-metadata-renderer-updated"
+  | "createdotfun-module-added";
 
 export type EventData = {
   kind: EventKind;
@@ -537,8 +541,10 @@ const allEventData = [
   metadataUpdate.metadataUpdateURIOpensea,
   metadataUpdate.contractURIUpdateThirdweb,
   metadataUpdate.metadataUpdateURIZora,
-  mintdotfun.metadataRendererUpdated,
-  mintdotfun.moduleAdded,
+  soundxyz.rangeEditionMintCreated,
+  soundxyz.merkleDropMintCreated,
+  createdotfun.metadataRendererUpdated,
+  createdotfun.moduleAdded,
 ];
 
 export const getEventData = (events?: string[]) => {
