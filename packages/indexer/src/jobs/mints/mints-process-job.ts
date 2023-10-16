@@ -2,6 +2,7 @@ import { idb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { fromBuffer, toBuffer } from "@/common/utils";
 import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handler";
+import { collectionNewContractDeployedJob } from "@/jobs/collections/collection-contract-deployed";
 import { mintsRefreshJob } from "@/jobs/mints/mints-refresh-job";
 import {
   CollectionMint,
@@ -10,10 +11,9 @@ import {
 } from "@/orderbook/mints";
 import * as detector from "@/orderbook/mints/calldata/detector";
 import { getContractKind } from "@/orderbook/mints/calldata/helpers";
-import MetadataApi from "@/utils/metadata-api";
+import MetadataProviderRouter from "@/metadata/metadata-provider-router";
 
 import { manifold } from "@/orderbook/mints/calldata/detector";
-import { collectionNewContractDeployedJob } from "@/jobs/collections/collection-contract-deployed";
 
 export type MintsProcessJobPayload =
   | {
@@ -60,18 +60,23 @@ export class MintsProcessJob extends AbstractRabbitMqJobHandler {
           }
         );
         if (!collectionExists) {
-          const collection = await MetadataApi.getCollectionMetadata(data.collection, "0", "", {
-            indexingMethod:
-              data.standard === "manifold"
-                ? "manifold"
-                : data.standard === "seadrop-v1.0"
-                ? "opensea"
-                : "onchain",
-            additionalQueryParams:
-              data.standard === "manifold"
-                ? { instanceId: data.additionalInfo.instanceId }
-                : undefined,
-          });
+          const collection = await MetadataProviderRouter.getCollectionMetadata(
+            data.collection,
+            "0",
+            "",
+            {
+              indexingMethod:
+                data.standard === "manifold"
+                  ? "manifold"
+                  : data.standard === "seadrop-v1.0"
+                  ? "opensea"
+                  : "onchain",
+              additionalQueryParams:
+                data.standard === "manifold"
+                  ? { instanceId: data.additionalInfo.instanceId }
+                  : undefined,
+            }
+          );
 
           let tokenIdRange: string | null = null;
           if (collection.tokenIdRange) {
@@ -146,7 +151,11 @@ export class MintsProcessJob extends AbstractRabbitMqJobHandler {
         }
 
         switch (data.standard) {
-          // TODO: Add support for `decent`
+          case "decent": {
+            collectionMints = await detector.decent.extractByCollectionERC721(data.collection);
+
+            break;
+          }
 
           case "foundation": {
             collectionMints = await detector.foundation.extractByCollectionERC721(data.collection);
@@ -205,6 +214,15 @@ export class MintsProcessJob extends AbstractRabbitMqJobHandler {
               collectionMints = await detector.zora.extractByCollectionERC721(data.collection);
             }
 
+            break;
+          }
+
+          case "soundxyz": {
+            collectionMints = await detector.soundxyz.extractByCollection(
+              data.collection,
+              data.additionalInfo.mintId,
+              data.additionalInfo.minter
+            );
             break;
           }
         }

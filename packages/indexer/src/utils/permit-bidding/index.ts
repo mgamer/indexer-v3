@@ -1,26 +1,20 @@
 import { idb, redb } from "@/common/db";
 import { fromBuffer, toBuffer } from "@/common/utils";
-
-export type PermitMessage = {
-  owner: string;
-  spender: string;
-  value: string;
-  nonce: string;
-  deadline: string;
-  signature?: string;
-  token: string;
-};
+import { PermitApproval } from "@reservoir0x/sdk/dist/router/v6/types";
 
 export const savePermitBidding = async (
   permitId: string,
-  message: PermitMessage,
-  signature: string
+  message: PermitApproval,
+  signature: string,
+  kind = "eip2612"
 ) => {
   await idb.none(
     `
-      INSERT INTO permit_biddings(
+      INSERT INTO permits(
         id,
         token,
+        kind,
+        index,
         owner,
         spender,
         value,
@@ -30,6 +24,8 @@ export const savePermitBidding = async (
       ) VALUES (
         $/id/,
         $/token/,
+        $/kind/,
+        $/index/,
         $/owner/,
         $/spender/,
         $/value/,
@@ -40,24 +36,26 @@ export const savePermitBidding = async (
     `,
     {
       id: permitId,
+      kind,
       owner: toBuffer(message.owner),
+      index: message.index ?? 0,
       spender: toBuffer(message.spender),
       token: toBuffer(message.token),
       nonce: message.nonce,
       deadline: message.deadline,
-      signature: signature,
+      signature: toBuffer(signature),
       value: message.value,
     }
   );
 };
 
-export const getPermitBidding = async (permitId: string): Promise<PermitMessage | undefined> => {
+export const getPermitBidding = async (permitId: string): Promise<PermitApproval | undefined> => {
   const result = await redb.oneOrNone(
     `
       SELECT
-        permit_biddings.*
-      FROM permit_biddings
-      WHERE permit_biddings.id = $/id/
+        permits.*
+      FROM permits
+      WHERE permits.id = $/id/
     `,
     { id: permitId }
   );
@@ -70,9 +68,10 @@ export const getPermitBidding = async (permitId: string): Promise<PermitMessage 
     spender: fromBuffer(result.spender),
     token: fromBuffer(result.token),
     value: result.value,
+    kind: result.kind,
     nonce: result.nonce,
     deadline: result.deadline,
-    signature: result.signature,
+    signature: fromBuffer(result.signature),
   };
 };
 
@@ -83,11 +82,11 @@ export const getActiveOrdersMaxNonce = async (
   const result = await redb.oneOrNone(
     `
       SELECT
-        max(permit_biddings.nonce) as nonce
-      FROM permit_biddings
-      LEFT JOIN orders ON orders.permit_id = permit_biddings.id
-      WHERE permit_biddings.owner = $/owner/
-      AND permit_biddings.token = $/token/
+        max(permits.nonce) as nonce
+      FROM permits
+      LEFT JOIN orders ON orders.permit_id = permits.id
+      WHERE permits.owner = $/owner/
+      AND permits.token = $/token/
       AND orders.fillability_status = 'fillable'
     `,
     { owner: toBuffer(owner), token: toBuffer(token) }

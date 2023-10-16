@@ -112,6 +112,7 @@ export const getChainStatsFromActivity = async () => {
                       range: {
                         timestamp: {
                           gte: period.startTime,
+                          format: "epoch_second",
                         },
                       },
                     },
@@ -217,10 +218,11 @@ export const getTopSellingCollections = async (params: {
   startTime: number;
   endTime?: number;
   fillType: TopSellingFillOptions;
+  sortBy?: "volume" | "sales";
   limit: number;
   includeRecentSales: boolean;
 }): Promise<CollectionAggregation[]> => {
-  const { startTime, endTime, fillType, limit } = params;
+  const { startTime, endTime, fillType, limit, sortBy } = params;
 
   const { trendingExcludedContracts } = getNetworkSettings();
 
@@ -237,6 +239,7 @@ export const getTopSellingCollections = async (params: {
             timestamp: {
               gte: startTime,
               ...(endTime ? { lte: endTime } : {}),
+              format: "epoch_second",
             },
           },
         },
@@ -253,12 +256,13 @@ export const getTopSellingCollections = async (params: {
     },
   } as any;
 
+  const sort = sortBy == "volume" ? { total_volume: "desc" } : { total_transactions: "desc" };
   const collectionAggregation = {
     collections: {
       terms: {
         field: "collection.id",
         size: limit,
-        order: { total_transactions: "desc" },
+        order: sort,
       },
       aggs: {
         total_sales: {
@@ -271,7 +275,6 @@ export const getTopSellingCollections = async (params: {
             field: "event.txHash",
           },
         },
-
         total_volume: {
           sum: {
             field: "pricing.priceDecimal",
@@ -467,32 +470,37 @@ export const search = async (
 
   if (params.startTimestamp) {
     (esQuery as any).bool.filter.push({
-      range: { timestamp: { gte: params.endTimestamp } },
+      range: { timestamp: { gte: params.startTimestamp, format: "epoch_second" } },
     });
   }
 
   if (params.endTimestamp) {
     (esQuery as any).bool.filter.push({
-      range: { timestamp: { lt: params.endTimestamp } },
+      range: { timestamp: { lt: params.endTimestamp, format: "epoch_second" } },
     });
   }
 
-  const esSort: any[] = [];
-
-  if (params.sortBy == "timestamp") {
-    esSort.push({ timestamp: { order: "desc" } });
-  } else {
-    esSort.push({ createdAt: { order: "desc" } });
-  }
-
-  let searchAfter;
+  let searchAfter: string[] = [];
 
   if (params.continuation) {
     if (params.continuationAsInt) {
       searchAfter = [params.continuation];
     } else {
-      searchAfter = [splitContinuation(params.continuation)[0]];
+      searchAfter = _.split(splitContinuation(params.continuation)[0], "_");
     }
+  }
+
+  const esSort: any[] = [];
+
+  if (params.sortBy == "timestamp") {
+    esSort.push({ timestamp: { order: "desc", format: "epoch_second" } });
+  } else {
+    esSort.push({ createdAt: { order: "desc" } });
+  }
+
+  // Backward compatibility
+  if (searchAfter?.length != 1 && !params.continuationAsInt) {
+    esSort.push({ id: { order: "desc" } });
   }
 
   try {
@@ -501,7 +509,7 @@ export const search = async (
         query: esQuery,
         sort: esSort as Sort,
         size: params.limit,
-        search_after: searchAfter,
+        search_after: searchAfter?.length ? searchAfter : undefined,
       },
       0,
       debug
@@ -511,18 +519,16 @@ export const search = async (
 
     let continuation = null;
 
-    if (activities.length === params.limit) {
-      const lastActivity = _.last(activities);
+    if (esResult.hits.hits.length === params.limit) {
+      const lastResult = _.last(esResult.hits.hits);
 
-      if (lastActivity) {
+      if (lastResult) {
+        const lastResultSortValue = lastResult.sort!.join("_");
+
         if (params.continuationAsInt) {
-          continuation = `${lastActivity.timestamp}`;
+          continuation = `${lastResultSortValue}`;
         } else {
-          const continuationValue =
-            params.sortBy == "timestamp"
-              ? lastActivity.timestamp
-              : new Date(lastActivity.createdAt).toISOString();
-          continuation = buildContinuation(`${continuationValue}`);
+          continuation = buildContinuation(`${lastResultSortValue}`);
         }
       }
     }
@@ -1338,14 +1344,18 @@ export const updateActivitiesCollectionMetadata = async (
   };
 
   try {
-    const esResult = await _search({
-      _source: ["id"],
-      // This is needed due to issue with elasticsearch DSL.
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      query,
-      size: 1000,
-    });
+    const esResult = await _search(
+      {
+        _source: ["id"],
+        // This is needed due to issue with elasticsearch DSL.
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        query,
+        size: 1000,
+      },
+      0,
+      true
+    );
 
     const pendingUpdateDocuments: { id: string; index: string }[] = esResult.hits.hits.map(
       (hit) => ({ id: hit._source!.id, index: hit._index })
@@ -1378,33 +1388,39 @@ export const updateActivitiesCollectionMetadata = async (
           "elasticsearch-activities",
           JSON.stringify({
             topic: "updateActivitiesCollectionMetadata",
-            message: `Errors in response`,
+            message: `Errors in response. collectionId=${collectionId}, collectionData=${JSON.stringify(
+              collectionData
+            )}`,
             data: {
               collectionId,
               collectionData,
             },
-            bulkParams,
+            bulkParams: JSON.stringify(bulkParams),
             response,
             keepGoing,
+            queryJson: JSON.stringify(query),
           })
         );
       } else {
         keepGoing = pendingUpdateDocuments.length === 1000;
 
-        // logger.info(
-        //   "elasticsearch-activities",
-        //   JSON.stringify({
-        //     topic: "updateActivitiesCollectionMetadata",
-        //     message: `Success`,
-        //     data: {
-        //       collectionId,
-        //       collectionData,
-        //     },
-        //     bulkParams,
-        //     response,
-        //     keepGoing,
-        //   })
-        // );
+        logger.info(
+          "elasticsearch-activities",
+          JSON.stringify({
+            topic: "updateActivitiesCollectionMetadata",
+            message: `Success. collectionId=${collectionId}, collectionData=${JSON.stringify(
+              collectionData
+            )}`,
+            data: {
+              collectionId,
+              collectionData,
+            },
+            bulkParams: JSON.stringify(bulkParams),
+            response,
+            keepGoing,
+            queryJson: JSON.stringify(query),
+          })
+        );
       }
     }
   } catch (error) {

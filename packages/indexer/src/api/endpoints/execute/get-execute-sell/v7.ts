@@ -6,6 +6,7 @@ import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
 import { BidDetails, FillBidsResult, PermitApproval } from "@reservoir0x/sdk/dist/router/v6/types";
+import { estimateGas } from "@reservoir0x/sdk/dist/router/v6/utils";
 import { TxData } from "@reservoir0x/sdk/dist/utils";
 import axios from "axios";
 import Joi from "joi";
@@ -32,6 +33,7 @@ import { ExecutionsBuffer } from "@/utils/executions";
 import { tryGetTokensSuspiciousStatus } from "@/utils/opensea";
 import { getPreSignatureId, getPreSignature, savePreSignature } from "@/utils/pre-signatures";
 import { getUSDAndCurrencyPrices } from "@/utils/prices";
+import { getPermitBidding } from "@/utils/permit-bidding";
 
 const version = "v7";
 
@@ -175,6 +177,9 @@ export const getExecuteSellV7Options: RouteOptions = {
                 tip: Joi.string(),
                 orderIds: Joi.array().items(Joi.string()),
                 data: Joi.object(),
+                gasEstimate: Joi.number().description(
+                  "Approximation of gas used (only applies to `transaction` items)"
+                ),
               })
             )
             .required(),
@@ -208,11 +213,13 @@ export const getExecuteSellV7Options: RouteOptions = {
           feesOnTop: Joi.array().items(JoiExecuteFee).description("Can be referral fees."),
           permitApproval: Joi.object({
             token: Joi.string(),
+            kind: Joi.string(),
+            index: Joi.number(),
             owner: Joi.string(),
             spender: Joi.string(),
             value: Joi.string(),
-            nonce: Joi.string(),
-            deadline: Joi.string(),
+            nonce: Joi.number(),
+            deadline: Joi.number(),
             signature: Joi.string(),
           })
             .optional()
@@ -235,7 +242,7 @@ export const getExecuteSellV7Options: RouteOptions = {
       type ExecuteFee = {
         kind?: string;
         recipient: string;
-        bps: number;
+        bps?: number;
         amount: number;
         rawAmount: string;
       };
@@ -546,21 +553,12 @@ export const getExecuteSellV7Options: RouteOptions = {
                 orders.maker,
                 orders.fillability_status,
                 orders.approval_status,
-                orders.quantity_remaining,
-                orders.permit_id,
-                permit_biddings.value as permit_bidding_value,
-                permit_biddings.owner as permit_bidding_owner,
-                permit_biddings.spender as permit_bidding_spender,
-                permit_biddings.deadline as permit_bidding_deadline,
-                permit_biddings.nonce as permit_bidding_nonce,
-                permit_biddings.signature as permit_bidding_signature
+                orders.quantity_remaining
               FROM orders
               JOIN contracts
                 ON orders.contract = contracts.address
               JOIN token_sets_tokens
                 ON orders.token_set_id = token_sets_tokens.token_set_id
-              JOIN permit_biddings
-                ON permit_biddings.id = orders.permit_id
               WHERE orders.id = $/id/
                 AND token_sets_tokens.contract = $/contract/
                 AND token_sets_tokens.token_id = $/tokenId/
@@ -680,25 +678,17 @@ export const getExecuteSellV7Options: RouteOptions = {
             }
           }
 
-          // post check
-          const permitApproval = result.permit_id
-            ? {
-                token: fromBuffer(result.currency),
-                owner: fromBuffer(result.permit_bidding_owner),
-                spender: fromBuffer(result.permit_bidding_spender),
-                value: result.permit_bidding_value,
-                deadline: result.permit_bidding_deadline,
-                nonce: result.permit_bidding_nonce,
-                signature: result.permit_bidding_signature,
-              }
+          const permitApproval = result.raw_data.permitId
+            ? await getPermitBidding(result.raw_data.permitId)
             : undefined;
 
-          // post check
+          // Post check
           const permitApprovalExpired = permitApproval
             ? bn(permitApproval.deadline).lte(now())
             : false;
+
           if (permitApprovalExpired) {
-            throw getExecuteError("Permit bidding expired");
+            throw getExecuteError("Permit approval expired");
           }
 
           await addToPath(
@@ -720,7 +710,7 @@ export const getExecuteSellV7Options: RouteOptions = {
               quantity: item.quantity,
               owner,
             },
-            permitApprovalExpired ? undefined : permitApproval
+            permitApproval
           );
         }
 
@@ -858,6 +848,19 @@ export const getExecuteSellV7Options: RouteOptions = {
               continue;
             }
 
+            const permitApproval = result.raw_data.permitId
+              ? await getPermitBidding(result.raw_data.permitId)
+              : undefined;
+
+            // Post check
+            const permitApprovalExpired = permitApproval
+              ? bn(permitApproval.deadline).lte(now())
+              : false;
+
+            if (permitApprovalExpired) {
+              throw getExecuteError("Permit approval expired");
+            }
+
             await addToPath(
               {
                 id: result.id,
@@ -876,7 +879,8 @@ export const getExecuteSellV7Options: RouteOptions = {
                 tokenId,
                 quantity: Math.min(quantityToFill, availableQuantity),
                 owner,
-              }
+              },
+              permitApproval
             );
 
             // Update the quantity to fill with the current order's available quantity
@@ -924,17 +928,17 @@ export const getExecuteSellV7Options: RouteOptions = {
         fee: Sdk.RouterV6.Types.Fee
       ) => {
         // The fees should be relative to a single quantity
-        fee.amount = bn(fee.amount).div(item.quantity).toString();
+        let feeAmount = bn(fee.amount).div(item.quantity).toString();
 
         // Global fees get split across all eligible orders
-        let adjustedFeeAmount = bn(fee.amount).div(ordersEligibleForGlobalFees.length).toString();
+        let adjustedFeeAmount = bn(feeAmount).div(ordersEligibleForGlobalFees.length).toString();
 
         // If the item's currency is not the same with the buy-in currency,
         if (item.currency !== Sdk.Common.Addresses.Native[config.chainId]) {
-          fee.amount = await getUSDAndCurrencyPrices(
+          feeAmount = await getUSDAndCurrencyPrices(
             Sdk.Common.Addresses.Native[config.chainId],
             item.currency,
-            fee.amount,
+            feeAmount,
             now()
           ).then((p) => p.currencyPrice!);
           adjustedFeeAmount = await getUSDAndCurrencyPrices(
@@ -952,9 +956,13 @@ export const getExecuteSellV7Options: RouteOptions = {
         );
         const rawAmount = bn(adjustedFeeAmount).toString();
 
+        // To avoid numeric overflow
+        const maxBps = 10000;
+        const bps = bn(feeAmount).mul(10000).div(item.rawQuote);
+
         item.feesOnTop.push({
           recipient: fee.recipient,
-          bps: bn(fee.amount).mul(10000).div(item.rawQuote).toNumber(),
+          bps: bps.gt(maxBps) ? undefined : bps.toNumber(),
           amount,
           rawAmount,
         });
@@ -997,6 +1005,7 @@ export const getExecuteSellV7Options: RouteOptions = {
           orderIds?: string[];
           tip?: string;
           data?: object;
+          gasEstimate?: number;
         }[];
       }[] = [
         {
@@ -1260,7 +1269,7 @@ export const getExecuteSellV7Options: RouteOptions = {
         }
       }
 
-      for (const { txData, orderIds, preSignatures } of txs) {
+      for (const { txData, txTags, orderIds, preSignatures } of txs) {
         // Handle pre-signatures
         const signaturesPaymentProcessor: string[] = [];
         for (const preSignature of preSignatures) {
@@ -1313,6 +1322,7 @@ export const getExecuteSellV7Options: RouteOptions = {
                 maxPriorityFeePerGas,
               }
             : undefined,
+          gasEstimate: txTags ? estimateGas(txTags) : undefined,
         });
       }
 

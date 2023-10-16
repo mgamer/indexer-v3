@@ -15,7 +15,9 @@ export async function doEventParsing(tx: string, skipProcessing = true) {
 }
 
 export async function doOrderSaving(postData: any) {
-  const { data } = await axios.post(`${indexUrl}/debug/order-saving`, postData);
+  const { data } = await axios.post(`${indexUrl}/debug/order-saving`, postData, {
+    validateStatus: () => true,
+  });
   return data;
 }
 

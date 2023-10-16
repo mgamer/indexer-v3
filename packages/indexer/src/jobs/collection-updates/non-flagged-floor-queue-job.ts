@@ -1,11 +1,8 @@
 import { idb } from "@/common/db";
 import { toBuffer } from "@/common/utils";
 import { AbstractRabbitMqJobHandler, BackoffStrategy } from "@/jobs/abstract-rabbit-mq-job-handler";
-import { Collections } from "@/models/collections";
-import { metadataIndexFetchJob } from "@/jobs/metadata-index/metadata-fetch-job";
 import { acquireLock, doesLockExist, releaseLock } from "@/common/redis";
-import { logger } from "@/common/logger";
-import { config } from "@/config/index";
+import { PendingFlagStatusSyncTokens } from "@/models/pending-flag-status-sync-tokens";
 
 export type NonFlaggedFloorQueueJobPayload = {
   kind: string;
@@ -51,42 +48,15 @@ export class NonFlaggedFloorQueueJob extends AbstractRabbitMqJobHandler {
 
     let acquiredLock;
 
-    if ([5, 11155111].includes(config.chainId)) {
-      if (!["revalidation"].includes(payload.kind)) {
-        acquiredLock = await acquireLock(
-          `${this.queueName}-lock:${collectionResult.collection_id}`,
-          300
-        );
-
-        if (!acquiredLock) {
-          const acquiredRevalidationLock = await acquireLock(
-            `${this.queueName}-revalidation-lock:${collectionResult.collection_id}`,
-            300
-          );
-
-          if (acquiredRevalidationLock) {
-            logger.info(
-              this.queueName,
-              JSON.stringify({
-                message: `Got revalidation lock. kind=${payload.kind}, collection=${collectionResult.collection_id}, tokenId=${payload.tokenId}`,
-                payload,
-                collectionId: collectionResult.collection_id,
-              })
-            );
-          }
-
-          return;
-        }
-      }
-
-      logger.info(
-        this.queueName,
-        JSON.stringify({
-          message: `Recalculating floor ask. kind=${payload.kind}, collection=${collectionResult.collection_id}, tokenId=${payload.tokenId}`,
-          payload,
-          collectionId: collectionResult.collection_id,
-        })
+    if (!["revalidation"].includes(payload.kind)) {
+      acquiredLock = await acquireLock(
+        `${this.queueName}-lock:${collectionResult.collection_id}`,
+        300
       );
+
+      if (!acquiredLock) {
+        return;
+      }
     }
 
     const nonFlaggedCollectionFloorAsk = await idb.oneOrNone(
@@ -198,30 +168,12 @@ export class NonFlaggedFloorQueueJob extends AbstractRabbitMqJobHandler {
     if (acquiredLock) {
       await releaseLock(`${this.queueName}-lock:${collectionResult.collection_id}`);
 
-      logger.info(
-        this.queueName,
-        JSON.stringify({
-          message: `Released lock. kind=${payload.kind}, collection=${collectionResult.collection_id}, tokenId=${payload.tokenId}`,
-          payload,
-          collectionId: collectionResult.collection_id,
-        })
-      );
-
       const revalidationLockExists = await doesLockExist(
         `${this.queueName}-revalidation-lock:${collectionResult.collection_id}`
       );
 
       if (revalidationLockExists) {
         await releaseLock(`${this.queueName}-revalidation-lock:${collectionResult.collection_id}`);
-
-        logger.info(
-          this.queueName,
-          JSON.stringify({
-            message: `Trigger revalidation. kind=${payload.kind}, collection=${collectionResult.collection_id}, tokenId=${payload.tokenId}`,
-            payload,
-            collectionId: collectionResult.collection_id,
-          })
-        );
 
         await this.addToQueue([
           {
@@ -236,19 +188,11 @@ export class NonFlaggedFloorQueueJob extends AbstractRabbitMqJobHandler {
     }
 
     if (nonFlaggedCollectionFloorAsk?.token_id) {
-      const collection = await Collections.getById(collectionResult.collection_id);
-
-      await metadataIndexFetchJob.addToQueue(
+      await PendingFlagStatusSyncTokens.add(
         [
           {
-            kind: "single-token",
-            data: {
-              method: metadataIndexFetchJob.getIndexingMethod(collection?.community || null),
-              contract: payload.contract,
-              tokenId: payload.tokenId,
-              collection: collectionResult.collection_id,
-            },
-            context: this.queueName,
+            contract: payload.contract,
+            tokenId: payload.tokenId,
           },
         ],
         true

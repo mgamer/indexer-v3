@@ -8,6 +8,9 @@ import { fromBuffer, regex, toBuffer } from "@/common/utils";
 import { redb } from "@/common/db";
 import * as Sdk from "@reservoir0x/sdk";
 import { config } from "@/config/index";
+import { getStartTime } from "@/models/top-selling-collections/top-selling-collections";
+
+import { redis } from "@/common/redis";
 
 import {
   getTopSellingCollections,
@@ -33,11 +36,14 @@ export const getTopSellingCollectionsV2Options: RouteOptions = {
   },
   validate: {
     query: Joi.object({
-      period: Joi.string().valid("5m", "30m", "1h", "6h", "24h").default("24h"),
+      period: Joi.string()
+        .valid("5m", "10m", "30m", "1h", "6h", "1d", "24h")
+        .default("1d")
+        .description("Time window to aggregate."),
       fillType: Joi.string()
         .lowercase()
         .valid(..._.values(TopSellingFillOptions))
-        .default(TopSellingFillOptions.any)
+        .default(TopSellingFillOptions.sale)
         .description("Fill types to aggregate from (sale, mint, any)"),
 
       limit: Joi.number()
@@ -46,6 +52,7 @@ export const getTopSellingCollectionsV2Options: RouteOptions = {
         .max(50)
         .default(25)
         .description("Amount of items returned in response. Default is 25 and max is 50"),
+      sortBy: Joi.string().valid("volume", "sales").default("sales"),
 
       includeRecentSales: Joi.boolean()
         .default(false)
@@ -92,6 +99,15 @@ export const getTopSellingCollectionsV2Options: RouteOptions = {
               .allow(null)
               .description("Lowest Ask Price."),
           },
+          tokenCount: Joi.number().description("Total tokens within the collection."),
+          ownerCount: Joi.number().description("Unique number of owners."),
+          volumeChange: Joi.object({
+            "1day": Joi.number().unsafe().allow(null),
+            "7day": Joi.number().unsafe().allow(null),
+            "30day": Joi.number().unsafe().allow(null),
+          }).description(
+            "Total volume change X-days vs previous X-days. (e.g. 7day [days 1-7] vs 7day prior [days 8-14]). A value over 1 is a positive gain, under 1 is a negative loss. e.g. 1 means no change; 1.1 means 10% increase; 0.9 means 10% decrease."
+          ),
           recentSales: Joi.array().items(
             Joi.object({
               contract: Joi.string(),
@@ -123,45 +139,45 @@ export const getTopSellingCollectionsV2Options: RouteOptions = {
     },
   },
   handler: async (request: Request, h) => {
-    let cacheTime = 60 * 5;
     const {
-      period,
       fillType,
       limit,
+      sortBy,
       includeRecentSales,
       normalizeRoyalties,
       useNonFlaggedFloorAsk,
     } = request.query;
-    const now = Math.floor(new Date().getTime() / 1000);
+
     try {
-      let startTime = now - 60 * 24 * 60;
+      let collectionsResult = [];
+      const period = request.query.period === "24h" ? "1d" : request.query.period;
 
-      switch (period) {
-        case "5m": {
-          startTime = now - 5 * 60;
-          cacheTime = 60 * 1;
-          break;
-        }
-        case "30m": {
-          startTime = now - 30 * 60;
-          break;
-        }
-        case "1h": {
-          startTime = now - 60 * 1 * 60;
-          break;
-        }
-        case "6h": {
-          startTime = now - 60 * 6 * 60;
-          break;
-        }
+      const cacheKey = `topSellingCollections:v2:${period}:${fillType}:${sortBy}`;
+
+      const cachedResults = await redis.get(cacheKey);
+
+      if (cachedResults) {
+        collectionsResult = JSON.parse(cachedResults).slice(0, limit);
+        logger.info(
+          "get-top-selling-collections-v2-cache-hit",
+          `Using cached results for ${cacheKey}`
+        );
+      } else {
+        const startTime = getStartTime(period);
+
+        collectionsResult = await getTopSellingCollections({
+          startTime,
+          fillType,
+          limit,
+          includeRecentSales,
+          sortBy,
+        });
+
+        logger.info(
+          "get-top-selling-collections-v2-cache-miss",
+          `No cached results for ${cacheKey}`
+        );
       }
-
-      const collectionsResult = await getTopSellingCollections({
-        startTime,
-        fillType,
-        limit,
-        includeRecentSales,
-      });
 
       let floorAskSelectQuery;
 
@@ -194,14 +210,22 @@ export const getTopSellingCollectionsV2Options: RouteOptions = {
       `;
       }
 
-      request.query.contract = collectionsResult.map((collection: any) =>
-        toBuffer(collection.primaryContract)
-      );
+      let collections = [];
 
-      const baseQuery = `
+      if (collectionsResult.length) {
+        request.query.contract = collectionsResult.map((collection: any) =>
+          toBuffer(collection.primaryContract)
+        );
+
+        const baseQuery = `
         SELECT
           collections.id,
           collections.contract,
+          collections.token_count,
+          collections.owner_count,
+          collections.day1_volume_change,
+          collections.day7_volume_change,
+          collections.day30_volume_change,
           (collections.metadata ->> 'bannerImageUrl')::TEXT AS "banner",
           (collections.metadata ->> 'description')::TEXT AS "description",
           ${floorAskSelectQuery}
@@ -209,80 +233,91 @@ export const getTopSellingCollectionsV2Options: RouteOptions = {
           WHERE collections.contract IN ($/contract:csv/)
       `;
 
-      const resultsPromise = redb.manyOrNone(baseQuery, request.query);
-      const recentSalesPromise = collectionsResult.map(async (collection: any) => {
-        return {
-          ...collection,
-          recentSales: await Promise.all(
-            collection.recentSales.map(async (sale: any) => {
-              const { pricing, ...salesData } = sale;
-              const price = pricing
-                ? await getJoiPriceObject(
-                    {
-                      gross: {
-                        amount: String(pricing?.currencyPrice ?? pricing?.price ?? 0),
-                        nativeAmount: String(pricing?.price ?? 0),
-                        usdAmount: String(pricing.usdPrice ?? 0),
-                      },
-                    },
-                    pricing.currency
-                  )
-                : null;
-
-              return {
-                ...salesData,
-                price,
-              };
-            })
-          ),
-        };
-      });
-
-      const responses = await Promise.all([resultsPromise, ...recentSalesPromise]);
-      const collectionMetadataResponse = responses.shift();
-      const collectionsMetadata: Record<string, any> = {};
-      if (collectionMetadataResponse && Array.isArray(collectionMetadataResponse)) {
-        collectionMetadataResponse.forEach((metadata: any) => {
-          collectionsMetadata[fromBuffer(metadata.contract)] = metadata;
-        });
-      }
-      const sources = await Sources.getInstance();
-      const collections = await Promise.all(
-        responses.map(async (response) => {
-          const metadata = collectionsMetadata[(response as any).primaryContract] || {};
-          let floorAsk;
-          if (metadata) {
-            const floorAskCurrency = metadata.floor_sell_currency
-              ? fromBuffer(metadata.floor_sell_currency)
-              : Sdk.Common.Addresses.Native[config.chainId];
-            floorAsk = {
-              id: metadata.floor_sell_id,
-              sourceDomain: sources.get(metadata.floor_sell_source_id_int)?.domain,
-              price: metadata.floor_sell_id
-                ? await getJoiPriceObject(
-                    {
-                      gross: {
-                        amount: metadata.floor_sell_currency_value ?? metadata.floor_sell_value,
-                        nativeAmount: metadata.floor_sell_value,
-                      },
-                    },
-                    floorAskCurrency
-                  )
-                : null,
-            };
-          }
-
+        const resultsPromise = redb.manyOrNone(baseQuery, request.query);
+        const recentSalesPromise = collectionsResult.map(async (collection: any) => {
           return {
-            ...response,
-            banner: metadata.banner,
-            description: metadata.description,
-            floorAsk,
+            ...collection,
+            recentSales: includeRecentSales
+              ? await Promise.all(
+                  collection.recentSales.map(async (sale: any) => {
+                    const { pricing, ...salesData } = sale;
+                    const price = pricing
+                      ? await getJoiPriceObject(
+                          {
+                            gross: {
+                              amount: String(pricing?.currencyPrice ?? pricing?.price ?? 0),
+                              nativeAmount: String(pricing?.price ?? 0),
+                              usdAmount: String(pricing.usdPrice ?? 0),
+                            },
+                          },
+                          pricing.currency
+                        )
+                      : null;
+
+                    return {
+                      ...salesData,
+                      price,
+                    };
+                  })
+                )
+              : [],
           };
-        })
-      );
-      const response = h.response({ collections });
-      response.header("cache-control", `${cacheTime}, public`);
-      return response;
+        });
+
+        const responses = await Promise.all([resultsPromise, ...recentSalesPromise]);
+
+        const collectionMetadataResponse = responses.shift();
+        const collectionsMetadata: Record<string, any> = {};
+        if (collectionMetadataResponse && Array.isArray(collectionMetadataResponse)) {
+          collectionMetadataResponse.forEach((metadata: any) => {
+            collectionsMetadata[fromBuffer(metadata.contract)] = metadata;
+          });
+        }
+        const sources = await Sources.getInstance();
+
+        collections = await Promise.all(
+          responses.map(async (response: any) => {
+            const metadata = collectionsMetadata[(response as any).primaryContract] || {};
+            let floorAsk;
+            if (metadata) {
+              const floorAskCurrency = metadata.floor_sell_currency
+                ? fromBuffer(metadata.floor_sell_currency)
+                : Sdk.Common.Addresses.Native[config.chainId];
+              floorAsk = {
+                id: metadata.floor_sell_id,
+                sourceDomain: sources.get(metadata.floor_sell_source_id_int)?.domain,
+                price: metadata.floor_sell_id
+                  ? await getJoiPriceObject(
+                      {
+                        gross: {
+                          amount: metadata.floor_sell_currency_value ?? metadata.floor_sell_value,
+                          nativeAmount: metadata.floor_sell_value,
+                        },
+                      },
+                      floorAskCurrency
+                    )
+                  : null,
+              };
+            }
+
+            return {
+              ...response,
+              volumeChange: {
+                "1day": metadata.day1_volume_change,
+                "7day": metadata.day7_volume_change,
+                "30day": metadata.day30_volume_change,
+              },
+              tokenCount: Number(metadata.token_count || 0),
+              ownerCount: Number(metadata.owner_count || 0),
+              banner: metadata.banner,
+              description: metadata.description,
+              floorAsk,
+            };
+          })
+        );
+      }
+
+      return h.response({ collections });
     } catch (error) {
       logger.error(`get-top-selling-collections-${version}-handler`, `Handler failure: ${error}`);
       throw error;

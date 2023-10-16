@@ -185,15 +185,15 @@ export const setupRoutes = (server: Server) => {
   });
 
   server.route({
-    method: "POST",
-    path: "/admin/update-api-key",
-    options: adminEndpoints.postUpdateApiKeyOptions,
+    method: "GET",
+    path: "/admin/provider-metadata/{type}",
+    options: adminEndpoints.getProviderMetadata,
   });
 
   server.route({
     method: "POST",
-    path: "/admin/refresh-collection-flags",
-    options: adminEndpoints.postRefreshCollectionFlagsOptions,
+    path: "/admin/update-api-key",
+    options: adminEndpoints.postUpdateApiKeyOptions,
   });
 
   server.route({
@@ -320,12 +320,6 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/admin/get-marketplaces",
     options: adminEndpoints.getMarketplaces,
-  });
-
-  server.route({
-    method: "POST",
-    path: "/admin/flag-address",
-    options: adminEndpoints.postFlagAddressOptions,
   });
 
   server.route({

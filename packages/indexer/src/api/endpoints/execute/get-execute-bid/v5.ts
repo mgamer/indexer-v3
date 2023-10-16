@@ -18,6 +18,8 @@ import { config } from "@/config/index";
 import { getExecuteError } from "@/orderbook/orders/errors";
 import { checkBlacklistAndFallback } from "@/orderbook/orders";
 import * as b from "@/utils/auth/blur";
+import * as e from "@/utils/auth/erc721c";
+import * as erc721c from "@/utils/erc721c";
 import { ExecutionsBuffer } from "@/utils/executions";
 import { PreSignature } from "@reservoir0x/sdk/dist/router/v6/types";
 
@@ -296,7 +298,7 @@ export const getExecuteBidV5Options: RouteOptions = {
         {
           id: "auth",
           action: "Sign auth challenge",
-          description: "Before being able to list, it might be needed to sign an auth challenge",
+          description: "Before being able to bid, it might be needed to sign an auth challenge",
           kind: "signature",
           items: [],
         },
@@ -312,6 +314,13 @@ export const getExecuteBidV5Options: RouteOptions = {
           action: "Approve currency",
           description:
             "We'll ask your approval for the exchange to access your token. This is a one-time only operation per exchange.",
+          kind: "transaction",
+          items: [],
+        },
+        {
+          id: "auth-transaction",
+          action: "On-chain verification",
+          description: "Some marketplaces require triggering an auth transaction before filling",
           kind: "transaction",
           items: [],
         },
@@ -432,11 +441,101 @@ export const getExecuteBidV5Options: RouteOptions = {
             steps[0].items.push({
               status: "complete",
             });
+            steps[1].items.push({
+              status: "complete",
+              // Hacky fix for: https://github.com/reservoirprotocol/reservoir-kit/pull/391
+              data: {},
+            });
           }
         }
       }
 
       const permitMessageDeadline = String(now() + payload.permitBiddingLifetime);
+      // Handle ERC721C authentication
+      const unverifiedERC721CTransferValidators: string[] = [];
+      await Promise.all(
+        params.map(async (p) => {
+          try {
+            if (p.token || p.collection) {
+              const contract = p.token ? p.token.split(":")[0] : p.collection!;
+
+              const config = await erc721c.getERC721CConfigFromDB(contract);
+              if (config && [4, 6].includes(config.transferSecurityLevel)) {
+                const isVerified = await erc721c.isVerifiedEOA(
+                  config.transferValidator,
+                  payload.maker
+                );
+                if (!isVerified) {
+                  unverifiedERC721CTransferValidators.push(config.transferValidator);
+                }
+              }
+            }
+          } catch {
+            // Skip errors
+          }
+        })
+      );
+      if (unverifiedERC721CTransferValidators.length) {
+        const erc721cAuthId = e.getAuthId(payload.maker);
+
+        const erc721cAuth = await e.getAuth(erc721cAuthId);
+        if (!erc721cAuth) {
+          const erc721cAuthChallengeId = e.getAuthChallengeId(payload.maker);
+
+          let erc721cAuthChallenge = await e.getAuthChallenge(erc721cAuthChallengeId);
+          if (!erc721cAuthChallenge) {
+            erc721cAuthChallenge = {
+              message: "EOA",
+              walletAddress: payload.maker,
+            };
+
+            await e.saveAuthChallenge(
+              erc721cAuthChallengeId,
+              erc721cAuthChallenge,
+              // Give a 10 minute buffer for the auth challenge to expire
+              10 * 60
+            );
+          }
+
+          steps[0].items.push({
+            status: "incomplete",
+            data: {
+              sign: {
+                signatureKind: "eip191",
+                message: erc721cAuthChallenge.message,
+              },
+              post: {
+                endpoint: "/execute/auth-signature/v1",
+                method: "POST",
+                body: {
+                  kind: "erc721c",
+                  id: erc721cAuthChallengeId,
+                },
+              },
+            },
+          });
+
+          // Force the client to poll
+          steps[1].items.push({
+            status: "incomplete",
+            tip: "This step is dependent on a previous step. Once you've completed it, re-call the API to get the data for this step.",
+          });
+
+          // Return early since any next steps are dependent on the ERC721C auth
+          return {
+            steps,
+          };
+        } else {
+          steps[0].items.push({
+            status: "complete",
+          });
+          steps[1].items.push({
+            status: "complete",
+            // Hacky fix for: https://github.com/reservoirprotocol/reservoir-kit/pull/391
+            data: {},
+          });
+        }
+      }
 
       const errors: { message: string; orderIndex: number }[] = [];
       await Promise.all(
@@ -560,7 +659,7 @@ export const getExecuteBidV5Options: RouteOptions = {
               collectionId && !attributeKey && !attributeValue ? collectionId : undefined;
 
             const usePermitBidding =
-              [Sdk.Common.Addresses.Usdc[config.chainId]].includes(params.currency) &&
+              // [Sdk.Common.Addresses.Usdc[config.chainId]].includes(params.currency) &&
               payload.usePermitBidding;
 
             switch (params.orderKind) {
@@ -590,7 +689,7 @@ export const getExecuteBidV5Options: RouteOptions = {
                 if (needsBethWrapping) {
                   // Force the client to poll
                   // (since Blur won't release the calldata unless you have enough BETH in your wallet)
-                  steps[4].items.push({
+                  steps[5].items.push({
                     status: "incomplete",
                   });
                 } else {
@@ -606,7 +705,7 @@ export const getExecuteBidV5Options: RouteOptions = {
 
                   const id = new Sdk.BlurV2.Order(config.chainId, signData.value).hash();
 
-                  steps[4].items.push({
+                  steps[5].items.push({
                     status: "incomplete",
                     data: {
                       sign: {
@@ -656,17 +755,6 @@ export const getExecuteBidV5Options: RouteOptions = {
                     message: "Unsupported orderbook",
                     orderIndex: i,
                   });
-                }
-
-                // OpenSea expects a royalty of at least 0.5%
-                if (
-                  params.orderbook === "opensea" &&
-                  params.royaltyBps !== undefined &&
-                  Number(params.royaltyBps) < 50
-                ) {
-                  throw getExecuteError(
-                    "Royalties should be at least 0.5% when posting to OpenSea"
-                  );
                 }
 
                 const options = (params.options?.["seaport-v1.4"] ??
@@ -771,7 +859,7 @@ export const getExecuteBidV5Options: RouteOptions = {
 
                   const hasSignature = preSignature.signature;
                   if (!hasSignature) {
-                    steps[3].items.push({
+                    steps[4].items.push({
                       status: "incomplete",
                       data: {
                         sign: preSignature.data,
@@ -926,7 +1014,7 @@ export const getExecuteBidV5Options: RouteOptions = {
 
                   const hasSignature = preSignature.signature;
                   if (!hasSignature) {
-                    steps[3].items.push({
+                    steps[4].items.push({
                       status: "incomplete",
                       data: {
                         sign: preSignature.data,
@@ -1075,7 +1163,7 @@ export const getExecuteBidV5Options: RouteOptions = {
 
                   const hasSignature = preSignature.signature;
                   if (!hasSignature) {
-                    steps[3].items.push({
+                    steps[4].items.push({
                       status: "incomplete",
                       data: {
                         sign: preSignature.data,
@@ -1099,7 +1187,7 @@ export const getExecuteBidV5Options: RouteOptions = {
                   });
                 }
 
-                steps[4].items.push({
+                steps[5].items.push({
                   status: "incomplete",
                   data: {
                     sign: order.getSignatureData(),
@@ -1225,7 +1313,7 @@ export const getExecuteBidV5Options: RouteOptions = {
 
                   const hasSignature = preSignature.signature;
                   if (!hasSignature) {
-                    steps[3].items.push({
+                    steps[4].items.push({
                       status: "incomplete",
                       data: {
                         sign: preSignature.data,
@@ -1249,7 +1337,7 @@ export const getExecuteBidV5Options: RouteOptions = {
                   });
                 }
 
-                steps[4].items.push({
+                steps[5].items.push({
                   status: "incomplete",
                   data: {
                     sign: order.getSignatureData(),
@@ -1372,7 +1460,7 @@ export const getExecuteBidV5Options: RouteOptions = {
 
                   const hasSignature = preSignature.signature;
                   if (!hasSignature) {
-                    steps[3].items.push({
+                    steps[4].items.push({
                       status: "incomplete",
                       data: {
                         sign: preSignature.data,
@@ -1396,7 +1484,7 @@ export const getExecuteBidV5Options: RouteOptions = {
                   });
                 }
 
-                steps[4].items.push({
+                steps[5].items.push({
                   status: "incomplete",
                   data: {
                     sign: new Sdk.X2Y2.Exchange(
@@ -1514,7 +1602,7 @@ export const getExecuteBidV5Options: RouteOptions = {
 
                   const hasSignature = preSignature.signature;
                   if (!hasSignature) {
-                    steps[3].items.push({
+                    steps[4].items.push({
                       status: "incomplete",
                       data: {
                         sign: preSignature.data,
@@ -1538,7 +1626,22 @@ export const getExecuteBidV5Options: RouteOptions = {
                   });
                 }
 
-                steps[4].items.push({
+                // Handle on-chain authentication
+                for (const tv of _.uniq(unverifiedERC721CTransferValidators)) {
+                  const erc721cAuthId = e.getAuthId(payload.maker);
+                  const erc721cAuth = await e.getAuth(erc721cAuthId);
+
+                  steps[3].items.push({
+                    status: "incomplete",
+                    data: new Sdk.Common.Helpers.ERC721C().generateVerificationTxData(
+                      tv,
+                      payload.maker,
+                      erc721cAuth!.signature
+                    ),
+                  });
+                }
+
+                steps[5].items.push({
                   status: "incomplete",
                   data: {
                     sign: order.getSignatureData(),
@@ -1589,7 +1692,7 @@ export const getExecuteBidV5Options: RouteOptions = {
         const orders = bulkOrders["seaport-v1.5"];
         if (orders.length === 1) {
           const order = new Sdk.SeaportV15.Order(config.chainId, orders[0].order.data);
-          steps[4].items.push({
+          steps[5].items.push({
             status: "incomplete",
             data: {
               sign: order.getSignatureData(),
@@ -1622,7 +1725,7 @@ export const getExecuteBidV5Options: RouteOptions = {
             orders.map((o) => new Sdk.SeaportV15.Order(config.chainId, o.order.data))
           );
 
-          steps[4].items.push({
+          steps[5].items.push({
             status: "incomplete",
             data: {
               sign: signatureData,
@@ -1661,7 +1764,7 @@ export const getExecuteBidV5Options: RouteOptions = {
         const orders = bulkOrders["alienswap"];
         if (orders.length === 1) {
           const order = new Sdk.Alienswap.Order(config.chainId, orders[0].order.data);
-          steps[4].items.push({
+          steps[5].items.push({
             status: "incomplete",
             data: {
               sign: order.getSignatureData(),
@@ -1694,7 +1797,7 @@ export const getExecuteBidV5Options: RouteOptions = {
             orders.map((o) => new Sdk.Alienswap.Order(config.chainId, o.order.data))
           );
 
-          steps[4].items.push({
+          steps[5].items.push({
             status: "incomplete",
             data: {
               sign: signatureData,
@@ -1758,7 +1861,7 @@ export const getExecuteBidV5Options: RouteOptions = {
         }
       }
 
-      if (!steps[4].items.length) {
+      if (!steps[5].items.length) {
         const error = getExecuteError("No orders can be created");
         error.output.payload.errors = errors;
         throw error;
@@ -1790,10 +1893,11 @@ export const getExecuteBidV5Options: RouteOptions = {
       // won't affect the client, which might be polling the API and
       // expect to get the steps returned in the same order / at the
       // same index.
-      if (!blurAuth) {
+      if (!blurAuth && !unverifiedERC721CTransferValidators.length) {
         // If we reached this point and the Blur auth is missing then we
         // can be sure that no Blur orders were requested and it is safe
-        // to remove the auth step
+        // to remove the auth step - we also handle other authentication
+        // methods (eg. ERC721C)
         steps = steps.slice(1);
       }
 

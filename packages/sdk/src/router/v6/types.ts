@@ -52,13 +52,30 @@ export type Permit = {
 };
 
 export type PermitApproval = {
+  kind: "eip2612" | "permit2";
   token: string;
   owner: string;
   spender: string;
   value: string;
-  nonce: string;
-  deadline: string;
-  signature: string;
+  nonce: number;
+  deadline: number;
+  signature?: string;
+  index?: number;
+};
+
+export type TxKind = "sale" | "mint" | "swap";
+export type TxTags = {
+  kind: TxKind;
+  // Number of listings for each order kind
+  listings?: { [orderKind: string]: number };
+  // Number of bids for each order kind
+  bids?: { [orderKind: string]: number };
+  // Number of mints
+  mints?: number;
+  // Number of swaps
+  swaps?: number;
+  // Number of fees on top
+  feesOnTop?: number;
 };
 
 // Orders
@@ -89,16 +106,16 @@ export type GenericOrder =
       order: Sdk.SeaportV14.Order;
     }
   | {
-      kind: "seaport-v1.4-partial";
-      order: Sdk.SeaportBase.Types.PartialOrder;
-    }
-  | {
       kind: "seaport-v1.5";
       order: Sdk.SeaportV15.Order;
     }
   | {
       kind: "seaport-v1.5-partial";
-      order: Sdk.SeaportBase.Types.PartialOrder;
+      order: Sdk.SeaportBase.Types.OpenseaPartialOrder;
+    }
+  | {
+      kind: "seaport-v1.5-partial-okx";
+      order: Sdk.SeaportBase.Types.OkxPartialOrder;
     }
   | {
       kind: "alienswap";
@@ -187,6 +204,9 @@ export type ListingFillDetails = {
   isFlagged?: boolean;
   // Relevant for partially-fillable orders
   amount?: number | string;
+  // Relevant for special orders (eg. signed orders)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  extraArgs?: any;
   fees?: Fee[];
 };
 export type ListingDetails = GenericOrder & ListingFillDetails;
@@ -209,6 +229,7 @@ export type FillListingsResult = {
   txs: {
     approvals: FTApproval[];
     txData: TxData;
+    txTags?: TxTags;
     orderIds: string[];
     permits: Permit[];
     preSignatures: PreSignature[];
@@ -243,6 +264,7 @@ export type FillBidsResult = {
   txs: {
     approvals: NFTApproval[];
     txData: TxData;
+    txTags?: TxTags;
     orderIds: string[];
     preSignatures: PreSignature[];
   }[];
@@ -264,6 +286,7 @@ export type MintDetails = {
 export type FillMintsResult = {
   txs: {
     txData: TxData;
+    txTags?: TxTags;
     orderIds: string[];
   }[];
   success: { [orderId: string]: boolean };

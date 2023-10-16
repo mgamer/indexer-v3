@@ -29,6 +29,7 @@ export const config = {
       "opensea"
   ),
   metadataApiBaseUrl: String(process.env.METADATA_API_BASE_URL),
+  disableFlagStatusRefreshJob: Boolean(Number(process.env.DISABLE_FLAG_STATUS_REFRESH_JOB)),
 
   disableRealtimeMetadataRefresh: Boolean(Number(process.env.DISABLE_REALTIME_METADATA_REFRESH)),
 
@@ -86,9 +87,21 @@ export const config = {
   openSeaApiKey: String(process.env.OPENSEA_API_KEY),
   openSeaApiUrl: String(process.env.OPENSEA_API_URL || ""),
 
+  openSeaTokenMetadataBySlugApiKey: String(process.env.OPENSEA_SLUG_API_KEY),
+  openSeaCollectionMetadataApiKey: String(process.env.OPENSEA_COLLECTION_API_KEY),
+  openSeaTokenMetadataApiKey: String(process.env.OPENSEA_TOKENS_API_KEY),
+  openSeaFlaggedMetadataApiKey: String(process.env.OPENSEA_FLAGGED_API_KEY),
+
   openSeaCrossPostingApiKey: String(
     process.env.OPENSEA_CROSS_POSTING_API_KEY || process.env.OPENSEA_API_KEY
   ),
+
+  simplehashApiKey: String(process.env.SIMPLEHASH_API_KEY),
+
+  soundxyzApiKey: String(process.env.SOUNDXYZ_API_KEY),
+  soundxyzUserAgent: String(process.env.SOUNDXYZ_USER_AGENT),
+
+  ordinalsApiKey: String(process.env.ORDINALS_API_KEY),
 
   x2y2ApiKey: String(process.env.X2Y2_API_KEY),
   cbApiKey: String(process.env.CB_API_KEY),
@@ -109,12 +122,6 @@ export const config = {
   maxParallelTokenCollectionSlugRefreshJobs: Number(
     process.env.MAX_PARALLEL_TOKEN_COLLECTION_SLUG_REFRESH_JOBS || 1
   ),
-
-  // Backfilling
-  doFtTransfersWrite: Boolean(Number(process.env.DO_FT_TRANSFERS_WRITE)),
-  doNftTransfersWrite: Boolean(Number(process.env.DO_NFT_TRANSFERS_WRITE)),
-  doProcessBackfilling: Boolean(Number(process.env.DO_PROCESS_BACKFILLING)),
-  doProcessRealtime: Boolean(Number(process.env.DO_PROCESS_REALTIME)),
 
   enableDebug: Boolean(Number(process.env.ENABLE_DEBUG)),
 

@@ -1,12 +1,13 @@
 import { defaultAbiCoder } from "@ethersproject/abi";
 import { AddressZero } from "@ethersproject/constants";
+import * as Sdk from "@reservoir0x/sdk";
 import { TxData } from "@reservoir0x/sdk/dist/utils";
 
 import { idb } from "@/common/db";
 import { bn, fromBuffer, toBuffer } from "@/common/utils";
+import { config } from "@/config/index";
 import { mintsProcessJob } from "@/jobs/mints/mints-process-job";
 import { CollectionMint } from "@/orderbook/mints";
-
 import * as mints from "@/orderbook/mints/calldata/detector";
 
 // For now, use the deployer address
@@ -40,11 +41,11 @@ export type AbiParam =
       abiType: string;
     }
   | {
-      kind: "custom";
+      kind: "referrer";
       abiType: string;
     }
   | {
-      kind: "referrer";
+      kind: "custom";
       abiType: string;
     };
 
@@ -56,7 +57,28 @@ export type MintTxSchema = {
   };
 };
 
-export type CustomInfo = mints.manifold.Info;
+export type CustomInfo = mints.manifold.Info | mints.soundxyz.Info;
+
+export type PartialCollectionMint = Pick<
+  CollectionMint,
+  "collection" | "details" | "price" | "contract"
+>;
+
+export const normalizePartialCollectionMint = (
+  partialCm: PartialCollectionMint
+): CollectionMint => {
+  return {
+    collection: partialCm.collection ?? partialCm.contract,
+    contract: partialCm.contract ?? partialCm.collection,
+    stage: "claim",
+    kind: "public",
+    status: "open",
+    standard: "unknown",
+    details: partialCm.details,
+    currency: Sdk.Common.Addresses.Native[config.chainId],
+    price: partialCm.price ?? "0",
+  };
+};
 
 export const generateCollectionMintTxData = async (
   collectionMint: CollectionMint,
@@ -225,6 +247,13 @@ export const generateCollectionMintTxData = async (
             break;
           }
 
+          case "soundxyz": {
+            if (allowlistItemIndex === 0) {
+              abiValue = await mints.soundxyz.generateProofValue(collectionMint, minter);
+            }
+            break;
+          }
+
           default: {
             throw new Error("Allowlist fields not supported");
           }
@@ -290,7 +319,7 @@ export const generateCollectionMintTxData = async (
       : "");
 
   let price = collectionMint.price;
-  if (!price) {
+  if (!price && allowlistData) {
     // If the price is not available on the main `CollectionMint`, get it from the allowlist
     price = allowlistData.actual_price!;
   }
@@ -330,6 +359,8 @@ export const refreshMintsForCollection = async (collection: string) => {
         return mints.mintdotfun.refreshByCollection(collection);
       case "seadrop-v1.0":
         return mints.seadrop.refreshByCollection(collection);
+      case "soundxyz":
+        return mints.soundxyz.refreshByCollection(collection);
       case "thirdweb":
         return mints.thirdweb.refreshByCollection(collection);
       case "unknown":

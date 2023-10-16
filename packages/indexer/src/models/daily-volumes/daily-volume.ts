@@ -245,6 +245,7 @@ export class DailyVolume {
     const results = await ridb.manyOrNone(
       `SELECT t1.collection_id,
        t1.volume,
+       t1.sales_count,
        t1.rank,
        t1.floor_sell_value,
        t1.volume_change,
@@ -254,6 +255,7 @@ export class DailyVolume {
           t.contract,
           t."collection_id",
           sum("fe"."price") AS "volume",
+          COUNT(*) AS "sales_count",
           RANK() OVER (ORDER BY SUM(price) DESC, t."collection_id") "rank",
           min(fe.price) AS "floor_sell_value",
           (sum("fe"."price") / vc.volume_past) as "volume_change"
@@ -301,7 +303,8 @@ export class DailyVolume {
               day1_volume = $/volume/,
               day1_rank = $/rank/,
               day1_floor_sell_value = $/floor_sell_value/,
-              day1_volume_change = $/volume_change/
+              day1_volume_change = $/volume_change/,
+              day1_sales_count = $/sales_count/
             WHERE id = $/collection_id/
             `,
           values: values,
@@ -356,6 +359,119 @@ export class DailyVolume {
     }
 
     return true;
+  }
+
+  /**
+   * update the all time volume for all collections by calculating the volume since the most recent daily_volume entry for each collection, and then adding it to the sum of all_time_volume from summing all daily_volume entries for each collection
+   *
+   **/
+  public static async updateAllTimeVolume(collectionId = ""): Promise<boolean> {
+    try {
+      // Step 1: Get the most recent timestamp for each collection from daily_volumes
+      const mostRecentTimestamps = await redb.manyOrNone(
+        `
+        SELECT collection_id, MAX(timestamp) as recent_timestamp
+        FROM collections
+        JOIN daily_volumes ON collections.id = daily_volumes.collection_id
+        WHERE collection_id != '-1'
+        AND collections.day1_volume > 0
+        ${collectionId ? "AND collection_id = $/collectionId/" : ""}
+        GROUP BY collection_id
+      `,
+        { collectionId }
+      );
+
+      // Step 2: Calculate the volume since the most recent timestamp for each collection
+      const recentVolumes = await Promise.all(
+        mostRecentTimestamps.map(async (row: any) => {
+          const volumeSinceRecent = await redb.oneOrNone(
+            `
+            SELECT SUM("fe"."price") as volume_since_recent
+            FROM "fill_events_2" "fe"
+            JOIN "tokens" "t" ON "fe"."token_id" = "t"."token_id" AND "fe"."contract" = "t"."contract"
+            WHERE "fe"."timestamp" > $/recentTimestamp/
+              AND "t"."collection_id" = $/collectionId/
+              AND fe.price > 0
+              AND fe.is_deleted = 0
+              AND fe.is_primary IS NOT TRUE 
+              AND coalesce(fe.wash_trading_score, 0) = 0
+          `,
+            {
+              recentTimestamp: row?.recent_timestamp ?? 0,
+              collectionId: row.collection_id,
+            }
+          );
+
+          let totalVolume = { total_volume: 0 };
+
+          const redisTotalVolume = await redis.get(`all_time_volume_${row.collection_id}`);
+          if (redisTotalVolume) {
+            totalVolume.total_volume = parseInt(redisTotalVolume, 10);
+          } else {
+            const pgTotalVolume = await redb.oneOrNone(
+              `
+              SELECT SUM(volume) as total_volume
+              FROM daily_volumes
+              WHERE collection_id != '-1'
+                AND collection_id = $/collectionId/
+              GROUP BY collection_id
+            `,
+              {
+                collectionId: row.collection_id,
+              }
+            );
+
+            if (pgTotalVolume) {
+              await redis.set(
+                `all_time_volume_${row.collection_id}`,
+                totalVolume.total_volume,
+                "EX",
+                60 * 60 * 24
+              );
+              totalVolume = pgTotalVolume;
+            } else {
+              totalVolume = { total_volume: 0 };
+            }
+          }
+
+          return {
+            collection_id: row.collection_id,
+            volume_since_recent: volumeSinceRecent ? volumeSinceRecent.volume_since_recent : 0,
+            past_total_volume: totalVolume ? totalVolume.total_volume : 0,
+            total_new_volume: totalVolume
+              ? totalVolume.total_volume + volumeSinceRecent.volume_since_recent
+              : volumeSinceRecent.volume_since_recent,
+          };
+        })
+      );
+
+      // Step 3: Update the volumes in collections
+      const queries: PgPromiseQuery[] = [];
+      recentVolumes.forEach((values: any) => {
+        queries.push({
+          query: `
+          UPDATE collections
+          SET all_time_volume = $/total_new_volume/,
+            7day_volume = CASE WHEN 7day_volume < $/volume_since_recent/ THEN $/volume_since_recent/ ELSE 7day_volume END,
+            30day_volume = CASE WHEN 30day_volume < $/volume_since_recent/ THEN $/volume_since_recent/ ELSE 30day_volume END
+          WHERE id = $/collection_id/
+        `,
+          values: values,
+        });
+      });
+
+      const concat = pgp.helpers.concat(queries);
+      await idb.none(concat);
+
+      return true;
+    } catch (error: any) {
+      logger.error(
+        "all-time-volumes",
+        `Error while updating all time volumes. collectionId=${collectionId}, error=${error}`
+      );
+
+      return false;
+    }
   }
 
   /**
@@ -550,6 +666,13 @@ export class DailyVolume {
 
       for (const query of _.chunk(queries, 100)) {
         await idb.none(pgp.helpers.concat(query));
+      }
+
+      // for each collection, save the all time volume in redis, and set it to expire in 24 hours
+      const allTimeVolumesByCollection = _.groupBy(mergedArr, "collection_id");
+      for (const collectionId of Object.keys(allTimeVolumesByCollection)) {
+        const volume = allTimeVolumesByCollection[collectionId][0].all_time_volume;
+        await redis.set(`all_time_volume_${collectionId}`, volume, "EX", 24 * 60 * 60);
       }
     } catch (error: any) {
       logger.error(

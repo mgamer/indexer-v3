@@ -4,7 +4,6 @@ import { AbstractRabbitMqJobHandler, BackoffStrategy } from "@/jobs/abstract-rab
 import { acquireLock, doesLockExist, redis, releaseLock } from "@/common/redis";
 import { tokenRefreshCacheJob } from "@/jobs/token-updates/token-refresh-cache-job";
 import { config } from "@/config/index";
-import { logger } from "@/common/logger";
 
 export type CollectionFloorJobPayload = {
   kind: string;
@@ -47,42 +46,15 @@ export class CollectionFloorJob extends AbstractRabbitMqJobHandler {
 
     let acquiredLock;
 
-    if ([5, 11155111].includes(config.chainId)) {
-      if (!["revalidation"].includes(kind)) {
-        acquiredLock = await acquireLock(
-          `${this.queueName}-lock:${collectionResult.collection_id}`,
-          300
-        );
-
-        if (!acquiredLock) {
-          const acquiredRevalidationLock = await acquireLock(
-            `${this.queueName}-revalidation-lock:${collectionResult.collection_id}`,
-            300
-          );
-
-          if (acquiredRevalidationLock) {
-            logger.info(
-              this.queueName,
-              JSON.stringify({
-                message: `Got revalidation lock. kind=${kind}, collection=${collectionResult.collection_id}, tokenId=${tokenId}`,
-                payload,
-                collectionId: collectionResult.collection_id,
-              })
-            );
-          }
-
-          return;
-        }
-      }
-
-      logger.info(
-        this.queueName,
-        JSON.stringify({
-          message: `Recalculating floor ask. kind=${kind}, collection=${collectionResult.collection_id}, tokenId=${tokenId}`,
-          payload,
-          collectionId: collectionResult.collection_id,
-        })
+    if (!["revalidation"].includes(kind)) {
+      acquiredLock = await acquireLock(
+        `${this.queueName}-lock:${collectionResult.collection_id}`,
+        300
       );
+
+      if (!acquiredLock) {
+        return;
+      }
     }
 
     const collectionFloorAsk = await idb.oneOrNone(
@@ -192,30 +164,12 @@ export class CollectionFloorJob extends AbstractRabbitMqJobHandler {
     if (acquiredLock) {
       await releaseLock(`${this.queueName}-lock:${collectionResult.collection_id}`);
 
-      logger.info(
-        this.queueName,
-        JSON.stringify({
-          message: `Released lock. kind=${kind}, collection=${collectionResult.collection_id}, tokenId=${tokenId}`,
-          payload,
-          collectionId: collectionResult.collection_id,
-        })
-      );
-
       const revalidationLockExists = await doesLockExist(
         `${this.queueName}-revalidation-lock:${collectionResult.collection_id}`
       );
 
       if (revalidationLockExists) {
         await releaseLock(`${this.queueName}-revalidation-lock:${collectionResult.collection_id}`);
-
-        logger.info(
-          this.queueName,
-          JSON.stringify({
-            message: `Trigger revalidation. kind=${kind}, collection=${collectionResult.collection_id}, tokenId=${tokenId}`,
-            payload,
-            collectionId: collectionResult.collection_id,
-          })
-        );
 
         await this.addToQueue([
           { kind: "revalidation", contract, tokenId, txHash: null, txTimestamp: null },

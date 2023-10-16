@@ -773,7 +773,6 @@ export const save = async (
         normalized_value: isProtectedOffer ? null : normalizedValue,
         currency_normalized_value: isProtectedOffer ? null : currencyNormalizedValue,
         originated_at: metadata.originatedAt ?? null,
-        permit_id: metadata.permitId ?? null,
       });
 
       const unfillable =
@@ -855,7 +854,6 @@ export const save = async (
         "normalized_value",
         "currency_normalized_value",
         "originated_at",
-        "permit_id",
       ],
       {
         table: "orders",

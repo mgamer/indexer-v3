@@ -10,11 +10,12 @@ import "@/jobs/daily-volumes";
 import "@/jobs/data-archive";
 import "@/jobs/events-sync";
 import "@/jobs/oracle";
-import "@/jobs/websocket-events";
 import "@/jobs/metrics";
 import "@/jobs/opensea-orders";
 import "@/jobs/monitoring";
 import "@/jobs/failed-messages";
+import "@/jobs/top-selling-collections-cache";
+import "@/jobs/flag-status/flag-status-cron";
 
 // Export all job queues for monitoring through the BullMQ UI
 
@@ -30,13 +31,13 @@ import * as backfillExpiredOrders from "@/jobs/backfill/backfill-expired-orders"
 import * as backfillExpiredOrders2 from "@/jobs/backfill/backfill-expired-orders-2";
 import * as backfillRefreshCollectionMetadata from "@/jobs/backfill/backfill-refresh-collections-metadata";
 import * as backfillSaleRoyalties from "@/jobs/backfill/backfill-sale-royalties";
-import * as tokenWebsocketEventsTriggerQueue from "@/jobs/websocket-events/token-websocket-events-trigger-queue";
 import * as backfillSalePricingDecimalElasticsearch from "@/jobs/activities/backfill/backfill-sales-pricing-decimal-elasticsearch";
 import * as backfillRefreshCollectionsCreator from "@/jobs/backfill/backfill-refresh-collections-creator";
 import * as backfillLooksrareSeaportOrders from "@/jobs/backfill/backfill-looksrare-seaport-orders";
 import * as backfillSalesUsdPrice from "@/jobs/backfill/backfill-sales-usd-price";
 import * as backfillSales from "@/jobs/backfill/backfill-sales";
 import * as backfillReorgBlocks from "@/jobs/backfill/backfill-reorg-blocks";
+import * as backfillDeletedSalesElasticsearch from "@/jobs/activities/backfill/backfill-deleted-sales-elasticsearch";
 
 import amqplib from "amqplib";
 import { config } from "@/config/index";
@@ -104,9 +105,11 @@ import { collectionFloorJob } from "@/jobs/collection-updates/collection-floor-q
 import { eventsSyncProcessRealtimeJob } from "@/jobs/events-sync/process/events-sync-process-realtime";
 import { fillUpdatesJob } from "@/jobs/fill-updates/fill-updates-job";
 import { fillPostProcessJob } from "@/jobs/fill-updates/fill-post-process-job";
-import { generateCollectionTokenSetJob } from "@/jobs/flag-status/generate-collection-token-set-job";
 import { flagStatusUpdateJob } from "@/jobs/flag-status/flag-status-update-job";
-import { flagStatusProcessJob } from "@/jobs/flag-status/flag-status-process-job";
+import { tokenFlagStatusSyncJob } from "@/jobs/flag-status/token-flag-status-sync-job";
+import { collectionSlugFlugStatusSyncJob } from "@/jobs/flag-status/collection-slug-flag-status";
+import { contractFlugStatusSyncJob } from "./flag-status/contract-flag-status";
+
 import { metadataIndexFetchJob } from "@/jobs/metadata-index/metadata-fetch-job";
 import { metadataIndexProcessJob } from "@/jobs/metadata-index/metadata-process-job";
 import { metadataIndexWriteJob } from "@/jobs/metadata-index/metadata-write-job";
@@ -154,6 +157,9 @@ import { traceSyncJob } from "@/jobs/events-sync/trace-sync-job";
 import { backfillTokensTimeToMetadataJob } from "@/jobs/backfill/backfill-tokens-time-to-metadata-job";
 import { permitBiddingOrderNonceChangeJob } from "@/jobs/permit-bidding/order-approval-change-job";
 import { orderUpdatesExpiredPermitBiddingOrderJob } from "@/jobs/permit-bidding/cron/expired-orders-job";
+import { topSellingCollectionsJob } from "@/jobs/top-selling-collections-cache/save-top-selling-collections-job";
+import { newCollectionForTokenJob } from "@/jobs/token-updates/new-collection-for-token-job";
+import { backfillTokensWithMissingCollectionJob } from "@/jobs/backfill/backfill-tokens-with-missing-collection-job";
 
 export const allJobQueues = [
   backfillWrongNftBalances.queue,
@@ -161,13 +167,13 @@ export const allJobQueues = [
   backfillExpiredOrders2.queue,
   backfillRefreshCollectionMetadata.queue,
   backfillSaleRoyalties.queue,
-  tokenWebsocketEventsTriggerQueue.queue,
   backfillSalePricingDecimalElasticsearch.queue,
   backfillRefreshCollectionsCreator.queue,
   backfillLooksrareSeaportOrders.queue,
   backfillSalesUsdPrice.queue,
   backfillSales.queue,
   backfillReorgBlocks.queue,
+  backfillDeletedSalesElasticsearch.queue,
 ];
 
 export class RabbitMqJobsConsumer {
@@ -239,9 +245,10 @@ export class RabbitMqJobsConsumer {
       eventsSyncProcessRealtimeJob,
       fillUpdatesJob,
       fillPostProcessJob,
-      generateCollectionTokenSetJob,
       flagStatusUpdateJob,
-      flagStatusProcessJob,
+      tokenFlagStatusSyncJob,
+      collectionSlugFlugStatusSyncJob,
+      contractFlugStatusSyncJob,
       metadataIndexFetchJob,
       metadataIndexProcessJob,
       metadataIndexWriteJob,
@@ -291,6 +298,9 @@ export class RabbitMqJobsConsumer {
       backfillTokensTimeToMetadataJob,
       permitBiddingOrderNonceChangeJob,
       orderUpdatesExpiredPermitBiddingOrderJob,
+      topSellingCollectionsJob,
+      newCollectionForTokenJob,
+      backfillTokensWithMissingCollectionJob,
     ];
   }
 
