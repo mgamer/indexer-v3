@@ -2,7 +2,6 @@
 
 import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handler";
 
-import { config } from "@/config/index";
 import { getTokenFlagStatus } from "@/jobs/flag-status/utils";
 import { acquireLock, getLockExpiration } from "@/common/redis";
 import { logger } from "@/common/logger";
@@ -16,7 +15,6 @@ export class TokenFlagStatusSyncJob extends AbstractRabbitMqJobHandler {
   concurrency = 1;
   lazyMode = true;
   useSharedChannel = true;
-  disableConsuming = !config.disableFlagStatusRefreshJob || !config.liquidityOnly;
   singleActiveConsumer = true;
 
   protected async process() {
