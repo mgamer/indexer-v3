@@ -3,6 +3,7 @@ import { Contract } from "@ethersproject/contracts";
 import * as Sdk from "@reservoir0x/sdk";
 
 import { baseProvider } from "@/common/provider";
+import { bn } from "@/common/utils";
 import { config } from "@/config/index";
 import { Transaction } from "@/models/transactions";
 import {
@@ -10,23 +11,20 @@ import {
   getCollectionMints,
   simulateAndUpsertCollectionMint,
 } from "@/orderbook/mints";
-
 import { getStatus, toSafeTimestamp } from "@/orderbook/mints/calldata/helpers";
 
 const STANDARD = "createdotfun";
 
 const BasicMintModule = "0x000000000f30984de6843bbc1d109c95ea6242ac";
 
-export const extractByCollection = async (
-  collection: string,
-  module: string
-): Promise<CollectionMint[]> => {
+export const extractByCollectionERC721 = async (collection: string): Promise<CollectionMint[]> => {
   const results: CollectionMint[] = [];
   try {
-    const mintModule = new Contract(
-      module,
+    const module = new Contract(
+      BasicMintModule,
       new Interface([
-        `function configuration(address _contract) external view returns (
+        "function mintPayout() view returns (address)",
+        `function configuration(address contract) view returns (
           (
             uint256 price,
             uint64 mintStart,
@@ -41,23 +39,30 @@ export const extractByCollection = async (
       baseProvider
     );
 
-    const configuration = await mintModule.configuration(collection);
-    const price = configuration.price.toString();
+    const payout = new Contract(
+      await module.mintPayout(),
+      new Interface(["function protocolFee() view returns (uint256)"]),
+      baseProvider
+    );
+    const protocolFee = await payout.protocolFee();
+
+    const configuration = await module.configuration(collection);
+    const price = bn(configuration.price).add(protocolFee).toString();
     const maxSupply = configuration.maxSupply.toString();
     const maxPerWallet = configuration.maxPerWallet.toString();
 
     results.push({
       collection,
       contract: collection,
-      stage: `claim-${module.toLowerCase()}-${collection}`,
+      stage: `claim-${BasicMintModule}-${collection}`,
       kind: "public",
       status: "open",
       standard: STANDARD,
       details: {
         tx: {
-          to: module,
+          to: BasicMintModule,
           data: {
-            // `mint`
+            // `mint_efficient_7e80c46e`
             signature: "0x00000000",
             params: [
               {
@@ -81,7 +86,7 @@ export const extractByCollection = async (
         },
       },
       currency: Sdk.Common.Addresses.Native[config.chainId],
-      price: price,
+      price,
       maxMintsPerWallet: maxPerWallet === "0" ? undefined : maxPerWallet,
       maxSupply: maxSupply === "0" ? undefined : maxSupply,
       startTime: toSafeTimestamp(configuration.mintStart),
@@ -110,11 +115,11 @@ export const extractByTx = async (
 ): Promise<CollectionMint[]> => {
   if (
     [
-      "0x00000000", // `mint`
+      "0x00000000", // `mint_efficient_7e80c46e`
     ].some((bytes4) => tx.data.startsWith(bytes4)) &&
     tx.to === BasicMintModule
   ) {
-    return extractByCollection(collection, tx.to);
+    return extractByCollectionERC721(collection);
   }
 
   return [];
@@ -125,7 +130,7 @@ export const refreshByCollection = async (collection: string) => {
 
   for (const { collection } of existingCollectionMints) {
     // Fetch and save/update the currently available mints
-    const latestCollectionMints = await extractByCollection(collection, BasicMintModule);
+    const latestCollectionMints = await extractByCollectionERC721(collection);
     for (const collectionMint of latestCollectionMints) {
       await simulateAndUpsertCollectionMint(collectionMint);
     }

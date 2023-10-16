@@ -317,8 +317,7 @@ export type EventSubKind =
   | "metadata-update-zora"
   | "soundxyz-range-edition-mint-created"
   | "soundxyz-merkle-drop-mint-created"
-  | "createdotfun-metadata-renderer-updated"
-  | "createdotfun-module-added";
+  | "createdotfun-configuration-updated";
 
 export type EventData = {
   kind: EventKind;
@@ -543,8 +542,7 @@ const allEventData = [
   metadataUpdate.metadataUpdateURIZora,
   soundxyz.rangeEditionMintCreated,
   soundxyz.merkleDropMintCreated,
-  createdotfun.metadataRendererUpdated,
-  createdotfun.moduleAdded,
+  createdotfun.configurationUpdated,
 ];
 
 export const getEventData = (events?: string[]) => {
