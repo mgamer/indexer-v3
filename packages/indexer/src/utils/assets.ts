@@ -80,7 +80,8 @@ export class Assets {
       {
         image: imageUrl,
         width: width,
-        exp: Math.floor(Date.now() / 1000) + 2 * (60 * 60), // Expires: Now + 2h
+        // TODO: Do we want to expire the token?
+        // exp: Math.floor(Date.now() / 1000) + 2 * (60 * 60), // Expires: Now + 2h
       },
       config.privateImageResizingSigningKey,
       {
