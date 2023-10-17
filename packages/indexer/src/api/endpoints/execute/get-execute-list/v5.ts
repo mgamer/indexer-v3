@@ -71,7 +71,7 @@ export const getExecuteListV5Options: RouteOptions = {
         .lowercase()
         .pattern(regex.address)
         .description(
-          "Address of wallet taker the private order. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00`"
+          "Address of wallet taking the private order. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00`"
         )
         .optional(),
       source: Joi.string()
