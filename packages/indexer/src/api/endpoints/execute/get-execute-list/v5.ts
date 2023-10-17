@@ -418,7 +418,7 @@ export const getExecuteListV5Options: RouteOptions = {
             (params as any).feeRecipient.push(feeRecipient);
           }
 
-          if (payload.taker && ["seaport-v1.5", "x2y2"].includes(params.orderKind)) {
+          if (payload.taker && !["seaport-v1.5", "x2y2"].includes(params.orderKind)) {
             return errors.push({ message: "Private listing unsupport", orderIndex: i });
           }
 
