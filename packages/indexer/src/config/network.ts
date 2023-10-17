@@ -676,6 +676,19 @@ export const getNetworkSettings = (): NetworkSettings => {
               decimals: 18,
             },
           ],
+          [
+            "0x011e128ec62840186f4a07e85e3ace28858c5606",
+            {
+              contract: "0x011e128ec62840186f4a07e85e3ace28858c5606",
+              name: "WVAL",
+              symbol: "$VAL",
+              decimals: 18,
+              metadata: {
+                image:
+                  "https:/ /i.ibb.co/s1k4Qvz/valeria-logo.png",
+              },
+            },
+          ],
         ]),
         coingecko: {
           networkId: "polygon-pos",
