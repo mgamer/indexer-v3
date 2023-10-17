@@ -710,7 +710,7 @@ export const getNetworkSettings = (): NetworkSettings => {
               decimals: 18,
               metadata: {
                 image:
-                  "https:/ /i.ibb.co/s1k4Qvz/valeria-logo.png",
+                  "https://i.ibb.co/s1k4Qvz/valeria-logo.png",
               },
             },
           ],
