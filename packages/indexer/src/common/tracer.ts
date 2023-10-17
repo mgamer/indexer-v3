@@ -1,9 +1,8 @@
 import tracer from "dd-trace";
-// import { Network } from "@reservoir0x/sdk/dist/utils";
 
 import { getServiceName } from "@/config/network";
 import { config } from "@/config/index";
-
+import { Network } from "@reservoir0x/sdk/dist/utils";
 if (process.env.DATADOG_AGENT_URL) {
   const service = getServiceName();
 
@@ -39,17 +38,21 @@ if (process.env.DATADOG_AGENT_URL) {
     headers: ["x-api-key", "referer"],
   });
 
-  // tracer.use("ioredis", {
-  //   enabled: config.chainId === Network.Ancient8Testnet,
-  // });
-  //
-  // tracer.use("amqplib", {
-  //   enabled: config.chainId === Network.Ancient8Testnet,
-  // });
-  //
-  // tracer.use("pg", {
-  //   enabled: config.chainId === Network.Ancient8Testnet,
-  // });
+  tracer.use("ioredis", {
+    enabled: config.chainId === Network.Ethereum,
+  });
+
+  tracer.use("amqplib", {
+    enabled: config.chainId === Network.Ethereum,
+  });
+
+  tracer.use("pg", {
+    enabled: config.chainId === Network.Ethereum,
+  });
+
+  tracer.use("elasticsearch", {
+    enabled: config.chainId === Network.Ethereum,
+  });
 }
 
 export default tracer;

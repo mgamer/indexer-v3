@@ -447,8 +447,7 @@ export const getNetworkSettings = (): NetworkSettings => {
               symbol: "$VAL",
               decimals: 18,
               metadata: {
-                image:
-                  "https://i.ibb.co/s1k4Qvz/valeria-logo.png",
+                image: "https://i.ibb.co/s1k4Qvz/valeria-logo.png",
               },
             },
           ],
@@ -557,6 +556,20 @@ export const getNetworkSettings = (): NetworkSettings => {
         lastBlockLatency: 15,
         backfillBlockBatchSize: 60,
         reorgCheckFrequency: [30],
+        whitelistedCurrencies: new Map([
+          [
+            Sdk.Common.Addresses.Usdc[config.chainId][1],
+            {
+              contract: Sdk.Common.Addresses.Usdc[config.chainId][1],
+              name: "USD Coin",
+              symbol: "USDC",
+              decimals: 6,
+              metadata: {
+                image: "https://assets.coingecko.com/coins/images/6319/large/USD_Coin_icon.png",
+              },
+            },
+          ],
+        ]),
         coingecko: {
           networkId: "optimistic-ethereum",
         },
@@ -650,6 +663,18 @@ export const getNetworkSettings = (): NetworkSettings => {
         reorgCheckFrequency: [30],
         whitelistedCurrencies: new Map([
           [
+            Sdk.Common.Addresses.Usdc[config.chainId][1],
+            {
+              contract: Sdk.Common.Addresses.Usdc[config.chainId][1],
+              name: "USD Coin",
+              symbol: "USDC",
+              decimals: 6,
+              metadata: {
+                image: "https://assets.coingecko.com/coins/images/6319/large/USD_Coin_icon.png",
+              },
+            },
+          ],
+          [
             "0xba777ae3a3c91fcd83ef85bfe65410592bdd0f7c",
             {
               contract: "0xba777ae3a3c91fcd83ef85bfe65410592bdd0f7c",
@@ -687,6 +712,15 @@ export const getNetworkSettings = (): NetworkSettings => {
                 image:
                   "https:/ /i.ibb.co/s1k4Qvz/valeria-logo.png",
               },
+            },
+          ],
+          [
+            "0xdc8b54313ed0ab1a0b6b8728c7d360c671a4b7cb",
+            {
+              contract: "0xdc8b54313ed0ab1a0b6b8728c7d360c671a4b7cb",
+              name: "FEWL",
+              symbol: "FEWL",
+              decimals: 18,
             },
           ],
         ]),
@@ -781,6 +815,20 @@ export const getNetworkSettings = (): NetworkSettings => {
           // Prohibition Contracts - ArtBlocks Engine
           "0x47a91457a3a1f700097199fd63c039c4784384ab",
         ],
+        whitelistedCurrencies: new Map([
+          [
+            Sdk.Common.Addresses.Usdc[config.chainId][1],
+            {
+              contract: Sdk.Common.Addresses.Usdc[config.chainId][1],
+              name: "USD Coin",
+              symbol: "USDC",
+              decimals: 6,
+              metadata: {
+                image: "https://assets.coingecko.com/coins/images/6319/large/USD_Coin_icon.png",
+              },
+            },
+          ],
+        ]),
         coingecko: {
           networkId: "arbitrum-one",
         },
@@ -1185,6 +1233,20 @@ export const getNetworkSettings = (): NetworkSettings => {
         realtimeSyncMaxBlockLag: 32,
         realtimeSyncFrequencySeconds: 5,
         lastBlockLatency: 5,
+        whitelistedCurrencies: new Map([
+          [
+            Sdk.Common.Addresses.Usdc[config.chainId][1],
+            {
+              contract: Sdk.Common.Addresses.Usdc[config.chainId][1],
+              name: "USD Coin",
+              symbol: "USDC",
+              decimals: 6,
+              metadata: {
+                image: "https://assets.coingecko.com/coins/images/6319/large/USD_Coin_icon.png",
+              },
+            },
+          ],
+        ]),
         coingecko: {
           networkId: "base",
         },
