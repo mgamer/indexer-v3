@@ -221,7 +221,7 @@ export class MintQueueJob extends AbstractRabbitMqJobHandler {
       }
 
       // Set any cached information (eg. floor sell)
-      if (config.chainId != 999) {
+      if (config.chainId !== 999) {
         await tokenRefreshCacheJob.addToQueue({ contract, tokenId });
       }
     } catch (error) {
