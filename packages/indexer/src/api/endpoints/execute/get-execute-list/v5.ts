@@ -26,9 +26,8 @@ import * as blurSellToken from "@/orderbook/orders/blur/build/sell/token";
 import * as looksRareV2SellToken from "@/orderbook/orders/looks-rare-v2/build/sell/token";
 import * as looksRareV2Check from "@/orderbook/orders/looks-rare-v2/check";
 
-import * as seaportBaseCheck from "@/orderbook/orders/seaport-base/check";
-
 // Seaport v1.5
+import * as seaportBaseCheck from "@/orderbook/orders/seaport-base/check";
 import * as seaportV15SellToken from "@/orderbook/orders/seaport-v1.5/build/sell/token";
 
 // Alienswap
@@ -419,7 +418,10 @@ export const getExecuteListV5Options: RouteOptions = {
           }
 
           if (payload.taker && !["seaport-v1.5", "x2y2"].includes(params.orderKind)) {
-            return errors.push({ message: "Private listing unsupport", orderIndex: i });
+            return errors.push({
+              message: "Private orders are only supported for seaport-v1.5 and x2y2",
+              orderIndex: i,
+            });
           }
 
           try {
