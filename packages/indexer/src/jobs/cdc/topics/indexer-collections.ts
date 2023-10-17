@@ -40,15 +40,17 @@ export class IndexerCollectionsHandler extends KafkaEventHandler {
       },
       eventKind: WebsocketEventKind.CollectionEvent,
     });
-    logger.info("top-selling-collections", `updating collection ${payload.after.id}`);
 
-    const collectionKey = `collection-cache:v1:${payload.after.id}`;
+    try {
+      logger.info("top-selling-collections", `updating collection ${payload.after.id}`);
 
-    const cachedCollection = await redis.get(collectionKey);
+      const collectionKey = `collection-cache:v1:${payload.after.id}`;
 
-    if (cachedCollection !== null) {
-      // If the collection exists, fetch the on_sale_count
-      const listedCountQuery = `
+      const cachedCollection = await redis.get(collectionKey);
+
+      if (cachedCollection !== null) {
+        // If the collection exists, fetch the on_sale_count
+        const listedCountQuery = `
         SELECT
           COUNT(*) AS on_sale_count
         FROM tokens
@@ -56,18 +58,24 @@ export class IndexerCollectionsHandler extends KafkaEventHandler {
           AND tokens.floor_sell_value IS NOT NULL
       `;
 
-      const listCountResult = await redb.one(listedCountQuery);
-      const listCount = listCountResult.on_sale_count;
+        const listCountResult = await redb.one(listedCountQuery);
+        const listCount = listCountResult.on_sale_count;
 
-      const updatedPayload = {
-        ...payload.after,
-        on_sale_count: listCount,
-      };
+        const updatedPayload = {
+          ...payload.after,
+          on_sale_count: listCount,
+        };
 
-      await redis.set(collectionKey, JSON.stringify(updatedPayload), "XX");
+        await redis.set(collectionKey, JSON.stringify(updatedPayload), "XX");
+      }
+
+      logger.info("top-selling-collections", `updated collection ${payload.after.id}`);
+    } catch (err) {
+      logger.error(
+        "top-selling-collections",
+        `failed to update collection ${payload.after.id}, ${err}`
+      );
     }
-
-    logger.info("top-selling-collections", `updated collection ${payload.after.id}`);
   }
 
   protected async handleDelete(): Promise<void> {
