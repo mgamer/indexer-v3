@@ -437,7 +437,7 @@ export class DailyVolume {
             collection_id: row.id,
             volume_since_recent: volumeSinceRecent ? volumeSinceRecent.volume_since_recent : 0,
             total_new_volume: totalVolume
-              ? totalVolume.total_volume + volumeSinceRecent.volume_since_recent
+              ? Number(totalVolume.total_volume) + Number(volumeSinceRecent.volume_since_recent)
               : volumeSinceRecent.volume_since_recent,
           };
         })
