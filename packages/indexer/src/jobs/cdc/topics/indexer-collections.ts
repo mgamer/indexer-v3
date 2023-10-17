@@ -54,11 +54,13 @@ export class IndexerCollectionsHandler extends KafkaEventHandler {
         SELECT
           COUNT(*) AS on_sale_count
         FROM tokens
-        WHERE tokens.collection_id = ${payload.after.id}
+        WHERE tokens.collection_id = $/collectionId/
           AND tokens.floor_sell_value IS NOT NULL
       `;
 
-        const listCountResult = await redb.one(listedCountQuery);
+        const listCountResult = await redb.one(listedCountQuery, {
+          collectionId: payload.after.id,
+        });
         const listCount = listCountResult.on_sale_count;
 
         const updatedPayload = {
