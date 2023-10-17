@@ -418,7 +418,7 @@ export const getExecuteListV5Options: RouteOptions = {
             (params as any).feeRecipient.push(feeRecipient);
           }
 
-          if (payload.taker && params.orderKind != "seaport-v1.5") {
+          if (payload.taker && ["seaport-v1.5", "x2y2"].includes(params.orderKind)) {
             return errors.push({ message: "Private listing unsupport", orderIndex: i });
           }
 
@@ -841,6 +841,7 @@ export const getExecuteListV5Options: RouteOptions = {
                 const order = await x2y2SellToken.build({
                   ...params,
                   orderbook: "x2y2",
+                  taker: payload.taker,
                   maker,
                   contract,
                   tokenId,
