@@ -2,7 +2,6 @@
 import { KafkaEventHandler } from "./KafkaEventHandler";
 import { redis } from "@/common/redis";
 
-// import { logger } from "@/common/logger";
 import {
   WebsocketEventKind,
   WebsocketEventRouter,
