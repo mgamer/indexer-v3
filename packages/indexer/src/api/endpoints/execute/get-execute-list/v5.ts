@@ -66,13 +66,6 @@ export const getExecuteListV5Options: RouteOptions = {
         .description(
           "Address of wallet making the order. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00`"
         ),
-      taker: Joi.string()
-        .lowercase()
-        .pattern(regex.address)
-        .description(
-          "Address of wallet taking the private order. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00`"
-        )
-        .optional(),
       source: Joi.string()
         .lowercase()
         .pattern(regex.domain)
@@ -183,6 +176,13 @@ export const getExecuteListV5Options: RouteOptions = {
             currency: Joi.string()
               .pattern(regex.address)
               .default(Sdk.Common.Addresses.Native[config.chainId]),
+            taker: Joi.string()
+              .lowercase()
+              .pattern(regex.address)
+              .description(
+                "Address of wallet taking the private order. Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00`"
+              )
+              .optional(),
           })
         )
         .min(1),
@@ -258,6 +258,7 @@ export const getExecuteListV5Options: RouteOptions = {
       salt?: string;
       nonce?: string;
       currency?: string;
+      taker?: string;
     }[];
 
     const perfTime1 = performance.now();
@@ -417,7 +418,7 @@ export const getExecuteListV5Options: RouteOptions = {
             (params as any).feeRecipient.push(feeRecipient);
           }
 
-          if (payload.taker && !["seaport-v1.5", "x2y2"].includes(params.orderKind)) {
+          if (params.taker && !["seaport-v1.5", "x2y2"].includes(params.orderKind)) {
             return errors.push({
               message: "Private orders are only supported for seaport-v1.5 and x2y2",
               orderIndex: i,
@@ -597,7 +598,6 @@ export const getExecuteListV5Options: RouteOptions = {
                   ...options,
                   orderbook: params.orderbook as "reservoir" | "opensea",
                   maker,
-                  taker: payload.taker,
                   contract,
                   tokenId,
                   source,
@@ -843,7 +843,6 @@ export const getExecuteListV5Options: RouteOptions = {
                 const order = await x2y2SellToken.build({
                   ...params,
                   orderbook: "x2y2",
-                  taker: payload.taker,
                   maker,
                   contract,
                   tokenId,
