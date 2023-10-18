@@ -32,7 +32,7 @@ export class UpdateCollectionDailyVolumeJob extends AbstractRabbitMqJobHandler {
       limit: 1,
     });
 
-    if (_.isEmpty(result.activities)) {
+    if (!_.isEmpty(result.activities)) {
       const currentTime = getUnixTime(new Date());
       let saleDate = fromUnixTime(result.activities[0].timestamp);
       saleDate.setUTCHours(0, 0, 0, 0);
