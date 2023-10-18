@@ -525,7 +525,7 @@ jobs:
           ./utils/version_update.sh \
             ./prod/platform/indexer-api-scroll.yaml \
             ${{ github.sha }} \
-            indexer-worker-scroll
+            indexer-api-scroll
           ./utils/version_update.sh \
             ./prod/platform/indexer-worker-scroll.yaml \
             ${{ github.sha }} \
@@ -533,7 +533,7 @@ jobs:
           ./utils/version_update.sh \
             ./prod/platform/indexer-kafka-worker-scroll.yaml \
             ${{ github.sha }} \
-            indexer-worker-scroll
+            indexer-kafka-worker-scroll
           ./utils/version_update.sh \
             ./prod/platform/indexer-worker-master-scroll.yaml \
             ${{ github.sha }} \
