@@ -11,7 +11,7 @@ export type UpdateCollectionDailyVolumeJobPayload = {
   contract: string;
 };
 
-export class UpdateCollectionDailyVolumeJob extends AbstractRabbitMqJobHandler {
+export default class UpdateCollectionDailyVolumeJob extends AbstractRabbitMqJobHandler {
   queueName = "update-collection-daily-volume-queue";
   maxRetries = 10;
   concurrency = 1;
