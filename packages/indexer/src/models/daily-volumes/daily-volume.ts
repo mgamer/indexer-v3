@@ -470,7 +470,7 @@ export class DailyVolume {
       recentVolumes = recentVolumes.filter((v) => v);
 
       if (!recentVolumes.length) {
-        return false;
+        return true;
       }
 
       // Step 3: Update the volumes in collections
