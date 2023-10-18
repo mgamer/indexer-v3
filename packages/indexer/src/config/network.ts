@@ -1396,6 +1396,9 @@ export const getNetworkSettings = (): NetworkSettings => {
         realtimeSyncFrequencySeconds: 5,
         lastBlockLatency: 5,
         headBlockDelay: 10,
+        coingecko: {
+          networkId: "scroll",
+        },
         onStartup: async () => {
           // Insert the native currency
           await Promise.all([
