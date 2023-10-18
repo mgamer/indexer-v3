@@ -116,7 +116,7 @@ export const getOpenseaNetworkName = () => {
     case 999:
       return "zora_testnet";
     default:
-      throw new Error(`Unsupported chainId ${config.chainId}`);
+      return null;
   }
 };
 
