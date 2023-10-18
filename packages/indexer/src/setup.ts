@@ -60,4 +60,5 @@ const setup = async () => {
   }
 };
 
+start();
 setup().then(() => start());
