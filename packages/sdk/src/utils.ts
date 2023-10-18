@@ -147,6 +147,7 @@ export enum Network {
   EthereumSepolia = 11155111,
   Zksync = 324,
   Ancient8Testnet = 2863311531,
+  Scroll = 534352,
 }
 
 export type ChainIdToAddress = { [chainId: number]: string };
