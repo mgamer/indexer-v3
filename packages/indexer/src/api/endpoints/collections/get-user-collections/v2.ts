@@ -9,6 +9,7 @@ import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 import { CollectionSets } from "@/models/collection-sets";
 import { Sources } from "@/models/sources";
 import { getJoiCollectionBaseObject } from "@/common/joi";
+import { Takedowns } from "@/models/takedowns";
 
 const version = "v2";
 
@@ -302,26 +303,30 @@ export const getUserCollectionsV2Options: RouteOptions = {
       const result = await redb.manyOrNone(baseQuery, { ...params, ...query });
 
       const sources = await Sources.getInstance();
+      const takedowns = await Takedowns.getCollections(result.map((r) => r.id));
 
       const collections = _.map(result, async (r) => {
         const response = {
           collection: {
-            ...(await getJoiCollectionBaseObject({
-              id: r.id,
-              slug: r.slug,
-              name: r.name,
-              image: r.image,
-              banner: r.banner,
-              discordUrl: r.discord_url,
-              externalUrl: r.external_url,
-              twitterUsername: r.twitter_username,
-              openseaVerificationStatus: r.opensea_verification_status,
-              description: r.description,
-              sampleImages: r.sample_images,
-              tokenCount: r.token_count,
-              tokenSetId: r.token_set_id,
-              contract: r.contract,
-            })),
+            ...(await getJoiCollectionBaseObject(
+              {
+                id: r.id,
+                slug: r.slug,
+                name: r.name,
+                image: r.image,
+                banner: r.banner,
+                discordUrl: r.discord_url,
+                externalUrl: r.external_url,
+                twitterUsername: r.twitter_username,
+                openseaVerificationStatus: r.opensea_verification_status,
+                description: r.description,
+                sampleImages: r.sample_images,
+                tokenCount: r.token_count,
+                tokenSetId: r.token_set_id,
+                contract: r.contract,
+              },
+              takedowns
+            )),
             floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
             rank: {
               "1day": r.day1_rank,

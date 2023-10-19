@@ -6,7 +6,7 @@ import Joi from "joi";
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
-import { isTakedownCollection } from "@/utils/takedown";
+import { Takedowns } from "@/models/takedowns";
 
 const version = "v1";
 
@@ -177,40 +177,41 @@ export const getCollectionsV1Options: RouteOptions = {
         ) y ON TRUE
       `;
 
-      const result = await redb.manyOrNone(baseQuery, query).then((result) =>
-        result.map(async (r) => {
-          const isTakedown = await isTakedownCollection(r.id);
-          const contract = fromBuffer(r.contract);
+      const results = await redb.manyOrNone(baseQuery, query);
+      const takedowns = await Takedowns.getCollections(results.map((r) => r.id));
 
-          return {
-            id: !isTakedown ? r.id : contract,
-            slug: !isTakedown ? r.slug : contract,
-            name: !isTakedown ? r.name : contract,
-            metadata: !isTakedown ? r.metadata : null,
-            sampleImages: !isTakedown ? r.sample_images || [] : [],
-            tokenCount: String(r.token_count),
-            tokenSetId: !isTakedown ? r.token_set_id : `contract:${contract}`,
-            royalties: !isTakedown && r.royalties ? r.royalties[0] : null,
-            floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
-            topBidValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
-            topBidMaker: r.top_buy_maker ? fromBuffer(r.top_buy_maker) : null,
-            rank: {
-              "1day": r.day1_rank,
-              "7day": r.day7_rank,
-              "30day": r.day30_rank,
-              allTime: r.all_time_rank,
-            },
-            volume: {
-              "1day": r.day1_volume ? formatEth(r.day1_volume) : null,
-              "7day": r.day7_volume ? formatEth(r.day7_volume) : null,
-              "30day": r.day30_volume ? formatEth(r.day30_volume) : null,
-              allTime: r.all_time_volume ? formatEth(r.all_time_volume) : null,
-            },
-          };
-        })
-      );
+      results.map(async (r) => {
+        const isTakedown = takedowns.includes(r.id);
+        const contract = fromBuffer(r.contract);
 
-      return { collections: await Promise.all(result) };
+        return {
+          id: !isTakedown ? r.id : contract,
+          slug: !isTakedown ? r.slug : contract,
+          name: !isTakedown ? r.name : contract,
+          metadata: !isTakedown ? r.metadata : null,
+          sampleImages: !isTakedown ? r.sample_images || [] : [],
+          tokenCount: String(r.token_count),
+          tokenSetId: !isTakedown ? r.token_set_id : `contract:${contract}`,
+          royalties: !isTakedown && r.royalties ? r.royalties[0] : null,
+          floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
+          topBidValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
+          topBidMaker: r.top_buy_maker ? fromBuffer(r.top_buy_maker) : null,
+          rank: {
+            "1day": r.day1_rank,
+            "7day": r.day7_rank,
+            "30day": r.day30_rank,
+            allTime: r.all_time_rank,
+          },
+          volume: {
+            "1day": r.day1_volume ? formatEth(r.day1_volume) : null,
+            "7day": r.day7_volume ? formatEth(r.day7_volume) : null,
+            "30day": r.day30_volume ? formatEth(r.day30_volume) : null,
+            allTime: r.all_time_volume ? formatEth(r.all_time_volume) : null,
+          },
+        };
+      });
+
+      return { collections: await Promise.all(results) };
     } catch (error) {
       logger.error(`get-collections-${version}-handler`, `Handler failure: ${error}`);
       throw error;

@@ -22,6 +22,7 @@ import { config } from "@/config/index";
 import { CollectionSets } from "@/models/collection-sets";
 import { Sources } from "@/models/sources";
 import { Assets } from "@/utils/assets";
+import { Takedowns } from "@/models/takedowns";
 
 const version = "v7";
 
@@ -733,6 +734,7 @@ export const getCollectionsV7Options: RouteOptions = {
 
       const results = await redb.manyOrNone(baseQuery, query);
 
+      const takedowns = await Takedowns.getCollections(results.map((r) => r.id));
       const sources = await Sources.getInstance();
       const collections = await Promise.all(
         results.map(async (r) => {
@@ -753,27 +755,30 @@ export const getCollectionsV7Options: RouteOptions = {
 
           return {
             chainId: config.chainId,
-            ...(await getJoiCollectionBaseObject({
-              id: r.id,
-              slug: r.slug,
-              createdAt: r.created_at,
-              updatedAt: r.updated_at,
-              name: r.name,
-              image: r.image,
-              banner: r.banner,
-              discordUrl: r.discord_url,
-              externalUrl: r.external_url,
-              twitterUsername: r.twitter_username,
-              openseaVerificationStatus: r.opensea_verification_status,
-              description: r.description,
-              sampleImages: sampleImages,
-              tokenCount: r.token_count,
-              onSaleCount: r.on_sale_count,
-              contract: r.contract,
-              tokenSetId: r.token_set_id,
-              royalties: r.royalties,
-              newRoyalties: r.new_royalties,
-            })),
+            ...(await getJoiCollectionBaseObject(
+              {
+                id: r.id,
+                slug: r.slug,
+                createdAt: r.created_at,
+                updatedAt: r.updated_at,
+                name: r.name,
+                image: r.image,
+                banner: r.banner,
+                discordUrl: r.discord_url,
+                externalUrl: r.external_url,
+                twitterUsername: r.twitter_username,
+                openseaVerificationStatus: r.opensea_verification_status,
+                description: r.description,
+                sampleImages: sampleImages,
+                tokenCount: r.token_count,
+                onSaleCount: r.on_sale_count,
+                contract: r.contract,
+                tokenSetId: r.token_set_id,
+                royalties: r.royalties,
+                newRoyalties: r.new_royalties,
+              },
+              takedowns
+            )),
             creator: r.creator ? fromBuffer(r.creator) : null,
             floorAsk: {
               id: r.floor_sell_id,

@@ -6,7 +6,7 @@ import Joi from "joi";
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, toBuffer } from "@/common/utils";
-import { isTakedownCollection } from "@/utils/takedown";
+import { Takedowns } from "@/models/takedowns";
 
 const version = "v1";
 
@@ -118,8 +118,10 @@ export const getUserCollectionsV1Options: RouteOptions = {
       baseQuery += ` LIMIT $/limit/`;
 
       const result = await redb.manyOrNone(baseQuery, { ...params, ...query });
+      const takedowns = await Takedowns.getCollections(result.map((r) => r.id));
+
       const collections = _.map(result, async (r) => {
-        const isTakedown = await isTakedownCollection(r.id);
+        const isTakedown = takedowns.includes(r.id);
         return {
           collection: {
             id: !isTakedown ? r.id : r.contract,

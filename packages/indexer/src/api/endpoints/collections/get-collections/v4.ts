@@ -9,6 +9,7 @@ import { logger } from "@/common/logger";
 import { formatEth, fromBuffer } from "@/common/utils";
 import { CollectionSets } from "@/models/collection-sets";
 import { getJoiCollectionDeprecatedBaseObject } from "@/common/joi";
+import { Takedowns } from "@/models/takedowns";
 
 const version = "v4";
 
@@ -289,25 +290,29 @@ export const getCollectionsV4Options: RouteOptions = {
       `;
 
       const result = await redb.manyOrNone(baseQuery, query);
+      const takedowns = await Takedowns.getCollections(result.map((r) => r.id));
 
       if (result) {
         collections = result.map(async (r) => {
           const response = {
-            ...(await getJoiCollectionDeprecatedBaseObject({
-              id: r.id,
-              slug: r.slug,
-              name: r.name,
-              image: r.image,
-              banner: r.banner,
-              discordUrl: r.discord_url,
-              externalUrl: r.external_url,
-              twitterUsername: r.twitter_username,
-              description: r.description,
-              sampleImages: r.sample_images,
-              tokenCount: r.token_count,
-              contract: r.contract,
-              tokenSetId: r.token_set_id,
-            })),
+            ...(await getJoiCollectionDeprecatedBaseObject(
+              {
+                id: r.id,
+                slug: r.slug,
+                name: r.name,
+                image: r.image,
+                banner: r.banner,
+                discordUrl: r.discord_url,
+                externalUrl: r.external_url,
+                twitterUsername: r.twitter_username,
+                description: r.description,
+                sampleImages: r.sample_images,
+                tokenCount: r.token_count,
+                contract: r.contract,
+                tokenSetId: r.token_set_id,
+              },
+              takedowns
+            )),
             floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
             rank: {
               "1day": r.day1_rank,

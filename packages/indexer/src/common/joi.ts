@@ -16,7 +16,6 @@ import { OrderKind } from "@/orderbook/orders";
 import { Assets, ImageSize } from "@/utils/assets";
 import { Currency, getCurrency } from "@/utils/currencies";
 import { getUSDAndCurrencyPrices, getUSDAndNativePrices } from "@/utils/prices";
-import { isTakedownCollection, isTakedownToken } from "@/utils/takedown";
 
 // --- Prices ---
 
@@ -1005,28 +1004,31 @@ export const getJoiSourceObject = (source: SourcesEntity | undefined, full = tru
 
 // --- Collections ---
 
-export const getJoiCollectionBaseObject = async (collection: {
-  id: string;
-  slug: string;
-  createdAt?: number;
-  updatedAt?: number;
-  name: string;
-  image: any;
-  sampleImages: any;
-  banner: string;
-  discordUrl: string;
-  externalUrl: string;
-  twitterUsername: string;
-  openseaVerificationStatus?: string;
-  description: string;
-  tokenCount: number;
-  onSaleCount?: number;
-  contract: Buffer;
-  tokenSetId: string;
-  royalties?: any;
-  newRoyalties?: any;
-}) => {
-  const isTakedown = await isTakedownCollection(collection.id);
+export const getJoiCollectionBaseObject = async (
+  collection: {
+    id: string;
+    slug: string;
+    createdAt?: number;
+    updatedAt?: number;
+    name: string;
+    image: any;
+    sampleImages: any;
+    banner: string;
+    discordUrl: string;
+    externalUrl: string;
+    twitterUsername: string;
+    openseaVerificationStatus?: string;
+    description: string;
+    tokenCount: number;
+    onSaleCount?: number;
+    contract: Buffer;
+    tokenSetId: string;
+    royalties?: any;
+    newRoyalties?: any;
+  },
+  takedowns: string[]
+) => {
+  const isTakedown = takedowns.includes(collection.id);
   const contract = fromBuffer(collection.contract);
 
   return {
@@ -1075,22 +1077,25 @@ export const getJoiCollectionBaseObject = async (collection: {
   };
 };
 
-export const getJoiCollectionDeprecatedBaseObject = async (collection: {
-  id: string;
-  slug: string;
-  name: string;
-  image: any;
-  sampleImages: any;
-  banner: string;
-  discordUrl?: string;
-  externalUrl?: string;
-  twitterUsername?: string;
-  description?: string;
-  tokenCount: number;
-  contract: Buffer;
-  tokenSetId: string;
-}) => {
-  const isTakedown = await isTakedownCollection(collection.id);
+export const getJoiCollectionDeprecatedBaseObject = async (
+  collection: {
+    id: string;
+    slug: string;
+    name: string;
+    image: any;
+    sampleImages: any;
+    banner: string;
+    discordUrl?: string;
+    externalUrl?: string;
+    twitterUsername?: string;
+    description?: string;
+    tokenCount: number;
+    contract: Buffer;
+    tokenSetId: string;
+  },
+  takedowns: string[]
+) => {
+  const isTakedown = takedowns.includes(collection.id);
   const contract = fromBuffer(collection.contract);
 
   return {
@@ -1118,34 +1123,35 @@ export const getJoiCollectionDeprecatedBaseObject = async (collection: {
 
 // -- Tokens --
 
-export const getJoiTokenBaseObject = async (token: {
-  contract: string;
-  tokenId: string;
-  name: string;
-  description: string;
-  image: string;
-  metadata?: any;
-  media: string;
-  kind: string;
-  isFlagged: boolean;
-  lastFlagUpdate?: string | null;
-  lastFlagChange?: string | null;
-  supply: number;
-  remainingSupply: number;
-  rarity: number;
-  rarityRank: number;
-  collection: {
-    id: string;
+export const getJoiTokenBaseObject = async (
+  token: {
+    contract: string;
+    tokenId: string;
     name: string;
+    description: string;
     image: string;
-    slug: string;
-    creator?: string | null;
-    tokenCount?: number;
-  };
-}) => {
-  const isTakedown =
-    (await isTakedownToken(token.contract, token.tokenId)) ||
-    (await isTakedownCollection(token.collection.id));
+    metadata?: any;
+    media: string;
+    kind: string;
+    isFlagged: boolean;
+    lastFlagUpdate?: string | null;
+    lastFlagChange?: string | null;
+    supply: number;
+    remainingSupply: number;
+    rarity: number;
+    rarityRank: number;
+    collection: {
+      id: string;
+      name: string;
+      image: string;
+      slug: string;
+      creator?: string | null;
+      tokenCount?: number;
+    };
+  },
+  takedowns: string[]
+) => {
+  const isTakedown = takedowns.includes(token.tokenId);
 
   return {
     contract: token.contract,

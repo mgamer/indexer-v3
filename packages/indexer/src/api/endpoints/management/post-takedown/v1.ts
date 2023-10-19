@@ -10,6 +10,7 @@ import { regex } from "@/common/utils";
 import { ApiKeyManager } from "@/models/api-keys";
 import { idb } from "@/common/db";
 import { config } from "@/config/index";
+import { Takedowns } from "@/models/takedowns";
 
 const version = "v1";
 
@@ -48,8 +49,8 @@ export const postTakedownV1Options: RouteOptions = {
     const payload = request.payload as any;
 
     try {
-      let id;
-      let type;
+      const id = payload.token ? payload.token : payload.collection;
+      const type = payload.token ? "token" : "collection";
       const apiKey = await ApiKeyManager.getApiKey(payload.key);
 
       if (_.isNull(apiKey)) {
@@ -58,16 +59,6 @@ export const postTakedownV1Options: RouteOptions = {
 
       if (!apiKey.permissions?.takedown) {
         throw Boom.unauthorized("Not allowed");
-      }
-
-      if (payload.token) {
-        id = payload.token;
-        type = "token";
-      }
-
-      if (payload.collection) {
-        id = payload.collection;
-        type = "collection";
       }
 
       await idb.oneOrNone(
@@ -95,6 +86,12 @@ export const postTakedownV1Options: RouteOptions = {
           active: payload.active,
         }
       );
+
+      if (payload.active) {
+        Takedowns.add(type, id);
+      } else {
+        Takedowns.delete(type, id);
+      }
 
       return { message: "Takedown request accepted" };
     } catch (error) {

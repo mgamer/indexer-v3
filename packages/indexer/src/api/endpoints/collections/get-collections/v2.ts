@@ -7,6 +7,7 @@ import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 import { getJoiCollectionDeprecatedBaseObject } from "@/common/joi";
+import { Takedowns } from "@/models/takedowns";
 
 const version = "v2";
 
@@ -178,9 +179,12 @@ export const getCollectionsV2Options: RouteOptions = {
         ) y ON TRUE
       `;
 
-      const result = await redb.manyOrNone(baseQuery, query).then((result) =>
-        result.map(async (r) => ({
-          ...(await getJoiCollectionDeprecatedBaseObject({
+      const results = await redb.manyOrNone(baseQuery, query);
+      const takedowns = await Takedowns.getCollections(results.map((r) => r.id));
+
+      results.map(async (r) => ({
+        ...(await getJoiCollectionDeprecatedBaseObject(
+          {
             id: r.id,
             slug: r.slug,
             name: r.name,
@@ -190,19 +194,20 @@ export const getCollectionsV2Options: RouteOptions = {
             tokenCount: r.token_count,
             contract: r.contract,
             tokenSetId: r.token_set_id,
-          })),
-          floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
-          topBidValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
-          topBidMaker: r.top_buy_maker ? fromBuffer(r.top_buy_maker) : null,
-          "1dayVolume": r.day1_volume ? formatEth(r.day1_volume) : null,
-          "7dayVolume": r.day7_volume ? formatEth(r.day7_volume) : null,
-          "30dayVolume": r.day30_volume ? formatEth(r.day30_volume) : null,
-          allTimeVolume: r.all_time_volume ? formatEth(r.all_time_volume) : null,
-          allTimeRank: r.all_time_rank,
-        }))
-      );
+          },
+          takedowns
+        )),
+        floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
+        topBidValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
+        topBidMaker: r.top_buy_maker ? fromBuffer(r.top_buy_maker) : null,
+        "1dayVolume": r.day1_volume ? formatEth(r.day1_volume) : null,
+        "7dayVolume": r.day7_volume ? formatEth(r.day7_volume) : null,
+        "30dayVolume": r.day30_volume ? formatEth(r.day30_volume) : null,
+        allTimeVolume: r.all_time_volume ? formatEth(r.all_time_volume) : null,
+        allTimeRank: r.all_time_rank,
+      }));
 
-      return { collections: await Promise.all(result) };
+      return { collections: await Promise.all(results) };
     } catch (error) {
       logger.error(`get-collections-${version}-handler`, `Handler failure: ${error}`);
       throw error;
