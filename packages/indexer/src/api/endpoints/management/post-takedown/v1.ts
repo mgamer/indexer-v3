@@ -9,6 +9,7 @@ import { logger } from "@/common/logger";
 import { regex } from "@/common/utils";
 import { ApiKeyManager } from "@/models/api-keys";
 import { idb } from "@/common/db";
+import { config } from "@/config/index";
 
 const version = "v1";
 
@@ -85,12 +86,12 @@ export const postTakedownV1Options: RouteOptions = {
           ON CONFLICT (id, type)
           DO UPDATE SET
             "active" = $/active/,
-            "updated_at" = now()         
+            "updated_at" = now()
         `,
         {
           id,
           type,
-          api_key: apiKey.key,
+          api_key: apiKey.key !== config.adminApiKey ? apiKey.key : null,
           active: payload.active,
         }
       );

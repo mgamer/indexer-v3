@@ -8,7 +8,7 @@ CREATE TYPE "takedown_type_t" AS ENUM (
 CREATE TABLE "takedowns" (  
   "id" TEXT NOT NULL,
   "type" "takedown_type_t" NOT NULL,  
-  "api_key" TEXT NOT NULL,
+  "api_key" TEXT,
   "created_at" TIMESTAMPTZ DEFAULT now(),
   "updated_at" TIMESTAMPTZ DEFAULT now(),
   "active" BOOLEAN NOT NULL DEFAULT TRUE
