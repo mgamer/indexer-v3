@@ -13,6 +13,7 @@ import {
   getJoiPriceObject,
   getJoiSaleObject,
   getJoiSourceObject,
+  getJoiTokenBaseObject,
   JoiAttributeValue,
   JoiPrice,
   JoiSale,
@@ -29,7 +30,6 @@ import {
 } from "@/common/utils";
 import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
-import { Assets, ImageSize } from "@/utils/assets";
 import { CollectionSets } from "@/models/collection-sets";
 import { Collections } from "@/models/collections";
 
@@ -1271,33 +1271,37 @@ export const getTokensV6Options: RouteOptions = {
         return {
           token: {
             chainId: config.chainId,
-            contract,
-            tokenId,
-            name: r.name,
-            description: r.description,
-            image: Assets.getLocalAssetsLink(r.image),
-            imageSmall: Assets.getResizedImageUrl(r.image, ImageSize.small),
-            imageLarge: Assets.getResizedImageUrl(r.image, ImageSize.large),
-            metadata: Object.values(metadata).every((el) => el === undefined)
-              ? undefined
-              : metadata,
-            media: r.media,
-            kind: r.kind,
-            isFlagged: Boolean(Number(r.is_flagged)),
-            lastFlagUpdate: r.last_flag_update ? new Date(r.last_flag_update).toISOString() : null,
-            lastFlagChange: r.last_flag_change ? new Date(r.last_flag_change).toISOString() : null,
-            supply: !_.isNull(r.supply) ? r.supply : null,
-            remainingSupply: !_.isNull(r.remaining_supply) ? r.remaining_supply : null,
-            rarity: r.rarity_score,
-            rarityRank: r.rarity_rank,
-            collection: {
-              id: r.collection_id,
-              name: r.collection_name,
-              image: Assets.getLocalAssetsLink(r.collection_image),
-              slug: r.slug,
-              creator: r.creator ? fromBuffer(r.creator) : null,
-              tokenCount: r.token_count,
-            },
+            ...(await getJoiTokenBaseObject({
+              contract,
+              tokenId,
+              name: r.name,
+              description: r.description,
+              image: r.image,
+              metadata: Object.values(metadata).every((el) => el === undefined)
+                ? undefined
+                : metadata,
+              media: r.media,
+              kind: r.kind,
+              isFlagged: Boolean(Number(r.is_flagged)),
+              lastFlagUpdate: r.last_flag_update
+                ? new Date(r.last_flag_update).toISOString()
+                : null,
+              lastFlagChange: r.last_flag_change
+                ? new Date(r.last_flag_change).toISOString()
+                : null,
+              supply: !_.isNull(r.supply) ? r.supply : null,
+              remainingSupply: !_.isNull(r.remaining_supply) ? r.remaining_supply : null,
+              rarity: r.rarity_score,
+              rarityRank: r.rarity_rank,
+              collection: {
+                id: r.collection_id,
+                name: r.collection_name,
+                image: r.collection_image,
+                slug: r.slug,
+                creator: r.creator ? fromBuffer(r.creator) : null,
+                tokenCount: r.token_count,
+              },
+            })),
             lastSale:
               query.includeLastSale && r.last_sale_currency
                 ? await getJoiSaleObject({

@@ -13,10 +13,11 @@ import { FeeRecipients } from "@/models/fee-recipients";
 import { Sources } from "@/models/sources";
 import { SourcesEntity } from "@/models/sources/sources-entity";
 import { OrderKind } from "@/orderbook/orders";
-import { Assets } from "@/utils/assets";
+import { Assets, ImageSize } from "@/utils/assets";
 import { Currency, getCurrency } from "@/utils/currencies";
 import { getUSDAndCurrencyPrices, getUSDAndNativePrices } from "@/utils/prices";
 import { Collections } from "@/models/collections";
+import { Tokens } from "@/models/tokens";
 
 // --- Prices ---
 
@@ -1113,5 +1114,70 @@ export const getJoiCollectionDeprecatedBaseObject = async (collection: {
     tokenCount: String(collection.tokenCount),
     primaryContract: contract,
     tokenSetId: !isTakedown ? collection.id : `contract:${collection.contract}`,
+  };
+};
+
+// -- Tokens --
+
+export const getJoiTokenBaseObject = async (token: {
+  contract: string;
+  tokenId: string;
+  name: string;
+  description: string;
+  image: string;
+  metadata?: any;
+  media: string;
+  kind: string;
+  isFlagged: boolean;
+  lastFlagUpdate?: string | null;
+  lastFlagChange?: string | null;
+  supply: number;
+  remainingSupply: number;
+  rarity: number;
+  rarityRank: number;
+  collection: {
+    id: string;
+    name: string;
+    image: string;
+    slug: string;
+    creator?: string | null;
+    tokenCount?: number;
+  };
+}) => {
+  const isTakedown =
+    (await Tokens.isTakedown(token.contract, token.tokenId)) ||
+    (await Collections.isTakedown(token.collection.id));
+
+  return {
+    contract: token.contract,
+    tokenId: token.tokenId,
+    name: !isTakedown ? token.name : null,
+    description: !isTakedown ? token.description : null,
+    image: !isTakedown ? Assets.getLocalAssetsLink(token.image) : null,
+    imageSmall: !isTakedown ? Assets.getResizedImageUrl(token.image, ImageSize.small) : null,
+    imageLarge: !isTakedown ? Assets.getResizedImageUrl(token.image, ImageSize.large) : null,
+    metadata: token.metadata ? (!isTakedown ? token.metadata : null) : undefined,
+    media: !isTakedown ? token.media : null,
+    kind: token.kind,
+    isFlagged: !isTakedown ? token.isFlagged : false,
+    lastFlagUpdate: token.lastFlagUpdate,
+    lastFlagChange: token.lastFlagChange,
+    supply: token.supply,
+    remainingSupply: token.remainingSupply,
+    rarity: token.rarity,
+    rarityRank: token.rarityRank,
+    collection: {
+      id: !isTakedown ? token.collection.id : token.contract,
+      name: !isTakedown ? token.collection.name : token.contract,
+      image: !isTakedown ? Assets.getLocalAssetsLink(token.collection.image) : null,
+      slug: !isTakedown ? token.collection.slug : token.contract,
+      creator:
+        token.collection.creator !== undefined
+          ? !isTakedown
+            ? token.collection.creator
+            : null
+          : undefined,
+      tokenCount: token.collection.tokenCount,
+    },
   };
 };
