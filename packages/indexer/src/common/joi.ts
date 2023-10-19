@@ -1030,16 +1030,9 @@ export const getJoiCollectionBaseObject = async (
 ) => {
   const isTakedown = takedowns.includes(collection.id);
   const contract = fromBuffer(collection.contract);
-
-  return {
+  const result: any = {
     id: !isTakedown ? collection.id : contract,
     slug: !isTakedown ? collection.slug : contract,
-    createdAt: collection.createdAt
-      ? new Date(collection.createdAt * 1000).toISOString()
-      : undefined,
-    updatedAt: collection.updatedAt
-      ? new Date(collection.updatedAt * 1000).toISOString()
-      : undefined,
     name: !isTakedown ? collection.name : contract,
     image: !isTakedown
       ? Assets.getLocalAssetsLink(collection.image) ||
@@ -1051,18 +1044,27 @@ export const getJoiCollectionBaseObject = async (
     discordUrl: !isTakedown ? collection.discordUrl : null,
     externalUrl: !isTakedown ? collection.externalUrl : null,
     twitterUsername: !isTakedown ? collection.twitterUsername : null,
-    openseaVerificationStatus: collection.openseaVerificationStatus
-      ? !isTakedown
-        ? collection.openseaVerificationStatus
-        : null
-      : undefined,
     description: !isTakedown ? collection.description : null,
     sampleImages: !isTakedown ? Assets.getLocalAssetsLink(collection.sampleImages) || [] : [],
     tokenCount: String(collection.tokenCount),
-    onSaleCount: collection.onSaleCount ? String(collection.onSaleCount) : undefined,
     primaryContract: contract,
     tokenSetId: !isTakedown ? collection.tokenSetId : `contract:${contract}`,
-    royalties:
+  };
+
+  if (collection.createdAt !== undefined) {
+    result.createdAt = new Date(collection.createdAt * 1000).toISOString();
+  }
+  if (collection.updatedAt !== undefined) {
+    result.updatedAt = new Date(collection.updatedAt * 1000).toISOString();
+  }
+  if (collection.openseaVerificationStatus !== undefined) {
+    result.openseaVerificationStatus = !isTakedown ? collection.openseaVerificationStatus : null;
+  }
+  if (collection.onSaleCount !== undefined) {
+    result.onSaleCount = String(collection.onSaleCount);
+  }
+  if (collection.royalties !== undefined) {
+    result.royalties =
       !isTakedown && collection.royalties
         ? {
             // Main recipient, kept for backwards-compatibility only
@@ -1072,9 +1074,13 @@ export const getJoiCollectionBaseObject = async (
               .map((r: any) => r.bps)
               .reduce((a: number, b: number) => a + b, 0),
           }
-        : null,
-    allRoyalties: !isTakedown ? collection.newRoyalties ?? null : null,
-  };
+        : null;
+  }
+  if (collection.newRoyalties !== undefined) {
+    result.allRoyalties = !isTakedown ? collection.newRoyalties ?? null : null;
+  }
+
+  return result;
 };
 
 export const getJoiCollectionDeprecatedBaseObject = async (
@@ -1097,8 +1103,7 @@ export const getJoiCollectionDeprecatedBaseObject = async (
 ) => {
   const isTakedown = takedowns.includes(collection.id);
   const contract = fromBuffer(collection.contract);
-
-  return {
+  const result: any = {
     id: !isTakedown ? collection.id : contract,
     slug: !isTakedown ? collection.slug : contract,
     name: !isTakedown ? collection.name : contract,
@@ -1106,19 +1111,26 @@ export const getJoiCollectionDeprecatedBaseObject = async (
       ? collection.image || (collection.sampleImages?.length ? collection.sampleImages[0] : null)
       : null,
     banner: !isTakedown ? collection.banner : null,
-    discordUrl: collection.discordUrl ? (!isTakedown ? collection.discordUrl : null) : undefined,
-    externalUrl: collection.externalUrl ? (!isTakedown ? collection.externalUrl : null) : undefined,
-    twitterUsername: collection.twitterUsername
-      ? !isTakedown
-        ? collection.twitterUsername
-        : null
-      : undefined,
-    description: collection.description ? (!isTakedown ? collection.description : null) : undefined,
     sampleImages: !isTakedown ? collection.sampleImages || [] : [],
     tokenCount: String(collection.tokenCount),
     primaryContract: contract,
     tokenSetId: !isTakedown ? collection.id : `contract:${contract}`,
   };
+
+  if (collection.discordUrl !== undefined) {
+    result.discordUrl = !isTakedown ? collection.discordUrl : null;
+  }
+  if (collection.externalUrl !== undefined) {
+    result.externalUrl = !isTakedown ? collection.externalUrl : null;
+  }
+  if (collection.twitterUsername !== undefined) {
+    result.twitterUsername = !isTakedown ? collection.twitterUsername : null;
+  }
+  if (collection.description !== undefined) {
+    result.description = !isTakedown ? collection.description : null;
+  }
+
+  return result;
 };
 
 // -- Tokens --
@@ -1152,8 +1164,7 @@ export const getJoiTokenBaseObject = async (
   takedowns: (string | null)[]
 ) => {
   const isTakedown = takedowns.includes(token.tokenId);
-
-  return {
+  const result: any = {
     contract: token.contract,
     tokenId: token.tokenId,
     name: !isTakedown ? token.name : null,
@@ -1161,7 +1172,6 @@ export const getJoiTokenBaseObject = async (
     image: !isTakedown ? Assets.getLocalAssetsLink(token.image) : null,
     imageSmall: !isTakedown ? Assets.getResizedImageUrl(token.image, ImageSize.small) : null,
     imageLarge: !isTakedown ? Assets.getResizedImageUrl(token.image, ImageSize.large) : null,
-    metadata: token.metadata ? (!isTakedown ? token.metadata : null) : undefined,
     media: !isTakedown ? token.media : null,
     kind: token.kind,
     isFlagged: !isTakedown ? token.isFlagged : false,
@@ -1176,13 +1186,18 @@ export const getJoiTokenBaseObject = async (
       name: !isTakedown ? token.collection.name : token.contract,
       image: !isTakedown ? Assets.getLocalAssetsLink(token.collection.image) : null,
       slug: !isTakedown ? token.collection.slug : token.contract,
-      creator:
-        token.collection.creator !== undefined
-          ? !isTakedown
-            ? token.collection.creator
-            : null
-          : undefined,
-      tokenCount: token.collection.tokenCount,
     },
   };
+
+  if (token.metadata !== undefined) {
+    result.metadata = !isTakedown ? token.metadata : null;
+  }
+  if (token.collection.creator !== undefined) {
+    result.collection.creator = !isTakedown ? token.collection.creator : null;
+  }
+  if (token.collection.tokenCount !== undefined) {
+    result.collection.tokenCount = token.collection.tokenCount;
+  }
+
+  return result;
 };

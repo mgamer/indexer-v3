@@ -216,7 +216,7 @@ export const getCollectionsV3Options: RouteOptions = {
       const results = await redb.manyOrNone(baseQuery, query);
       const takedowns = await Takedowns.getCollections(results.map((r) => r.id));
 
-      results.map(async (r) => ({
+      const collections = results.map(async (r) => ({
         ...(await getJoiCollectionDeprecatedBaseObject(
           {
             id: r.id,
@@ -262,7 +262,7 @@ export const getCollectionsV3Options: RouteOptions = {
         },
       }));
 
-      return { collections: await Promise.all(results) };
+      return { collections: await Promise.all(collections) };
     } catch (error) {
       logger.error(`get-collections-${version}-handler`, `Handler failure: ${error}`);
       throw error;
