@@ -12,6 +12,7 @@ import {
 import { config } from "@/config/index";
 import { orderUpdatesByIdJob } from "@/jobs/order-updates/order-updates-by-id-job";
 import { redis } from "@/common/redis";
+import { logger } from "@/common/logger";
 
 export type TokenAttributes = {
   attributeId: number;
@@ -111,6 +112,17 @@ export class Tokens {
                    ${updateString}
                    WHERE contract = $/contract/
                    AND token_id = $/tokenId/`;
+
+    if (config.chainId === 11155111) {
+      logger.info(
+        "updateToken",
+        JSON.stringify({
+          topic: "debugTokenUpdate",
+          message: `Update token. contract=${contract}, tokenId=${tokenId}`,
+          token: `${contract}:${tokenId}`,
+        })
+      );
+    }
 
     return await idb.none(query, replacementValues);
   }
