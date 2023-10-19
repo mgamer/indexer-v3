@@ -16,8 +16,7 @@ import { OrderKind } from "@/orderbook/orders";
 import { Assets, ImageSize } from "@/utils/assets";
 import { Currency, getCurrency } from "@/utils/currencies";
 import { getUSDAndCurrencyPrices, getUSDAndNativePrices } from "@/utils/prices";
-import { Collections } from "@/models/collections";
-import { Tokens } from "@/models/tokens";
+import { isTakedownCollection, isTakedownToken } from "@/utils/takedown";
 
 // --- Prices ---
 
@@ -1027,7 +1026,7 @@ export const getJoiCollectionBaseObject = async (collection: {
   royalties?: any;
   newRoyalties?: any;
 }) => {
-  const isTakedown = await Collections.isTakedown(collection.id);
+  const isTakedown = await isTakedownCollection(collection.id);
   const contract = fromBuffer(collection.contract);
 
   return {
@@ -1091,7 +1090,7 @@ export const getJoiCollectionDeprecatedBaseObject = async (collection: {
   contract: Buffer;
   tokenSetId: string;
 }) => {
-  const isTakedown = await Collections.isTakedown(collection.id);
+  const isTakedown = await isTakedownCollection(collection.id);
   const contract = fromBuffer(collection.contract);
 
   return {
@@ -1145,8 +1144,8 @@ export const getJoiTokenBaseObject = async (token: {
   };
 }) => {
   const isTakedown =
-    (await Tokens.isTakedown(token.contract, token.tokenId)) ||
-    (await Collections.isTakedown(token.collection.id));
+    (await isTakedownToken(token.contract, token.tokenId)) ||
+    (await isTakedownCollection(token.collection.id));
 
   return {
     contract: token.contract,

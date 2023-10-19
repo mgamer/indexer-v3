@@ -9,7 +9,7 @@ import Joi from "joi";
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { parseEther } from "@ethersproject/units";
-import { JoiPrice, getJoiCollectionBaseObject, getJoiPriceObject } from "@/common/joi";
+import { JoiPrice, getJoiPriceObject, getJoiCollectionBaseObject } from "@/common/joi";
 import {
   buildContinuation,
   formatEth,

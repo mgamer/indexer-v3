@@ -6,7 +6,7 @@ import Joi from "joi";
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
-import { Collections } from "@/models/collections";
+import { isTakedownCollection } from "@/utils/takedown";
 
 const version = "v1";
 
@@ -179,7 +179,7 @@ export const getCollectionsV1Options: RouteOptions = {
 
       const result = await redb.manyOrNone(baseQuery, query).then((result) =>
         result.map(async (r) => {
-          const isTakedown = await Collections.isTakedown(r.id);
+          const isTakedown = await isTakedownCollection(r.id);
           const contract = fromBuffer(r.contract);
 
           return {

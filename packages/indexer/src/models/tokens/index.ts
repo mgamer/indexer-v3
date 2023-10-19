@@ -11,7 +11,6 @@ import {
 } from "@/models/tokens/tokens-entity";
 import { config } from "@/config/index";
 import { orderUpdatesByIdJob } from "@/jobs/order-updates/order-updates-by-id-job";
-import { redis } from "@/common/redis";
 import { logger } from "@/common/logger";
 
 export type TokenAttributes = {
@@ -463,29 +462,5 @@ export class Tokens {
       value: r.value,
       maker: fromBuffer(r.maker),
     }));
-  }
-
-  public static async isTakedown(contract: string, tokenId: string) {
-    const token = `${contract}:${tokenId}`;
-    let active = await redis.get(`token-takedown:${token}`);
-
-    if (!active) {
-      active = await idb.oneOrNone(
-        `
-          SELECT
-            active
-          FROM takedowns t
-          WHERE t.id = $/id/
-          AND t.type = 'token'
-      `,
-        {
-          id: token,
-        }
-      );
-
-      await redis.set(`token-takedown:${token}`, active ? 1 : 0, "EX", 3600);
-    }
-
-    return active;
   }
 }

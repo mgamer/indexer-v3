@@ -6,7 +6,7 @@ import Joi from "joi";
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, toBuffer } from "@/common/utils";
-import { Collections } from "@/models/collections";
+import { isTakedownCollection } from "@/utils/takedown";
 
 const version = "v1";
 
@@ -118,8 +118,8 @@ export const getUserCollectionsV1Options: RouteOptions = {
       baseQuery += ` LIMIT $/limit/`;
 
       const result = await redb.manyOrNone(baseQuery, { ...params, ...query });
-      const collections = _.map(result, (r) => {
-        const isTakedown = Collections.isTakedown(r.id);
+      const collections = _.map(result, async (r) => {
+        const isTakedown = await isTakedownCollection(r.id);
         return {
           collection: {
             id: !isTakedown ? r.id : r.contract,
@@ -136,7 +136,7 @@ export const getUserCollectionsV1Options: RouteOptions = {
         };
       });
 
-      return { collections };
+      return { collections: await Promise.all(collections) };
     } catch (error) {
       logger.error(`get-user-collections-${version}-handler`, `Handler failure: ${error}`);
       throw error;

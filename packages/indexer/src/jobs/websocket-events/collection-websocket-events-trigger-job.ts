@@ -8,7 +8,7 @@ import { idb } from "@/common/db";
 import { redis } from "@/common/redis";
 import { Sources } from "@/models/sources";
 import { formatValidBetween } from "@/jobs/websocket-events/utils";
-import { Collections } from "@/models/collections";
+import { isTakedownCollection } from "@/utils/takedown";
 
 interface CollectionInfo {
   id: string;
@@ -202,7 +202,7 @@ export class CollectionWebsocketEventsTriggerQueueJob extends AbstractRabbitMqJo
         ? sources.get(r.non_flagged_floor_sell_source_id_int)
         : null;
 
-      const isTakedown = Collections.isTakedown(r.id);
+      const isTakedown = await isTakedownCollection(r.id);
       const id = !isTakedown ? r.id : r.contract;
 
       await publishWebsocketEvent({

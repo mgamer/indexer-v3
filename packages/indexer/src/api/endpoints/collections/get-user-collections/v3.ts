@@ -8,7 +8,7 @@ import { logger } from "@/common/logger";
 import { formatEth, fromBuffer, regex, toBuffer } from "@/common/utils";
 import { CollectionSets } from "@/models/collection-sets";
 import { Sources } from "@/models/sources";
-import { getJoiCollectionBaseObject, getJoiPriceObject, JoiPrice } from "@/common/joi";
+import { getJoiPriceObject, JoiPrice, getJoiCollectionBaseObject } from "@/common/joi";
 import * as Sdk from "@reservoir0x/sdk";
 import { config } from "@/config/index";
 
