@@ -16,7 +16,7 @@ CREATE TABLE "takedowns" (
 
 ALTER TABLE "takedowns"
   ADD CONSTRAINT "takedowns_pk"
-  PRIMARY KEY ("id", "type", "api_key");
+  PRIMARY KEY ("id", "type");
 
 -- Down Migration
 

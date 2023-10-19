@@ -7,9 +7,8 @@ import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, fromBuffer, regex, toBuffer } from "@/common/utils";
 import { CollectionSets } from "@/models/collection-sets";
-import { Assets } from "@/utils/assets";
 import { Sources } from "@/models/sources";
-import { getJoiPriceObject, JoiPrice } from "@/common/joi";
+import { getJoiCollectionBaseObject, getJoiPriceObject, JoiPrice } from "@/common/joi";
 import * as Sdk from "@reservoir0x/sdk";
 import { config } from "@/config/index";
 
@@ -316,22 +315,22 @@ export const getUserCollectionsV3Options: RouteOptions = {
       const collections = _.map(result, async (r) => {
         const response = {
           collection: {
-            id: r.id,
-            slug: r.slug,
-            name: r.name,
-            image:
-              Assets.getLocalAssetsLink(r.image) ||
-              (r.sample_images?.length ? Assets.getLocalAssetsLink(r.sample_images[0]) : null),
-            banner: r.banner,
-            discordUrl: r.discord_url,
-            externalUrl: r.external_url,
-            twitterUsername: r.twitter_username,
-            openseaVerificationStatus: r.opensea_verification_status,
-            description: r.description,
-            sampleImages: Assets.getLocalAssetsLink(r.sample_images) || [],
-            tokenCount: String(r.token_count),
-            primaryContract: fromBuffer(r.contract),
-            tokenSetId: r.token_set_id,
+            ...(await getJoiCollectionBaseObject({
+              id: r.id,
+              slug: r.slug,
+              name: r.name,
+              image: r.image,
+              banner: r.banner,
+              discordUrl: r.discord_url,
+              externalUrl: r.external_url,
+              twitterUsername: r.twitter_username,
+              openseaVerificationStatus: r.opensea_verification_status,
+              description: r.description,
+              sampleImages: r.sample_images,
+              tokenCount: r.token_count,
+              tokenSetId: r.token_set_id,
+              contract: r.contract,
+            })),
             floorAskPrice: r.floor_sell_value
               ? await getJoiPriceObject(
                   {

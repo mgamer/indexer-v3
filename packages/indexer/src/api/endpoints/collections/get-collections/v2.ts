@@ -6,6 +6,7 @@ import Joi from "joi";
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
+import { getJoiCollectionDeprecatedBaseObject } from "@/common/joi";
 
 const version = "v2";
 
@@ -178,16 +179,18 @@ export const getCollectionsV2Options: RouteOptions = {
       `;
 
       const result = await redb.manyOrNone(baseQuery, query).then((result) =>
-        result.map((r) => ({
-          id: r.id,
-          slug: r.slug,
-          name: r.name,
-          image: r.image || (r.sample_images?.length ? r.sample_images[0] : null),
-          banner: r.banner,
-          sampleImages: r.sample_images || [],
-          tokenCount: String(r.token_count),
-          primaryContract: fromBuffer(r.contract),
-          tokenSetId: r.token_set_id,
+        result.map(async (r) => ({
+          ...(await getJoiCollectionDeprecatedBaseObject({
+            id: r.id,
+            slug: r.slug,
+            name: r.name,
+            image: r.image,
+            banner: r.banner,
+            sampleImages: r.sample_images,
+            tokenCount: r.token_count,
+            contract: r.contract,
+            tokenSetId: r.token_set_id,
+          })),
           floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
           topBidValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
           topBidMaker: r.top_buy_maker ? fromBuffer(r.top_buy_maker) : null,
@@ -199,7 +202,7 @@ export const getCollectionsV2Options: RouteOptions = {
         }))
       );
 
-      return { collections: result };
+      return { collections: await Promise.all(result) };
     } catch (error) {
       logger.error(`get-collections-${version}-handler`, `Handler failure: ${error}`);
       throw error;

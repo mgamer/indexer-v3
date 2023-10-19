@@ -82,7 +82,7 @@ export const postTakedownV1Options: RouteOptions = {
             $/api_key/,
             $/active/
           )
-          ON CONFLICT (id, type, api_key)
+          ON CONFLICT (id, type)
           DO UPDATE SET
             "active" = $/active/,
             "updated_at" = now()         

@@ -9,7 +9,7 @@ import Joi from "joi";
 
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
-import { JoiPrice, getJoiPriceObject } from "@/common/joi";
+import { JoiPrice, getJoiCollectionBaseObject, getJoiPriceObject } from "@/common/joi";
 import {
   buildContinuation,
   formatEth,
@@ -753,36 +753,28 @@ export const getCollectionsV7Options: RouteOptions = {
 
           return {
             chainId: config.chainId,
-            id: r.id,
-            slug: r.slug,
-            createdAt: new Date(r.created_at * 1000).toISOString(),
-            updatedAt: new Date(r.updated_at * 1000).toISOString(),
-            name: r.name,
-            image:
-              r.image ?? (sampleImages.length ? Assets.getLocalAssetsLink(sampleImages[0]) : null),
-            banner: r.banner,
-            discordUrl: r.discord_url,
-            externalUrl: r.external_url,
-            twitterUsername: r.twitter_username,
-            openseaVerificationStatus: r.opensea_verification_status,
-            description: r.description,
-            sampleImages: Assets.getLocalAssetsLink(sampleImages) ?? [],
-            tokenCount: String(r.token_count),
-            onSaleCount: String(r.on_sale_count),
-            primaryContract: fromBuffer(r.contract),
-            tokenSetId: r.token_set_id,
+            ...(await getJoiCollectionBaseObject({
+              id: r.id,
+              slug: r.slug,
+              createdAt: r.created_at,
+              updatedAt: r.updated_at,
+              name: r.name,
+              image: r.image,
+              banner: r.banner,
+              discordUrl: r.discord_url,
+              externalUrl: r.external_url,
+              twitterUsername: r.twitter_username,
+              openseaVerificationStatus: r.opensea_verification_status,
+              description: r.description,
+              sampleImages: sampleImages,
+              tokenCount: r.token_count,
+              onSaleCount: r.on_sale_count,
+              contract: r.contract,
+              tokenSetId: r.token_set_id,
+              royalties: r.royalties,
+              newRoyalties: r.new_royalties,
+            })),
             creator: r.creator ? fromBuffer(r.creator) : null,
-            royalties: r.royalties
-              ? {
-                  // Main recipient, kept for backwards-compatibility only
-                  recipient: r.royalties.length ? r.royalties[0].recipient : null,
-                  breakdown: r.royalties.filter((r: any) => r.bps && r.recipient),
-                  bps: r.royalties
-                    .map((r: any) => r.bps)
-                    .reduce((a: number, b: number) => a + b, 0),
-                }
-              : null,
-            allRoyalties: r.new_royalties ?? null,
             floorAsk: {
               id: r.floor_sell_id,
               sourceDomain: sources.get(r.floor_sell_source_id_int)?.domain,

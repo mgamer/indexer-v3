@@ -28,6 +28,7 @@ import {
 import { recalcTokenCountQueueJob } from "@/jobs/collection-updates/recalc-token-count-queue-job";
 import { Contracts } from "@/models/contracts";
 import * as registry from "@/utils/royalties/registry";
+import { redis } from "@/common/redis";
 
 export class Collections {
   public static async getById(collectionId: string, readReplica = false) {
@@ -460,5 +461,28 @@ export class Collections {
 
     const collectionIds = await idb.manyOrNone(query, { community });
     return _.map(collectionIds, "id");
+  }
+
+  public static async isTakedown(collectionId: string) {
+    let active = await redis.get(`collection-takedown:${collectionId}`);
+
+    if (!active) {
+      active = await idb.oneOrNone(
+        `
+          SELECT
+            active
+          FROM takedowns t
+          WHERE t.id = $/id/
+          AND t.type = 'collection'
+      `,
+        {
+          id: collectionId,
+        }
+      );
+
+      await redis.set(`collection-takedown:${collectionId}`, active ? 1 : 0, "EX", 3600);
+    }
+
+    return active;
   }
 }

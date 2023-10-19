@@ -8,6 +8,7 @@ import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, fromBuffer } from "@/common/utils";
 import { CollectionSets } from "@/models/collection-sets";
+import { getJoiCollectionDeprecatedBaseObject } from "@/common/joi";
 
 const version = "v4";
 
@@ -290,21 +291,23 @@ export const getCollectionsV4Options: RouteOptions = {
       const result = await redb.manyOrNone(baseQuery, query);
 
       if (result) {
-        collections = result.map((r) => {
+        collections = result.map(async (r) => {
           const response = {
-            id: r.id,
-            slug: r.slug,
-            name: r.name,
-            image: r.image || (r.sample_images?.length ? r.sample_images[0] : null),
-            banner: r.banner,
-            discordUrl: r.discord_url,
-            externalUrl: r.external_url,
-            twitterUsername: r.twitter_username,
-            description: r.description,
-            sampleImages: r.sample_images || [],
-            tokenCount: String(r.token_count),
-            primaryContract: fromBuffer(r.contract),
-            tokenSetId: r.token_set_id,
+            ...(await getJoiCollectionDeprecatedBaseObject({
+              id: r.id,
+              slug: r.slug,
+              name: r.name,
+              image: r.image,
+              banner: r.banner,
+              discordUrl: r.discord_url,
+              externalUrl: r.external_url,
+              twitterUsername: r.twitter_username,
+              description: r.description,
+              sampleImages: r.sample_images,
+              tokenCount: r.token_count,
+              contract: r.contract,
+              tokenSetId: r.token_set_id,
+            })),
             floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
             rank: {
               "1day": r.day1_rank,
@@ -377,7 +380,7 @@ export const getCollectionsV4Options: RouteOptions = {
         }
       }
 
-      return { collections, continuation };
+      return { collections: await Promise.all(collections), continuation };
     } catch (error) {
       logger.error(`get-collections-${version}-handler`, `Handler failure: ${error}`);
       throw error;

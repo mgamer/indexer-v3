@@ -9,7 +9,7 @@ import Joi from "joi";
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { parseEther } from "@ethersproject/units";
-import { JoiPrice, getJoiPriceObject } from "@/common/joi";
+import { JoiPrice, getJoiCollectionBaseObject, getJoiPriceObject } from "@/common/joi";
 import {
   buildContinuation,
   formatEth,
@@ -659,34 +659,26 @@ export const getCollectionsV5Options: RouteOptions = {
           );
 
           return {
-            id: r.id,
-            slug: r.slug,
-            createdAt: new Date(r.created_at).toISOString(),
-            name: r.name,
-            image:
-              r.image ?? (sampleImages.length ? Assets.getLocalAssetsLink(sampleImages[0]) : null),
-            banner: r.banner,
-            discordUrl: r.discord_url,
-            externalUrl: r.external_url,
-            twitterUsername: r.twitter_username,
-            openseaVerificationStatus: r.opensea_verification_status,
-            description: r.description,
-            sampleImages: Assets.getLocalAssetsLink(sampleImages) ?? [],
-            tokenCount: String(r.token_count),
-            onSaleCount: String(r.on_sale_count),
-            primaryContract: fromBuffer(r.contract),
-            tokenSetId: r.token_set_id,
-            royalties: r.royalties
-              ? {
-                  // Main recipient, kept for backwards-compatibility only
-                  recipient: r.royalties.length ? r.royalties[0].recipient : null,
-                  breakdown: r.royalties.filter((r: any) => r.bps && r.recipient),
-                  bps: r.royalties
-                    .map((r: any) => r.bps)
-                    .reduce((a: number, b: number) => a + b, 0),
-                }
-              : null,
-            allRoyalties: r.new_royalties ?? null,
+            ...(await getJoiCollectionBaseObject({
+              id: r.id,
+              slug: r.slug,
+              createdAt: r.created_at,
+              name: r.name,
+              image: r.image,
+              banner: r.banner,
+              discordUrl: r.discord_url,
+              externalUrl: r.external_url,
+              twitterUsername: r.twitter_username,
+              openseaVerificationStatus: r.opensea_verification_status,
+              description: r.description,
+              sampleImages: sampleImages,
+              tokenCount: r.token_count,
+              onSaleCount: r.on_sale_count,
+              contract: r.contract,
+              tokenSetId: r.token_set_id,
+              royalties: r.royalties,
+              newRoyalties: r.new_royalties,
+            })),
             lastBuy: {
               value: r.last_buy_value ? formatEth(r.last_buy_value) : null,
               timestamp: r.last_buy_timestamp,

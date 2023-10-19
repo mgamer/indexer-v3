@@ -16,6 +16,7 @@ import { OrderKind } from "@/orderbook/orders";
 import { Assets } from "@/utils/assets";
 import { Currency, getCurrency } from "@/utils/currencies";
 import { getUSDAndCurrencyPrices, getUSDAndNativePrices } from "@/utils/prices";
+import { Collections } from "@/models/collections";
 
 // --- Prices ---
 
@@ -1000,4 +1001,117 @@ export const getJoiSourceObject = (source: SourcesEntity | undefined, full = tru
         url: full ? source.metadata.url : undefined,
       }
     : null;
+};
+
+// --- Collections ---
+
+export const getJoiCollectionBaseObject = async (collection: {
+  id: string;
+  slug: string;
+  createdAt?: number;
+  updatedAt?: number;
+  name: string;
+  image: any;
+  sampleImages: any;
+  banner: string;
+  discordUrl: string;
+  externalUrl: string;
+  twitterUsername: string;
+  openseaVerificationStatus?: string;
+  description: string;
+  tokenCount: number;
+  onSaleCount?: number;
+  contract: Buffer;
+  tokenSetId: string;
+  royalties?: any;
+  newRoyalties?: any;
+}) => {
+  const isTakedown = await Collections.isTakedown(collection.id);
+  const contract = fromBuffer(collection.contract);
+
+  return {
+    id: !isTakedown ? collection.id : contract,
+    slug: !isTakedown ? collection.slug : contract,
+    createdAt: collection.createdAt
+      ? new Date(collection.createdAt * 1000).toISOString()
+      : undefined,
+    updatedAt: collection.updatedAt
+      ? new Date(collection.updatedAt * 1000).toISOString()
+      : undefined,
+    name: !isTakedown ? collection.name : contract,
+    image: !isTakedown
+      ? Assets.getLocalAssetsLink(collection.image) ||
+        (collection.sampleImages?.length
+          ? Assets.getLocalAssetsLink(collection.sampleImages[0])
+          : null)
+      : null,
+    banner: !isTakedown ? collection.banner : null,
+    discordUrl: !isTakedown ? collection.discordUrl : null,
+    externalUrl: !isTakedown ? collection.externalUrl : null,
+    twitterUsername: !isTakedown ? collection.twitterUsername : null,
+    openseaVerificationStatus: collection.openseaVerificationStatus
+      ? !isTakedown
+        ? collection.openseaVerificationStatus
+        : null
+      : undefined,
+    description: !isTakedown ? collection.description : null,
+    sampleImages: !isTakedown ? Assets.getLocalAssetsLink(collection.sampleImages) || [] : [],
+    tokenCount: String(collection.tokenCount),
+    onSaleCount: collection.onSaleCount ? String(collection.onSaleCount) : undefined,
+    primaryContract: contract,
+    tokenSetId: !isTakedown ? collection.tokenSetId : `contract:${collection.contract}`,
+    royalties:
+      !isTakedown && collection.royalties
+        ? {
+            // Main recipient, kept for backwards-compatibility only
+            recipient: collection.royalties.length ? collection.royalties[0].recipient : null,
+            breakdown: collection.royalties.filter((r: any) => r.bps && r.recipient),
+            bps: collection.royalties
+              .map((r: any) => r.bps)
+              .reduce((a: number, b: number) => a + b, 0),
+          }
+        : null,
+    allRoyalties: !isTakedown ? collection.newRoyalties ?? null : null,
+  };
+};
+
+export const getJoiCollectionDeprecatedBaseObject = async (collection: {
+  id: string;
+  slug: string;
+  name: string;
+  image: any;
+  sampleImages: any;
+  banner: string;
+  discordUrl?: string;
+  externalUrl?: string;
+  twitterUsername?: string;
+  description?: string;
+  tokenCount: number;
+  contract: Buffer;
+  tokenSetId: string;
+}) => {
+  const isTakedown = await Collections.isTakedown(collection.id);
+  const contract = fromBuffer(collection.contract);
+
+  return {
+    id: !isTakedown ? collection.id : contract,
+    slug: !isTakedown ? collection.slug : contract,
+    name: !isTakedown ? collection.name : contract,
+    image: !isTakedown
+      ? collection.image || (collection.sampleImages?.length ? collection.sampleImages[0] : null)
+      : null,
+    banner: !isTakedown ? collection.banner : null,
+    discordUrl: collection.discordUrl ? (!isTakedown ? collection.discordUrl : null) : undefined,
+    externalUrl: collection.externalUrl ? (!isTakedown ? collection.externalUrl : null) : undefined,
+    twitterUsername: collection.twitterUsername
+      ? !isTakedown
+        ? collection.twitterUsername
+        : null
+      : undefined,
+    description: collection.description ? (!isTakedown ? collection.description : null) : undefined,
+    sampleImages: !isTakedown ? collection.sampleImages || [] : [],
+    tokenCount: String(collection.tokenCount),
+    primaryContract: contract,
+    tokenSetId: !isTakedown ? collection.id : `contract:${collection.contract}`,
+  };
 };
