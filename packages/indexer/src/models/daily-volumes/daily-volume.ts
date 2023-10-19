@@ -338,7 +338,8 @@ export class DailyVolume {
             day1_volume = 0,
             day1_rank = NULL,
             day1_floor_sell_value = NULL,
-            day1_volume_change = NULL
+            day1_volume_change = NULL,
+            day1_sales_count = 0
           WHERE id = $/collection_id/
         `,
           values: { collection_id: c.id },
