@@ -1026,7 +1026,7 @@ export const getJoiCollectionBaseObject = async (
     royalties?: any;
     newRoyalties?: any;
   },
-  takedowns: string[]
+  takedowns: (string | null)[]
 ) => {
   const isTakedown = takedowns.includes(collection.id);
   const contract = fromBuffer(collection.contract);
@@ -1061,7 +1061,7 @@ export const getJoiCollectionBaseObject = async (
     tokenCount: String(collection.tokenCount),
     onSaleCount: collection.onSaleCount ? String(collection.onSaleCount) : undefined,
     primaryContract: contract,
-    tokenSetId: !isTakedown ? collection.tokenSetId : `contract:${collection.contract}`,
+    tokenSetId: !isTakedown ? collection.tokenSetId : `contract:${contract}`,
     royalties:
       !isTakedown && collection.royalties
         ? {
@@ -1093,7 +1093,7 @@ export const getJoiCollectionDeprecatedBaseObject = async (
     contract: Buffer;
     tokenSetId: string;
   },
-  takedowns: string[]
+  takedowns: (string | null)[]
 ) => {
   const isTakedown = takedowns.includes(collection.id);
   const contract = fromBuffer(collection.contract);
@@ -1117,7 +1117,7 @@ export const getJoiCollectionDeprecatedBaseObject = async (
     sampleImages: !isTakedown ? collection.sampleImages || [] : [],
     tokenCount: String(collection.tokenCount),
     primaryContract: contract,
-    tokenSetId: !isTakedown ? collection.id : `contract:${collection.contract}`,
+    tokenSetId: !isTakedown ? collection.id : `contract:${contract}`,
   };
 };
 
@@ -1149,7 +1149,7 @@ export const getJoiTokenBaseObject = async (
       tokenCount?: number;
     };
   },
-  takedowns: string[]
+  takedowns: (string | null)[]
 ) => {
   const isTakedown = takedowns.includes(token.tokenId);
 
