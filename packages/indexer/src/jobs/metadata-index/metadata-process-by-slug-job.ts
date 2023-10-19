@@ -20,7 +20,7 @@ export type MetadataIndexProcessBySlugJobPayload = {
   method: string;
 };
 
-export class MetadataIndexProcessBySlugJob extends AbstractRabbitMqJobHandler {
+export default class MetadataIndexProcessBySlugJob extends AbstractRabbitMqJobHandler {
   queueName = "metadata-index-process-queue-by-slug";
   maxRetries = 10;
   concurrency = 1;
@@ -53,7 +53,6 @@ export class MetadataIndexProcessBySlugJob extends AbstractRabbitMqJobHandler {
     async function processSlug(refreshTokenBySlug: RefreshTokenBySlug) {
       try {
         const results = await openseaMetadataProvider.getTokensMetadataBySlug(
-          refreshTokenBySlug.contract,
           refreshTokenBySlug.slug,
           refreshTokenBySlug.continuation ?? ""
         );

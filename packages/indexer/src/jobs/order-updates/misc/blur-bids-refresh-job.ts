@@ -14,7 +14,7 @@ export type BlurBidsRefreshJobPayload = {
   collection: string;
 };
 
-export class BlurBidsRefreshJob extends AbstractRabbitMqJobHandler {
+export default class BlurBidsRefreshJob extends AbstractRabbitMqJobHandler {
   queueName = "blur-bids-refresh";
   maxRetries = 3;
   concurrency = 1;
@@ -27,24 +27,32 @@ export class BlurBidsRefreshJob extends AbstractRabbitMqJobHandler {
   protected async process(payload: BlurBidsRefreshJobPayload) {
     const { collection } = payload;
 
-    try {
-      const pricePoints = await axios
-        .get(`${config.orderFetcherBaseUrl}/api/blur-collection-bids?collection=${collection}`)
-        .then((response) => response.data.bids as Sdk.Blur.Types.BlurBidPricePoint[]);
+    if (config.chainId !== 1) {
+      return;
+    }
 
-      await orderbookOrdersJob.addToQueue([
-        {
-          kind: "blur-bid",
-          info: {
-            orderParams: {
-              collection,
-              pricePoints,
+    try {
+      await axios
+        .get(`${config.orderFetcherBaseUrl}/api/blur-collection-bids?collection=${collection}`)
+        .then(async (response) => {
+          const pricePoints = response.data.bids as Sdk.Blur.Types.BlurBidPricePoint[];
+          await orderbookOrdersJob.addToQueue([
+            {
+              kind: "blur-bid",
+              info: {
+                orderParams: {
+                  collection,
+                  pricePoints,
+                },
+                metadata: {},
+                fullUpdate: true,
+              },
             },
-            metadata: {},
-            fullUpdate: true,
-          },
-        },
-      ]);
+          ]);
+        })
+        .catch(() => {
+          // Skip any errors
+        });
 
       // Also refresh the royalties
       const lockKey = `blur-royalties-refresh-lock:${collection}`;

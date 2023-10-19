@@ -198,12 +198,6 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
-    path: "/admin/refresh-collection-flags",
-    options: adminEndpoints.postRefreshCollectionFlagsOptions,
-  });
-
-  server.route({
-    method: "POST",
     path: "/admin/update-source",
     options: adminEndpoints.postUpdateSourceOptions,
   });
@@ -326,12 +320,6 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/admin/get-marketplaces",
     options: adminEndpoints.getMarketplaces,
-  });
-
-  server.route({
-    method: "POST",
-    path: "/admin/flag-address",
-    options: adminEndpoints.postFlagAddressOptions,
   });
 
   server.route({
@@ -524,6 +512,12 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/collections/top-selling/v2",
     options: collectionsEndpoints.getTopSellingCollectionsV2Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/collections/trending/v1",
+    options: collectionsEndpoints.getTrendingCollectionsV1Options,
   });
 
   server.route({

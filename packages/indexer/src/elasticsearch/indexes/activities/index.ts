@@ -341,6 +341,269 @@ export const getTopSellingCollections = async (params: {
   );
 };
 
+export const getRecentSalesByCollection = async (
+  collections: string[],
+  fillType: TopSellingFillOptions
+) => {
+  const salesQuery = {
+    bool: {
+      filter: [
+        {
+          terms: {
+            "collection.id": collections,
+          },
+        },
+        {
+          terms: {
+            type: fillType == "any" ? ["sale", "mint"] : [fillType],
+          },
+        },
+      ],
+    },
+  } as any;
+
+  const collectionAggregation = {
+    collections: {
+      terms: {
+        field: "collection.id",
+      },
+      aggs: {
+        recent_sales: {
+          top_hits: {
+            sort: [
+              {
+                timestamp: {
+                  order: "desc",
+                },
+              },
+            ],
+            _source: {
+              includes: [
+                "contract",
+                "collection.name",
+                "collection.image",
+                "collection.id",
+                "name",
+                "toAddress",
+                "token.id",
+                "token.name",
+                "token.image",
+                "type",
+                "timestamp",
+                "pricing.price",
+                "pricing.priceDecimal",
+                "pricing.currencyPrice",
+                "pricing.usdPrice",
+                "pricing.feeBps",
+                "pricing.currency",
+                "pricing.value",
+                "pricing.valueDecimal",
+                "pricing.currencyValue",
+                "pricing.normalizedValue",
+                "pricing.normalizedValueDecimal",
+                "pricing.currencyNormalizedValue",
+              ],
+            },
+            size: 8,
+          },
+        },
+      },
+    },
+  } as any;
+
+  const esResult = (await elasticsearch.search({
+    index: INDEX_NAME,
+    size: 0,
+    body: {
+      query: salesQuery,
+      aggs: collectionAggregation,
+    },
+  })) as any;
+
+  const result = esResult?.aggregations?.collections?.buckets?.reduce((acc: any, bucket: any) => {
+    acc[bucket.key] = bucket.recent_sales.hits.hits.map((hit: any) => hit._source);
+    return acc;
+  }, {});
+
+  return result;
+};
+
+const getPastResults = async (
+  collections: string[],
+  startTime: number,
+  fillType: TopSellingFillOptions
+) => {
+  const now = Math.floor(new Date().getTime() / 1000);
+  const period = now - startTime;
+  const previousPeriodStartTime = startTime - period;
+
+  const salesQuery = {
+    bool: {
+      filter: [
+        {
+          terms: {
+            "collection.id": collections,
+          },
+        },
+
+        {
+          terms: {
+            type: fillType == "any" ? ["sale", "mint"] : [fillType],
+          },
+        },
+        {
+          range: {
+            timestamp: {
+              gte: previousPeriodStartTime,
+              lte: startTime,
+              format: "epoch_second",
+            },
+          },
+        },
+      ],
+    },
+  } as any;
+
+  const collectionAggregation = {
+    collections: {
+      terms: {
+        field: "collection.id",
+      },
+      aggs: {
+        total_sales: {
+          value_count: {
+            field: "id",
+          },
+        },
+        total_volume: {
+          sum: {
+            field: "pricing.priceDecimal",
+          },
+        },
+      },
+    },
+  } as any;
+
+  const esResult = (await elasticsearch.search({
+    index: INDEX_NAME,
+    size: 0,
+    body: {
+      query: salesQuery,
+      aggs: collectionAggregation,
+    },
+  })) as any;
+
+  return esResult?.aggregations?.collections?.buckets?.map((bucket: any) => {
+    return {
+      volume: bucket?.total_volume?.value,
+      count: bucket?.total_sales.value,
+      id: bucket.key,
+    };
+  });
+};
+
+export const getTopSellingCollectionsV2 = async (params: {
+  startTime: number;
+  fillType: TopSellingFillOptions;
+  sortBy?: "volume" | "sales";
+  limit: number;
+}): Promise<CollectionAggregation[]> => {
+  const { startTime, fillType, limit, sortBy } = params;
+
+  const { trendingExcludedContracts } = getNetworkSettings();
+
+  const salesQuery = {
+    bool: {
+      filter: [
+        {
+          terms: {
+            type: fillType == "any" ? ["sale", "mint"] : [fillType],
+          },
+        },
+        {
+          range: {
+            timestamp: {
+              gte: startTime,
+              format: "epoch_second",
+            },
+          },
+        },
+      ],
+      ...(trendingExcludedContracts && {
+        must_not: [
+          {
+            terms: {
+              "collection.id": trendingExcludedContracts,
+            },
+          },
+        ],
+      }),
+    },
+  } as any;
+
+  const sort = sortBy == "volume" ? { total_volume: "desc" } : { total_sales: "desc" };
+  const collectionAggregation = {
+    collections: {
+      terms: {
+        field: "collection.id",
+        size: limit,
+        order: sort,
+      },
+      aggs: {
+        total_sales: {
+          value_count: {
+            field: "id",
+          },
+        },
+        total_transactions: {
+          cardinality: {
+            field: "event.txHash",
+          },
+        },
+        total_volume: {
+          sum: {
+            field: "pricing.priceDecimal",
+          },
+        },
+      },
+    },
+  } as any;
+
+  const esResult = (await elasticsearch.search({
+    index: INDEX_NAME,
+    size: 0,
+    body: {
+      query: salesQuery,
+      aggs: collectionAggregation,
+    },
+  })) as any;
+
+  const collections = esResult?.aggregations?.collections?.buckets;
+  const pastResults = await getPastResults(
+    collections.map((collection: any) => collection.key),
+    startTime,
+    fillType
+  );
+
+  return esResult?.aggregations?.collections?.buckets?.map((bucket: any) => {
+    const pastResult = pastResults.find((result: any) => result.id == bucket.key);
+
+    return {
+      volume: bucket?.total_volume?.value,
+      volumePercentChange: _.round(
+        ((bucket?.total_volume?.value || 0) / (pastResult?.volume || 1)) * 100 - 100,
+        2
+      ),
+      count: bucket?.total_sales.value,
+      countPercentChange: _.round(
+        ((bucket?.total_sales.value || 0) / (pastResult?.count || 1)) * 100 - 100,
+        2
+      ),
+      id: bucket.key,
+    };
+  });
+};
+
 export const deleteActivitiesById = async (ids: string[]): Promise<void> => {
   try {
     const response = await elasticsearch.bulk({
@@ -386,6 +649,7 @@ export const search = async (
     startTimestamp?: number;
     endTimestamp?: number;
     sortBy?: "timestamp" | "createdAt";
+    sortDirection?: "desc" | "asc";
     limit?: number;
     continuation?: string | null;
     continuationAsInt?: boolean;
@@ -393,6 +657,7 @@ export const search = async (
   debug = false
 ): Promise<{ activities: ActivityDocument[]; continuation: string | null }> => {
   const esQuery = {};
+  params.sortDirection = params.sortDirection ?? "desc";
 
   (esQuery as any).bool = { filter: [] };
 
@@ -470,32 +735,37 @@ export const search = async (
 
   if (params.startTimestamp) {
     (esQuery as any).bool.filter.push({
-      range: { timestamp: { gte: params.endTimestamp } },
+      range: { timestamp: { gte: params.startTimestamp, format: "epoch_second" } },
     });
   }
 
   if (params.endTimestamp) {
     (esQuery as any).bool.filter.push({
-      range: { timestamp: { lt: params.endTimestamp } },
+      range: { timestamp: { lt: params.endTimestamp, format: "epoch_second" } },
     });
   }
 
-  const esSort: any[] = [];
-
-  if (params.sortBy == "timestamp") {
-    esSort.push({ timestamp: { order: "desc" } });
-  } else {
-    esSort.push({ createdAt: { order: "desc" } });
-  }
-
-  let searchAfter;
+  let searchAfter: string[] = [];
 
   if (params.continuation) {
     if (params.continuationAsInt) {
       searchAfter = [params.continuation];
     } else {
-      searchAfter = [splitContinuation(params.continuation)[0]];
+      searchAfter = _.split(splitContinuation(params.continuation)[0], "_");
     }
+  }
+
+  const esSort: any[] = [];
+
+  if (params.sortBy == "timestamp") {
+    esSort.push({ timestamp: { order: params.sortDirection, format: "epoch_second" } });
+  } else {
+    esSort.push({ createdAt: { order: params.sortDirection } });
+  }
+
+  // Backward compatibility
+  if (searchAfter?.length != 1 && !params.continuationAsInt) {
+    esSort.push({ id: { order: params.sortDirection } });
   }
 
   try {
@@ -504,7 +774,7 @@ export const search = async (
         query: esQuery,
         sort: esSort as Sort,
         size: params.limit,
-        search_after: searchAfter,
+        search_after: searchAfter?.length ? searchAfter : undefined,
       },
       0,
       debug
@@ -514,18 +784,16 @@ export const search = async (
 
     let continuation = null;
 
-    if (activities.length === params.limit) {
-      const lastActivity = _.last(activities);
+    if (esResult.hits.hits.length === params.limit) {
+      const lastResult = _.last(esResult.hits.hits);
 
-      if (lastActivity) {
+      if (lastResult) {
+        const lastResultSortValue = lastResult.sort!.join("_");
+
         if (params.continuationAsInt) {
-          continuation = `${lastActivity.timestamp}`;
+          continuation = `${lastResultSortValue}`;
         } else {
-          const continuationValue =
-            params.sortBy == "timestamp"
-              ? lastActivity.timestamp
-              : new Date(lastActivity.createdAt).toISOString();
-          continuation = buildContinuation(`${continuationValue}`);
+          continuation = buildContinuation(`${lastResultSortValue}`);
         }
       }
     }

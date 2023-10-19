@@ -37,6 +37,7 @@ import * as backfillSalesUsdPrice from "@/jobs/backfill/backfill-sales-usd-price
 import * as backfillSales from "@/jobs/backfill/backfill-sales";
 import * as backfillReorgBlocks from "@/jobs/backfill/backfill-reorg-blocks";
 import * as backfillDeletedSalesElasticsearch from "@/jobs/activities/backfill/backfill-deleted-sales-elasticsearch";
+import * as backfillRouter from "@/jobs/backfill/backfill-router";
 
 import amqplib from "amqplib";
 import { config } from "@/config/index";
@@ -104,9 +105,11 @@ import { collectionFloorJob } from "@/jobs/collection-updates/collection-floor-q
 import { eventsSyncProcessRealtimeJob } from "@/jobs/events-sync/process/events-sync-process-realtime";
 import { fillUpdatesJob } from "@/jobs/fill-updates/fill-updates-job";
 import { fillPostProcessJob } from "@/jobs/fill-updates/fill-post-process-job";
-import { generateCollectionTokenSetJob } from "@/jobs/flag-status/generate-collection-token-set-job";
 import { flagStatusUpdateJob } from "@/jobs/flag-status/flag-status-update-job";
-import { flagStatusProcessJob } from "@/jobs/flag-status/flag-status-process-job";
+import { tokenFlagStatusSyncJob } from "@/jobs/flag-status/token-flag-status-sync-job";
+import { collectionSlugFlagStatusSyncJob } from "@/jobs/flag-status/collection-slug-flag-status-sync-job";
+import { contractFlagStatusSyncJob } from "@/jobs/flag-status/contract-flag-status-sync-job";
+
 import { metadataIndexFetchJob } from "@/jobs/metadata-index/metadata-fetch-job";
 import { metadataIndexProcessJob } from "@/jobs/metadata-index/metadata-process-job";
 import { metadataIndexWriteJob } from "@/jobs/metadata-index/metadata-write-job";
@@ -155,6 +158,7 @@ import { backfillTokensTimeToMetadataJob } from "@/jobs/backfill/backfill-tokens
 import { topSellingCollectionsJob } from "@/jobs/top-selling-collections-cache/save-top-selling-collections-job";
 import { newCollectionForTokenJob } from "@/jobs/token-updates/new-collection-for-token-job";
 import { backfillTokensWithMissingCollectionJob } from "@/jobs/backfill/backfill-tokens-with-missing-collection-job";
+import { processConsecutiveTransferJob } from "@/jobs/events-sync/process-consecutive-transfer";
 
 export const allJobQueues = [
   backfillWrongNftBalances.queue,
@@ -169,6 +173,7 @@ export const allJobQueues = [
   backfillSales.queue,
   backfillReorgBlocks.queue,
   backfillDeletedSalesElasticsearch.queue,
+  backfillRouter.queue,
 ];
 
 export class RabbitMqJobsConsumer {
@@ -240,9 +245,10 @@ export class RabbitMqJobsConsumer {
       eventsSyncProcessRealtimeJob,
       fillUpdatesJob,
       fillPostProcessJob,
-      generateCollectionTokenSetJob,
       flagStatusUpdateJob,
-      flagStatusProcessJob,
+      tokenFlagStatusSyncJob,
+      collectionSlugFlagStatusSyncJob,
+      contractFlagStatusSyncJob,
       metadataIndexFetchJob,
       metadataIndexProcessJob,
       metadataIndexWriteJob,
@@ -293,6 +299,7 @@ export class RabbitMqJobsConsumer {
       topSellingCollectionsJob,
       newCollectionForTokenJob,
       backfillTokensWithMissingCollectionJob,
+      processConsecutiveTransferJob,
     ];
   }
 
