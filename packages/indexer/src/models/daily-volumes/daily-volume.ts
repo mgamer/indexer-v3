@@ -420,7 +420,8 @@ export class DailyVolume {
               const redisTotalVolume = await redis.get(`all_time_volume_${row.id}`);
               if (redisTotalVolume) {
                 totalVolume.total_volume = parseInt(redisTotalVolume, 10);
-              } else {
+              } else if (row?.recent_timestamp) {
+                // only try to get the total volume from postgres if we have a recent timestamp (that means we have daily_volume entries for this collection, but its not in redis for some reason)
                 const pgTotalVolume = await redb.oneOrNone(
                   `
               SELECT SUM(volume) as total_volume
@@ -445,6 +446,8 @@ export class DailyVolume {
                 } else {
                   totalVolume = { total_volume: 0 };
                 }
+              } else {
+                totalVolume = { total_volume: 0 };
               }
 
               recentVolumes.push({
