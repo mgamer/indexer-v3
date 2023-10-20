@@ -1,5 +1,5 @@
 import { Interface } from "@ethersproject/abi";
-import { HashZero, AddressZero } from "@ethersproject/constants";
+import { HashZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import * as Sdk from "@reservoir0x/sdk";
 import axios from "axios";
@@ -123,9 +123,8 @@ export const extractByCollection = async (
                       abiType: "uint16",
                     },
                     {
-                      kind: "unknown",
+                      kind: "referrer",
                       abiType: "address",
-                      abiValue: AddressZero,
                     },
                   ],
                 },
