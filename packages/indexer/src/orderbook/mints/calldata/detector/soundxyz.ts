@@ -223,9 +223,8 @@ export const extractByCollection = async (
                       abiType: "bytes32[]",
                     },
                     {
-                      kind: "unknown",
+                      kind: "referrer",
                       abiType: "address",
-                      abiValue: AddressZero,
                     },
                   ],
                 },
