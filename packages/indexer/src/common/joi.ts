@@ -13,7 +13,7 @@ import { FeeRecipients } from "@/models/fee-recipients";
 import { Sources } from "@/models/sources";
 import { SourcesEntity } from "@/models/sources/sources-entity";
 import { OrderKind } from "@/orderbook/orders";
-import { Assets, ImageSize } from "@/utils/assets";
+import { Assets } from "@/utils/assets";
 import { Currency, getCurrency } from "@/utils/currencies";
 import { getUSDAndCurrencyPrices, getUSDAndNativePrices } from "@/utils/prices";
 
@@ -1004,200 +1004,71 @@ export const getJoiSourceObject = (source: SourcesEntity | undefined, full = tru
 
 // --- Collections ---
 
-export const getJoiCollectionBaseObject = async (
-  collection: {
-    id: string;
-    slug: string;
-    createdAt?: number;
-    updatedAt?: number;
-    name: string;
-    image: any;
-    sampleImages: any;
-    banner: string;
-    discordUrl: string;
-    externalUrl: string;
-    twitterUsername: string;
-    openseaVerificationStatus?: string;
-    description: string;
-    tokenCount: number;
-    onSaleCount?: number;
-    contract: Buffer;
-    tokenSetId: string;
-    royalties?: any;
-    newRoyalties?: any;
-  },
-  takedowns: (string | null)[]
-) => {
+export const getJoiCollectionObject = (collection: any, takedowns: (string | null)[]) => {
   const isTakedown = takedowns.includes(collection.id);
-  const contract = fromBuffer(collection.contract);
-  const result: any = {
-    id: !isTakedown ? collection.id : contract,
-    slug: !isTakedown ? collection.slug : contract,
-    name: !isTakedown ? collection.name : contract,
-    image: !isTakedown
-      ? Assets.getLocalAssetsLink(collection.image) ||
-        (collection.sampleImages?.length
-          ? Assets.getLocalAssetsLink(collection.sampleImages[0])
-          : null)
-      : null,
-    banner: !isTakedown ? collection.banner : null,
-    discordUrl: !isTakedown ? collection.discordUrl : null,
-    externalUrl: !isTakedown ? collection.externalUrl : null,
-    twitterUsername: !isTakedown ? collection.twitterUsername : null,
-    description: !isTakedown ? collection.description : null,
-    sampleImages: !isTakedown ? Assets.getLocalAssetsLink(collection.sampleImages) || [] : [],
-    tokenCount: String(collection.tokenCount),
-    primaryContract: contract,
-    tokenSetId: !isTakedown ? collection.tokenSetId : `contract:${contract}`,
-  };
+  if (isTakedown) {
+    collection.id = collection.primaryContract;
+    collection.name = collection.primaryContract;
 
-  if (collection.createdAt !== undefined) {
-    result.createdAt = new Date(collection.createdAt * 1000).toISOString();
-  }
-  if (collection.updatedAt !== undefined) {
-    result.updatedAt = new Date(collection.updatedAt * 1000).toISOString();
-  }
-  if (collection.openseaVerificationStatus !== undefined) {
-    result.openseaVerificationStatus = !isTakedown ? collection.openseaVerificationStatus : null;
-  }
-  if (collection.onSaleCount !== undefined) {
-    result.onSaleCount = String(collection.onSaleCount);
-  }
-  if (collection.royalties !== undefined) {
-    result.royalties =
-      !isTakedown && collection.royalties
-        ? {
-            // Main recipient, kept for backwards-compatibility only
-            recipient: collection.royalties.length ? collection.royalties[0].recipient : null,
-            breakdown: collection.royalties.filter((r: any) => r.bps && r.recipient),
-            bps: collection.royalties
-              .map((r: any) => r.bps)
-              .reduce((a: number, b: number) => a + b, 0),
-          }
-        : null;
-  }
-  if (collection.newRoyalties !== undefined) {
-    result.allRoyalties = !isTakedown ? collection.newRoyalties ?? null : null;
+    if (collection.metadata) {
+      collection.metadata = null;
+    }
+    if (collection.community) {
+      collection.community = null;
+    }
+    if (collection.tokenIdRange) {
+      collection.tokenIdRange = null;
+    }
+    if (collection.tokenSetId) {
+      collection.tokenSetId = `contract:${collection.primaryContract}`;
+    }
+    if (collection.royalties) {
+      collection.royalties = null;
+    }
+    if (collection.newRoyalties) {
+      collection.newRoyalties = null;
+    }
   }
 
-  return result;
-};
-
-export const getJoiCollectionDeprecatedBaseObject = async (
-  collection: {
-    id: string;
-    slug: string;
-    name: string;
-    image: any;
-    sampleImages: any;
-    banner: string;
-    discordUrl?: string;
-    externalUrl?: string;
-    twitterUsername?: string;
-    description?: string;
-    tokenCount: number;
-    contract: Buffer;
-    tokenSetId: string;
-  },
-  takedowns: (string | null)[]
-) => {
-  const isTakedown = takedowns.includes(collection.id);
-  const contract = fromBuffer(collection.contract);
-  const result: any = {
-    id: !isTakedown ? collection.id : contract,
-    slug: !isTakedown ? collection.slug : contract,
-    name: !isTakedown ? collection.name : contract,
-    image: !isTakedown
-      ? collection.image || (collection.sampleImages?.length ? collection.sampleImages[0] : null)
-      : null,
-    banner: !isTakedown ? collection.banner : null,
-    sampleImages: !isTakedown ? collection.sampleImages || [] : [],
-    tokenCount: String(collection.tokenCount),
-    primaryContract: contract,
-    tokenSetId: !isTakedown ? collection.id : `contract:${contract}`,
-  };
-
-  if (collection.discordUrl !== undefined) {
-    result.discordUrl = !isTakedown ? collection.discordUrl : null;
-  }
-  if (collection.externalUrl !== undefined) {
-    result.externalUrl = !isTakedown ? collection.externalUrl : null;
-  }
-  if (collection.twitterUsername !== undefined) {
-    result.twitterUsername = !isTakedown ? collection.twitterUsername : null;
-  }
-  if (collection.description !== undefined) {
-    result.description = !isTakedown ? collection.description : null;
-  }
-
-  return result;
+  return collection;
 };
 
 // -- Tokens --
 
-export const getJoiTokenBaseObject = async (
-  token: {
-    contract: string;
-    tokenId: string;
-    name: string;
-    description: string;
-    image: string;
-    metadata?: any;
-    media: string;
-    kind: string;
-    isFlagged: boolean;
-    lastFlagUpdate?: string | null;
-    lastFlagChange?: string | null;
-    supply: number;
-    remainingSupply: number;
-    rarity: number;
-    rarityRank: number;
-    collection: {
-      id: string;
-      name: string;
-      image: string;
-      slug: string;
-      creator?: string | null;
-      tokenCount?: number;
-    };
-  },
-  takedowns: (string | null)[]
-) => {
+export const getJoiTokenObject = (token: any, takedowns: (string | null)[]) => {
   const isTakedown = takedowns.includes(`${token.contract}:${token.tokenId}`);
-  const result: any = {
-    contract: token.contract,
-    tokenId: token.tokenId,
-    name: !isTakedown ? token.name : null,
-    description: !isTakedown ? token.description : null,
-    image: !isTakedown ? Assets.getLocalAssetsLink(token.image) : null,
-    imageSmall: !isTakedown ? Assets.getResizedImageUrl(token.image, ImageSize.small) : null,
-    imageLarge: !isTakedown ? Assets.getResizedImageUrl(token.image, ImageSize.large) : null,
-    media: !isTakedown ? token.media : null,
-    kind: token.kind,
-    isFlagged: !isTakedown ? token.isFlagged : false,
-    lastFlagUpdate: token.lastFlagUpdate,
-    lastFlagChange: token.lastFlagChange,
-    supply: token.supply,
-    remainingSupply: token.remainingSupply,
-    rarity: token.rarity,
-    rarityRank: token.rarityRank,
-    collection: {
-      id: !isTakedown ? token.collection.id : token.contract,
-      name: !isTakedown ? token.collection.name : token.contract,
-      image: !isTakedown ? Assets.getLocalAssetsLink(token.collection.image) : null,
-      slug: !isTakedown ? token.collection.slug : token.contract,
-    },
-  };
+  if (isTakedown) {
+    token.collection.id = token.contract;
+    token.name = null;
 
-  if (token.metadata !== undefined) {
-    result.metadata = !isTakedown ? token.metadata : null;
-  }
-  if (token.collection.creator !== undefined) {
-    result.collection.creator = !isTakedown ? token.collection.creator : null;
-  }
-  if (token.collection.tokenCount !== undefined) {
-    result.collection.tokenCount = token.collection.tokenCount;
+    if (token.collection.slug) {
+      token.collection.slug = token.contract;
+    }
+    if (token.collection.image) {
+      token.collection.image = null;
+    }
+    if (token.isFlagged !== undefined) {
+      token.isFlagged = false;
+    }
+    if (token.media) {
+      token.media = null;
+    }
+    if (token.description) {
+      token.description = null;
+    }
+    if (token.imageSmall) {
+      token.imageSmall = null;
+    }
+    if (token.imageLarge) {
+      token.imageLarge = null;
+    }
+    if (token.metadata) {
+      token.metadata = null;
+    }
+    if (token.attributes) {
+      token.attributes = [];
+    }
   }
 
-  return result;
+  return token;
 };

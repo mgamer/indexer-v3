@@ -13,7 +13,7 @@ import {
   getJoiPriceObject,
   getJoiSaleObject,
   getJoiSourceObject,
-  getJoiTokenBaseObject,
+  getJoiTokenObject,
   JoiAttributeValue,
   JoiPrice,
   JoiSale,
@@ -30,6 +30,7 @@ import {
 } from "@/common/utils";
 import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
+import { Assets, ImageSize } from "@/utils/assets";
 import { CollectionSets } from "@/models/collection-sets";
 import { Collections } from "@/models/collections";
 import { Takedowns } from "@/models/takedowns";
@@ -1131,7 +1132,6 @@ export const getTokensV6Options: RouteOptions = {
         rawResult.map((r) => `${fromBuffer(r.t_contract)}:${r.t_token_id}`),
         rawResult[0]?.collection_id
       );
-
       const result = rawResult.map(async (r) => {
         const feeBreakdown = r.top_buy_fee_breakdown;
 
@@ -1275,85 +1275,85 @@ export const getTokensV6Options: RouteOptions = {
         }
 
         return {
-          token: {
-            chainId: config.chainId,
-            ...(await getJoiTokenBaseObject(
-              {
-                contract,
-                tokenId,
-                name: r.name,
-                description: r.description,
-                image: r.image,
-                metadata: Object.values(metadata).every((el) => el === undefined)
-                  ? undefined
-                  : metadata,
-                media: r.media,
-                kind: r.kind,
-                isFlagged: Boolean(Number(r.is_flagged)),
-                lastFlagUpdate: r.last_flag_update
-                  ? new Date(r.last_flag_update).toISOString()
-                  : null,
-                lastFlagChange: r.last_flag_change
-                  ? new Date(r.last_flag_change).toISOString()
-                  : null,
-                supply: !_.isNull(r.supply) ? r.supply : null,
-                remainingSupply: !_.isNull(r.remaining_supply) ? r.remaining_supply : null,
-                rarity: r.rarity_score,
-                rarityRank: r.rarity_rank,
-                collection: {
-                  id: r.collection_id,
-                  name: r.collection_name,
-                  image: r.collection_image,
-                  slug: r.slug,
-                  creator: r.creator ? fromBuffer(r.creator) : null,
-                  tokenCount: r.token_count,
-                },
+          token: getJoiTokenObject(
+            {
+              chainId: config.chainId,
+              contract,
+              tokenId,
+              name: r.name,
+              description: r.description,
+              image: Assets.getLocalAssetsLink(r.image),
+              imageSmall: Assets.getResizedImageUrl(r.image, ImageSize.small),
+              imageLarge: Assets.getResizedImageUrl(r.image, ImageSize.large),
+              metadata: Object.values(metadata).every((el) => el === undefined)
+                ? undefined
+                : metadata,
+              media: r.media,
+              kind: r.kind,
+              isFlagged: Boolean(Number(r.is_flagged)),
+              lastFlagUpdate: r.last_flag_update
+                ? new Date(r.last_flag_update).toISOString()
+                : null,
+              lastFlagChange: r.last_flag_change
+                ? new Date(r.last_flag_change).toISOString()
+                : null,
+              supply: !_.isNull(r.supply) ? r.supply : null,
+              remainingSupply: !_.isNull(r.remaining_supply) ? r.remaining_supply : null,
+              rarity: r.rarity_score,
+              rarityRank: r.rarity_rank,
+              collection: {
+                id: r.collection_id,
+                name: r.collection_name,
+                image: Assets.getLocalAssetsLink(r.collection_image),
+                slug: r.slug,
+                creator: r.creator ? fromBuffer(r.creator) : null,
+                tokenCount: r.token_count,
               },
-              takedowns
-            )),
-            lastSale:
-              query.includeLastSale && r.last_sale_currency
-                ? await getJoiSaleObject({
-                    prices: {
-                      gross: {
-                        amount: r.last_sale_currency_price ?? r.last_sale_price,
-                        nativeAmount: r.last_sale_price,
-                        usdAmount: r.last_sale_usd_price,
+              lastSale:
+                query.includeLastSale && r.last_sale_currency
+                  ? await getJoiSaleObject({
+                      prices: {
+                        gross: {
+                          amount: r.last_sale_currency_price ?? r.last_sale_price,
+                          nativeAmount: r.last_sale_price,
+                          usdAmount: r.last_sale_usd_price,
+                        },
                       },
-                    },
-                    fees: {
-                      royaltyFeeBps: r.last_sale_royalty_fee_bps,
-                      marketplaceFeeBps: r.last_sale_marketplace_fee_bps,
-                      paidFullRoyalty: r.last_sale_paid_full_royalty,
-                      royaltyFeeBreakdown: r.last_sale_royalty_fee_breakdown,
-                      marketplaceFeeBreakdown: r.last_sale_marketplace_fee_breakdown,
-                    },
-                    currencyAddress: r.last_sale_currency,
-                    timestamp: r.last_sale_timestamp,
-                    orderSourceId: r.last_sale_order_source_id_int,
-                    fillSourceId: r.last_sale_fill_source_id,
-                  })
+                      fees: {
+                        royaltyFeeBps: r.last_sale_royalty_fee_bps,
+                        marketplaceFeeBps: r.last_sale_marketplace_fee_bps,
+                        paidFullRoyalty: r.last_sale_paid_full_royalty,
+                        royaltyFeeBreakdown: r.last_sale_royalty_fee_breakdown,
+                        marketplaceFeeBreakdown: r.last_sale_marketplace_fee_breakdown,
+                      },
+                      currencyAddress: r.last_sale_currency,
+                      timestamp: r.last_sale_timestamp,
+                      orderSourceId: r.last_sale_order_source_id_int,
+                      fillSourceId: r.last_sale_fill_source_id,
+                    })
+                  : undefined,
+              owner: r.owner ? fromBuffer(r.owner) : null,
+              attributes: query.includeAttributes
+                ? r.attributes
+                  ? _.map(r.attributes, (attribute) => ({
+                      key: attribute.key,
+                      kind: attribute.kind,
+                      value: attribute.value,
+                      tokenCount: attribute.tokenCount,
+                      onSaleCount: attribute.onSaleCount,
+                      floorAskPrice: attribute.floorAskPrice
+                        ? formatEth(attribute.floorAskPrice)
+                        : attribute.floorAskPrice,
+                      topBidValue: attribute.topBidValue
+                        ? formatEth(attribute.topBidValue)
+                        : attribute.topBidValue,
+                      createdAt: new Date(attribute.createdAt).toISOString(),
+                    }))
+                  : []
                 : undefined,
-            owner: r.owner ? fromBuffer(r.owner) : null,
-            attributes: query.includeAttributes
-              ? r.attributes
-                ? _.map(r.attributes, (attribute) => ({
-                    key: attribute.key,
-                    kind: attribute.kind,
-                    value: attribute.value,
-                    tokenCount: attribute.tokenCount,
-                    onSaleCount: attribute.onSaleCount,
-                    floorAskPrice: attribute.floorAskPrice
-                      ? formatEth(attribute.floorAskPrice)
-                      : attribute.floorAskPrice,
-                    topBidValue: attribute.topBidValue
-                      ? formatEth(attribute.topBidValue)
-                      : attribute.topBidValue,
-                    createdAt: new Date(attribute.createdAt).toISOString(),
-                  }))
-                : []
-              : undefined,
-          },
+            },
+            takedowns
+          ),
           market: {
             floorAsk: {
               id: r.floor_sell_id,

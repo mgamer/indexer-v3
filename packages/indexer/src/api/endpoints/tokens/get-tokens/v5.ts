@@ -11,6 +11,7 @@ import { logger } from "@/common/logger";
 import {
   getJoiPriceObject,
   getJoiSourceObject,
+  getJoiTokenObject,
   JoiAttributeValue,
   JoiPrice,
   JoiSource,
@@ -28,6 +29,7 @@ import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
 import { Assets } from "@/utils/assets";
 import { CollectionSets } from "@/models/collection-sets";
+import { Takedowns } from "@/models/takedowns";
 
 const version = "v5";
 
@@ -924,6 +926,10 @@ export const getTokensV5Options: RouteOptions = {
       }
 
       const sources = await Sources.getInstance();
+      const takedowns = await Takedowns.getTokens(
+        rawResult.map((r) => `${fromBuffer(r.contract)}:${r.token_id}`),
+        rawResult[0]?.collection_id
+      );
       const result = rawResult.map(async (r) => {
         const feeBreakdown = r.top_buy_fee_breakdown;
 
@@ -1045,53 +1051,60 @@ export const getTokensV5Options: RouteOptions = {
         }
 
         return {
-          token: {
-            contract,
-            tokenId,
-            name: r.name,
-            description: r.description,
-            image: Assets.getLocalAssetsLink(r.image),
-            media: r.media,
-            kind: r.kind,
-            isFlagged: Boolean(Number(r.is_flagged)),
-            lastFlagUpdate: r.last_flag_update ? new Date(r.last_flag_update).toISOString() : null,
-            lastFlagChange: r.last_flag_change ? new Date(r.last_flag_change).toISOString() : null,
-            rarity: r.rarity_score,
-            rarityRank: r.rarity_rank,
-            collection: {
-              id: r.collection_id,
-              name: r.collection_name,
-              image: Assets.getLocalAssetsLink(r.collection_image),
-              slug: r.slug,
+          token: getJoiTokenObject(
+            {
+              contract,
+              tokenId,
+              name: r.name,
+              description: r.description,
+              image: Assets.getLocalAssetsLink(r.image),
+              media: r.media,
+              kind: r.kind,
+              isFlagged: Boolean(Number(r.is_flagged)),
+              lastFlagUpdate: r.last_flag_update
+                ? new Date(r.last_flag_update).toISOString()
+                : null,
+              lastFlagChange: r.last_flag_change
+                ? new Date(r.last_flag_change).toISOString()
+                : null,
+              rarity: r.rarity_score,
+              rarityRank: r.rarity_rank,
+              collection: {
+                id: r.collection_id,
+                name: r.collection_name,
+                image: Assets.getLocalAssetsLink(r.collection_image),
+                slug: r.slug,
+              },
+              lastBuy: {
+                value: r.last_buy_value ? formatEth(r.last_buy_value) : null,
+                timestamp: r.last_buy_timestamp,
+              },
+              lastSell: {
+                value: r.last_sell_value ? formatEth(r.last_sell_value) : null,
+                timestamp: r.last_sell_timestamp,
+              },
+              owner: r.owner ? fromBuffer(r.owner) : null,
+              attributes: query.includeAttributes
+                ? r.attributes
+                  ? _.map(r.attributes, (attribute) => ({
+                      key: attribute.key,
+                      kind: attribute.kind,
+                      value: attribute.value,
+                      tokenCount: attribute.tokenCount,
+                      onSaleCount: attribute.onSaleCount,
+                      floorAskPrice: attribute.floorAskPrice
+                        ? formatEth(attribute.floorAskPrice)
+                        : attribute.floorAskPrice,
+                      topBidValue: attribute.topBidValue
+                        ? formatEth(attribute.topBidValue)
+                        : attribute.topBidValue,
+                      createdAt: new Date(attribute.createdAt).toISOString(),
+                    }))
+                  : []
+                : undefined,
             },
-            lastBuy: {
-              value: r.last_buy_value ? formatEth(r.last_buy_value) : null,
-              timestamp: r.last_buy_timestamp,
-            },
-            lastSell: {
-              value: r.last_sell_value ? formatEth(r.last_sell_value) : null,
-              timestamp: r.last_sell_timestamp,
-            },
-            owner: r.owner ? fromBuffer(r.owner) : null,
-            attributes: query.includeAttributes
-              ? r.attributes
-                ? _.map(r.attributes, (attribute) => ({
-                    key: attribute.key,
-                    kind: attribute.kind,
-                    value: attribute.value,
-                    tokenCount: attribute.tokenCount,
-                    onSaleCount: attribute.onSaleCount,
-                    floorAskPrice: attribute.floorAskPrice
-                      ? formatEth(attribute.floorAskPrice)
-                      : attribute.floorAskPrice,
-                    topBidValue: attribute.topBidValue
-                      ? formatEth(attribute.topBidValue)
-                      : attribute.topBidValue,
-                    createdAt: new Date(attribute.createdAt).toISOString(),
-                  }))
-                : []
-              : undefined,
-          },
+            takedowns
+          ),
           market: {
             floorAsk: {
               id: r.floor_sell_id,

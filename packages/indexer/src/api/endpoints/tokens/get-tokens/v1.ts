@@ -6,6 +6,8 @@ import Joi from "joi";
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
+import { Takedowns } from "@/models/takedowns";
+import { getJoiTokenObject } from "@/common/joi";
 
 const version = "v1";
 
@@ -162,22 +164,32 @@ export const getTokensV1Options: RouteOptions = {
       baseQuery += ` OFFSET $/offset/`;
       baseQuery += ` LIMIT $/limit/`;
 
-      const result = await redb.manyOrNone(baseQuery, query).then((result) =>
-        result.map((r) => ({
-          contract: fromBuffer(r.contract),
-          tokenId: r.token_id,
-          name: r.name,
-          image: r.image,
-          collection: {
-            id: r.collection_id,
-            name: r.collection_name,
-          },
-          floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
-          topBidValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
-        }))
-      );
+      const result = await redb.manyOrNone(baseQuery, query).then(async (result) => {
+        const takedowns = await Takedowns.getTokens(
+          result.map((r) => `${fromBuffer(r.contract)}:${r.token_id}`),
+          result[0]?.collection_id
+        );
 
-      return { tokens: result };
+        return result.map((r) =>
+          getJoiTokenObject(
+            {
+              contract: fromBuffer(r.contract),
+              tokenId: r.token_id,
+              name: r.name,
+              image: r.image,
+              collection: {
+                id: r.collection_id,
+                name: r.collection_name,
+              },
+              floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
+              topBidValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
+            },
+            takedowns
+          )
+        );
+      });
+
+      return { tokens: await Promise.all(result) };
     } catch (error) {
       logger.error(`get-tokens-${version}-handler`, `Handler failure: ${error}`);
       throw error;

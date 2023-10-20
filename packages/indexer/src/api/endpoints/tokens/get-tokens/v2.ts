@@ -14,6 +14,8 @@ import {
   toBuffer,
 } from "@/common/utils";
 import * as Boom from "@hapi/boom";
+import { Takedowns } from "@/models/takedowns";
+import { getJoiTokenObject } from "@/common/joi";
 
 const version = "v2";
 
@@ -264,18 +266,28 @@ export const getTokensV2Options: RouteOptions = {
         continuation = buildContinuation(continuation);
       }
 
-      const result = rawResult.map((r) => ({
-        contract: fromBuffer(r.contract),
-        tokenId: r.token_id,
-        name: r.name,
-        image: r.image,
-        collection: {
-          id: r.collection_id,
-          name: r.collection_name,
-        },
-        floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
-        topBidValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
-      }));
+      const takedowns = await Takedowns.getTokens(
+        rawResult.map((r) => `${fromBuffer(r.contract)}:${r.token_id}`),
+        rawResult[0]?.collection_id
+      );
+
+      const result = rawResult.map((r) =>
+        getJoiTokenObject(
+          {
+            contract: fromBuffer(r.contract),
+            tokenId: r.token_id,
+            name: r.name,
+            image: r.image,
+            collection: {
+              id: r.collection_id,
+              name: r.collection_name,
+            },
+            floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
+            topBidValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
+          },
+          takedowns
+        )
+      );
 
       return {
         tokens: result,

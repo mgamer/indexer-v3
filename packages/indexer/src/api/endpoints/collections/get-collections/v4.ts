@@ -8,8 +8,8 @@ import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, fromBuffer } from "@/common/utils";
 import { CollectionSets } from "@/models/collection-sets";
-import { getJoiCollectionDeprecatedBaseObject } from "@/common/joi";
 import { Takedowns } from "@/models/takedowns";
+import { getJoiCollectionObject } from "@/common/joi";
 
 const version = "v4";
 
@@ -293,61 +293,59 @@ export const getCollectionsV4Options: RouteOptions = {
       const takedowns = await Takedowns.getCollections(result.map((r) => r.id));
 
       if (result) {
-        collections = result.map(async (r) => {
-          const response = {
-            ...(await getJoiCollectionDeprecatedBaseObject(
-              {
-                id: r.id,
-                slug: r.slug,
-                name: r.name,
-                image: r.image,
-                banner: r.banner,
-                discordUrl: r.discord_url,
-                externalUrl: r.external_url,
-                twitterUsername: r.twitter_username,
-                description: r.description,
-                sampleImages: r.sample_images,
-                tokenCount: r.token_count,
-                contract: r.contract,
-                tokenSetId: r.token_set_id,
+        collections = result.map((r) => {
+          const response = getJoiCollectionObject(
+            {
+              id: r.id,
+              slug: r.slug,
+              name: r.name,
+              image: r.image || (r.sample_images?.length ? r.sample_images[0] : null),
+              banner: r.banner,
+              discordUrl: r.discord_url,
+              externalUrl: r.external_url,
+              twitterUsername: r.twitter_username,
+              description: r.description,
+              sampleImages: r.sample_images || [],
+              tokenCount: String(r.token_count),
+              primaryContract: fromBuffer(r.contract),
+              tokenSetId: r.token_set_id,
+              floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
+              rank: {
+                "1day": r.day1_rank,
+                "7day": r.day7_rank,
+                "30day": r.day30_rank,
+                allTime: r.all_time_rank,
               },
-              takedowns
-            )),
-            floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
-            rank: {
-              "1day": r.day1_rank,
-              "7day": r.day7_rank,
-              "30day": r.day30_rank,
-              allTime: r.all_time_rank,
+              volume: {
+                "1day": r.day1_volume ? formatEth(r.day1_volume) : null,
+                "7day": r.day7_volume ? formatEth(r.day7_volume) : null,
+                "30day": r.day30_volume ? formatEth(r.day30_volume) : null,
+                allTime: r.all_time_volume ? formatEth(r.all_time_volume) : null,
+              },
+              volumeChange: {
+                "1day": r.day1_volume_change,
+                "7day": r.day7_volume_change,
+                "30day": r.day30_volume_change,
+              },
+              floorSale: {
+                "1day": r.day1_floor_sell_value ? formatEth(r.day1_floor_sell_value) : null,
+                "7day": r.day7_floor_sell_value ? formatEth(r.day7_floor_sell_value) : null,
+                "30day": r.day30_floor_sell_value ? formatEth(r.day30_floor_sell_value) : null,
+              },
+              floorSaleChange: {
+                "1day": Number(r.day1_floor_sell_value)
+                  ? Number(r.floor_sell_value) / Number(r.day1_floor_sell_value)
+                  : null,
+                "7day": Number(r.day7_floor_sell_value)
+                  ? Number(r.floor_sell_value) / Number(r.day7_floor_sell_value)
+                  : null,
+                "30day": Number(r.day30_floor_sell_value)
+                  ? Number(r.floor_sell_value) / Number(r.day30_floor_sell_value)
+                  : null,
+              },
             },
-            volume: {
-              "1day": r.day1_volume ? formatEth(r.day1_volume) : null,
-              "7day": r.day7_volume ? formatEth(r.day7_volume) : null,
-              "30day": r.day30_volume ? formatEth(r.day30_volume) : null,
-              allTime: r.all_time_volume ? formatEth(r.all_time_volume) : null,
-            },
-            volumeChange: {
-              "1day": r.day1_volume_change,
-              "7day": r.day7_volume_change,
-              "30day": r.day30_volume_change,
-            },
-            floorSale: {
-              "1day": r.day1_floor_sell_value ? formatEth(r.day1_floor_sell_value) : null,
-              "7day": r.day7_floor_sell_value ? formatEth(r.day7_floor_sell_value) : null,
-              "30day": r.day30_floor_sell_value ? formatEth(r.day30_floor_sell_value) : null,
-            },
-            floorSaleChange: {
-              "1day": Number(r.day1_floor_sell_value)
-                ? Number(r.floor_sell_value) / Number(r.day1_floor_sell_value)
-                : null,
-              "7day": Number(r.day7_floor_sell_value)
-                ? Number(r.floor_sell_value) / Number(r.day7_floor_sell_value)
-                : null,
-              "30day": Number(r.day30_floor_sell_value)
-                ? Number(r.floor_sell_value) / Number(r.day30_floor_sell_value)
-                : null,
-            },
-          };
+            takedowns
+          );
 
           if (query.includeTopBid) {
             (response as any).topBidValue = r.top_buy_value ? formatEth(r.top_buy_value) : null;
@@ -385,7 +383,7 @@ export const getCollectionsV4Options: RouteOptions = {
         }
       }
 
-      return { collections: await Promise.all(collections), continuation };
+      return { collections, continuation };
     } catch (error) {
       logger.error(`get-collections-${version}-handler`, `Handler failure: ${error}`);
       throw error;

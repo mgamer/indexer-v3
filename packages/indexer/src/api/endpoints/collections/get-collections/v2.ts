@@ -6,8 +6,8 @@ import Joi from "joi";
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
-import { getJoiCollectionDeprecatedBaseObject } from "@/common/joi";
 import { Takedowns } from "@/models/takedowns";
+import { getJoiCollectionObject } from "@/common/joi";
 
 const version = "v2";
 
@@ -179,35 +179,35 @@ export const getCollectionsV2Options: RouteOptions = {
         ) y ON TRUE
       `;
 
-      const results = await redb.manyOrNone(baseQuery, query);
-      const takedowns = await Takedowns.getCollections(results.map((r) => r.id));
+      const result = await redb.manyOrNone(baseQuery, query).then(async (result) => {
+        const takedowns = await Takedowns.getCollections(result.map((r) => r.id));
+        return result.map((r) =>
+          getJoiCollectionObject(
+            {
+              id: r.id,
+              slug: r.slug,
+              name: r.name,
+              image: r.image || (r.sample_images?.length ? r.sample_images[0] : null),
+              banner: r.banner,
+              sampleImages: r.sample_images || [],
+              tokenCount: String(r.token_count),
+              primaryContract: fromBuffer(r.contract),
+              tokenSetId: r.token_set_id,
+              floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
+              topBidValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
+              topBidMaker: r.top_buy_maker ? fromBuffer(r.top_buy_maker) : null,
+              "1dayVolume": r.day1_volume ? formatEth(r.day1_volume) : null,
+              "7dayVolume": r.day7_volume ? formatEth(r.day7_volume) : null,
+              "30dayVolume": r.day30_volume ? formatEth(r.day30_volume) : null,
+              allTimeVolume: r.all_time_volume ? formatEth(r.all_time_volume) : null,
+              allTimeRank: r.all_time_rank,
+            },
+            takedowns
+          )
+        );
+      });
 
-      const collections = results.map(async (r) => ({
-        ...(await getJoiCollectionDeprecatedBaseObject(
-          {
-            id: r.id,
-            slug: r.slug,
-            name: r.name,
-            image: r.image,
-            banner: r.banner,
-            sampleImages: r.sample_images,
-            tokenCount: r.token_count,
-            contract: r.contract,
-            tokenSetId: r.token_set_id,
-          },
-          takedowns
-        )),
-        floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
-        topBidValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
-        topBidMaker: r.top_buy_maker ? fromBuffer(r.top_buy_maker) : null,
-        "1dayVolume": r.day1_volume ? formatEth(r.day1_volume) : null,
-        "7dayVolume": r.day7_volume ? formatEth(r.day7_volume) : null,
-        "30dayVolume": r.day30_volume ? formatEth(r.day30_volume) : null,
-        allTimeVolume: r.all_time_volume ? formatEth(r.all_time_volume) : null,
-        allTimeRank: r.all_time_rank,
-      }));
-
-      return { collections: await Promise.all(collections) };
+      return { collections: await Promise.all(result) };
     } catch (error) {
       logger.error(`get-collections-${version}-handler`, `Handler failure: ${error}`);
       throw error;
