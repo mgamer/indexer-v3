@@ -1163,7 +1163,7 @@ export const getJoiTokenBaseObject = async (
   },
   takedowns: (string | null)[]
 ) => {
-  const isTakedown = takedowns.includes(token.tokenId);
+  const isTakedown = takedowns.includes(`${token.contract}:${token.tokenId}`);
   const result: any = {
     contract: token.contract,
     tokenId: token.tokenId,

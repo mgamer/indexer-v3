@@ -1128,7 +1128,7 @@ export const getTokensV6Options: RouteOptions = {
 
       const sources = await Sources.getInstance();
       const takedowns = await Takedowns.getTokens(
-        rawResult.map((r) => `${r.t_contract}:${r.t_token_id}`),
+        rawResult.map((r) => `${fromBuffer(r.t_contract)}:${r.t_token_id}`),
         rawResult[0]?.collection_id
       );
 
