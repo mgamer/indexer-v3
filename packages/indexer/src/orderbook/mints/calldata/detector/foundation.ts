@@ -74,7 +74,7 @@ export const extractByCollectionERC721 = async (collection: string): Promise<Col
       contract: collection,
       stage: "public-sale",
       kind: "public",
-      status: "open",
+      status: result.marketCanMint ? "open" : "closed",
       standard: STANDARD,
       details: {
         tx: {
