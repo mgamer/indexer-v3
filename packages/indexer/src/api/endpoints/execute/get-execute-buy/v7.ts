@@ -1,7 +1,9 @@
 import { Interface } from "@ethersproject/abi";
 import { BigNumber } from "@ethersproject/bignumber";
-import { AddressZero } from "@ethersproject/constants";
+import { AddressZero, HashZero } from "@ethersproject/constants";
+import { randomBytes } from "@ethersproject/random";
 import { keccak256 } from "@ethersproject/solidity";
+import { parseEther } from "@ethersproject/units";
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
@@ -189,6 +191,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
         .optional()
         .description("Referrer address (where supported)"),
       comment: Joi.string().optional().description("Mint comment (where suported)"),
+      useSeaportIntent: Joi.boolean().optional().description("Fill via a Seaport intent"),
       // Various authorization keys
       x2y2ApiKey: Joi.string().description("Optional X2Y2 API key used for filling."),
       openseaApiKey: Joi.string().description(
@@ -1479,6 +1482,84 @@ export const getExecuteBuyV7Options: RouteOptions = {
           items: [],
         },
       ];
+
+      // Seaport intent MVP
+      if (payload.useSeaportIntent) {
+        if (path[0].currency !== Sdk.Common.Addresses.Native[config.chainId]) {
+          throw Boom.badRequest("Only ETH listings are supported");
+        }
+        if (items.length > 1) {
+          throw Boom.badRequest("Only a single item can be purchased via Seaport intent");
+        }
+        if (payload.normalizeRoyalties) {
+          throw Boom.badRequest("Royalty normalization not supported via Seaport intent");
+        }
+
+        const price = path[0].rawQuote;
+        const totalGlobalFees = (globalFees as { amount: string }[])
+          .map((f) => bn(f.amount))
+          .reduce((a, b) => a.add(b));
+        const gasFee = parseEther("0.005");
+        const totalPrice = bn(price).add(totalGlobalFees).add(gasFee);
+
+        const contractKind = listingDetails[0].contractKind;
+        const solver = "0x743dbd073d951bc1e7ee276eb79a285595993d63";
+        const order = new Sdk.SeaportV15.Order(config.chainId, {
+          offerer: payload.taker,
+          zone: AddressZero,
+          offer: [
+            {
+              itemType: Sdk.SeaportBase.Types.ItemType.ERC20,
+              token: Sdk.Common.Addresses.WNative[config.chainId],
+              identifierOrCriteria: "0",
+              startAmount: totalPrice.toString(),
+              endAmount: totalPrice.toString(),
+            },
+          ],
+          consideration: [
+            {
+              itemType:
+                contractKind === "erc721"
+                  ? Sdk.SeaportBase.Types.ItemType.ERC721
+                  : Sdk.SeaportBase.Types.ItemType.ERC1155,
+              token: path[0].contract,
+              identifierOrCriteria: path[0].tokenId!,
+              startAmount: "0",
+              endAmount: "0",
+              recipient: payload.taker,
+            },
+            {
+              itemType: Sdk.SeaportBase.Types.ItemType.ERC20,
+              token: Sdk.Common.Addresses.WNative[config.chainId],
+              identifierOrCriteria: "0",
+              startAmount: gasFee.toString(),
+              endAmount: gasFee.toString(),
+              recipient: solver,
+            },
+            ...(globalFees as { amount: string; recipient: string }[]).map((f) => ({
+              itemType: Sdk.SeaportBase.Types.ItemType.ERC20,
+              token: Sdk.Common.Addresses.WNative[config.chainId],
+              identifierOrCriteria: "0",
+              startAmount: f.amount,
+              endAmount: f.amount,
+              recipient: f.recipient,
+            })),
+          ],
+          orderType: Sdk.SeaportBase.Types.OrderType.FULL_OPEN,
+          startTime: Math.floor(Date.now() / 1000),
+          endTime: Math.floor(Date.now() / 1000) + 5 * 60,
+          zoneHash: HashZero,
+          salt: bn(randomBytes(32)).toHexString(),
+          conduitKey: Sdk.SeaportBase.Addresses.OpenseaConduitKey[config.chainId],
+          counter: (
+            await new Sdk.SeaportV15.Exchange(config.chainId).getCounter(
+              baseProvider,
+              payload.taker
+            )
+          ).toString(),
+          totalOriginalConsiderationItems: globalFees.length + 3,
+        });
+      }
 
       // Cross-chain purchasing MVP
       if (
