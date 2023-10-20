@@ -9,7 +9,8 @@ import { formatEth, fromBuffer, regex, toBuffer } from "@/common/utils";
 import { CollectionSets } from "@/models/collection-sets";
 import * as Sdk from "@reservoir0x/sdk";
 import { config } from "@/config/index";
-import { getJoiPriceObject, JoiPrice } from "@/common/joi";
+import { getJoiPriceObject, getJoiTokenObject, JoiPrice } from "@/common/joi";
+import { Takedowns } from "@/models/takedowns";
 
 const version = "v4";
 
@@ -282,6 +283,10 @@ export const getUserTokensV4Options: RouteOptions = {
       `;
 
       const userTokens = await redb.manyOrNone(baseQuery, { ...query, ...params });
+      const takedowns = await Takedowns.getTokens(
+        userTokens.map((r) => `${fromBuffer(r.contract)}:${r.token_id}`),
+        userTokens.map((r) => r.collection_id)
+      );
 
       const result = userTokens.map(async (r) => {
         // Use default currencies for backwards compatibility with entries
@@ -294,41 +299,44 @@ export const getUserTokensV4Options: RouteOptions = {
           : Sdk.Common.Addresses.WNative[config.chainId];
 
         return {
-          token: {
-            contract: fromBuffer(r.contract),
-            tokenId: r.token_id,
-            name: r.name,
-            image: r.image,
-            collection: {
-              id: r.collection_id,
-              name: r.collection_name,
-              imageUrl: r.metadata?.imageUrl,
-              floorAskPrice: r.collection_floor_sell_value
-                ? formatEth(r.collection_floor_sell_value)
-                : null,
+          token: getJoiTokenObject(
+            {
+              contract: fromBuffer(r.contract),
+              tokenId: r.token_id,
+              name: r.name,
+              image: r.image,
+              collection: {
+                id: r.collection_id,
+                name: r.collection_name,
+                imageUrl: r.metadata?.imageUrl,
+                floorAskPrice: r.collection_floor_sell_value
+                  ? formatEth(r.collection_floor_sell_value)
+                  : null,
+              },
+              topBid: query.includeTopBid
+                ? {
+                    id: r.top_bid_id,
+                    price: r.top_bid_value
+                      ? await getJoiPriceObject(
+                          {
+                            net: {
+                              amount: r.top_bid_currency_value ?? r.top_bid_value,
+                              nativeAmount: r.top_bid_value,
+                            },
+                            gross: {
+                              amount: r.top_bid_currency_price ?? r.top_bid_price,
+                              nativeAmount: r.top_bid_price,
+                            },
+                          },
+                          topBidCurrency,
+                          query.displayCurrency
+                        )
+                      : null,
+                  }
+                : undefined,
             },
-            topBid: query.includeTopBid
-              ? {
-                  id: r.top_bid_id,
-                  price: r.top_bid_value
-                    ? await getJoiPriceObject(
-                        {
-                          net: {
-                            amount: r.top_bid_currency_value ?? r.top_bid_value,
-                            nativeAmount: r.top_bid_value,
-                          },
-                          gross: {
-                            amount: r.top_bid_currency_price ?? r.top_bid_price,
-                            nativeAmount: r.top_bid_price,
-                          },
-                        },
-                        topBidCurrency,
-                        query.displayCurrency
-                      )
-                    : null,
-                }
-              : undefined,
-          },
+            takedowns
+          ),
           ownership: {
             tokenCount: String(r.token_count),
             onSaleCount: String(r.on_sale_count),

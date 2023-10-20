@@ -416,7 +416,7 @@ export const getTokensV4Options: RouteOptions = {
       const sources = await Sources.getInstance();
       const takedowns = await Takedowns.getTokens(
         rawResult.map((r) => `${fromBuffer(r.contract)}:${r.token_id}`),
-        rawResult[0]?.collection_id
+        rawResult.map((r) => r.collection_id)
       );
       const result = rawResult.map((r) => {
         return getJoiTokenObject(

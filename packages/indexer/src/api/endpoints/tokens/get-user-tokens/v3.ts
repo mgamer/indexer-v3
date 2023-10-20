@@ -9,6 +9,8 @@ import { logger } from "@/common/logger";
 import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 import { CollectionSets } from "@/models/collection-sets";
 import { Assets } from "@/utils/assets";
+import { Takedowns } from "@/models/takedowns";
+import { getJoiTokenObject } from "@/common/joi";
 
 const version = "v3";
 
@@ -249,28 +251,35 @@ export const getUserTokensV3Options: RouteOptions = {
       `;
 
       const userTokens = await redb.manyOrNone(baseQuery, { ...query, ...params });
+      const takedowns = await Takedowns.getTokens(
+        userTokens.map((r) => `${fromBuffer(r.contract)}:${r.token_id}`),
+        userTokens.map((r) => r.collection_id)
+      );
 
       const result = _.map(userTokens, (r) => ({
-        token: {
-          contract: fromBuffer(r.contract),
-          tokenId: r.token_id,
-          name: r.name,
-          image: Assets.getLocalAssetsLink(r.image),
-          collection: {
-            id: r.collection_id,
-            name: r.collection_name,
-            imageUrl: Assets.getLocalAssetsLink(r.metadata?.imageUrl),
-            floorAskPrice: r.collection_floor_sell_value
-              ? formatEth(r.collection_floor_sell_value)
-              : null,
+        token: getJoiTokenObject(
+          {
+            contract: fromBuffer(r.contract),
+            tokenId: r.token_id,
+            name: r.name,
+            image: Assets.getLocalAssetsLink(r.image),
+            collection: {
+              id: r.collection_id,
+              name: r.collection_name,
+              imageUrl: Assets.getLocalAssetsLink(r.metadata?.imageUrl),
+              floorAskPrice: r.collection_floor_sell_value
+                ? formatEth(r.collection_floor_sell_value)
+                : null,
+            },
+            topBid: query.includeTopBid
+              ? {
+                  id: r.top_bid_id,
+                  value: r.top_bid_value ? formatEth(r.top_bid_value) : null,
+                }
+              : undefined,
           },
-          topBid: query.includeTopBid
-            ? {
-                id: r.top_bid_id,
-                value: r.top_bid_value ? formatEth(r.top_bid_value) : null,
-              }
-            : undefined,
-        },
+          takedowns
+        ),
         ownership: {
           tokenCount: String(r.token_count),
           onSaleCount: String(r.on_sale_count),

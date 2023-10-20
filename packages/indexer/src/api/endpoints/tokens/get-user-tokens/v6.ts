@@ -20,12 +20,14 @@ import {
   getJoiDynamicPricingObject,
   getJoiPriceObject,
   getJoiSourceObject,
+  getJoiTokenObject,
   JoiDynamicPrice,
   JoiPrice,
   JoiSource,
 } from "@/common/joi";
 import { Sources } from "@/models/sources";
 import _ from "lodash";
+import { Takedowns } from "@/models/takedowns";
 
 const version = "v6";
 
@@ -512,6 +514,10 @@ export const getUserTokensV6Options: RouteOptions = {
       }
 
       const sources = await Sources.getInstance();
+      const takedowns = await Takedowns.getTokens(
+        userTokens.map((r) => `${fromBuffer(r.contract)}:${r.token_id}`),
+        userTokens.map((r) => r.collection_id)
+      );
       const result = userTokens.map(async (r) => {
         const contract = fromBuffer(r.contract);
         const tokenId = r.token_id;
@@ -530,56 +536,59 @@ export const getUserTokensV6Options: RouteOptions = {
         const acquiredTime = new Date(r.acquired_at * 1000).toISOString();
 
         return {
-          token: {
-            contract: contract,
-            tokenId: tokenId,
-            kind: r.kind,
-            name: r.name,
-            image: r.image,
-            lastBuy: {
-              value: r.last_buy_value ? formatEth(r.last_buy_value) : null,
-              timestamp: r.last_buy_timestamp,
-            },
-            lastSell: {
-              value: r.last_sell_value ? formatEth(r.last_sell_value) : null,
-              timestamp: r.last_sell_timestamp,
-            },
-            rarityScore: r.rarity_score,
-            rarityRank: r.rarity_rank,
-            media: r.media,
-            collection: {
-              id: r.collection_id,
-              name: r.collection_name,
-              imageUrl: r.metadata?.imageUrl,
-              floorAskPrice: r.collection_floor_sell_value
-                ? formatEth(r.collection_floor_sell_value)
+          token: getJoiTokenObject(
+            {
+              contract: contract,
+              tokenId: tokenId,
+              kind: r.kind,
+              name: r.name,
+              image: r.image,
+              lastBuy: {
+                value: r.last_buy_value ? formatEth(r.last_buy_value) : null,
+                timestamp: r.last_buy_timestamp,
+              },
+              lastSell: {
+                value: r.last_sell_value ? formatEth(r.last_sell_value) : null,
+                timestamp: r.last_sell_timestamp,
+              },
+              rarityScore: r.rarity_score,
+              rarityRank: r.rarity_rank,
+              media: r.media,
+              collection: {
+                id: r.collection_id,
+                name: r.collection_name,
+                imageUrl: r.metadata?.imageUrl,
+                floorAskPrice: r.collection_floor_sell_value
+                  ? formatEth(r.collection_floor_sell_value)
+                  : null,
+              },
+              topBid: query.includeTopBid
+                ? {
+                    id: r.top_bid_id,
+                    price: r.top_bid_value
+                      ? await getJoiPriceObject(
+                          {
+                            net: {
+                              amount: r.top_bid_currency_value ?? r.top_bid_value,
+                              nativeAmount: r.top_bid_value,
+                            },
+                            gross: {
+                              amount: r.top_bid_currency_price ?? r.top_bid_price,
+                              nativeAmount: r.top_bid_price,
+                            },
+                          },
+                          topBidCurrency,
+                          query.displayCurrency
+                        )
+                      : null,
+                  }
+                : undefined,
+              lastAppraisalValue: r.last_token_appraisal_value
+                ? formatEth(r.last_token_appraisal_value)
                 : null,
             },
-            topBid: query.includeTopBid
-              ? {
-                  id: r.top_bid_id,
-                  price: r.top_bid_value
-                    ? await getJoiPriceObject(
-                        {
-                          net: {
-                            amount: r.top_bid_currency_value ?? r.top_bid_value,
-                            nativeAmount: r.top_bid_value,
-                          },
-                          gross: {
-                            amount: r.top_bid_currency_price ?? r.top_bid_price,
-                            nativeAmount: r.top_bid_price,
-                          },
-                        },
-                        topBidCurrency,
-                        query.displayCurrency
-                      )
-                    : null,
-                }
-              : undefined,
-            lastAppraisalValue: r.last_token_appraisal_value
-              ? formatEth(r.last_token_appraisal_value)
-              : null,
-          },
+            takedowns
+          ),
           ownership: {
             tokenCount: String(r.token_count),
             onSaleCount: String(r.on_sale_count),

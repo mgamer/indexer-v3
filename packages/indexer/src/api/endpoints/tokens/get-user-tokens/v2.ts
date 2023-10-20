@@ -7,6 +7,8 @@ import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 import { CollectionSets } from "@/models/collection-sets";
+import { Takedowns } from "@/models/takedowns";
+import { getJoiTokenObject } from "@/common/joi";
 
 const version = "v2";
 
@@ -206,32 +208,41 @@ export const getUserTokensV2Options: RouteOptions = {
         LIMIT $/limit/
       `;
 
-      const result = await redb.manyOrNone(baseQuery, { ...query, ...params }).then((result) =>
-        result.map((r) => ({
-          token: {
-            contract: fromBuffer(r.contract),
-            tokenId: r.token_id,
-            name: r.name,
-            image: r.image,
-            collection: {
-              id: r.collection_id,
-              name: r.collection_name,
-              imageUrl: r.metadata?.imageUrl,
-              floorAskPrice: r.collection_floor_sell_value
-                ? formatEth(r.collection_floor_sell_value)
-                : null,
+      const result = await redb
+        .manyOrNone(baseQuery, { ...query, ...params })
+        .then(async (result) => {
+          const takedowns = await Takedowns.getTokens(
+            result.map((r) => `${fromBuffer(r.contract)}:${r.token_id}`),
+            result.map((r) => r.collection_id)
+          );
+          return result.map((r) => ({
+            token: getJoiTokenObject(
+              {
+                contract: fromBuffer(r.contract),
+                tokenId: r.token_id,
+                name: r.name,
+                image: r.image,
+                collection: {
+                  id: r.collection_id,
+                  name: r.collection_name,
+                  imageUrl: r.metadata?.imageUrl,
+                  floorAskPrice: r.collection_floor_sell_value
+                    ? formatEth(r.collection_floor_sell_value)
+                    : null,
+                },
+              },
+              takedowns
+            ),
+            ownership: {
+              tokenCount: String(r.token_count),
+              onSaleCount: String(r.on_sale_count),
+              floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
+              acquiredAt: r.acquired_at ? new Date(r.acquired_at).toISOString() : null,
             },
-          },
-          ownership: {
-            tokenCount: String(r.token_count),
-            onSaleCount: String(r.on_sale_count),
-            floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
-            acquiredAt: r.acquired_at ? new Date(r.acquired_at).toISOString() : null,
-          },
-        }))
-      );
+          }));
+        });
 
-      return { tokens: result };
+      return { tokens: await Promise.all(result) };
     } catch (error) {
       logger.error(`get-user-tokens-${version}-handler`, `Handler failure: ${error}`);
       throw error;

@@ -6,6 +6,8 @@ import Joi from "joi";
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
+import { getJoiTokenObject } from "@/common/joi";
+import { Takedowns } from "@/models/takedowns";
 
 const version = "v1";
 
@@ -160,33 +162,42 @@ export const getUserTokensV1Options: RouteOptions = {
       baseQuery += ` OFFSET $/offset/`;
       baseQuery += ` LIMIT $/limit/`;
 
-      const result = await redb.manyOrNone(baseQuery, { ...query, ...params }).then((result) =>
-        result.map((r) => ({
-          token: {
-            contract: fromBuffer(r.contract),
-            tokenId: r.token_id,
-            name: r.name,
-            image: r.image,
-            collection: {
-              id: r.collection_id,
-              name: r.collection_name,
+      const result = await redb
+        .manyOrNone(baseQuery, { ...query, ...params })
+        .then(async (result) => {
+          const takedowns = await Takedowns.getTokens(
+            result.map((r) => `${fromBuffer(r.contract)}:${r.token_id}`),
+            result.map((r) => r.collection_id)
+          );
+          return result.map((r) => ({
+            token: getJoiTokenObject(
+              {
+                contract: fromBuffer(r.contract),
+                tokenId: r.token_id,
+                name: r.name,
+                image: r.image,
+                collection: {
+                  id: r.collection_id,
+                  name: r.collection_name,
+                },
+                topBid: {
+                  id: r.top_buy_id,
+                  value: r.top_buy_value ? formatEth(r.top_buy_value) : null,
+                  schema: r.top_buy_schema,
+                },
+              },
+              takedowns
+            ),
+            ownership: {
+              tokenCount: String(r.token_count),
+              onSaleCount: String(r.on_sale_count),
+              floorSellValue: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
+              acquiredAt: Number(r.acquired_at),
             },
-            topBid: {
-              id: r.top_buy_id,
-              value: r.top_buy_value ? formatEth(r.top_buy_value) : null,
-              schema: r.top_buy_schema,
-            },
-          },
-          ownership: {
-            tokenCount: String(r.token_count),
-            onSaleCount: String(r.on_sale_count),
-            floorSellValue: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
-            acquiredAt: Number(r.acquired_at),
-          },
-        }))
-      );
+          }));
+        });
 
-      return { tokens: result };
+      return { tokens: await Promise.all(result) };
     } catch (error) {
       logger.error(`get-user-tokens-${version}-handler`, `Handler failure: ${error}`);
       throw error;

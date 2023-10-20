@@ -32,16 +32,28 @@ export class Takedowns {
     await Takedowns.delete("token", id);
   }
 
-  public static async getTokens(ids: string[], collectionId?: string): Promise<(string | null)[]> {
-    if (collectionId && (await Takedowns.isTakedownCollection(collectionId))) {
-      return ids;
+  public static async getTokens(
+    ids: string[],
+    collectionIds: string[]
+  ): Promise<(string | null)[]> {
+    const takedownCollections: string[] = [];
+    const result = [];
+    for (let i = 0; i < ids.length; i++) {
+      if (
+        takedownCollections.includes(collectionIds[i]) ||
+        (await Takedowns.isTakedownCollection(collectionIds[i])) ||
+        (await Takedowns.isTakedownToken(ids[i]))
+      ) {
+        result.push(ids[i]);
+        takedownCollections.push(collectionIds[i]);
+      }
     }
 
-    return Takedowns.get("token", ids);
+    return result;
   }
 
-  public static async isTakedownToken(contract: string, tokenId: string): Promise<boolean> {
-    return Takedowns.isTakedown("token", `${contract}:${tokenId}`);
+  public static async isTakedownToken(id: string): Promise<boolean> {
+    return await Takedowns.isTakedown("token", id);
   }
 
   // --- Collections --- //
