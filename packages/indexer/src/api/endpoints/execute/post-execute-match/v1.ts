@@ -1,6 +1,7 @@
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
+import axios from "axios";
 import Joi from "joi";
 
 import { config } from "@/config/index";
@@ -17,13 +18,20 @@ export const postExecuteMatchV1Options: RouteOptions = {
     },
   },
   validate: {
-    payload: Joi.object({
-      order: Joi.any().required(),
-    }),
+    payload: Joi.alternatives(
+      Joi.object({
+        kind: Joi.string().valid("seaport-v1.5-intent").required(),
+        order: Joi.any().required(),
+      })
+    ),
   },
   response: {
     schema: Joi.object({
-      message: Joi.string(),
+      status: Joi.object({
+        endpoint: Joi.string().required(),
+        method: Joi.string().valid("POST").required(),
+        body: Joi.any(),
+      }),
     }).label(`postExecuteMatch${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(`post-execute-match-${version}-handler`, `Wrong response schema: ${error}`);
@@ -35,36 +43,32 @@ export const postExecuteMatchV1Options: RouteOptions = {
     const payload = request.payload as any;
 
     try {
-      const order = new Sdk.SeaportV15.Order(config.chainId, payload.order);
+      switch (payload.kind) {
+        case "seaport-v1.5-intent": {
+          const order = new Sdk.SeaportV15.Order(config.chainId, payload.order);
 
-      switch (preSignature.kind) {
-        case "payment-processor-take-order": {
-          // Attach the signature to the pre-signature
-          preSignature.signature = query.signature;
+          await axios
+            .post(`${config.solverBaseUrl}/intents/seaport`, { order: payload.order })
+            .then((response) => response.data);
 
-          const signatureValid = checkEIP721Signature(
-            preSignature.data,
-            query.signature,
-            preSignature.signer
-          );
-          if (!signatureValid) {
-            throw new Error("Invalid signature");
-          }
-
-          // Update the cached pre-signature to include the signature
-          await savePreSignature(payload.id, preSignature, 0);
-
-          break;
+          return {
+            status: {
+              endpoint: "/execute/status/v1",
+              method: "POST",
+              body: {
+                kind: "seaport-intent",
+                hash: order.hash(),
+              },
+            },
+          };
         }
 
         default: {
-          throw new Error("Unknown pre-signature kind");
+          throw Boom.badRequest("Unknown kind");
         }
       }
-
-      return { message: "Success" };
     } catch (error) {
-      logger.error(`post-pre-signature-${version}-handler`, `Handler failure: ${error}`);
+      logger.error(`post-execute-match-${version}-handler`, `Handler failure: ${error}`);
       throw error;
     }
   },
