@@ -299,8 +299,7 @@ export class Collections {
 
     const query = `
       UPDATE collections
-        SET updated_at = now(),
-        SET ${updateString}
+        SET updated_at = now(), ${updateString}
       WHERE id = $/collectionId/
     `;
 
