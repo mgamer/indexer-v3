@@ -71,8 +71,11 @@ export class IndexerCollectionsHandler extends KafkaEventHandler {
           askOrderId: payload.after.floor_sell_id,
         });
 
+        const { metadata, ...updatedCollection } = payload.after;
+
         const updatedPayload = {
-          ...payload.after,
+          ...updatedCollection,
+          metadata: JSON.parse(metadata),
           on_sale_count: result.on_sale_count,
           floor_sell_currency: result.floor_sell_currency,
           normalized_floor_sell_currency_value: result.normalized_floor_sell_currency_value,
