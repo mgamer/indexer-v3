@@ -217,6 +217,7 @@ export class Collections {
             OR slug IS DISTINCT FROM $/slug/ 
             OR payment_tokens IS DISTINCT FROM $/paymentTokens/ 
             OR creator IS DISTINCT FROM $/creator/
+            OR $/isSpamContract/ = 1
             )
       RETURNING (
                   SELECT
@@ -236,7 +237,7 @@ export class Collections {
       slug: collection.slug,
       paymentTokens: collection.paymentTokens ? { opensea: collection.paymentTokens } : {},
       creator: collection.creator ? toBuffer(collection.creator) : null,
-      isSpamContract,
+      isSpamContract: Number(isSpamContract),
     };
 
     const result = await idb.oneOrNone(query, values);
