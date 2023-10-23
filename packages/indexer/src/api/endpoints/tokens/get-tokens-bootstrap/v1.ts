@@ -15,6 +15,8 @@ import {
 } from "@/common/utils";
 import { Sources } from "@/models/sources";
 import { Assets } from "@/utils/assets";
+import { Takedowns } from "@/models/takedowns";
+import { getJoiTokenObject } from "@/common/joi";
 
 const version = "v1";
 
@@ -128,18 +130,25 @@ export const getTokensBootstrapV1Options: RouteOptions = {
       const rawResult = await redb.manyOrNone(baseQuery, query);
 
       const sources = await Sources.getInstance();
+      const takedowns = await Takedowns.getTokens(
+        rawResult.map((r) => `${fromBuffer(r.contract)}:${r.token_id}`),
+        rawResult.map((r) => r.collection_id)
+      );
       const result = rawResult.map((r) => {
-        return {
-          contract: fromBuffer(r.contract),
-          tokenId: r.token_id,
-          image: Assets.getLocalAssetsLink(r.image),
-          orderId: r.floor_sell_id,
-          maker: fromBuffer(r.floor_sell_maker),
-          price: formatEth(r.floor_sell_value),
-          validFrom: Number(r.floor_sell_valid_from),
-          validUntil: Number(r.floor_sell_valid_to),
-          source: sources.get(r.floor_sell_source_id_int)?.name,
-        };
+        return getJoiTokenObject(
+          {
+            contract: fromBuffer(r.contract),
+            tokenId: r.token_id,
+            image: Assets.getLocalAssetsLink(r.image),
+            orderId: r.floor_sell_id,
+            maker: fromBuffer(r.floor_sell_maker),
+            price: formatEth(r.floor_sell_value),
+            validFrom: Number(r.floor_sell_valid_from),
+            validUntil: Number(r.floor_sell_valid_to),
+            source: sources.get(r.floor_sell_source_id_int)?.name,
+          },
+          takedowns
+        );
       });
 
       let continuation: string | undefined;

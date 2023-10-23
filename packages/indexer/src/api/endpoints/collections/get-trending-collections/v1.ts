@@ -20,8 +20,9 @@ import {
   TopSellingFillOptions,
 } from "@/elasticsearch/indexes/activities";
 
-import { getJoiPriceObject, JoiPrice } from "@/common/joi";
+import { getJoiCollectionObject, getJoiPriceObject, JoiPrice } from "@/common/joi";
 import { Sources } from "@/models/sources";
+import { Takedowns } from "@/models/takedowns";
 
 const version = "v1";
 
@@ -138,12 +139,14 @@ export const getTrendingCollectionsV1Options: RouteOptions = {
 
       if (collectionsResult.length > 0) {
         const collectionsMetadata = await getCollectionsMetadata(collectionsResult);
+        const takedowns = await Takedowns.getCollections(collectionsResult.map((r: any) => r.id));
 
         collections = await formatCollections(
           collectionsResult,
           collectionsMetadata,
           normalizeRoyalties,
-          useNonFlaggedFloorAsk
+          useNonFlaggedFloorAsk,
+          takedowns
         );
       }
 
@@ -160,7 +163,8 @@ async function formatCollections(
   collectionsResult: any[],
   collectionsMetadata: Record<string, any>,
   normalizeRoyalties: boolean,
-  useNonFlaggedFloorAsk: boolean
+  useNonFlaggedFloorAsk: boolean,
+  takedowns: (string | null)[]
 ) {
   const sources = await Sources.getInstance();
 
@@ -203,30 +207,33 @@ async function formatCollections(
         };
       }
 
-      return {
-        ...response,
-        image: metadata?.metadata?.imageUrl,
-        name: metadata?.name || "",
-        onSaleCount: Number(metadata.on_sale_count) || 0,
-        volumeChange: {
-          "1day": Number(metadata.day1_volume_change),
-          "7day": Number(metadata.day7_volume_change),
-          "30day": Number(metadata.day30_volume_change),
-        },
+      return getJoiCollectionObject(
+        {
+          ...response,
+          image: metadata?.metadata?.imageUrl,
+          name: metadata?.name || "",
+          onSaleCount: Number(metadata.on_sale_count) || 0,
+          volumeChange: {
+            "1day": Number(metadata.day1_volume_change),
+            "7day": Number(metadata.day7_volume_change),
+            "30day": Number(metadata.day30_volume_change),
+          },
 
-        collectionVolume: {
-          "1day": metadata.day1_volume ? formatEth(metadata.day1_volume) : null,
-          "7day": metadata.day7_volume ? formatEth(metadata.day7_volume) : null,
-          "30day": metadata.day30_volume ? formatEth(metadata.day30_volume) : null,
-          allTime: metadata.all_time_volume ? formatEth(metadata.all_time_volume) : null,
-        },
+          collectionVolume: {
+            "1day": metadata.day1_volume ? formatEth(metadata.day1_volume) : null,
+            "7day": metadata.day7_volume ? formatEth(metadata.day7_volume) : null,
+            "30day": metadata.day30_volume ? formatEth(metadata.day30_volume) : null,
+            allTime: metadata.all_time_volume ? formatEth(metadata.all_time_volume) : null,
+          },
 
-        tokenCount: Number(metadata.token_count || 0),
-        ownerCount: Number(metadata.owner_count || 0),
-        banner: metadata?.metadata?.bannerImageUrl,
-        description: metadata?.metadata?.description,
-        floorAsk,
-      };
+          tokenCount: Number(metadata.token_count || 0),
+          ownerCount: Number(metadata.owner_count || 0),
+          banner: metadata?.metadata?.bannerImageUrl,
+          description: metadata?.metadata?.description,
+          floorAsk,
+        },
+        takedowns
+      );
     })
   );
 
