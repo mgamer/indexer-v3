@@ -32,7 +32,7 @@ export const postExecuteStatusV1Options: RouteOptions = {
   },
   response: {
     schema: Joi.object({
-      status: Joi.string().valid("unknown", "success", "failure").required(),
+      status: Joi.string().valid("unknown", "pending", "success", "failure").required(),
       details: Joi.string(),
       time: Joi.number(),
     }).label(`postExecuteStatus${version.toUpperCase()}Response`),
