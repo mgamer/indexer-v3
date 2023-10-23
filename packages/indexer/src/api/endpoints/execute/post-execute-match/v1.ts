@@ -56,7 +56,7 @@ export const postExecuteMatchV1Options: RouteOptions = {
               endpoint: "/execute/status/v1",
               method: "POST",
               body: {
-                kind: "seaport-intent",
+                kind: payload.kind,
                 hash: order.hash(),
               },
             },
