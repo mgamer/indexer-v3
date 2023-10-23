@@ -1,6 +1,6 @@
 import { BigNumber } from "@ethersproject/bignumber";
 import * as Sdk from "@reservoir0x/sdk";
-
+import { HashZero } from "@ethersproject/constants";
 import { logger } from "@/common/logger";
 import { bn } from "@/common/utils";
 import { config } from "@/config/index";
@@ -56,15 +56,43 @@ export const extractByTx = async (
   }
 
   // For now, we only support simple data types in the calldata
-  if (["(", ")", "[", "]", "bytes"].some((x) => methodSignature.params.includes(x))) {
-    return [];
+  const complexKeywords = ["(", ")", "[", "]", "bytes"];
+  const hasComplexArguments = complexKeywords.some((x) => methodSignature.params.includes(x));
+  let allBytesIsEmpty = false;
+
+  if (hasComplexArguments) {
+    methodSignature.params.split("),").forEach((abiType, i) => {
+      const complexParam = complexKeywords.some((c) => abiType.includes(c));
+      if (complexParam && abiType.includes("bytes32")) {
+        const decodedValue = methodSignature.decodedCalldata[i];
+        const subParams = abiType.replace("(", "").split(",");
+        allBytesIsEmpty = subParams.every((param, i) => {
+          const value = decodedValue[i];
+          if (param === "bytes32") {
+            return value == HashZero;
+          } else if (param === "bytes32[]") {
+            return value.length === 0;
+          }
+        });
+      }
+    });
+    if (!allBytesIsEmpty) {
+      return [];
+    }
+  }
+  let rawParams = methodSignature.params.split(",");
+
+  if (hasComplexArguments && allBytesIsEmpty) {
+    // (bytes32,bytes32[]),uint256
+    rawParams = methodSignature.params.split("),");
+    rawParams = rawParams.map((c, index) => (index < rawParams.length - 1 ? `${c})` : c));
   }
 
   const params: AbiParam[] = [];
 
   try {
     if (methodSignature.params.length) {
-      methodSignature.params.split(",").forEach((abiType, i) => {
+      rawParams.forEach((abiType, i) => {
         const decodedValue = methodSignature.decodedCalldata[i];
 
         if (abiType.includes("int") && bn(decodedValue).eq(amountMinted)) {
