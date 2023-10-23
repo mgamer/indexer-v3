@@ -487,7 +487,7 @@ export const getCollectionsV7Options: RouteOptions = {
           collections.day1_floor_sell_value,
           collections.day7_floor_sell_value,
           collections.day30_floor_sell_value,
-          collections.is_spam,
+          --collections.is_spam,
           ${floorAskSelectQuery}
           collections.token_count,
           collections.owner_count,

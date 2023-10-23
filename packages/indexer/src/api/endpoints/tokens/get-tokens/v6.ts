@@ -629,7 +629,7 @@ export const getTokensV6Options: RouteOptions = {
           t.rarity_score,
           t.rarity_rank,
           t.is_flagged,
-          t.is_spam AS t_is_spam,
+          --t.is_spam AS t_is_spam,
           t.last_flag_update,
           t.last_flag_change,
           t.supply,
@@ -638,7 +638,7 @@ export const getTokensV6Options: RouteOptions = {
           c.slug,
           c.creator,
           c.token_count,
-          c.is_spam AS c_is_spam,
+          --c.is_spam AS c_is_spam,
           (c.metadata ->> 'imageUrl')::TEXT AS collection_image,
           (
             SELECT

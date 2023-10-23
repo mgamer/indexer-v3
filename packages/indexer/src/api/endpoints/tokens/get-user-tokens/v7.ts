@@ -417,7 +417,7 @@ export const getUserTokensV7Options: RouteOptions = {
           t.last_sell_timestamp,
           t.last_buy_timestamp,
           t.is_flagged,
-          t.is_spam AS t_is_spam,
+          --t.is_spam AS t_is_spam,
           t.last_flag_update,
           t.last_flag_change,
           null AS top_bid_id,
@@ -459,7 +459,7 @@ export const getUserTokensV7Options: RouteOptions = {
             t.last_sell_timestamp,
             t.last_buy_timestamp,
             t.is_flagged,
-            t.is_spam AS t_is_spam,
+            --t.is_spam AS t_is_spam,
             t.last_flag_update,
             t.last_flag_change,
             ${selectFloorData}
@@ -547,7 +547,7 @@ export const getUserTokensV7Options: RouteOptions = {
                top_bid_id, top_bid_price, top_bid_value, top_bid_currency, top_bid_currency_price, top_bid_currency_value, top_bid_source_id_int,
                o.currency AS collection_floor_sell_currency, o.currency_price AS collection_floor_sell_currency_price,
                c.name as collection_name, con.kind, c.metadata, c.royalties, (c.metadata ->> 'safelistRequestStatus')::TEXT AS "opensea_verification_status",
-               c.royalties_bps, ot.kind AS floor_sell_kind, c.slug, c.is_spam AS c_is_spam,
+               c.royalties_bps, ot.kind AS floor_sell_kind, c.slug--, c.is_spam AS c_is_spam,
                ${query.includeRawData ? "ot.raw_data AS floor_sell_raw_data," : ""}
                ${
                  query.useNonFlaggedFloorAsk
