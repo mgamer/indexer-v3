@@ -128,6 +128,9 @@ export const getUserTokensV7Options: RouteOptions = {
       includeRawData: Joi.boolean()
         .default(false)
         .description("If true, raw data is included in the response."),
+      filterSpamTokens: Joi.boolean()
+        .default(false)
+        .description("If true, will filter any tokens marked as spam."),
       useNonFlaggedFloorAsk: Joi.boolean()
         .default(false)
         .description("If true, will return the collection non flagged floor ask."),
@@ -166,6 +169,7 @@ export const getUserTokensV7Options: RouteOptions = {
               .description("No rarity rank for collections over 100k"),
             media: Joi.string().allow(null),
             isFlagged: Joi.boolean().default(false),
+            isSpam: Joi.boolean().default(false),
             lastFlagUpdate: Joi.string().allow("", null),
             lastFlagChange: Joi.string().allow("", null),
             collection: Joi.object({
@@ -173,6 +177,7 @@ export const getUserTokensV7Options: RouteOptions = {
               name: Joi.string().allow("", null),
               slug: Joi.string().allow("", null).description("Open Sea slug"),
               imageUrl: Joi.string().allow(null),
+              isSpam: Joi.boolean().default(false),
               openseaVerificationStatus: Joi.string().allow("", null),
               floorAskPrice: JoiPrice.allow(null).description("Can be null if no active asks."),
               royaltiesBps: Joi.number().allow(null),
@@ -414,6 +419,7 @@ export const getUserTokensV7Options: RouteOptions = {
           t.last_sell_timestamp,
           t.last_buy_timestamp,
           t.is_flagged,
+          t.is_spam AS t_is_spam,
           t.last_flag_update,
           t.last_flag_change,
           null AS top_bid_id,
@@ -429,6 +435,7 @@ export const getUserTokensV7Options: RouteOptions = {
         ${includeRoyaltyBreakdownQuery}
         WHERE b.token_id = t.token_id
         AND b.contract = t.contract
+        ${query.filterSpamTokens ? `AND t.is_spam = 0` : ""}
         AND ${
           tokensCollectionFilters.length ? "(" + tokensCollectionFilters.join(" OR ") + ")" : "TRUE"
         }
@@ -454,6 +461,7 @@ export const getUserTokensV7Options: RouteOptions = {
             t.last_sell_timestamp,
             t.last_buy_timestamp,
             t.is_flagged,
+            t.is_spam AS t_is_spam,
             t.last_flag_update,
             t.last_flag_change,
             ${selectFloorData}
@@ -541,7 +549,7 @@ export const getUserTokensV7Options: RouteOptions = {
                top_bid_id, top_bid_price, top_bid_value, top_bid_currency, top_bid_currency_price, top_bid_currency_value, top_bid_source_id_int,
                o.currency AS collection_floor_sell_currency, o.currency_price AS collection_floor_sell_currency_price,
                c.name as collection_name, con.kind, c.metadata, c.royalties, (c.metadata ->> 'safelistRequestStatus')::TEXT AS "opensea_verification_status",
-               c.royalties_bps, ot.kind AS floor_sell_kind, c.slug,
+               c.royalties_bps, ot.kind AS floor_sell_kind, c.slug, c.is_spam AS c_is_spam,
                ${query.includeRawData ? "ot.raw_data AS floor_sell_raw_data," : ""}
                ${
                  query.useNonFlaggedFloorAsk
@@ -572,7 +580,9 @@ export const getUserTokensV7Options: RouteOptions = {
               AND amount > 0
           ) AS b
           ${tokensJoin}
-          JOIN collections c ON c.id = t.collection_id
+          JOIN collections c ON c.id = t.collection_id ${
+            query.filterSpamTokens ? `AND c.is_spam = 0` : ""
+          }
           LEFT JOIN orders o ON o.id = c.floor_sell_id
           LEFT JOIN orders ot ON ot.id = t.floor_sell_id
           JOIN contracts con ON b.contract = con.address
@@ -696,6 +706,7 @@ export const getUserTokensV7Options: RouteOptions = {
               remainingSupply: !_.isNull(r.remaining_supply) ? r.remaining_supply : null,
               media: r.media,
               isFlagged: Boolean(Number(r.is_flagged)),
+              isSpam: Boolean(Number(r.t_is_spam)) || Boolean(Number(r.c_is_spam)),
               lastFlagUpdate: r.last_flag_update
                 ? new Date(r.last_flag_update).toISOString()
                 : null,
