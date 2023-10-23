@@ -718,6 +718,7 @@ export const getUserTokensV7Options: RouteOptions = {
                 name: r.collection_name,
                 slug: r.slug,
                 imageUrl: r.metadata?.imageUrl,
+                isSpam: Boolean(Number(r.c_is_spam)),
                 openseaVerificationStatus: r.opensea_verification_status,
                 floorAskPrice: r.collection_floor_sell_value
                   ? await getJoiPriceObject(
