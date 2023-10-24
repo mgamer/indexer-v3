@@ -7,6 +7,7 @@ import * as utils from "@/events-sync/utils";
 import { BigNumber } from "ethers";
 import { parseEther } from "ethers/lib/utils";
 import { config } from "@/config/index";
+// import { defaultAbiCoder } from "@ethersproject/abi";
 
 jest.setTimeout(1000 * 1000);
 
@@ -25,6 +26,14 @@ describe("Mints - Generic", () => {
       BigNumber.from("0"),
       BigNumber.from("1")
     );
+
+    // console.log(
+    //   defaultAbiCoder.encode(
+    //     ["(bytes32,bytes32[])"],
+    //     [["0x0000000000000000000000000000000000000000000000000000000000000000", []]]
+    //   )
+    // );
+
     // console.log("infos", infos);
     expect(infos.length).not.toBe(0);
   });

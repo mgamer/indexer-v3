@@ -13,9 +13,13 @@ import {
 import { AbiParam } from "@/orderbook/mints/calldata";
 import { getMaxSupply } from "@/orderbook/mints/calldata/helpers";
 import { getMethodSignature } from "@/orderbook/mints/method-signatures";
+import { ParamType } from "@ethersproject/abi";
 
 const STANDARD = "unknown";
 
+function isEmptyArray(arr: string[], def: string) {
+  return arr.length === 0 ? true : arr.every((c: string) => c == def);
+}
 export const extractByTx = async (
   collection: string,
   tx: Transaction,
@@ -56,45 +60,44 @@ export const extractByTx = async (
   }
 
   // For now, we only support simple data types in the calldata
-  const complexKeywords = ["(", ")", "[", "]", "bytes"];
-  const hasComplexArguments = complexKeywords.some((x) => methodSignature.params.includes(x));
+  const complexKeywords = ["(", ")", "[", "]", "bytes", "tuple"];
+  const parsedParams = methodSignature.inputs.map((c) => c.type!);
+  const hasComplexArguments = parsedParams.some((abiType) =>
+    complexKeywords.some((x) => abiType.includes(x))
+  );
   let allBytesIsEmpty = false;
 
   if (hasComplexArguments) {
-    methodSignature.params.split("),").forEach((abiType, i) => {
+    parsedParams.forEach((abiType, i) => {
+      const decodedValue = methodSignature.decodedCalldata[i];
       const complexParam = complexKeywords.some((c) => abiType.includes(c));
-      if (complexParam && abiType.includes("bytes32")) {
-        const decodedValue = methodSignature.decodedCalldata[i];
-        const subParams = abiType.replace("(", "").split(",");
+      if (complexParam && abiType.includes("tuple")) {
+        const subParams = methodSignature.inputs[i].components!;
         allBytesIsEmpty = subParams.every((param, i) => {
           const value = decodedValue[i];
-          if (param === "bytes32") {
+          if (param.type === "bytes32") {
             return value == HashZero;
-          } else if (param === "bytes32[]") {
-            return value.length === 0;
+          } else if (param.type === "bytes32[]") {
+            return isEmptyArray(value, HashZero);
           }
         });
+      } else if (abiType.includes("bytes32[]")) {
+        allBytesIsEmpty = isEmptyArray(decodedValue, HashZero);
       }
     });
+
     if (!allBytesIsEmpty) {
       return [];
     }
-  }
-  let rawParams = methodSignature.params.split(",");
-
-  if (hasComplexArguments && allBytesIsEmpty) {
-    // (bytes32,bytes32[]),uint256
-    rawParams = methodSignature.params.split("),");
-    rawParams = rawParams.map((c, index) => (index < rawParams.length - 1 ? `${c})` : c));
   }
 
   const params: AbiParam[] = [];
 
   try {
     if (methodSignature.params.length) {
-      rawParams.forEach((abiType, i) => {
+      parsedParams.forEach((abiType, i) => {
         const decodedValue = methodSignature.decodedCalldata[i];
-
+        const rawABI = ParamType.fromObject(methodSignature.inputs[i]).format();
         if (abiType.includes("int") && bn(decodedValue).eq(amountMinted)) {
           params.push({
             kind: "quantity",
@@ -110,6 +113,12 @@ export const extractByTx = async (
             kind: "recipient",
             abiType,
           });
+        } else if (abiType.includes("tuple") || abiType.includes("[]")) {
+          params.push({
+            kind: "unknown",
+            abiType: rawABI,
+            abiValue: decodedValue,
+          });
         } else {
           params.push({
             kind: "unknown",
@@ -122,7 +131,6 @@ export const extractByTx = async (
   } catch (error) {
     logger.error("mint-detector", JSON.stringify({ kind: STANDARD, error }));
   }
-
   const collectionMint: CollectionMint = {
     collection,
     contract: collection,
