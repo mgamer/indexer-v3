@@ -38,7 +38,7 @@ if (config.doBackgroundWork) {
         );
       }
     } catch (error) {
-      logger.error("sync-takedowns", `failed to record metrics error ${error}`);
+      logger.error("sync-takedowns", `failed to sync takedowns error ${error}`);
     }
   });
 }
