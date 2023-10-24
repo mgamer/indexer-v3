@@ -1,5 +1,7 @@
+import { Interface } from "@ethersproject/abi";
 import { BigNumber } from "@ethersproject/bignumber";
-import { AddressZero } from "@ethersproject/constants";
+import { AddressZero, HashZero, MaxUint256 } from "@ethersproject/constants";
+import { randomBytes } from "@ethersproject/random";
 import { keccak256 } from "@ethersproject/solidity";
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
@@ -141,6 +143,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
         "If true, all fills will be executed through the router (where possible)"
       ),
       currency: Joi.string().lowercase().description("Currency to be used for purchases."),
+      currencyChainId: Joi.number().description("The chain id of the purchase currency"),
       normalizeRoyalties: Joi.boolean().default(false).description("Charge any missing royalties."),
       allowInactiveOrderIds: Joi.boolean()
         .default(false)
@@ -182,6 +185,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
         .description(
           "Choose a specific swapping provider when buying in a different currency (defaults to `uniswap`)"
         ),
+      executionMethod: Joi.string().valid("seaport-v1.5-intent"),
       referrer: Joi.string()
         .pattern(regex.address)
         .optional()
@@ -219,6 +223,11 @@ export const getExecuteBuyV7Options: RouteOptions = {
                 gasEstimate: Joi.number().description(
                   "Approximation of gas used (only applies to `transaction` items)"
                 ),
+                check: Joi.object({
+                  endpoint: Joi.string().required(),
+                  method: Joi.string().valid("POST").required(),
+                  body: Joi.any(),
+                }).description("The details of the endpoint for checking the status of the step"),
               })
             )
             .required(),
@@ -253,6 +262,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
             .items(JoiExecuteFee)
             .description("Can be marketplace fees or royalties"),
           feesOnTop: Joi.array().items(JoiExecuteFee).description("Can be referral fees."),
+          fromChainId: Joi.number().description("Chain id buying from"),
         })
       ),
       maxQuantities: Joi.array().items(
@@ -306,6 +316,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
         totalRawPrice?: string;
         builtInFees: ExecuteFee[];
         feesOnTop: ExecuteFee[];
+        fromChainId?: number;
       }[] = [];
 
       // Keep track of dynamically-priced orders (eg. from pools like Sudoswap and NFTX)
@@ -1430,6 +1441,11 @@ export const getExecuteBuyV7Options: RouteOptions = {
           orderIds?: string[];
           data?: object;
           gasEstimate?: number;
+          check?: {
+            endpoint: string;
+            method: "POST";
+            body: object;
+          };
         }[];
       }[] = [
         {
@@ -1475,6 +1491,198 @@ export const getExecuteBuyV7Options: RouteOptions = {
           items: [],
         },
       ];
+
+      // Intent purchasing MVP
+      if (payload.executionMethod === "seaport-v1.5-intent") {
+        if (listingDetails.length > 1) {
+          throw Boom.badRequest("Only single intent purchases are supported");
+        }
+
+        const details = listingDetails[0];
+        if (details.currency !== Sdk.Common.Addresses.Native[config.chainId]) {
+          throw Boom.badRequest("Only native token intent purchases are supported");
+        }
+        if (details.contractKind !== "erc721") {
+          throw Boom.badRequest("Only erc721 token intent purchases are supported");
+        }
+
+        const { fee }: { fee: string } = await axios
+          .get(`${config.solverBaseUrl}/intents/seaport/fee`)
+          .then((response) => response.data);
+        const totalPrice = bn(path[0].totalRawPrice ?? path[0].rawQuote).add(fee);
+
+        const order = new Sdk.SeaportV15.Order(config.chainId, {
+          offerer: payload.taker,
+          zone: AddressZero,
+          offer: [
+            {
+              itemType: Sdk.SeaportBase.Types.ItemType.ERC20,
+              token: Sdk.Common.Addresses.WNative[config.chainId],
+              identifierOrCriteria: "0",
+              startAmount: totalPrice.toString(),
+              endAmount: totalPrice.toString(),
+            },
+          ],
+          consideration: [
+            {
+              itemType: Sdk.SeaportBase.Types.ItemType.ERC721,
+              token: path[0].contract,
+              identifierOrCriteria: path[0].tokenId!,
+              startAmount: "1",
+              endAmount: "1",
+              recipient: payload.taker,
+            },
+            ...((payload.feesOnTop ?? []) as string[])
+              .map((f) => {
+                const [recipient, amount] = f.split(":");
+                return { amount, recipient };
+              })
+              .map(({ amount, recipient }) => ({
+                itemType: Sdk.SeaportBase.Types.ItemType.ERC20,
+                token: Sdk.Common.Addresses.WNative[config.chainId],
+                identifierOrCriteria: "0",
+                startAmount: amount.toString(),
+                endAmount: amount.toString(),
+                recipient,
+              })),
+          ],
+          orderType: Sdk.SeaportBase.Types.OrderType.FULL_OPEN,
+          startTime: Math.floor(Date.now() / 1000),
+          endTime: Math.floor(Date.now() / 1000) + 5 * 60,
+          zoneHash: HashZero,
+          salt: bn(randomBytes(32)).toHexString(),
+          conduitKey: Sdk.SeaportBase.Addresses.OpenseaConduitKey[config.chainId],
+          counter: (
+            await new Sdk.SeaportV15.Exchange(config.chainId).getCounter(
+              baseProvider,
+              payload.taker
+            )
+          ).toString(),
+          totalOriginalConsiderationItems: 1 + (details.fees?.length ?? 0),
+        });
+
+        steps[3].items.push({
+          status: "incomplete",
+          data: {
+            sign: order.getSignatureData(),
+            post: {
+              endpoint: "/execute/solve/v1",
+              method: "POST",
+              body: {
+                kind: "seaport-v1.5-intent",
+                data: order.params,
+              },
+            },
+          },
+          check: {
+            endpoint: "/execute/status/v1",
+            method: "POST",
+            body: {
+              kind: "seaport-v1.5-intent",
+              id: order.hash(),
+            },
+          },
+        });
+      }
+
+      // Cross-chain purchasing MVP
+      if (
+        payload.currency === Sdk.Common.Addresses.Native[config.chainId] &&
+        payload.currencyChainId !== undefined &&
+        payload.currencyChainId !== config.chainId &&
+        config.crossChainSolverBaseUrl
+      ) {
+        if (items.length > 1) {
+          throw Boom.badRequest("Only single item cross-chain purchases are supported");
+        }
+        if (payload.normalizeRoyalties) {
+          throw Boom.badRequest(
+            "Royalty normalization is not supported when purchasing cross-chain"
+          );
+        }
+        if (payload.feeOnTop) {
+          throw Boom.badRequest("Fees on top are not supported when purchasing cross-chain");
+        }
+
+        const fromChainId = payload.currencyChainId;
+        const toChainId = config.chainId;
+
+        const ccConfig: {
+          enabled: boolean;
+          swapEscrow?: string;
+        } = await axios
+          .get(
+            `${config.crossChainSolverBaseUrl}/config?fromChainId=${fromChainId}&toChainId=${toChainId}`
+          )
+          .then((response) => response.data);
+
+        if (!ccConfig.enabled) {
+          throw Boom.badRequest("Cross-chain swap not supported between requested chains");
+        }
+
+        const item = items[0];
+        if (!item.token && !item.collection) {
+          throw Boom.badRequest("Can only purchase cross-chain via `token` or `collection`");
+        }
+
+        const token = item.token ?? `${item.collection!}:${MaxUint256.toString()}`;
+
+        const quote = await axios
+          .post(`${config.crossChainSolverBaseUrl}/intents/quote`, {
+            fromChainId,
+            toChainId,
+            token,
+            amount: item.quantity,
+            fillType: item.fillType,
+          })
+          .then((response) => response.data.price);
+
+        path[0].totalPrice = formatPrice(quote);
+        path[0].totalRawPrice = quote;
+        path[0].fromChainId = fromChainId;
+
+        const params = [
+          config.chainId,
+          token.split(":")[0],
+          token.split(":")[1],
+          items[0].quantity,
+          Math.floor(Date.now() / 1000) + 10 * 60,
+        ];
+        const id = keccak256(
+          ["address", "uint96", "address", "uint256", "uint128", "uint32", "uint256"],
+          [payload.taker, params[0], params[1], params[2], params[3], params[4], quote]
+        );
+
+        steps[5].items.push({
+          status: "incomplete",
+          data: {
+            to: ccConfig.swapEscrow!,
+            data: new Interface([
+              `function makeRequest(
+                uint96 chainId,
+                address token,
+                uint256 tokenId,
+                uint128 amount,
+                uint32 deadline
+              ) payable`,
+            ]).encodeFunctionData("makeRequest", params),
+            value: quote,
+          },
+          check: {
+            endpoint: "/execute/status/v1",
+            method: "POST",
+            body: {
+              kind: "cross-chain-intent",
+              id,
+            },
+          },
+        });
+
+        return {
+          steps: steps.filter((s) => s.items.length),
+          path,
+        };
+      }
 
       // Handle Blur authentication
       let blurAuth: b.Auth | undefined;
@@ -1677,6 +1885,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
         let mintsResult = await router.fillMintsTx(mintDetails, payload.taker, {
           source: payload.source,
           partial: payload.partial,
+          relayer: payload.relayer,
         });
 
         // Minting via a smart contract proxy is complicated.
@@ -1714,6 +1923,10 @@ export const getExecuteBuyV7Options: RouteOptions = {
         }
 
         if (!safeToUse) {
+          if (payload.relayer) {
+            throw Boom.badRequest("Relayer not supported for requested mints");
+          }
+
           mintsResult = await router.fillMintsTx(mintDetails, payload.taker, {
             source: payload.source,
             forceDirectFilling: true,
@@ -1767,6 +1980,13 @@ export const getExecuteBuyV7Options: RouteOptions = {
               status: "incomplete",
               data: {
                 ...approval.txData,
+                check: {
+                  endpoint: "/execute/status/v1",
+                  method: "POST",
+                  body: {
+                    kind: "transaction",
+                  },
+                },
                 maxFeePerGas,
                 maxPriorityFeePerGas,
               },
@@ -1892,6 +2112,13 @@ export const getExecuteBuyV7Options: RouteOptions = {
                   erc721cAuth!.signature
                 )
               : undefined,
+          check: {
+            endpoint: "/execute/status/v1",
+            method: "POST",
+            body: {
+              kind: "transaction",
+            },
+          },
         });
       }
 
@@ -1911,6 +2138,13 @@ export const getExecuteBuyV7Options: RouteOptions = {
                   maxPriorityFeePerGas,
                 }
               : undefined,
+          check: {
+            endpoint: "/execute/status/v1",
+            method: "POST",
+            body: {
+              kind: "transaction",
+            },
+          },
           gasEstimate: txTags ? estimateGas(txTags) : undefined,
         });
       }

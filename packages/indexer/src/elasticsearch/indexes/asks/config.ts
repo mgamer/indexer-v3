@@ -5,27 +5,16 @@ export const CONFIG_DEFAULT = {
   mappings: {
     dynamic: "false",
     properties: {
-      chain: {
-        properties: {
-          id: { type: "integer" },
-          name: { type: "keyword" },
-        },
-      },
       id: { type: "keyword" },
       createdAt: { type: "date" },
       indexedAt: { type: "date" },
-      type: { type: "keyword" },
-      timestamp: { type: "date", format: "epoch_second" },
       contract: { type: "keyword" },
-      fromAddress: { type: "keyword" },
-      toAddress: { type: "keyword" },
-      amount: { type: "keyword" },
       token: {
         properties: {
           id: { type: "keyword" },
           name: { type: "keyword" },
           image: { type: "keyword" },
-          media: { type: "keyword" },
+          attributes: { type: "flattened" },
         },
       },
       collection: {
@@ -38,7 +27,14 @@ export const CONFIG_DEFAULT = {
       order: {
         properties: {
           id: { type: "keyword" },
-          side: { type: "keyword" },
+          kind: { type: "keyword" },
+          maker: { type: "keyword" },
+          taker: { type: "keyword" },
+          validFrom: { type: "date" },
+          validUntil: { type: "date" },
+          quantityFilled: { type: "long" },
+          quantityRemaining: { type: "long" },
+          tokenSetId: { type: "keyword" },
           sourceId: { type: "integer" },
           criteria: {
             properties: {
@@ -65,45 +61,31 @@ export const CONFIG_DEFAULT = {
               },
             },
           },
-        },
-      },
-      event: {
-        properties: {
-          timestamp: { type: "float" },
-          txHash: { type: "keyword" },
-          logIndex: { type: "integer" },
-          batchIndex: { type: "integer" },
-          blockHash: { type: "keyword" },
-          fillSourceId: { type: "integer" },
-        },
-      },
-      pricing: {
-        properties: {
-          price: { type: "keyword" },
-          priceDecimal: { type: "double" },
-          currencyPrice: { type: "keyword" },
-          usdPrice: { type: "keyword" },
-          feeBps: { type: "integer" },
-          currency: { type: "keyword" },
-          value: { type: "keyword" },
-          valueDecimal: { type: "double" },
-          currencyValue: { type: "keyword" },
-          normalizedValue: { type: "keyword" },
-          normalizedValueDecimal: { type: "double" },
-          currencyNormalizedValue: { type: "keyword" },
+          pricing: {
+            properties: {
+              price: { type: "keyword" },
+              priceDecimal: { type: "double" },
+              currencyPrice: { type: "keyword" },
+              usdPrice: { type: "keyword" },
+              feeBps: { type: "integer" },
+              currency: { type: "keyword" },
+              value: { type: "keyword" },
+              valueDecimal: { type: "double" },
+              currencyValue: { type: "keyword" },
+              normalizedValue: { type: "keyword" },
+              normalizedValueDecimal: { type: "double" },
+              currencyNormalizedValue: { type: "keyword" },
+            },
+          },
         },
       },
     },
   } as MappingTypeMapping,
   settings: {
     number_of_shards:
-      getNetworkSettings().elasticsearch?.indexes?.activities?.numberOfShards ||
+      getNetworkSettings().elasticsearch?.indexes?.asks?.numberOfShards ||
       getNetworkSettings().elasticsearch?.numberOfShards ||
       1,
     number_of_replicas: 0,
-    sort: {
-      field: ["timestamp"],
-      order: ["desc"],
-    },
   },
 };
