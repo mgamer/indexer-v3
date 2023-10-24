@@ -88,9 +88,9 @@ export const postTakedownV1Options: RouteOptions = {
       );
 
       if (payload.active) {
-        Takedowns.add(type, id);
+        Takedowns.add(type, [id]);
       } else {
-        Takedowns.delete(type, id);
+        Takedowns.delete(type, [id]);
       }
 
       return { message: "Takedown request accepted" };
