@@ -1,4 +1,4 @@
-import { Interface, Result, defaultAbiCoder, JsonFragmentType } from "@ethersproject/abi";
+import { Interface, JsonFragmentType, Result, defaultAbiCoder } from "@ethersproject/abi";
 import { guessAbiEncodedData } from "@openchainxyz/abi-guesser";
 import axios from "axios";
 
@@ -14,10 +14,8 @@ export type MethodSignature = {
   inputs: JsonFragmentType[];
 };
 
-function getInputsFromInterface(iface: Interface) {
-  const inputs = JSON.parse(iface.format("json") as string)[0].inputs as JsonFragmentType[];
-  return inputs;
-}
+const getInputsFromInterface = (iface: Interface): JsonFragmentType[] =>
+  JSON.parse(iface.format("json") as string)[0].inputs;
 
 export const getMethodSignature = async (
   calldata: string
