@@ -7,6 +7,7 @@ import * as utils from "@/events-sync/utils";
 import { BigNumber } from "ethers";
 import { parseEther } from "ethers/lib/utils";
 import { config } from "@/config/index";
+// import { simulateCollectionMint } from "@/orderbook/mints/simulation";
 // import { defaultAbiCoder } from "@ethersproject/abi";
 
 jest.setTimeout(1000 * 1000);
@@ -76,7 +77,7 @@ describe("Mints - Generic", () => {
     if (config.chainId != 8453) {
       return;
     }
-    const collection = "0xd1758C96e8BF67F2D8e9A250aEAf189a79F2784e";
+    const collection = "0xd1758c96e8bf67f2d8e9a250aeaf189a79f2784e";
     const tx = "0xc8b54c635a4f08994ba5a8bf8ef4fc2d4972ea1bde5ccab2b8d8f445c439ee38";
     const transcation = await utils.fetchTransaction(tx);
     const infos = await extractByTx(
@@ -92,7 +93,7 @@ describe("Mints - Generic", () => {
     if (config.chainId != 8453) {
       return;
     }
-    const collection = "0xB43159cF582dcf42Cc8f833D4A5915361984BD20";
+    const collection = "0xb43159cf582dcf42cc8f833d4a5915361984bd20";
     const txId = "0x6df11da37db5748b97fb4c60fc807bcd6feff4659e8e498d99a07d1f5737f03a";
     const transcation = await utils.fetchTransaction(txId);
     const infos = await extractByTx(
@@ -108,15 +109,21 @@ describe("Mints - Generic", () => {
     if (config.chainId != 8453) {
       return;
     }
-    const collection = "0x0D39445fAf8e7f7CC240f4E12ae3A7867eEA2a67";
+    const collection = "0x0d39445faf8e7f7cc240f4e12ae3a7867eea2a67";
     const txId = "0x13dcd467192096bbd652d934dd0d7a40581bc6d39d38d9e8a874e7a77151d732";
     const transcation = await utils.fetchTransaction(txId);
-    const infos = await extractByTx(
+    const collectionMints = await extractByTx(
       collection,
       transcation,
       parseEther("0.000099"),
       BigNumber.from("10")
     );
-    expect(infos.length).not.toBe(0);
+
+    // for (const collectionMint of collectionMints) {
+    //   const result = await simulateCollectionMint(collectionMint);
+    //   console.log("result", result);
+    // }
+
+    expect(collectionMints.length).not.toBe(0);
   });
 });

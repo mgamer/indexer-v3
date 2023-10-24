@@ -21,6 +21,7 @@ describe("Mints - ThirdWeb", () => {
     // mint(auth = {"key":"0x0000000000000000000000000000000000000000000000000000000000000000","proof":[]}, _count = 1)
     const infos = await extractByTx("0xd7a7bf902b101e108a08af2efae00fd415e5526b", transcation);
     // console.log("infos", infos);
+
     expect(infos.length).not.toBe(0);
   });
 });
