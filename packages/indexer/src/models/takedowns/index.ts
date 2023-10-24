@@ -13,10 +13,7 @@ export class Takedowns {
 
   public static async delete(type: string, id: string[]): Promise<void> {
     await redis.hdel(`takedown-${type}`, id);
-
-    for (const takedown of id) {
-      this.takedowns[takedown] = false;
-    }
+    this.takedowns = {};
   }
 
   public static async get(type: string, ids: string[]): Promise<(string | null)[]> {
