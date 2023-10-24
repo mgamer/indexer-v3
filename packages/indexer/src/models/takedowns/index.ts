@@ -1,20 +1,48 @@
 import { redis } from "@/common/redis";
 
 export class Takedowns {
-  public static async add(type: string, id: string): Promise<void> {
+  public static takedowns: { [id: string]: boolean } = {};
+
+  public static async add(type: string, id: string[]): Promise<void> {
     await redis.hset(`takedown-${type}`, id, id);
+
+    for (const takedown of id) {
+      this.takedowns[takedown] = true;
+    }
   }
 
-  public static async delete(type: string, id: string): Promise<void> {
+  public static async delete(type: string, id: string[]): Promise<void> {
     await redis.hdel(`takedown-${type}`, id);
+
+    for (const takedown of id) {
+      this.takedowns[takedown] = false;
+    }
   }
 
   public static async get(type: string, ids: string[]): Promise<(string | null)[]> {
+    const result: (string | null)[] = [];
+
+    ids = ids.filter((id) => {
+      const isTakedown = this.takedowns[id];
+      if (isTakedown) {
+        result.push(id);
+      }
+      return !(id in this.takedowns);
+    });
+
     if (ids.length) {
-      return await redis.hmget(`takedown-${type}`, ids);
-    } else {
-      return [];
+      const takedowns = await redis.hmget(`takedown-${type}`, ids);
+      for (let i = 0; i < ids.length; i++) {
+        if (takedowns[i]) {
+          result.push(ids[i]);
+          this.takedowns[ids[i]] = true;
+        } else {
+          this.takedowns[ids[i]] = false;
+        }
+      }
     }
+
+    return result;
   }
 
   public static async isTakedown(type: string, id: string): Promise<boolean> {
@@ -24,46 +52,58 @@ export class Takedowns {
 
   // --- Tokens --- //
 
-  public static async addToken(id: string): Promise<void> {
-    await Takedowns.add("token", id);
+  public static async addTokens(ids: string[]): Promise<void> {
+    await Takedowns.add("token", ids);
   }
 
-  public static async deleteToken(id: string): Promise<void> {
-    await Takedowns.delete("token", id);
+  public static async addToken(contract: string, tokenId: string): Promise<void> {
+    await Takedowns.addTokens([`${contract}:${tokenId}`]);
+  }
+
+  public static async deleteTokens(ids: string[]): Promise<void> {
+    await Takedowns.delete("token", ids);
   }
 
   public static async getTokens(
-    ids: string[],
-    collectionIds: string[]
+    tokens: { contract: string; tokenId: string; collectionId: string }[]
   ): Promise<(string | null)[]> {
-    const takedownCollections: string[] = [];
-    const result = [];
-    for (let i = 0; i < ids.length; i++) {
-      if (
-        takedownCollections.includes(collectionIds[i]) ||
-        (await Takedowns.isTakedownCollection(collectionIds[i])) ||
-        (await Takedowns.isTakedownToken(ids[i]))
-      ) {
-        result.push(ids[i]);
-        takedownCollections.push(collectionIds[i]);
+    const result: (string | null)[] = [];
+
+    const tokenTakedowns = await Takedowns.get(
+      "token",
+      tokens.map((t) => `${t.contract}:${t.tokenId}`)
+    );
+    const collectionTakedowns = await Takedowns.getCollections(tokens.map((t) => t.collectionId));
+
+    for (let i = 0; i < tokens.length; i++) {
+      if (tokenTakedowns[i] || collectionTakedowns[i]) {
+        result.push(`${tokens[i].contract}:${tokens[i].tokenId}`);
+        this.takedowns[`${tokens[i].contract}:${tokens[i].tokenId}`] = true;
+
+        if (collectionTakedowns[i]) {
+          this.takedowns[tokens[i].collectionId] = true;
+        }
+      } else {
+        this.takedowns[`${tokens[i].contract}:${tokens[i].tokenId}`] = false;
+        this.takedowns[tokens[i].collectionId] = false;
       }
     }
 
     return result;
   }
 
-  public static async isTakedownToken(id: string): Promise<boolean> {
-    return await Takedowns.isTakedown("token", id);
+  public static async isTakedownToken(contract: string, tokenId: string): Promise<boolean> {
+    return await Takedowns.isTakedown("token", `${contract}:${tokenId}`);
   }
 
   // --- Collections --- //
 
-  public static async addCollection(id: string): Promise<void> {
-    await Takedowns.add("collection", id);
+  public static async addCollections(ids: string[]): Promise<void> {
+    await Takedowns.add("collection", ids);
   }
 
-  public static async deleteCollection(id: string): Promise<void> {
-    await Takedowns.delete("collection", id);
+  public static async deleteCollections(ids: string[]): Promise<void> {
+    await Takedowns.delete("collection", ids);
   }
 
   public static async getCollections(ids: string[]): Promise<(string | null)[]> {

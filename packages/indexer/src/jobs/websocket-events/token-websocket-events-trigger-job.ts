@@ -103,10 +103,9 @@ export class TokenWebsocketEventsTriggerJob extends AbstractRabbitMqJobHandler {
 
       const sources = await Sources.getInstance();
 
-      const takedowns = await Takedowns.getTokens(
-        [`${contract}:${tokenId}`],
-        [data.after.collection_id]
-      );
+      const takedowns = await Takedowns.getTokens([
+        { contract, tokenId, collectionId: data.after.collection_id },
+      ]);
 
       const floorSellSource = data.after.floor_sell_value
         ? sources.get(Number(data.after.floor_sell_source_id_int), contract, tokenId)

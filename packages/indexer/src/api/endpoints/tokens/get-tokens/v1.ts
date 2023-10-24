@@ -166,8 +166,11 @@ export const getTokensV1Options: RouteOptions = {
 
       const result = await redb.manyOrNone(baseQuery, query).then(async (result) => {
         const takedowns = await Takedowns.getTokens(
-          result.map((r) => `${fromBuffer(r.contract)}:${r.token_id}`),
-          result.map((r) => r.collection_id)
+          result.map((r) => ({
+            contract: fromBuffer(r.contract),
+            tokenId: r.token_id,
+            collectionId: r.collection_id,
+          }))
         );
 
         return result.map((r) =>

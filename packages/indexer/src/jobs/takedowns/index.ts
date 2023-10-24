@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import cron from "node-cron";
 import { acquireLock } from "@/common/redis";
 import { config } from "@/config/index";
@@ -11,25 +13,29 @@ if (config.doBackgroundWork) {
     try {
       const lock = await acquireLock("sync-takedowns", 60 * 5 - 5);
       if (lock) {
-        await idb
-          .manyOrNone(
-            `
+        const takedowns = await idb.manyOrNone(
+          `
             SELECT
               id,
               type,
               active
             FROM takedowns t
           `
-          )
-          .then((result) =>
-            result.map((takedown) => {
-              if (takedown.active) {
-                Takedowns.add(takedown.type, takedown.id);
-              } else {
-                Takedowns.delete(takedown.type, takedown.id);
-              }
-            })
-          );
+        );
+
+        Takedowns.addTokens(
+          takedowns.filter((t: any) => t.active && t.type === "token").map((t: any) => t.id)
+        );
+        Takedowns.deleteTokens(
+          takedowns.filter((t: any) => !t.active && t.type === "token").map((t: any) => t.id)
+        );
+
+        Takedowns.addCollections(
+          takedowns.filter((t: any) => t.active && t.type === "collection").map((t: any) => t.id)
+        );
+        Takedowns.deleteCollections(
+          takedowns.filter((t: any) => !t.active && t.type === "collection").map((t: any) => t.id)
+        );
       }
     } catch (error) {
       logger.error("sync-takedowns", `failed to record metrics error ${error}`);

@@ -443,8 +443,11 @@ export const getTokensDetailsV4Options: RouteOptions = {
 
       const sources = await Sources.getInstance();
       const takedowns = await Takedowns.getTokens(
-        rawResult.map((r) => `${fromBuffer(r.contract)}:${r.token_id}`),
-        rawResult.map((r) => r.collection_id)
+        rawResult.map((r) => ({
+          contract: fromBuffer(r.contract),
+          tokenId: r.token_id,
+          collectionId: r.collection_id,
+        }))
       );
 
       const result = rawResult.map(async (r) => {
