@@ -80,6 +80,7 @@ export const extractByTx = async (
           } else if (param.type === "bytes32[]") {
             return isEmptyArray(value, HashZero);
           }
+          return false;
         });
       } else if (abiType.includes("bytes32[]")) {
         allBytesIsEmpty = isEmptyArray(decodedValue, HashZero);
