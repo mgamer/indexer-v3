@@ -1,6 +1,6 @@
 import { Interface } from "@ethersproject/abi";
 import { BigNumber } from "@ethersproject/bignumber";
-import { AddressZero } from "@ethersproject/constants";
+import { AddressZero, MaxUint256 } from "@ethersproject/constants";
 import { keccak256 } from "@ethersproject/solidity";
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
@@ -1495,17 +1495,18 @@ export const getExecuteBuyV7Options: RouteOptions = {
         payload.currency === Sdk.Common.Addresses.Native[config.chainId] &&
         payload.currencyChainId !== undefined &&
         payload.currencyChainId !== config.chainId &&
-        items[0].token &&
         config.crossChainSolverBaseUrl
       ) {
         if (items.length > 1) {
-          throw Boom.badRequest("Only a single item can be purchased cross-chain");
+          throw Boom.badRequest("Only a single item cross-chain purchases are supported");
         }
         if (payload.normalizeRoyalties) {
-          throw Boom.badRequest("Royalty normalization not supported cross-chain");
+          throw Boom.badRequest(
+            "Royalty normalization is not supported when purchasing cross-chain"
+          );
         }
-        if (payload.feesOnTop) {
-          throw Boom.badRequest("Fees on top not supported cross-chain");
+        if (payload.feeOnTop) {
+          throw Boom.badRequest("Fees on top are not supported when purchasing cross-chain");
         }
 
         const fromChainId = payload.currencyChainId;
@@ -1524,23 +1525,31 @@ export const getExecuteBuyV7Options: RouteOptions = {
           throw Boom.badRequest("Cross-chain swap not supported between requested chains");
         }
 
+        const item = items[0];
+        if (!item.token && !item.collection) {
+          throw Boom.badRequest("Can only purchase cross-chain via `token` or `collection`");
+        }
+
+        const token = item.token ?? `${item.collection!}:${MaxUint256.toString()}`;
+
         const quote = await axios
           .post(`${config.crossChainSolverBaseUrl}/intents/quote`, {
             fromChainId,
             toChainId,
-            token: items[0].token,
-            amount: items[0].quantity,
+            token,
+            amount: item.quantity,
+            fillType: item.fillType,
           })
           .then((response) => response.data.price);
 
         path[0].totalPrice = formatPrice(quote);
         path[0].totalRawPrice = quote;
-        path[0].fromChainId = payload.currencyChainId;
+        path[0].fromChainId = fromChainId;
 
         const params = [
           config.chainId,
-          items[0].token.split(":")[0],
-          items[0].token.split(":")[1],
+          token.split(":")[0],
+          token.split(":")[1],
           items[0].quantity,
           Math.floor(Date.now() / 1000) + 10 * 60,
         ];
@@ -1781,6 +1790,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
         let mintsResult = await router.fillMintsTx(mintDetails, payload.taker, {
           source: payload.source,
           partial: payload.partial,
+          relayer: payload.relayer,
         });
 
         // Minting via a smart contract proxy is complicated.
@@ -1818,6 +1828,10 @@ export const getExecuteBuyV7Options: RouteOptions = {
         }
 
         if (!safeToUse) {
+          if (payload.relayer) {
+            throw Boom.badRequest("Relayer not supported for requested mints");
+          }
+
           mintsResult = await router.fillMintsTx(mintDetails, payload.taker, {
             source: payload.source,
             forceDirectFilling: true,
