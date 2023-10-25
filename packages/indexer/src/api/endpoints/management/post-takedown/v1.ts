@@ -87,6 +87,17 @@ export const postTakedownV1Options: RouteOptions = {
         );
       }
 
+      logger.info(
+        `post-takedown-${version}-handler`,
+        JSON.stringify({
+          message: "Takedown request accepted",
+          id,
+          type,
+          active: payload.active,
+          apiKey: apiKey.key,
+        })
+      );
+
       return { message: "Takedown request accepted" };
     } catch (error) {
       logger.warn(`post-takedown-${version}-handler`, `Handler failure: ${error}`);
