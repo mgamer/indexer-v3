@@ -33,7 +33,6 @@ import { Sources } from "@/models/sources";
 import { Assets, ImageSize } from "@/utils/assets";
 import { CollectionSets } from "@/models/collection-sets";
 import { Collections } from "@/models/collections";
-import { Takedowns } from "@/models/takedowns";
 
 const version = "v6";
 
@@ -637,6 +636,8 @@ export const getTokensV6Options: RouteOptions = {
           t.supply,
           t.remaining_supply,
           extract(epoch from t.updated_at) AS t_updated_at,
+          t.is_takedown AS t_is_takedown,
+          c.is_takedown AS c_is_takedown,
           c.slug,
           c.creator,
           c.token_count,
@@ -1131,13 +1132,6 @@ export const getTokensV6Options: RouteOptions = {
       }
 
       const sources = await Sources.getInstance();
-      const takedowns = await Takedowns.getTokens(
-        rawResult.map((r) => ({
-          contract: fromBuffer(r.t_contract),
-          tokenId: r.t_token_id,
-          collectionId: r.collection_id,
-        }))
-      );
       const result = rawResult.map(async (r) => {
         const feeBreakdown = r.top_buy_fee_breakdown;
 
@@ -1359,7 +1353,7 @@ export const getTokensV6Options: RouteOptions = {
                   : []
                 : undefined,
             },
-            takedowns
+            r.t_is_takedown || r.c_is_takedown
           ),
           market: {
             floorAsk: {

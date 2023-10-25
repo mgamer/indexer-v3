@@ -8,7 +8,6 @@ import { idb } from "@/common/db";
 import { redis } from "@/common/redis";
 import { Sources } from "@/models/sources";
 import { formatValidBetween } from "@/jobs/websocket-events/utils";
-import { Takedowns } from "@/models/takedowns";
 
 interface CollectionInfo {
   id: string;
@@ -54,6 +53,7 @@ interface CollectionInfo {
   top_buy_maker: string;
   top_buy_valid_between: string;
   top_buy_source_id_int: number;
+  is_takedown: number;
   created_at: string;
   updated_at: string;
 }
@@ -202,7 +202,7 @@ export class CollectionWebsocketEventsTriggerQueueJob extends AbstractRabbitMqJo
         ? sources.get(r.non_flagged_floor_sell_source_id_int)
         : null;
 
-      const isTakedown = await Takedowns.isTakedownCollection(r.id);
+      const isTakedown = r.is_takedown;
       const id = !isTakedown ? r.id : r.contract;
 
       await publishWebsocketEvent({

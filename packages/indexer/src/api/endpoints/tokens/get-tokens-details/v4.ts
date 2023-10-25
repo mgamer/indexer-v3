@@ -18,7 +18,6 @@ import { Sources } from "@/models/sources";
 import { Assets } from "@/utils/assets";
 import { JoiAttributeValue, JoiSource, getJoiSourceObject, getJoiTokenObject } from "@/common/joi";
 import * as Boom from "@hapi/boom";
-import { Takedowns } from "@/models/takedowns";
 
 const version = "v4";
 
@@ -195,6 +194,8 @@ export const getTokensDetailsV4Options: RouteOptions = {
           "t"."image",
           "t"."media",
           "t"."collection_id",
+          "t"."is_takedown" as "t_is_takedown",
+          "c"."is_takedown" as "c_is_takedown",
           "c"."name" as "collection_name",
           "con"."kind",
           "t"."is_flagged",
@@ -442,13 +443,6 @@ export const getTokensDetailsV4Options: RouteOptions = {
       }
 
       const sources = await Sources.getInstance();
-      const takedowns = await Takedowns.getTokens(
-        rawResult.map((r) => ({
-          contract: fromBuffer(r.contract),
-          tokenId: r.token_id,
-          collectionId: r.collection_id,
-        }))
-      );
 
       const result = rawResult.map(async (r) => {
         const contract = fromBuffer(r.contract);
@@ -502,7 +496,7 @@ export const getTokensDetailsV4Options: RouteOptions = {
                   }))
                 : [],
             },
-            takedowns
+            r.t_is_takedown || r.c_is_takedown
           ),
           market: {
             floorAsk: {

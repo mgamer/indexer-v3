@@ -9,7 +9,6 @@ import { Assets } from "@/utils/assets";
 import * as Sdk from "@reservoir0x/sdk";
 import { Sources } from "@/models/sources";
 import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handler";
-import { Takedowns } from "@/models/takedowns";
 
 export type TokenWebsocketEventsTriggerJobPayload =
   | {
@@ -70,6 +69,7 @@ export class TokenWebsocketEventsTriggerJob extends AbstractRabbitMqJobHandler {
           con.kind,
           c.name AS collection_name,
           c.slug,
+          c.is_takedown AS collection_is_takedown,
           (c.metadata ->> 'imageUrl')::TEXT AS collection_image,
           (SELECT
             array_agg(
@@ -102,10 +102,6 @@ export class TokenWebsocketEventsTriggerJob extends AbstractRabbitMqJobHandler {
       const r = rawResult[0];
 
       const sources = await Sources.getInstance();
-
-      const takedowns = await Takedowns.getTokens([
-        { contract, tokenId, collectionId: data.after.collection_id },
-      ]);
 
       const floorSellSource = data.after.floor_sell_value
         ? sources.get(Number(data.after.floor_sell_source_id_int), contract, tokenId)
@@ -162,7 +158,7 @@ export class TokenWebsocketEventsTriggerJob extends AbstractRabbitMqJobHandler {
               value: attribute.value,
             })),
           },
-          takedowns
+          data.after.is_takedown || r.collection_is_takedown
         ),
         market: {
           floorAsk: data.after.floor_sell_value && {
@@ -562,6 +558,7 @@ interface TokenInfo {
   normalized_floor_sell_currency: string;
   normalized_floor_sell_currency_value: string;
   last_flag_change: string;
+  is_takedown: number;
   supply: string;
   remaining_supply: string;
 }

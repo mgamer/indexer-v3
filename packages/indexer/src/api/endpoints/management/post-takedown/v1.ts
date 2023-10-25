@@ -6,11 +6,9 @@ import _ from "lodash";
 import Joi from "joi";
 
 import { logger } from "@/common/logger";
-import { regex } from "@/common/utils";
+import { regex, toBuffer } from "@/common/utils";
 import { ApiKeyManager } from "@/models/api-keys";
 import { idb } from "@/common/db";
-import { config } from "@/config/index";
-import { Takedowns } from "@/models/takedowns";
 
 const version = "v1";
 
@@ -61,36 +59,32 @@ export const postTakedownV1Options: RouteOptions = {
         throw Boom.unauthorized("Not allowed");
       }
 
-      await idb.oneOrNone(
-        `
-          INSERT INTO "takedowns" (
-            "id",
-            "type",
-            "api_key",
-            "active"
-          ) VALUES (
-            $/id/,
-            $/type/,
-            $/api_key/,
-            $/active/
-          )
-          ON CONFLICT (id, type)
-          DO UPDATE SET
-            "active" = $/active/,
-            "updated_at" = now()
-        `,
-        {
-          id,
-          type,
-          api_key: apiKey.key !== config.adminApiKey ? apiKey.key : null,
-          active: payload.active,
-        }
-      );
-
-      if (payload.active) {
-        Takedowns.add(type, [id]);
-      } else {
-        Takedowns.delete(type, [id]);
+      if (type === "token") {
+        await idb.oneOrNone(
+          `
+            UPDATE "tokens"
+            SET "is_takedown" = $/active/
+            WHERE "contract" = $/contract/
+            AND "token_id" = $/token_id/
+          `,
+          {
+            contract: toBuffer(id.split(":")[0]),
+            token_id: id.split(":")[1],
+            active: Number(payload.active),
+          }
+        );
+      } else if (type === "collection") {
+        await idb.oneOrNone(
+          `
+            UPDATE "collections"
+            SET "is_takedown" = $/active/
+            WHERE "id" = $/id/
+          `,
+          {
+            id,
+            active: Number(payload.active),
+          }
+        );
       }
 
       return { message: "Takedown request accepted" };

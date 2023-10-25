@@ -18,9 +18,8 @@ import {
   getRecentSalesByCollection,
 } from "@/elasticsearch/indexes/activities";
 
-import { getJoiCollectionObject, getJoiPriceObject, JoiPrice } from "@/common/joi";
+import { getJoiPriceObject, JoiPrice } from "@/common/joi";
 import { Sources } from "@/models/sources";
-import { Takedowns } from "@/models/takedowns";
 
 const version = "v2";
 
@@ -34,7 +33,7 @@ export const getTopSellingCollectionsV2Options: RouteOptions = {
   tags: ["api", "x-deprecated"],
   plugins: {
     "hapi-swagger": {
-      deprecated: true,
+      order: 3,
     },
   },
   validate: {
@@ -248,41 +247,37 @@ export const getTopSellingCollectionsV2Options: RouteOptions = {
           );
         }
 
-        const takedowns = await Takedowns.getCollections(collectionsResult.map((r: any) => r.id));
         const resultsPromise = redb.manyOrNone(baseQuery);
         const recentSalesPromise = collectionsResult.map(async (collection: any) => {
           const recentSales = recentSalesPerCollection[collection.id] || [];
 
-          return getJoiCollectionObject(
-            {
-              ...collection,
-              recentSales: recentSales
-                ? await Promise.all(
-                    recentSales.map(async (sale: any) => {
-                      const { pricing, ...salesData } = sale;
-                      const price = pricing
-                        ? await getJoiPriceObject(
-                            {
-                              gross: {
-                                amount: String(pricing?.currencyPrice ?? pricing?.price ?? 0),
-                                nativeAmount: String(pricing?.price ?? 0),
-                                usdAmount: String(pricing.usdPrice ?? 0),
-                              },
+          return {
+            ...collection,
+            recentSales: recentSales
+              ? await Promise.all(
+                  recentSales.map(async (sale: any) => {
+                    const { pricing, ...salesData } = sale;
+                    const price = pricing
+                      ? await getJoiPriceObject(
+                          {
+                            gross: {
+                              amount: String(pricing?.currencyPrice ?? pricing?.price ?? 0),
+                              nativeAmount: String(pricing?.price ?? 0),
+                              usdAmount: String(pricing.usdPrice ?? 0),
                             },
-                            pricing.currency
-                          )
-                        : null;
+                          },
+                          pricing.currency
+                        )
+                      : null;
 
-                      return {
-                        ...salesData,
-                        price,
-                      };
-                    })
-                  )
-                : [],
-            },
-            takedowns
-          );
+                    return {
+                      ...salesData,
+                      price,
+                    };
+                  })
+                )
+              : [],
+          };
         });
 
         const responses = await Promise.all([resultsPromise, ...recentSalesPromise]);

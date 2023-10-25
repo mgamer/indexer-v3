@@ -1004,8 +1004,7 @@ export const getJoiSourceObject = (source: SourcesEntity | undefined, full = tru
 
 // --- Collections ---
 
-export const getJoiCollectionObject = (collection: any, takedowns: (string | null)[]) => {
-  const isTakedown = takedowns.includes(collection.id);
+export const getJoiCollectionObject = (collection: any, isTakedown: boolean) => {
   if (isTakedown) {
     collection.id = collection.primaryContract;
     collection.name = collection.primaryContract;
@@ -1035,8 +1034,7 @@ export const getJoiCollectionObject = (collection: any, takedowns: (string | nul
 
 // -- Tokens --
 
-export const getJoiTokenObject = (token: any, takedowns: (string | null)[]) => {
-  const isTakedown = takedowns.includes(`${token.contract}:${token.tokenId}`);
+export const getJoiTokenObject = (token: any, isTakedown: boolean) => {
   if (isTakedown) {
     token.collection.id = token.contract;
     token.name = null;

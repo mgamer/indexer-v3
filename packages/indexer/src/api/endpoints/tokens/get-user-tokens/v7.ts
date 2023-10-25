@@ -29,7 +29,6 @@ import {
 import { Sources } from "@/models/sources";
 import _ from "lodash";
 import { Assets, ImageSize } from "@/utils/assets";
-import { Takedowns } from "@/models/takedowns";
 
 const version = "v7";
 
@@ -550,6 +549,7 @@ export const getUserTokensV7Options: RouteOptions = {
                o.currency AS collection_floor_sell_currency, o.currency_price AS collection_floor_sell_currency_price,
                c.name as collection_name, con.kind, c.metadata, c.royalties, (c.metadata ->> 'safelistRequestStatus')::TEXT AS "opensea_verification_status",
                c.royalties_bps, ot.kind AS floor_sell_kind, c.slug, c.is_spam AS c_is_spam,
+               t.is_takedown AS t_is_takedown, c.is_takedown AS c_is_takedown,
                ${query.includeRawData ? "ot.raw_data AS floor_sell_raw_data," : ""}
                ${
                  query.useNonFlaggedFloorAsk
@@ -658,13 +658,6 @@ export const getUserTokensV7Options: RouteOptions = {
       }
 
       const sources = await Sources.getInstance();
-      const takedowns = await Takedowns.getTokens(
-        userTokens.map((r) => ({
-          contract: fromBuffer(r.contract),
-          tokenId: r.token_id,
-          collectionId: r.collection_id,
-        }))
-      );
       const result = userTokens.map(async (r) => {
         const contract = fromBuffer(r.contract);
         const tokenId = r.token_id;
@@ -805,7 +798,7 @@ export const getUserTokensV7Options: RouteOptions = {
                   : []
                 : undefined,
             },
-            takedowns
+            r.t_is_takedown || r.c_is_takedown
           ),
           ownership: {
             tokenCount: String(r.token_count),

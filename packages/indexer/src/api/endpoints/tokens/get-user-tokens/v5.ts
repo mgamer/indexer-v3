@@ -18,7 +18,6 @@ import {
 } from "@/common/joi";
 import { Sources } from "@/models/sources";
 import _ from "lodash";
-import { Takedowns } from "@/models/takedowns";
 
 const version = "v5";
 
@@ -334,6 +333,7 @@ export const getUserTokensV5Options: RouteOptions = {
                t.floor_sell_maker, t.floor_sell_valid_from, t.floor_sell_valid_to, t.floor_sell_source_id_int,
                top_bid_id, top_bid_price, top_bid_value, top_bid_currency, top_bid_currency_price, top_bid_currency_value,
                c.name as collection_name, c.metadata, c.floor_sell_value AS "collection_floor_sell_value",
+               t.is_takedown AS "t_is_takedown", c.is_takedown AS "c_is_takedown",
                (
                     CASE WHEN t.floor_sell_value IS NOT NULL
                     THEN 1
@@ -361,13 +361,6 @@ export const getUserTokensV5Options: RouteOptions = {
 
       const userTokens = await redb.manyOrNone(baseQuery, { ...query, ...params });
       const sources = await Sources.getInstance();
-      const takedowns = await Takedowns.getTokens(
-        userTokens.map((r) => ({
-          contract: fromBuffer(r.contract),
-          tokenId: r.token_id,
-          collectionId: r.collection_id,
-        }))
-      );
 
       const result = userTokens.map(async (r) => {
         const contract = fromBuffer(r.contract);
@@ -422,7 +415,7 @@ export const getUserTokensV5Options: RouteOptions = {
                   }
                 : undefined,
             },
-            takedowns
+            r.t_is_takedown || r.c_is_takedown
           ),
           ownership: {
             tokenCount: String(r.token_count),

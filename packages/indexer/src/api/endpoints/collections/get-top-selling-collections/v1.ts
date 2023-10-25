@@ -15,8 +15,7 @@ import {
   getRecentSalesByCollection,
 } from "@/elasticsearch/indexes/activities";
 
-import { getJoiCollectionObject, getJoiPriceObject, JoiPrice } from "@/common/joi";
-import { Takedowns } from "@/models/takedowns";
+import { getJoiPriceObject, JoiPrice } from "@/common/joi";
 
 const version = "v1";
 
@@ -153,41 +152,36 @@ export const getTopSellingCollectionsV1Options: RouteOptions = {
         });
       }
 
-      const takedowns = await Takedowns.getCollections(collectionsResult.map((r: any) => r.id));
-
       const collections = await Promise.all(
         collectionsResult.map(async (collection: any) => {
-          return getJoiCollectionObject(
-            {
-              ...collection,
-              recentSales:
-                includeRecentSales && collection?.recentSales
-                  ? await Promise.all(
-                      collection.recentSales.map(async (sale: any) => {
-                        const { pricing, ...salesData } = sale;
-                        const price = pricing
-                          ? await getJoiPriceObject(
-                              {
-                                gross: {
-                                  amount: String(pricing?.currencyPrice ?? pricing?.price ?? 0),
-                                  nativeAmount: String(pricing?.price ?? 0),
-                                  usdAmount: String(pricing.usdPrice ?? 0),
-                                },
+          return {
+            ...collection,
+            recentSales:
+              includeRecentSales && collection?.recentSales
+                ? await Promise.all(
+                    collection.recentSales.map(async (sale: any) => {
+                      const { pricing, ...salesData } = sale;
+                      const price = pricing
+                        ? await getJoiPriceObject(
+                            {
+                              gross: {
+                                amount: String(pricing?.currencyPrice ?? pricing?.price ?? 0),
+                                nativeAmount: String(pricing?.price ?? 0),
+                                usdAmount: String(pricing.usdPrice ?? 0),
                               },
-                              pricing.currency
-                            )
-                          : null;
+                            },
+                            pricing.currency
+                          )
+                        : null;
 
-                        return {
-                          ...salesData,
-                          price,
-                        };
-                      })
-                    )
-                  : [],
-            },
-            takedowns
-          );
+                      return {
+                        ...salesData,
+                        price,
+                      };
+                    })
+                  )
+                : [],
+          };
         })
       );
 

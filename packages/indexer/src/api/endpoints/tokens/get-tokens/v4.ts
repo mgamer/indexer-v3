@@ -16,7 +16,6 @@ import {
   toBuffer,
 } from "@/common/utils";
 import { Assets } from "@/utils/assets";
-import { Takedowns } from "@/models/takedowns";
 import { getJoiTokenObject } from "@/common/joi";
 
 const version = "v4";
@@ -168,6 +167,8 @@ export const getTokensV4Options: RouteOptions = {
           "t"."image",
           "t"."media",
           "t"."collection_id",
+          "t"."is_takedown" as "t_is_takedown",
+          "c"."is_takedown" as "c_is_takedown",
           "c"."name" as "collection_name",
           "t"."floor_sell_source_id_int",
           ("c".metadata ->> 'imageUrl')::TEXT AS "collection_image",
@@ -414,13 +415,6 @@ export const getTokensV4Options: RouteOptions = {
       }
 
       const sources = await Sources.getInstance();
-      const takedowns = await Takedowns.getTokens(
-        rawResult.map((r) => ({
-          contract: fromBuffer(r.contract),
-          tokenId: r.token_id,
-          collectionId: r.collection_id,
-        }))
-      );
       const result = rawResult.map((r) => {
         return getJoiTokenObject(
           {
@@ -453,7 +447,7 @@ export const getTokensV4Options: RouteOptions = {
             isFlagged: Boolean(Number(r.is_flagged)),
             lastFlagUpdate: r.last_flag_update ? new Date(r.last_flag_update).toISOString() : null,
           },
-          takedowns
+          r.t_is_takedown || r.c_is_takedown
         );
       });
 

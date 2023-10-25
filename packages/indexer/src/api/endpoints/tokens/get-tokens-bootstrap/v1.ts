@@ -15,7 +15,6 @@ import {
 } from "@/common/utils";
 import { Sources } from "@/models/sources";
 import { Assets } from "@/utils/assets";
-import { Takedowns } from "@/models/takedowns";
 import { getJoiTokenObject } from "@/common/joi";
 
 const version = "v1";
@@ -87,6 +86,8 @@ export const getTokensBootstrapV1Options: RouteOptions = {
           "t"."contract",
           "t"."token_id",
           "t"."image",
+          "t"."is_takedown" as "t_is_takedown",
+          "c"."is_takedown" as "c_is_takedown",
           "t"."floor_sell_id",
           "t"."floor_sell_value",
           "t"."floor_sell_maker",
@@ -94,6 +95,8 @@ export const getTokensBootstrapV1Options: RouteOptions = {
           "t"."floor_sell_valid_from",
           "t"."floor_sell_valid_to"
         FROM "tokens" "t"
+        JOIN "collections" "c"
+          ON "t"."collection_id" = "c"."id"
       `;
 
       // Filters
@@ -130,13 +133,6 @@ export const getTokensBootstrapV1Options: RouteOptions = {
       const rawResult = await redb.manyOrNone(baseQuery, query);
 
       const sources = await Sources.getInstance();
-      const takedowns = await Takedowns.getTokens(
-        rawResult.map((r) => ({
-          contract: fromBuffer(r.contract),
-          tokenId: r.token_id,
-          collectionId: r.collection_id,
-        }))
-      );
       const result = rawResult.map((r) => {
         return getJoiTokenObject(
           {
@@ -150,7 +146,7 @@ export const getTokensBootstrapV1Options: RouteOptions = {
             validUntil: Number(r.floor_sell_valid_to),
             source: sources.get(r.floor_sell_source_id_int)?.name,
           },
-          takedowns
+          r.t_is_takedown || r.c_is_takedown
         );
       });
 

@@ -22,7 +22,6 @@ import { config } from "@/config/index";
 import { CollectionSets } from "@/models/collection-sets";
 import { Sources } from "@/models/sources";
 import { Assets } from "@/utils/assets";
-import { Takedowns } from "@/models/takedowns";
 
 const version = "v6";
 
@@ -635,7 +634,6 @@ export const getCollectionsV6Options: RouteOptions = {
       const results = await redb.manyOrNone(baseQuery, query);
 
       const sources = await Sources.getInstance();
-      const takedowns = await Takedowns.getCollections(results.map((r) => r.id));
       const collections = await Promise.all(
         results.map(async (r) => {
           // Use default currencies for backwards compatibility with entries
@@ -808,7 +806,7 @@ export const getCollectionsV6Options: RouteOptions = {
                   )
                 : [],
             },
-            takedowns
+            r.is_takedown
           );
         })
       );

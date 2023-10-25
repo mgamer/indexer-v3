@@ -12,7 +12,6 @@ import { Sources } from "@/models/sources";
 import { getJoiCollectionObject, getJoiPriceObject, JoiPrice } from "@/common/joi";
 import * as Sdk from "@reservoir0x/sdk";
 import { config } from "@/config/index";
-import { Takedowns } from "@/models/takedowns";
 
 const version = "v3";
 
@@ -212,6 +211,7 @@ export const getUserCollectionsV3Options: RouteOptions = {
                 collections.contract,
                 collections.token_set_id,
                 collections.token_count,
+                collections.is_takedown,
                 filtered_token_images.images AS sample_images,
                 collections.day1_volume,
                 collections.day7_volume,
@@ -313,7 +313,6 @@ export const getUserCollectionsV3Options: RouteOptions = {
 
       const result = await redb.manyOrNone(baseQuery, { ...params, ...query });
       const sources = await Sources.getInstance();
-      const takedowns = await Takedowns.getCollections(result.map((r) => r.id));
 
       const collections = _.map(result, async (r) => {
         const response = {
@@ -371,7 +370,7 @@ export const getUserCollectionsV3Options: RouteOptions = {
               },
               contractKind: r.contract_kind,
             },
-            takedowns
+            r.is_takedown
           ),
           ownership: {
             tokenCount: String(r.owner_token_count),

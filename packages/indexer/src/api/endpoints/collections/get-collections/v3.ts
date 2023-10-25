@@ -6,7 +6,6 @@ import Joi from "joi";
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
-import { Takedowns } from "@/models/takedowns";
 import { getJoiCollectionObject } from "@/common/joi";
 
 const version = "v3";
@@ -121,6 +120,7 @@ export const getCollectionsV3Options: RouteOptions = {
           collections.contract,
           collections.token_set_id,
           collections.token_count,
+          collections.is_takedown,
           (
             SELECT array(
               SELECT tokens.image FROM tokens
@@ -214,7 +214,6 @@ export const getCollectionsV3Options: RouteOptions = {
       `;
 
       const result = await redb.manyOrNone(baseQuery, query).then(async (result) => {
-        const takedowns = await Takedowns.getCollections(result.map((r) => r.id));
         return result.map((r) =>
           getJoiCollectionObject(
             {
@@ -257,7 +256,7 @@ export const getCollectionsV3Options: RouteOptions = {
                 "30day": r.day30_floor_sell_value ? formatEth(r.day30_floor_sell_value) : null,
               },
             },
-            takedowns
+            r.is_takedown
           )
         );
       });

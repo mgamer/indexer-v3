@@ -10,7 +10,6 @@ import { CollectionSets } from "@/models/collection-sets";
 import * as Sdk from "@reservoir0x/sdk";
 import { config } from "@/config/index";
 import { getJoiPriceObject, getJoiTokenObject, JoiPrice } from "@/common/joi";
-import { Takedowns } from "@/models/takedowns";
 
 const version = "v4";
 
@@ -262,6 +261,7 @@ export const getUserTokensV4Options: RouteOptions = {
                t.name, t.image, t.collection_id, t.floor_sell_id, t.floor_sell_value, t.floor_sell_currency, t.floor_sell_currency_value, 
                top_bid_id, top_bid_price, top_bid_value, top_bid_currency, top_bid_currency_price, top_bid_currency_value,
                c.name as collection_name, c.metadata, c.floor_sell_value AS "collection_floor_sell_value",
+               t.is_takedown AS "t_is_takedown", c.is_takedown AS "c_is_takedown",
                (
                     CASE WHEN t.floor_sell_value IS NOT NULL
                     THEN 1
@@ -283,14 +283,6 @@ export const getUserTokensV4Options: RouteOptions = {
       `;
 
       const userTokens = await redb.manyOrNone(baseQuery, { ...query, ...params });
-      const takedowns = await Takedowns.getTokens(
-        userTokens.map((r) => ({
-          contract: fromBuffer(r.contract),
-          tokenId: r.token_id,
-          collectionId: r.collection_id,
-        }))
-      );
-
       const result = userTokens.map(async (r) => {
         // Use default currencies for backwards compatibility with entries
         // that don't have the currencies cached in the tokens table
@@ -338,7 +330,7 @@ export const getUserTokensV4Options: RouteOptions = {
                   }
                 : undefined,
             },
-            takedowns
+            r.t_is_takedown || r.c_is_takedown
           ),
           ownership: {
             tokenCount: String(r.token_count),

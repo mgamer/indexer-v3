@@ -8,7 +8,6 @@ import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, fromBuffer } from "@/common/utils";
 import { CollectionSets } from "@/models/collection-sets";
-import { Takedowns } from "@/models/takedowns";
 import { getJoiCollectionObject } from "@/common/joi";
 
 const version = "v4";
@@ -154,6 +153,7 @@ export const getCollectionsV4Options: RouteOptions = {
           collections.contract,
           collections.token_set_id,
           collections.token_count,
+          collections.is_takedown,
           (
             SELECT array(
               SELECT tokens.image FROM tokens
@@ -290,7 +290,6 @@ export const getCollectionsV4Options: RouteOptions = {
       `;
 
       const result = await redb.manyOrNone(baseQuery, query);
-      const takedowns = await Takedowns.getCollections(result.map((r) => r.id));
 
       if (result) {
         collections = result.map((r) => {
@@ -344,7 +343,7 @@ export const getCollectionsV4Options: RouteOptions = {
                   : null,
               },
             },
-            takedowns
+            r.is_takedown
           );
 
           if (query.includeTopBid) {

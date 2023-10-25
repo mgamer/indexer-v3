@@ -7,7 +7,6 @@ import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 import { getJoiTokenObject } from "@/common/joi";
-import { Takedowns } from "@/models/takedowns";
 
 const version = "v1";
 
@@ -95,6 +94,8 @@ export const getUserTokensV1Options: RouteOptions = {
           "t"."name",
           "t"."image",
           "t"."collection_id",
+          "t"."is_takedown" as "t_is_takedown",
+          "c"."is_takedown" as "c_is_takedown",
           "c"."name" as "collection_name",
           "nb"."amount" as "token_count",
           (CASE WHEN "t"."floor_sell_value" IS NOT NULL
@@ -165,13 +166,6 @@ export const getUserTokensV1Options: RouteOptions = {
       const result = await redb
         .manyOrNone(baseQuery, { ...query, ...params })
         .then(async (result) => {
-          const takedowns = await Takedowns.getTokens(
-            result.map((r) => ({
-              contract: fromBuffer(r.contract),
-              tokenId: r.token_id,
-              collectionId: r.collection_id,
-            }))
-          );
           return result.map((r) => ({
             token: getJoiTokenObject(
               {
@@ -189,7 +183,7 @@ export const getUserTokensV1Options: RouteOptions = {
                   schema: r.top_buy_schema,
                 },
               },
-              takedowns
+              r.t_is_takedown || r.c_is_takedown
             ),
             ownership: {
               tokenCount: String(r.token_count),

@@ -9,7 +9,6 @@ import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 import { CollectionSets } from "@/models/collection-sets";
 import { Assets } from "@/utils/assets";
 import { Sources } from "@/models/sources";
-import { Takedowns } from "@/models/takedowns";
 import { getJoiCollectionObject } from "@/common/joi";
 
 const version = "v2";
@@ -191,6 +190,7 @@ export const getUserCollectionsV2Options: RouteOptions = {
                 collections.contract,
                 collections.token_set_id,
                 collections.token_count,
+                collections.is_takedown,
                 (
                   SELECT array(
                     SELECT tokens.image FROM tokens
@@ -304,7 +304,6 @@ export const getUserCollectionsV2Options: RouteOptions = {
       const result = await redb.manyOrNone(baseQuery, { ...params, ...query });
 
       const sources = await Sources.getInstance();
-      const takedowns = await Takedowns.getCollections(result.map((r) => r.id));
 
       const collections = _.map(result, (r) => {
         const response = {
@@ -351,7 +350,7 @@ export const getUserCollectionsV2Options: RouteOptions = {
                 "30day": r.day30_floor_sell_value ? formatEth(r.day30_floor_sell_value) : null,
               },
             },
-            takedowns
+            r.is_takedown
           ),
           ownership: {
             tokenCount: String(r.owner_token_count),

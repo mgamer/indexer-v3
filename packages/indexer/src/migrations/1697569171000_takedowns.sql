@@ -1,25 +1,9 @@
 -- Up Migration
 
-CREATE TYPE "takedown_type_t" AS ENUM (
-  'collection',
-  'token'
-);
-
-CREATE TABLE "takedowns" (  
-  "id" TEXT NOT NULL,
-  "type" "takedown_type_t" NOT NULL,  
-  "api_key" TEXT,
-  "created_at" TIMESTAMPTZ DEFAULT now(),
-  "updated_at" TIMESTAMPTZ DEFAULT now(),
-  "active" BOOLEAN NOT NULL DEFAULT TRUE
-);
-
-ALTER TABLE "takedowns"
-  ADD CONSTRAINT "takedowns_pk"
-  PRIMARY KEY ("id");
+ALTER TABLE "collections" ADD COLUMN "is_takedown" INT;
+ALTER TABLE "tokens" ADD COLUMN "is_takedown" INT;
 
 -- Down Migration
 
-DROP TABLE "takedowns";
-
-DROP TYPE "takedown_type_t";
+ALTER TABLE "collections" DROP COLUMN "is_takedown";
+ALTER TABLE "tokens" DROP COLUMN "is_takedown";
