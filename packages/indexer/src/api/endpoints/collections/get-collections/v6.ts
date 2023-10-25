@@ -397,7 +397,7 @@ export const getCollectionsV6Options: RouteOptions = {
           collections.contract,
           collections.token_id_range,
           collections.token_set_id,
-          collections.creator,          
+          collections.creator,
           collections.day1_sales_count AS "day_sale_count",
           collections.day1_rank,
           collections.day1_volume,
