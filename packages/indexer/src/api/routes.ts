@@ -222,6 +222,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
+    path: "/admin/resync-takedowns",
+    options: adminEndpoints.postResyncTakedownsOptions,
+  });
+
+  server.route({
+    method: "POST",
     path: "/admin/refresh-token",
     options: adminEndpoints.postRefreshTokenOptions,
   });

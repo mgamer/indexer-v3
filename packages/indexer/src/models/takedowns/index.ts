@@ -3,17 +3,21 @@ import { redis } from "@/common/redis";
 export class Takedowns {
   public static takedowns: { [id: string]: boolean } = {};
 
-  public static async add(type: string, id: string[]): Promise<void> {
-    await redis.hset(`takedown-${type}`, id, id);
+  public static async add(type: string, ids: string[]): Promise<void> {
+    if (ids.length) {
+      await redis.hset(`takedown-${type}`, ids, ids);
 
-    for (const takedown of id) {
-      this.takedowns[takedown] = true;
+      for (const id of ids) {
+        this.takedowns[id] = true;
+      }
     }
   }
 
-  public static async delete(type: string, id: string[]): Promise<void> {
-    await redis.hdel(`takedown-${type}`, id);
-    this.takedowns = {};
+  public static async delete(type: string, ids: string[]): Promise<void> {
+    if (ids.length) {
+      await redis.hdel(`takedown-${type}`, ids);
+      this.takedowns = {};
+    }
   }
 
   public static async get(type: string, ids: string[]): Promise<(string | null)[]> {
