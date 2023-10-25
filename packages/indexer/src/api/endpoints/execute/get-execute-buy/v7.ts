@@ -1492,7 +1492,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
         },
       ];
 
-      // Intent purchasing MVP
+      // Seaport intent purchasing MVP
       if (payload.executionMethod === "seaport-v1.5-intent") {
         if (listingDetails.length > 1) {
           throw Boom.badRequest("Only single intent purchases are supported");
@@ -1513,6 +1513,9 @@ export const getExecuteBuyV7Options: RouteOptions = {
             amount: details.amount ?? "1",
           })
           .then((response) => response.data.price);
+
+        path[0].totalPrice = formatPrice(quote);
+        path[0].totalRawPrice = quote;
 
         const order = new Sdk.SeaportV15.Order(config.chainId, {
           offerer: payload.taker,
@@ -1586,9 +1589,14 @@ export const getExecuteBuyV7Options: RouteOptions = {
             },
           },
         });
+
+        return {
+          steps: steps.filter((s) => s.items.length),
+          path,
+        };
       }
 
-      // Cross-chain purchasing MVP
+      // Cross-chain intent purchasing MVP
       if (
         payload.currency === Sdk.Common.Addresses.Native[config.chainId] &&
         payload.currencyChainId !== undefined &&
