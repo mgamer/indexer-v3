@@ -1506,10 +1506,13 @@ export const getExecuteBuyV7Options: RouteOptions = {
           throw Boom.badRequest("Only erc721 token intent purchases are supported");
         }
 
-        const { fee }: { fee: string } = await axios
-          .get(`${config.solverBaseUrl}/intents/seaport/fee`)
-          .then((response) => response.data);
-        const totalPrice = bn(path[0].totalRawPrice ?? path[0].rawQuote).add(fee);
+        const quote = await axios
+          .post(`${config.seaportSolverBaseUrl}/quote`, {
+            chainId: config.chainId,
+            token: `${details.contract}:${details.tokenId}`,
+            amount: details.amount ?? "1",
+          })
+          .then((response) => response.data.price);
 
         const order = new Sdk.SeaportV15.Order(config.chainId, {
           offerer: payload.taker,
@@ -1519,8 +1522,8 @@ export const getExecuteBuyV7Options: RouteOptions = {
               itemType: Sdk.SeaportBase.Types.ItemType.ERC20,
               token: Sdk.Common.Addresses.WNative[config.chainId],
               identifierOrCriteria: "0",
-              startAmount: totalPrice.toString(),
-              endAmount: totalPrice.toString(),
+              startAmount: quote.toString(),
+              endAmount: quote.toString(),
             },
           ],
           consideration: [
@@ -1626,7 +1629,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
           : `${item.contract}:${MaxUint256.toString()}`.toLowerCase();
 
         const quote = await axios
-          .post(`${config.crossChainSolverBaseUrl}/intents/quote`, {
+          .post(`${config.crossChainSolverBaseUrl}/quote`, {
             fromChainId,
             toChainId,
             token,
