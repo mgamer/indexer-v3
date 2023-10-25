@@ -397,7 +397,7 @@ export const getCollectionsV6Options: RouteOptions = {
           collections.contract,
           collections.token_id_range,
           collections.token_set_id,
-          collections.creator,
+          collections.creator,          
           collections.day1_sales_count AS "day_sale_count",
           collections.day1_rank,
           collections.day1_volume,
@@ -413,6 +413,7 @@ export const getCollectionsV6Options: RouteOptions = {
           collections.day1_floor_sell_value,
           collections.day7_floor_sell_value,
           collections.day30_floor_sell_value,
+          collections.is_takedown,
           ${floorAskSelectQuery}
           collections.token_count,
           collections.owner_count,

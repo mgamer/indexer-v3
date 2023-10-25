@@ -1009,6 +1009,9 @@ export const getJoiCollectionObject = (collection: any, isTakedown: boolean) => 
     collection.id = collection.primaryContract;
     collection.name = collection.primaryContract;
 
+    if (collection.slug) {
+      collection.slug = collection.primaryContract;
+    }
     if (collection.metadata) {
       collection.metadata = null;
     }

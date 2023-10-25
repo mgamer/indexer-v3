@@ -186,7 +186,14 @@ export const getUserTokensV3Options: RouteOptions = {
 
     let tokensJoin = `
       JOIN LATERAL (
-        SELECT t.token_id, t.name, t.image, t.collection_id, null AS top_bid_id, null AS top_bid_value
+        SELECT 
+          t.token_id, 
+          t.name,
+          t.image,
+          t.collection_id,
+          null AS top_bid_id,
+          null AS top_bid_value,
+          t.is_takedown AS "t_is_takedown"
         FROM tokens t
         WHERE b.token_id = t.token_id
         AND b.contract = t.contract
@@ -196,7 +203,7 @@ export const getUserTokensV3Options: RouteOptions = {
     if (query.includeTopBid) {
       tokensJoin = `
         JOIN LATERAL (
-          SELECT t.token_id, t.name, t.image, t.collection_id
+          SELECT t.token_id, t.name, t.image, t.collection_id, t.is_takedown AS "t_is_takedown"
           FROM tokens t
           WHERE b.token_id = t.token_id
           AND b.contract = t.contract
@@ -229,7 +236,7 @@ export const getUserTokensV3Options: RouteOptions = {
                t.image, t.collection_id, b.floor_sell_id, b.floor_sell_value, top_bid_id,
                top_bid_value, c.name as collection_name, c.metadata,
                c.floor_sell_value AS "collection_floor_sell_value",
-               t.is_takedown AS "t_is_takedown", c.is_takedown AS "c_is_takedown",
+               c.is_takedown AS "c_is_takedown", t_is_takedown,
                (
                     CASE WHEN b.floor_sell_value IS NOT NULL
                     THEN 1
