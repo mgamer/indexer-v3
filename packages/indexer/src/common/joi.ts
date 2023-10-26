@@ -1015,6 +1015,21 @@ export const getJoiCollectionObject = (collection: any, isTakedown: boolean) => 
     if (collection.metadata) {
       collection.metadata = null;
     }
+    if (collection.banner) {
+      collection.banner = null;
+    }
+    if (collection.discordUrl) {
+      collection.discordUrl = null;
+    }
+    if (collection.externalUrl) {
+      collection.externalUrl = null;
+    }
+    if (collection.twitterUsername) {
+      collection.twitterUsername = null;
+    }
+    if (collection.openseaVerificationStatus) {
+      collection.openseaVerificationStatus = null;
+    }
     if (collection.community) {
       collection.community = null;
     }
