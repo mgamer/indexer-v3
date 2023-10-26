@@ -74,9 +74,7 @@ export class Assets {
           if (imageUrl.match(/=s\d+$/)) {
             resizeImageUrl = imageUrl.replace(/=s\d+$/, `=s${size}`);
           }
-        }
-
-        if (imageUrl?.includes("i.seadn.io")) {
+        } else if (imageUrl?.includes("i.seadn.io")) {
           if (imageUrl.match(/w=\d+/)) {
             resizeImageUrl = imageUrl.replace(/w=\d+/, `w=${size}`);
           }
