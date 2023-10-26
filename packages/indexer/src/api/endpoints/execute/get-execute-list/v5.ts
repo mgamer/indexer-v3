@@ -161,12 +161,12 @@ export const getExecuteListV5Options: RouteOptions = {
             marketplaceFees: Joi.array()
               .items(Joi.string().pattern(regex.fee))
               .description(
-                "List of marketplace fees (formatted as `feeRecipient:feeAmount`) to be bundled within the order"
+                "List of marketplace fees (formatted as `feeRecipient:feeBps`) to be bundled within the order. 1 BPS = 0.01% Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00:100`"
               ),
             customRoyalties: Joi.array()
               .items(Joi.string().pattern(regex.fee))
               .description(
-                "List of custom royalties (formatted as `feeRecipient:feeAmount`) to be bundled within the order"
+                "List of custom royalties (formatted as `feeRecipient:feeBps`) to be bundled within the order. 1 BPS = 0.01% Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00:100`"
               ),
             listingTime: Joi.string()
               .pattern(regex.unixTimestamp)
