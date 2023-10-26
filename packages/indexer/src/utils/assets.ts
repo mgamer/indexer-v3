@@ -72,11 +72,11 @@ export class Assets {
         let resizeImageUrl = imageUrl;
         if (imageUrl?.includes("lh3.googleusercontent.com")) {
           if (imageUrl.match(/=s\d+$/)) {
-            resizeImageUrl = imageUrl.replace(/=s\d+$/, `=s${size}`);
+            resizeImageUrl = imageUrl.replace(/=s\d+$/, `=s${ImageSize.large}`);
           }
         } else if (imageUrl?.includes("i.seadn.io")) {
           if (imageUrl.match(/w=\d+/)) {
-            resizeImageUrl = imageUrl.replace(/w=\d+/, `w=${size}`);
+            resizeImageUrl = imageUrl.replace(/w=\d+/, `w=${ImageSize.large}`);
           }
         }
 
