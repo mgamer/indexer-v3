@@ -59,7 +59,7 @@ const getNetworkConfig = (chainId?: number) => {
         url = "https://rpc.zora.co";
         break;
       case 534352:
-        url = "https://rpc.scroll.io";
+        url = "https://rpc.ankr.com/scroll";
         break;
       // Testnets
       case 5:
@@ -88,6 +88,9 @@ const getNetworkConfig = (chainId?: number) => {
         break;
       case 2863311531:
         url = "https://rpc-testnet.ancient8.gg/";
+        break;
+      case 13472:
+        url = "https://rpc.testnet.immutable.com/";
         break;
       default:
         throw new Error("Unsupported chain id");
@@ -169,6 +172,7 @@ const config: HardhatUserConfig = {
     scrollAlpha: getNetworkConfig(534353),
     sepolia: getNetworkConfig(11155111),
     ancient8Testnet: getNetworkConfig(2863311531),
+    immutableZkevmTestnet: getNetworkConfig(13472),
   },
   etherscan: {
     apiKey: process.env.ETHERSCAN_API_KEY,

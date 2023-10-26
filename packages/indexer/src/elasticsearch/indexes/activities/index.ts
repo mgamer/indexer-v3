@@ -12,6 +12,8 @@ import {
 import { SortResults } from "@elastic/elasticsearch/lib/api/typesWithBodyKey";
 import { logger } from "@/common/logger";
 import { CollectionsEntity } from "@/models/collections/collections-entity";
+
+import { redis } from "@/common/redis";
 import {
   ActivityDocument,
   ActivityType,
@@ -511,6 +513,9 @@ export const getTopSellingCollectionsV2 = async (params: {
   const { startTime, fillType, limit, sortBy } = params;
 
   const { trendingExcludedContracts } = getNetworkSettings();
+  const spamCollectionsCache = await redis.get("active-spam-collection-ids");
+  const spamCollections = spamCollectionsCache ? JSON.parse(spamCollectionsCache) : [];
+  const excludedCollections = spamCollections.concat(trendingExcludedContracts || []);
 
   const salesQuery = {
     bool: {
@@ -533,7 +538,7 @@ export const getTopSellingCollectionsV2 = async (params: {
         must_not: [
           {
             terms: {
-              "collection.id": trendingExcludedContracts,
+              "collection.id": excludedCollections,
             },
           },
         ],
@@ -590,15 +595,13 @@ export const getTopSellingCollectionsV2 = async (params: {
 
     return {
       volume: bucket?.total_volume?.value,
-      volumePercentChange: _.round(
-        ((bucket?.total_volume?.value || 0) / (pastResult?.volume || 1)) * 100 - 100,
-        2
-      ),
+      volumePercentChange: pastResult?.volume
+        ? _.round(((bucket?.total_volume?.value || 0) / (pastResult?.volume || 1)) * 100 - 100, 2)
+        : null,
       count: bucket?.total_sales.value,
-      countPercentChange: _.round(
-        ((bucket?.total_sales.value || 0) / (pastResult?.count || 1)) * 100 - 100,
-        2
-      ),
+      countPercentChange: pastResult?.count
+        ? _.round(((bucket?.total_sales.value || 0) / (pastResult?.count || 1)) * 100 - 100, 2)
+        : null,
       id: bucket.key,
     };
   });
