@@ -259,7 +259,8 @@ export const getCollectionActivityV6Options: RouteOptions = {
             tokens.contract,
             tokens.token_id,
             tokens.name,
-            tokens.image
+            tokens.image,
+            tokens.metadata_disabled
           FROM tokens
           WHERE (tokens.contract, tokens.token_id) IN ($/tokensFilter:raw/)
         `,
@@ -273,6 +274,7 @@ export const getCollectionActivityV6Options: RouteOptions = {
                     token_id: token.token_id,
                     name: token.name,
                     image: token.image,
+                    metadata_disabled: token.metadata_disabled,
                   }))
                 );
 
@@ -288,6 +290,7 @@ export const getCollectionActivityV6Options: RouteOptions = {
                       token_id: tokenResult.token_id,
                       name: tokenResult.name,
                       image: tokenResult.image,
+                      metadata_disabled: tokenResult.metadata_disabled,
                     })
                   );
 
@@ -391,10 +394,14 @@ export const getCollectionActivityV6Options: RouteOptions = {
           token: {
             tokenId: activity.token?.id || null,
             tokenName: query.includeMetadata
-              ? (tokenMetadata ? tokenMetadata.name : activity.token?.name) || null
+              ? !tokenMetadata.metadata_disabled
+                ? (tokenMetadata ? tokenMetadata.name : activity.token?.name) || null
+                : null
               : undefined,
             tokenImage: query.includeMetadata
-              ? (tokenMetadata ? tokenMetadata.image : activity.token?.image) || null
+              ? !tokenMetadata.metadata_disabled
+                ? (tokenMetadata ? tokenMetadata.image : activity.token?.image) || null
+                : null
               : undefined,
           },
           collection: {

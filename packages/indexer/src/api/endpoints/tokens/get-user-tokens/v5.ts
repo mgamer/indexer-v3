@@ -10,6 +10,7 @@ import { CollectionSets } from "@/models/collection-sets";
 import * as Sdk from "@reservoir0x/sdk";
 import { config } from "@/config/index";
 import {
+  getJoiCollectionObject,
   getJoiPriceObject,
   getJoiSourceObject,
   getJoiTokenObject,
@@ -387,14 +388,17 @@ export const getUserTokensV5Options: RouteOptions = {
               tokenId: tokenId,
               name: r.name,
               image: r.image,
-              collection: {
-                id: r.collection_id,
-                name: r.collection_name,
-                imageUrl: r.metadata?.imageUrl,
-                floorAskPrice: r.collection_floor_sell_value
-                  ? formatEth(r.collection_floor_sell_value)
-                  : null,
-              },
+              collection: getJoiCollectionObject(
+                {
+                  id: r.collection_id,
+                  name: r.collection_name,
+                  imageUrl: r.metadata?.imageUrl,
+                  floorAskPrice: r.collection_floor_sell_value
+                    ? formatEth(r.collection_floor_sell_value)
+                    : null,
+                },
+                r.c_metadata_disabled
+              ),
               topBid: query.includeTopBid
                 ? {
                     id: r.top_bid_id,

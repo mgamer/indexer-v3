@@ -264,7 +264,8 @@ export const getUserActivityV6Options: RouteOptions = {
             tokens.contract,
             tokens.token_id,
             tokens.name,
-            tokens.image
+            tokens.image,
+            tokens.metadata_disabled
           FROM tokens
           WHERE (tokens.contract, tokens.token_id) IN ($/tokensFilter:raw/)
         `,
@@ -278,6 +279,7 @@ export const getUserActivityV6Options: RouteOptions = {
                     token_id: token.token_id,
                     name: token.name,
                     image: token.image,
+                    metadata_disabled: token.metadata_disabled,
                   }))
                 );
 
@@ -293,6 +295,7 @@ export const getUserActivityV6Options: RouteOptions = {
                       token_id: tokenResult.token_id,
                       name: tokenResult.name,
                       image: tokenResult.image,
+                      metadata_disabled: tokenResult.metadata_disabled,
                     })
                   );
 

@@ -14,7 +14,7 @@ import {
   toBuffer,
 } from "@/common/utils";
 import * as Boom from "@hapi/boom";
-import { getJoiTokenObject } from "@/common/joi";
+import { getJoiCollectionObject, getJoiTokenObject } from "@/common/joi";
 
 const version = "v2";
 
@@ -274,10 +274,13 @@ export const getTokensV2Options: RouteOptions = {
             tokenId: r.token_id,
             name: r.name,
             image: r.image,
-            collection: {
-              id: r.collection_id,
-              name: r.collection_name,
-            },
+            collection: getJoiCollectionObject(
+              {
+                id: r.collection_id,
+                name: r.collection_name,
+              },
+              r.c_metadata_disabled
+            ),
             floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
             topBidValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
           },

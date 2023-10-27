@@ -17,6 +17,7 @@ import { CollectionSets } from "@/models/collection-sets";
 import * as Sdk from "@reservoir0x/sdk";
 import { config } from "@/config/index";
 import {
+  getJoiCollectionObject,
   getJoiPriceObject,
   getJoiSaleObject,
   getJoiSourceObject,
@@ -554,14 +555,8 @@ export const getUserTokensV7Options: RouteOptions = {
                t.rarity_score, ${selectLastSale}
                top_bid_id, top_bid_price, top_bid_value, top_bid_currency, top_bid_currency_price, top_bid_currency_value, top_bid_source_id_int,
                o.currency AS collection_floor_sell_currency, o.currency_price AS collection_floor_sell_currency_price,
-<<<<<<< HEAD
                c.name as collection_name, con.kind, c.metadata, c.royalties, (c.metadata ->> 'safelistRequestStatus')::TEXT AS "opensea_verification_status",
                c.royalties_bps, ot.kind AS floor_sell_kind, c.slug, c.is_spam AS c_is_spam, c.metadata_disabled AS c_metadata_disabled, t_metadata_disabled,
-=======
-               c.name as collection_name, con.kind, con.symbol, c.metadata, c.royalties,
-               (c.metadata ->> 'safelistRequestStatus')::TEXT AS "opensea_verification_status",
-               c.royalties_bps, ot.kind AS floor_sell_kind, c.slug, c.is_spam AS c_is_spam,
->>>>>>> main
                ${query.includeRawData ? "ot.raw_data AS floor_sell_raw_data," : ""}
                ${
                  query.useNonFlaggedFloorAsk
@@ -715,39 +710,44 @@ export const getUserTokensV7Options: RouteOptions = {
               media: r.media,
               isFlagged: Boolean(Number(r.is_flagged)),
               isSpam: Boolean(Number(r.t_is_spam)) || Boolean(Number(r.c_is_spam)),
+              metadataDisabled:
+                Boolean(Number(r.c_metadata_disabled)) || Boolean(Number(r.t_metadata_disabled)),
               lastFlagUpdate: r.last_flag_update
                 ? new Date(r.last_flag_update).toISOString()
                 : null,
               lastFlagChange: r.last_flag_change
                 ? new Date(r.last_flag_change).toISOString()
                 : null,
-              collection: {
-                id: r.collection_id,
-                name: r.collection_name,
-                slug: r.slug,
-                symbol: r.symbol,
-                imageUrl: r.metadata?.imageUrl,
-                isSpam: Boolean(Number(r.c_is_spam)),
-                metadataDisabled:
-                  Boolean(Number(r.c_metadata_disabled)) || Boolean(Number(r.t_metadata_disabled)),
-                openseaVerificationStatus: r.opensea_verification_status,
-                floorAskPrice: r.collection_floor_sell_value
-                  ? await getJoiPriceObject(
-                      {
-                        gross: {
-                          amount: String(
-                            r.collection_floor_sell_currency_price ?? r.collection_floor_sell_value
-                          ),
-                          nativeAmount: String(r.collection_floor_sell_value),
+              collection: getJoiCollectionObject(
+                {
+                  id: r.collection_id,
+                  name: r.collection_name,
+                  slug: r.slug,
+                  symbol: r.symbol,
+                  imageUrl: r.metadata?.imageUrl,
+                  isSpam: Boolean(Number(r.c_is_spam)),
+                  metadataDisabled: Boolean(Number(r.c_metadata_disabled)),
+                  openseaVerificationStatus: r.opensea_verification_status,
+                  floorAskPrice: r.collection_floor_sell_value
+                    ? await getJoiPriceObject(
+                        {
+                          gross: {
+                            amount: String(
+                              r.collection_floor_sell_currency_price ??
+                                r.collection_floor_sell_value
+                            ),
+                            nativeAmount: String(r.collection_floor_sell_value),
+                          },
                         },
-                      },
-                      collectionFloorSellCurrency,
-                      query.displayCurrency
-                    )
-                  : null,
-                royaltiesBps: r.royalties_bps ?? 0,
-                royalties: r.royalties,
-              },
+                        collectionFloorSellCurrency,
+                        query.displayCurrency
+                      )
+                    : null,
+                  royaltiesBps: r.royalties_bps ?? 0,
+                  royalties: r.royalties,
+                },
+                r.c_metadata_disabled
+              ),
               lastSale:
                 query.includeLastSale && r.last_sale_currency
                   ? await getJoiSaleObject({

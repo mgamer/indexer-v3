@@ -8,6 +8,7 @@ import { ApiKeyManager } from "@/models/api-keys";
 import _ from "lodash";
 import { idb } from "@/common/db";
 import { regex } from "@/common/utils";
+import { MetadataStatus } from "@/models/metadata-status";
 
 const version = "v1";
 
@@ -78,6 +79,12 @@ export const putSetCollectionDisableMetadataV1Options: RouteOptions = {
           disable: Number(payload.disable),
         }
       );
+
+      if (payload.disable) {
+        MetadataStatus.disableCollections([params.collection]);
+      } else {
+        MetadataStatus.enableCollections([params.collection]);
+      }
 
       logger.info(
         `put-set-collection-disable-metadata-${version}-handler`,

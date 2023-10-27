@@ -15,7 +15,11 @@ import {
   toBuffer,
 } from "@/common/utils";
 import { Sources } from "@/models/sources";
-import { JoiAttributeKeyValueObject, getJoiTokenObject } from "@/common/joi";
+import {
+  JoiAttributeKeyValueObject,
+  getJoiCollectionObject,
+  getJoiTokenObject,
+} from "@/common/joi";
 import * as Boom from "@hapi/boom";
 
 const version = "v2";
@@ -375,10 +379,13 @@ export const getTokensDetailsV2Options: RouteOptions = {
               description: r.description,
               image: r.image,
               kind: r.kind,
-              collection: {
-                id: r.collection_id,
-                name: r.collection_name,
-              },
+              collection: getJoiCollectionObject(
+                {
+                  id: r.collection_id,
+                  name: r.collection_name,
+                },
+                r.c_metadata_disabled
+              ),
               lastBuy: {
                 value: r.last_buy_value ? formatEth(r.last_buy_value) : null,
                 timestamp: r.last_buy_timestamp,
