@@ -575,6 +575,12 @@ export const setupRoutes = (server: Server) => {
   });
 
   server.route({
+    method: "PUT",
+    path: "/collections/{collection}/disable-metadata/v1",
+    options: collectionsEndpoints.putSetCollectionDisableMetadataV1Options,
+  });
+
+  server.route({
     method: "GET",
     path: "/collections/{collection}/supported-marketplaces/v1",
     options: collectionsEndpoints.getCollectionSupportedMarketplacesV1Options,
@@ -825,12 +831,6 @@ export const setupRoutes = (server: Server) => {
     method: "POST",
     path: "/management/orders/simulate/v1",
     options: managementEndpoints.postSimulateOrderV1Options,
-  });
-
-  server.route({
-    method: "POST",
-    path: "/management/{type}/update-metadata-disabled/v1",
-    options: managementEndpoints.postUpdateMetadataDisabledV1Options,
   });
 
   // Oracle
@@ -1321,6 +1321,12 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/tokens/ids/v1",
     options: tokensEndpoints.getTokensIdsV4Options,
+  });
+
+  server.route({
+    method: "PUT",
+    path: "/tokens/{token}/disable-metadata/v1",
+    options: tokensEndpoints.putSetTokenDisableMetadataV1Options,
   });
 
   // Token sets
