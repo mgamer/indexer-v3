@@ -53,7 +53,7 @@ interface CollectionInfo {
   top_buy_maker: string;
   top_buy_valid_between: string;
   top_buy_source_id_int: number;
-  metadata_disabled: number;
+  metadata_disabled?: number;
   created_at: string;
   updated_at: string;
 }
@@ -94,6 +94,7 @@ const changedMapping = {
   non_flagged_floor_sell_value: "floorAskNonFlagged.price",
   top_buy_id: "topBid.id",
   top_buy_value: "topBid.value",
+  metadata_disabled: "metadataDisabled",
 };
 
 export type CollectionWebsocketEventsTriggerQueuePayload = {
@@ -223,6 +224,7 @@ export class CollectionWebsocketEventsTriggerQueueJob extends AbstractRabbitMqJo
             twitterUsername: !metadataDisabled ? metadata?.twitterUsername : null,
             description: !metadataDisabled ? metadata?.description : null,
           },
+          metadataDisabled,
           tokenCount: String(r.token_count),
           primaryContract: r.contract,
           tokenSetId: !metadataDisabled ? r.token_set_id : `contract:${r.contract}`,

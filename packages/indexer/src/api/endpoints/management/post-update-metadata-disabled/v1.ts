@@ -25,7 +25,7 @@ export const postUpdateMetadataDisabledV1Options: RouteOptions = {
     }),
     payload: Joi.object({
       id: Joi.string()
-        .when("..type", {
+        .when("params.type", {
           is: "token",
           then: Joi.object().pattern(regex.token, Joi.boolean().required()),
           otherwise: Joi.object().pattern(regex.collectionId, Joi.boolean().required()),
@@ -34,7 +34,7 @@ export const postUpdateMetadataDisabledV1Options: RouteOptions = {
           "Disable metadata for the given token or collection id. Example token id: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`. Example collection id: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
         ),
       key: Joi.string().uuid().description("API key").required(),
-      disabled: Joi.boolean()
+      disable: Joi.boolean()
         .description("Whether to disable or reenable the metadata. Defaults to true (disable)")
         .default(true),
     }),
@@ -70,26 +70,26 @@ export const postUpdateMetadataDisabledV1Options: RouteOptions = {
         await idb.oneOrNone(
           `
             UPDATE "tokens"
-            SET "metadata_disabled" = $/active/
+            SET "metadata_disabled" = $/disable/
             WHERE "contract" = $/contract/
             AND "token_id" = $/token_id/
           `,
           {
             contract: toBuffer(payload.id.split(":")[0]),
             token_id: payload.id.split(":")[1],
-            active: Number(payload.active),
+            disable: Number(payload.disable),
           }
         );
       } else if (params.type === "collection") {
         await idb.oneOrNone(
           `
             UPDATE "collections"
-            SET "metadata_disabled" = $/active/
+            SET "metadata_disabled" = $/disable/
             WHERE "id" = $/id/
           `,
           {
             id: payload.id,
-            active: Number(payload.active),
+            disable: Number(payload.disable),
           }
         );
       }
@@ -100,7 +100,7 @@ export const postUpdateMetadataDisabledV1Options: RouteOptions = {
           message: "Update metadata disabled status request accepted",
           id: payload.id,
           type: params.type,
-          active: payload.active,
+          disable: payload.disable,
           apiKey: apiKey.key,
         })
       );

@@ -170,6 +170,7 @@ export const getUserTokensV7Options: RouteOptions = {
             media: Joi.string().allow(null),
             isFlagged: Joi.boolean().default(false),
             isSpam: Joi.boolean().default(false),
+            metadataDisabled: Joi.boolean().default(false),
             lastFlagUpdate: Joi.string().allow("", null),
             lastFlagChange: Joi.string().allow("", null),
             collection: Joi.object({
@@ -727,6 +728,8 @@ export const getUserTokensV7Options: RouteOptions = {
                 symbol: r.symbol,
                 imageUrl: r.metadata?.imageUrl,
                 isSpam: Boolean(Number(r.c_is_spam)),
+                metadataDisabled:
+                  Boolean(Number(r.c_metadata_disabled)) || Boolean(Number(r.t_metadata_disabled)),
                 openseaVerificationStatus: r.opensea_verification_status,
                 floorAskPrice: r.collection_floor_sell_value
                   ? await getJoiPriceObject(

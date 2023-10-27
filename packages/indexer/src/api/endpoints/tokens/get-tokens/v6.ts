@@ -274,6 +274,7 @@ export const getTokensV6Options: RouteOptions = {
             kind: Joi.string().allow("", null).description("Can be erc721, erc115, etc."),
             isFlagged: Joi.boolean().default(false),
             isSpam: Joi.boolean().default(false),
+            metadataDisabled: Joi.boolean().default(false),
             lastFlagUpdate: Joi.string().allow("", null),
             lastFlagChange: Joi.string().allow("", null),
             supply: Joi.number()
@@ -1294,6 +1295,8 @@ export const getTokensV6Options: RouteOptions = {
               kind: r.kind,
               isFlagged: Boolean(Number(r.is_flagged)),
               isSpam: Boolean(Number(r.t_is_spam)) || Boolean(Number(r.c_is_spam)),
+              metadataDisabled:
+                Boolean(Number(r.t_metadata_disabled)) || Boolean(Number(r.c_metadata_disabled)),
               lastFlagUpdate: r.last_flag_update
                 ? new Date(r.last_flag_update).toISOString()
                 : null,

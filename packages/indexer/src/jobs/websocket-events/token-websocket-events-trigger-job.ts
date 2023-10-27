@@ -41,6 +41,7 @@ const changedMapping = {
   normalized_floor_sell_value: "market.floorAskNormalized.price.gross.amount",
   supply: "token.supply",
   remaining_supply: "token.remainingSupply",
+  metadata_disabled: "metadataDisabled",
 };
 
 export class TokenWebsocketEventsTriggerJob extends AbstractRabbitMqJobHandler {
@@ -134,6 +135,9 @@ export class TokenWebsocketEventsTriggerJob extends AbstractRabbitMqJobHandler {
             media: data.after.media,
             kind: r?.kind,
             isFlagged: Boolean(Number(data.after.is_flagged)),
+            metadataDisabled:
+              Boolean(Number(data.after.metadata_disabled)) ||
+              Boolean(Number(r?.c_metadata_disabled)),
             lastFlagUpdate: data.after.last_flag_update
               ? new Date(data.after.last_flag_update).toISOString()
               : null,
@@ -558,7 +562,7 @@ interface TokenInfo {
   normalized_floor_sell_currency: string;
   normalized_floor_sell_currency_value: string;
   last_flag_change: string;
-  metadata_disabled: number;
+  metadata_disabled?: number;
   supply: string;
   remaining_supply: string;
 }
