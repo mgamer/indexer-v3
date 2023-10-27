@@ -194,8 +194,8 @@ export const getTokensDetailsV4Options: RouteOptions = {
           "t"."image",
           "t"."media",
           "t"."collection_id",
-          "t"."is_takedown" as "t_is_takedown",
-          "c"."is_takedown" as "c_is_takedown",
+          "t"."metadata_disabled" as "t_metadata_disabled",
+          "c"."metadata_disabled" as "c_metadata_disabled",
           "c"."name" as "collection_name",
           "con"."kind",
           "t"."is_flagged",
@@ -496,7 +496,7 @@ export const getTokensDetailsV4Options: RouteOptions = {
                   }))
                 : [],
             },
-            r.t_is_takedown || r.c_is_takedown
+            r.t_metadata_disabled || r.c_metadata_disabled
           ),
           market: {
             floorAsk: {

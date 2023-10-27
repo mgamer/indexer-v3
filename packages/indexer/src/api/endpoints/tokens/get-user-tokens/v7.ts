@@ -422,7 +422,7 @@ export const getUserTokensV7Options: RouteOptions = {
           t.last_buy_timestamp,
           t.is_flagged,
           t.is_spam AS t_is_spam,
-          t.is_takedown AS t_is_takedown,
+          t.metadata_disabled AS t_metadata_disabled,
           t.last_flag_update,
           t.last_flag_change,
           null AS top_bid_id,
@@ -466,7 +466,7 @@ export const getUserTokensV7Options: RouteOptions = {
             t.last_buy_timestamp,
             t.is_flagged,
             t.is_spam AS t_is_spam,
-            t.is_takedown AS t_is_takedown,
+            t.metadata_disabled AS t_metadata_disabled,
             t.last_flag_update,
             t.last_flag_change,
             ${selectFloorData}
@@ -555,7 +555,7 @@ export const getUserTokensV7Options: RouteOptions = {
                o.currency AS collection_floor_sell_currency, o.currency_price AS collection_floor_sell_currency_price,
 <<<<<<< HEAD
                c.name as collection_name, con.kind, c.metadata, c.royalties, (c.metadata ->> 'safelistRequestStatus')::TEXT AS "opensea_verification_status",
-               c.royalties_bps, ot.kind AS floor_sell_kind, c.slug, c.is_spam AS c_is_spam, c.is_takedown AS c_is_takedown, t_is_takedown,
+               c.royalties_bps, ot.kind AS floor_sell_kind, c.slug, c.is_spam AS c_is_spam, c.metadata_disabled AS c_metadata_disabled, t_metadata_disabled,
 =======
                c.name as collection_name, con.kind, con.symbol, c.metadata, c.royalties,
                (c.metadata ->> 'safelistRequestStatus')::TEXT AS "opensea_verification_status",
@@ -810,7 +810,7 @@ export const getUserTokensV7Options: RouteOptions = {
                   : []
                 : undefined,
             },
-            r.t_is_takedown || r.c_is_takedown
+            r.t_metadata_disabled || r.c_metadata_disabled
           ),
           ownership: {
             tokenCount: String(r.token_count),

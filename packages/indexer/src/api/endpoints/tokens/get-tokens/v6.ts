@@ -638,8 +638,8 @@ export const getTokensV6Options: RouteOptions = {
           t.supply,
           t.remaining_supply,
           extract(epoch from t.updated_at) AS t_updated_at,
-          t.is_takedown AS t_is_takedown,
-          c.is_takedown AS c_is_takedown,
+          t.metadata_disabled AS t_metadata_disabled,
+          c.metadata_disabled AS c_metadata_disabled,
           c.slug,
           c.creator,
           c.token_count,
@@ -1356,7 +1356,7 @@ export const getTokensV6Options: RouteOptions = {
                   : []
                 : undefined,
             },
-            r.t_is_takedown || r.c_is_takedown
+            r.t_metadata_disabled || r.c_metadata_disabled
           ),
           market: {
             floorAsk: {

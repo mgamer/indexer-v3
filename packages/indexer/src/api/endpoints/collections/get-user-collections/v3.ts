@@ -211,7 +211,7 @@ export const getUserCollectionsV3Options: RouteOptions = {
                 collections.contract,
                 collections.token_set_id,
                 collections.token_count,
-                collections.is_takedown,
+                collections.metadata_disabled,
                 filtered_token_images.images AS sample_images,
                 collections.day1_volume,
                 collections.day7_volume,
@@ -370,7 +370,7 @@ export const getUserCollectionsV3Options: RouteOptions = {
               },
               contractKind: r.contract_kind,
             },
-            r.is_takedown
+            r.metadata_disabled
           ),
           ownership: {
             tokenCount: String(r.owner_token_count),

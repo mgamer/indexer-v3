@@ -1004,8 +1004,8 @@ export const getJoiSourceObject = (source: SourcesEntity | undefined, full = tru
 
 // --- Collections ---
 
-export const getJoiCollectionObject = (collection: any, isTakedown: boolean) => {
-  if (isTakedown) {
+export const getJoiCollectionObject = (collection: any, metadataDisabled: boolean) => {
+  if (metadataDisabled) {
     collection.id = collection.primaryContract;
     collection.name = collection.primaryContract;
 
@@ -1055,8 +1055,8 @@ export const getJoiCollectionObject = (collection: any, isTakedown: boolean) => 
 
 // -- Tokens --
 
-export const getJoiTokenObject = (token: any, isTakedown: boolean) => {
-  if (isTakedown) {
+export const getJoiTokenObject = (token: any, metadataDisabled: boolean) => {
+  if (metadataDisabled) {
     token.collection.id = token.contract;
     token.name = null;
 

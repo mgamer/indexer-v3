@@ -227,7 +227,7 @@ export const getTopSellingCollectionsV2Options: RouteOptions = {
           collections.contract,
           collections.token_count,
           collections.owner_count,
-          collections.is_takedown,
+          collections.metadata_disabled,
           collections.day1_volume_change,
           collections.day7_volume_change,
           collections.day30_volume_change,
@@ -333,7 +333,7 @@ export const getTopSellingCollectionsV2Options: RouteOptions = {
                 description: metadata.description,
                 floorAsk,
               },
-              metadata.is_takedown
+              metadata.metadata_disabled
             );
           })
         );

@@ -133,8 +133,8 @@ export const getTokensDetailsV2Options: RouteOptions = {
           "t"."description",
           "t"."image",
           "t"."collection_id",
-          "t"."is_takedown" as "t_is_takedown",
-          "c"."is_takedown" as "c_is_takedown",
+          "t"."metadata_disabled" as "t_metadata_disabled",
+          "c"."metadata_disabled" as "c_metadata_disabled",
           "c"."name" as "collection_name",
           "con"."kind",
           "t"."last_buy_value",
@@ -390,7 +390,7 @@ export const getTokensDetailsV2Options: RouteOptions = {
               owner: r.owner ? fromBuffer(r.owner) : null,
               attributes: r.attributes || [],
             },
-            r.t_is_takedown || r.c_is_takedown
+            r.t_metadata_disabled || r.c_metadata_disabled
           ),
           market: {
             floorAsk: {

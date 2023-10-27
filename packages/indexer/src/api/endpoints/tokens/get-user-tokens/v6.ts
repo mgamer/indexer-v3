@@ -325,7 +325,7 @@ export const getUserTokensV6Options: RouteOptions = {
           t.media,
           t.rarity_rank,
           t.collection_id,
-          t.is_takedown AS "t_is_takedown",
+          t.metadata_disabled AS "t_metadata_disabled",
           t.rarity_score,
           t.last_buy_value,
           t.last_buy_timestamp,
@@ -357,7 +357,7 @@ export const getUserTokensV6Options: RouteOptions = {
             t.media,
             t.rarity_rank,
             t.collection_id,
-            t.is_takedown AS "t_is_takedown",
+            t.metadata_disabled AS "t_metadata_disabled",
             t.rarity_score,
             t.last_sell_value,
             t.last_buy_value,
@@ -409,7 +409,7 @@ export const getUserTokensV6Options: RouteOptions = {
                t.floor_sell_maker, t.floor_sell_valid_from, t.floor_sell_valid_to, t.floor_sell_source_id_int,
                t.rarity_score, t.last_sell_value, t.last_buy_value, t.last_sell_timestamp, t.last_buy_timestamp,
                top_bid_id, top_bid_price, top_bid_value, top_bid_currency, top_bid_currency_price, top_bid_currency_value,
-               c.is_takedown AS "c_is_takedown", t_is_takedown, c.name as collection_name, con.kind, c.metadata, ${
+               c.metadata_disabled AS "c_metadata_disabled", t_metadata_disabled, c.name as collection_name, con.kind, c.metadata, ${
                  query.useNonFlaggedFloorAsk
                    ? "c.floor_sell_value"
                    : "c.non_flagged_floor_sell_value"
@@ -584,7 +584,7 @@ export const getUserTokensV6Options: RouteOptions = {
                 ? formatEth(r.last_token_appraisal_value)
                 : null,
             },
-            r.t_is_takedown || r.c_is_takedown
+            r.t_metadata_disabled || r.c_metadata_disabled
           ),
           ownership: {
             tokenCount: String(r.token_count),

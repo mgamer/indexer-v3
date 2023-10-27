@@ -537,8 +537,8 @@ export const getTokensV5Options: RouteOptions = {
           t.is_flagged,
           t.last_flag_update,
           t.last_flag_change,
-          t.is_takedown AS t_is_takedown,
-          c.is_takedown AS c_is_takedown,
+          t.metadata_disabled AS t_metadata_disabled,
+          c.metadata_disabled AS c_metadata_disabled,
           c.slug,
           t.last_buy_value,
           t.last_buy_timestamp,
@@ -1100,7 +1100,7 @@ export const getTokensV5Options: RouteOptions = {
                   : []
                 : undefined,
             },
-            r.t_is_takedown || r.c_is_takedown
+            r.t_metadata_disabled || r.c_metadata_disabled
           ),
           market: {
             floorAsk: {

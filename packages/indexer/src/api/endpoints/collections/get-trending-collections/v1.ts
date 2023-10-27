@@ -269,7 +269,7 @@ async function getCollectionsMetadata(collectionsResult: any[]) {
       collections.creator,
       collections.token_count,
       collections.owner_count,
-      collections.is_takedown,
+      collections.metadata_disabled,
       collections.day1_volume_change,
       collections.day7_volume_change,
       collections.day30_volume_change,
@@ -331,7 +331,7 @@ async function getCollectionsMetadata(collectionsResult: any[]) {
 
     // need to convert buffers before saving to redis
     collectionMetadataResponse = collectionMetadataResponse.map((metadata: any) => {
-      const { contract, floor_sell_currency, is_takedown, ...rest } = metadata;
+      const { contract, floor_sell_currency, metadata_disabled, ...rest } = metadata;
 
       return getJoiCollectionObject(
         {
@@ -341,7 +341,7 @@ async function getCollectionsMetadata(collectionsResult: any[]) {
             ? fromBuffer(floor_sell_currency)
             : Sdk.Common.Addresses.Native[config.chainId],
         },
-        is_takedown
+        metadata_disabled
       );
     });
 

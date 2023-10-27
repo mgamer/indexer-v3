@@ -95,8 +95,8 @@ export const getTokensV2Options: RouteOptions = {
           "t"."name",
           "t"."image",
           "t"."collection_id",
-          "t"."is_takedown" as "t_is_takedown",
-          "c"."is_takedown" as "c_is_takedown",
+          "t"."metadata_disabled" as "t_metadata_disabled",
+          "c"."metadata_disabled" as "c_metadata_disabled",
           "c"."name" as "collection_name",
           "t"."floor_sell_value",
           "t"."top_buy_value"
@@ -281,7 +281,7 @@ export const getTokensV2Options: RouteOptions = {
             floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,
             topBidValue: r.top_buy_value ? formatEth(r.top_buy_value) : null,
           },
-          r.t_is_takedown || r.c_is_takedown
+          r.t_metadata_disabled || r.c_metadata_disabled
         )
       );
 

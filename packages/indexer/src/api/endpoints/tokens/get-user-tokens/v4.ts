@@ -195,7 +195,7 @@ export const getUserTokensV4Options: RouteOptions = {
           t.name,
           t.image,
           t.collection_id,
-          t.is_takedown AS "t_is_takedown",
+          t.metadata_disabled AS "t_metadata_disabled",
           t.floor_sell_id,
           t.floor_sell_value,
           t.floor_sell_currency,
@@ -220,7 +220,7 @@ export const getUserTokensV4Options: RouteOptions = {
             t.name,
             t.image,
             t.collection_id,
-            t.is_takedown AS "t_is_takedown",
+            t.metadata_disabled AS "t_metadata_disabled",
             t.floor_sell_id,
             t.floor_sell_value,
             t.floor_sell_currency,
@@ -263,7 +263,7 @@ export const getUserTokensV4Options: RouteOptions = {
                t.name, t.image, t.collection_id, t.floor_sell_id, t.floor_sell_value, t.floor_sell_currency, t.floor_sell_currency_value, 
                top_bid_id, top_bid_price, top_bid_value, top_bid_currency, top_bid_currency_price, top_bid_currency_value,
                c.name as collection_name, c.metadata, c.floor_sell_value AS "collection_floor_sell_value",
-               c.is_takedown AS "c_is_takedown", t_is_takedown,
+               c.metadata_disabled AS "c_metadata_disabled", t_metadata_disabled,
                (
                     CASE WHEN t.floor_sell_value IS NOT NULL
                     THEN 1
@@ -332,7 +332,7 @@ export const getUserTokensV4Options: RouteOptions = {
                   }
                 : undefined,
             },
-            r.t_is_takedown || r.c_is_takedown
+            r.t_metadata_disabled || r.c_metadata_disabled
           ),
           ownership: {
             tokenCount: String(r.token_count),

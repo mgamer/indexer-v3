@@ -829,8 +829,8 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
-    path: "/management/takedown/v1",
-    options: managementEndpoints.postTakedownV1Options,
+    path: "/management/{type}/update-metadata-disabled/v1",
+    options: managementEndpoints.postUpdateMetadataDisabledV1Options,
   });
 
   // Oracle

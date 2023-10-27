@@ -69,7 +69,7 @@ export class TokenWebsocketEventsTriggerJob extends AbstractRabbitMqJobHandler {
           con.kind,
           c.name AS collection_name,
           c.slug,
-          c.is_takedown AS collection_is_takedown,
+          c.metadata_disabled AS collection_metadata_disabled,
           (c.metadata ->> 'imageUrl')::TEXT AS collection_image,
           (SELECT
             array_agg(
@@ -158,7 +158,7 @@ export class TokenWebsocketEventsTriggerJob extends AbstractRabbitMqJobHandler {
               value: attribute.value,
             })),
           },
-          data.after.is_takedown || r.collection_is_takedown
+          data.after.metadata_disabled || r.collection_metadata_disabled
         ),
         market: {
           floorAsk: data.after.floor_sell_value && {
@@ -558,7 +558,7 @@ interface TokenInfo {
   normalized_floor_sell_currency: string;
   normalized_floor_sell_currency_value: string;
   last_flag_change: string;
-  is_takedown: number;
+  metadata_disabled: number;
   supply: string;
   remaining_supply: string;
 }
