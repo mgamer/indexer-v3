@@ -3,7 +3,12 @@ import { config } from "@/config/index";
 import _ from "lodash";
 import { publishWebsocketEvent } from "@/common/websocketPublisher";
 import { idb } from "@/common/db";
-import { getJoiPriceObject, getJoiSourceObject, getJoiTokenObject } from "@/common/joi";
+import {
+  getJoiCollectionObject,
+  getJoiPriceObject,
+  getJoiSourceObject,
+  getJoiTokenObject,
+} from "@/common/joi";
 import { fromBuffer, toBuffer } from "@/common/utils";
 import { Assets } from "@/utils/assets";
 import * as Sdk from "@reservoir0x/sdk";
@@ -150,12 +155,16 @@ export class TokenWebsocketEventsTriggerJob extends AbstractRabbitMqJobHandler {
               : null,
             rarity: data.after.rarity_score,
             rarityRank: data.after.rarity_rank,
-            collection: {
-              id: data.after.collection_id,
-              name: r?.collection_name,
-              image: r?.collection_image ? Assets.getLocalAssetsLink(r.collection_image) : null,
-              slug: r?.slug,
-            },
+            collection: getJoiCollectionObject(
+              {
+                id: data.after.collection_id,
+                name: r?.collection_name,
+                image: r?.collection_image ? Assets.getLocalAssetsLink(r.collection_image) : null,
+                slug: r?.slug,
+                metadataDisabled: Boolean(Number(r?.collection_metadata_disabled)),
+              },
+              r?.c_metadata_disabled
+            ),
             attributes: _.map(r.attributes, (attribute) => ({
               key: attribute.key,
               kind: attribute.kind,
@@ -337,6 +346,8 @@ export class TokenWebsocketEventsTriggerJob extends AbstractRabbitMqJobHandler {
           t.updated_at,
           t.supply,
           t.remaining_supply,
+          t.metadata_disabled AS token_metadata_disabled,
+          c.metadata_disabled AS collection_metadata_disabled,
           c.slug,
           (c.metadata ->> 'imageUrl')::TEXT AS collection_image,
           (SELECT
@@ -391,33 +402,43 @@ export class TokenWebsocketEventsTriggerJob extends AbstractRabbitMqJobHandler {
         : Sdk.Common.Addresses.Native[config.chainId];
 
       const result = {
-        token: {
-          contract,
-          tokenId,
-          name: r.name,
-          description: r.description,
-          image: Assets.getLocalAssetsLink(r.image),
-          media: r.media,
-          kind: r.kind,
-          isFlagged: Boolean(Number(r.is_flagged)),
-          lastFlagUpdate: r.last_flag_update ? new Date(r.last_flag_update).toISOString() : null,
-          lastFlagChange: r.last_flag_change ? new Date(r.last_flag_change).toISOString() : null,
-          supply: !_.isNull(r.supply) ? r.supply : null,
-          remainingSupply: !_.isNull(r.remaining_supply) ? r.remaining_supply : null,
-          rarity: r.rarity_score,
-          rarityRank: r.rarity_rank,
-          collection: {
-            id: r.collection_id,
-            name: r.collection_name,
-            image: r?.collection_image ? Assets.getLocalAssetsLink(r.collection_image) : null,
-            slug: r.slug,
+        token: getJoiTokenObject(
+          {
+            contract,
+            tokenId,
+            name: r.name,
+            description: r.description,
+            image: Assets.getLocalAssetsLink(r.image),
+            media: r.media,
+            kind: r.kind,
+            metadataDisabled:
+              Boolean(Number(r.token_metadata_disabled)) ||
+              Boolean(Number(r.collection_metadata_disabled)),
+            isFlagged: Boolean(Number(r.is_flagged)),
+            lastFlagUpdate: r.last_flag_update ? new Date(r.last_flag_update).toISOString() : null,
+            lastFlagChange: r.last_flag_change ? new Date(r.last_flag_change).toISOString() : null,
+            supply: !_.isNull(r.supply) ? r.supply : null,
+            remainingSupply: !_.isNull(r.remaining_supply) ? r.remaining_supply : null,
+            rarity: r.rarity_score,
+            rarityRank: r.rarity_rank,
+            collection: getJoiCollectionObject(
+              {
+                id: r.collection_id,
+                name: r.collection_name,
+                image: r?.collection_image ? Assets.getLocalAssetsLink(r.collection_image) : null,
+                slug: r.slug,
+                metadataDisabled: Boolean(Number(r.collection_metadata_disabled)),
+              },
+              r.collection_metadata_disabled
+            ),
+            attributes: _.map(r.attributes, (attribute) => ({
+              key: attribute.key,
+              kind: attribute.kind,
+              value: attribute.value,
+            })),
           },
-          attributes: _.map(r.attributes, (attribute) => ({
-            key: attribute.key,
-            kind: attribute.kind,
-            value: attribute.value,
-          })),
-        },
+          r.token_metadata_disabled
+        ),
         market: {
           floorAsk: r.floor_sell_value && {
             id: r.floor_sell_id,
