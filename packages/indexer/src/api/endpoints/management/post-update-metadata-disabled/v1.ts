@@ -25,10 +25,10 @@ export const postUpdateMetadataDisabledV1Options: RouteOptions = {
     }),
     payload: Joi.object({
       id: Joi.string()
-        .when("params.type", {
+        .when(Joi.ref("$params.type"), {
           is: "token",
-          then: Joi.object().pattern(regex.token, Joi.boolean().required()),
-          otherwise: Joi.object().pattern(regex.collectionId, Joi.boolean().required()),
+          then: Joi.string().pattern(regex.token),
+          otherwise: Joi.string().pattern(regex.collectionId),
         })
         .description(
           "Disable metadata for the given token or collection id. Example token id: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`. Example collection id: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
