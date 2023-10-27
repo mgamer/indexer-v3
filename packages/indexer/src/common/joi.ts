@@ -1094,3 +1094,34 @@ export const getJoiTokenObject = (token: any, metadataDisabled: boolean) => {
 
   return token;
 };
+
+// -- Activities --
+
+export const getJoiActivityObject = (
+  activity: any,
+  tokenMetadataDisabled: boolean,
+  collectionMetadataDisabled: { [id: string]: boolean }
+) => {
+  if (tokenMetadataDisabled || collectionMetadataDisabled[activity.collection?.collectionId]) {
+    if (activity.token?.tokenName) {
+      activity.token.tokenName = null;
+    }
+    if (activity.token?.tokenImage) {
+      activity.token.tokenImage = null;
+    }
+    if (activity.token?.tokenMedia) {
+      activity.token.tokenMedia = null;
+    }
+  }
+
+  if (collectionMetadataDisabled[activity.collection?.collectionId]) {
+    if (activity.collection?.collectionName) {
+      activity.collection.collectionName = activity.contract;
+    }
+    if (activity.collection?.collectionImage) {
+      activity.collection.collectionImage = null;
+    }
+  }
+
+  return activity;
+};

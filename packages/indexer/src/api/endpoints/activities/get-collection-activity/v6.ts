@@ -6,6 +6,7 @@ import Joi from "joi";
 import { logger } from "@/common/logger";
 import { fromBuffer, regex } from "@/common/utils";
 import {
+  getJoiActivityObject,
   getJoiActivityOrderObject,
   getJoiPriceObject,
   getJoiSourceObject,
@@ -23,6 +24,7 @@ import * as ActivitiesIndex from "@/elasticsearch/indexes/activities";
 import { redb } from "@/common/db";
 import { redis } from "@/common/redis";
 import { Sources } from "@/models/sources";
+import { MetadataStatus } from "@/models/metadata-status";
 
 const version = "v6";
 
@@ -217,12 +219,17 @@ export const getCollectionActivityV6Options: RouteOptions = {
       });
 
       let tokensMetadata: any[] = [];
+      let disabledCollectionMetadata: any = {};
 
       if (query.includeMetadata) {
         try {
           let tokensToFetch = activities
             .filter((activity) => activity.token)
             .map((activity) => `token-cache:${activity.contract}:${activity.token?.id}`);
+
+          disabledCollectionMetadata = await MetadataStatus.get(
+            activities.map((activity) => activity.collection?.id ?? "")
+          );
 
           if (tokensToFetch.length) {
             // Make sure each token is unique
@@ -373,51 +380,51 @@ export const getCollectionActivityV6Options: RouteOptions = {
           ? sources.get(activity.event?.fillSourceId)
           : undefined;
 
-        return {
-          type: activity.type,
-          fromAddress: activity.fromAddress,
-          toAddress: activity.toAddress || null,
-          price: await getJoiPriceObject(
-            {
-              gross: {
-                amount: String(activity.pricing?.currencyPrice ?? activity.pricing?.price ?? 0),
-                nativeAmount: String(activity.pricing?.price ?? 0),
+        return getJoiActivityObject(
+          {
+            type: activity.type,
+            fromAddress: activity.fromAddress,
+            toAddress: activity.toAddress || null,
+            price: await getJoiPriceObject(
+              {
+                gross: {
+                  amount: String(activity.pricing?.currencyPrice ?? activity.pricing?.price ?? 0),
+                  nativeAmount: String(activity.pricing?.price ?? 0),
+                },
               },
-            },
-            currency,
-            query.displayCurrency
-          ),
-          amount: Number(activity.amount),
-          timestamp: activity.timestamp,
-          createdAt: new Date(activity.createdAt).toISOString(),
-          contract: activity.contract,
-          token: {
-            tokenId: activity.token?.id || null,
-            tokenName: query.includeMetadata
-              ? !tokenMetadata.metadata_disabled
+              currency,
+              query.displayCurrency
+            ),
+            amount: Number(activity.amount),
+            timestamp: activity.timestamp,
+            createdAt: new Date(activity.createdAt).toISOString(),
+            contract: activity.contract,
+            token: {
+              tokenId: activity.token?.id || null,
+              tokenName: query.includeMetadata
                 ? (tokenMetadata ? tokenMetadata.name : activity.token?.name) || null
-                : null
-              : undefined,
-            tokenImage: query.includeMetadata
-              ? !tokenMetadata.metadata_disabled
-                ? (tokenMetadata ? tokenMetadata.image : activity.token?.image) || null
-                : null
-              : undefined,
-          },
-          collection: {
-            collectionId: activity.collection?.id,
-            collectionName: query.includeMetadata ? activity.collection?.name : undefined,
-            collectionImage:
-              query.includeMetadata && activity.collection?.image != null
-                ? activity.collection?.image
                 : undefined,
+              tokenImage: query.includeMetadata
+                ? (tokenMetadata ? tokenMetadata.image : activity.token?.image) || null
+                : undefined,
+            },
+            collection: {
+              collectionId: activity.collection?.id,
+              collectionName: query.includeMetadata ? activity.collection?.name : undefined,
+              collectionImage:
+                query.includeMetadata && activity.collection?.image != null
+                  ? activity.collection?.image
+                  : undefined,
+            },
+            txHash: activity.event?.txHash,
+            logIndex: activity.event?.logIndex,
+            batchIndex: activity.event?.batchIndex,
+            fillSource: fillSource ? getJoiSourceObject(fillSource, false) : undefined,
+            order,
           },
-          txHash: activity.event?.txHash,
-          logIndex: activity.event?.logIndex,
-          batchIndex: activity.event?.batchIndex,
-          fillSource: fillSource ? getJoiSourceObject(fillSource, false) : undefined,
-          order,
-        };
+          tokenMetadata.metadata_disabled,
+          disabledCollectionMetadata
+        );
       });
 
       return { activities: await Promise.all(result), continuation };

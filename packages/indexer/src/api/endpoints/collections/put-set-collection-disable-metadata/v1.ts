@@ -81,9 +81,9 @@ export const putSetCollectionDisableMetadataV1Options: RouteOptions = {
       );
 
       if (payload.disable) {
-        MetadataStatus.disableCollections([params.collection]);
+        MetadataStatus.disable([params.collection]);
       } else {
-        MetadataStatus.enableCollections([params.collection]);
+        MetadataStatus.enable([params.collection]);
       }
 
       logger.info(
