@@ -18,14 +18,16 @@ export class BackfillAsksElasticsearchJob extends AbstractRabbitMqJobHandler {
   lazyMode = true;
 
   protected async process(payload: BackfillAsksElasticsearchJobPayload) {
-    logger.info(
-      this.queueName,
-      JSON.stringify({
-        topic: "debugAskIndex",
-        message: `Start. fromTimestamp=${payload.fromTimestamp}, onlyActive=${payload.onlyActive}`,
-        payload,
-      })
-    );
+    if (!payload.cursor) {
+      logger.info(
+        this.queueName,
+        JSON.stringify({
+          topic: "debugAskIndex",
+          message: `Start. fromTimestamp=${payload.fromTimestamp}, onlyActive=${payload.onlyActive}`,
+          payload,
+        })
+      );
+    }
 
     let nextCursor;
 
@@ -42,7 +44,7 @@ export class BackfillAsksElasticsearchJob extends AbstractRabbitMqJobHandler {
       }
 
       if (payload.fromTimestamp) {
-        fromTimestampFilter = `AND (orders.updated_at) > (to_timestamp($/updatedAt/))`;
+        fromTimestampFilter = `AND (orders.updated_at) > (to_timestamp($/fromTimestamp/))`;
       }
 
       const criteriaBuildQuery = Orders.buildCriteriaQuery("orders", "token_set_id", true);
