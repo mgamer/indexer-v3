@@ -101,17 +101,6 @@ export const postReportTokenSpamV1Options: RouteOptions = {
             },
           },
         ]);
-
-        logger.info(
-          `post-report-token-spam-${version}-handler`,
-          JSON.stringify({
-            message: "Report spam request accepted",
-            id: params.token,
-            type: "token",
-            active: payload.active,
-            apiKey: apiKey.key,
-          })
-        );
       }
 
       return {

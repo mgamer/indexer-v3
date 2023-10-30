@@ -101,17 +101,6 @@ export const postReportCollectionSpamV1Options: RouteOptions = {
             },
           },
         ]);
-
-        logger.info(
-          `post-report-collection-spam-${version}-handler`,
-          JSON.stringify({
-            message: "Report spam request accepted",
-            id: params.collection,
-            type: "collection",
-            active: payload.active,
-            apiKey: apiKey.key,
-          })
-        );
       }
 
       return {
