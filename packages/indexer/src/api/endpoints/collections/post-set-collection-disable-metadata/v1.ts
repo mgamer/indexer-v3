@@ -12,7 +12,7 @@ import { MetadataStatus } from "@/models/metadata-status";
 
 const version = "v1";
 
-export const putSetCollectionDisableMetadataV1Options: RouteOptions = {
+export const postSetCollectionDisableMetadataV1Options: RouteOptions = {
   description: "Disable or reenable metadata for a collection",
   notes:
     "This API requires an allowed API key for execution. Please contact technical support with more questions.",
@@ -44,10 +44,10 @@ export const putSetCollectionDisableMetadataV1Options: RouteOptions = {
   response: {
     schema: Joi.object({
       message: Joi.string(),
-    }).label(`putSetCollectionDisableMetadata${version.toUpperCase()}Response`),
+    }).label(`postSetCollectionDisableMetadata${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(
-        `put-set-collection-disable-metadata-${version}-handler`,
+        `post-set-collection-disable-metadata-${version}-handler`,
         `Wrong response schema: ${error}`
       );
       throw error;
@@ -87,7 +87,7 @@ export const putSetCollectionDisableMetadataV1Options: RouteOptions = {
       }
 
       logger.info(
-        `put-set-collection-disable-metadata-${version}-handler`,
+        `post-set-collection-disable-metadata-${version}-handler`,
         JSON.stringify({
           message: "Disable collection metadata request accepted",
           id: payload.collection,
@@ -100,7 +100,7 @@ export const putSetCollectionDisableMetadataV1Options: RouteOptions = {
       return { message: "Success" };
     } catch (error) {
       logger.error(
-        `put-set-collection-disable-metadata-${version}-handler`,
+        `post-set-collection-disable-metadata-${version}-handler`,
         `Handler failure: ${JSON.stringify(error)}`
       );
       throw error;
