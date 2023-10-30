@@ -36,7 +36,6 @@ export const getBuildInfo = async (
     `,
     { collection }
   );
-
   if (!collectionResult) {
     throw new Error("Could not fetch collection");
   }

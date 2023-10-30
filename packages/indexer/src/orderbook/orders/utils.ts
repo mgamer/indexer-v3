@@ -17,6 +17,7 @@ export type OrderMetadata = {
   originatedAt?: string;
   fromOnChain?: boolean;
   permitId?: string;
+  permitIndex?: number;
 };
 
 // Underlying database model for an order

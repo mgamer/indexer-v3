@@ -3,12 +3,6 @@ import { AddressZero } from "@ethersproject/constants";
 import { getEventData } from "@/events-sync/data";
 import { EnhancedEvent, OnChainData } from "@/events-sync/handlers/utils";
 
-import { Interface } from "@ethersproject/abi";
-import { Contract } from "@ethersproject/contracts";
-import { baseProvider } from "@/common/provider";
-import * as permitBidding from "@/utils/permit-bidding";
-import { bn } from "@/common/utils";
-
 export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChainData) => {
   // Handle the events
   for (const { subKind, baseEventParams, log } of events) {
@@ -84,24 +78,13 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           },
         });
 
-        const token = baseEventParams.address.toLowerCase();
-        const permitBiddingMaxNonce = await permitBidding.getActiveOrdersMaxNonce(owner, token);
-        if (permitBiddingMaxNonce) {
-          const tokenContract = new Contract(
-            baseEventParams.address,
-            new Interface(["function nonces(address owner) external view returns (uint256)"]),
-            baseProvider
-          );
-          const nonce = (await tokenContract.nonces(owner)).toString();
-          if (bn(permitBiddingMaxNonce).lte(nonce)) {
-            onChainData.permitNonceChanges.push({
-              token,
-              owner,
-              spender,
-              nonce,
-            });
-          }
-        }
+        // Recheck every permit that could have been affected
+        onChainData.permitInfos.push({
+          kind: "eip2612",
+          owner,
+          spender,
+          token: baseEventParams.address,
+        });
 
         break;
       }

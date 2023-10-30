@@ -3,6 +3,7 @@ import { Provider } from "@ethersproject/abstract-provider";
 import { BigNumberish } from "@ethersproject/bignumber";
 import { hexZeroPad, splitSignature } from "@ethersproject/bytes";
 import { Contract } from "@ethersproject/contracts";
+import { _TypedDataEncoder } from "@ethersproject/hash";
 import { verifyTypedData } from "@ethersproject/wallet";
 
 import * as CommonAddresses from "../../common/addresses";
@@ -18,11 +19,19 @@ export type Transfer = {
   amount: BigNumberish;
 };
 
-export type PermitWithTransfers = {
-  token: string;
+export type PermitKind = "eip2612";
+
+export type Permit = {
+  kind: PermitKind;
+  data: EIP2612PermitWithTransfers;
+};
+
+export type EIP2612PermitWithTransfers = {
   owner: string;
   spender: string;
-  amount: BigNumberish;
+  token: string;
+  amount: string;
+  nonce: string;
   deadline: number;
   transfers: Transfer[];
   signature?: string;
@@ -37,11 +46,23 @@ export class PermitHandler {
     this.provider = provider;
   }
 
+  public async getNonce(token: string, owner: string): Promise<string> {
+    const tokenContract = new Contract(
+      token,
+      new Interface(["function nonces(address owner) external view returns (uint256)"]),
+      this.provider
+    );
+
+    const nonce = await tokenContract.nonces(owner);
+    return nonce.toString();
+  }
+
   public async generate(
     owner: string,
+    spender: string,
     transferItems: ApprovalProxy.TransferItem[],
     expiresIn = 10 * 60
-  ): Promise<PermitWithTransfers[]> {
+  ): Promise<Permit[]> {
     if (!transferItems.length) {
       return [];
     }
@@ -58,7 +79,7 @@ export class PermitHandler {
 
     const currentTime = getCurrentTimestamp();
 
-    const permits: PermitWithTransfers[] = [];
+    const permits: EIP2612PermitWithTransfers[] = [];
     for (const [currency, transferItems] of Object.entries(currencyToTransferItems)) {
       const totalAmountPerRecipient = transferItems.map((transferItem) => ({
         amount: transferItem.items
@@ -69,34 +90,46 @@ export class PermitHandler {
       }));
 
       permits.push({
-        token: currency,
         owner,
-        spender: Addresses.PermitProxy[this.chainId],
+        spender,
+        token: currency,
         amount: totalAmountPerRecipient
           .map(({ amount }) => bn(amount))
           .reduce((a, b) => a.add(b))
           .toString(),
         deadline: currentTime + expiresIn,
+        nonce: await this.getNonce(currency, owner),
         transfers: totalAmountPerRecipient,
       });
     }
 
-    return permits;
+    return permits.map((p) => ({
+      kind: "eip2612",
+      data: p,
+    }));
   }
 
-  public async getSignatureData(permit: PermitWithTransfers) {
+  public async hash(permit: Permit) {
+    return _TypedDataEncoder.hashStruct("Permit", EIP712_TYPES_FOR_EIP2612_PERMIT, {
+      owner: permit.data.owner,
+      spender: permit.data.spender,
+      value: permit.data.amount,
+      nonce: permit.data.nonce,
+      deadline: permit.data.deadline,
+    });
+  }
+
+  public async getSignatureData(permit: Permit) {
     const tokenContract = new Contract(
-      permit.token,
+      permit.data.token,
       new Interface([
-        "function nonces(address owner) external view returns (uint256)",
         "function name() external view returns (string)",
         "function version() external view returns (string)",
         "function EIP712_VERSION() external view returns (string)",
       ]),
       this.provider
     );
-    const [nonce, name, version] = await Promise.all([
-      tokenContract.nonces(permit.owner),
+    const [name, version] = await Promise.all([
       tokenContract.name(),
       tokenContract.version().catch(() => tokenContract.EIP712_VERSION()),
     ]);
@@ -106,39 +139,31 @@ export class PermitHandler {
       domain:
         // The bridged USDC on Polygon and Mumbai have a custom domain
         [Network.Polygon, Network.Mumbai].includes(this.chainId) &&
-        permit.token === CommonAddresses.Usdc[this.chainId][0]
+        permit.data.token === CommonAddresses.Usdc[this.chainId][0]
           ? {
               name,
               version,
               salt: hexZeroPad(bn(this.chainId).toHexString(), 32),
-              verifyingContract: permit.token,
+              verifyingContract: permit.data.token,
             }
           : {
               name,
               version,
               chainId: this.chainId,
-              verifyingContract: permit.token,
+              verifyingContract: permit.data.token,
             },
-      types: {
-        Permit: [
-          { name: "owner", type: "address" },
-          { name: "spender", type: "address" },
-          { name: "value", type: "uint256" },
-          { name: "nonce", type: "uint256" },
-          { name: "deadline", type: "uint256" },
-        ],
-      },
+      types: EIP712_TYPES_FOR_EIP2612_PERMIT,
       value: {
-        owner: permit.owner,
-        spender: Addresses.PermitProxy[this.chainId],
-        value: permit.amount.toString(),
-        nonce: nonce.toString(),
-        deadline: permit.deadline,
+        owner: permit.data.owner,
+        spender: permit.data.spender,
+        value: permit.data.amount,
+        nonce: permit.data.nonce,
+        deadline: permit.data.deadline,
       },
     };
   }
 
-  public async attachAndCheckSignature(permit: PermitWithTransfers, signature: string) {
+  public async attachAndCheckSignature(permit: Permit, signature: string) {
     const signatureData = await this.getSignatureData(permit);
     const signer = verifyTypedData(
       signatureData.domain,
@@ -147,14 +172,14 @@ export class PermitHandler {
       signature
     );
 
-    if (signer.toLowerCase() != permit.owner.toLowerCase()) {
+    if (signer.toLowerCase() != permit.data.owner.toLowerCase()) {
       throw new Error("Invalid signature");
     }
 
-    permit.signature = signature;
+    permit.data.signature = signature;
   }
 
-  public attachToRouterExecution(txData: TxData, permits: PermitWithTransfers[]): TxData {
+  public attachToRouterExecution(txData: TxData, permits: Permit[]): TxData {
     // Handle the case when there's no permits to attach
     if (!permits.length) {
       return txData;
@@ -168,13 +193,26 @@ export class PermitHandler {
     return {
       ...txData,
       to: Addresses.PermitProxy[this.chainId],
-      data: new Interface(PermitProxyAbi).encodeFunctionData("transferWithExecute", [
-        permits.map((p) => ({
-          ...p,
-          ...splitSignature(p.signature!),
-        })),
-        executionInfos,
-      ]),
+      data: new Interface(PermitProxyAbi).encodeFunctionData(
+        "eip26126PermitWithTransfersAndExecute",
+        [
+          permits.map((p) => ({
+            ...p.data,
+            ...splitSignature(p.data.signature!),
+          })),
+          executionInfos,
+        ]
+      ),
     };
   }
 }
+
+const EIP712_TYPES_FOR_EIP2612_PERMIT = {
+  Permit: [
+    { name: "owner", type: "address" },
+    { name: "spender", type: "address" },
+    { name: "value", type: "uint256" },
+    { name: "nonce", type: "uint256" },
+    { name: "deadline", type: "uint256" },
+  ],
+};

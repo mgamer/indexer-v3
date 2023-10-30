@@ -29,7 +29,8 @@ export * as paymentProcessor from "@/orderbook/orders/payment-processor";
 
 import { HashZero } from "@ethersproject/constants";
 import * as Sdk from "@reservoir0x/sdk";
-import { BidDetails, ListingDetails, PermitApproval } from "@reservoir0x/sdk/dist/router/v6/types";
+import { Permit } from "@reservoir0x/sdk/dist/router/v6/permit";
+import { BidDetails, ListingDetails } from "@reservoir0x/sdk/dist/router/v6/types";
 
 import { inject } from "@/api/index";
 import { idb } from "@/common/db";
@@ -474,7 +475,7 @@ export const generateBidDetailsV6 = async (
     amount?: number;
     owner?: string;
   },
-  permitApproval?: PermitApproval
+  permit?: Permit
 ): Promise<BidDetails> => {
   const common = {
     orderId: order.id,
@@ -487,6 +488,7 @@ export const generateBidDetailsV6 = async (
     owner: token.owner,
     isProtected: order.isProtected,
     fees: order.fees ?? [],
+    permit,
   };
 
   switch (order.kind) {
@@ -591,7 +593,6 @@ export const generateBidDetailsV6 = async (
           ...common,
           extraArgs,
           order: sdkOrder,
-          permitApproval,
         };
       } else {
         return {

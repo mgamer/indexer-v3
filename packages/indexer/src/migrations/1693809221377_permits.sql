@@ -1,32 +1,36 @@
 -- Up Migration
 
 CREATE TYPE "permit_kind_t" AS ENUM (
-  'eip2612',
-  'permit2'
+  'eip2612'
 );
 
 CREATE TABLE "permits" (
-    "id" TEXT NOT NULL,
-    "kind" "permit_kind_t" NOT NULL,
-    "index" INT NOT NULL,
-    "token" BYTEA NOT NULL,
-    "owner" BYTEA NOT NULL, 
-    "spender" BYTEA NOT NULL, 
-    "value" NUMERIC(78, 0),
-    "nonce" INT,
-    "deadline" INT,
-    "signature" BYTEA NOT NULL,
-    "created_at" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  "id" TEXT NOT NULL,
+  "index" INT NOT NULL,
+  "is_valid" BOOLEAN NOT NULL,
+  "kind" "permit_kind_t" NOT NULL,
+  "token" BYTEA NOT NULL,
+  "owner" BYTEA NOT NULL, 
+  "spender" BYTEA NOT NULL, 
+  "value" NUMERIC(78, 0) NOT NULL,
+  "nonce" NUMERIC(78, 0) NOT NULL,
+  "deadline" INT NOT NULL,
+  "signature" BYTEA NOT NULL,
+  "created_at" TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 ALTER TABLE "permits"
   ADD CONSTRAINT "permits_pk"
-  PRIMARY KEY ("id");
+  PRIMARY KEY ("id", "index");
 
-CREATE INDEX "permits_token_spender_owner_nonce_deadline_full_index"
-  ON "permits" ("token", "spender", "owner", "nonce", "deadline");
+CREATE INDEX "permits_token_owner_spender_index"
+  ON "permits" ("token", "owner", "spender") WHERE ("is_valid");
+
+CREATE INDEX "permits_deadline_index"
+  ON "permits" ("deadline") WHERE ("is_valid");
 
 -- Down Migration
 
 DROP TABLE "permits";
+
 DROP TYPE "permit_kind_t";

@@ -3405,14 +3405,11 @@ export class Router {
             approvals: [],
             preSignatures: [],
             txTags: routerTxTags,
-            permits: await new PermitHandler(this.chainId, this.provider)
-              .generate(relayer, ftTransferItems)
-              .then((permits) =>
-                permits.map((p) => ({
-                  kind: "erc20",
-                  data: p,
-                }))
-              ),
+            permits: await new PermitHandler(this.chainId, this.provider).generate(
+              relayer,
+              Addresses.PermitProxy[this.chainId],
+              ftTransferItems
+            ),
             txData: {
               from: relayer,
               ...{
@@ -4665,34 +4662,34 @@ export class Router {
       }
     }
 
-    const permitApprovalExecutions: ExecutionInfo[] = [];
-    const permitBiddingBids = details.filter((c) => c.permitApproval);
+    // Needed for pre-executing any permits
+    let permitExecution: ExecutionInfo | undefined;
 
-    if (permitBiddingBids.length) {
-      permitApprovalExecutions.push({
+    const permits = details.filter((d) => d.permit).map((d) => d.permit!);
+    if (permits.length) {
+      permitExecution = {
         module: this.contracts.permitProxy.address,
-        data: this.contracts.permitProxy.interface.encodeFunctionData("bulkPermit", [
-          permitBiddingBids
-            .map((c) => c.permitApproval)
-            .map((permitApproval) => {
-              if (permitApproval) {
-                const { v, r, s } = splitSignature(permitApproval.signature!);
-                return {
-                  token: permitApproval.token,
-                  owner: permitApproval.owner,
-                  spender: permitApproval.spender,
-                  amount: permitApproval.value,
-                  deadline: permitApproval.deadline,
-                  v,
-                  r,
-                  s,
-                };
-              }
-            })
-            .filter((c) => c),
-        ]),
+        data: this.contracts.permitProxy.interface.encodeFunctionData(
+          "eip26126PermitWithTransfersAndExecute",
+          [
+            permits.map((p) => {
+              const { v, r, s } = splitSignature(p.data.signature!);
+              return {
+                owner: p.data.owner,
+                spender: p.data.spender,
+                token: p.data.token,
+                amount: p.data.amount,
+                deadline: p.data.deadline,
+                v,
+                r,
+                s,
+              };
+            }),
+            [],
+          ]
+        ),
         value: 0,
-      });
+      };
     }
 
     // Batch fill all protected offers in a single transaction
@@ -4812,7 +4809,7 @@ export class Router {
       const execution = executionsWithDetails[0].execution;
       const detail = executionsWithDetails[0].detail;
       const routerLevelTxData = this.contracts.router.interface.encodeFunctionData("execute", [
-        [...permitApprovalExecutions, execution],
+        [...(permitExecution ? [permitExecution] : []), execution],
       ]);
 
       // Use the on-received ERC721/ERC1155 hooks for approval-less bid filling
@@ -4858,7 +4855,7 @@ export class Router {
             this.contracts.approvalProxy.interface.encodeFunctionData("bulkTransferWithExecute", [
               nftTransferItems,
               [
-                ...permitApprovalExecutions,
+                ...(permitExecution ? [permitExecution] : []),
                 ...executionsWithDetails.map(({ execution }) => execution),
               ],
               Sdk.SeaportBase.Addresses.ReservoirConduitKey[this.chainId],

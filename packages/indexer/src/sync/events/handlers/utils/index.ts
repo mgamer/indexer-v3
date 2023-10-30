@@ -36,9 +36,9 @@ import {
 import { orderbookOrdersJob } from "@/jobs/orderbook/orderbook-orders-job";
 import { transferUpdatesJob } from "@/jobs/transfer-updates/transfer-updates-job";
 import {
-  permitBiddingOrderNonceChangeJob,
-  PermitBiddingOrderNonceChangeJobPayload,
-} from "@/jobs/permit-bidding/order-approval-change-job";
+  permitUpdatesJob,
+  PermitUpdatesJobPayload,
+} from "@/jobs/permit-updates/permit-updates-job";
 
 // Semi-parsed and classified event
 export type EnhancedEvent = {
@@ -90,7 +90,8 @@ export type OnChainData = {
   orderInfos: OrderUpdatesByIdJobPayload[];
   makerInfos: OrderUpdatesByMakerJobPayload[];
 
-  permitNonceChanges: PermitBiddingOrderNonceChangeJobPayload[];
+  // For properly keeping permits validated on the go
+  permitInfos: PermitUpdatesJobPayload[];
 
   // Orders
   orders: GenericOrderInfo[];
@@ -107,7 +108,6 @@ export const initOnChainData = (): OnChainData => ({
   nonceCancelEvents: [],
 
   nftApprovalEvents: [],
-  permitNonceChanges: [],
 
   ftTransferEvents: [],
   nftTransferEvents: [],
@@ -119,6 +119,8 @@ export const initOnChainData = (): OnChainData => ({
 
   orderInfos: [],
   makerInfos: [],
+
+  permitInfos: [],
 
   orders: [],
 });
@@ -190,8 +192,8 @@ export const processOnChainData = async (data: OnChainData, backfill?: boolean) 
     await Promise.all([
       orderUpdatesByIdJob.addToQueue(data.orderInfos),
       orderUpdatesByMakerJob.addToQueue(data.makerInfos),
+      permitUpdatesJob.addToQueue(data.permitInfos),
       orderbookOrdersJob.addToQueue(data.orders),
-      permitBiddingOrderNonceChangeJob.addToQueue(data.permitNonceChanges),
     ]);
   }
 

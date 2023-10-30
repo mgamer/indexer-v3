@@ -4,4 +4,3 @@ export * from "./erc721c";
 export * from "./erc1155";
 export * from "./merkle";
 export * from "./wnative";
-export * from "./permit";

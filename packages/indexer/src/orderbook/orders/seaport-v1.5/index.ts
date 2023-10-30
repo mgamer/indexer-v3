@@ -27,7 +27,6 @@ import { TokenSet } from "@/orderbook/token-sets/token-list";
 import { getCurrency } from "@/utils/currencies";
 import { checkMarketplaceIsFiltered } from "@/utils/marketplace-blacklists";
 import { getUSDAndNativePrices } from "@/utils/prices";
-import { getPermitBidding } from "@/utils/permit-bidding";
 import * as royalties from "@/utils/royalties";
 import { isOpen } from "@/utils/seaport-conduits";
 
@@ -295,6 +294,8 @@ export const save = async (
         await offChainCheck(order, "seaport-v1.5", exchange, {
           onChainApprovalRecheck: true,
           singleTokenERC721ApprovalCheck: metadata.fromOnChain,
+          permitId: metadata.permitId,
+          permitIndex: metadata.permitIndex,
         });
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (error: any) {
@@ -314,17 +315,12 @@ export const save = async (
         }
       }
 
-      if (metadata.permitId) {
-        const permitSignature = await getPermitBidding(metadata.permitId);
-        if (!permitSignature) {
-          return results.push({
-            id,
-            status: "permit-bidding-signature-not-found",
-          });
-        } else {
-          fillabilityStatus = "fillable";
-          approvalStatus = "approved";
-        }
+      // Mark the order when using permits
+      if (metadata.permitId && metadata.permitIndex) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (order.params as any).permitId = metadata.permitId;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (order.params as any).permitIndex = metadata.permitIndex;
       }
 
       // Check and save: associated token set

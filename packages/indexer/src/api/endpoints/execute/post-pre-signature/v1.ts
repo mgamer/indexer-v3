@@ -5,7 +5,6 @@ import Joi from "joi";
 
 import { logger } from "@/common/logger";
 import { getPreSignature, savePreSignature } from "@/utils/pre-signatures";
-import { savePermitBidding } from "@/utils/permit-bidding";
 
 const version = "v1";
 
@@ -45,34 +44,21 @@ export const postPreSignatureV1Options: RouteOptions = {
       }
 
       switch (preSignature.kind) {
-        case "permit-bidding":
         case "payment-processor-take-order": {
           // Attach the signature to the pre-signature
           preSignature.signature = query.signature;
+
           const signatureValid = checkEIP721Signature(
             preSignature.data,
             query.signature,
             preSignature.signer
           );
-
           if (!signatureValid) {
             throw new Error("Invalid signature");
           }
 
           // Update the cached pre-signature to include the signature
           await savePreSignature(payload.id, preSignature, 0);
-
-          // Save permit bidding
-          if (preSignature.kind === "permit-bidding") {
-            await savePermitBidding(
-              payload.id,
-              {
-                ...preSignature.data.value,
-                token: preSignature.data.domain.verifyingContract.toLowerCase(),
-              },
-              preSignature.signature!
-            );
-          }
 
           break;
         }

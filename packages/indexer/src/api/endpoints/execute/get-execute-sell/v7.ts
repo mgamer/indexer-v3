@@ -4,7 +4,7 @@ import { keccak256 } from "@ethersproject/solidity";
 import { parseEther } from "@ethersproject/units";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
-import { BidDetails, FillBidsResult, PermitApproval } from "@reservoir0x/sdk/dist/router/v6/types";
+import { BidDetails, FillBidsResult } from "@reservoir0x/sdk/dist/router/v6/types";
 import { estimateGas } from "@reservoir0x/sdk/dist/router/v6/utils";
 import { TxData } from "@reservoir0x/sdk/dist/utils";
 import axios from "axios";
@@ -30,9 +30,9 @@ import * as b from "@/utils/auth/blur";
 import { getCurrency } from "@/utils/currencies";
 import { ExecutionsBuffer } from "@/utils/executions";
 import { tryGetTokensSuspiciousStatus } from "@/utils/opensea";
+import { getPersistentPermit } from "@/utils/permits";
 import { getPreSignatureId, getPreSignature, savePreSignature } from "@/utils/pre-signatures";
 import { getUSDAndCurrencyPrices } from "@/utils/prices";
-import { getPermitBidding } from "@/utils/permit-bidding";
 
 const version = "v7";
 
@@ -210,19 +210,6 @@ export const getExecuteSellV7Options: RouteOptions = {
             .items(JoiExecuteFee)
             .description("Can be marketplace fees or royalties"),
           feesOnTop: Joi.array().items(JoiExecuteFee).description("Can be referral fees."),
-          permitApproval: Joi.object({
-            token: Joi.string(),
-            kind: Joi.string(),
-            index: Joi.number(),
-            owner: Joi.string(),
-            spender: Joi.string(),
-            value: Joi.string(),
-            nonce: Joi.number(),
-            deadline: Joi.number(),
-            signature: Joi.string(),
-          })
-            .optional()
-            .description("Permit Approval"),
         })
       ),
     }).label(`getExecuteSell${version.toUpperCase()}Response`),
@@ -263,7 +250,6 @@ export const getExecuteSellV7Options: RouteOptions = {
         totalRawPrice: string;
         builtInFees: ExecuteFee[];
         feesOnTop: ExecuteFee[];
-        permitApproval?: PermitApproval;
       }[] = [];
 
       // Keep track of dynamically-priced orders (eg. from pools like Sudoswap and NFTX)
@@ -291,7 +277,8 @@ export const getExecuteSellV7Options: RouteOptions = {
           price: string;
           sourceId: number | null;
           currency: string;
-          rawData: object;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          rawData: any;
           builtInFees: { kind: string; recipient: string; bps: number }[];
           additionalFees?: Sdk.RouterV6.Types.Fee[];
         },
@@ -301,8 +288,7 @@ export const getExecuteSellV7Options: RouteOptions = {
           tokenId: string;
           quantity?: number;
           owner?: string;
-        },
-        permitApproval?: PermitApproval
+        }
       ) => {
         // Handle dynamically-priced orders
         if (
@@ -409,8 +395,14 @@ export const getExecuteSellV7Options: RouteOptions = {
               rawAmount: bn(f.amount).toString(),
             })),
           ],
-          permitApproval,
         });
+
+        // Load any permits
+
+        const permit =
+          order.rawData.permitId && order.rawData.permitIndex
+            ? await getPersistentPermit(order.rawData.permitId, order.rawData.permitIndex)
+            : undefined;
 
         bidDetails.push(
           await generateBidDetailsV6(
@@ -434,7 +426,7 @@ export const getExecuteSellV7Options: RouteOptions = {
               amount: token.quantity,
               owner: token.owner,
             },
-            permitApproval
+            permit
           )
         );
       };
@@ -677,15 +669,6 @@ export const getExecuteSellV7Options: RouteOptions = {
             }
           }
 
-          const permitApproval = result.raw_data.permitId
-            ? await getPermitBidding(result.raw_data.permitId)
-            : undefined;
-
-          // Post check
-          if (permitApproval && bn(permitApproval.deadline).lte(now())) {
-            throw getExecuteError("Permit approval expired");
-          }
-
           await addToPath(
             {
               id: result.id,
@@ -704,8 +687,7 @@ export const getExecuteSellV7Options: RouteOptions = {
               tokenId,
               quantity: item.quantity,
               owner,
-            },
-            permitApproval
+            }
           );
         }
 
@@ -843,15 +825,6 @@ export const getExecuteSellV7Options: RouteOptions = {
               continue;
             }
 
-            const permitApproval = result.raw_data.permitId
-              ? await getPermitBidding(result.raw_data.permitId)
-              : undefined;
-
-            // Post check
-            if (permitApproval && bn(permitApproval.deadline).lte(now())) {
-              throw getExecuteError("Permit approval expired");
-            }
-
             await addToPath(
               {
                 id: result.id,
@@ -870,8 +843,7 @@ export const getExecuteSellV7Options: RouteOptions = {
                 tokenId,
                 quantity: Math.min(quantityToFill, availableQuantity),
                 owner,
-              },
-              permitApproval
+              }
             );
 
             // Update the quantity to fill with the current order's available quantity

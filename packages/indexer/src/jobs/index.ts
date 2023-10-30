@@ -155,8 +155,8 @@ import { tokenWebsocketEventsTriggerJob } from "@/jobs/websocket-events/token-we
 import { blockGapCheckJob } from "@/jobs/events-sync/block-gap-check";
 import { traceSyncJob } from "@/jobs/events-sync/trace-sync-job";
 import { backfillTokensTimeToMetadataJob } from "@/jobs/backfill/backfill-tokens-time-to-metadata-job";
-import { permitBiddingOrderNonceChangeJob } from "@/jobs/permit-bidding/order-approval-change-job";
-import { orderUpdatesExpiredPermitBiddingOrderJob } from "@/jobs/permit-bidding/cron/expired-orders-job";
+import { permitUpdatesJob } from "@/jobs/permit-updates/permit-updates-job";
+import { expiredPermitsJob } from "@/jobs/permit-updates/cron/expired-permits-job";
 import { topSellingCollectionsJob } from "@/jobs/top-selling-collections-cache/save-top-selling-collections-job";
 import { newCollectionForTokenJob } from "@/jobs/token-updates/new-collection-for-token-job";
 import { backfillTokensWithMissingCollectionJob } from "@/jobs/backfill/backfill-tokens-with-missing-collection-job";
@@ -303,8 +303,8 @@ export class RabbitMqJobsConsumer {
       tokenWebsocketEventsTriggerJob,
       blockGapCheckJob,
       backfillTokensTimeToMetadataJob,
-      permitBiddingOrderNonceChangeJob,
-      orderUpdatesExpiredPermitBiddingOrderJob,
+      permitUpdatesJob,
+      expiredPermitsJob,
       topSellingCollectionsJob,
       newCollectionForTokenJob,
       backfillTokensWithMissingCollectionJob,

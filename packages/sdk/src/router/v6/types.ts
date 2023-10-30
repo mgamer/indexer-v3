@@ -2,7 +2,7 @@ import { BigNumberish } from "@ethersproject/bignumber";
 
 import * as Sdk from "../../index";
 import { TxData } from "../../utils";
-import { PermitWithTransfers } from "./permit";
+import { Permit } from "./permit";
 
 // Approvals and permits
 
@@ -46,21 +46,13 @@ export type Fee = {
   amount: BigNumberish;
 };
 
-export type Permit = {
-  kind: "erc20";
-  data: PermitWithTransfers;
-};
-
-export type PermitApproval = {
-  kind: "eip2612" | "permit2";
-  token: string;
-  owner: string;
-  spender: string;
-  value: string;
-  nonce: number;
-  deadline: number;
+export type PreSignature = {
+  kind: "payment-processor-take-order";
+  signer: string;
   signature?: string;
-  index?: number;
+  uniqueId: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  data: any;
 };
 
 export type TxKind = "sale" | "mint" | "swap";
@@ -216,15 +208,6 @@ export type PerCurrencyListingDetails = {
   [currency: string]: ListingDetails[];
 };
 
-export type PreSignature = {
-  kind: "payment-processor-take-order" | "permit-bidding";
-  signer: string;
-  signature?: string;
-  uniqueId: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  data: any;
-};
-
 export type FillListingsResult = {
   txs: {
     approvals: FTApproval[];
@@ -256,7 +239,7 @@ export type BidFillDetails = {
   owner?: string;
   isProtected?: boolean;
   fees?: Fee[];
-  permitApproval?: PermitApproval;
+  permit?: Permit;
 };
 export type BidDetails = GenericOrder & BidFillDetails;
 

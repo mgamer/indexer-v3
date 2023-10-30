@@ -62,7 +62,8 @@ export const postOrderV3Options: RouteOptions = {
       collection: Joi.string(),
       tokenSetId: Joi.string(),
       isNonFlagged: Joi.boolean(),
-      permitId: Joi.string().optional(),
+      permitId: Joi.string(),
+      permitIndex: Joi.number(),
     }).oxor("tokenSetId", "collection", "attribute"),
   },
   response: {
@@ -104,8 +105,9 @@ export const postOrderV3Options: RouteOptions = {
       // Only relevant for non-flagged tokens bids
       const isNonFlagged = payload.isNonFlagged;
 
-      // Permit bidding
+      // Permits
       const permitId = payload.permitId;
+      const permitIndex = payload.permitIndex;
 
       const signature = query.signature ?? order.data.signature;
       if (signature) {
@@ -299,6 +301,7 @@ export const postOrderV3Options: RouteOptions = {
                     schema,
                     source,
                     permitId,
+                    permitIndex,
                   },
                 },
               ]);
