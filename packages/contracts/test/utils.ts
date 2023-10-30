@@ -47,7 +47,8 @@ export const reset = async () => {
 };
 
 // Retrieve the forked network's chain id
-export const getChainId = () => ((network.config as any).forking?.url.includes("goerli") ? 5 : 1);
+export const getChainId = () => ((network.config as any)?.chainId ? (network.config as any)?.chainId : (network.config as any).forking?.url.includes("goerli") ? 5 : 
+(network.config as any).forking?.url.includes("sepolia") ? 11155111 : 1);
 
 // --- Deployments ---
 

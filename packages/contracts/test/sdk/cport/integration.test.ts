@@ -372,4 +372,10 @@ describe("PaymentProcessor - Indexer Integration Test", () => {
   //   testCase({
   //     bulkCancel: true,
   //   }));
+
+  // buy order
+  // 0x51c73381f671bf6f6b033d6cb2312d07e1f39834feea0787f825aa91dd11b759
+
+  // sell order
+  // 0xae6e3c32be1c88131134245dcf8495ab770849be637f6d69874df83a11fa0de3
 });

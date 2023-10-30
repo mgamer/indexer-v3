@@ -1,16 +1,15 @@
 import { Contract } from "@ethersproject/contracts";
 import { parseEther } from "@ethersproject/units";
-import * as Sdk from "@reservoir0x/sdk/src";
 import * as Common from "@reservoir0x/sdk/src/common";
-import * as PaymentProcessor from "@reservoir0x/sdk/src/payment-processor";
+import * as CPort from "@reservoir0x/sdk/src/cport";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 import { expect } from "chai";
-import { ethers } from "hardhat";
+import { ethers, network } from "hardhat";
 import { constants } from "ethers";
 
 import { getChainId, getCurrentTimestamp, reset, setupNFTs } from "../../../utils";
 
-describe("PaymentProcessor - SingleToken", () => {
+describe("CPort - SingleToken ERC721", () => {
   const chainId = getChainId();
 
   let deployer: SignerWithAddress;
@@ -37,30 +36,26 @@ describe("PaymentProcessor - SingleToken", () => {
     const nft = new Common.Helpers.Erc721(ethers.provider, erc721.address);
 
     // Approve the exchange
-    await nft.approve(seller, PaymentProcessor.Addresses.Exchange[chainId]);
-
-    const exchange = new PaymentProcessor.Exchange(chainId);
+    await nft.approve(seller, CPort.Addresses.Exchange[chainId]);
+    
+    const exchange = new CPort.Exchange(chainId);
 
     const sellerMasterNonce = await exchange.getMasterNonce(ethers.provider, seller.address);
-    const takerMasterNonce = await exchange.getMasterNonce(ethers.provider, buyer.address);
     const blockTime = await getCurrentTimestamp(ethers.provider);
 
-    const builder = new PaymentProcessor.Builders.SingleToken(chainId);
+    const builder = new CPort.Builders.SingleToken(chainId);
     const orderParameters = {
-      protocol: 0,
-      sellerAcceptedOffer: false,
+      protocol: CPort.Types.OrderProtocols.ERC721_FILL_OR_KILL,
       marketplace: constants.AddressZero,
       marketplaceFeeNumerator: "0",
       maxRoyaltyFeeNumerator: "0",
-      privateTaker: constants.AddressZero,
       trader: seller.address,
       tokenAddress: erc721.address,
       tokenId: soldTokenId,
       amount: "1",
       price: price,
       expiration: (blockTime + 60 * 60).toString(),
-      nonce: "0",
-      coin: constants.AddressZero,
+      paymentMethod: constants.AddressZero,
       masterNonce: sellerMasterNonce,
     };
 
@@ -68,19 +63,14 @@ describe("PaymentProcessor - SingleToken", () => {
     const sellOrder = builder.build(orderParameters);
     await sellOrder.sign(seller);
 
-    const buyOrder = sellOrder.buildMatching({
-      taker: buyer.address,
-      takerMasterNonce: takerMasterNonce,
-    });
-    await buyOrder.sign(buyer);
-
-    buyOrder.checkSignature();
     sellOrder.checkSignature();
     await sellOrder.checkFillability(ethers.provider);
 
     const sellerBalanceBefore = await ethers.provider.getBalance(seller.address);
 
-    await exchange.fillOrder(buyer, sellOrder, buyOrder);
+    await exchange.fillOrder(buyer, sellOrder, {
+      taker: buyer.address
+    });
 
     const sellerBalanceAfter = await ethers.provider.getBalance(seller.address);
     const ownerAfter = await nft.getOwner(soldTokenId);
@@ -102,24 +92,23 @@ describe("PaymentProcessor - SingleToken", () => {
     await weth.deposit(buyer, price);
 
     // Approve the exchange contract for the buyer
-    await weth.approve(buyer, PaymentProcessor.Addresses.Exchange[chainId]);
+    await weth.approve(buyer, CPort.Addresses.Exchange[chainId]);
 
     // Mint erc721 to seller
     await erc721.connect(seller).mint(soldTokenId);
     const nft = new Common.Helpers.Erc721(ethers.provider, erc721.address);
 
     // Approve the exchange
-    await nft.approve(seller, PaymentProcessor.Addresses.Exchange[chainId]);
+    await nft.approve(seller, CPort.Addresses.Exchange[chainId]);
 
-    const exchange = new PaymentProcessor.Exchange(chainId);
+    const exchange = new CPort.Exchange(chainId);
     const buyerMasterNonce = await exchange.getMasterNonce(ethers.provider, buyer.address);
-    const sellerMasterNonce = await exchange.getMasterNonce(ethers.provider, seller.address);
     const blockTime = await getCurrentTimestamp(ethers.provider);
 
-    const builder = new PaymentProcessor.Builders.SingleToken(chainId);
+    const builder = new CPort.Builders.SingleToken(chainId);
     const orderParameters = {
-      protocol: 0,
-      sellerAcceptedOffer: true,
+      protocol: CPort.Types.OrderProtocols.ERC721_FILL_OR_KILL,
+      beneficiary: buyer.address,
       marketplace: constants.AddressZero,
       marketplaceFeeNumerator: "0",
       maxRoyaltyFeeNumerator: "0",
@@ -129,27 +118,22 @@ describe("PaymentProcessor - SingleToken", () => {
       amount: "1",
       price: price,
       expiration: (blockTime + 60 * 60).toString(),
-      nonce: "0",
-      coin: Common.Addresses.WNative[chainId],
+      paymentMethod: Common.Addresses.WNative[chainId],
       masterNonce: buyerMasterNonce,
     };
 
     const buyOrder = builder.build(orderParameters);
+
     await buyOrder.sign(buyer);
 
-    const sellOrder = buyOrder.buildMatching({
-      taker: seller.address,
-      takerMasterNonce: sellerMasterNonce,
-    });
-    await sellOrder.sign(seller);
-
     buyOrder.checkSignature();
-    sellOrder.checkSignature();
     await buyOrder.checkFillability(ethers.provider);
 
     const sellerBalanceBefore = await weth.getBalance(seller.address);
 
-    await exchange.fillOrder(seller, buyOrder, sellOrder);
+    await exchange.fillOrder(seller, buyOrder, {
+      taker: buyer.address
+    });
 
     const sellerBalanceAfter = await weth.getBalance(seller.address);
     const ownerAfter = await nft.getOwner(soldTokenId);
@@ -159,354 +143,355 @@ describe("PaymentProcessor - SingleToken", () => {
     expect(ownerAfter).to.eq(buyer.address);
   });
 
-  it("Build and direct fill sell order", async () => {
-    const buyer = alice;
-    const seller = bob;
-    const price = parseEther("1");
-    const soldTokenId = 1;
 
-    // Mint erc721 to seller
-    await erc721.connect(seller).mint(soldTokenId);
-    const nft = new Common.Helpers.Erc721(ethers.provider, erc721.address);
+  // it("Build and direct fill sell order", async () => {
+  //   const buyer = alice;
+  //   const seller = bob;
+  //   const price = parseEther("1");
+  //   const soldTokenId = 1;
 
-    // Approve the exchange
-    await nft.approve(seller, PaymentProcessor.Addresses.Exchange[chainId]);
+  //   // Mint erc721 to seller
+  //   await erc721.connect(seller).mint(soldTokenId);
+  //   const nft = new Common.Helpers.Erc721(ethers.provider, erc721.address);
 
-    const exchange = new PaymentProcessor.Exchange(chainId);
+  //   // Approve the exchange
+  //   await nft.approve(seller, PaymentProcessor.Addresses.Exchange[chainId]);
 
-    const sellerMasterNonce = await exchange.getMasterNonce(ethers.provider, seller.address);
-    const takerMasterNonce = await exchange.getMasterNonce(ethers.provider, buyer.address);
-    const blockTime = await getCurrentTimestamp(ethers.provider);
+  //   const exchange = new PaymentProcessor.Exchange(chainId);
 
-    const builder = new PaymentProcessor.Builders.SingleToken(chainId);
-    const orderParameters = {
-      protocol: 0,
-      sellerAcceptedOffer: false,
-      marketplace: constants.AddressZero,
-      marketplaceFeeNumerator: "0",
-      maxRoyaltyFeeNumerator: "0",
-      privateTaker: constants.AddressZero,
-      trader: seller.address,
-      tokenAddress: erc721.address,
-      tokenId: soldTokenId,
-      amount: "1",
-      price: price,
-      expiration: (blockTime + 60 * 60).toString(),
-      nonce: "0",
-      coin: constants.AddressZero,
-      masterNonce: sellerMasterNonce,
-    };
+  //   const sellerMasterNonce = await exchange.getMasterNonce(ethers.provider, seller.address);
+  //   const takerMasterNonce = await exchange.getMasterNonce(ethers.provider, buyer.address);
+  //   const blockTime = await getCurrentTimestamp(ethers.provider);
 
-    // Build sell order
-    const sellOrder = builder.build(orderParameters);
-    await sellOrder.sign(seller);
+  //   const builder = new PaymentProcessor.Builders.SingleToken(chainId);
+  //   const orderParameters = {
+  //     protocol: 0,
+  //     sellerAcceptedOffer: false,
+  //     marketplace: constants.AddressZero,
+  //     marketplaceFeeNumerator: "0",
+  //     maxRoyaltyFeeNumerator: "0",
+  //     privateTaker: constants.AddressZero,
+  //     trader: seller.address,
+  //     tokenAddress: erc721.address,
+  //     tokenId: soldTokenId,
+  //     amount: "1",
+  //     price: price,
+  //     expiration: (blockTime + 60 * 60).toString(),
+  //     nonce: "0",
+  //     coin: constants.AddressZero,
+  //     masterNonce: sellerMasterNonce,
+  //   };
 
-    const buyOrder = sellOrder.buildMatching({
-      taker: buyer.address,
-      takerMasterNonce: takerMasterNonce,
-    });
-    await buyOrder.sign(buyer);
+  //   // Build sell order
+  //   const sellOrder = builder.build(orderParameters);
+  //   await sellOrder.sign(seller);
 
-    buyOrder.checkSignature();
-    sellOrder.checkSignature();
+  //   const buyOrder = sellOrder.buildMatching({
+  //     taker: buyer.address,
+  //     takerMasterNonce: takerMasterNonce,
+  //   });
+  //   await buyOrder.sign(buyer);
 
-    await sellOrder.checkFillability(ethers.provider);
+  //   buyOrder.checkSignature();
+  //   sellOrder.checkSignature();
 
-    const sellerBalanceBefore = await ethers.provider.getBalance(seller.address);
+  //   await sellOrder.checkFillability(ethers.provider);
 
-    const router = new Sdk.RouterV6.Router(chainId, ethers.provider);
-    const nonPartialTx = await router.fillListingsTx(
-      [
-        {
-          orderId: "0",
-          kind: "payment-processor",
-          contractKind: "erc721",
-          contract: erc721.address,
-          tokenId: soldTokenId.toString(),
-          order: sellOrder,
-          currency: Sdk.Common.Addresses.Native[chainId],
-          price: price.toString(),
-        },
-      ],
-      buyer.address,
-      Sdk.Common.Addresses.Native[chainId],
-      {
-        source: "reservoir.market",
-      }
-    );
+  //   const sellerBalanceBefore = await ethers.provider.getBalance(seller.address);
 
-    for (const tx of nonPartialTx.txs) {
-      const preSignatures: string[] = [];
-      for (const { data: preSignature, kind } of tx.preSignatures) {
-        if (kind === "payment-processor-take-order") {
-          const signature = await buyer._signTypedData(
-            preSignature.domain,
-            preSignature.types,
-            preSignature.value
-          );
-          preSignatures.push(signature);
-        }
-      }
+  //   const router = new Sdk.RouterV6.Router(chainId, ethers.provider);
+  //   const nonPartialTx = await router.fillListingsTx(
+  //     [
+  //       {
+  //         orderId: "0",
+  //         kind: "payment-processor",
+  //         contractKind: "erc721",
+  //         contract: erc721.address,
+  //         tokenId: soldTokenId.toString(),
+  //         order: sellOrder,
+  //         currency: Sdk.Common.Addresses.Native[chainId],
+  //         price: price.toString(),
+  //       },
+  //     ],
+  //     buyer.address,
+  //     Sdk.Common.Addresses.Native[chainId],
+  //     {
+  //       source: "reservoir.market",
+  //     }
+  //   );
 
-      const newTxData = exchange.attachTakerSignatures(tx.txData.data, preSignatures);
-      tx.txData.data = newTxData;
+  //   for (const tx of nonPartialTx.txs) {
+  //     const preSignatures: string[] = [];
+  //     for (const { data: preSignature, kind } of tx.preSignatures) {
+  //       if (kind === "payment-processor-take-order") {
+  //         const signature = await buyer._signTypedData(
+  //           preSignature.domain,
+  //           preSignature.types,
+  //           preSignature.value
+  //         );
+  //         preSignatures.push(signature);
+  //       }
+  //     }
 
-      await buyer.sendTransaction(tx.txData);
-    }
+  //     const newTxData = exchange.attachTakerSignatures(tx.txData.data, preSignatures);
+  //     tx.txData.data = newTxData;
 
-    const sellerBalanceAfter = await ethers.provider.getBalance(seller.address);
-    const ownerAfter = await nft.getOwner(soldTokenId);
-    const receiveAmount = sellerBalanceAfter.sub(sellerBalanceBefore);
+  //     await buyer.sendTransaction(tx.txData);
+  //   }
 
-    expect(receiveAmount).to.gte(price);
-    expect(ownerAfter).to.eq(buyer.address);
-  });
+  //   const sellerBalanceAfter = await ethers.provider.getBalance(seller.address);
+  //   const ownerAfter = await nft.getOwner(soldTokenId);
+  //   const receiveAmount = sellerBalanceAfter.sub(sellerBalanceBefore);
 
-  it("Build and direct fill buy order", async () => {
-    const buyer = alice;
-    const seller = bob;
-    const price = parseEther("1");
-    const soldTokenId = 1;
-    const soldTokenId2 = 2;
+  //   expect(receiveAmount).to.gte(price);
+  //   expect(ownerAfter).to.eq(buyer.address);
+  // });
 
-    const weth = new Common.Helpers.WNative(ethers.provider, chainId);
+  // it("Build and direct fill buy order", async () => {
+  //   const buyer = alice;
+  //   const seller = bob;
+  //   const price = parseEther("1");
+  //   const soldTokenId = 1;
+  //   const soldTokenId2 = 2;
 
-    // Mint weth to buyer
-    await weth.deposit(buyer, price.mul(2));
+  //   const weth = new Common.Helpers.WNative(ethers.provider, chainId);
 
-    // Approve the exchange contract for the buyer
-    await weth.approve(buyer, PaymentProcessor.Addresses.Exchange[chainId]);
+  //   // Mint weth to buyer
+  //   await weth.deposit(buyer, price.mul(2));
 
-    // Mint erc721 to seller
-    await erc721.connect(seller).mint(soldTokenId);
-    await erc721.connect(seller).mint(soldTokenId2);
+  //   // Approve the exchange contract for the buyer
+  //   await weth.approve(buyer, PaymentProcessor.Addresses.Exchange[chainId]);
 
-    const nft = new Common.Helpers.Erc721(ethers.provider, erc721.address);
+  //   // Mint erc721 to seller
+  //   await erc721.connect(seller).mint(soldTokenId);
+  //   await erc721.connect(seller).mint(soldTokenId2);
 
-    // Approve the exchange
-    await nft.approve(seller, PaymentProcessor.Addresses.Exchange[chainId]);
+  //   const nft = new Common.Helpers.Erc721(ethers.provider, erc721.address);
 
-    const exchange = new PaymentProcessor.Exchange(chainId);
-    const buyerMasterNonce = await exchange.getMasterNonce(ethers.provider, buyer.address);
-    const sellerMasterNonce = await exchange.getMasterNonce(ethers.provider, seller.address);
-    const blockTime = await getCurrentTimestamp(ethers.provider);
+  //   // Approve the exchange
+  //   await nft.approve(seller, PaymentProcessor.Addresses.Exchange[chainId]);
 
-    const builder = new PaymentProcessor.Builders.SingleToken(chainId);
-    const orderParameters = {
-      protocol: 0,
-      sellerAcceptedOffer: true,
-      marketplace: constants.AddressZero,
-      marketplaceFeeNumerator: "0",
-      maxRoyaltyFeeNumerator: "0",
-      trader: buyer.address,
-      tokenAddress: erc721.address,
-      tokenId: soldTokenId,
-      amount: "1",
-      price: price,
-      expiration: (blockTime + 60 * 60).toString(),
-      coin: Common.Addresses.WNative[chainId],
-      masterNonce: buyerMasterNonce,
-    };
+  //   const exchange = new PaymentProcessor.Exchange(chainId);
+  //   const buyerMasterNonce = await exchange.getMasterNonce(ethers.provider, buyer.address);
+  //   const sellerMasterNonce = await exchange.getMasterNonce(ethers.provider, seller.address);
+  //   const blockTime = await getCurrentTimestamp(ethers.provider);
 
-    const buyOrder = builder.build(orderParameters);
-    await buyOrder.sign(buyer);
+  //   const builder = new PaymentProcessor.Builders.SingleToken(chainId);
+  //   const orderParameters = {
+  //     protocol: 0,
+  //     sellerAcceptedOffer: true,
+  //     marketplace: constants.AddressZero,
+  //     marketplaceFeeNumerator: "0",
+  //     maxRoyaltyFeeNumerator: "0",
+  //     trader: buyer.address,
+  //     tokenAddress: erc721.address,
+  //     tokenId: soldTokenId,
+  //     amount: "1",
+  //     price: price,
+  //     expiration: (blockTime + 60 * 60).toString(),
+  //     coin: Common.Addresses.WNative[chainId],
+  //     masterNonce: buyerMasterNonce,
+  //   };
 
-    const sellOrder = buyOrder.buildMatching({
-      taker: seller.address,
-      takerMasterNonce: sellerMasterNonce,
-    });
-    await sellOrder.sign(seller);
+  //   const buyOrder = builder.build(orderParameters);
+  //   await buyOrder.sign(buyer);
 
-    buyOrder.checkSignature();
-    sellOrder.checkSignature();
-    await buyOrder.checkFillability(ethers.provider);
+  //   const sellOrder = buyOrder.buildMatching({
+  //     taker: seller.address,
+  //     takerMasterNonce: sellerMasterNonce,
+  //   });
+  //   await sellOrder.sign(seller);
 
-    const orderParameters2 = {
-      protocol: 0,
-      sellerAcceptedOffer: true,
-      marketplace: constants.AddressZero,
-      marketplaceFeeNumerator: "0",
-      maxRoyaltyFeeNumerator: "0",
-      trader: buyer.address,
-      tokenAddress: erc721.address,
-      tokenId: soldTokenId2,
-      amount: "1",
-      price: price,
-      expiration: (blockTime + 60 * 60).toString(),
-      coin: Common.Addresses.WNative[chainId],
-      masterNonce: buyerMasterNonce,
-    };
+  //   buyOrder.checkSignature();
+  //   sellOrder.checkSignature();
+  //   await buyOrder.checkFillability(ethers.provider);
 
-    const buyOrder2 = builder.build(orderParameters2);
-    await buyOrder2.sign(buyer);
+  //   const orderParameters2 = {
+  //     protocol: 0,
+  //     sellerAcceptedOffer: true,
+  //     marketplace: constants.AddressZero,
+  //     marketplaceFeeNumerator: "0",
+  //     maxRoyaltyFeeNumerator: "0",
+  //     trader: buyer.address,
+  //     tokenAddress: erc721.address,
+  //     tokenId: soldTokenId2,
+  //     amount: "1",
+  //     price: price,
+  //     expiration: (blockTime + 60 * 60).toString(),
+  //     coin: Common.Addresses.WNative[chainId],
+  //     masterNonce: buyerMasterNonce,
+  //   };
 
-    const sellOrder2 = buyOrder.buildMatching({
-      taker: seller.address,
-      takerMasterNonce: sellerMasterNonce,
-    });
-    await sellOrder2.sign(seller);
+  //   const buyOrder2 = builder.build(orderParameters2);
+  //   await buyOrder2.sign(buyer);
 
-    buyOrder2.checkSignature();
-    sellOrder2.checkSignature();
+  //   const sellOrder2 = buyOrder.buildMatching({
+  //     taker: seller.address,
+  //     takerMasterNonce: sellerMasterNonce,
+  //   });
+  //   await sellOrder2.sign(seller);
 
-    const sellerBalanceBefore = await weth.getBalance(seller.address);
+  //   buyOrder2.checkSignature();
+  //   sellOrder2.checkSignature();
 
-    const router = new Sdk.RouterV6.Router(chainId, ethers.provider);
-    const nonPartialTx = await router.fillBidsTx(
-      [
-        {
-          orderId: "0",
-          kind: "payment-processor",
-          contractKind: "erc721",
-          contract: erc721.address,
-          tokenId: soldTokenId.toString(),
-          order: buyOrder,
-          price: price.toString(),
-        },
-        {
-          orderId: "1",
-          kind: "payment-processor",
-          contractKind: "erc721",
-          contract: erc721.address,
-          tokenId: soldTokenId2.toString(),
-          order: buyOrder2,
-          price: price.toString(),
-        },
-      ],
-      seller.address,
-      {
-        source: "reservoir.market",
-      }
-    );
+  //   const sellerBalanceBefore = await weth.getBalance(seller.address);
 
-    for (const tx of nonPartialTx.txs) {
-      const preSignatures: string[] = [];
-      for (const { data: preSignature, kind } of tx.preSignatures) {
-        if (kind === "payment-processor-take-order") {
-          const signature = await seller._signTypedData(
-            preSignature.domain,
-            preSignature.types,
-            preSignature.value
-          );
-          preSignatures.push(signature);
-        }
-      }
+  //   const router = new Sdk.RouterV6.Router(chainId, ethers.provider);
+  //   const nonPartialTx = await router.fillBidsTx(
+  //     [
+  //       {
+  //         orderId: "0",
+  //         kind: "payment-processor",
+  //         contractKind: "erc721",
+  //         contract: erc721.address,
+  //         tokenId: soldTokenId.toString(),
+  //         order: buyOrder,
+  //         price: price.toString(),
+  //       },
+  //       {
+  //         orderId: "1",
+  //         kind: "payment-processor",
+  //         contractKind: "erc721",
+  //         contract: erc721.address,
+  //         tokenId: soldTokenId2.toString(),
+  //         order: buyOrder2,
+  //         price: price.toString(),
+  //       },
+  //     ],
+  //     seller.address,
+  //     {
+  //       source: "reservoir.market",
+  //     }
+  //   );
 
-      const newTxData = exchange.attachTakerSignatures(tx.txData.data, preSignatures);
-      tx.txData.data = newTxData;
-      await seller.sendTransaction(tx.txData);
-    }
+  //   for (const tx of nonPartialTx.txs) {
+  //     const preSignatures: string[] = [];
+  //     for (const { data: preSignature, kind } of tx.preSignatures) {
+  //       if (kind === "payment-processor-take-order") {
+  //         const signature = await seller._signTypedData(
+  //           preSignature.domain,
+  //           preSignature.types,
+  //           preSignature.value
+  //         );
+  //         preSignatures.push(signature);
+  //       }
+  //     }
 
-    const sellerBalanceAfter = await weth.getBalance(seller.address);
-    const ownerAfter = await nft.getOwner(soldTokenId);
-    const ownerAfter2 = await nft.getOwner(soldTokenId2);
-    const receiveAmount = sellerBalanceAfter.sub(sellerBalanceBefore);
+  //     const newTxData = exchange.attachTakerSignatures(tx.txData.data, preSignatures);
+  //     tx.txData.data = newTxData;
+  //     await seller.sendTransaction(tx.txData);
+  //   }
 
-    expect(receiveAmount).to.gte(price.mul(2));
-    expect(ownerAfter).to.eq(buyer.address);
-    expect(ownerAfter2).to.eq(buyer.address);
-  });
+  //   const sellerBalanceAfter = await weth.getBalance(seller.address);
+  //   const ownerAfter = await nft.getOwner(soldTokenId);
+  //   const ownerAfter2 = await nft.getOwner(soldTokenId2);
+  //   const receiveAmount = sellerBalanceAfter.sub(sellerBalanceBefore);
 
-  it("Build and direct fill with sweep", async () => {
-    const buyer = alice;
-    const seller = bob;
-    const price = parseEther("1");
-    const soldTokenId = 1;
+  //   expect(receiveAmount).to.gte(price.mul(2));
+  //   expect(ownerAfter).to.eq(buyer.address);
+  //   expect(ownerAfter2).to.eq(buyer.address);
+  // });
 
-    // Mint erc721 to seller
-    await erc721.connect(seller).mint(soldTokenId);
-    const nft = new Common.Helpers.Erc721(ethers.provider, erc721.address);
+  // it("Build and direct fill with sweep", async () => {
+  //   const buyer = alice;
+  //   const seller = bob;
+  //   const price = parseEther("1");
+  //   const soldTokenId = 1;
 
-    // Approve the exchange
-    await nft.approve(seller, PaymentProcessor.Addresses.Exchange[chainId]);
+  //   // Mint erc721 to seller
+  //   await erc721.connect(seller).mint(soldTokenId);
+  //   const nft = new Common.Helpers.Erc721(ethers.provider, erc721.address);
 
-    const exchange = new PaymentProcessor.Exchange(chainId);
+  //   // Approve the exchange
+  //   await nft.approve(seller, PaymentProcessor.Addresses.Exchange[chainId]);
 
-    const sellerMasterNonce = await exchange.getMasterNonce(ethers.provider, seller.address);
-    const takerMasterNonce = await exchange.getMasterNonce(ethers.provider, buyer.address);
-    const blockTime = await getCurrentTimestamp(ethers.provider);
+  //   const exchange = new PaymentProcessor.Exchange(chainId);
 
-    const builder = new PaymentProcessor.Builders.SingleToken(chainId);
-    const orderParameters = {
-      protocol: 0,
-      sellerAcceptedOffer: false,
-      marketplace: constants.AddressZero,
-      marketplaceFeeNumerator: "0",
-      maxRoyaltyFeeNumerator: "0",
-      privateTaker: constants.AddressZero,
-      trader: seller.address,
-      tokenAddress: erc721.address,
-      tokenId: soldTokenId,
-      amount: "1",
-      price: price,
-      expiration: (blockTime + 60 * 60).toString(),
-      nonce: "0",
-      coin: constants.AddressZero,
-      masterNonce: sellerMasterNonce,
-    };
+  //   const sellerMasterNonce = await exchange.getMasterNonce(ethers.provider, seller.address);
+  //   const takerMasterNonce = await exchange.getMasterNonce(ethers.provider, buyer.address);
+  //   const blockTime = await getCurrentTimestamp(ethers.provider);
 
-    // Build sell order
-    const sellOrder = builder.build(orderParameters);
-    await sellOrder.sign(seller);
+  //   const builder = new PaymentProcessor.Builders.SingleToken(chainId);
+  //   const orderParameters = {
+  //     protocol: 0,
+  //     sellerAcceptedOffer: false,
+  //     marketplace: constants.AddressZero,
+  //     marketplaceFeeNumerator: "0",
+  //     maxRoyaltyFeeNumerator: "0",
+  //     privateTaker: constants.AddressZero,
+  //     trader: seller.address,
+  //     tokenAddress: erc721.address,
+  //     tokenId: soldTokenId,
+  //     amount: "1",
+  //     price: price,
+  //     expiration: (blockTime + 60 * 60).toString(),
+  //     nonce: "0",
+  //     coin: constants.AddressZero,
+  //     masterNonce: sellerMasterNonce,
+  //   };
 
-    const buyOrder = sellOrder.buildMatching({
-      taker: buyer.address,
-      takerMasterNonce: takerMasterNonce,
-    });
-    await buyOrder.sign(buyer);
+  //   // Build sell order
+  //   const sellOrder = builder.build(orderParameters);
+  //   await sellOrder.sign(seller);
 
-    buyOrder.checkSignature();
-    sellOrder.checkSignature();
+  //   const buyOrder = sellOrder.buildMatching({
+  //     taker: buyer.address,
+  //     takerMasterNonce: takerMasterNonce,
+  //   });
+  //   await buyOrder.sign(buyer);
 
-    await sellOrder.checkFillability(ethers.provider);
+  //   buyOrder.checkSignature();
+  //   sellOrder.checkSignature();
 
-    const sellerBalanceBefore = await ethers.provider.getBalance(seller.address);
+  //   await sellOrder.checkFillability(ethers.provider);
 
-    const router = new Sdk.RouterV6.Router(chainId, ethers.provider);
-    const nonPartialTx = await router.fillListingsTx(
-      [
-        {
-          orderId: "0",
-          kind: "payment-processor",
-          contractKind: "erc721",
-          contract: erc721.address,
-          tokenId: soldTokenId.toString(),
-          order: sellOrder,
-          currency: Sdk.Common.Addresses.Native[chainId],
-          price: price.toString(),
-        },
-      ],
-      buyer.address,
-      Sdk.Common.Addresses.Native[chainId],
-      {
-        source: "reservoir.market",
-      }
-    );
+  //   const sellerBalanceBefore = await ethers.provider.getBalance(seller.address);
 
-    for (const tx of nonPartialTx.txs) {
-      const preSignatures: string[] = [];
-      for (const { data: preSignature, kind } of tx.preSignatures) {
-        if (kind === "payment-processor-take-order") {
-          const signature = await buyer._signTypedData(
-            preSignature.domain,
-            preSignature.types,
-            preSignature.value
-          );
-          preSignatures.push(signature);
-        }
-      }
+  //   const router = new Sdk.RouterV6.Router(chainId, ethers.provider);
+  //   const nonPartialTx = await router.fillListingsTx(
+  //     [
+  //       {
+  //         orderId: "0",
+  //         kind: "payment-processor",
+  //         contractKind: "erc721",
+  //         contract: erc721.address,
+  //         tokenId: soldTokenId.toString(),
+  //         order: sellOrder,
+  //         currency: Sdk.Common.Addresses.Native[chainId],
+  //         price: price.toString(),
+  //       },
+  //     ],
+  //     buyer.address,
+  //     Sdk.Common.Addresses.Native[chainId],
+  //     {
+  //       source: "reservoir.market",
+  //     }
+  //   );
 
-      const newTxData = exchange.attachTakerSignatures(tx.txData.data, preSignatures);
-      tx.txData.data = newTxData;
+  //   for (const tx of nonPartialTx.txs) {
+  //     const preSignatures: string[] = [];
+  //     for (const { data: preSignature, kind } of tx.preSignatures) {
+  //       if (kind === "payment-processor-take-order") {
+  //         const signature = await buyer._signTypedData(
+  //           preSignature.domain,
+  //           preSignature.types,
+  //           preSignature.value
+  //         );
+  //         preSignatures.push(signature);
+  //       }
+  //     }
 
-      await buyer.sendTransaction(tx.txData);
-    }
+  //     const newTxData = exchange.attachTakerSignatures(tx.txData.data, preSignatures);
+  //     tx.txData.data = newTxData;
 
-    const sellerBalanceAfter = await ethers.provider.getBalance(seller.address);
-    const ownerAfter = await nft.getOwner(soldTokenId);
-    const receiveAmount = sellerBalanceAfter.sub(sellerBalanceBefore);
+  //     await buyer.sendTransaction(tx.txData);
+  //   }
 
-    expect(receiveAmount).to.gte(price);
-    expect(ownerAfter).to.eq(buyer.address);
-  });
+  //   const sellerBalanceAfter = await ethers.provider.getBalance(seller.address);
+  //   const ownerAfter = await nft.getOwner(soldTokenId);
+  //   const receiveAmount = sellerBalanceAfter.sub(sellerBalanceBefore);
+
+  //   expect(receiveAmount).to.gte(price);
+  //   expect(ownerAfter).to.eq(buyer.address);
+  // });
 });

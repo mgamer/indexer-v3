@@ -255,6 +255,10 @@ export const extractEventsBatches = (enhancedEvents: EnhancedEvent[]): EventsBat
         kind: "createdotfun",
         data: kindToEvents.get("createdotfun") ?? [],
       },
+      {
+        kind: "cport",
+        data: kindToEvents.get("cport") ?? [],
+      },
     ];
 
     txHashToEventsBatch.set(txHash, {

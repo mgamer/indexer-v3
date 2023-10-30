@@ -48,6 +48,7 @@ import * as joepeg from "@/events-sync/data/joepeg";
 import * as metadataUpdate from "@/events-sync/data/metadata-update";
 import * as soundxyz from "@/events-sync/data/soundxyz";
 import * as createdotfun from "@/events-sync/data/createdotfun";
+import * as cport from "@/events-sync/data/cport";
 
 // All events we're syncing should have an associated `EventData`
 // entry which dictates the way the event will be parsed and then
@@ -98,7 +99,8 @@ export type EventKind =
   | "joepeg"
   | "metadata-update"
   | "soundxyz"
-  | "createdotfun";
+  | "createdotfun"
+  | "cport";
 
 // Event sub-kind in each of the above protocol/standard
 export type EventSubKind =
@@ -317,7 +319,13 @@ export type EventSubKind =
   | "metadata-update-zora"
   | "soundxyz-range-edition-mint-created"
   | "soundxyz-merkle-drop-mint-created"
-  | "createdotfun-configuration-updated";
+  | "createdotfun-configuration-updated"
+  | "cport-buy-listing-erc721"
+  | "cport-buy-listing-erc1155"
+  | "cport-accept-offer-erc721"
+  | "cport-accept-offer-erc1155"
+  | "cport-master-nonce-invalidated"
+  | "cport-nonce-invalidated";
 
 export type EventData = {
   kind: EventKind;
@@ -543,6 +551,12 @@ const allEventData = [
   soundxyz.rangeEditionMintCreated,
   soundxyz.merkleDropMintCreated,
   createdotfun.configurationUpdated,
+  cport.acceptOfferERC1155,
+  cport.acceptOfferERC721,
+  cport.buyListingERC1155,
+  cport.buyListingERC721,
+  cport.masterNonceInvalidated,
+  cport.nonceInvalidated,
 ];
 
 export const getEventData = (events?: string[]) => {
