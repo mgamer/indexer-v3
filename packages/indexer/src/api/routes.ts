@@ -580,6 +580,12 @@ export const setupRoutes = (server: Server) => {
     options: collectionsEndpoints.getCollectionSupportedMarketplacesV1Options,
   });
 
+  server.route({
+    method: "POST",
+    path: "/collections/{collection}/report-spam/v1",
+    options: collectionsEndpoints.postReportCollectionSpamV1Options,
+  });
+
   // Chain
 
   server.route({
@@ -825,12 +831,6 @@ export const setupRoutes = (server: Server) => {
     method: "POST",
     path: "/management/orders/simulate/v1",
     options: managementEndpoints.postSimulateOrderV1Options,
-  });
-
-  server.route({
-    method: "POST",
-    path: "/management/spam/report/v1",
-    options: managementEndpoints.postReportSpamV1Options,
   });
 
   // Oracle
@@ -1178,6 +1178,12 @@ export const setupRoutes = (server: Server) => {
   });
 
   // Tokens
+
+  server.route({
+    method: "POST",
+    path: "/tokens/{token}/report-spam/v1",
+    options: tokensEndpoints.postReportTokenSpamV1Options,
+  });
 
   server.route({
     method: "GET",
