@@ -117,7 +117,8 @@ export class Collections {
     const collectionResult = await idb.oneOrNone(
       `
         SELECT
-          collections.id
+          collections.id,
+          collections.is_spam
         FROM tokens
         JOIN collections
           ON tokens.collection_id = collections.id
@@ -206,22 +207,26 @@ export class Collections {
       );
     }
 
-    const isSpamContract = await AlchemyApi.isSpamContract(collection.contract);
-    if (isSpamContract && !(await AlchemySpamContracts.exists(collection.contract))) {
-      await AlchemySpamContracts.add(collection.contract);
+    // Check if the collection already marked as spam
+    let isSpamContract = false;
+    if (Number(collectionResult.is_spam) <= 0) {
+      isSpamContract = await AlchemyApi.isSpamContract(collection.contract);
+      if (isSpamContract && !(await AlchemySpamContracts.exists(collection.contract))) {
+        await AlchemySpamContracts.add(collection.contract);
 
-      // Track the change
-      await actionsTrackingJob.addToQueue([
-        {
-          context: ActionsContext.SpamContractUpdate,
-          origin: ActionsOrigin.CollectionRefresh,
-          actionTakerIdentifier: "alchemy",
-          data: {
-            contract,
-            newSpamState: 1,
+        // Track the change
+        await actionsTrackingJob.addToQueue([
+          {
+            context: ActionsContext.SpamContractUpdate,
+            origin: ActionsOrigin.CollectionRefresh,
+            actionTakerIdentifier: "alchemy",
+            data: {
+              contract,
+              newSpamState: 1,
+            },
           },
-        },
-      ]);
+        ]);
+      }
     }
 
     const query = `
