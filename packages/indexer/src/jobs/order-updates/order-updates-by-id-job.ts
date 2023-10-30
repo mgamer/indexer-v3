@@ -216,7 +216,7 @@ export default class OrderUpdatesByIdJob extends AbstractRabbitMqJobHandler {
                 quantityRemaining: order.quantityRemaining,
                 nonce: order.nonce,
                 maker: order.maker,
-                value: isWhitelistedCurrency(order.currency) ? 0 : order.value,
+                value: order.currency && isWhitelistedCurrency(order.currency) ? 0 : order.value,
                 kind: trigger.kind,
                 txHash: trigger.txHash ? toBuffer(trigger.txHash) : null,
                 txTimestamp: trigger.txTimestamp || null,
