@@ -31,6 +31,11 @@ import * as registry from "@/utils/royalties/registry";
 import { config } from "@/config/index";
 import { AlchemyApi } from "@/utils/alchemy";
 import { AlchemySpamContracts } from "@/models/alchemy-spam-contracts";
+import {
+  ActionsContext,
+  ActionsOrigin,
+  actionsTrackingJob,
+} from "@/jobs/actions-tracking/actions-tracking-job";
 
 export class Collections {
   public static async getById(collectionId: string, readReplica = false) {
@@ -202,8 +207,21 @@ export class Collections {
     }
 
     const isSpamContract = await AlchemyApi.isSpamContract(collection.contract);
-    if (isSpamContract) {
+    if (isSpamContract && !(await AlchemySpamContracts.exists(collection.contract))) {
       await AlchemySpamContracts.add(collection.contract);
+
+      // Track the change
+      await actionsTrackingJob.addToQueue([
+        {
+          context: ActionsContext.SpamContractUpdate,
+          origin: ActionsOrigin.CollectionRefresh,
+          actionTakerIdentifier: "alchemy",
+          data: {
+            contract,
+            newSpamState: 1,
+          },
+        },
+      ]);
     }
 
     const query = `
@@ -221,7 +239,7 @@ export class Collections {
             OR slug IS DISTINCT FROM $/slug/ 
             OR payment_tokens IS DISTINCT FROM $/paymentTokens/ 
             OR creator IS DISTINCT FROM $/creator/
-            OR $/isSpamContract/ = 1
+            OR ((is_spam IS NULL OR is_spam = 0) AND $/isSpamContract/ = 1)
             )
       RETURNING (
                   SELECT

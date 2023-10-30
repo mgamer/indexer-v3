@@ -775,7 +775,7 @@ export const getCollectionsV7Options: RouteOptions = {
             twitterUsername: r.twitter_username,
             openseaVerificationStatus: r.opensea_verification_status,
             description: r.description,
-            isSpam: Boolean(Number(r.is_spam)),
+            isSpam: Number(r.is_spam) > 0,
             sampleImages: Assets.getLocalAssetsLink(sampleImages) ?? [],
             tokenCount: String(r.token_count),
             onSaleCount: String(r.on_sale_count),

@@ -4,6 +4,11 @@ import _ from "lodash";
 import { AlchemySpamContracts } from "@/models/alchemy-spam-contracts";
 import { idb } from "@/common/db";
 import { toBuffer } from "@/common/utils";
+import {
+  ActionsContext,
+  ActionsOrigin,
+  actionsTrackingJob,
+} from "@/jobs/actions-tracking/actions-tracking-job";
 
 export default class CollectionRefreshSpamJob extends AbstractRabbitMqJobHandler {
   queueName = "collections-refresh-spam";
@@ -37,17 +42,31 @@ export default class CollectionRefreshSpamJob extends AbstractRabbitMqJobHandler
         }
       }
 
-      // Update the new spam collections
+      // Update the new spam collections but don't overwrite spam settings done by users
       if (!_.isEmpty(newSpamContracts)) {
         const query = `
           UPDATE collections
           SET is_spam = 1, updated_at = now()
           WHERE contract IN ($/newSpamContracts:list/)
+          AND (is_spam IS NULL OR is_spam = 0)
         `;
 
         await idb.none(query, {
           newSpamContracts: newSpamContracts.map(toBuffer),
         });
+
+        // Track the change
+        const trackingParams = _.map(newSpamContracts, (contract) => ({
+          context: ActionsContext.SpamContractUpdate,
+          origin: ActionsOrigin.DailyProcess,
+          actionTakerIdentifier: "alchemy",
+          data: {
+            contract,
+            newSpamState: 1,
+          },
+        }));
+
+        await actionsTrackingJob.addToQueue(trackingParams);
       }
     }
   }

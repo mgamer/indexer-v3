@@ -1289,7 +1289,7 @@ export const getTokensV6Options: RouteOptions = {
             media: r.media,
             kind: r.kind,
             isFlagged: Boolean(Number(r.is_flagged)),
-            isSpam: Boolean(Number(r.t_is_spam)) || Boolean(Number(r.c_is_spam)),
+            isSpam: Number(r.t_is_spam) > 0 || Number(r.c_is_spam) > 0,
             lastFlagUpdate: r.last_flag_update ? new Date(r.last_flag_update).toISOString() : null,
             lastFlagChange: r.last_flag_change ? new Date(r.last_flag_change).toISOString() : null,
             supply: !_.isNull(r.supply) ? r.supply : null,

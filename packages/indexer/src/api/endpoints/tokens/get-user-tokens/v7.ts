@@ -706,7 +706,7 @@ export const getUserTokensV7Options: RouteOptions = {
             remainingSupply: !_.isNull(r.remaining_supply) ? r.remaining_supply : null,
             media: r.media,
             isFlagged: Boolean(Number(r.is_flagged)),
-            isSpam: Boolean(Number(r.t_is_spam)) || Boolean(Number(r.c_is_spam)),
+            isSpam: Number(r.t_is_spam) > 0 || Number(r.c_is_spam) > 0,
             lastFlagUpdate: r.last_flag_update ? new Date(r.last_flag_update).toISOString() : null,
             lastFlagChange: r.last_flag_change ? new Date(r.last_flag_change).toISOString() : null,
             collection: {
@@ -715,7 +715,7 @@ export const getUserTokensV7Options: RouteOptions = {
               slug: r.slug,
               symbol: r.symbol,
               imageUrl: r.metadata?.imageUrl,
-              isSpam: Boolean(Number(r.c_is_spam)),
+              isSpam: Number(r.c_is_spam) > 0,
               openseaVerificationStatus: r.opensea_verification_status,
               floorAskPrice: r.collection_floor_sell_value
                 ? await getJoiPriceObject(
