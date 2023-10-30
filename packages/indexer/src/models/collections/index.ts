@@ -209,7 +209,7 @@ export class Collections {
 
     // Check if the collection already marked as spam
     let isSpamContract = false;
-    if (Number(collectionResult.is_spam) <= 0) {
+    if (Number(collectionResult.is_spam) === 0) {
       isSpamContract = await AlchemyApi.isSpamContract(collection.contract);
       if (isSpamContract && !(await AlchemySpamContracts.exists(collection.contract))) {
         await AlchemySpamContracts.add(collection.contract);
