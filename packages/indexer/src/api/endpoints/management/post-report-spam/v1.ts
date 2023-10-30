@@ -16,7 +16,7 @@ import {
 
 const version = "v1";
 
-export const postSimulateOrderV1Options: RouteOptions = {
+export const postReportSpamV1Options: RouteOptions = {
   description: "Report if a collection or specific token is spam",
   notes: "This API can be used by allowed API keys to report spam on a token or collection.",
   tags: ["api", "Management"],
