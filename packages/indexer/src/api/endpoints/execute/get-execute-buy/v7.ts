@@ -1,5 +1,5 @@
 import { BigNumber } from "@ethersproject/bignumber";
-import { AddressZero } from "@ethersproject/constants";
+import { AddressZero, HashZero, MaxUint256 } from "@ethersproject/constants";
 import { keccak256 } from "@ethersproject/solidity";
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
@@ -11,6 +11,7 @@ import {
   MintDetails,
 } from "@reservoir0x/sdk/dist/router/v6/types";
 import { estimateGas } from "@reservoir0x/sdk/dist/router/v6/utils";
+import { getRandomBytes } from "@reservoir0x/sdk/dist/utils";
 import axios from "axios";
 import Joi from "joi";
 import _ from "lodash";
@@ -141,6 +142,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
         "If true, all fills will be executed through the router (where possible)"
       ),
       currency: Joi.string().lowercase().description("Currency to be used for purchases."),
+      currencyChainId: Joi.number().description("The chain id of the purchase currency"),
       normalizeRoyalties: Joi.boolean().default(false).description("Charge any missing royalties."),
       allowInactiveOrderIds: Joi.boolean()
         .default(false)
@@ -182,6 +184,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
         .description(
           "Choose a specific swapping provider when buying in a different currency (defaults to `uniswap`)"
         ),
+      executionMethod: Joi.string().valid("seaport-intent"),
       referrer: Joi.string()
         .pattern(regex.address)
         .optional()
@@ -219,6 +222,11 @@ export const getExecuteBuyV7Options: RouteOptions = {
                 gasEstimate: Joi.number().description(
                   "Approximation of gas used (only applies to `transaction` items)"
                 ),
+                check: Joi.object({
+                  endpoint: Joi.string().required(),
+                  method: Joi.string().valid("POST").required(),
+                  body: Joi.any(),
+                }).description("The details of the endpoint for checking the status of the step"),
               })
             )
             .required(),
@@ -253,6 +261,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
             .items(JoiExecuteFee)
             .description("Can be marketplace fees or royalties"),
           feesOnTop: Joi.array().items(JoiExecuteFee).description("Can be referral fees."),
+          fromChainId: Joi.number().description("Chain id buying from"),
         })
       ),
       maxQuantities: Joi.array().items(
@@ -306,6 +315,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
         totalRawPrice?: string;
         builtInFees: ExecuteFee[];
         feesOnTop: ExecuteFee[];
+        fromChainId?: number;
       }[] = [];
 
       // Keep track of dynamically-priced orders (eg. from pools like Sudoswap and NFTX)
@@ -823,60 +833,66 @@ export const getExecuteBuyV7Options: RouteOptions = {
                   }
 
                   if (quantityToMint > 0) {
-                    const { txData, price } = await generateCollectionMintTxData(
-                      mint,
-                      payload.taker,
-                      quantityToMint,
-                      {
-                        comment: payload.comment,
-                        referrer: payload.referrer,
-                      }
-                    );
+                    try {
+                      const { txData, price } = await generateCollectionMintTxData(
+                        mint,
+                        payload.taker,
+                        quantityToMint,
+                        {
+                          comment: payload.comment,
+                          referrer: payload.referrer,
+                        }
+                      );
 
-                    const orderId = `mint:${item.collection}`;
-                    mintDetails.push({
-                      orderId,
-                      txData,
-                      fees: [],
-                      token: mint.contract,
-                      quantity: quantityToMint,
-                      comment: payload.comment,
-                    });
-
-                    await addToPath(
-                      {
-                        id: orderId,
-                        kind: "mint",
-                        maker: mint.contract,
-                        nativePrice: price,
-                        price: price,
-                        sourceId: null,
-                        currency: mint.currency,
-                        rawData: {},
-                        builtInFees: [],
-                        additionalFees: [],
-                      },
-                      {
-                        kind: collectionData.token_kind,
-                        contract: mint.contract,
+                      const orderId = `mint:${item.collection}`;
+                      mintDetails.push({
+                        orderId,
+                        txData,
+                        fees: [],
+                        token: mint.contract,
                         quantity: quantityToMint,
-                      }
-                    );
-
-                    if (preview) {
-                      // The max quantity is the amount mintable on the collection
-                      maxQuantities.push({
-                        itemIndex,
-                        maxQuantity: mint.tokenId
-                          ? quantityToMint.toString()
-                          : amountMintable
-                          ? amountMintable.toString()
-                          : null,
+                        comment: payload.comment,
                       });
-                    }
 
-                    item.quantity -= quantityToMint;
-                    mintAvailable = true;
+                      await addToPath(
+                        {
+                          id: orderId,
+                          kind: "mint",
+                          maker: mint.contract,
+                          nativePrice: price,
+                          price: price,
+                          sourceId: null,
+                          currency: mint.currency,
+                          rawData: {},
+                          builtInFees: [],
+                          additionalFees: [],
+                        },
+                        {
+                          kind: collectionData.token_kind,
+                          contract: mint.contract,
+                          quantity: quantityToMint,
+                        }
+                      );
+
+                      if (preview) {
+                        // The max quantity is the amount mintable on the collection
+                        maxQuantities.push({
+                          itemIndex,
+                          maxQuantity: mint.tokenId
+                            ? quantityToMint.toString()
+                            : amountMintable
+                            ? amountMintable.toString()
+                            : null,
+                        });
+                      }
+
+                      item.quantity -= quantityToMint;
+                      mintAvailable = true;
+                    } catch {
+                      // Skip errors
+                      // Mostly coming from allowlist mints for which the user is not authorized
+                      // TODO: Have an allowlist check instead of handling it via `try` / `catch`
+                    }
                   }
 
                   hasActiveMints = true;
@@ -1036,57 +1052,63 @@ export const getExecuteBuyV7Options: RouteOptions = {
                   ).toNumber();
 
                   if (quantityToMint > 0) {
-                    const { txData, price } = await generateCollectionMintTxData(
-                      mint,
-                      payload.taker,
-                      quantityToMint,
-                      {
-                        comment: payload.comment,
-                        referrer: payload.referrer,
-                      }
-                    );
+                    try {
+                      const { txData, price } = await generateCollectionMintTxData(
+                        mint,
+                        payload.taker,
+                        quantityToMint,
+                        {
+                          comment: payload.comment,
+                          referrer: payload.referrer,
+                        }
+                      );
 
-                    const orderId = `mint:${collectionData.id}`;
-                    mintDetails.push({
-                      orderId,
-                      txData,
-                      fees: [],
-                      token: mint.contract,
-                      quantity: quantityToMint,
-                      comment: payload.comment,
-                    });
-
-                    await addToPath(
-                      {
-                        id: orderId,
-                        kind: "mint",
-                        maker: mint.contract,
-                        nativePrice: price,
-                        price: price,
-                        sourceId: null,
-                        currency: mint.currency,
-                        rawData: {},
-                        builtInFees: [],
-                        additionalFees: [],
-                      },
-                      {
-                        kind: collectionData.token_kind,
-                        contract: mint.contract,
-                        tokenId,
+                      const orderId = `mint:${collectionData.id}`;
+                      mintDetails.push({
+                        orderId,
+                        txData,
+                        fees: [],
+                        token: mint.contract,
                         quantity: quantityToMint,
-                      }
-                    );
-
-                    if (preview) {
-                      // The max quantity is the amount mintable on the collection
-                      maxQuantities.push({
-                        itemIndex,
-                        maxQuantity: amountMintable ? amountMintable.toString() : null,
+                        comment: payload.comment,
                       });
-                    }
 
-                    item.quantity -= quantityToMint;
-                    mintAvailable = true;
+                      await addToPath(
+                        {
+                          id: orderId,
+                          kind: "mint",
+                          maker: mint.contract,
+                          nativePrice: price,
+                          price: price,
+                          sourceId: null,
+                          currency: mint.currency,
+                          rawData: {},
+                          builtInFees: [],
+                          additionalFees: [],
+                        },
+                        {
+                          kind: collectionData.token_kind,
+                          contract: mint.contract,
+                          tokenId,
+                          quantity: quantityToMint,
+                        }
+                      );
+
+                      if (preview) {
+                        // The max quantity is the amount mintable on the collection
+                        maxQuantities.push({
+                          itemIndex,
+                          maxQuantity: amountMintable ? amountMintable.toString() : null,
+                        });
+                      }
+
+                      item.quantity -= quantityToMint;
+                      mintAvailable = true;
+                    } catch {
+                      // Skip errors
+                      // Mostly coming from allowlist mints for which the user is not authorized
+                      // TODO: Have an allowlist check instead of handling it via `try` / `catch`
+                    }
                   }
 
                   hasActiveMints = true;
@@ -1418,8 +1440,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
         };
       }
 
-      // Set up generic filling steps
-      let steps: {
+      type StepType = {
         id: string;
         action: string;
         description: string;
@@ -1430,8 +1451,16 @@ export const getExecuteBuyV7Options: RouteOptions = {
           orderIds?: string[];
           data?: object;
           gasEstimate?: number;
+          check?: {
+            endpoint: string;
+            method: "POST";
+            body: object;
+          };
         }[];
-      }[] = [
+      };
+
+      // Set up generic filling steps
+      let steps: StepType[] = [
         {
           id: "auth",
           action: "Sign in",
@@ -1475,6 +1504,248 @@ export const getExecuteBuyV7Options: RouteOptions = {
           items: [],
         },
       ];
+
+      // Seaport intent purchasing MVP
+      if (payload.executionMethod === "seaport-intent") {
+        if (!config.seaportSolverBaseUrl) {
+          throw Boom.badRequest("Intent purchasing not supported");
+        }
+
+        if (listingDetails.length > 1) {
+          throw Boom.badRequest("Only single token intent purchases are supported");
+        }
+
+        const details = listingDetails[0];
+        if (details.currency !== Sdk.Common.Addresses.Native[config.chainId]) {
+          throw Boom.badRequest("Only native token intent purchases are supported");
+        }
+        if (details.contractKind !== "erc721") {
+          throw Boom.badRequest("Only erc721 token intent purchases are supported");
+        }
+
+        const quote = await axios
+          .post(`${config.seaportSolverBaseUrl}/quote`, {
+            chainId: config.chainId,
+            token: `${details.contract}:${details.tokenId}`,
+            amount: details.amount ?? "1",
+          })
+          .then((response) => response.data.price);
+
+        path[0].totalPrice = formatPrice(quote);
+        path[0].totalRawPrice = quote;
+
+        const order = new Sdk.SeaportV15.Order(config.chainId, {
+          offerer: payload.taker,
+          zone: AddressZero,
+          offer: [
+            {
+              itemType: Sdk.SeaportBase.Types.ItemType.ERC20,
+              token: Sdk.Common.Addresses.WNative[config.chainId],
+              identifierOrCriteria: "0",
+              startAmount: quote.toString(),
+              endAmount: quote.toString(),
+            },
+          ],
+          consideration: [
+            {
+              itemType: Sdk.SeaportBase.Types.ItemType.ERC721,
+              token: path[0].contract,
+              identifierOrCriteria: path[0].tokenId!,
+              startAmount: "1",
+              endAmount: "1",
+              recipient: payload.taker,
+            },
+            ...((payload.feesOnTop ?? []) as string[])
+              .map((f) => {
+                const [recipient, amount] = f.split(":");
+                return { amount, recipient };
+              })
+              .map(({ amount, recipient }) => ({
+                itemType: Sdk.SeaportBase.Types.ItemType.ERC20,
+                token: Sdk.Common.Addresses.WNative[config.chainId],
+                identifierOrCriteria: "0",
+                startAmount: amount.toString(),
+                endAmount: amount.toString(),
+                recipient,
+              })),
+          ],
+          orderType: Sdk.SeaportBase.Types.OrderType.FULL_OPEN,
+          startTime: Math.floor(Date.now() / 1000),
+          endTime: Math.floor(Date.now() / 1000) + 5 * 60,
+          zoneHash: HashZero,
+          salt: getRandomBytes(20).toString(),
+          conduitKey: Sdk.SeaportBase.Addresses.OpenseaConduitKey[config.chainId],
+          counter: (
+            await new Sdk.SeaportV15.Exchange(config.chainId).getCounter(
+              baseProvider,
+              payload.taker
+            )
+          ).toString(),
+          totalOriginalConsiderationItems: 1 + (details.fees?.length ?? 0),
+        });
+
+        steps[3].items.push({
+          status: "incomplete",
+          data: {
+            sign: order.getSignatureData(),
+            post: {
+              endpoint: "/execute/solve/v1",
+              method: "POST",
+              body: {
+                kind: "seaport-intent",
+                order: order.params,
+              },
+            },
+          },
+          check: {
+            endpoint: "/execute/status/v1",
+            method: "POST",
+            body: {
+              kind: "seaport-intent",
+              id: order.hash(),
+            },
+          },
+        });
+
+        return {
+          steps: steps.filter((s) => s.items.length),
+          path,
+        };
+      }
+
+      // Cross-chain intent purchasing MVP
+      if (payload.currencyChainId !== undefined && payload.currencyChainId !== config.chainId) {
+        if (!config.crossChainSolverBaseUrl) {
+          throw Boom.badRequest("Cross-chain purchasing not supported");
+        }
+
+        if (buyInCurrency !== Sdk.Common.Addresses.Native[config.chainId]) {
+          throw Boom.badRequest("Only native currency is supported for cross-chain purchasing");
+        }
+
+        if (path.length > 1) {
+          throw Boom.badRequest("Only single item cross-chain purchases are supported");
+        }
+
+        if (payload.normalizeRoyalties) {
+          throw Boom.badRequest(
+            "Royalty normalization is not supported when purchasing cross-chain"
+          );
+        }
+
+        if (payload.feeOnTop) {
+          throw Boom.badRequest("Fees on top are not supported when purchasing cross-chain");
+        }
+
+        const fromChainId = payload.currencyChainId;
+        const toChainId = config.chainId;
+
+        const ccConfig: {
+          enabled: boolean;
+          solver?: string;
+          deposit?: string;
+        } = await axios
+          .get(
+            `${config.crossChainSolverBaseUrl}/config?fromChainId=${fromChainId}&toChainId=${toChainId}&user=${payload.taker}`
+          )
+          .then((response) => response.data);
+
+        if (!ccConfig.enabled) {
+          throw Boom.badRequest("Cross-chain swap not supported between requested chains");
+        }
+
+        const item = path[0];
+        const token = item.tokenId
+          ? `${item.contract}:${item.tokenId}`.toLowerCase()
+          : `${item.contract}:${MaxUint256.toString()}`.toLowerCase();
+
+        const quote = await axios
+          .post(`${config.crossChainSolverBaseUrl}/quote`, {
+            fromChainId,
+            toChainId,
+            token,
+            amount: item.quantity,
+          })
+          .then((response) => response.data.price);
+
+        item.fromChainId = fromChainId;
+        item.totalPrice = formatPrice(quote);
+        item.totalRawPrice = quote;
+
+        const customSteps: StepType[] = [
+          {
+            id: "deposit",
+            action: "Deposit",
+            description: "Deposit funds on origin chain",
+            kind: "transaction",
+            items: [],
+          },
+          {
+            id: "order-signature",
+            action: "Authorize cross-chain request",
+            description: "A free off-chain signature to create the request",
+            kind: "signature",
+            items: [],
+          },
+        ];
+
+        if (bn(ccConfig.deposit!).lte(quote)) {
+          const exchange = new Sdk.CrossChain.Exchange(fromChainId);
+          customSteps[0].items.push({
+            status: "incomplete",
+            data: {
+              ...exchange.depositTx(
+                payload.taker,
+                ccConfig.solver!,
+                bn(quote).sub(ccConfig.deposit!).toString()
+              ),
+              chainId: fromChainId,
+            },
+            check: {
+              endpoint: "/execute/status/v1",
+              method: "POST",
+              body: {
+                kind: "transaction",
+              },
+            },
+          });
+        }
+
+        const order = new Sdk.CrossChain.Order(fromChainId, {
+          isCollectionRequest: Boolean(items[0].collection),
+          maker: payload.taker,
+          solver: ccConfig.solver!,
+          token: item.contract,
+          tokenId: item.tokenId ?? MaxUint256.toString(),
+          amount: String(item.quantity),
+          price: quote,
+          recipient: payload.taker,
+          chainId: config.chainId,
+          deadline: now() + 30 * 60,
+          salt: getRandomBytes(20).toString(),
+        });
+
+        customSteps[1].items.push({
+          status: "incomplete",
+          data: {
+            sign: order.getSignatureData(),
+            post: {
+              endpoint: "/execute/solve/v1",
+              method: "POST",
+              body: {
+                kind: "cross-chain-intent",
+                order: order.params,
+                fromChainId,
+              },
+            },
+          },
+        });
+
+        return {
+          steps: customSteps.filter((s) => s.items.length),
+          path,
+        };
+      }
 
       // Handle Blur authentication
       let blurAuth: b.Auth | undefined;
@@ -1677,6 +1948,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
         let mintsResult = await router.fillMintsTx(mintDetails, payload.taker, {
           source: payload.source,
           partial: payload.partial,
+          relayer: payload.relayer,
         });
 
         // Minting via a smart contract proxy is complicated.
@@ -1714,6 +1986,10 @@ export const getExecuteBuyV7Options: RouteOptions = {
         }
 
         if (!safeToUse) {
+          if (payload.relayer) {
+            throw Boom.badRequest("Relayer not supported for requested mints");
+          }
+
           mintsResult = await router.fillMintsTx(mintDetails, payload.taker, {
             source: payload.source,
             forceDirectFilling: true,
@@ -1767,6 +2043,13 @@ export const getExecuteBuyV7Options: RouteOptions = {
               status: "incomplete",
               data: {
                 ...approval.txData,
+                check: {
+                  endpoint: "/execute/status/v1",
+                  method: "POST",
+                  body: {
+                    kind: "transaction",
+                  },
+                },
                 maxFeePerGas,
                 maxPriorityFeePerGas,
               },
@@ -1892,6 +2175,13 @@ export const getExecuteBuyV7Options: RouteOptions = {
                   erc721cAuth!.signature
                 )
               : undefined,
+          check: {
+            endpoint: "/execute/status/v1",
+            method: "POST",
+            body: {
+              kind: "transaction",
+            },
+          },
         });
       }
 
@@ -1911,6 +2201,13 @@ export const getExecuteBuyV7Options: RouteOptions = {
                   maxPriorityFeePerGas,
                 }
               : undefined,
+          check: {
+            endpoint: "/execute/status/v1",
+            method: "POST",
+            body: {
+              kind: "transaction",
+            },
+          },
           gasEstimate: txTags ? estimateGas(txTags) : undefined,
         });
       }
@@ -1990,14 +2287,13 @@ export const getExecuteBuyV7Options: RouteOptions = {
         path,
       };
     } catch (error) {
-      if (!(error instanceof Boom.Boom)) {
-        logger.error(
-          `get-execute-buy-${version}-handler`,
-          `Handler failure: ${error} (path = ${JSON.stringify({})}, request = ${JSON.stringify(
-            payload
-          )})`
-        );
-      }
+      logger.error(
+        `get-execute-buy-${version}-handler`,
+        `Handler failure: ${error} (path = ${JSON.stringify({})}, request = ${JSON.stringify(
+          payload
+        )})`
+      );
+
       throw error;
     }
   },

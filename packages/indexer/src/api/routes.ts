@@ -516,6 +516,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
+    path: "/collections/trending/v1",
+    options: collectionsEndpoints.getTrendingCollectionsV1Options,
+  });
+
+  server.route({
+    method: "GET",
     path: "/users/{user}/collections/v1",
     options: collectionsEndpoints.getUserCollectionsV1Options,
   });
@@ -762,6 +768,18 @@ export const setupRoutes = (server: Server) => {
     method: "POST",
     path: "/execute/results/v1",
     options: executeEndpoints.postExecuteResultsV1,
+  });
+
+  server.route({
+    method: "POST",
+    path: "/execute/solve/v1",
+    options: executeEndpoints.postExecuteSolveV1Options,
+  });
+
+  server.route({
+    method: "POST",
+    path: "/execute/status/v1",
+    options: executeEndpoints.postExecuteStatusV1Options,
   });
 
   server.route({

@@ -1,5 +1,6 @@
 import _ from "lodash";
 import { redis } from "@/common/redis";
+import { getOpenseaNetworkName } from "@/config/network";
 
 export type PendingFlagStatusSyncToken = {
   contract: string;
@@ -13,6 +14,10 @@ export class PendingFlagStatusSyncTokens {
   public static key = "pending-flag-status-sync-tokens";
 
   public static async add(tokens: PendingFlagStatusSyncToken[], prioritized = false) {
+    if (!getOpenseaNetworkName()) {
+      return;
+    }
+
     if (prioritized) {
       return await redis.lpush(
         this.key,

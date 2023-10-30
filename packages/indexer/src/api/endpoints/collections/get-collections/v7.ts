@@ -187,6 +187,7 @@ export const getCollectionsV7Options: RouteOptions = {
           createdAt: Joi.string().description("Time when added to indexer"),
           updatedAt: Joi.string().description("Time when updated in indexer"),
           name: Joi.string().allow("", null),
+          symbol: Joi.string().allow("", null),
           image: Joi.string().allow("", null),
           banner: Joi.string().allow("", null),
           discordUrl: Joi.string().allow("", null),
@@ -194,6 +195,7 @@ export const getCollectionsV7Options: RouteOptions = {
           twitterUsername: Joi.string().allow("", null),
           openseaVerificationStatus: Joi.string().allow("", null),
           description: Joi.string().allow("", null),
+          isSpam: Joi.boolean().default(false),
           sampleImages: Joi.array().items(Joi.string().allow("", null)),
           tokenCount: Joi.string().description("Total tokens within the collection."),
           onSaleCount: Joi.string().description("Total tokens currently on sale."),
@@ -486,6 +488,7 @@ export const getCollectionsV7Options: RouteOptions = {
           collections.day1_floor_sell_value,
           collections.day7_floor_sell_value,
           collections.day30_floor_sell_value,
+          collections.is_spam,
           ${floorAskSelectQuery}
           collections.token_count,
           collections.owner_count,
@@ -510,10 +513,7 @@ export const getCollectionsV7Options: RouteOptions = {
         query.sortDirection === "asc" ? "FIRST" : "LAST"
       }
             LIMIT 4
-          ) AS sample_images,
-          (
-            SELECT kind FROM contracts WHERE contracts.address = collections.contract
-          )  as contract_kind
+          ) AS sample_images
         FROM collections
       `;
 
@@ -681,6 +681,7 @@ export const getCollectionsV7Options: RouteOptions = {
         SELECT
           x.*,
           y.*,
+          z.*,
           u.*
           ${attributesSelectQuery}
           ${saleCountSelectQuery}
@@ -704,6 +705,13 @@ export const getCollectionsV7Options: RouteOptions = {
            JOIN tokens ON tokens.contract = token_sets_tokens.contract AND tokens.token_id = token_sets_tokens.token_id
            WHERE orders.id = x.floor_sell_id
         ) y ON TRUE
+        LEFT JOIN LATERAL (
+          SELECT 
+              kind AS contract_kind,
+              symbol
+          FROM contracts 
+          WHERE contracts.address = x.contract
+        ) z ON TRUE
         LEFT JOIN LATERAL (
             SELECT
               orders.currency AS top_buy_currency,
@@ -758,6 +766,7 @@ export const getCollectionsV7Options: RouteOptions = {
             createdAt: new Date(r.created_at * 1000).toISOString(),
             updatedAt: new Date(r.updated_at * 1000).toISOString(),
             name: r.name,
+            symbol: r.symbol,
             image:
               r.image ?? (sampleImages.length ? Assets.getLocalAssetsLink(sampleImages[0]) : null),
             banner: r.banner,
@@ -766,6 +775,7 @@ export const getCollectionsV7Options: RouteOptions = {
             twitterUsername: r.twitter_username,
             openseaVerificationStatus: r.opensea_verification_status,
             description: r.description,
+            isSpam: Boolean(Number(r.is_spam)),
             sampleImages: Assets.getLocalAssetsLink(sampleImages) ?? [],
             tokenCount: String(r.token_count),
             onSaleCount: String(r.on_sale_count),

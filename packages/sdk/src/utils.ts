@@ -136,6 +136,7 @@ export enum Network {
   Linea = 59144,
   Zora = 7777777,
   PolygonZkevm = 1101,
+  Scroll = 534352,
   // Testnets
   EthereumGoerli = 5,
   ZoraTestnet = 999,
@@ -147,6 +148,7 @@ export enum Network {
   EthereumSepolia = 11155111,
   Zksync = 324,
   Ancient8Testnet = 2863311531,
+  ImmutableZkevmTestnet = 13472,
 }
 
 export type ChainIdToAddress = { [chainId: number]: string };

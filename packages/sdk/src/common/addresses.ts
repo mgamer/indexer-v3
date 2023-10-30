@@ -25,6 +25,8 @@ export const Native: ChainIdToAddress = {
   [Network.Zksync]: AddressZero,
   [Network.PolygonZkevm]: AddressZero,
   [Network.Ancient8Testnet]: AddressZero,
+  [Network.Scroll]: AddressZero,
+  [Network.ImmutableZkevmTestnet]: AddressZero,
 };
 
 // Wrapped native currency
@@ -50,6 +52,8 @@ export const WNative: ChainIdToAddress = {
   [Network.Zksync]: "0x5aea5775959fbc2557cc8789bc1bf90a239d9a91",
   [Network.PolygonZkevm]: "0x4f9a0e7fd2bf6067db6994cf12e4495df938e6e9",
   [Network.Ancient8Testnet]: "0x4200000000000000000000000000000000000006",
+  [Network.Scroll]: "0x5300000000000000000000000000000000000004",
+  [Network.ImmutableZkevmTestnet]: "0xaf7cf5d4af0bfaa85d384d42b8d410762ccbce69",
 };
 
 export const Usdc: ChainIdToAddressList = {
@@ -117,6 +121,7 @@ export const RoyaltyEngine: ChainIdToAddress = {
   [Network.Avalanche]: "0x60b433ee91680189deb2c94b0b062ea283f6b4dd",
   [Network.PolygonZkevm]: "0x60b433ee91680189deb2c94b0b062ea283f6b4dd",
   [Network.Ancient8Testnet]: "0x8755310f937528173e7c5a106131d79a3601c9d9",
+  [Network.Scroll]: "0xc055b6d9fd8146bc76fcd6f944c8669d5279ed95",
 };
 
 // Uniswap's `SwapRouter02`
@@ -150,6 +155,7 @@ export const Create3Factory: ChainIdToAddress = {
   [Network.Linea]: "0x0000000000000a9efe52e741bcb25da0e4438e71",
   [Network.PolygonZkevm]: "0x0000000000000a9efe52e741bcb25da0e4438e71",
   [Network.Ancient8Testnet]: "0x0000000000000a9efe52e741bcb25da0e4438e71",
+  [Network.Scroll]: "0x0000000000000a9efe52e741bcb25da0e4438e71",
 };
 
 export const GelatoRelay1BalanceERC2771: ChainIdToAddress = {

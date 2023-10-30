@@ -42,8 +42,12 @@ export const updateMarketplaceFeeSpec = async (
       await idb.none(
         `
           UPDATE collections
-            SET marketplace_fees = $/marketplaceFees:json/
+            SET marketplace_fees = $/marketplaceFees:json/,
+                updated_at = NOW()
           WHERE collections.id = $/collection/
+          AND (
+            collections.marketplace_fees IS DISTINCT FROM $/marketplaceFees:json/
+          )
         `,
         {
           collection,

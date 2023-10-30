@@ -126,6 +126,9 @@ export const getUserTokensV7Options: RouteOptions = {
       includeRawData: Joi.boolean()
         .default(false)
         .description("If true, raw data is included in the response."),
+      excludeSpam: Joi.boolean()
+        .default(false)
+        .description("If true, will filter any tokens marked as spam."),
       useNonFlaggedFloorAsk: Joi.boolean()
         .default(false)
         .description("If true, will return the collection non flagged floor ask."),
@@ -151,6 +154,7 @@ export const getUserTokensV7Options: RouteOptions = {
             imageSmall: Joi.string().allow("", null),
             imageLarge: Joi.string().allow("", null),
             metadata: Joi.object().allow(null),
+            description: Joi.string().allow("", null),
             supply: Joi.number()
               .unsafe()
               .allow(null)
@@ -164,12 +168,16 @@ export const getUserTokensV7Options: RouteOptions = {
               .description("No rarity rank for collections over 100k"),
             media: Joi.string().allow(null),
             isFlagged: Joi.boolean().default(false),
+            isSpam: Joi.boolean().default(false),
             lastFlagUpdate: Joi.string().allow("", null),
             lastFlagChange: Joi.string().allow("", null),
             collection: Joi.object({
               id: Joi.string().allow(null),
               name: Joi.string().allow("", null),
+              slug: Joi.string().allow("", null).description("Open Sea slug"),
+              symbol: Joi.string().allow("", null),
               imageUrl: Joi.string().allow(null),
+              isSpam: Joi.boolean().default(false),
               openseaVerificationStatus: Joi.string().allow("", null),
               floorAskPrice: JoiPrice.allow(null).description("Can be null if no active asks."),
               royaltiesBps: Joi.number().allow(null),
@@ -401,6 +409,7 @@ export const getUserTokensV7Options: RouteOptions = {
           t.image,
           t.metadata,
           t.media,
+          t.description,
           t.rarity_rank,
           t.collection_id,
           t.rarity_score,
@@ -411,6 +420,7 @@ export const getUserTokensV7Options: RouteOptions = {
           t.last_sell_timestamp,
           t.last_buy_timestamp,
           t.is_flagged,
+          t.is_spam AS t_is_spam,
           t.last_flag_update,
           t.last_flag_change,
           null AS top_bid_id,
@@ -426,6 +436,7 @@ export const getUserTokensV7Options: RouteOptions = {
         ${includeRoyaltyBreakdownQuery}
         WHERE b.token_id = t.token_id
         AND b.contract = t.contract
+        ${query.excludeSpam ? `AND t.is_spam != 1` : ""}
         AND ${
           tokensCollectionFilters.length ? "(" + tokensCollectionFilters.join(" OR ") + ")" : "TRUE"
         }
@@ -441,6 +452,7 @@ export const getUserTokensV7Options: RouteOptions = {
             t.image,
             t.metadata,
             t.media,
+            t.description,
             t.rarity_rank,
             t.collection_id,
             t.rarity_score,
@@ -451,6 +463,7 @@ export const getUserTokensV7Options: RouteOptions = {
             t.last_sell_timestamp,
             t.last_buy_timestamp,
             t.is_flagged,
+            t.is_spam AS t_is_spam,
             t.last_flag_update,
             t.last_flag_change,
             ${selectFloorData}
@@ -533,12 +546,13 @@ export const getUserTokensV7Options: RouteOptions = {
       let baseQuery = `
         SELECT b.contract, b.token_id, b.token_count, extract(epoch from b.acquired_at) AS acquired_at, b.last_token_appraisal_value,
                t.name, t.image, t.metadata AS token_metadata, t.media, t.rarity_rank, t.collection_id, t.floor_sell_id, t.floor_sell_value, t.floor_sell_currency, t.floor_sell_currency_value,
-               t.floor_sell_maker, t.floor_sell_valid_from, t.floor_sell_valid_to, t.floor_sell_source_id_int, t.supply, t.remaining_supply,
+               t.floor_sell_maker, t.floor_sell_valid_from, t.floor_sell_valid_to, t.floor_sell_source_id_int, t.supply, t.remaining_supply, t.description,
                t.rarity_score, ${selectLastSale}
                top_bid_id, top_bid_price, top_bid_value, top_bid_currency, top_bid_currency_price, top_bid_currency_value, top_bid_source_id_int,
                o.currency AS collection_floor_sell_currency, o.currency_price AS collection_floor_sell_currency_price,
-               c.name as collection_name, con.kind, c.metadata, c.royalties, (c.metadata ->> 'safelistRequestStatus')::TEXT AS "opensea_verification_status",
-               c.royalties_bps, ot.kind AS floor_sell_kind,
+               c.name as collection_name, con.kind, con.symbol, c.metadata, c.royalties,
+               (c.metadata ->> 'safelistRequestStatus')::TEXT AS "opensea_verification_status",
+               c.royalties_bps, ot.kind AS floor_sell_kind, c.slug, c.is_spam AS c_is_spam,
                ${query.includeRawData ? "ot.raw_data AS floor_sell_raw_data," : ""}
                ${
                  query.useNonFlaggedFloorAsk
@@ -569,7 +583,9 @@ export const getUserTokensV7Options: RouteOptions = {
               AND amount > 0
           ) AS b
           ${tokensJoin}
-          JOIN collections c ON c.id = t.collection_id
+          JOIN collections c ON c.id = t.collection_id ${
+            query.excludeSpam ? `AND c.is_spam != 1` : ""
+          }
           LEFT JOIN orders o ON o.id = c.floor_sell_id
           LEFT JOIN orders ot ON ot.id = t.floor_sell_id
           JOIN contracts con ON b.contract = con.address
@@ -677,23 +693,29 @@ export const getUserTokensV7Options: RouteOptions = {
             image: r.image,
             imageSmall: Assets.getResizedImageUrl(r.image, ImageSize.small),
             imageLarge: Assets.getResizedImageUrl(r.image, ImageSize.large),
-            metadata: r.token_metadata?.image_original_url
+            metadata: r.token_metadata
               ? {
                   imageOriginal: r.token_metadata.image_original_url,
+                  tokenURI: r.token_metadata.metadata_original_url,
                 }
               : undefined,
+            description: r.description,
             rarityScore: r.rarity_score,
             rarityRank: r.rarity_rank,
             supply: !_.isNull(r.supply) ? r.supply : null,
             remainingSupply: !_.isNull(r.remaining_supply) ? r.remaining_supply : null,
             media: r.media,
             isFlagged: Boolean(Number(r.is_flagged)),
+            isSpam: Boolean(Number(r.t_is_spam)) || Boolean(Number(r.c_is_spam)),
             lastFlagUpdate: r.last_flag_update ? new Date(r.last_flag_update).toISOString() : null,
             lastFlagChange: r.last_flag_change ? new Date(r.last_flag_change).toISOString() : null,
             collection: {
               id: r.collection_id,
               name: r.collection_name,
+              slug: r.slug,
+              symbol: r.symbol,
               imageUrl: r.metadata?.imageUrl,
+              isSpam: Boolean(Number(r.c_is_spam)),
               openseaVerificationStatus: r.opensea_verification_status,
               floorAskPrice: r.collection_floor_sell_value
                 ? await getJoiPriceObject(

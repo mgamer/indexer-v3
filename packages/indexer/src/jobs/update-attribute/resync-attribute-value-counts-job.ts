@@ -11,9 +11,9 @@ export type ResyncAttributeValueCountsJobPayload = {
   value: string;
 };
 
-export class ResyncAttributeValueCountsJob extends AbstractRabbitMqJobHandler {
+export default class ResyncAttributeValueCountsJob extends AbstractRabbitMqJobHandler {
   queueName = "resync-attribute-value-counts-queue";
-  maxRetries = 10;
+  maxRetries = 1;
   concurrency = 3;
   useSharedChannel = true;
   lazyMode = true;

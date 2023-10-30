@@ -83,14 +83,33 @@ export const config = {
     ? (JSON.parse(process.env.FORWARD_RESERVOIR_API_KEYS) as string[])
     : [],
 
+  alchemyApiKey: String(process.env.ALCHEMY_API_KEY),
   looksRareApiKey: String(process.env.LOOKSRARE_API_KEY),
   openSeaApiKey: String(process.env.OPENSEA_API_KEY),
   openSeaApiUrl: String(process.env.OPENSEA_API_URL || ""),
 
-  openSeaTokenMetadataBySlugApiKey: String(process.env.OPENSEA_SLUG_API_KEY),
-  openSeaCollectionMetadataApiKey: String(process.env.OPENSEA_COLLECTION_API_KEY),
-  openSeaTokenMetadataApiKey: String(process.env.OPENSEA_TOKENS_API_KEY),
-  openSeaFlaggedMetadataApiKey: String(process.env.OPENSEA_FLAGGED_API_KEY),
+  // Solvers
+  crossChainSolverBaseUrl: process.env.CROSS_CHAIN_SOLVER_BASE_URL,
+  seaportSolverBaseUrl: process.env.SEAPORT_SOLVER_BASE_URL,
+
+  openSeaTokenMetadataApiKey: String(
+    process.env.OPENSEA_TOKENS_API_KEY || process.env.OPENSEA_API_KEY
+  ),
+  openSeaTokenMetadataBySlugApiKey: String(
+    process.env.OPENSEA_SLUG_API_KEY ||
+      process.env.OPENSEA_TOKENS_API_KEY ||
+      process.env.OPENSEA_API_KEY
+  ),
+  openSeaCollectionMetadataApiKey: String(
+    process.env.OPENSEA_COLLECTION_API_KEY ||
+      process.env.OPENSEA_TOKENS_API_KEY ||
+      process.env.OPENSEA_API_KEY
+  ),
+  openSeaTokenFlagStatusApiKey: String(
+    process.env.OPENSEA_TOKEN_FLAG_STATUS_API_KEY ||
+      process.env.OPENSEA_TOKENS_API_KEY ||
+      process.env.OPENSEA_API_KEY
+  ),
 
   openSeaCrossPostingApiKey: String(
     process.env.OPENSEA_CROSS_POSTING_API_KEY || process.env.OPENSEA_API_KEY
@@ -102,6 +121,10 @@ export const config = {
   soundxyzUserAgent: String(process.env.SOUNDXYZ_USER_AGENT),
 
   ordinalsApiKey: String(process.env.ORDINALS_API_KEY),
+
+  enableImageResizing: Boolean(Number(process.env.ENABLE_IMAGE_RESIZING)),
+  privateImageResizingSigningKey: String(process.env.PRIVATE_IMAGE_RESIZING_SIGNING_KEY),
+  imageResizingBaseUrl: String(process.env.IMAGE_RESIZING_BASE_URL),
 
   x2y2ApiKey: String(process.env.X2Y2_API_KEY),
   cbApiKey: String(process.env.CB_API_KEY),

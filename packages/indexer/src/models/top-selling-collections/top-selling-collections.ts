@@ -1,14 +1,27 @@
 import { redis } from "@/common/redis";
-
 import {
-  getTopSellingCollections,
+  getTopSellingCollectionsV2 as getTopSellingCollections,
   TopSellingFillOptions,
 } from "@/elasticsearch/indexes/activities";
+
+import { CollectionAggregation } from "@/elasticsearch/indexes/activities/base";
+
+import { redb } from "@/common/db";
+import { logger } from "@/common/logger";
 
 const VERSION = "v2";
 const expireTimeInSeconds = 1800;
 
-export const getStartTime = (period: string) => {
+type Period = "5m" | "10m" | "30m" | "1h" | "6h" | "1d" | "7d" | "30d";
+type FillSort = "volume" | "sales";
+
+interface TopSellingCollectionWindow {
+  period: Period;
+  fillSort: FillSort;
+  collections: CollectionAggregation[];
+}
+
+export const getStartTime = (period: Period): number => {
   const now = Math.floor(new Date().getTime() / 1000);
 
   let startTime = now - 60 * 24 * 60;
@@ -28,7 +41,7 @@ export const getStartTime = (period: string) => {
       break;
     }
     case "1h": {
-      startTime = now - 60 * 1 * 60;
+      startTime = now - 60 * 60;
       break;
     }
     case "6h": {
@@ -49,49 +62,56 @@ export const getStartTime = (period: string) => {
   return startTime;
 };
 
-export class TopSellingCollections {
-  public static async updateTopSellingCollections() {
-    const periods = ["30m", "1h", "6h", "1d"];
-    // only cache sales sorted by volume for now
+export const saveActiveSpamCollectionIds = async () => {
+  const query = `
+    SELECT 
+      collections.id
+    FROM collections
+    WHERE
+      day30_volume > 0 AND
+      is_spam = 1
+  `;
 
-    const results = await Promise.all(
-      periods.map(async (period) => {
+  const results = await redb.manyOrNone(query);
+  const ids = results.map((r) => r.id);
+  await redis.set("active-spam-collection-ids", JSON.stringify(ids));
+};
+
+export class TopSellingCollections {
+  public static async updateTopSellingCollections(): Promise<TopSellingCollectionWindow[]> {
+    const periods: Period[] = ["1h", "6h", "1d", "7d", "30d"];
+    const fillSorts: FillSort[] = ["volume", "sales"];
+
+    try {
+      await saveActiveSpamCollectionIds();
+    } catch (err) {
+      logger.error("top-selling-collections", `failed to update active spam collection ids ${err}`);
+    }
+
+    const tasks = fillSorts.flatMap((fillSort) => {
+      return periods.map(async (period) => {
         const startTime = getStartTime(period);
         const topSellingCollections = await getTopSellingCollections({
           startTime,
           fillType: TopSellingFillOptions.sale,
-          limit: 50,
-          includeRecentSales: true,
-          sortBy: "volume",
+          limit: 1000,
+          sortBy: fillSort,
         });
 
         return {
           period,
+          fillSort,
           collections: topSellingCollections,
         };
-      })
-    );
-
-    const startTime = getStartTime("1d");
-    const countCollections = await getTopSellingCollections({
-      startTime,
-      fillType: TopSellingFillOptions.sale,
-      limit: 50,
-      includeRecentSales: true,
-      sortBy: "sales",
+      });
     });
+
+    const results: TopSellingCollectionWindow[] = await Promise.all(tasks);
 
     const pipeline = redis.pipeline();
 
-    pipeline.set(
-      `topSellingCollections:${VERSION}:1d:sale:sales`,
-      JSON.stringify(countCollections),
-      "EX",
-      expireTimeInSeconds
-    );
-
-    results.forEach(({ period, collections }) => {
-      const key = `topSellingCollections:${VERSION}:${period}:sale:volume`;
+    results.forEach(({ period, collections, fillSort }: TopSellingCollectionWindow) => {
+      const key = `top-selling-collections:${VERSION}:${period}:sale:${fillSort}`;
       const value = JSON.stringify(collections);
       pipeline.set(key, value, "EX", expireTimeInSeconds);
     });

@@ -6,10 +6,10 @@ import { logger } from "ethers";
 import { Tokens } from "@/models/tokens";
 import { PendingFlagStatusSyncContracts } from "@/models/pending-flag-status-sync-contracts";
 
-export const getTokensFlagStatusWithTokenIds = async (
+export const getTokenFlagStatus = async (
   contract: string,
   tokenId: string
-): Promise<{ contract: string; tokenId: string; isFlagged: boolean | null }> => {
+): Promise<{ contract: string; tokenId: string; isFlagged: boolean }> => {
   const result = await openseaMetadataProvider._getTokenFlagStatus(contract, tokenId);
 
   return result.data;
@@ -100,8 +100,9 @@ export const getTokensFlagStatusForCollectionByContract = async (
     // for now, just log that we are refreshing all tokens
     logger.info(
       "getTokensFlagStatusForCollection",
-      "Shared collection, stopping processing for now"
+      `Shared contract, stopping processing for now. contract=${contract}`
     );
+
     return { tokens: [], nextContinuation: null };
   }
 

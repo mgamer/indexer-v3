@@ -75,6 +75,12 @@ export const getNetworkName = () => {
     case 2863311531:
       return "ancient8-testnet";
 
+    case 534352:
+      return "scroll";
+
+    case 13472:
+      return "immutable-zkevm-testnet";
+
     default:
       return "unknown";
   }
@@ -106,26 +112,12 @@ export const getOpenseaNetworkName = () => {
       return "base";
     case 84531:
       return "base_goerli";
-    case 324:
-      return "zksync";
     case 7777777:
       return "zora";
     case 999:
       return "zora_testnet";
     default:
-      throw new Error(`Unsupported chainId ${config.chainId}`);
-  }
-};
-
-export const getOpenseaSubDomain = () => {
-  switch (config.chainId) {
-    case 5:
-    case 80001:
-    case 11155111:
-      return "testnets-api";
-
-    default:
-      return "api";
+      return null;
   }
 };
 
@@ -210,7 +202,11 @@ export const getNetworkSettings = (): NetworkSettings => {
     nonSimulatableContracts: [],
     multiCollectionContracts: [],
     mintsAsSalesBlacklist: [],
-    mintAddresses: [AddressZero],
+    mintAddresses: [
+      AddressZero,
+      // Limitbreak
+      "0x00000089e8825c9a59b4503398faacf2e9a9cdb0",
+    ],
     burnAddresses: [AddressZero, "0x000000000000000000000000000000000000dead"],
     reorgCheckFrequency: [1, 5, 10, 30, 60], // In minutes
     whitelistedCurrencies: new Map<string, Currency>(),
@@ -225,7 +221,9 @@ export const getNetworkSettings = (): NetworkSettings => {
       indexes: {
         activities: {
           numberOfShards: 2,
-          configName: "CONFIG_1689873821",
+        },
+        asks: {
+          numberOfShards: 1,
         },
       },
     },
@@ -439,6 +437,18 @@ export const getNetworkSettings = (): NetworkSettings => {
               },
             },
           ],
+          [
+            "0x011e128ec62840186f4a07e85e3ace28858c5606",
+            {
+              contract: "0x011e128ec62840186f4a07e85e3ace28858c5606",
+              name: "Val",
+              symbol: "$VAL",
+              decimals: 18,
+              metadata: {
+                image: "https://i.ibb.co/s1k4Qvz/valeria-logo.png",
+              },
+            },
+          ],
         ]),
         coingecko: {
           networkId: "ethereum",
@@ -544,6 +554,20 @@ export const getNetworkSettings = (): NetworkSettings => {
         lastBlockLatency: 15,
         backfillBlockBatchSize: 60,
         reorgCheckFrequency: [30],
+        whitelistedCurrencies: new Map([
+          [
+            Sdk.Common.Addresses.Usdc[config.chainId][1],
+            {
+              contract: Sdk.Common.Addresses.Usdc[config.chainId][1],
+              name: "USD Coin",
+              symbol: "USDC",
+              decimals: 6,
+              metadata: {
+                image: "https://assets.coingecko.com/coins/images/6319/large/USD_Coin_icon.png",
+              },
+            },
+          ],
+        ]),
         coingecko: {
           networkId: "optimistic-ethereum",
         },
@@ -637,12 +661,15 @@ export const getNetworkSettings = (): NetworkSettings => {
         reorgCheckFrequency: [30],
         whitelistedCurrencies: new Map([
           [
-            "0xba777ae3a3c91fcd83ef85bfe65410592bdd0f7c",
+            Sdk.Common.Addresses.Usdc[config.chainId][1],
             {
-              contract: "0xba777ae3a3c91fcd83ef85bfe65410592bdd0f7c",
-              name: "BitCone",
-              symbol: "CONE",
-              decimals: 18,
+              contract: Sdk.Common.Addresses.Usdc[config.chainId][1],
+              name: "USD Coin",
+              symbol: "USDC",
+              decimals: 6,
+              metadata: {
+                image: "https://assets.coingecko.com/coins/images/6319/large/USD_Coin_icon.png",
+              },
             },
           ],
           [
@@ -660,6 +687,48 @@ export const getNetworkSettings = (): NetworkSettings => {
               contract: "0xdBb5Da27FFcFeBea8799a5832D4607714fc6aBa8",
               name: "DEGEN",
               symbol: "DGEN",
+              decimals: 18,
+            },
+          ],
+          [
+            "0x456f931298065b1852647de005dd27227146d8b9",
+            {
+              contract: "0x456f931298065b1852647de005dd27227146d8b9",
+              name: "WVAL",
+              symbol: "$VAL",
+              decimals: 18,
+              metadata: {
+                image: "https://i.ibb.co/s1k4Qvz/valeria-logo.png",
+              },
+            },
+          ],
+          [
+            "0x87cc4e6a40c6d3500403a83bbbb5de065fd46ef0",
+            {
+              contract: "0x87cc4e6a40c6d3500403a83bbbb5de065fd46ef0",
+              name: "p_TAVA",
+              symbol: "TAVA",
+              decimals: 18,
+            },
+          ],
+          [
+            "0xca80e0a5c8d56617894eac6737c11965af56cef5",
+            {
+              contract: "0xca80e0a5c8d56617894eac6737c11965af56cef5",
+              name: "Altava Fashion Link",
+              symbol: "$FLT",
+              decimals: 18,
+              metadata: {
+                image: "https://i.ibb.co/s91hZsX/FLT-256-Circle.png",
+              },
+            },
+          ],
+          [
+            "0xdc8b54313ed0ab1a0b6b8728c7d360c671a4b7cb",
+            {
+              contract: "0xdc8b54313ed0ab1a0b6b8728c7d360c671a4b7cb",
+              name: "FEWL",
+              symbol: "FEWL",
               decimals: 18,
             },
           ],
@@ -755,6 +824,20 @@ export const getNetworkSettings = (): NetworkSettings => {
           // Prohibition Contracts - ArtBlocks Engine
           "0x47a91457a3a1f700097199fd63c039c4784384ab",
         ],
+        whitelistedCurrencies: new Map([
+          [
+            Sdk.Common.Addresses.Usdc[config.chainId][1],
+            {
+              contract: Sdk.Common.Addresses.Usdc[config.chainId][1],
+              name: "USD Coin",
+              symbol: "USDC",
+              decimals: 6,
+              metadata: {
+                image: "https://assets.coingecko.com/coins/images/6319/large/USD_Coin_icon.png",
+              },
+            },
+          ],
+        ]),
         coingecko: {
           networkId: "arbitrum-one",
         },
@@ -1159,6 +1242,20 @@ export const getNetworkSettings = (): NetworkSettings => {
         realtimeSyncMaxBlockLag: 32,
         realtimeSyncFrequencySeconds: 5,
         lastBlockLatency: 5,
+        whitelistedCurrencies: new Map([
+          [
+            Sdk.Common.Addresses.Usdc[config.chainId][1],
+            {
+              contract: Sdk.Common.Addresses.Usdc[config.chainId][1],
+              name: "USD Coin",
+              symbol: "USDC",
+              decimals: 6,
+              metadata: {
+                image: "https://assets.coingecko.com/coins/images/6319/large/USD_Coin_icon.png",
+              },
+            },
+          ],
+        ]),
         coingecko: {
           networkId: "base",
         },
@@ -1289,6 +1386,76 @@ export const getNetworkSettings = (): NetworkSettings => {
                   'ETH',
                   18,
                   '{"coingeckoCurrencyId": "ethereum", "image": "https://assets.coingecko.com/coins/images/279/large/ethereum.png"}'
+                ) ON CONFLICT DO NOTHING
+              `
+            ),
+          ]);
+        },
+      };
+    }
+    // Scroll Mainnet
+    case 534352: {
+      return {
+        ...defaultNetworkSettings,
+        enableWebSocket: false,
+        realtimeSyncMaxBlockLag: 32,
+        realtimeSyncFrequencySeconds: 5,
+        lastBlockLatency: 5,
+        headBlockDelay: 10,
+        coingecko: {
+          networkId: "scroll",
+        },
+        onStartup: async () => {
+          // Insert the native currency
+          await Promise.all([
+            idb.none(
+              `
+                INSERT INTO currencies (
+                  contract,
+                  name,
+                  symbol,
+                  decimals,
+                  metadata
+                ) VALUES (
+                  '\\x0000000000000000000000000000000000000000',
+                  'Ether',
+                  'ETH',
+                  18,
+                  '{"coingeckoCurrencyId": "ethereum", "image": "https://assets.coingecko.com/coins/images/279/large/ethereum.png"}'
+                ) ON CONFLICT DO NOTHING
+              `
+            ),
+          ]);
+        },
+      };
+    }
+    // Immutable zkEVM Testnet
+    case 13472: {
+      return {
+        ...defaultNetworkSettings,
+        enableWebSocket: false,
+        realtimeSyncMaxBlockLag: 32,
+        realtimeSyncFrequencySeconds: 5,
+        lastBlockLatency: 5,
+        headBlockDelay: 10,
+        isTestnet: true,
+        onStartup: async () => {
+          // Insert the native currency
+          await Promise.all([
+            idb.none(
+              `
+                INSERT INTO currencies (
+                  contract,
+                  name,
+                  symbol,
+                  decimals,
+                  metadata
+                ) VALUES (
+                  '\\x0000000000000000000000000000000000000000',
+                  'Test ImmutableX',
+                  'tIMX',
+                  18,
+                  '{"coingeckoCurrencyId": "ethereum", "image": "https://assets.coingecko.com/coins/images/17233/standard/immutableX-symbol-BLK-RGB.png"}'
                 ) ON CONFLICT DO NOTHING
               `
             ),

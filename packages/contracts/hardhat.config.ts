@@ -58,6 +58,9 @@ const getNetworkConfig = (chainId?: number) => {
       case 7777777:
         url = "https://rpc.zora.co";
         break;
+      case 534352:
+        url = "https://rpc.ankr.com/scroll";
+        break;
       // Testnets
       case 5:
         url = `https://eth-goerli.g.alchemy.com/v2/${process.env.ALCHEMY_KEY}`;
@@ -85,6 +88,9 @@ const getNetworkConfig = (chainId?: number) => {
         break;
       case 2863311531:
         url = "https://rpc-testnet.ancient8.gg/";
+        break;
+      case 13472:
+        url = "https://rpc.testnet.immutable.com/";
         break;
       default:
         throw new Error("Unsupported chain id");
@@ -155,6 +161,7 @@ const config: HardhatUserConfig = {
     avalanche: getNetworkConfig(43114),
     linea: getNetworkConfig(59144),
     zora: getNetworkConfig(7777777),
+    scroll: getNetworkConfig(534352),
     // Testnets
     goerli: getNetworkConfig(5),
     zoraTestnet: getNetworkConfig(999),
@@ -165,6 +172,7 @@ const config: HardhatUserConfig = {
     scrollAlpha: getNetworkConfig(534353),
     sepolia: getNetworkConfig(11155111),
     ancient8Testnet: getNetworkConfig(2863311531),
+    immutableZkevmTestnet: getNetworkConfig(13472),
   },
   etherscan: {
     apiKey: process.env.ETHERSCAN_API_KEY,

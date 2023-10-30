@@ -2,7 +2,6 @@
 
 import { BigNumber } from "@ethersproject/bignumber";
 import { _TypedDataEncoder } from "@ethersproject/hash";
-import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
 import { TxData } from "@reservoir0x/sdk/dist/utils";
@@ -15,6 +14,7 @@ import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { bn, now, regex } from "@/common/utils";
 import { config } from "@/config/index";
+import { FeeRecipients } from "@/models/fee-recipients";
 import { getExecuteError } from "@/orderbook/orders/errors";
 import { checkBlacklistAndFallback } from "@/orderbook/orders";
 import * as b from "@/utils/auth/blur";
@@ -170,8 +170,16 @@ export const getExecuteBidV5Options: RouteOptions = {
             ),
             fees: Joi.array()
               .items(Joi.string().pattern(regex.fee))
+              .description("Deprecated, use `marketplaceFees` and/or `customRoyalties`"),
+            marketplaceFees: Joi.array()
+              .items(Joi.string().pattern(regex.fee))
               .description(
-                "List of fees (formatted as `feeRecipient:feeBps`) to be bundled within the order. 1 BPS = 0.01% Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00:100`"
+                "List of marketplace fees (formatted as `feeRecipient:feeBps`) to be bundled within the order. 1 BPS = 0.01% Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00:100`"
+              ),
+            customRoyalties: Joi.array()
+              .items(Joi.string().pattern(regex.fee))
+              .description(
+                "List of custom royalties (formatted as `feeRecipient:feeBps`) to be bundled within the order. 1 BPS = 0.01% Example: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00:100`"
               ),
             excludeFlaggedTokens: Joi.boolean()
               .default(false)
@@ -192,6 +200,7 @@ export const getExecuteBidV5Options: RouteOptions = {
             nonce: Joi.string().pattern(regex.number).description("Optional. Set a custom nonce"),
             currency: Joi.string()
               .pattern(regex.address)
+              .lowercase()
               .default(Sdk.Common.Addresses.WNative[config.chainId]),
           })
             .or("token", "collection", "tokenSetId")
@@ -274,7 +283,9 @@ export const getExecuteBidV5Options: RouteOptions = {
         automatedRoyalties: boolean;
         royaltyBps?: number;
         excludeFlaggedTokens: boolean;
-        fees: string[];
+        fees?: string[];
+        marketplaceFees?: string[];
+        customRoyalties?: string[];
         currency: string;
         listingTime?: number;
         expirationTime?: number;
@@ -537,6 +548,8 @@ export const getExecuteBidV5Options: RouteOptions = {
         }
       }
 
+      const feeRecipients = await FeeRecipients.getInstance();
+
       const errors: { message: string; orderIndex: number }[] = [];
       await Promise.all(
         params.map(async (params, i) => {
@@ -591,6 +604,18 @@ export const getExecuteBidV5Options: RouteOptions = {
             const [feeRecipient, fee] = feeData.split(":");
             (params as any).fee.push(fee);
             (params as any).feeRecipient.push(feeRecipient);
+          }
+          for (const feeData of params.marketplaceFees ?? []) {
+            const [feeRecipient, fee] = feeData.split(":");
+            (params as any).fee.push(fee);
+            (params as any).feeRecipient.push(feeRecipient);
+            await feeRecipients.create(feeRecipient, "marketplace", source);
+          }
+          for (const feeData of params.customRoyalties ?? []) {
+            const [feeRecipient, fee] = feeData.split(":");
+            (params as any).fee.push(fee);
+            (params as any).feeRecipient.push(feeRecipient);
+            await feeRecipients.create(feeRecipient, "royalty", source);
           }
 
           try {
@@ -1905,9 +1930,8 @@ export const getExecuteBidV5Options: RouteOptions = {
 
       return { steps, errors };
     } catch (error) {
-      if (!(error instanceof Boom.Boom)) {
-        logger.error(`get-execute-bid-${version}-handler`, `Handler failure: ${error}`);
-      }
+      logger.error(`get-execute-bid-${version}-handler`, `Handler failure: ${error}`);
+
       throw error;
     }
   },

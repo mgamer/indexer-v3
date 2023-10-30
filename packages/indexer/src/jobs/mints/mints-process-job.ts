@@ -33,7 +33,7 @@ export type MintsProcessJobPayload =
       };
     };
 
-export class MintsProcessJob extends AbstractRabbitMqJobHandler {
+export default class MintsProcessJob extends AbstractRabbitMqJobHandler {
   queueName = "mints-process";
   maxRetries = 3;
   concurrency = 30;
@@ -43,6 +43,8 @@ export class MintsProcessJob extends AbstractRabbitMqJobHandler {
     const { by, data } = payload;
 
     try {
+      logger.info("debug-mints", JSON.stringify({ method: "mints-process-job", data: payload }));
+
       let collectionMints: CollectionMint[] = [];
 
       // Process new mints knowing a mint transaction
@@ -222,6 +224,13 @@ export class MintsProcessJob extends AbstractRabbitMqJobHandler {
               data.collection,
               data.additionalInfo.mintId,
               data.additionalInfo.minter
+            );
+            break;
+          }
+
+          case "createdotfun": {
+            collectionMints = await detector.createdotfun.extractByCollectionERC721(
+              data.collection
             );
             break;
           }

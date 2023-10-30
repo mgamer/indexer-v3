@@ -38,6 +38,7 @@ import * as tfoust from "./tfoust";
 import * as utopiaAvatars from "./utopia-avatars";
 import * as superrareShared from "./superrare-shared";
 import * as foundationShared from "./foundation-shared";
+import * as kanpaiPandas from "./kanpai-pandas";
 
 const extendCollection: any = {};
 const extend: any = {};
@@ -162,6 +163,7 @@ extendCollection["1,0x0a1bbd57033f57e7b6743621b79fcb9eb2ce3676"] = artblocksEngi
 extendCollection["1,0x942bc2d3e7a589fe5bd4a5c6ef9727dfd82f5c8a"] = artblocksEngine;
 extendCollection["1,0x32d4be5ee74376e08038d652d4dc26e62c67f436"] = artblocksEngine;
 extendCollection["1,0xea698596b6009a622c3ed00dd5a8b5d1cae4fc36"] = artblocksEngine;
+extendCollection["1,0x8cdbd7010bd197848e95c1fd7f6e870aac9b0d3c"] = artblocksEngine;
 extendCollection["5,0xe480a895de49b49e37a8f0a8bd7e07fc9844cdb9"] = artblocksEngine;
 extendCollection["42161,0x47a91457a3a1f700097199fd63c039c4784384ab"] = artblocksEngine;
 
@@ -274,6 +276,7 @@ extend["1,0x0a1bbd57033f57e7b6743621b79fcb9eb2ce3676"] = artblocksEngine;
 extend["1,0x942bc2d3e7a589fe5bd4a5c6ef9727dfd82f5c8a"] = artblocksEngine;
 extend["1,0x32d4be5ee74376e08038d652d4dc26e62c67f436"] = artblocksEngine;
 extend["1,0xea698596b6009a622c3ed00dd5a8b5d1cae4fc36"] = artblocksEngine;
+extend["1,0x8cdbd7010bd197848e95c1fd7f6e870aac9b0d3c"] = artblocksEngine;
 extend["5,0xe480a895de49b49e37a8f0a8bd7e07fc9844cdb9"] = artblocksEngine;
 extend["42161,0x47a91457a3a1f700097199fd63c039c4784384ab"] = artblocksEngine;
 
@@ -313,3 +316,6 @@ extend["1,0xb932a70a57673d89f4acffbe830e8ed7f75fb9e0"] = superrareShared;
 
 //Foundation Shared
 extend["1,0x3b3ee1931dc30c1957379fac9aba94d1c48a5405"] = foundationShared;
+
+// Kanpai Pandas
+extend["1,0xacf63e56fd08970b43401492a02f6f38b6635c91"] = kanpaiPandas;

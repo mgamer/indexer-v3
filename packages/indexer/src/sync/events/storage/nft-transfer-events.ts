@@ -142,7 +142,7 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
 
       const isFromZeroAddress = fromBuffer(event.from) === AddressZero;
       const isErc1155 = _.includes(erc1155Contracts, fromBuffer(event.address));
-      const deferUpdate = config.chainId === 137 && isFromZeroAddress && isErc1155;
+      const deferUpdate = [137, 80001].includes(config.chainId) && isFromZeroAddress && isErc1155;
 
       // Atomically insert the transfer events and update balances
       nftTransferQueries.push(`
@@ -282,7 +282,7 @@ function buildTokenValuesQueries(tokenValuesChunk: erc721Token[] | erc1155Token[
       columnSet
     )}
     ON CONFLICT (contract, token_id) DO UPDATE
-    SET minted_timestamp = EXCLUDED.minted_timestamp
+    SET minted_timestamp = EXCLUDED.minted_timestamp, updated_at = NOW()
     WHERE EXCLUDED.minted_timestamp < tokens.minted_timestamp
   `;
 }

@@ -3,12 +3,13 @@ import { HTMLElement, parse } from "node-html-parser";
 import _ from "lodash";
 import axios from "axios";
 import { Sources } from "@/models/sources";
+import { logger } from "@/common/logger";
 
 export type FetchSourceInfoJobPayload = {
   sourceDomain: string;
 };
 
-export class FetchSourceInfoJob extends AbstractRabbitMqJobHandler {
+export default class FetchSourceInfoJob extends AbstractRabbitMqJobHandler {
   queueName = "fetch-source-info-queue";
   maxRetries = 10;
   concurrency = 3;
@@ -18,6 +19,8 @@ export class FetchSourceInfoJob extends AbstractRabbitMqJobHandler {
 
   protected async process(payload: FetchSourceInfoJobPayload) {
     const { sourceDomain } = payload;
+
+    logger.info(this.queueName, `Start. sourceDomain=${sourceDomain}`);
 
     let url = sourceDomain;
     let iconUrl: string | undefined;
@@ -36,6 +39,7 @@ export class FetchSourceInfoJob extends AbstractRabbitMqJobHandler {
           "Mozilla/5.0 (X11; Fedora; Linux x86_64; rv:89.0) Gecko/20100101 Firefox/89.0",
       },
     });
+
     const html = parse(response.data);
 
     // First get the custom reservoir title tag
@@ -113,6 +117,42 @@ export class FetchSourceInfoJob extends AbstractRabbitMqJobHandler {
     const tokenUrlBase = this.getTokenUrl(html, url, "base");
     const tokenUrlZksync = this.getTokenUrl(html, url, "zksync");
     const tokenUrlPolygonZkevm = this.getTokenUrl(html, url, "polygon-zkevm");
+    const tokenUrlScroll = this.getTokenUrl(html, url, "scroll");
+    const tokenUrlImmutableZkevmTestnet = this.getTokenUrl(html, url, "immutable-zkevm-testnet");
+
+    logger.info(
+      this.queueName,
+      JSON.stringify({
+        message: `Debug. sourceDomain=${sourceDomain}`,
+        data: {
+          title: titleText,
+          icon: iconUrl,
+          description,
+          socialImage,
+          twitterUsername,
+          tokenUrlMainnet,
+          tokenUrlRinkeby,
+          tokenUrlPolygon,
+          tokenUrlArbitrum,
+          tokenUrlOptimism,
+          tokenUrlBsc,
+          tokenUrlGoerli,
+          tokenUrlZora,
+          tokenUrlSepolia,
+          tokenUrlMumbai,
+          tokenUrlBaseGoerli,
+          tokenUrlArbitrumNova,
+          tokenUrlAvalanche,
+          tokenUrlScrollAlpha,
+          tokenUrlZoraTestnet,
+          tokenUrlBase,
+          tokenUrlZksync,
+          tokenUrlPolygonZkevm,
+          tokenUrlScroll,
+          tokenUrlImmutableZkevmTestnet,
+        },
+      })
+    );
 
     // Update the source data
     const sources = await Sources.getInstance();
@@ -140,6 +180,8 @@ export class FetchSourceInfoJob extends AbstractRabbitMqJobHandler {
       tokenUrlBase,
       tokenUrlZksync,
       tokenUrlPolygonZkevm,
+      tokenUrlScroll,
+      tokenUrlImmutableZkevmTestnet,
     });
   }
 
