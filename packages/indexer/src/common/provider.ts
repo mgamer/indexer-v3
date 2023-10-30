@@ -61,8 +61,6 @@ export const safeWebSocketSubscription = (
   });
 
   webSocketProvider._websocket.on("pong", () => {
-    // eslint-disable-next-line
-    console.log("pong");
     if (pingTimeout) {
       clearInterval(pingTimeout);
     }
