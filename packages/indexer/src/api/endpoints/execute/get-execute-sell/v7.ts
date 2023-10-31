@@ -398,11 +398,9 @@ export const getExecuteSellV7Options: RouteOptions = {
         });
 
         // Load any permits
-
-        const permit =
-          order.rawData.permitId && order.rawData.permitIndex
-            ? await getPersistentPermit(order.rawData.permitId, order.rawData.permitIndex)
-            : undefined;
+        const permit = order.rawData.permitId
+          ? await getPersistentPermit(order.rawData.permitId, order.rawData.permitIndex ?? 0)
+          : undefined;
 
         bidDetails.push(
           await generateBidDetailsV6(

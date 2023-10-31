@@ -40,7 +40,7 @@ export const savePersistentPermit = async (permit: Permit, signature: string) =>
       )
     `,
     {
-      id: new PermitHandler(config.chainId, baseProvider).hash(permit),
+      id: await new PermitHandler(config.chainId, baseProvider).hash(permit),
       index: 0,
       isValid: true,
       kind: permit.kind,

@@ -857,12 +857,16 @@ export const getExecuteBidV5Options: RouteOptions = {
                       token: params.currency,
                       amount: price,
                     },
-                    order.params.endTime
+                    order.params.endTime - now()
                   );
 
                   const id = getEphemeralPermitId(request.payload as object, {
+                    owner: permit.data.owner,
+                    spender: permit.data.spender,
                     token: permit.data.token,
                     amount: permit.data.amount,
+                    nonce: permit.data.nonce,
+                    deadline: permit.data.deadline,
                   });
 
                   const cachedPermit = await getEphemeralPermit(id);
@@ -891,6 +895,9 @@ export const getExecuteBidV5Options: RouteOptions = {
                         },
                       },
                     });
+                  } else {
+                    permitId = await permitHandler.hash(permit);
+                    permitIndex = 0;
                   }
                 }
 

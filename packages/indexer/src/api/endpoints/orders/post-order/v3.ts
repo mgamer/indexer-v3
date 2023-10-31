@@ -183,7 +183,6 @@ export const postOrderV3Options: RouteOptions = {
             metadata: {
               schema,
               source,
-              permitId,
             },
           };
 
@@ -266,7 +265,6 @@ export const postOrderV3Options: RouteOptions = {
                   metadata: {
                     schema,
                     source,
-                    permitId,
                   },
                 },
               ]);
@@ -283,7 +281,6 @@ export const postOrderV3Options: RouteOptions = {
                   metadata: {
                     schema,
                     source,
-                    permitId,
                   },
                 },
               ]);
@@ -317,7 +314,6 @@ export const postOrderV3Options: RouteOptions = {
                   metadata: {
                     schema,
                     source,
-                    permitId,
                   },
                 },
               ]);
@@ -413,7 +409,6 @@ export const postOrderV3Options: RouteOptions = {
               metadata: {
                 schema,
                 source,
-                permitId,
               },
             };
 
@@ -470,7 +465,6 @@ export const postOrderV3Options: RouteOptions = {
                 orderParams: order.data,
                 metadata: {
                   schema,
-                  permitId,
                 },
               },
             ]);

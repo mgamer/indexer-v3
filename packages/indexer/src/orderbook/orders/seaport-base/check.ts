@@ -91,8 +91,8 @@ export const offChainCheck = async (
       hasBalance = false;
     }
 
-    if (options?.permitId && options.permitIndex) {
-      const permit = await getPersistentPermit(options.permitId, options.permitIndex);
+    if (options?.permitId) {
+      const permit = await getPersistentPermit(options.permitId, options.permitIndex ?? 0);
       if (!permit) {
         hasApproval = false;
       }

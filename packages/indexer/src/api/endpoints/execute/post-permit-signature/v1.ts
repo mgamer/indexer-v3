@@ -56,13 +56,16 @@ export const postPermitSignatureV1Options: RouteOptions = {
 
       // Verify the permit signature
       try {
-        new PermitHandler(config.chainId, baseProvider).attachAndCheckSignature(permit, signature);
+        await new PermitHandler(config.chainId, baseProvider).attachAndCheckSignature(
+          permit,
+          signature
+        );
       } catch {
         throw Boom.badRequest("Invalid permit signature");
       }
 
       // Update the cached permit to include the signature
-      await saveEphemeralPermit(id, permit, signature);
+      await saveEphemeralPermit(id, permit);
 
       // Persist the permit if needed
       if (persist) {
