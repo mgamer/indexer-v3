@@ -68,7 +68,7 @@ export class PermitUpdatesJob extends AbstractRabbitMqJobHandler {
               WHERE orders.maker = $/maker/
                 AND orders.side = 'buy'
                 AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
-                AND (orders.raw_data->>'permitId'::TEXT, orders.raw_data->>'permitIndex'::INT) IN ($/permits:list/)
+                AND (orders.raw_data->>'permitId'::TEXT, COALESCE(orders.raw_data->>'permitIndex'::TEXT, '0')::INT) IN ($/permits:list/)
             `,
             {
               maker: toBuffer(owner),
