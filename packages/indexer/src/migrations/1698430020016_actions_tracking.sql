@@ -16,8 +16,11 @@ ALTER TABLE "actions_tracking"
   ADD CONSTRAINT "actions_tracking_pk"
   PRIMARY KEY ("id");
 
-CREATE INDEX "actions_tracking_context_created_at"
-  ON "actions_tracking" ("context", "created_at");
+CREATE INDEX "actions_tracking_context_collection_id_created_at"
+  ON "actions_tracking" ("context", "collection_id", "created_at");
+
+CREATE INDEX "actions_tracking_context_contract_token_id_created_at"
+  ON "actions_tracking" ("context", "contract", "token_id", "created_at");
 
 CREATE INDEX "actions_tracking_action_taker_identifier_created_at"
   ON "actions_tracking" ("action_taker_identifier", "created_at");
