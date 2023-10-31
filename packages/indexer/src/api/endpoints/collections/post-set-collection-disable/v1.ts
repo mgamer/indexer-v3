@@ -100,8 +100,8 @@ export const postSetCollectionDisableV1Options: RouteOptions = {
       logger.info(
         `post-set-collection-disable-${version}-handler`,
         JSON.stringify({
-          message: "Disable collection metadata request accepted",
-          id: payload.collection,
+          message: "Disable metadata request accepted",
+          ids: payload.collections,
           type: "collection",
           disable: payload.disable,
           apiKey: apiKey.key,
