@@ -36,7 +36,7 @@ export class GeneralTrackingJob extends AbstractRabbitMqJobHandler {
 
     await idb.none(
       `
-        INSERT INTO actions_tracking (
+        INSERT INTO general_tracking (
           context,
           origin,
           action_taker_identifier,
