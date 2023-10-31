@@ -61,7 +61,7 @@ export class GeneralTrackingJob extends AbstractRabbitMqJobHandler {
         contract: contract ? toBuffer(contract) : null,
         collection: collection ?? null,
         tokenId: tokenId ?? null,
-        data: data ?? {},
+        data: data ?? null,
       }
     );
   }
