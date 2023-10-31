@@ -53,12 +53,24 @@ export class PermitUpdatesJob extends AbstractRabbitMqJobHandler {
           owner
         );
 
+        const permit = (permitId: string, permitIndex: number) => ({
+          rawType: true,
+          toPostgres: () => pgp.as.format("($1::TEXT, $2::INT)", [permitId, permitIndex]),
+        });
+
         const invalidatedPermits = relevantPermits.filter((p) => p.nonce !== latestNonce);
         if (invalidatedPermits.length) {
-          const permit = (permitId: string, permitIndex: number) => ({
-            rawType: true,
-            toPostgres: () => pgp.as.format("($1::TEXT, $2::INT)", [permitId, permitIndex]),
-          });
+          // Invalidate permits
+          await idb.none(
+            `
+              UPDATE permits SET
+                is_valid = FALSE
+              WHERE (permits.id, permits.index) IN ($/permits:list/)
+            `,
+            {
+              permits: invalidatedPermits.map((p) => permit(p.id, p.index)),
+            }
+          );
 
           const invalidatedOrders = await idb.manyOrNone(
             `
@@ -76,7 +88,7 @@ export class PermitUpdatesJob extends AbstractRabbitMqJobHandler {
             }
           );
           if (invalidatedOrders.length) {
-            // Update any orders that did change status
+            // Invalidate orders
 
             const values = invalidatedOrders.map(({ id }) => ({
               id,
@@ -99,7 +111,7 @@ export class PermitUpdatesJob extends AbstractRabbitMqJobHandler {
             // Recheck all updated orders
             await orderUpdatesByIdJob.addToQueue(
               values.map(({ id }) => ({
-                context: `${context}-${id}`,
+                context: `permit-cancellation-${id}`,
                 id,
                 trigger: {
                   kind: "cancel",
