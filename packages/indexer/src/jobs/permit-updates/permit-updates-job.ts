@@ -1,4 +1,4 @@
-import { PermitHandler } from "@reservoir0x/sdk/src/router/v6/permit";
+import { PermitHandler } from "@reservoir0x/sdk/dist/router/v6/permit";
 
 import { idb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";

@@ -10,6 +10,7 @@ import * as CommonAddresses from "../../common/addresses";
 import { Network, TxData, bn, getCurrentTimestamp } from "../../utils";
 import * as Addresses from "./addresses";
 import * as ApprovalProxy from "./approval-proxy";
+import { ExecutionInfo } from "./types";
 
 import PermitProxyAbi from "./abis/PermitProxy.json";
 import RouterAbi from "./abis/ReservoirV6_0_1.json";
@@ -60,53 +61,83 @@ export class PermitHandler {
   public async generate(
     owner: string,
     spender: string,
-    transferItems: ApprovalProxy.TransferItem[],
+    options:
+      | {
+          // Generate the permit given a list of required transfers
+          kind: "with-transfers";
+          transferItems: ApprovalProxy.TransferItem[];
+        }
+      | {
+          // Generate the permit directly without any associated transfers
+          kind: "no-transfers";
+          token: string;
+          amount: string;
+        },
     expiresIn = 10 * 60
   ): Promise<Permit[]> {
-    if (!transferItems.length) {
-      return [];
-    }
-
-    const currencyToTransferItems: { [currency: string]: ApprovalProxy.TransferItem[] } = {};
-    for (const transferItem of transferItems) {
-      for (const item of transferItem.items) {
-        if (!currencyToTransferItems[item.token]) {
-          currencyToTransferItems[item.token] = [];
-        }
-        currencyToTransferItems[item.token].push(transferItem);
-      }
-    }
-
     const currentTime = getCurrentTimestamp();
 
-    const permits: EIP2612PermitWithTransfers[] = [];
-    for (const [currency, transferItems] of Object.entries(currencyToTransferItems)) {
-      const totalAmountPerRecipient = transferItems.map((transferItem) => ({
-        amount: transferItem.items
-          .map((item) => bn(item.amount))
-          .reduce((a, b) => a.add(b))
-          .toString(),
-        recipient: transferItem.recipient,
+    if (options.kind === "with-transfers") {
+      if (!options.transferItems.length) {
+        return [];
+      }
+
+      const currencyToTransferItems: { [currency: string]: ApprovalProxy.TransferItem[] } = {};
+      for (const transferItem of options.transferItems) {
+        for (const item of transferItem.items) {
+          if (!currencyToTransferItems[item.token]) {
+            currencyToTransferItems[item.token] = [];
+          }
+          currencyToTransferItems[item.token].push(transferItem);
+        }
+      }
+
+      const permits: EIP2612PermitWithTransfers[] = [];
+      for (const [currency, transferItems] of Object.entries(currencyToTransferItems)) {
+        const totalAmountPerRecipient = transferItems.map((transferItem) => ({
+          amount: transferItem.items
+            .map((item) => bn(item.amount))
+            .reduce((a, b) => a.add(b))
+            .toString(),
+          recipient: transferItem.recipient,
+        }));
+
+        permits.push({
+          owner,
+          spender,
+          token: currency,
+          amount: totalAmountPerRecipient
+            .map(({ amount }) => bn(amount))
+            .reduce((a, b) => a.add(b))
+            .toString(),
+          deadline: currentTime + expiresIn,
+          nonce: await this.getNonce(currency, owner),
+          transfers: totalAmountPerRecipient,
+        });
+      }
+
+      return permits.map((p) => ({
+        kind: "eip2612",
+        data: p,
       }));
+    } else {
+      const permits = [
+        {
+          owner,
+          spender,
+          token: options.token,
+          amount: options.amount,
+          deadline: currentTime + expiresIn,
+          nonce: await this.getNonce(options.token, owner),
+          transfers: [],
+        },
+      ];
 
-      permits.push({
-        owner,
-        spender,
-        token: currency,
-        amount: totalAmountPerRecipient
-          .map(({ amount }) => bn(amount))
-          .reduce((a, b) => a.add(b))
-          .toString(),
-        deadline: currentTime + expiresIn,
-        nonce: await this.getNonce(currency, owner),
-        transfers: totalAmountPerRecipient,
-      });
+      return permits.map((p) => ({
+        kind: "eip2612",
+        data: p,
+      }));
     }
-
-    return permits.map((p) => ({
-      kind: "eip2612",
-      data: p,
-    }));
   }
 
   public async hash(permit: Permit) {
@@ -179,28 +210,49 @@ export class PermitHandler {
     permit.data.signature = signature;
   }
 
+  // For plain permits
+  public getRouterExecution(permits: Permit[]): ExecutionInfo {
+    if (!permits.every((p) => p.data.transfers.length === 0)) {
+      throw new Error("Transfer permits not supported");
+    }
+
+    return {
+      module: Addresses.PermitProxy[this.chainId],
+      data: new Interface(PermitProxyAbi).encodeFunctionData("eip2612Permit", [
+        permits.map((p) => ({
+          ...p.data,
+          ...splitSignature(p.data.signature!),
+        })),
+      ]),
+      value: 0,
+    };
+  }
+
+  // For transfer permits
   public attachToRouterExecution(txData: TxData, permits: Permit[]): TxData {
+    if (!permits.every((p) => p.data.transfers.length > 0)) {
+      throw new Error("Non-transfer permits not supported");
+    }
+
     // Handle the case when there's no permits to attach
     if (!permits.length) {
       return txData;
     }
 
-    const executionInfos = new Interface(RouterAbi).decodeFunctionData(
-      "execute",
-      txData.data
-    ).executionInfos;
-
     return {
       ...txData,
       to: Addresses.PermitProxy[this.chainId],
       data: new Interface(PermitProxyAbi).encodeFunctionData(
-        "eip26126PermitWithTransfersAndExecute",
+        "eip2612PermitWithTransfersAndExecute",
         [
           permits.map((p) => ({
-            ...p.data,
-            ...splitSignature(p.data.signature!),
+            permit: {
+              ...p.data,
+              ...splitSignature(p.data.signature!),
+            },
+            transfers: p.data.transfers,
           })),
-          executionInfos,
+          new Interface(RouterAbi).decodeFunctionData("execute", txData.data).executionInfos,
         ]
       ),
     };

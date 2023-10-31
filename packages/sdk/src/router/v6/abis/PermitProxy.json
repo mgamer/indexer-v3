@@ -63,6 +63,68 @@
             "internalType": "bytes32",
             "name": "s",
             "type": "bytes32"
+          }
+        ],
+        "internalType": "struct PermitProxy.EIP2612Permit[]",
+        "name": "permits",
+        "type": "tuple[]"
+      }
+    ],
+    "name": "eip2612Permit",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "components": [
+          {
+            "components": [
+              {
+                "internalType": "contract IERC20",
+                "name": "token",
+                "type": "address"
+              },
+              {
+                "internalType": "address",
+                "name": "owner",
+                "type": "address"
+              },
+              {
+                "internalType": "address",
+                "name": "spender",
+                "type": "address"
+              },
+              {
+                "internalType": "uint256",
+                "name": "amount",
+                "type": "uint256"
+              },
+              {
+                "internalType": "uint256",
+                "name": "deadline",
+                "type": "uint256"
+              },
+              {
+                "internalType": "uint8",
+                "name": "v",
+                "type": "uint8"
+              },
+              {
+                "internalType": "bytes32",
+                "name": "r",
+                "type": "bytes32"
+              },
+              {
+                "internalType": "bytes32",
+                "name": "s",
+                "type": "bytes32"
+              }
+            ],
+            "internalType": "struct PermitProxy.EIP2612Permit",
+            "name": "permit",
+            "type": "tuple"
           },
           {
             "components": [
@@ -83,7 +145,7 @@
           }
         ],
         "internalType": "struct PermitProxy.EIP2612PermitWithTransfers[]",
-        "name": "permits",
+        "name": "permitsWithTransfers",
         "type": "tuple[]"
       },
       {
@@ -109,7 +171,7 @@
         "type": "tuple[]"
       }
     ],
-    "name": "eip26126PermitWithTransfersAndExecute",
+    "name": "eip2612PermitWithTransfersAndExecute",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"

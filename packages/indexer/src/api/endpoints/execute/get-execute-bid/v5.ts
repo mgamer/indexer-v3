@@ -4,6 +4,8 @@ import { BigNumber } from "@ethersproject/bignumber";
 import { _TypedDataEncoder } from "@ethersproject/hash";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
+import { PermitHandler } from "@reservoir0x/sdk/dist/router/v6/permit";
+
 import { TxData } from "@reservoir0x/sdk/dist/utils";
 import axios from "axios";
 import Joi from "joi";
@@ -51,7 +53,6 @@ import * as zeroExV4BuyCollection from "@/orderbook/orders/zeroex-v4/build/buy/c
 // PaymentProcessor
 import * as paymentProcessorBuyToken from "@/orderbook/orders/payment-processor/build/buy/token";
 import * as paymentProcessorBuyCollection from "@/orderbook/orders/payment-processor/build/buy/collection";
-import { PermitHandler } from "@reservoir0x/sdk/src/router/v6/permit";
 
 const version = "v5";
 
@@ -834,10 +835,12 @@ export const getExecuteBidV5Options: RouteOptions = {
                 const exchange = new Sdk.SeaportV15.Exchange(config.chainId);
                 const conduit = exchange.deriveConduit(order.params.conduitKey);
 
+                const price = order.getMatchingPrice().toString();
+
                 // Check the maker's approval
                 let approvalTx: TxData | undefined;
                 const currencyApproval = await currency.getAllowance(maker, conduit);
-                if (bn(currencyApproval).lt(order.getMatchingPrice())) {
+                if (bn(currencyApproval).lt(price)) {
                   approvalTx = currency.approveTransaction(maker, conduit);
                 }
 
@@ -849,7 +852,11 @@ export const getExecuteBidV5Options: RouteOptions = {
                   const [permit] = await permitHandler.generate(
                     maker,
                     conduit,
-                    [],
+                    {
+                      kind: "no-transfers",
+                      token: params.currency,
+                      amount: price,
+                    },
                     order.params.endTime
                   );
 

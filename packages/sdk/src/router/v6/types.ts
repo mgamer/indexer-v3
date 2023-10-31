@@ -55,7 +55,7 @@ export type PreSignature = {
   data: any;
 };
 
-export type TxKind = "sale" | "mint" | "swap";
+export type TxKind = "sale" | "mint" | "swap" | "permit";
 export type TxTags = {
   kind: TxKind;
   // Number of listings for each order kind

@@ -7,6 +7,7 @@ import { BidDetails, ListingDetails } from "@reservoir0x/sdk/src/router/v6/types
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 import { expect } from "chai";
 import { ethers } from "hardhat";
+
 import {
   bn,
   getChainId,
@@ -15,7 +16,6 @@ import {
   setupNFTs,
   setupRouterWithModules,
 } from "../utils";
-import { MaxUint256 } from "@ethersproject/constants";
 
 describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
   const chainId = getChainId();
@@ -1742,7 +1742,7 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
     );
 
     // Sign permit
-    const { data: permit } = tx.txs[0].permits[0];
+    const permit = tx.txs[0].permits[0];
     const permitHandler = new PermitHandler(chainId, ethers.provider);
     const signatureData = await permitHandler.getSignatureData(permit);
     const signature = await buyer._signTypedData(
@@ -3300,7 +3300,7 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
     expect(await dai.getBalance(router.contracts.swapModule.address)).to.eq(0);
   });
 
-  it("Fill multiple bids with permit bidding", async () => {
+  it("Fill multiple bids with permit", async () => {
     const seller = dan;
 
     const bids: BidDetails[] = [];
@@ -3345,7 +3345,10 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
       value: swapExecutions.map(({ value }) => value).reduce((a, b) => bn(a).add(b)),
     });
 
-    const usdc = new Sdk.Common.Helpers.Erc20(ethers.provider, Sdk.Common.Addresses.Usdc[chainId][0]);
+    const usdc = new Sdk.Common.Helpers.Erc20(
+      ethers.provider,
+      Sdk.Common.Addresses.Usdc[chainId][0]
+    );
 
     // Order 1: Seaport USDC
     const buyer1 = alice;
@@ -3353,22 +3356,29 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
     const price1 = parseUnits("2", 6);
     const fee1 = bn(550);
     {
-      // Issue USDC for buyer
+      // Issue USDC to the buyer
       await usdc.transfer(emily, buyer1.address, price1);
-      // await usdc.approve(buyer1, Sdk.SeaportV14.Addresses.Exchange[chainId]);
-      const permitData = await Sdk.Common.Helpers.createPermitMessage(
+
+      // Generate permit
+      const permitHandler = new PermitHandler(chainId, ethers.provider);
+      const [permit] = await permitHandler.generate(
+        buyer1.address,
+        Sdk.SeaportV15.Addresses.Exchange[chainId],
         {
-          chainId: chainId,
-          token: Sdk.Common.Addresses.Usdc[chainId][0],
-          owner: buyer1.address,
-          spender: Sdk.SeaportV14.Addresses.Exchange[chainId],
-          amount: MaxUint256.toString(),
-          deadline: String(Math.floor(Date.now() / 1000) + 86400 * 7),
+          kind: "no-transfers",
+          token: usdc.contract.address,
+          amount: price1.toString(),
         },
-        ethers.provider
+        Math.floor(Date.now() / 1000) + 5 * 60
       );
 
-      const permitSignature = await buyer1._signTypedData(permitData.domain, permitData.types, permitData.value);
+      // Sign permit
+      const signatureData = await permitHandler.getSignatureData(permit);
+      permit.data.signature = await buyer1._signTypedData(
+        signatureData.domain,
+        signatureData.types,
+        signatureData.value
+      );
 
       // Mint erc721 to seller
       await erc721.connect(seller).mint(tokenId1);
@@ -3399,29 +3409,20 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
           startTime: await getCurrentTimestamp(ethers.provider),
           endTime: (await getCurrentTimestamp(ethers.provider)) + 60,
         },
-        Sdk.SeaportV14.Order
+        Sdk.SeaportV15.Order
       );
       await buyOrder.sign(buyer1);
 
       bids.push({
         // Irrelevant
         orderId: "0",
-        kind: "seaport-v1.4",
+        kind: "seaport-v1.5",
         contractKind: "erc721",
         contract: erc721.address,
         tokenId: tokenId1.toString(),
         order: buyOrder,
         price: price1.toString(),
-        permitApproval: {
-          kind: "eip2612",
-          token: Sdk.Common.Addresses.Usdc[chainId][0],
-          owner: permitData.value.owner,
-          spender: permitData.value.spender,
-          deadline: parseInt(permitData.value.deadline),
-          value: permitData.value.value,
-          nonce: permitData.value.nonce,
-          signature: permitSignature,
-        }
+        permit,
       });
     }
 
@@ -3490,14 +3491,17 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
       source: "reservoir.market",
     });
 
+    // Trigger permits
+    await seller.sendTransaction(tx.txs[0].txData);
+
     // Trigger approvals
-    for (const approval of tx.txs[0].approvals) {
+    for (const approval of tx.txs[1].approvals) {
       await seller.sendTransaction(approval.txData);
     }
 
-    await seller.sendTransaction(tx.txs[0].txData);
+    // Trigger sale
+    await seller.sendTransaction(tx.txs[1].txData);
 
-    const sellerWethBalanceAfter = await weth.getBalance(seller.address);
     const token1OwnerAfter = await erc721.ownerOf(tokenId1);
     const token2OwnerAfter = await erc721.ownerOf(tokenId2);
 
@@ -3506,14 +3510,12 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
 
     // Router is stateless (it shouldn't keep any funds)
     expect(await ethers.provider.getBalance(router.contracts.router.address)).to.eq(0);
-    expect(await ethers.provider.getBalance(router.contracts.seaportV14Module.address)).to.eq(0);
     expect(await ethers.provider.getBalance(router.contracts.seaportV15Module.address)).to.eq(0);
     expect(await weth.getBalance(router.contracts.router.address)).to.eq(0);
-    expect(await weth.getBalance(router.contracts.seaportV14Module.address)).to.eq(0);
     expect(await weth.getBalance(router.contracts.seaportV15Module.address)).to.eq(0);
   });
 
-  it("Fill single bid with permit bidding", async () => {
+  it("Fill single bid with permit", async () => {
     const seller = dan;
 
     const bids: BidDetails[] = [];
@@ -3530,7 +3532,7 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
             {
               params: {
                 tokenIn: Sdk.Common.Addresses.WNative[chainId],
-                tokenOut: Sdk.Common.Addresses.Usdc[chainId],
+                tokenOut: Sdk.Common.Addresses.Usdc[chainId][0],
                 fee: 500,
                 recipient: router.contracts.swapModule.address,
                 amountOut: parseUnits("50000", 6),
@@ -3558,7 +3560,10 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
       value: swapExecutions.map(({ value }) => value).reduce((a, b) => bn(a).add(b)),
     });
 
-    const usdc = new Sdk.Common.Helpers.Erc20(ethers.provider, Sdk.Common.Addresses.Usdc[chainId][0]);
+    const usdc = new Sdk.Common.Helpers.Erc20(
+      ethers.provider,
+      Sdk.Common.Addresses.Usdc[chainId][0]
+    );
 
     // Order 1: Seaport USDC
     const buyer1 = alice;
@@ -3566,22 +3571,29 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
     const price1 = parseUnits("2", 6);
     const fee1 = bn(550);
     {
-      // Issue USDC for buyer
+      // Issue USDC to the buyer
       await usdc.transfer(emily, buyer1.address, price1);
-      // await usdc.approve(buyer1, Sdk.SeaportV14.Addresses.Exchange[chainId]);
-      const permitData = await Sdk.Common.Helpers.createPermitMessage(
+
+      // Generate permit
+      const permitHandler = new PermitHandler(chainId, ethers.provider);
+      const [permit] = await permitHandler.generate(
+        buyer1.address,
+        Sdk.SeaportV15.Addresses.Exchange[chainId],
         {
-          chainId: chainId,
-          token: Sdk.Common.Addresses.Usdc[chainId][0],
-          owner: buyer1.address,
-          spender: Sdk.SeaportV14.Addresses.Exchange[chainId],
-          amount: MaxUint256.toString(),
-          deadline: String(Math.floor(Date.now() / 1000) + 86400 * 7),
+          kind: "no-transfers",
+          token: usdc.contract.address,
+          amount: price1.toString(),
         },
-        ethers.provider
+        Math.floor(Date.now() / 1000) + 5 * 60
       );
 
-      const permitSignature = await buyer1._signTypedData(permitData.domain, permitData.types, permitData.value);
+      // Sign permit
+      const signatureData = await permitHandler.getSignatureData(permit);
+      permit.data.signature = await buyer1._signTypedData(
+        signatureData.domain,
+        signatureData.types,
+        signatureData.value
+      );
 
       // Mint erc721 to seller
       await erc721.connect(seller).mint(tokenId1);
@@ -3612,29 +3624,20 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
           startTime: await getCurrentTimestamp(ethers.provider),
           endTime: (await getCurrentTimestamp(ethers.provider)) + 60,
         },
-        Sdk.SeaportV14.Order
+        Sdk.SeaportV15.Order
       );
       await buyOrder.sign(buyer1);
 
       bids.push({
         // Irrelevant
         orderId: "0",
-        kind: "seaport-v1.4",
+        kind: "seaport-v1.5",
         contractKind: "erc721",
         contract: erc721.address,
         tokenId: tokenId1.toString(),
         order: buyOrder,
         price: price1.toString(),
-        permitApproval: {
-          kind: "eip2612",
-          token: Sdk.Common.Addresses.Usdc[chainId][0],
-          owner: permitData.value.owner,
-          spender: permitData.value.spender,
-          deadline: parseInt(permitData.value.deadline),
-          value: permitData.value.value,
-          nonce: permitData.value.nonce,
-          signature: permitSignature,
-        }
+        permit,
       });
     }
 
@@ -3646,13 +3649,16 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
       source: "reservoir.market",
     });
 
+    // Trigger permits
+    await seller.sendTransaction(tx.txs[0].txData);
+
     // Trigger approvals
-    for (const approval of tx.txs[0].approvals) {
+    for (const approval of tx.txs[1].approvals) {
       await seller.sendTransaction(approval.txData);
     }
 
-    await seller.sendTransaction(tx.txs[0].txData);
-
+    // Trigger sale
+    await seller.sendTransaction(tx.txs[1].txData);
 
     const token1OwnerAfter = await erc721.ownerOf(tokenId1);
 
@@ -3660,8 +3666,8 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
 
     // Router is stateless (it shouldn't keep any funds)
     expect(await ethers.provider.getBalance(router.contracts.router.address)).to.eq(0);
-    expect(await ethers.provider.getBalance(router.contracts.seaportV14Module.address)).to.eq(0);
+    expect(await ethers.provider.getBalance(router.contracts.seaportV15Module.address)).to.eq(0);
     expect(await weth.getBalance(router.contracts.router.address)).to.eq(0);
-    expect(await weth.getBalance(router.contracts.seaportV14Module.address)).to.eq(0);
+    expect(await weth.getBalance(router.contracts.seaportV15Module.address)).to.eq(0);
   });
 });

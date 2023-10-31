@@ -37,7 +37,6 @@ import {
 } from "./types";
 import { SwapInfo, generateSwapInfo, mergeSwapInfos } from "./swap/index";
 import { generateFTApprovalTxData, generateNFTApprovalTxData, isETH, isWETH } from "./utils";
-import { splitSignature } from "@ethersproject/bytes";
 
 // Tokens
 import ERC721Abi from "../../common/abis/Erc721.json";
@@ -3408,7 +3407,10 @@ export class Router {
             permits: await new PermitHandler(this.chainId, this.provider).generate(
               relayer,
               Addresses.PermitProxy[this.chainId],
-              ftTransferItems
+              {
+                kind: "with-transfers",
+                transferItems: ftTransferItems,
+              }
             ),
             txData: {
               from: relayer,
@@ -4662,34 +4664,26 @@ export class Router {
       }
     }
 
-    // Needed for pre-executing any permits
-    let permitExecution: ExecutionInfo | undefined;
-
+    // Pre-execute any permits
     const permits = details.filter((d) => d.permit).map((d) => d.permit!);
+    const permitHandler = new PermitHandler(this.chainId, this.provider);
     if (permits.length) {
-      permitExecution = {
-        module: this.contracts.permitProxy.address,
-        data: this.contracts.permitProxy.interface.encodeFunctionData(
-          "eip26126PermitWithTransfersAndExecute",
-          [
-            permits.map((p) => {
-              const { v, r, s } = splitSignature(p.data.signature!);
-              return {
-                owner: p.data.owner,
-                spender: p.data.spender,
-                token: p.data.token,
-                amount: p.data.amount,
-                deadline: p.data.deadline,
-                v,
-                r,
-                s,
-              };
-            }),
-            [],
-          ]
-        ),
-        value: 0,
-      };
+      const permitExecution = permitHandler.getRouterExecution(permits);
+      txs.push({
+        txTags: {
+          kind: "permit",
+        },
+        txData: {
+          from: taker,
+          to: this.contracts.router.address,
+          data:
+            this.contracts.router.interface.encodeFunctionData("execute", [[permitExecution]]) +
+            generateSourceBytes(options?.source),
+        },
+        approvals: [],
+        preSignatures: [],
+        orderIds: [],
+      });
     }
 
     // Batch fill all protected offers in a single transaction
@@ -4809,7 +4803,7 @@ export class Router {
       const execution = executionsWithDetails[0].execution;
       const detail = executionsWithDetails[0].detail;
       const routerLevelTxData = this.contracts.router.interface.encodeFunctionData("execute", [
-        [...(permitExecution ? [permitExecution] : []), execution],
+        [execution],
       ]);
 
       // Use the on-received ERC721/ERC1155 hooks for approval-less bid filling
@@ -4854,10 +4848,7 @@ export class Router {
           data:
             this.contracts.approvalProxy.interface.encodeFunctionData("bulkTransferWithExecute", [
               nftTransferItems,
-              [
-                ...(permitExecution ? [permitExecution] : []),
-                ...executionsWithDetails.map(({ execution }) => execution),
-              ],
+              [...executionsWithDetails.map(({ execution }) => execution)],
               Sdk.SeaportBase.Addresses.ReservoirConduitKey[this.chainId],
             ]) + generateSourceBytes(options?.source),
         },

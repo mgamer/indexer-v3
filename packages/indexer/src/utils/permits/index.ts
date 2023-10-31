@@ -1,12 +1,12 @@
 import { keccak256 } from "@ethersproject/solidity";
-import { Permit, PermitHandler } from "@reservoir0x/sdk/src/router/v6/permit";
+import { Permit, PermitHandler } from "@reservoir0x/sdk/dist/router/v6/permit";
 import stringify from "json-stable-stringify";
 
-import { config } from "@/config/index";
 import { idb } from "@/common/db";
 import { baseProvider } from "@/common/provider";
 import { redis } from "@/common/redis";
 import { fromBuffer, toBuffer } from "@/common/utils";
+import { config } from "@/config/index";
 
 // Persistent permits
 
@@ -98,24 +98,3 @@ export const saveEphemeralPermit = async (id: string, permit: Permit, expiresIn 
 
 export const getEphemeralPermit = async (id: string) =>
   redis.get(id).then((s) => (s ? (JSON.parse(s) as Permit) : undefined));
-
-// export const getMaxNonce = async (
-//   owner: string,
-//   token: string
-// ): Promise<string | undefined> => {
-//   const result = await redb.oneOrNone(
-//     `
-//       SELECT
-//         max(permits.nonce) as nonce
-//       FROM permits
-//       WHERE permits.owner = $/owner/
-//       AND permits.token = $/token/
-//     `,
-//     { owner: toBuffer(owner), token: toBuffer(token) }
-//   );
-
-//   if (!result) {
-//     return undefined;
-//   }
-//   return result.nonce as string;
-// };

@@ -25,7 +25,7 @@ contract PermitProxy is ERC2771Context, ReentrancyGuard {
   }
 
   // https://eips.ethereum.org/EIPS/eip-2612
-  struct EIP2612PermitWithTransfers {
+  struct EIP2612Permit {
     IERC20 token;
     address owner;
     address spender;
@@ -34,6 +34,10 @@ contract PermitProxy is ERC2771Context, ReentrancyGuard {
     uint8 v;
     bytes32 r;
     bytes32 s;
+  }
+
+  struct EIP2612PermitWithTransfers {
+    EIP2612Permit permit;
     Transfer[] transfers;
   }
 
@@ -53,13 +57,16 @@ contract PermitProxy is ERC2771Context, ReentrancyGuard {
 
   // --- Public methods ---
 
-  function eip26126PermitWithTransfersAndExecute(
-    EIP2612PermitWithTransfers[] calldata permits,
+  function eip2612PermitWithTransfersAndExecute(
+    EIP2612PermitWithTransfers[] calldata permitsWithTransfers,
     IReservoirV6_0_1.ExecutionInfo[] calldata executionInfos
   ) external nonReentrant {
-    uint256 permitsLength = permits.length;
-    for (uint256 i = 0; i < permitsLength; ) {
-      EIP2612PermitWithTransfers memory permit = permits[i];
+    uint256 permitsWithTransfersLength = permitsWithTransfers.length;
+    for (uint256 i = 0; i < permitsWithTransfersLength; ) {
+      EIP2612PermitWithTransfers memory permitWithTransfers = permitsWithTransfers[i];
+      EIP2612Permit memory permit = permitWithTransfers.permit;
+      Transfer[] memory transfers = permitWithTransfers.transfers;
+
       if (permit.owner != _msgSender()) {
         revert Unauthorized();
       }
@@ -74,13 +81,9 @@ contract PermitProxy is ERC2771Context, ReentrancyGuard {
         permit.s
       );
 
-      uint256 transfersLength = permit.transfers.length;
+      uint256 transfersLength = transfers.length;
       for (uint256 j = 0; j < transfersLength; ) {
-        permit.token.safeTransferFrom(
-          permit.owner,
-          permit.transfers[j].recipient,
-          permit.transfers[j].amount
-        );
+        permit.token.safeTransferFrom(permit.owner, transfers[j].recipient, transfers[j].amount);
 
         unchecked {
           ++j;
@@ -94,6 +97,27 @@ contract PermitProxy is ERC2771Context, ReentrancyGuard {
 
     if (executionInfos.length > 0) {
       ROUTER.execute(executionInfos);
+    }
+  }
+
+  function eip2612Permit(EIP2612Permit[] calldata permits) external nonReentrant {
+    uint256 permitsLength = permits.length;
+    for (uint256 i = 0; i < permitsLength; ) {
+      EIP2612Permit memory permit = permits[i];
+
+      IEIP2612(address(permit.token)).permit(
+        permit.owner,
+        permit.spender,
+        permit.amount,
+        permit.deadline,
+        permit.v,
+        permit.r,
+        permit.s
+      );
+
+      unchecked {
+        ++i;
+      }
     }
   }
 }
