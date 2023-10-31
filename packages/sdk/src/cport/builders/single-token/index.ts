@@ -43,7 +43,8 @@ export class SingleTokenBuilder extends BaseBuilder {
       marketplace: params.marketplace ?? AddressZero,
       beneficiary: params.beneficiary ?? undefined,
       marketplaceFeeNumerator: s(params.marketplaceFeeNumerator) ?? "0",
-      maxRoyaltyFeeNumerator: s(params.maxRoyaltyFeeNumerator) ?? "0",
+      maxRoyaltyFeeNumerator:
+        params.maxRoyaltyFeeNumerator != undefined ? s(params.maxRoyaltyFeeNumerator) : undefined,
       sellerOrBuyer: params.trader,
       tokenAddress: params.tokenAddress,
       tokenId: s(params.tokenId),

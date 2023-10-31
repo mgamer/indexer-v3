@@ -24,6 +24,7 @@ export * as sudoswapV2 from "@/orderbook/orders/sudoswap-v2";
 export * as midaswap from "@/orderbook/orders/midaswap";
 export * as caviarV1 from "@/orderbook/orders/caviar-v1";
 export * as paymentProcessor from "@/orderbook/orders/payment-processor";
+export * as cport from "@/orderbook/orders/cport";
 
 // Imports
 
@@ -450,6 +451,14 @@ export const generateListingDetailsV6 = (
       };
     }
 
+    case "cport": {
+      return {
+        kind: "cport",
+        ...common,
+        order: new Sdk.CPort.Order(config.chainId, order.rawData),
+      };
+    }
+
     default: {
       throw new Error("Unsupported order kind");
     }
@@ -796,6 +805,20 @@ export const generateBidDetailsV6 = async (
       const sdkOrder = new Sdk.PaymentProcessor.Order(config.chainId, order.rawData);
       return {
         kind: "payment-processor",
+        ...common,
+        order: sdkOrder,
+        extraArgs: {
+          maxRoyaltyFeeNumerator: await registry
+            .getRegistryRoyalties(common.contract, common.tokenId)
+            .then((royalties) => royalties.map((r) => r.bps).reduce((a, b) => a + b, 0)),
+        },
+      };
+    }
+
+    case "cport": {
+      const sdkOrder = new Sdk.CPort.Order(config.chainId, order.rawData);
+      return {
+        kind: "cport",
         ...common,
         order: sdkOrder,
         extraArgs: {

@@ -79,7 +79,7 @@ export const offChainCheck = async (
             .fetchAndUpdateFtApproval(
               order.params.paymentMethod,
               order.params.sellerOrBuyer,
-              Sdk.PaymentProcessor.Addresses.Exchange[config.chainId],
+              Sdk.CPort.Addresses.Exchange[config.chainId],
               true
             )
             .then((a) => a.value)
@@ -99,7 +99,7 @@ export const offChainCheck = async (
       hasBalance = false;
     }
 
-    const operator = Sdk.PaymentProcessor.Addresses.Exchange[config.chainId];
+    const operator = Sdk.CPort.Addresses.Exchange[config.chainId];
 
     // Check: maker has set the proper approval
     const nftApproval = await commonHelpers.getNftApproval(

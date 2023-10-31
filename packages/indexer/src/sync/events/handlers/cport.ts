@@ -12,6 +12,7 @@ import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import * as paymentProcessorUtils from "@/utils/payment-processor";
 import { getUSDAndNativePrices } from "@/utils/prices";
 import { defaultAbiCoder } from "@ethersproject/abi";
+// import { baseProvider } from "@/common/provider";
 
 export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChainData) => {
   // For keeping track of all individual trades per transaction
@@ -198,6 +199,8 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           break;
         }
 
+        // console.log("matchedMethod", matchedMethod);
+
         const agrs = exchange.contract.interface.decodeFunctionData(
           matchedMethod.name,
           relevantCalldata!
@@ -227,10 +230,11 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
 
           const isBuyOrder = orderBeneficiary != orderMaker ? false : true;
           const maker = isBuyOrder
-            ? parsedLog.args["seller"].toLowerCase()
-            : parsedLog.args["buyer"].toLowerCase();
-          let taker = isBuyOrder
             ? parsedLog.args["buyer"].toLowerCase()
+            : parsedLog.args["buyer"].toLowerCase();
+
+          let taker = isBuyOrder
+            ? parsedLog.args["seller"].toLowerCase()
             : parsedLog.args["seller"].toLowerCase();
 
           const orderSide = !isBuyOrder ? "sell" : "buy";

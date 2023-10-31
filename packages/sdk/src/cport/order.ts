@@ -51,7 +51,7 @@ export class Order {
 
   private detectKind(): Types.OrderKind {
     const params = this.params;
-    if (!params.maxRoyaltyFeeNumerator && !params.beneficiary) {
+    if (params.maxRoyaltyFeeNumerator && !params.beneficiary) {
       return "sale-approval";
     }
 

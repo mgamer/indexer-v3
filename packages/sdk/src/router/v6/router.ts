@@ -432,6 +432,47 @@ export class Router {
       }
     }
 
+    // We don't have a module for CPort listings
+    if (details.some(({ kind }) => kind === "cport")) {
+      if (options?.relayer) {
+        throw new Error("Relayer not supported for CPort orders");
+      }
+
+      for (const detail of details.filter(({ kind }) => kind === "cport")) {
+        const order = detail.order as Sdk.CPort.Order;
+        const exchange = new Sdk.CPort.Exchange(this.chainId);
+        const orderPrice = order.params.price;
+
+        if (buyInCurrency !== Sdk.Common.Addresses.Native[this.chainId]) {
+          swapDetails.push({
+            tokenIn: buyInCurrency,
+            tokenOut: Sdk.Common.Addresses.Native[this.chainId],
+            tokenOutAmount: orderPrice,
+            recipient: taker,
+            refundTo: taker,
+            details: [detail],
+            txIndex: txs.length,
+          });
+        }
+
+        txs.push({
+          approvals: [],
+          permits: [],
+          preSignatures: [],
+          txTags: {
+            kind: "sale",
+            listings: { manifold: 1 },
+          },
+          txData: exchange.fillOrderTx(taker, order, {
+            taker,
+          }),
+          orderIds: [detail.orderId],
+        });
+
+        success[detail.orderId] = true;
+      }
+    }
+
     // Detect which contracts block SCs via PaymentProcessor
     const blockedPaymentProcessorDetails: ListingDetails[] = [];
     await Promise.all(
@@ -3681,6 +3722,37 @@ export class Router {
         txData: exchange.fillOrdersTx(taker, orders, takeOrders),
         orderIds: paymentProcessorDetails.map((d) => d.orderId),
       });
+    }
+
+    // We don't have a module for CPort offer
+    if (details.some(({ kind }) => kind === "cport")) {
+      for (const detail of details.filter(({ kind }) => kind === "cport")) {
+        const order = detail.order as Sdk.CPort.Order;
+        const exchange = new Sdk.CPort.Exchange(this.chainId);
+
+        txs.push({
+          approvals: [
+            {
+              orderIds: [detail.orderId],
+              contract: detail.contract,
+              owner: taker,
+              operator: exchange.contract.address,
+              txData: generateNFTApprovalTxData(detail.contract, taker, exchange.contract.address),
+            },
+          ],
+          preSignatures: [],
+          txTags: {
+            kind: "sale",
+            bids: { cport: 1 },
+          },
+          txData: exchange.fillOrderTx(taker, order, {
+            taker,
+          }),
+          orderIds: [detail.orderId],
+        });
+
+        success[detail.orderId] = true;
+      }
     }
 
     // CASE 2

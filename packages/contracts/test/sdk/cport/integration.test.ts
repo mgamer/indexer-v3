@@ -4,7 +4,7 @@
 import { Contract } from "@ethersproject/contracts";
 import { parseEther } from "@ethersproject/units";
 import * as Common from "@reservoir0x/sdk/src/common";
-import * as PaymentProcessor from "@reservoir0x/sdk/src/payment-processor";
+import * as CPort from "@reservoir0x/sdk/src/cport";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 import { expect } from "chai";
 import chalk from "chalk";
@@ -17,7 +17,7 @@ import { getChainId, getCurrentTimestamp, reset, setupNFTs } from "../../utils";
 const green = chalk.green;
 const error = chalk.red;
 
-describe("PaymentProcessor - Indexer Integration Test", () => {
+describe("CPort - Indexer Integration Test", () => {
   const chainId = getChainId();
 
   let deployer: SignerWithAddress;
@@ -55,8 +55,8 @@ describe("PaymentProcessor - Indexer Integration Test", () => {
     await weth.deposit(seller, price);
 
     // Approve the exchange contract for the buyer
-    await weth.approve(seller, PaymentProcessor.Addresses.Exchange[chainId]);
-    await weth.approve(buyer, PaymentProcessor.Addresses.Exchange[chainId]);
+    await weth.approve(seller, CPort.Addresses.Exchange[chainId]);
+    await weth.approve(buyer, CPort.Addresses.Exchange[chainId]);
 
     // Mint erc721 to seller
     await erc721.connect(seller).mint(boughtTokenId);
@@ -64,66 +64,64 @@ describe("PaymentProcessor - Indexer Integration Test", () => {
     const nft = new Common.Helpers.Erc721(ethers.provider, erc721.address);
 
     // Approve the transfer manager
-    await nft.approve(seller, PaymentProcessor.Addresses.Exchange[chainId]);
-    await nft.approve(buyer, PaymentProcessor.Addresses.Exchange[chainId]);
+    await nft.approve(seller, CPort.Addresses.Exchange[chainId]);
+    await nft.approve(buyer, CPort.Addresses.Exchange[chainId]);
 
-    const exchange = new PaymentProcessor.Exchange(chainId);
+    const exchange = new CPort.Exchange(chainId);
     console.log(green("\n\n\t Build Order"));
 
     const buyerMasterNonce = await exchange.getMasterNonce(ethers.provider, buyer.address);
     const sellerMasterNonce = await exchange.getMasterNonce(ethers.provider, seller.address);
     const blockTime = await getCurrentTimestamp(ethers.provider);
 
-    const builder = new PaymentProcessor.Builders.SingleToken(chainId);
+    const builder = new CPort.Builders.SingleToken(chainId);
     const orderParameters = {
-      protocol: PaymentProcessor.Types.TokenProtocols.ERC721,
-      sellerAcceptedOffer: true,
+      protocol: CPort.Types.OrderProtocols.ERC721_FILL_OR_KILL,
+      beneficiary: buyer.address,
       marketplace: constants.AddressZero,
       marketplaceFeeNumerator: "0",
-      maxRoyaltyFeeNumerator: "0",
       trader: buyer.address,
       tokenAddress: erc721.address,
       tokenId: boughtTokenId,
       amount: "1",
       price: price,
-      expiration: (blockTime + 86400 * 30).toString(),
-      coin: Common.Addresses.WNative[chainId],
+      expiration: (blockTime + 60 * 60).toString(),
+      paymentMethod: Common.Addresses.WNative[chainId],
       masterNonce: buyerMasterNonce,
     };
 
     let order = builder.build(orderParameters);
-    let matchOrder = order.buildMatching({
-      taker: seller.address,
-      takerMasterNonce: sellerMasterNonce,
-    });
+    // let matchOrder = order.buildMatching({
+    //   taker: seller.address,
+    //   takerMasterNonce: sellerMasterNonce,
+    // });
 
     await order.sign(buyer);
-    await matchOrder.sign(seller);
+    // await matchOrder.sign(seller);
 
     if (isListing) {
       const listingParams = {
-        protocol: 0,
-        sellerAcceptedOffer: false,
+        protocol: CPort.Types.OrderProtocols.ERC721_FILL_OR_KILL,
         marketplace: constants.AddressZero,
         marketplaceFeeNumerator: "0",
         maxRoyaltyFeeNumerator: "0",
-        privateTaker: constants.AddressZero,
         trader: seller.address,
         tokenAddress: erc721.address,
         tokenId: boughtTokenId,
         amount: "1",
         price: price,
-        expiration: (blockTime + 86400 * 30).toString(),
-        coin: Common.Addresses.Native[chainId],
+        expiration: (blockTime + 60 * 60).toString(),
+        paymentMethod: constants.AddressZero,
         masterNonce: sellerMasterNonce,
       };
       order = builder.build(listingParams);
-      matchOrder = order.buildMatching({
-        taker: buyer.address,
-        takerMasterNonce: buyerMasterNonce,
-      });
+      // matchOrder = order.buildMatching({
+      //   taker: buyer.address,
+      //   takerMasterNonce: buyerMasterNonce,
+      // });
+
       await order.sign(seller);
-      await matchOrder.sign(buyer);
+      // await matchOrder.sign(buyer);
     }
 
     console.log(green("\t Perform Order Saving:"));
@@ -132,7 +130,7 @@ describe("PaymentProcessor - Indexer Integration Test", () => {
     const saveResult = await indexerHelper.doOrderSaving({
       contract: erc721.address,
       kind: "erc721",
-      currency: order.params.coin,
+      currency: order.params.paymentMethod,
       // Refresh balance incase the local indexer doesn't have the state
       makers: [order.params.sellerOrBuyer],
       nfts: [
@@ -146,7 +144,7 @@ describe("PaymentProcessor - Indexer Integration Test", () => {
         // Order Info
         {
           // export name from the @/orderbook/index
-          kind: "paymentProcessor",
+          kind: "cport",
           data: order.params,
         },
       ],
@@ -237,11 +235,11 @@ describe("PaymentProcessor - Indexer Integration Test", () => {
       return;
     }
 
-    console.log({
-      isListing,
-      seller: seller.address,
-      buyer: buyer.address,
-    });
+    // console.log({
+    //   isListing,
+    //   seller: seller.address,
+    //   buyer: buyer.address,
+    // });
 
     await order.checkFillability(ethers.provider);
 
@@ -250,7 +248,9 @@ describe("PaymentProcessor - Indexer Integration Test", () => {
     let fillTxHash: string | null = null;
 
     if (!executeByRouterAPI) {
-      const tx = await exchange.fillOrder(!isListing ? seller : buyer, order, matchOrder);
+      const tx = await exchange.fillOrder(!isListing ? seller : buyer, order, {
+        taker: isListing ? buyer.address : seller.address,
+      });
       await tx.wait();
       fillTxHash = tx.hash;
     } else {
@@ -264,7 +264,7 @@ describe("PaymentProcessor - Indexer Integration Test", () => {
                 orderId: orderInfo.id,
               },
             ],
-            taker: matchOrder.params.sellerOrBuyer,
+            taker: isListing ? buyer.address : seller.address,
           });
           const allSteps = executeResponse.steps;
           const lastSetp = allSteps[allSteps.length - 1];
@@ -283,7 +283,7 @@ describe("PaymentProcessor - Indexer Integration Test", () => {
                 orderId: orderInfo.id,
               },
             ],
-            taker: matchOrder.params.sellerOrBuyer,
+            taker: isListing ? buyer.address : seller.address,
           };
           const executeResponse = await indexerHelper.executeBuyV7(payload);
           const allSteps = executeResponse.steps;
@@ -320,8 +320,9 @@ describe("PaymentProcessor - Indexer Integration Test", () => {
     const matchFillEvent = fillEvents.find((event: any) => event.orderId === orderInfo.id);
     if (matchFillEvent) {
       const orderData = {
-        maker: order.params.sellerOrBuyer,
-        taker: (isListing ? buyer : seller).address.toLowerCase(),
+        side: isListing ? "sell" : "buy", 
+        maker: (isListing ? buyer : seller).address.toLowerCase(),
+        taker: (isListing ? seller : buyer).address.toLowerCase(),
       };
 
       expect(orderData.maker).to.eq(matchFillEvent.maker);
