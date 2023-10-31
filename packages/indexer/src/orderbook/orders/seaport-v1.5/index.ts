@@ -813,10 +813,7 @@ export const save = async (
         fee_bps: feeBps,
         fee_breakdown: feeBreakdown || null,
         dynamic: info.isDynamic ?? null,
-        raw_data: {
-          ...(metadata.permitId ? { permitId: metadata.permitId } : {}),
-          ...order.params,
-        },
+        raw_data: order.params,
         expiration: validTo,
         missing_royalties: missingRoyalties,
         normalized_value: normalizedValue,
