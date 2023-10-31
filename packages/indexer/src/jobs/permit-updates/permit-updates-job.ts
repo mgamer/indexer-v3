@@ -57,7 +57,7 @@ export class PermitUpdatesJob extends AbstractRabbitMqJobHandler {
         if (invalidatedPermits.length) {
           const permit = (permitId: string, permitIndex: number) => ({
             rawType: true,
-            toPostgres: () => pgp.as.format("($1, $2)", [permitId, permitIndex]),
+            toPostgres: () => pgp.as.format("($1::TEXT, $2::INT)", [permitId, permitIndex]),
           });
 
           const invalidatedOrders = await idb.manyOrNone(
@@ -68,7 +68,7 @@ export class PermitUpdatesJob extends AbstractRabbitMqJobHandler {
               WHERE orders.maker = $/maker/
                 AND orders.side = 'buy'
                 AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
-                AND (orders.raw_data ->> 'permitId', orders.raw_data ->> 'permitIndex') IN ($/permits:list/)
+                AND (orders.raw_data->>'permitId'::TEXT, orders.raw_data->>'permitIndex'::INT) IN ($/permits:list/)
             `,
             {
               maker: toBuffer(owner),
