@@ -1,5 +1,6 @@
 import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handler";
 import { idb } from "@/common/db";
+import { toBuffer } from "@/common/utils";
 
 export enum ActionsOrigin {
   DailyProcess = "daily-process",
@@ -18,6 +19,9 @@ export type ActionsTrackingJobPayload = {
   context: ActionsContext;
   origin: ActionsOrigin;
   actionTakerIdentifier: string;
+  contract?: string;
+  collection?: string;
+  tokenId?: string;
   data?: object;
 };
 
@@ -28,7 +32,7 @@ export class ActionsTrackingJob extends AbstractRabbitMqJobHandler {
   lazyMode = true;
 
   protected async process(payload: ActionsTrackingJobPayload) {
-    const { context, origin, actionTakerIdentifier, data } = payload;
+    const { context, origin, actionTakerIdentifier, contract, collection, tokenId, data } = payload;
 
     await idb.none(
       `
@@ -36,11 +40,17 @@ export class ActionsTrackingJob extends AbstractRabbitMqJobHandler {
           context,
           origin,
           action_taker_identifier,
+          contract,
+          collection_id,
+          token_id,
           data
         ) VALUES (
           $/context/,
           $/origin/,
           $/actionTakerIdentifier/,
+          $/contract/,
+          $/collection/,
+          $/tokenId/,
           $/data:json/
         )
         `,
@@ -48,6 +58,9 @@ export class ActionsTrackingJob extends AbstractRabbitMqJobHandler {
         context,
         origin,
         actionTakerIdentifier,
+        contract: contract ? toBuffer(contract) : null,
+        collection: collection ?? null,
+        tokenId: tokenId ?? null,
         data: data ?? {},
       }
     );

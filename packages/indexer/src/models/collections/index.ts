@@ -220,8 +220,8 @@ export class Collections {
             context: ActionsContext.SpamContractUpdate,
             origin: ActionsOrigin.CollectionRefresh,
             actionTakerIdentifier: "alchemy",
+            contract,
             data: {
-              contract,
               newSpamState: 1,
             },
           },

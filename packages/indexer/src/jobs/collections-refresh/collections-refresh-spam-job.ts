@@ -60,8 +60,8 @@ export default class CollectionRefreshSpamJob extends AbstractRabbitMqJobHandler
           context: ActionsContext.SpamContractUpdate,
           origin: ActionsOrigin.DailyProcess,
           actionTakerIdentifier: "alchemy",
+          contract,
           data: {
-            contract,
             newSpamState: 1,
           },
         }));

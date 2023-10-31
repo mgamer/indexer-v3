@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { Request, RouteOptions } from "@hapi/hapi";
-import { regex } from "@/common/utils";
 import Joi from "joi";
 import * as Boom from "@hapi/boom";
 import { logger } from "@/common/logger";
@@ -16,9 +15,9 @@ import {
 
 const version = "v1";
 
-export const postReportCollectionSpamV1Options: RouteOptions = {
-  description: "Report if a collection is spam",
-  notes: "This API can be used by allowed API keys to report spam on a collection.",
+export const postSpamStatusCollectionV1Options: RouteOptions = {
+  description: "Update the collection spam status",
+  notes: "This API can be used by allowed API keys to update the spam status of a collection.",
   tags: ["api", "Management"],
   plugins: {
     "hapi-swagger": {
@@ -32,35 +31,46 @@ export const postReportCollectionSpamV1Options: RouteOptions = {
     headers: Joi.object({
       "x-api-key": Joi.string().required(),
     }).options({ allowUnknown: true }),
-    params: Joi.object({
-      collection: Joi.string()
-        .lowercase()
-        .pattern(regex.collectionId)
-        .required()
-        .description(
-          "The collection to report / un-report, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`. Requires an authorized api key to be passed."
-        ),
-    }),
     payload: Joi.object({
+      collections: Joi.alternatives()
+        .try(
+          Joi.array()
+            .items(
+              Joi.string()
+                .lowercase()
+                .pattern(/^0x[a-fA-F0-9]{40}$/)
+            )
+            .min(1)
+            .max(50)
+            .description(
+              "Update to one or more collections. Max limit is 50. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
+            ),
+          Joi.string()
+            .lowercase()
+            .pattern(/^0x[a-fA-F0-9]{40}$/)
+            .description(
+              "Update to one or more collections. Max limit is 50. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
+            )
+        )
+        .required(),
       active: Joi.boolean()
-        .description("Whether to report or un-report the collection as spam")
+        .description("API to update the spam status of a collection")
         .default(true),
     }),
   },
   response: {
     schema: Joi.object({
       message: Joi.string(),
-    }).label(`postReportCollectionSpam${version.toUpperCase()}Response`),
+    }).label(`postSpamStatusCollection${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(
-        `post-report-collection-spam-${version}-handler`,
+        `post-spam-status-collection-${version}-handler`,
         `Wrong response schema: ${error}`
       );
       throw error;
     },
   },
   handler: async (request: Request) => {
-    const params = request.params as any;
     const payload = request.payload as any;
     let updateResult;
 
@@ -71,43 +81,50 @@ export const postReportCollectionSpamV1Options: RouteOptions = {
         throw Boom.unauthorized("Invalid API key");
       }
 
-      if (!apiKey.permissions?.report_spam) {
+      if (!apiKey.permissions?.update_spam_status) {
         throw Boom.unauthorized("Not allowed");
       }
 
-      updateResult = await idb.result(
+      if (!_.isArray(payload.collections)) {
+        payload.collections = [payload.collections];
+      }
+
+      updateResult = await idb.manyOrNone(
         `
             UPDATE collections
             SET is_spam = $/active/
-            WHERE id = $/id/
+            WHERE id IN ($/ids:list/)
             AND is_spam IS DISTINCT FROM $/active/
+            RETURNING id
           `,
         {
-          id: params.collection,
+          ids: payload.collection,
           active: Number(payload.active) ? 100 : -100,
         }
       );
 
-      if (updateResult && updateResult.rowCount) {
+      if (updateResult) {
         // Track the change
-        await actionsTrackingJob.addToQueue([
-          {
+        await actionsTrackingJob.addToQueue(
+          updateResult.map((res) => ({
             context: ActionsContext.SpamCollectionUpdate,
             origin: ActionsOrigin.API,
             actionTakerIdentifier: apiKey.key,
+            collection: res.id,
             data: {
-              collection: params.collection,
               newSpamState: Number(payload.active),
             },
-          },
-        ]);
+          }))
+        );
       }
 
       return {
-        message: `Report spam for collection ${params.collection} request accepted`,
+        message: `Update spam status for collection ${JSON.stringify(
+          payload.collection
+        )} request accepted`,
       };
     } catch (error) {
-      logger.error(`post-report-collection-spam-${version}-handler`, `Handler failure: ${error}`);
+      logger.error(`post-spam-status-collection-${version}-handler`, `Handler failure: ${error}`);
       throw error;
     }
   },

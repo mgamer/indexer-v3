@@ -582,8 +582,8 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
-    path: "/collections/{collection}/report-spam/v1",
-    options: collectionsEndpoints.postReportCollectionSpamV1Options,
+    path: "/collections/spam-status/v1",
+    options: collectionsEndpoints.postSpamStatusCollectionV1Options,
   });
 
   // Chain
@@ -1181,8 +1181,8 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
-    path: "/tokens/{token}/report-spam/v1",
-    options: tokensEndpoints.postReportTokenSpamV1Options,
+    path: "/tokens/spam-status/v1",
+    options: tokensEndpoints.postSpamStatusTokenV1Options,
   });
 
   server.route({
@@ -1326,7 +1326,7 @@ export const setupRoutes = (server: Server) => {
   server.route({
     method: "GET",
     path: "/tokens/ids/v1",
-    options: tokensEndpoints.getTokensIdsV4Options,
+    options: tokensEndpoints.getTokensIdsV1Options,
   });
 
   // Token sets
