@@ -164,7 +164,7 @@ import { processAskEventsJob } from "@/jobs/asks/process-ask-events-job";
 import { backfillAsksElasticsearchJob } from "@/jobs/asks/backfill-asks-elasticsearch-job";
 import { collectionRefreshSpamJob } from "@/jobs/collections-refresh/collections-refresh-spam-job";
 import { refreshAsksTokenJob } from "@/jobs/asks/refresh-asks-token-job";
-import { generalTrackingJob } from "@/jobs/general-tracking/general-tracking-job";
+import { actionsLogJob } from "@/jobs/general-tracking/actions-log-job";
 
 export const allJobQueues = [
   backfillWrongNftBalances.queue,
@@ -311,7 +311,7 @@ export class RabbitMqJobsConsumer {
       backfillAsksElasticsearchJob,
       collectionRefreshSpamJob,
       refreshAsksTokenJob,
-      generalTrackingJob,
+      actionsLogJob,
     ];
   }
 
