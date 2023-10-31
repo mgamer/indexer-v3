@@ -163,6 +163,7 @@ import { processAskEventJob } from "@/jobs/asks/process-ask-event-job";
 import { processAskEventsJob } from "@/jobs/asks/process-ask-events-job";
 import { backfillAsksElasticsearchJob } from "@/jobs/asks/backfill-asks-elasticsearch-job";
 import { collectionRefreshSpamJob } from "@/jobs/collections-refresh/collections-refresh-spam-job";
+import { refreshAsksTokenJob } from "@/jobs/asks/refresh-asks-token-job";
 import { refreshAsksTokenFlagStatusJob } from "@/jobs/asks/refresh-asks-token-flag-status-job";
 import { generalTrackingJob } from "@/jobs/general-tracking/general-tracking-job";
 
@@ -310,6 +311,7 @@ export class RabbitMqJobsConsumer {
       processAskEventsJob,
       backfillAsksElasticsearchJob,
       collectionRefreshSpamJob,
+      refreshAsksTokenJob,
       refreshAsksTokenFlagStatusJob,
       generalTrackingJob,
     ];
