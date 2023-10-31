@@ -5,10 +5,10 @@ import { AlchemySpamContracts } from "@/models/alchemy-spam-contracts";
 import { idb } from "@/common/db";
 import { toBuffer } from "@/common/utils";
 import {
-  ActionsContext,
-  ActionsOrigin,
-  actionsTrackingJob,
-} from "@/jobs/actions-tracking/actions-tracking-job";
+  GeneralTrackingContext,
+  GeneralTrackingOrigin,
+  generalTrackingJob,
+} from "@/jobs/general-tracking/general-tracking-job";
 
 export default class CollectionRefreshSpamJob extends AbstractRabbitMqJobHandler {
   queueName = "collections-refresh-spam";
@@ -57,8 +57,8 @@ export default class CollectionRefreshSpamJob extends AbstractRabbitMqJobHandler
 
         // Track the change
         const trackingParams = _.map(newSpamContracts, (contract) => ({
-          context: ActionsContext.SpamContractUpdate,
-          origin: ActionsOrigin.DailyProcess,
+          context: GeneralTrackingContext.SpamContractUpdate,
+          origin: GeneralTrackingOrigin.DailyProcess,
           actionTakerIdentifier: "alchemy",
           contract,
           data: {
@@ -66,7 +66,7 @@ export default class CollectionRefreshSpamJob extends AbstractRabbitMqJobHandler
           },
         }));
 
-        await actionsTrackingJob.addToQueue(trackingParams);
+        await generalTrackingJob.addToQueue(trackingParams);
       }
     }
   }

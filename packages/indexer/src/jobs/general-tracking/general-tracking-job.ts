@@ -2,22 +2,22 @@ import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handle
 import { idb } from "@/common/db";
 import { toBuffer } from "@/common/utils";
 
-export enum ActionsOrigin {
+export enum GeneralTrackingOrigin {
   DailyProcess = "daily-process",
   CollectionRefresh = "collection-refresh",
   API = "api",
 }
 
-export enum ActionsContext {
+export enum GeneralTrackingContext {
   SpamContractUpdate = "spam-contract-update",
   SpamCollectionUpdate = "spam-collection-update",
   SpamTokenUpdate = "spam-token-update",
   DisableMetadataUpdate = "disable-metadata-update",
 }
 
-export type ActionsTrackingJobPayload = {
-  context: ActionsContext;
-  origin: ActionsOrigin;
+export type GeneralTrackingJobPayload = {
+  context: GeneralTrackingContext;
+  origin: GeneralTrackingOrigin;
   actionTakerIdentifier: string;
   contract?: string;
   collection?: string;
@@ -25,13 +25,13 @@ export type ActionsTrackingJobPayload = {
   data?: object;
 };
 
-export class ActionsTrackingJob extends AbstractRabbitMqJobHandler {
-  queueName = "actions-tracking";
+export class GeneralTrackingJob extends AbstractRabbitMqJobHandler {
+  queueName = "general-tracking";
   maxRetries = 10;
   concurrency = 10;
   lazyMode = true;
 
-  protected async process(payload: ActionsTrackingJobPayload) {
+  protected async process(payload: GeneralTrackingJobPayload) {
     const { context, origin, actionTakerIdentifier, contract, collection, tokenId, data } = payload;
 
     await idb.none(
@@ -66,9 +66,9 @@ export class ActionsTrackingJob extends AbstractRabbitMqJobHandler {
     );
   }
 
-  public async addToQueue(params: ActionsTrackingJobPayload[]) {
+  public async addToQueue(params: GeneralTrackingJobPayload[]) {
     await this.sendBatch(params.map((p) => ({ payload: p })));
   }
 }
 
-export const actionsTrackingJob = new ActionsTrackingJob();
+export const generalTrackingJob = new GeneralTrackingJob();
