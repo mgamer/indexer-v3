@@ -711,7 +711,7 @@ export const getNetworkSettings = (): NetworkSettings => {
               symbol: "$VAL",
               decimals: 18,
               metadata: {
-                image: "https://i.ibb.co/s1k4Qvz/valeria-logo.png",
+                image: "https://i.ibb.co/YRFynrp/wvallogo.png",
               },
             },
           ],
