@@ -1,10 +1,10 @@
 import * as Sdk from "@reservoir0x/sdk";
-import { BaseBuilder } from "@reservoir0x/sdk/dist/payment-processor/builders/base";
+import { BaseBuilder } from "@reservoir0x/sdk/dist/cport/builders/base";
 
 import { redb } from "@/common/db";
 import { toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
-import * as utils from "@/orderbook/orders/payment-processor/build/utils";
+import * as utils from "@/orderbook/orders/cport/build/utils";
 import * as registry from "@/utils/royalties/registry";
 
 interface BuildOrderOptions extends utils.BaseOrderBuildOptions {
@@ -35,7 +35,7 @@ export const build = async (options: BuildOrderOptions) => {
     throw new Error("Could not generate build info");
   }
 
-  const builder: BaseBuilder = new Sdk.PaymentProcessor.Builders.SingleToken(config.chainId);
+  const builder: BaseBuilder = new Sdk.CPort.Builders.SingleToken(config.chainId);
 
   const tokenRoyalties = await registry.getRegistryRoyalties(options.contract!, options.tokenId);
   const tokenRoyaltiesBps = tokenRoyalties.map((r) => r.bps).reduce((a, b) => a + b, 0);

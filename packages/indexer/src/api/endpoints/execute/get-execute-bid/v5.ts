@@ -51,6 +51,10 @@ import * as zeroExV4BuyCollection from "@/orderbook/orders/zeroex-v4/build/buy/c
 import * as paymentProcessorBuyToken from "@/orderbook/orders/payment-processor/build/buy/token";
 import * as paymentProcessorBuyCollection from "@/orderbook/orders/payment-processor/build/buy/collection";
 
+// CPort
+import * as cPortBuyToken from "@/orderbook/orders/cport/build/buy/token";
+import * as cPortBuyCollection from "@/orderbook/orders/cport/build/buy/collection";
+
 const version = "v5";
 
 export const getExecuteBidV5Options: RouteOptions = {
@@ -123,7 +127,8 @@ export const getExecuteBidV5Options: RouteOptions = {
                 "looks-rare-v2",
                 "x2y2",
                 "alienswap",
-                "payment-processor"
+                "payment-processor",
+                "cport"
               )
               .default("seaport-v1.5")
               .description("Exchange protocol used to create order. Example: `seaport-v1.5`"),
@@ -1289,6 +1294,106 @@ export const getExecuteBidV5Options: RouteOptions = {
                           {
                             order: {
                               kind: "payment-processor",
+                              data: {
+                                ...order.params,
+                              },
+                            },
+                            tokenSetId,
+                            attribute,
+                            collection,
+                            isNonFlagged: params.excludeFlaggedTokens,
+                            orderbook: params.orderbook,
+                            orderbookApiKey: params.orderbookApiKey,
+                          },
+                        ],
+                        source,
+                      },
+                    },
+                  },
+                  orderIndexes: [i],
+                });
+
+                addExecution(order.hash(), params.quantity);
+
+                break;
+              }
+
+              case "cport": {
+                if (!["reservoir"].includes(params.orderbook)) {
+                  return errors.push({
+                    message: "Unsupported orderbook",
+                    orderIndex: i,
+                  });
+                }
+
+                let order: Sdk.CPort.Order;
+                if (token) {
+                  const [contract, tokenId] = token.split(":");
+                  order = await cPortBuyToken.build({
+                    ...params,
+                    maker,
+                    contract,
+                    tokenId,
+                  });
+                } else if (collection) {
+                  order = await cPortBuyCollection.build({
+                    ...params,
+                    maker,
+                    collection,
+                  });
+                } else {
+                  return errors.push({
+                    message: "Only token and collection bids are supported",
+                    orderIndex: i,
+                  });
+                }
+
+                // Check the maker's approval
+                let approvalTx: TxData | undefined;
+                const currencyApproval = await currency.getAllowance(
+                  maker,
+                  Sdk.CPort.Addresses.Exchange[config.chainId]
+                );
+                if (bn(currencyApproval).lt(bn(order.params.price))) {
+                  approvalTx = currency.approveTransaction(
+                    maker,
+                    Sdk.CPort.Addresses.Exchange[config.chainId]
+                  );
+                }
+
+                steps[2].items.push({
+                  status: !approvalTx ? "complete" : "incomplete",
+                  data: approvalTx,
+                  orderIndexes: [i],
+                });
+
+                // Handle on-chain authentication
+                for (const tv of _.uniq(unverifiedERC721CTransferValidators)) {
+                  const erc721cAuthId = e.getAuthId(payload.maker);
+                  const erc721cAuth = await e.getAuth(erc721cAuthId);
+
+                  steps[3].items.push({
+                    status: "incomplete",
+                    data: new Sdk.Common.Helpers.ERC721C().generateVerificationTxData(
+                      tv,
+                      payload.maker,
+                      erc721cAuth!.signature
+                    ),
+                  });
+                }
+
+                steps[4].items.push({
+                  status: "incomplete",
+                  data: {
+                    sign: order.getSignatureData(),
+                    post: {
+                      endpoint: "/order/v4",
+                      method: "POST",
+                      body: {
+                        items: [
+                          {
+                            order: {
+                              kind: "cport",
                               data: {
                                 ...order.params,
                               },
