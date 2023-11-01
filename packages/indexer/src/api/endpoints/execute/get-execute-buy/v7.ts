@@ -1666,7 +1666,10 @@ export const getExecuteBuyV7Options: RouteOptions = {
             token,
             amount: item.quantity,
           })
-          .then((response) => response.data.price);
+          .then((response) => response.data.price)
+          .catch((error) => {
+            throw Boom.badRequest(error.response?.data ?? "Error getting quote");
+          });
 
         item.fromChainId = fromChainId;
         item.totalPrice = formatPrice(quote);
