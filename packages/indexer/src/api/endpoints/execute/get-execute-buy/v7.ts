@@ -1660,7 +1660,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
           : `${item.contract}:${MaxUint256.toString()}`.toLowerCase();
 
         const quote = await axios
-          .post(`${config.crossChainSolverBaseUrl}/quote`, {
+          .post(`${config.crossChainSolverBaseUrl}/intents/quote`, {
             fromChainId,
             toChainId,
             token,
@@ -1708,7 +1708,8 @@ export const getExecuteBuyV7Options: RouteOptions = {
               endpoint: "/execute/status/v1",
               method: "POST",
               body: {
-                kind: "transaction",
+                kind: "cross-chain-transaction",
+                chainId: fromChainId,
               },
             },
           });
@@ -1738,7 +1739,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
               body: {
                 kind: "cross-chain-intent",
                 order: order.params,
-                fromChainId,
+                chainId: fromChainId,
               },
             },
           },
