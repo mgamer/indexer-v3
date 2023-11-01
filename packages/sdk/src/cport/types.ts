@@ -23,15 +23,6 @@ export type SignatureECDSA = {
   s: string;
 };
 
-// export type Cosignature = {
-//   signer: string;
-//   taker: string;
-//   expiration: string;
-//   v: number;
-//   r: string;
-//   s: string;
-// };
-
 export type MatchedOrder = {
   protocol: OrderProtocols;
   maker: string;
@@ -51,37 +42,6 @@ export type MatchedOrder = {
 
   signature: SignatureECDSA;
 };
-
-// export type MatchedOrderBundleBase = {
-//   protocol: number;
-//   paymentCoin: string;
-//   tokenAddress: string;
-//   privateBuyer: string;
-//   buyer: string;
-//   delegatedPurchaser: string;
-//   marketplace: string;
-//   marketplaceFeeNumerator: string;
-//   offerNonce: string;
-//   offerPrice: string;
-//   offerExpiration: string;
-// };
-
-// export type BundledItem = {
-//   tokenId: string;
-//   amount: string;
-//   maxRoyaltyFeeNumerator: string;
-//   itemPrice: string;
-//   listingNonce: string;
-//   listingExpiration: string;
-//   seller: string;
-// };
-
-// export type SweepMatchedOrder = {
-//   bundleDetails: MatchedOrderBundleBase;
-//   bundleItems: BundledItem[];
-//   signedOffer: Signature;
-//   signedListings: Signature[];
-// };
 
 export type BaseOrder = {
   kind?: OrderKind;
@@ -117,22 +77,6 @@ export type BaseOrder = {
   s?: string;
 };
 
-// SaleApproval(
-//   uint8 protocol,
-//   address seller,
-//   address marketplace,
-//   address paymentMethod,
-//   address tokenAddress,
-//   uint256 tokenId,
-//   uint256 amount,
-//   uint256 itemPrice,
-//   uint256 expiration,
-//   uint256 marketplaceFeeNumerator,
-//   uint256 maxRoyaltyFeeNumerator,
-//   uint256 nonce,
-//   uint256 masterNonce
-// )
-
 export type SaleApproval = {
   protocol: number;
   seller: string;
@@ -148,22 +92,6 @@ export type SaleApproval = {
   nonce: string;
   masterNonce: string;
 };
-
-// ItemOfferApproval(
-//   uint8 protocol,
-//   address buyer,
-//   address beneficiary,
-//   address marketplace,
-//   address paymentMethod,
-//   address tokenAddress,
-//   uint256 tokenId,
-//   uint256 amount,
-//   uint256 itemPrice,
-//   uint256 expiration,
-//   uint256 marketplaceFeeNumerator,
-//   uint256 nonce,
-//   uint256 masterNonce
-// )
 
 export type ItemOfferApproval = {
   protocol: number;
@@ -181,21 +109,6 @@ export type ItemOfferApproval = {
   masterNonce: string;
 };
 
-// CollectionOfferApproval(
-//   uint8 protocol,
-//   address buyer,
-//   address beneficiary,
-//   address marketplace,
-//   address paymentMethod,
-//   address tokenAddress,
-//   uint256 amount,
-//   uint256 itemPrice,
-//   uint256 expiration,
-//   uint256 marketplaceFeeNumerator,
-//   uint256 nonce,
-//   uint256 masterNonce
-// )
-
 export type CollectionOfferApproval = {
   protocol: number;
   buyer: string;
@@ -210,22 +123,6 @@ export type CollectionOfferApproval = {
   nonce: string;
   masterNonce: string;
 };
-
-// TokenSetOfferApproval(
-//   uint8 protocol,
-//   address buyer,
-//   address beneficiary,
-//   address marketplace,
-//   address paymentMethod,
-//   address tokenAddress,
-//   uint256 amount,
-//   uint256 itemPrice,
-//   uint256 expiration,
-//   uint256 marketplaceFeeNumerator,
-//   uint256 nonce,
-//   uint256 masterNonce,
-//   bytes32 tokenSetMerkleRoot
-// )
 
 export type TokenSetOfferApproval = {
   protocol: number;

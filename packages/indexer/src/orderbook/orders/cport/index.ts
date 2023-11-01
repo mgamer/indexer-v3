@@ -1,6 +1,4 @@
-import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
-import { keccak256 } from "@ethersproject/solidity";
 import * as Sdk from "@reservoir0x/sdk";
 import _ from "lodash";
 import pLimit from "p-limit";
@@ -20,7 +18,6 @@ import { DbOrder, OrderMetadata, generateSchemaHash } from "@/orderbook/orders/u
 import * as tokenSet from "@/orderbook/token-sets";
 import * as erc721c from "@/utils/erc721c";
 import { checkMarketplaceIsFiltered } from "@/utils/marketplace-blacklists";
-// import * as paymentProcessor from "@/utils/payment-processor";
 import { getUSDAndNativePrices } from "@/utils/prices";
 import * as royalties from "@/utils/royalties";
 
@@ -33,11 +30,6 @@ type SaveResult = {
   id: string;
   status: string;
   unfillable?: boolean;
-};
-
-export const getOrderNonce = (marketplace: string, nonce: string) => {
-  const hash = keccak256(["address", "uint256"], [marketplace, nonce]);
-  return BigNumber.from(hash).toString();
 };
 
 export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
@@ -379,7 +371,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
       const validFrom = `date_trunc('seconds', now())`;
       const validTo = `date_trunc('seconds', to_timestamp(${order.params.expiration}))`;
-      const orderNonce = getOrderNonce(order.params.marketplace, order.params.nonce);
+      const orderNonce = order.params.nonce;
       orderValues.push({
         id,
         kind: "cport",

@@ -122,45 +122,6 @@ export class Order {
     };
   }
 
-  // public getSweepMatchedOrder(orders: Order[]): Types.SweepMatchedOrder {
-  //   const matchedOrderBundleBase: Types.MatchedOrderBundleBase = {
-  //     protocol: this.params.protocol,
-  //     paymentCoin: this.params.coin,
-  //     tokenAddress: this.params.tokenAddress,
-  //     privateBuyer: AddressZero,
-  //     buyer: this.params.sellerOrBuyer,
-  //     delegatedPurchaser: AddressZero,
-  //     marketplace: this.params.marketplace,
-  //     marketplaceFeeNumerator: this.params.marketplaceFeeNumerator,
-  //     offerNonce: this.params.nonce,
-  //     offerPrice: this.params.price,
-  //     offerExpiration: this.params.expiration,
-  //   };
-
-  //   return {
-  //     bundleDetails: matchedOrderBundleBase,
-  //     signedOffer: {
-  //       r: this.params.r!,
-  //       s: this.params.s!,
-  //       v: this.params.v!,
-  //     },
-  //     signedListings: orders.map((c) => ({
-  //       r: c.params.r!,
-  //       s: c.params.s!,
-  //       v: c.params.v!,
-  //     })),
-  //     bundleItems: orders.map((c) => ({
-  //       tokenId: c.params.tokenId!,
-  //       amount: c.params.amount,
-  //       maxRoyaltyFeeNumerator: c.params.maxRoyaltyFeeNumerator,
-  //       itemPrice: c.params.price,
-  //       listingNonce: c.params.nonce,
-  //       listingExpiration: c.params.expiration,
-  //       seller: c.params.sellerOrBuyer,
-  //     })),
-  //   };
-  // }
-
   public checkSignature() {
     const signature = {
       r: this.params.r!,
@@ -317,40 +278,6 @@ export class Order {
       return [EIP712_TOKEN_SET_OFFER_APPROVAL_TYPES, bundleOffer, "TokenSetOfferApproval"];
     }
   }
-
-  // static createBundledOfferOrder(
-  //   orders: Order[],
-  //   options: {
-  //     taker: string;
-  //     takerMasterNonce: BigNumberish;
-  //     maxRoyaltyFeeNumerator?: BigNumberish;
-  //   }
-  // ) {
-  //   const order = orders[0];
-  //   const orderParams = order.params;
-  //   return new Order(order.chainId, {
-  //     kind: "bundled-offer-approval",
-  //     protocol: orderParams.protocol,
-  //     collectionLevelOffer: false,
-  //     sellerAcceptedOffer: false,
-  //     marketplace: orderParams.marketplace,
-  //     marketplaceFeeNumerator: orderParams.marketplaceFeeNumerator,
-  //     maxRoyaltyFeeNumerator: options?.maxRoyaltyFeeNumerator?.toString() ?? "0",
-  //     privateBuyerOrDelegatedPurchaser: AddressZero,
-  //     sellerOrBuyer: options.taker,
-  //     tokenAddress: orderParams.tokenAddress,
-  //     amount: orderParams.amount,
-  //     price: orders.reduce((all, order) => all.add(order.params.price), bn(0)).toString(),
-  //     expiration: orderParams.expiration,
-  //     nonce: orderParams.nonce,
-  //     coin: orderParams.coin,
-  //     masterNonce: s(options.takerMasterNonce),
-
-  //     tokenIds: orders.map((c) => c.params.tokenId!),
-  //     amounts: orders.map((c) => c.params.amount),
-  //     itemSalePrices: orders.map((c) => c.params.price),
-  //   });
-  // }
 
   private getBuilder(): BaseBuilder {
     switch (this.params.kind) {

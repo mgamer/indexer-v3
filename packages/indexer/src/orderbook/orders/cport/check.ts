@@ -4,7 +4,6 @@ import { baseProvider } from "@/common/provider";
 import { bn } from "@/common/utils";
 import { config } from "@/config/index";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
-import * as paymentProcessor from "@/orderbook/orders/cport";
 import * as onChainData from "@/utils/on-chain-data";
 
 export const offChainCheck = async (
@@ -53,7 +52,7 @@ export const offChainCheck = async (
   const nonceCancelled = await commonHelpers.isNonceCancelled(
     "cport",
     order.params.sellerOrBuyer,
-    paymentProcessor.getOrderNonce(order.params.marketplace, order.params.nonce)
+    order.params.nonce
   );
 
   if (nonceCancelled) {

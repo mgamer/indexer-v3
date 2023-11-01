@@ -344,17 +344,17 @@ describe("CPort - Indexer Integration Test", () => {
     );
   };
 
-  // it("Fill listing with cancel", async () => {
-  //   await testCase({
-  //     cancelOrder: true,
-  //   });
-  //   console.log("\n");
-  // });
+  it("Fill listing with cancel", async () => {
+    await testCase({
+      cancelOrder: true,
+    });
+    console.log("\n");
+  });
 
-  // it("Fill Offer via Router API", async () =>
-  //   testCase({
-  //     executeByRouterAPI: true,
-  //   }));
+  it("Fill Offer via Router API", async () =>
+    testCase({
+      executeByRouterAPI: true,
+    }));
 
   it("Fill Listing via Router API", async () =>
     testCase({
@@ -362,21 +362,16 @@ describe("CPort - Indexer Integration Test", () => {
       executeByRouterAPI: true,
     }));
 
-  // it("Fill offer", async () => testCase({}));
+  it("Fill offer", async () => testCase({}));
 
-  // it("Fill listing", async () =>
-  //   testCase({
-  //     isListing: true,
-  //   }));
+  it("Fill listing", async () =>
+    testCase({
+      isListing: true,
+    }));
 
-  // it("Fill listing with bulk Cancel", async () =>
-  //   testCase({
-  //     bulkCancel: true,
-  //   }));
+  it("Fill listing with bulk Cancel", async () =>
+    testCase({
+      bulkCancel: true,
+    }));
 
-  // buy order
-  // 0x51c73381f671bf6f6b033d6cb2312d07e1f39834feea0787f825aa91dd11b759
-
-  // sell order
-  // 0xae6e3c32be1c88131134245dcf8495ab770849be637f6d69874df83a11fa0de3
 });
