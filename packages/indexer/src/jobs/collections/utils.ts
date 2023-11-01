@@ -1,7 +1,7 @@
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { config } from "@/config/index";
-import { Network } from "@reservoir0x/sdk/src/utils";
+import { Network } from "@reservoir0x/sdk/dist/utils";
 import { ethers } from "ethers";
 
 const erc721Interface = new ethers.utils.Interface([

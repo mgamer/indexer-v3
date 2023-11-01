@@ -12,7 +12,7 @@ import {
   CollectionMintStatus,
   CollectionMintStatusReason,
 } from "@/orderbook/mints";
-import { Network } from "@reservoir0x/sdk/src/utils";
+import { Network } from "@reservoir0x/sdk/dist/utils";
 import { config } from "@/config/index";
 import { logger } from "@/common/logger";
 

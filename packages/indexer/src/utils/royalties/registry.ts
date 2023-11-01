@@ -11,7 +11,7 @@ import { redis } from "@/common/redis";
 import { bn, fromBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { Royalty, updateRoyaltySpec } from "@/utils/royalties";
-import { Network } from "@reservoir0x/sdk/src/utils";
+import { Network } from "@reservoir0x/sdk/dist/utils";
 
 // The royalties are returned in full amounts, but we store them as a percentage
 // so here we just use a default price (which is a round number) and deduce then
