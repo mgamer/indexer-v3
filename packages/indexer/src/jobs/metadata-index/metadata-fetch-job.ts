@@ -9,6 +9,8 @@ import { PendingRefreshTokensBySlug } from "@/models/pending-refresh-tokens-by-s
 import { AddressZero } from "@ethersproject/constants";
 import { metadataIndexProcessJob } from "@/jobs/metadata-index/metadata-process-job";
 import { metadataIndexProcessBySlugJob } from "@/jobs/metadata-index/metadata-process-by-slug-job";
+import { PendingFetchOnchainUriTokens } from "@/models/pending-fetch-onchain-uri-tokens";
+import { onchainMetadataProcessUriJob } from "./onchain-metadata-process-uri-job";
 
 export type MetadataIndexFetchJobPayload =
   | {
@@ -140,10 +142,15 @@ export default class MetadataIndexFetchJob extends AbstractRabbitMqJobHandler {
     }
 
     // Add the tokens to the list
-    const pendingRefreshTokens = new PendingRefreshTokens(data.method);
-    await pendingRefreshTokens.add(refreshTokens, prioritized);
+    if (data.method === "onchain") {
+      await PendingFetchOnchainUriTokens.add(refreshTokens, prioritized);
+      await onchainMetadataProcessUriJob.addToQueue();
+    } else {
+      const pendingRefreshTokens = new PendingRefreshTokens(data.method);
+      await pendingRefreshTokens.add(refreshTokens, prioritized);
 
-    await metadataIndexProcessJob.addToQueue({ method: data.method });
+      await metadataIndexProcessJob.addToQueue({ method: data.method });
+    }
   }
 
   public async getTokensForCollection(

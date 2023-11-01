@@ -12,6 +12,7 @@ import { PendingExpiredBidActivitiesQueue } from "@/elasticsearch/indexes/activi
 import { PendingFlagStatusSyncTokens } from "@/models/pending-flag-status-sync-tokens";
 import { PendingFlagStatusSyncContracts } from "@/models/pending-flag-status-sync-contracts";
 import { PendingFlagStatusSyncCollectionSlugs } from "@/models/pending-flag-status-sync-collection-slugs";
+import { PendingFetchOnchainUriTokens } from "@/models/pending-fetch-onchain-uri-tokens";
 
 if (config.doBackgroundWork) {
   cron.schedule(
@@ -30,6 +31,17 @@ if (config.doBackgroundWork) {
               topic: "queue-monitoring",
               metadataIndexingMethod: config.metadataIndexingMethod,
               pendingRefreshTokensCount,
+            })
+          );
+
+          // Log token onchain uri process metadata queue length
+          const pendingFetchOnchainUriProcessQueueLength = await PendingFetchOnchainUriTokens.len();
+
+          logger.info(
+            "pending-fetch-onchain-uri-process-queue-metric",
+            JSON.stringify({
+              topic: "queue-monitoring",
+              pendingFetchOnchainUriProcessQueueLength,
             })
           );
 

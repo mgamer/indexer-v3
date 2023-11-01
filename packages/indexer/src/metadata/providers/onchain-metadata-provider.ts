@@ -28,8 +28,44 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
   // get metadata methods
 
   async _getTokensMetadata(
-    tokens: { contract: string; tokenId: string }[]
+    tokens: { contract: string; tokenId: string; uri: string }[]
   ): Promise<TokenMetadata[]> {
+    const resolvedMetadata = await Promise.all(
+      tokens.map(async (token: any) => {
+        const [metadata, error] = await this.getTokenMetadataFromURI(
+          token.uri,
+          token.contract,
+          token.tokenId
+        );
+        if (error) {
+          if (error === 429) {
+            throw new RequestWasThrottledError(error.message, 10);
+          }
+
+          throw error;
+        }
+
+        return {
+          ...metadata,
+          contract: token.contract,
+          tokenId: token.tokenId,
+        };
+      })
+    );
+
+    return resolvedMetadata.map((token) => {
+      return this.parseToken(token);
+    });
+  }
+
+  async _getTokensMetadataUri(tokens: { contract: string; tokenId: string }[]): Promise<
+    {
+      contract: string;
+      tokenId: string;
+      uri: string;
+      error?: string;
+    }[]
+  > {
     const tokenData: {
       contract: string;
       tokenId: string;
@@ -79,6 +115,7 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
       }
     });
     const [batch, error] = await this.sendBatch(encodedTokens);
+
     if (error) {
       logger.error("onchain-fetcher", `fetchTokens sendBatch error. error:${error}`);
 
@@ -89,52 +126,27 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
       throw error;
     }
 
-    const resolvedMetadata = await Promise.all(
+    const resolvedURIs = await Promise.all(
       batch.map(async (token: any) => {
         const uri = defaultAbiCoder.decode(["string"], token.result)[0];
         if (!uri || uri === "") {
           return {
             contract: idToToken[token.id].contract,
             tokenId: idToToken[token.id].tokenId,
+            uri: null,
             error: "Unable to decode tokenURI from contract",
           };
         }
 
-        const [metadata, error] = await this.getTokenMetadataFromURI(
-          uri,
-          idToToken[token.id].contract,
-          idToToken[token.id].tokenId
-        );
-        if (error) {
-          // logger.error(
-          //   "onchain-fetcher",
-          //   JSON.stringify({
-          //     message: "fetchTokens getTokenMetadataFromURI error",
-          //     chainId,
-          //     token,
-          //     error,
-          //     uri,
-          //   })
-          // );
-
-          if (error === 429) {
-            throw new RequestWasThrottledError(error.message, 10);
-          }
-
-          throw error;
-        }
-
         return {
-          ...metadata,
           contract: idToToken[token.id].contract,
           tokenId: idToToken[token.id].tokenId,
+          uri,
         };
       })
     );
 
-    return resolvedMetadata.map((token) => {
-      return this.parseToken(token);
-    });
+    return resolvedURIs;
   }
 
   async _getCollectionMetadata(contract: string): Promise<CollectionMetadata> {
