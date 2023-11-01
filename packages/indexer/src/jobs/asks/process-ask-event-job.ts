@@ -85,6 +85,8 @@ export class ProcessAskEventJob extends AbstractRabbitMqJobHandler {
                         tokens.name AS "token_name",
                         tokens.image AS "token_image",
                         tokens.media AS "token_media",
+                        tokens.is_flagged AS "token_is_flagged",
+                        tokens.rarity_rank AS "token_rarity_rank",
                         collections.id AS "collection_id",
                         collections.name AS "collection_name",
                         (collections.metadata ->> 'imageUrl')::TEXT AS "collection_image",
@@ -127,6 +129,10 @@ export class ProcessAskEventJob extends AbstractRabbitMqJobHandler {
             token_name: rawResult.token_name,
             token_image: rawResult.token_image,
             token_media: rawResult.token_media,
+            token_is_flagged: Number(rawResult.token_is_flagged),
+            token_rarity_rank: rawResult.token_rarity_rank
+              ? Number(rawResult.token_rarity_rank)
+              : undefined,
             token_attributes: rawResult.token_attributes,
             collection_id: rawResult.collection_id,
             collection_name: rawResult.collection_name,
@@ -174,7 +180,9 @@ export class ProcessAskEventJob extends AbstractRabbitMqJobHandler {
   }
 
   public async addToQueue(payloads: ProcessAskEventJobPayload[]) {
-    if (config.environment !== "dev" && config.chainId !== 1) return;
+    if (!config.doElasticsearchWork) {
+      return;
+    }
 
     await this.sendBatch(payloads.map((payload) => ({ payload })));
   }

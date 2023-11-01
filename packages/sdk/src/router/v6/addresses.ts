@@ -57,10 +57,10 @@ export const ApprovalProxy: ChainIdToAddress = {
 // Permit proxy
 
 export const PermitProxy: ChainIdToAddress = {
-  [Network.Ethereum]: "0x104ff9a0e2a62aa531ef0cc9d19f948bde7062de",
-  [Network.EthereumGoerli]: "0x104ff9a0e2a62aa531ef0cc9d19f948bde7062de",
-  [Network.Polygon]: "0x104ff9a0e2a62aa531ef0cc9d19f948bde7062de",
-  [Network.Mumbai]: "0x104ff9a0e2a62aa531ef0cc9d19f948bde7062de",
+  [Network.Ethereum]: "0x30b3de99ab1de0c9700181f7a2597150e9416aa6",
+  [Network.EthereumGoerli]: "0x30b3de99ab1de0c9700181f7a2597150e9416aa6",
+  [Network.Polygon]: "0x30b3de99ab1de0c9700181f7a2597150e9416aa6",
+  [Network.Mumbai]: "0x30b3de99ab1de0c9700181f7a2597150e9416aa6",
 };
 
 // Utility modules
@@ -180,6 +180,7 @@ export const AlienswapModule: ChainIdToAddress = {
   [Network.EthereumSepolia]: "0x54e9b4580f8c180e8020cec7a330f189658e1329",
   [Network.Arbitrum]: "0x670ec3e840816c81fb8567c9a5368ab55f3d796a",
   [Network.Optimism]: "0x670ec3e840816c81fb8567c9a5368ab55f3d796a",
+  [Network.Scroll]: "0xf769c98b6e384e98e36d6fc3ec7247dd1e887f57",
 };
 
 export const SudoswapModule: ChainIdToAddress = {

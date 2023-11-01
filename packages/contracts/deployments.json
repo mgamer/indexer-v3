@@ -173,7 +173,8 @@
     "v2": {
       "10": "0x670ec3e840816c81fb8567c9a5368ab55f3d796a",
       "42161": "0x670ec3e840816c81fb8567c9a5368ab55f3d796a",
-      "59144": "0xf769c98b6e384e98e36d6fc3ec7247dd1e887f57"
+      "59144": "0xf769c98b6e384e98e36d6fc3ec7247dd1e887f57",
+      "534352": "0xf769c98b6e384e98e36d6fc3ec7247dd1e887f57"
     }
   },
   "SeaportV15Module": {
@@ -306,11 +307,11 @@
     }
   },
   "PermitProxy": {
-    "v1": {
-      "1": "0x104ff9a0e2a62aa531ef0cc9d19f948bde7062de",
-      "5": "0x104ff9a0e2a62aa531ef0cc9d19f948bde7062de",
-      "137": "0x104ff9a0e2a62aa531ef0cc9d19f948bde7062de",
-      "80001": "0x104ff9a0e2a62aa531ef0cc9d19f948bde7062de"
+    "v2": {
+      "1": "0x30b3de99ab1de0c9700181f7a2597150e9416aa6",
+      "5": "0x30b3de99ab1de0c9700181f7a2597150e9416aa6",
+      "137": "0x30b3de99ab1de0c9700181f7a2597150e9416aa6",
+      "80001": "0x30b3de99ab1de0c9700181f7a2597150e9416aa6"
     }
   },
   "CaviarV1Module": {

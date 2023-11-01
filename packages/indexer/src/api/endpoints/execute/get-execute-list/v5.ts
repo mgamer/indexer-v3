@@ -13,6 +13,7 @@ import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { now, regex } from "@/common/utils";
 import { config } from "@/config/index";
+import { ApiKeyManager } from "@/models/api-keys";
 import { FeeRecipients } from "@/models/fee-recipients";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import { getExecuteError } from "@/orderbook/orders/errors";
@@ -1225,14 +1226,32 @@ export const getExecuteListV5Options: RouteOptions = {
         })
       );
 
+      const key = request.headers["x-api-key"];
+      const apiKey = await ApiKeyManager.getApiKey(key);
+      logger.info(
+        `get-execute-bid-${version}-handler`,
+        JSON.stringify({
+          request: payload,
+          apiKey,
+        })
+      );
+
       return {
         steps: blurAuth ? [steps[0], ...steps.slice(1).filter((s) => s.items.length)] : steps,
         errors,
       };
     } catch (error) {
-      if (!(error instanceof Boom.Boom)) {
-        logger.error(`get-execute-list-${version}-handler`, `Handler failure: ${error}`);
-      }
+      const key = request.headers["x-api-key"];
+      const apiKey = await ApiKeyManager.getApiKey(key);
+      logger.error(
+        `get-execute-list-${version}-handler`,
+        JSON.stringify({
+          request: payload,
+          httpCode: error instanceof Boom.Boom ? error.output.statusCode : 500,
+          apiKey,
+        })
+      );
+
       throw error;
     }
   },

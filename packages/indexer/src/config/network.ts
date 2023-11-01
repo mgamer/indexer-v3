@@ -659,6 +659,10 @@ export const getNetworkSettings = (): NetworkSettings => {
         headBlockDelay: 0,
         backfillBlockBatchSize: 32,
         reorgCheckFrequency: [30],
+
+        trendingExcludedContracts: [
+          "0x198d38c5f21eab36731d0576560440f70cbd9418", // Yieldnodes
+        ],
         whitelistedCurrencies: new Map([
           [
             Sdk.Common.Addresses.Usdc[config.chainId][1],
@@ -673,11 +677,11 @@ export const getNetworkSettings = (): NetworkSettings => {
             },
           ],
           [
-            "0xba777ae3a3c91fcd83ef85bfe65410592bdd0f7c",
+            "0x875f123220024368968d9f1ab1f3f9c2f3fd190d",
             {
-              contract: "0xba777ae3a3c91fcd83ef85bfe65410592bdd0f7c",
-              name: "BitCone",
-              symbol: "CONE",
+              contract: "0x875f123220024368968d9f1ab1f3f9c2f3fd190d",
+              name: "RCAX",
+              symbol: "RCAX",
               decimals: 18,
             },
           ],
@@ -993,6 +997,17 @@ export const getNetworkSettings = (): NetworkSettings => {
           // PaymentProcessor WETH
           "0xfff9976782d46cc05630d1f6ebab18b2324d6b14": true,
         },
+        whitelistedCurrencies: new Map([
+          [
+            "0x570e40a09f77f0a098dc7a7ba803adf1d04dd8ec",
+            {
+              contract: "0x570e40a09f77f0a098dc7a7ba803adf1d04dd8ec",
+              name: "Angel community Token",
+              symbol: "ACT",
+              decimals: 18,
+            },
+          ],
+        ]),
         onStartup: async () => {
           // Insert the native currency
           await Promise.all([

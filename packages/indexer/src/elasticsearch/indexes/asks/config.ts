@@ -16,6 +16,8 @@ export const CONFIG_DEFAULT = {
           name: { type: "keyword" },
           image: { type: "keyword" },
           attributes: { type: "flattened" },
+          isFlagged: { type: "boolean" },
+          rarityRank: { type: "integer" },
         },
       },
       collection: {

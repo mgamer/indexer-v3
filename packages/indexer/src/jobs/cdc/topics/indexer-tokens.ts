@@ -6,6 +6,8 @@ import {
   WebsocketEventKind,
   WebsocketEventRouter,
 } from "@/jobs/websocket-events/websocket-event-router";
+import { refreshAsksTokenJob } from "@/jobs/asks/refresh-asks-token-job";
+import { logger } from "@/common/logger";
 
 export class IndexerTokensHandler extends KafkaEventHandler {
   topicName = "indexer.public.tokens";
@@ -54,6 +56,27 @@ export class IndexerTokensHandler extends KafkaEventHandler {
         "EX",
         60 * 60 * 24,
         "XX"
+      );
+    }
+
+    try {
+      if (payload.after.floor_sell_id) {
+        const flagStatusChanged = payload.before.is_flagged !== payload.after.is_flagged;
+        const rarityRankChanged = payload.before.rarity_rank !== payload.after.rarity_rank;
+
+        if (flagStatusChanged || rarityRankChanged) {
+          await refreshAsksTokenJob.addToQueue(payload.after.contract, payload.after.token_id);
+        }
+      }
+    } catch (error) {
+      logger.error(
+        "kafka-event-handler",
+        JSON.stringify({
+          topic: "debugAskIndex",
+          message: `Handle token error. error=${error}`,
+          payload,
+          error,
+        })
       );
     }
   }
