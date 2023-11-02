@@ -13,6 +13,7 @@ import {
 import { estimateGas } from "@reservoir0x/sdk/dist/router/v6/utils";
 import { getRandomBytes } from "@reservoir0x/sdk/dist/utils";
 import axios from "axios";
+import { randomUUID } from "crypto";
 import Joi from "joi";
 import _ from "lodash";
 
@@ -1743,6 +1744,14 @@ export const getExecuteBuyV7Options: RouteOptions = {
               },
             },
           },
+          check: {
+            endpoint: "/execute/status/v1",
+            method: "POST",
+            body: {
+              kind: "cross-chain-intent",
+              id: order.hash(),
+            },
+          },
         });
 
         return {
@@ -2304,7 +2313,10 @@ export const getExecuteBuyV7Options: RouteOptions = {
         `get-execute-buy-${version}-handler`,
         JSON.stringify({
           request: payload,
+          uuid: randomUUID(),
           httpCode: error instanceof Boom.Boom ? error.output.statusCode : 500,
+          error:
+            error instanceof Boom.Boom ? error.output.payload : { error: "Internal Server Error" },
           apiKey,
         })
       );
