@@ -13,7 +13,7 @@ import { ConduitController } from "../../seaport-base";
 import { constructOfferCounterOrderAndFulfillments } from "../../seaport-base/helpers";
 
 import * as Sdk from "../../index";
-import { bn, generateSourceBytes, getErrorMessage, uniqBy } from "../../utils";
+import { TxData, bn, generateSourceBytes, getErrorMessage, uniqBy } from "../../utils";
 import * as Addresses from "./addresses";
 import * as ApprovalProxy from "./approval-proxy";
 import { PermitHandler } from "./permit";
@@ -255,11 +255,12 @@ export class Router {
     const txs: FillMintsResult["txs"][0][] = [];
     const success: { [orderId: string]: boolean } = {};
 
+    const sender = options?.relayer ?? taker;
+
     if (
       !Addresses.MintModule[this.chainId] ||
-      !options?.relayer ||
       options?.forceDirectFilling ||
-      (details.length === 1 && !details[0].fees?.length && !details[0].comment)
+      (details.length === 1 && !details[0].fees?.length && !details[0].comment && !options?.relayer)
     ) {
       // Under some conditions, we simply return that transaction data back to the caller
 
@@ -267,6 +268,7 @@ export class Router {
         txs.push({
           txData: {
             ...txData,
+            from: sender,
             data: txData.data + generateSourceBytes(options?.source),
           },
           txTags: {
@@ -292,7 +294,7 @@ export class Router {
           comment: d.comment ?? "",
         })),
         {
-          refundTo: taker,
+          refundTo: sender,
           revertIfIncomplete: Boolean(!options?.partial),
         },
       ]);
@@ -311,7 +313,7 @@ export class Router {
         .toHexString();
       txs.push({
         txData: {
-          from: options?.relayer || taker,
+          from: sender,
           to: this.contracts.router.address,
           data:
             this.contracts.router.interface.encodeFunctionData("execute", [
@@ -3402,14 +3404,14 @@ export class Router {
             approvals: [],
             preSignatures: [],
             txTags: routerTxTags,
-            permits: await new PermitHandler(this.chainId, this.provider)
-              .generate(relayer, ftTransferItems)
-              .then((permits) =>
-                permits.map((p) => ({
-                  kind: "erc20",
-                  data: p,
-                }))
-              ),
+            permits: await new PermitHandler(this.chainId, this.provider).generate(
+              relayer,
+              Addresses.PermitProxy[this.chainId],
+              {
+                kind: "with-transfers",
+                transferItems: ftTransferItems,
+              }
+            ),
             txData: {
               from: relayer,
               ...{
@@ -4662,6 +4664,33 @@ export class Router {
       }
     }
 
+    // Permits have to be pre-executed
+    const preTxs: {
+      kind: "permit";
+      txData: TxData;
+      orderIds: string[];
+    }[] = [];
+
+    const detailsWithPermits = details.filter((d) => d.permit && success[d.orderId]);
+    const permitHandler = new PermitHandler(this.chainId, this.provider);
+    if (detailsWithPermits.length) {
+      const permitExecution = permitHandler.getRouterExecution(
+        detailsWithPermits.map((d) => d.permit!)
+      );
+
+      preTxs.push({
+        kind: "permit",
+        txData: {
+          from: taker,
+          to: this.contracts.router.address,
+          data:
+            this.contracts.router.interface.encodeFunctionData("execute", [[permitExecution]]) +
+            generateSourceBytes(options?.source),
+        },
+        orderIds: detailsWithPermits.map((d) => d.orderId),
+      });
+    }
+
     // Batch fill all protected offers in a single transaction
     if (protectedSeaportV15Offers.length) {
       const approvals: NFTApproval[] = [];
@@ -4778,7 +4807,6 @@ export class Router {
     if (executionsWithDetails.length === 1 && !options?.forceApprovalProxy) {
       const execution = executionsWithDetails[0].execution;
       const detail = executionsWithDetails[0].detail;
-
       const routerLevelTxData = this.contracts.router.interface.encodeFunctionData("execute", [
         [execution],
       ]);
@@ -4825,7 +4853,7 @@ export class Router {
           data:
             this.contracts.approvalProxy.interface.encodeFunctionData("bulkTransferWithExecute", [
               nftTransferItems,
-              executionsWithDetails.map(({ execution }) => execution),
+              [...executionsWithDetails.map(({ execution }) => execution)],
               Sdk.SeaportBase.Addresses.ReservoirConduitKey[this.chainId],
             ]) + generateSourceBytes(options?.source),
         },
@@ -4846,6 +4874,7 @@ export class Router {
     }
 
     return {
+      preTxs,
       txs,
       success,
     };

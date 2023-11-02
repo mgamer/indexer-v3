@@ -361,6 +361,12 @@ export const getRecentSalesByCollection = async (
           },
         },
       ],
+
+      must_not: {
+        term: {
+          "event.washTradingScore": 1,
+        },
+      },
     },
   } as any;
 
@@ -463,6 +469,12 @@ const getPastResults = async (
           },
         },
       ],
+
+      must_not: {
+        term: {
+          "event.washTradingScore": 1,
+        },
+      },
     },
   } as any;
 
@@ -470,6 +482,7 @@ const getPastResults = async (
     collections: {
       terms: {
         field: "collection.id",
+        size: collections.length,
       },
       aggs: {
         total_sales: {
@@ -525,6 +538,7 @@ export const getTopSellingCollectionsV2 = async (params: {
             type: fillType == "any" ? ["sale", "mint"] : [fillType],
           },
         },
+
         {
           range: {
             timestamp: {
@@ -534,15 +548,23 @@ export const getTopSellingCollectionsV2 = async (params: {
           },
         },
       ],
-      ...(trendingExcludedContracts && {
-        must_not: [
-          {
-            terms: {
-              "collection.id": excludedCollections,
-            },
+
+      must_not: [
+        {
+          term: {
+            "event.washTradingScore": 1,
           },
-        ],
-      }),
+        },
+        ...(excludedCollections.length > 0
+          ? [
+              {
+                terms: {
+                  "collection.id": excludedCollections,
+                },
+              },
+            ]
+          : []),
+      ],
     },
   } as any;
 
@@ -584,11 +606,15 @@ export const getTopSellingCollectionsV2 = async (params: {
   })) as any;
 
   const collections = esResult?.aggregations?.collections?.buckets;
-  const pastResults = await getPastResults(
-    collections.map((collection: any) => collection.key),
-    startTime,
-    fillType
-  );
+  let pastResults = [] as any;
+
+  if (collections.length > 0) {
+    pastResults = await getPastResults(
+      collections.map((collection: any) => collection.key),
+      startTime,
+      fillType
+    );
+  }
 
   return esResult?.aggregations?.collections?.buckets?.map((bucket: any) => {
     const pastResult = pastResults.find((result: any) => result.id == bucket.key);
@@ -1400,18 +1426,6 @@ export const updateActivitiesTokenMetadata = async (
     bool: {
       filter: {
         bool: {
-          must: [
-            {
-              term: {
-                contract: "0xb76fbbb30e31f2c3bdaa2466cfb1cfe39b220d06",
-              },
-            },
-            {
-              term: {
-                "token.id": "7514",
-              },
-            },
-          ],
           must_not: [
             {
               term: {
