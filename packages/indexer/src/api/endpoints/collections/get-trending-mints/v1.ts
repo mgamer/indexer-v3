@@ -211,7 +211,6 @@ export const getTrendingMintsV1Options: RouteOptions = {
               maxMintsPerWallet: Joi.number().unsafe().allow(null),
             })
           ),
-          addresses: Joi.array().items(Joi.string()),
           tokenCount: Joi.number().description("Total tokens within the collection."),
           ownerCount: Joi.number().description("Unique number of owners."),
           volumeChange: Joi.object({
@@ -299,7 +298,6 @@ async function formatCollections(
   useNonFlaggedFloorAsk: boolean
 ): Promise<any[]> {
   const sources = await Sources.getInstance();
-  const recentMints = await getRecentMints(collectionsResult.map((c) => c.id));
 
   const collections = await Promise.all(
     collectionsResult.map(async (r) => {
@@ -372,7 +370,6 @@ async function formatCollections(
               })
             )
           : [],
-        addresses: recentMints[r.id] ? recentMints[r.id] : [],
         volumeChange: {
           "1day": metadata.day1_volume_change,
           "7day": metadata.day7_volume_change,
@@ -495,28 +492,4 @@ async function getCollectionsMetadata(collectionIds: string[]): Promise<Record<s
   });
 
   return collectionsMetadata;
-}
-
-async function getRecentMints(collectionIds: string[]): Promise<Record<string, string[]>> {
-  const idsList = collectionIds.map((id) => `'${id.replace("0x", "\\x")}'`).join(",");
-
-  const results: MintResult[] = await redb.manyOrNone(`
-    WITH ltakers AS (
-      SELECT contract, taker, created_at
-      FROM fill_events_2
-      WHERE order_kind = 'mint' AND contract IN (${idsList})
-      ORDER BY created_at DESC
-      LIMIT 50
-    )
-
-    SELECT contract, ARRAY_AGG(taker) AS takers
-    FROM ltakers
-    GROUP BY contract;
-  `);
-
-  const hashMap: Record<string, string[]> = {};
-  for (const result of results) {
-    hashMap[fromBuffer(result.contract)] = result.takers.map((taker) => fromBuffer(taker));
-  }
-  return hashMap;
 }
