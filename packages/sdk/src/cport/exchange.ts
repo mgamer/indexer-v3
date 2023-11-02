@@ -72,10 +72,7 @@ export class Exchange {
     }
   ): Promise<ContractTransaction> {
     const tx = this.fillOrderTx(await taker.getAddress(), order, matchOptions, options);
-    return taker.sendTransaction({
-      ...tx,
-      gasLimit: 1000000,
-    });
+    return taker.sendTransaction(tx);
   }
 
   public fillOrderTx(

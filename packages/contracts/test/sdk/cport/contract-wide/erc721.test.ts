@@ -9,7 +9,7 @@ import { constants } from "ethers";
 
 import { getChainId, getCurrentTimestamp, reset, setupNFTs } from "../../../utils";
 
-describe("CPort - Contract-Wide - ERC721", () => {
+describe("CPort - ContractWide - ERC721", () => {
   const chainId = getChainId();
 
   let deployer: SignerWithAddress;
