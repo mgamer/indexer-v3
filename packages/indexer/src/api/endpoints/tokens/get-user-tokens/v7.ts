@@ -809,7 +809,8 @@ export const getUserTokensV7Options: RouteOptions = {
                   : []
                 : undefined,
             },
-            r.t_metadata_disabled || r.c_metadata_disabled
+            r.t_metadata_disabled,
+            r.c_metadata_disabled
           ),
           ownership: {
             tokenCount: String(r.token_count),

@@ -1370,7 +1370,8 @@ export const getTokensV6Options: RouteOptions = {
                   : []
                 : undefined,
             },
-            r.t_metadata_disabled || r.c_metadata_disabled
+            r.t_metadata_disabled,
+            r.c_metadata_disabled
           ),
           market: {
             floorAsk: {
