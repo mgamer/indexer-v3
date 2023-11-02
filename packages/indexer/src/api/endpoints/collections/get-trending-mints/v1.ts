@@ -506,7 +506,7 @@ async function getRecentMints(collectionIds: string[]): Promise<Record<string, s
       FROM fill_events_2
       WHERE order_kind = 'mint' AND contract IN (${idsList})
       ORDER BY created_at DESC
-      LIMIT 100
+      LIMIT 50
     )
 
     SELECT contract, ARRAY_AGG(taker) AS takers
