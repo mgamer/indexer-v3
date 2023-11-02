@@ -43,6 +43,17 @@ export class Order {
     );
   }
 
+  public getTokenSetProof() {
+    return {
+      rootHash: HashZero,
+      proof: [],
+    };
+  }
+
+  public isCollectionLevelOffer() {
+    return this.params.kind === "collection-offer-approval";
+  }
+
   public checkValidity() {
     if (!this.getBuilder().isValid(this)) {
       throw new Error("Invalid order");
@@ -89,13 +100,9 @@ export class Order {
     };
   }
 
-  public getMatchedOrder(
-    taker: string
-    // matchOrder: Order
-  ): Types.MatchedOrder {
+  public getMatchedOrder(taker: string): Types.MatchedOrder {
     const isBuyOrder = this.isBuyOrder();
     const sellOrder = this.params;
-    // const buyOrder = isBuyOrder ? this.params : matchOrder.params;
     return {
       protocol: sellOrder.protocol,
       beneficiary: isBuyOrder ? sellOrder.beneficiary! : taker,

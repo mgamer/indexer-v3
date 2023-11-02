@@ -438,38 +438,56 @@ export class Router {
         throw new Error("Relayer not supported for CPort orders");
       }
 
-      for (const detail of details.filter(({ kind }) => kind === "cport")) {
-        const order = detail.order as Sdk.CPort.Order;
-        const exchange = new Sdk.CPort.Exchange(this.chainId);
-        const orderPrice = order.params.price;
+      const cPortDetails = details.filter(({ kind }) => kind === "cport");
 
+      const exchange = new Sdk.CPort.Exchange(this.chainId);
+      const operator = exchange.contract.address;
+      const orders: Sdk.CPort.Order[] = cPortDetails.map((c) => c.order as Sdk.CPort.Order);
+
+      for (const detail of cPortDetails) {
+        const order = detail.order as Sdk.CPort.Order;
         if (buyInCurrency !== Sdk.Common.Addresses.Native[this.chainId]) {
           swapDetails.push({
             tokenIn: buyInCurrency,
             tokenOut: Sdk.Common.Addresses.Native[this.chainId],
-            tokenOutAmount: orderPrice,
+            tokenOutAmount: order.params.price,
             recipient: taker,
             refundTo: taker,
             details: [detail],
             txIndex: txs.length,
           });
         }
+      }
 
-        txs.push({
-          approvals: [],
-          permits: [],
-          preSignatures: [],
-          txTags: {
-            kind: "sale",
-            listings: { manifold: 1 },
-          },
-          txData: exchange.fillOrderTx(taker, order, {
-            taker,
-          }),
-          orderIds: [detail.orderId],
-        });
+      const approvals: FTApproval[] = [];
+      for (const { currency, price } of cPortDetails) {
+        if (!isETH(this.chainId, currency)) {
+          approvals.push({
+            currency,
+            amount: price,
+            owner: taker,
+            operator,
+            txData: generateFTApprovalTxData(currency, taker, operator),
+          });
+        }
+      }
 
-        success[detail.orderId] = true;
+      txs.push({
+        approvals,
+        permits: [],
+        txTags: {
+          kind: "sale",
+          listings: { cport: orders.length },
+        },
+        preSignatures: [],
+        txData: exchange.fillOrdersTx(taker, orders, {
+          taker,
+        }),
+        orderIds: cPortDetails.map((d) => d.orderId),
+      });
+
+      for (const { orderId } of cPortDetails) {
+        success[orderId] = true;
       }
     }
 
@@ -3726,33 +3744,65 @@ export class Router {
 
     // We don't have a module for CPort offer
     if (details.some(({ kind }) => kind === "cport")) {
-      for (const detail of details.filter(({ kind }) => kind === "cport")) {
-        const order = detail.order as Sdk.CPort.Order;
-        const exchange = new Sdk.CPort.Exchange(this.chainId);
-
-        txs.push({
-          approvals: [
-            {
-              orderIds: [detail.orderId],
-              contract: detail.contract,
-              owner: taker,
-              operator: exchange.contract.address,
-              txData: generateNFTApprovalTxData(detail.contract, taker, exchange.contract.address),
-            },
-          ],
-          preSignatures: [],
-          txTags: {
-            kind: "sale",
-            bids: { cport: 1 },
-          },
-          txData: exchange.fillOrderTx(taker, order, {
-            taker,
-          }),
-          orderIds: [detail.orderId],
+      const cPortDetails = details.filter(({ kind }) => kind === "cport");
+      const exchange = new Sdk.CPort.Exchange(this.chainId);
+      const operator = exchange.contract.address;
+      const orders: Sdk.CPort.Order[] = cPortDetails.map((c) => c.order as Sdk.CPort.Order);
+      const approvals: NFTApproval[] = [];
+      for (const { orderId, contract } of cPortDetails) {
+        approvals.push({
+          orderIds: [orderId],
+          contract: contract,
+          owner: taker,
+          operator,
+          txData: generateNFTApprovalTxData(contract, taker, operator),
         });
-
-        success[detail.orderId] = true;
       }
+
+      txs.push({
+        approvals,
+        txTags: {
+          kind: "sale",
+          listings: { cport: orders.length },
+        },
+        preSignatures: [],
+        txData: exchange.fillOrdersTx(taker, orders, {
+          taker,
+        }),
+        orderIds: cPortDetails.map((d) => d.orderId),
+      });
+
+      for (const { orderId } of cPortDetails) {
+        success[orderId] = true;
+      }
+
+      // for (const detail of details.filter(({ kind }) => kind === "cport")) {
+      //   const order = detail.order as Sdk.CPort.Order;
+      //   const exchange = new Sdk.CPort.Exchange(this.chainId);
+
+      //   txs.push({
+      //     approvals: [
+      //       {
+      //         orderIds: [detail.orderId],
+      //         contract: detail.contract,
+      //         owner: taker,
+      //         operator: exchange.contract.address,
+      //         txData: generateNFTApprovalTxData(detail.contract, taker, exchange.contract.address),
+      //       },
+      //     ],
+      //     preSignatures: [],
+      //     txTags: {
+      //       kind: "sale",
+      //       bids: { cport: 1 },
+      //     },
+      //     txData: exchange.fillOrderTx(taker, order, {
+      //       taker,
+      //     }),
+      //     orderIds: [detail.orderId],
+      //   });
+
+      //   success[detail.orderId] = true;
+      // }
     }
 
     // CASE 2
