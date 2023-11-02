@@ -1,4 +1,4 @@
-import { Interface } from "@ethersproject/abi";
+import { Interface, Result } from "@ethersproject/abi";
 import { HashZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import * as Sdk from "@reservoir0x/sdk";
@@ -390,6 +390,7 @@ export const extractByCollectionERC721 = async (
 export const extractByCollectionERC1155 = async (
   collection: string,
   tokenId: string,
+  usedInstanceId?: string,
   extension?: string
 ): Promise<CollectionMint[]> => {
   const extensions = extension
@@ -424,6 +425,24 @@ export const extractByCollectionERC1155 = async (
             ) claim
           )
         `,
+        `
+          function getClaim(address creatorContractAddress, uint256 claimIndex) external view returns (
+            (
+              uint32 total,
+              uint32 totalMax,
+              uint32 walletMax,
+              uint48 startDate,
+              uint48 endDate,
+              uint8 storageProtocol,
+              bytes32 merkleRoot,
+              string location,
+              uint256 tokenId,
+              uint256 cost,
+              address payable paymentReceiver,
+              address erc20
+            ) claim
+          )
+        `,
         "function MINT_FEE() view returns (uint256)",
         "function MINT_FEE_MERKLE() view returns (uint256)",
       ]),
@@ -431,9 +450,25 @@ export const extractByCollectionERC1155 = async (
     );
 
     try {
-      const result = await c.getClaimForToken(collection, tokenId);
-      const instanceId = bn(result.instanceId).toString();
-      const claim = result.claim;
+      let result: Result | undefined;
+      let olderVersion = false;
+      try {
+        result = await c.getClaimForToken(collection, tokenId);
+      } catch {
+        // Skip errors
+      }
+
+      if (!result) {
+        result = await c.getClaim(collection, usedInstanceId);
+        olderVersion = true;
+      }
+
+      if (!result) {
+        throw new Error("Fetch config failed");
+      }
+
+      const instanceId = olderVersion ? usedInstanceId : bn(result.instanceId).toString();
+      const claim = olderVersion ? result : result.claim;
       const isClosed = !(bn(claim.totalMax).eq(0) || bn(claim.total).lte(bn(claim.totalMax)));
 
       if (
@@ -456,35 +491,6 @@ export const extractByCollectionERC1155 = async (
             details: {
               tx: {
                 to: extension.toLowerCase(),
-                // data: {
-                //   // `mint`
-                //   signature: "0xfa2b068f",
-                //   params: [
-                //     {
-                //       kind: "contract",
-                //       abiType: "address",
-                //     },
-                //     {
-                //       kind: "unknown",
-                //       abiType: "uint256",
-                //       abiValue: instanceId,
-                //     },
-                //     {
-                //       kind: "unknown",
-                //       abiType: "uint32",
-                //       abiValue: 0,
-                //     },
-                //     {
-                //       kind: "unknown",
-                //       abiType: "bytes32[]",
-                //       abiValue: [],
-                //     },
-                //     {
-                //       kind: "recipient",
-                //       abiType: "address",
-                //     },
-                //   ],
-                // },
                 data: {
                   // `mintBatch`
                   signature: "0x26c858a4",
@@ -639,7 +645,7 @@ export const extractByTx = async (
       return extractByCollectionERC721(collection, instanceId, tx.to);
     } else if (contractKind === "erc1155") {
       const tokenId = await getTokenIdForERC1155Mint(collection, instanceId, tx.to);
-      return extractByCollectionERC1155(collection, tokenId, tx.to);
+      return extractByCollectionERC1155(collection, tokenId, instanceId, tx.to);
     }
   }
 

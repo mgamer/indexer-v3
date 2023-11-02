@@ -64,6 +64,24 @@ describe("Mints - Manifold", () => {
     expect(collectionMints[0].stage.includes("claim-")).not.toBe(false);
   });
 
+  it("case-erc1155-3", async () => {
+    const transcation = await utils.fetchTransaction(
+      "0x098588156053c10d4c299c91cd496d4799d4938f8f3441421f09603dcc657a35"
+    );
+    const collectionMints = await extractByTx(
+      "0x85b7e3eb2e3fbafeccdea6b69dd350f6e1c9a8e8",
+      transcation
+    );
+    // console.log("collectionMints", collectionMints);
+    for (const collectionMint of collectionMints) {
+      if (collectionMint.status === "open") {
+        const result = await simulateCollectionMint(collectionMint);
+        expect(result).toBe(true);
+      }
+    }
+    expect(collectionMints[0].stage.includes("claim-")).not.toBe(false);
+  });
+
   it("case-erc721-1", async () => {
     const transcation = await utils.fetchTransaction(
       "0x09d7b966ff5cdfa6e7b31dd29217a81f9139eb802f59d646cb07ba53fa858838"

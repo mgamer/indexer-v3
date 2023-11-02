@@ -137,7 +137,6 @@ const simulateMintTxData = async (
   quantity: number,
   txData: TxData
 ) => {
-  // console.log("txData", txData)
   if (
     [
       Network.Ethereum,
