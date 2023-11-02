@@ -456,38 +456,9 @@ export const extractByCollectionERC1155 = async (
             details: {
               tx: {
                 to: extension.toLowerCase(),
-                data: {
-                  // `mint`
-                  signature: "0xfa2b068f",
-                  params: [
-                    {
-                      kind: "contract",
-                      abiType: "address",
-                    },
-                    {
-                      kind: "unknown",
-                      abiType: "uint256",
-                      abiValue: instanceId,
-                    },
-                    {
-                      kind: "unknown",
-                      abiType: "uint32",
-                      abiValue: 0,
-                    },
-                    {
-                      kind: "unknown",
-                      abiType: "bytes32[]",
-                      abiValue: [],
-                    },
-                    {
-                      kind: "recipient",
-                      abiType: "address",
-                    },
-                  ],
-                },
                 // data: {
-                //   // `mintBatch`
-                //   signature: "0x26c858a4",
+                //   // `mint`
+                //   signature: "0xfa2b068f",
                 //   params: [
                 //     {
                 //       kind: "contract",
@@ -499,17 +470,13 @@ export const extractByCollectionERC1155 = async (
                 //       abiValue: instanceId,
                 //     },
                 //     {
-                //       kind: "quantity",
-                //       abiType: "uint16",
+                //       kind: "unknown",
+                //       abiType: "uint32",
+                //       abiValue: 0,
                 //     },
                 //     {
                 //       kind: "unknown",
-                //       abiType: "uint32[]",
-                //       abiValue: [],
-                //     },
-                //     {
-                //       kind: "unknown",
-                //       abiType: "bytes32[][]",
+                //       abiType: "bytes32[]",
                 //       abiValue: [],
                 //     },
                 //     {
@@ -518,6 +485,39 @@ export const extractByCollectionERC1155 = async (
                 //     },
                 //   ],
                 // },
+                data: {
+                  // `mintBatch`
+                  signature: "0x26c858a4",
+                  params: [
+                    {
+                      kind: "contract",
+                      abiType: "address",
+                    },
+                    {
+                      kind: "unknown",
+                      abiType: "uint256",
+                      abiValue: instanceId,
+                    },
+                    {
+                      kind: "quantity",
+                      abiType: "uint16",
+                    },
+                    {
+                      kind: "unknown",
+                      abiType: "uint32[]",
+                      abiValue: [],
+                    },
+                    {
+                      kind: "unknown",
+                      abiType: "bytes32[][]",
+                      abiValue: [],
+                    },
+                    {
+                      kind: "recipient",
+                      abiType: "address",
+                    },
+                  ],
+                },
               },
             },
             currency: Sdk.Common.Addresses.Native[config.chainId],
