@@ -355,8 +355,8 @@ export const getTrendingMints = async (params: {
     bool: {
       filter: [
         {
-          terms: {
-            type: ["mint"],
+          term: {
+            type: "mint",
           },
         },
         {
