@@ -33,7 +33,9 @@ export type Info = {
 export const extractByCollectionERC721 = async (
   collection: string,
   instanceId: string,
-  extension?: string
+  options?: {
+    extension?: string;
+  }
 ): Promise<CollectionMint[]> => {
   const nft = new Contract(
     collection,
@@ -44,7 +46,7 @@ export const extractByCollectionERC721 = async (
     baseProvider
   );
 
-  const extensions = extension ? [extension] : await nft.getExtensions();
+  const extensions = options?.extension ? [options.extension] : await nft.getExtensions();
 
   let version: number | undefined;
   try {
@@ -91,7 +93,7 @@ export const extractByCollectionERC721 = async (
                   bool identical,
                   bytes32 merkleRoot,
                   string location,
-                  uint cost,
+                  uint256 cost,
                   address payable paymentReceiver
                 ) claim
               )
@@ -140,9 +142,9 @@ export const extractByCollectionERC721 = async (
                   bool identical,
                   bytes32 merkleRoot,
                   string location,
-                  uint cost,
+                  uint256 cost,
                   address payable paymentReceiver,
-                  address erc20,
+                  address erc20
                 ) claim
               )
             `,
@@ -154,8 +156,8 @@ export const extractByCollectionERC721 = async (
 
         const [claim, mintFee, mintFeeMerkle] = await Promise.all([
           cV23.getClaim(collection, instanceId),
-          cV23.MINT_FEE(),
-          cV23.MINT_FEE_MERKLE(),
+          cV23.MINT_FEE().catch(() => "0"),
+          cV23.MINT_FEE_MERKLE().catch(() => "0"),
         ]);
         claimConfig = {
           total: claim.total,
@@ -180,10 +182,11 @@ export const extractByCollectionERC721 = async (
 
     if (!claimConfig) {
       try {
-        const cOlder = new Contract(
+        const cVUnknown = new Contract(
           extension,
           new Interface([
-            `function getClaim(address creatorContractAddress, uint256 claimIndex) external view returns (
+            `
+              function getClaim(address creatorContractAddress, uint256 claimIndex) view returns (
                 (
                   uint32 total,
                   uint32 totalMax,
@@ -197,7 +200,7 @@ export const extractByCollectionERC721 = async (
                   string location,
                   uint256 cost,
                   address payable paymentReceiver,
-                  address erc20,
+                  address erc20
                 ) claim
               )
             `,
@@ -208,9 +211,9 @@ export const extractByCollectionERC721 = async (
         );
 
         const [claim, mintFee, mintFeeMerkle] = await Promise.all([
-          cOlder.getClaim(collection, instanceId),
-          cOlder.MINT_FEE(),
-          cOlder.MINT_FEE_MERKLE(),
+          cVUnknown.getClaim(collection, instanceId),
+          cVUnknown.MINT_FEE().catch(() => "0"),
+          cVUnknown.MINT_FEE_MERKLE().catch(() => "0"),
         ]);
         claimConfig = {
           total: claim.total,
@@ -237,6 +240,7 @@ export const extractByCollectionERC721 = async (
       const isClosed = !(
         bn(claimConfig.totalMax).eq(0) || bn(claimConfig.total).lte(bn(claimConfig.totalMax))
       );
+
       try {
         // Public sale
         if (claimConfig.merkleRoot === HashZero) {
@@ -389,12 +393,16 @@ export const extractByCollectionERC721 = async (
 
 export const extractByCollectionERC1155 = async (
   collection: string,
-  tokenId: string,
-  usedInstanceId?: string,
-  extension?: string
+  options?: {
+    // Only needed for old versions of the lazy payable claim contract (which work off the instance id)
+    instanceId?: string;
+    // Only needed for new versions of the lazy payable claim contract (which work off the token id)
+    tokenId?: string;
+    extension?: string;
+  }
 ): Promise<CollectionMint[]> => {
-  const extensions = extension
-    ? [extension]
+  const extensions = options?.extension
+    ? [options?.extension]
     : await new Contract(
         collection,
         new Interface(["function getExtensions() view returns (address[])"]),
@@ -450,25 +458,41 @@ export const extractByCollectionERC1155 = async (
     );
 
     try {
-      let result: Result | undefined;
-      let olderVersion = false;
-      try {
-        result = await c.getClaimForToken(collection, tokenId);
-      } catch {
-        // Skip errors
+      let claim: Result | undefined;
+      let tokenId: string | undefined;
+      let instanceId: string | undefined;
+
+      const missesDetails = () => !claim || !tokenId || !instanceId;
+
+      if (missesDetails() && options?.tokenId) {
+        try {
+          const result = await c.getClaimForToken(collection, options.tokenId);
+          claim = result.claim;
+          tokenId = options.tokenId;
+          instanceId = result.instanceId.toString();
+        } catch {
+          // Skip errors
+        }
       }
 
-      if (!result) {
-        result = await c.getClaim(collection, usedInstanceId);
-        olderVersion = true;
+      if (missesDetails() && options?.instanceId) {
+        try {
+          const result = await c.getClaim(collection, options.instanceId);
+          claim = result;
+          tokenId = result.tokenId.toString();
+          instanceId = options.instanceId;
+        } catch {
+          // Skip errors
+        }
       }
 
-      if (!result) {
-        throw new Error("Fetch config failed");
+      if (missesDetails()) {
+        throw new Error("Failed to fetch the claim configuration");
       }
 
-      const instanceId = olderVersion ? usedInstanceId : bn(result.instanceId).toString();
-      const claim = olderVersion ? result : result.claim;
+      // To make TS happy
+      claim = claim!;
+
       const isClosed = !(bn(claim.totalMax).eq(0) || bn(claim.total).lte(bn(claim.totalMax)));
 
       if (
@@ -478,7 +502,7 @@ export const extractByCollectionERC1155 = async (
         // Public sale
         if (claim.merkleRoot === HashZero) {
           // Include the Manifold mint fee into the price
-          const fee = await c.MINT_FEE();
+          const fee = await c.MINT_FEE().catch(() => "0");
           const price = bn(claim.cost).add(fee).toString();
 
           results.push({
@@ -525,6 +549,9 @@ export const extractByCollectionERC1155 = async (
                   ],
                 },
               },
+              info: {
+                instanceId,
+              },
             },
             currency: Sdk.Common.Addresses.Native[config.chainId],
             price,
@@ -539,7 +566,7 @@ export const extractByCollectionERC1155 = async (
         // Allowlist sale
         if (claim.merkleRoot !== HashZero) {
           // Include the Manifold mint fee into the price
-          const fee = await c.MINT_FEE_MERKLE();
+          const fee = await c.MINT_FEE_MERKLE().catch(() => "0");
           const price = bn(claim.cost).add(fee).toString();
 
           const merkleTreeId = await fetchMetadata(
@@ -590,6 +617,7 @@ export const extractByCollectionERC1155 = async (
               },
               info: {
                 merkleTreeId,
+                instanceId,
               },
             },
             currency: Sdk.Common.Addresses.Native[config.chainId],
@@ -642,10 +670,9 @@ export const extractByTx = async (
       .instanceId.toString();
 
     if (contractKind === "erc721") {
-      return extractByCollectionERC721(collection, instanceId, tx.to);
+      return extractByCollectionERC721(collection, instanceId, { extension: tx.to });
     } else if (contractKind === "erc1155") {
-      const tokenId = await getTokenIdForERC1155Mint(collection, instanceId, tx.to);
-      return extractByCollectionERC1155(collection, tokenId, instanceId, tx.to);
+      return extractByCollectionERC1155(collection, { instanceId, extension: tx.to });
     }
   }
 
@@ -658,7 +685,10 @@ export const refreshByCollection = async (collection: string) => {
   for (const { tokenId, details } of existingCollectionMints) {
     // Fetch and save/update the currently available mints
     const latestCollectionMints = tokenId
-      ? await extractByCollectionERC1155(collection, tokenId)
+      ? await extractByCollectionERC1155(collection, {
+          tokenId,
+          instanceId: (details.info! as Info).instanceId,
+        })
       : await extractByCollectionERC721(collection, (details.info! as Info).instanceId!);
     for (const collectionMint of latestCollectionMints) {
       await simulateAndUpsertCollectionMint(collectionMint);
@@ -709,37 +739,4 @@ export const generateProofValue = async (
   }
 
   return result;
-};
-
-export const getTokenIdForERC1155Mint = async (
-  collection: string,
-  instanceId: string,
-  extension: string
-): Promise<string> => {
-  const c = new Contract(
-    extension,
-    new Interface([
-      `
-        function getClaim(address creatorContractAddress, uint256 instanceId) external view returns (
-          (
-            uint32 total,
-            uint32 totalMax,
-            uint32 walletMax,
-            uint48 startDate,
-            uint48 endDate,
-            uint8 storageProtocol,
-            bytes32 merkleRoot,
-            string location,
-            uint256 tokenId,
-            uint256 cost,
-            address payable paymentReceiver,
-            address erc20
-          )
-        )
-      `,
-    ]),
-    baseProvider
-  );
-
-  return (await c.getClaim(collection, instanceId)).tokenId.toString();
 };
