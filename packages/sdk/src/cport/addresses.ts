@@ -1,13 +1,13 @@
 import { ChainIdToAddress, Network } from "../utils";
 
 export const Exchange: ChainIdToAddress = {
-  [Network.EthereumSepolia]: "0x503d80ba1ad322220a48953d96c782a65488bd3a",
+  [Network.EthereumSepolia]: "0x7ca79c6f5040d97f66d9eba5accde49bc546d98d",
 };
 
 export const CPortEncoder: ChainIdToAddress = {
-  [Network.EthereumSepolia]: "0x00000052abef542ef6dd144ffdd4942f1eaf30ba",
+  [Network.EthereumSepolia]: "0x000000d75b0cf9bc3f3991b675483ac15c6091aa",
 };
 
 export const DomainSeparator: ChainIdToAddress = {
-  [Network.EthereumSepolia]: "0x30334acc1fbf29218669c223122902705a380853e41256cec9d8a7bc4163b292",
+  [Network.EthereumSepolia]: "0x098502aac4fe0299b580a7b6a11fc0d4f3232669134b6206dd3e1b374ea2c994",
 };
