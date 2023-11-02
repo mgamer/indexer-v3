@@ -191,6 +191,9 @@ export const getTrendingMintsV1Options: RouteOptions = {
               .allow(null)
               .description("Lowest Ask Price."),
           },
+          createdAt: Joi.date().allow("", null),
+          startDate: Joi.date().allow("", null),
+          endDate: Joi.date().allow("", null),
           mintPrice: Joi.number().allow(null),
           mintVolume: Joi.any(),
           mintCount: Joi.number().allow(null),
@@ -274,12 +277,10 @@ async function getMintingCollections(type: "paid" | "free" | "any"): Promise<Min
 
   const baseQuery = `
 SELECT 
-    collection_id
+    collection_id, start_time, end_time, created_at, updated_at, max_supply, max_mints_per_wallet, price
 FROM 
     collection_mints 
 ${whereClause}
-GROUP BY 
-    collection_id
   `;
 
   const result = await redb.manyOrNone<Mint>(baseQuery);
@@ -347,6 +348,9 @@ async function formatCollections(
         image: metadata?.metadata?.imageUrl,
         name: metadata?.name,
         mintType: Number(mintData?.price) > 0 ? "paid" : "free",
+        createdAt: mintData?.created_at && new Date(mintData?.created_at).toISOString(),
+        startDate: mintData?.start_time && new Date(mintData?.start_time).toISOString(),
+        endDate: mintData?.end_time && new Date(mintData?.end_time).toISOString(),
         mintCount: r.count,
         mintVolume: r.volume,
         mintStages: metadata?.mint_stages
@@ -410,61 +414,65 @@ async function getCollectionsMetadata(collectionIds: string[]): Promise<Record<s
     const collectionIdList = collectionsToFetchFromDb.map((id: string) => `'${id}'`).join(", ");
 
     const baseQuery = `
-    SELECT
-    collections.id,
-    collections.name,
-    collections.contract,
-    collections.creator,
-    collections.token_count,
-    collections.owner_count,
-    collections.day1_volume_change,
-    collections.day7_volume_change,
-    collections.day30_volume_change,
-    collections.all_time_volume,
-    json_build_object(
-      'imageUrl', collections.metadata ->> 'imageUrl',
-      'bannerImageUrl', collections.metadata ->> 'bannerImageUrl',
-      'description', collections.metadata ->> 'description'
-    ) AS metadata,
-    collections.non_flagged_floor_sell_id,
-    collections.non_flagged_floor_sell_value,
-    collections.non_flagged_floor_sell_maker,
-    collections.non_flagged_floor_sell_valid_between,
-    collections.non_flagged_floor_sell_source_id_int,
-    collections.floor_sell_id,
-    collections.floor_sell_value,
-    collections.floor_sell_maker,
-    collections.floor_sell_valid_between,
-    collections.floor_sell_source_id_int,
-    collections.normalized_floor_sell_id,
-    collections.normalized_floor_sell_value,
-    collections.normalized_floor_sell_maker,
-    collections.normalized_floor_sell_valid_between,
-    collections.normalized_floor_sell_source_id_int,
-    collections.top_buy_id,
-    collections.top_buy_value,
-    collections.top_buy_maker,
-    collections.top_buy_valid_between,
-    collections.top_buy_source_id_int,
-    mint_subquery.mint_stages
-  FROM collections
-  INNER JOIN LATERAL (
-    SELECT array_agg(
+    WITH MintStages AS (
+      SELECT 
+          collection_id,
+          array_agg(
+              json_build_object(
+                  'stage', stage::TEXT,
+                  'tokenId', token_id::TEXT,
+                  'kind', kind,
+                  'currency', '0x' || encode(currency, 'hex'),
+                  'price', price::TEXT,
+                  'startTime', EXTRACT(epoch FROM start_time)::INTEGER,
+                  'endTime', EXTRACT(epoch FROM end_time)::INTEGER,
+                  'maxMintsPerWallet', max_mints_per_wallet
+              )
+          ) AS mint_stages
+      FROM collection_mints
+      WHERE collection_id IN (${collectionIdList})
+      GROUP BY collection_id
+  )
+  SELECT 
+      c.id,
+      c.name,
+      c.contract,
+      c.creator,
+      c.token_count,
+      c.owner_count,
+      c.day1_volume_change,
+      c.day7_volume_change,
+      c.day30_volume_change,
+      c.all_time_volume,
       json_build_object(
-        'stage', collection_mints.stage::TEXT,
-        'tokenId', collection_mints.token_id::TEXT,
-        'kind', collection_mints.kind,
-        'currency', '0x' || encode(collection_mints.currency, 'hex'),
-        'price', collection_mints.price::TEXT,
-        'startTime', EXTRACT(epoch FROM collection_mints.start_time)::INTEGER,
-        'endTime', EXTRACT(epoch FROM collection_mints.end_time)::INTEGER,
-        'maxMintsPerWallet', collection_mints.max_mints_per_wallet
-      )
-    ) AS mint_stages
-    FROM collection_mints
-    WHERE collection_mints.collection_id = collections.id
-  ) AS mint_subquery ON true
-  WHERE collections.id IN (${collectionIdList});
+          'imageUrl', c.metadata ->> 'imageUrl',
+          'bannerImageUrl', c.metadata ->> 'bannerImageUrl',
+          'description', c.metadata ->> 'description'
+      ) AS metadata,
+      c.non_flagged_floor_sell_id,
+      c.non_flagged_floor_sell_value,
+      c.non_flagged_floor_sell_maker,
+      c.non_flagged_floor_sell_valid_between,
+      c.non_flagged_floor_sell_source_id_int,
+      c.floor_sell_id,
+      c.floor_sell_value,
+      c.floor_sell_maker,
+      c.floor_sell_valid_between,
+      c.floor_sell_source_id_int,
+      c.normalized_floor_sell_id,
+      c.normalized_floor_sell_value,
+      c.normalized_floor_sell_maker,
+      c.normalized_floor_sell_valid_between,
+      c.normalized_floor_sell_source_id_int,
+      c.top_buy_id,
+      c.top_buy_value,
+      c.top_buy_maker,
+      c.top_buy_valid_between,
+      c.top_buy_source_id_int,
+      ms.mint_stages
+  FROM collections c
+  LEFT JOIN MintStages ms ON c.id = ms.collection_id
+  WHERE c.id IN (${collectionIdList});  
   `;
 
     collectionMetadataResponse = await redb.manyOrNone(baseQuery);
