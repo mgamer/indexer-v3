@@ -443,7 +443,7 @@ export const getNetworkSettings = (): NetworkSettings => {
               contract: "0xed5464bd5c477b7f71739ce1d741b43e932b97b0",
               name: "BAP Methane",
               symbol: "METH",
-              decimals: 18,
+              decimals: 0,
               metadata: {
                 image: "https://i.ibb.co/Mc5Pmjn/baptoken.png",
               },
