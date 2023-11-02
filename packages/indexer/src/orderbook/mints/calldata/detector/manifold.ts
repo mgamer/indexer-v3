@@ -461,8 +461,47 @@ export const extractByCollectionERC1155 = async (
       let claim: Result | undefined;
       let tokenId: string | undefined;
       let instanceId: string | undefined;
+      let hasMintFee = false;
+      let mintFee = bn(0);
 
       const missesDetails = () => !claim || !tokenId || !instanceId;
+
+      try {
+        mintFee = await c.MINT_FEE();
+        hasMintFee = true;
+      } catch {
+        // Skip errors
+      }
+
+      if (missesDetails() && !hasMintFee && options?.instanceId) {
+        const c = new Contract(
+          extension,
+          new Interface([
+            `
+              function getClaim(address creatorContractAddress, uint256 claimIndex) external view returns (
+                (
+                  uint32 total,
+                  uint32 totalMax,
+                  uint32 walletMax,
+                  uint48 startDate,
+                  uint48 endDate,
+                  uint8 storageProtocol,
+                  bytes32 merkleRoot,
+                  string location,
+                  uint256 tokenId,
+                  uint256 cost,
+                  address payable paymentReceiver
+                ) claim
+              )
+            `,
+          ]),
+          baseProvider
+        );
+        const result = await c.getClaim(collection, options?.instanceId);
+        claim = result;
+        tokenId = result.tokenId.toString();
+        instanceId = options.instanceId;
+      }
 
       if (missesDetails() && options?.tokenId) {
         try {
@@ -497,13 +536,12 @@ export const extractByCollectionERC1155 = async (
 
       if (
         instanceId !== "0" &&
-        claim.erc20.toLowerCase() === Sdk.Common.Addresses.Native[config.chainId]
+        (!claim.erc20 || claim.erc20.toLowerCase() === Sdk.Common.Addresses.Native[config.chainId])
       ) {
         // Public sale
         if (claim.merkleRoot === HashZero) {
           // Include the Manifold mint fee into the price
-          const fee = await c.MINT_FEE().catch(() => "0");
-          const price = bn(claim.cost).add(fee).toString();
+          const price = bn(claim.cost).add(mintFee).toString();
 
           results.push({
             collection,
