@@ -2,12 +2,14 @@ import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
 import { keccak256 } from "@ethersproject/solidity";
 import { parseEther } from "@ethersproject/units";
+import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
 import { BidDetails, FillBidsResult } from "@reservoir0x/sdk/dist/router/v6/types";
 import { estimateGas } from "@reservoir0x/sdk/dist/router/v6/utils";
 import { TxData } from "@reservoir0x/sdk/dist/utils";
 import axios from "axios";
+import { randomUUID } from "crypto";
 import Joi from "joi";
 
 import { inject } from "@/api/index";
@@ -1365,6 +1367,16 @@ export const getExecuteSellV7Options: RouteOptions = {
         })
       );
 
+      const key = request.headers["x-api-key"];
+      const apiKey = await ApiKeyManager.getApiKey(key);
+      logger.info(
+        `get-execute-sell-${version}-handler`,
+        JSON.stringify({
+          request: payload,
+          apiKey,
+        })
+      );
+
       return {
         requestId,
         steps: blurAuth ? [steps[0], ...steps.slice(1).filter((s) => s.items.length)] : steps,
@@ -1372,12 +1384,18 @@ export const getExecuteSellV7Options: RouteOptions = {
         path,
       };
     } catch (error) {
+      const key = request.headers["x-api-key"];
+      const apiKey = await ApiKeyManager.getApiKey(key);
       logger.error(
         `get-execute-sell-${version}-handler`,
-        `Handler failure: ${error} (path = ${JSON.stringify({})}, request = ${JSON.stringify(
-          payload
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        )}, trace=${(error as any).stack})`
+        JSON.stringify({
+          request: payload,
+          uuid: randomUUID(),
+          httpCode: error instanceof Boom.Boom ? error.output.statusCode : 500,
+          error:
+            error instanceof Boom.Boom ? error.output.payload : { error: "Internal Server Error" },
+          apiKey,
+        })
       );
 
       throw error;

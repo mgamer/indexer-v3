@@ -13,6 +13,7 @@ import {
 import { estimateGas } from "@reservoir0x/sdk/dist/router/v6/utils";
 import { getRandomBytes } from "@reservoir0x/sdk/dist/utils";
 import axios from "axios";
+import { randomUUID } from "crypto";
 import Joi from "joi";
 import _ from "lodash";
 
@@ -1660,13 +1661,16 @@ export const getExecuteBuyV7Options: RouteOptions = {
           : `${item.contract}:${MaxUint256.toString()}`.toLowerCase();
 
         const quote = await axios
-          .post(`${config.crossChainSolverBaseUrl}/quote`, {
+          .post(`${config.crossChainSolverBaseUrl}/intents/quote`, {
             fromChainId,
             toChainId,
             token,
             amount: item.quantity,
           })
-          .then((response) => response.data.price);
+          .then((response) => response.data.price)
+          .catch((error) => {
+            throw Boom.badRequest(error.response?.data ?? "Error getting quote");
+          });
 
         item.fromChainId = fromChainId;
         item.totalPrice = formatPrice(quote);
@@ -1705,7 +1709,8 @@ export const getExecuteBuyV7Options: RouteOptions = {
               endpoint: "/execute/status/v1",
               method: "POST",
               body: {
-                kind: "transaction",
+                kind: "cross-chain-transaction",
+                chainId: fromChainId,
               },
             },
           });
@@ -1735,8 +1740,16 @@ export const getExecuteBuyV7Options: RouteOptions = {
               body: {
                 kind: "cross-chain-intent",
                 order: order.params,
-                fromChainId,
+                chainId: fromChainId,
               },
+            },
+          },
+          check: {
+            endpoint: "/execute/status/v1",
+            method: "POST",
+            body: {
+              kind: "cross-chain-intent",
+              id: order.hash(),
             },
           },
         });
@@ -2277,6 +2290,16 @@ export const getExecuteBuyV7Options: RouteOptions = {
         })
       );
 
+      const key = request.headers["x-api-key"];
+      const apiKey = await ApiKeyManager.getApiKey(key);
+      logger.info(
+        `get-execute-buy-${version}-handler`,
+        JSON.stringify({
+          request: payload,
+          apiKey,
+        })
+      );
+
       return {
         requestId,
         steps: blurAuth ? [steps[0], ...steps.slice(1).filter((s) => s.items.length)] : steps,
@@ -2284,11 +2307,18 @@ export const getExecuteBuyV7Options: RouteOptions = {
         path,
       };
     } catch (error) {
+      const key = request.headers["x-api-key"];
+      const apiKey = await ApiKeyManager.getApiKey(key);
       logger.error(
         `get-execute-buy-${version}-handler`,
-        `Handler failure: ${error} (path = ${JSON.stringify({})}, request = ${JSON.stringify(
-          payload
-        )})`
+        JSON.stringify({
+          request: payload,
+          uuid: randomUUID(),
+          httpCode: error instanceof Boom.Boom ? error.output.statusCode : 500,
+          error:
+            error instanceof Boom.Boom ? error.output.payload : { error: "Internal Server Error" },
+          apiKey,
+        })
       );
 
       throw error;

@@ -23,6 +23,20 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
     try {
       const { data, creatorAddress } = await this.getDataWithCreator(contract, tokenId);
 
+      if (contract === "0x5d4ea842d1d39be56c8c29352e918e12890bd949") {
+        logger.info(
+          "opensea-fetcher",
+          JSON.stringify({
+            topic: "fetchCollectionDebug",
+            message: `getDataWithCreator.  contract=${contract}, tokenId=${tokenId}`,
+            contract,
+            tokenId,
+            data,
+            creatorAddress,
+          })
+        );
+      }
+
       if (!data?.collection) {
         throw new Error("Missing collection");
       }
@@ -151,8 +165,34 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
       .catch((error) => this.handleError(error));
 
     const assets = data.assets.map(this.parseToken).filter(Boolean);
+
+    // Get custom metadata
+    const customAssets = await Promise.all(
+      assets.map(async (asset: any) => {
+        if (hasCustomHandler(asset.contract)) {
+          const result = await customHandleToken({
+            contract: asset.contract,
+            tokenId: asset.tokenId,
+          });
+          return result;
+        }
+        return asset;
+      })
+    );
+
+    // Get extended metadata
+    const extendedMetadata = await Promise.all(
+      customAssets.map(async (asset: any) => {
+        if (hasExtendHandler(asset.contract)) {
+          const result = await extendMetadata(asset);
+          return result;
+        }
+        return asset;
+      })
+    );
+
     return {
-      metadata: assets,
+      metadata: extendedMetadata,
       continuation: data.next ?? undefined,
       previous: data.previous ?? undefined,
     };
@@ -428,17 +468,87 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
     }
 
     let data = await this.getOSData("nft", contract, tokenId);
+
+    if (contract === "0x5d4ea842d1d39be56c8c29352e918e12890bd949") {
+      logger.info(
+        "opensea-fetcher",
+        JSON.stringify({
+          topic: "fetchCollectionDebug",
+          message: `getOSData nft.  contract=${contract}, tokenId=${tokenId}`,
+          contract,
+          tokenId,
+          data,
+        })
+      );
+    }
+
     let creatorAddress = data?.creator;
 
     if (data?.collection) {
       data = await this.getOSDataForCollection(contract, tokenId, data.collection);
+
+      if (contract === "0x5d4ea842d1d39be56c8c29352e918e12890bd949") {
+        logger.info(
+          "opensea-fetcher",
+          JSON.stringify({
+            topic: "fetchCollectionDebug",
+            message: `getOSDataForCollection.  contract=${contract}, tokenId=${tokenId}`,
+            contract,
+            tokenId,
+            data,
+          })
+        );
+      }
+
       creatorAddress = creatorAddress ?? data?.creator?.address;
     } else {
       data = await this.getOSDataForEventsOrAsset(contract, tokenId);
+
+      if (contract === "0x5d4ea842d1d39be56c8c29352e918e12890bd949") {
+        logger.info(
+          "opensea-fetcher",
+          JSON.stringify({
+            topic: "fetchCollectionDebug",
+            message: `getOSDataForEventsOrAsset.  contract=${contract}, tokenId=${tokenId}`,
+            contract,
+            tokenId,
+            data,
+          })
+        );
+      }
+
       if (data?.collection?.slug && !data?.collection?.payment_tokens) {
         data = await this.getOSData("collection", contract, tokenId, data.collection.slug);
+
+        if (contract === "0x5d4ea842d1d39be56c8c29352e918e12890bd949") {
+          logger.info(
+            "opensea-fetcher",
+            JSON.stringify({
+              topic: "fetchCollectionDebug",
+              message: `getOSData collection.  contract=${contract}, tokenId=${tokenId}`,
+              contract,
+              tokenId,
+              data,
+            })
+          );
+        }
       }
+
       creatorAddress = data?.creator?.address;
+    }
+
+    if (contract === "0x5d4ea842d1d39be56c8c29352e918e12890bd949") {
+      logger.info(
+        "opensea-fetcher",
+        JSON.stringify({
+          topic: "fetchCollectionDebug",
+          message: `getDataWithCreator return.  contract=${contract}, tokenId=${tokenId}`,
+          contract,
+          tokenId,
+          data,
+          creatorAddress,
+        })
+      );
     }
 
     return {

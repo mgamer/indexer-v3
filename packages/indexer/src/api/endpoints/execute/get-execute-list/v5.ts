@@ -1,10 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { _TypedDataEncoder } from "@ethersproject/hash";
+import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
 import { TxData } from "@reservoir0x/sdk/dist/utils";
 import axios from "axios";
+import { randomUUID } from "crypto";
 import Joi from "joi";
 import _ from "lodash";
 
@@ -12,6 +14,7 @@ import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { now, regex } from "@/common/utils";
 import { config } from "@/config/index";
+import { ApiKeyManager } from "@/models/api-keys";
 import { FeeRecipients } from "@/models/fee-recipients";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import { getExecuteError } from "@/orderbook/orders/errors";
@@ -1224,12 +1227,34 @@ export const getExecuteListV5Options: RouteOptions = {
         })
       );
 
+      const key = request.headers["x-api-key"];
+      const apiKey = await ApiKeyManager.getApiKey(key);
+      logger.info(
+        `get-execute-bid-${version}-handler`,
+        JSON.stringify({
+          request: payload,
+          apiKey,
+        })
+      );
+
       return {
         steps: blurAuth ? [steps[0], ...steps.slice(1).filter((s) => s.items.length)] : steps,
         errors,
       };
     } catch (error) {
-      logger.error(`get-execute-list-${version}-handler`, `Handler failure: ${error}`);
+      const key = request.headers["x-api-key"];
+      const apiKey = await ApiKeyManager.getApiKey(key);
+      logger.error(
+        `get-execute-list-${version}-handler`,
+        JSON.stringify({
+          request: payload,
+          uuid: randomUUID(),
+          httpCode: error instanceof Boom.Boom ? error.output.statusCode : 500,
+          error:
+            error instanceof Boom.Boom ? error.output.payload : { error: "Internal Server Error" },
+          apiKey,
+        })
+      );
 
       throw error;
     }
