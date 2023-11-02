@@ -154,11 +154,6 @@ export const getTransfersBulkV2Options: RouteOptions = {
         }
       }
 
-      // if (query.txHash) {
-      //   (query as any).txHash = toBuffer(query.txHash);
-      //   conditions.push(`nft_transfer_events.tx_hash = $/txHash/`);
-      // }
-
       // We default in the code so that these values don't appear in the docs
       if (!query.startTimestamp) {
         query.startTimestamp = 0;
