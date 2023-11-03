@@ -361,7 +361,8 @@ export const getUserActivityV6Options: RouteOptions = {
                   name: tokenMetadata ? tokenMetadata.name : activity.token?.name,
                   image: tokenMetadata ? tokenMetadata.image : activity.token?.image,
                 },
-                tokenMetadata?.metadata_disabled,
+                tokenMetadata?.metadata_disabled ||
+                  disabledCollectionMetadata[activity.collection?.id ?? ""],
                 true
               );
             }
