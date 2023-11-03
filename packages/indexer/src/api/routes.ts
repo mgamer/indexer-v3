@@ -576,8 +576,8 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
-    path: "/collections/disable/v1",
-    options: collectionsEndpoints.postSetCollectionDisableV1Options,
+    path: "/collections/disable-metadata/v1",
+    options: collectionsEndpoints.postSetCollectionDisableMetadataV1Options,
   });
 
   server.route({
@@ -1337,8 +1337,8 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
-    path: "/tokens/disable/v1",
-    options: tokensEndpoints.postSetTokenDisableV1Options,
+    path: "/tokens/disable-metadata/v1",
+    options: tokensEndpoints.postSetTokenDisableMetadataV1Options,
   });
 
   // Token sets

@@ -11,7 +11,7 @@ import { regex, toBuffer } from "@/common/utils";
 
 const version = "v1";
 
-export const postSetTokenDisableV1Options: RouteOptions = {
+export const postSetTokenDisableMetadataV1Options: RouteOptions = {
   description: "Disable or reenable metadata for a token",
   notes:
     "This API requires an allowed API key for execution. Please contact technical support with more questions.",
@@ -50,9 +50,12 @@ export const postSetTokenDisableV1Options: RouteOptions = {
   response: {
     schema: Joi.object({
       message: Joi.string(),
-    }).label(`postSetTokenDisable${version.toUpperCase()}Response`),
+    }).label(`postSetTokenDisableMetadata${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
-      logger.error(`post-set-token-disable-${version}-handler`, `Wrong response schema: ${error}`);
+      logger.error(
+        `post-set-token-disable-metadata-${version}-handler`,
+        `Wrong response schema: ${error}`
+      );
       throw error;
     },
   },
@@ -95,7 +98,7 @@ export const postSetTokenDisableV1Options: RouteOptions = {
       );
 
       logger.info(
-        `post-set-token-disable-${version}-handler`,
+        `post-set-token-disable-metadata-${version}-handler`,
         JSON.stringify({
           message: "Disable metadata request accepted",
           ids: payload.tokens,
@@ -108,7 +111,7 @@ export const postSetTokenDisableV1Options: RouteOptions = {
       return { message: "Success" };
     } catch (error) {
       logger.error(
-        `post-set-token-disable-${version}-handler`,
+        `post-set-token-disable-metadata-${version}-handler`,
         `Handler failure: ${JSON.stringify(error)}`
       );
       throw error;
