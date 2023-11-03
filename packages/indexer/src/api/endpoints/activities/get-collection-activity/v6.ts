@@ -343,7 +343,8 @@ export const getCollectionActivityV6Options: RouteOptions = {
                     name: activity.collection?.name,
                     image: activity.collection?.image,
                   },
-                  disabledCollectionMetadata[activity.collection?.id ?? ""]
+                  disabledCollectionMetadata[activity.collection?.id ?? ""],
+                  activity.contract
                 ),
               },
             };
