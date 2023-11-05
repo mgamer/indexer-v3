@@ -1,4 +1,4 @@
-import { ParamType, JsonFragmentType } from "@ethersproject/abi";
+import { ParamType } from "@ethersproject/abi";
 import { BigNumber } from "@ethersproject/bignumber";
 import { HashZero } from "@ethersproject/constants";
 import * as Sdk from "@reservoir0x/sdk";
