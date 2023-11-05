@@ -9,6 +9,7 @@ import {
   CollectionMint,
   CollectionMintStandard,
   simulateAndUpsertCollectionMint,
+  generateMintRefreshJobIfNeed,
 } from "@/orderbook/mints";
 import * as detector from "@/orderbook/mints/calldata/detector";
 import { getContractKind } from "@/orderbook/mints/calldata/helpers";
@@ -237,6 +238,7 @@ export default class MintsProcessJob extends AbstractRabbitMqJobHandler {
       for (const collectionMint of collectionMints) {
         const result = await simulateAndUpsertCollectionMint(collectionMint);
         logger.info("mints-process", JSON.stringify({ success: result, collectionMint }));
+        await generateMintRefreshJobIfNeed(collectionMint.collection);
       }
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
