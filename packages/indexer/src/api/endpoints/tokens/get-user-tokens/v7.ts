@@ -178,7 +178,7 @@ export const getUserTokensV7Options: RouteOptions = {
               name: Joi.string().allow("", null),
               slug: Joi.string().allow("", null).description("Open Sea slug"),
               symbol: Joi.string().allow("", null),
-              imageUrl: Joi.string().allow(null),
+              imageUrl: Joi.string().allow("", null),
               isSpam: Joi.boolean().default(false),
               metadataDisabled: Joi.boolean().default(false),
               openseaVerificationStatus: Joi.string().allow("", null),
