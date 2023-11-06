@@ -25,7 +25,7 @@ import { buildContinuation, splitContinuation } from "@/common/utils";
 import { backfillActivitiesElasticsearchJob } from "@/jobs/activities/backfill/backfill-activities-elasticsearch-job";
 
 import * as CONFIG from "@/elasticsearch/indexes/activities/config";
-import { ElasticMintResult } from "@/api/endpoints/collections/get-trending-mints/v1";
+import { ElasticMintResult } from "@/api/endpoints/collections/get-trending-mints/interfaces";
 
 const INDEX_NAME = `${getNetworkName()}.activities`;
 

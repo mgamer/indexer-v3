@@ -16,124 +16,16 @@ const REDIS_EXPIRATION_MINTS = 120; // Assuming an hour, adjust as needed.
 
 import { getTrendingMints } from "@/elasticsearch/indexes/activities";
 
-import { getJoiPriceObject, JoiPrice } from "@/common/joi";
+import {
+  ElasticMintResult,
+  Metadata,
+  MetadataKey,
+  Mint,
+} from "@/api/endpoints/collections/get-trending-mints/interfaces";
+import { JoiPrice, getJoiPriceObject } from "@/common/joi";
 import { Sources } from "@/models/sources";
 
 const version = "v1";
-export interface MintResult {
-  contract: Buffer;
-  takers: Buffer[];
-}
-export interface Mint {
-  collection_id: string;
-  kind: string;
-  status: string;
-  mint_stages: {
-    stage: string;
-    tokenId: number;
-    kind: string;
-    currency: string;
-    price: string;
-    startTime: null;
-    endTime: null;
-    maxMintsPerWallet: number;
-  }[];
-  details: {
-    tx: {
-      to: string;
-      data: {
-        params: {
-          kind: string;
-          abiType: string;
-        }[];
-        signature: string;
-      };
-    };
-  };
-  currency: {
-    type: string;
-    data: number[];
-  };
-  price: string;
-  stage: string;
-  max_mints_per_wallet: any;
-  start_time: any;
-  end_time: any;
-  created_at: string;
-  updated_at: string;
-  max_supply: string;
-  token_id: any;
-  allowlist_id: any;
-  id: string;
-}
-
-export interface Metadata {
-  id: string;
-  name: string;
-  contract: {
-    type: string;
-    data: number[];
-  };
-  mint_stages: {
-    stage: string;
-    tokenId: number;
-    kind: string;
-    currency: string;
-    price: string;
-    startTime: null;
-    endTime: null;
-    maxMintsPerWallet: number;
-  }[];
-  creator: any;
-  token_count: number;
-  owner_count: number;
-  day1_volume_change: any;
-  day7_volume_change: any;
-  day30_volume_change: any;
-  all_time_volume: string;
-  metadata: {
-    imageUrl: any;
-    bannerImageUrl: any;
-    description: any;
-  };
-  non_flagged_floor_sell_id: string;
-  non_flagged_floor_sell_value: string;
-  non_flagged_floor_sell_maker: {
-    type: string;
-    data: number[];
-  };
-  non_flagged_floor_sell_valid_between: string;
-  non_flagged_floor_sell_source_id_int: number;
-  floor_sell_id: string;
-  floor_sell_value: string;
-  floor_sell_maker: {
-    type: string;
-    data: number[];
-  };
-  floor_sell_valid_between: string;
-  floor_sell_source_id_int: number;
-  normalized_floor_sell_id: string;
-  normalized_floor_sell_value: string;
-  normalized_floor_sell_maker: {
-    type: string;
-    data: number[];
-  };
-  normalized_floor_sell_valid_between: string;
-  normalized_floor_sell_source_id_int: number;
-  top_buy_id: any;
-  top_buy_value: any;
-  top_buy_maker: any;
-  top_buy_valid_between: any;
-  top_buy_source_id_int: any;
-}
-
-export interface ElasticMintResult {
-  volume: number;
-  count: number;
-  id: string;
-}
-
-export type MetadataKey = keyof Metadata;
 
 export const getTrendingMintsV1Options: RouteOptions = {
   description: "Top Trending Mints",
@@ -347,7 +239,7 @@ async function formatCollections(
         image: metadata?.metadata?.imageUrl,
         name: metadata?.name,
         mintType: Number(mintData?.price) > 0 ? "paid" : "free",
-        maxSupply: mintData?.max_supply,
+        maxSupply: Number.isSafeInteger(mintData?.max_supply) ? mintData?.max_supply : null,
         createdAt: mintData?.created_at && new Date(mintData?.created_at).toISOString(),
         startDate: mintData?.start_time && new Date(mintData?.start_time).toISOString(),
         endDate: mintData?.end_time && new Date(mintData?.end_time).toISOString(),
@@ -421,7 +313,7 @@ async function getCollectionsMetadata(collectionIds: string[]): Promise<Record<s
                   'stage', stage::TEXT,
                   'tokenId', token_id::TEXT,
                   'kind', kind,
-                  'currency', '0x' || encode(currency, 'hex'),
+                  'currency', concat('0x', encode(collection_mints.currency, 'hex')),
                   'price', price::TEXT,
                   'startTime', EXTRACT(epoch FROM start_time)::INTEGER,
                   'endTime', EXTRACT(epoch FROM end_time)::INTEGER,
