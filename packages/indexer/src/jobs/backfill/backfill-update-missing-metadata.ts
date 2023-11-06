@@ -17,7 +17,7 @@ import { metadataIndexFetchJob } from "@/jobs/metadata-index/metadata-fetch-job"
 import { metadataIndexProcessJob } from "@/jobs/metadata-index/metadata-process-job";
 import { metadataIndexProcessBySlugJob } from "@/jobs/metadata-index/metadata-process-by-slug-job";
 import { PendingFetchOnchainUriTokens } from "@/models/pending-fetch-onchain-uri-tokens";
-import { onchainMetadataProcessUriJob } from "../metadata-index/onchain-metadata-process-uri-job";
+import { onchainMetadataFetchTokenUriJob } from "../metadata-index/onchain-metadata-process-token-uri-job";
 
 const QUEUE_NAME = "backfill-update-missing-metadata-queue";
 
@@ -145,7 +145,7 @@ async function processCollectionTokens(
   // push to tokens refresh queue
   if (indexingMethod === "onchain") {
     await PendingFetchOnchainUriTokens.add(unindexedTokens);
-    await onchainMetadataProcessUriJob.addToQueue();
+    await onchainMetadataFetchTokenUriJob.addToQueue();
   } else {
     const pendingRefreshTokens = new PendingRefreshTokens(indexingMethod);
     await pendingRefreshTokens.add(unindexedTokens);

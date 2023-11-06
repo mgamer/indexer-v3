@@ -10,7 +10,7 @@ import { AddressZero } from "@ethersproject/constants";
 import { metadataIndexProcessJob } from "@/jobs/metadata-index/metadata-process-job";
 import { metadataIndexProcessBySlugJob } from "@/jobs/metadata-index/metadata-process-by-slug-job";
 import { PendingFetchOnchainUriTokens } from "@/models/pending-fetch-onchain-uri-tokens";
-import { onchainMetadataProcessUriJob } from "./onchain-metadata-process-uri-job";
+import { onchainMetadataFetchTokenUriJob } from "./onchain-metadata-process-token-uri-job";
 
 export type MetadataIndexFetchJobPayload =
   | {
@@ -144,7 +144,7 @@ export default class MetadataIndexFetchJob extends AbstractRabbitMqJobHandler {
     // Add the tokens to the list
     if (data.method === "onchain") {
       await PendingFetchOnchainUriTokens.add(refreshTokens, prioritized);
-      await onchainMetadataProcessUriJob.addToQueue();
+      await onchainMetadataFetchTokenUriJob.addToQueue();
     } else {
       const pendingRefreshTokens = new PendingRefreshTokens(data.method);
       await pendingRefreshTokens.add(refreshTokens, prioritized);

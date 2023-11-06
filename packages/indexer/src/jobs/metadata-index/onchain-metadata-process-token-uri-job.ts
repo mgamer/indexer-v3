@@ -2,13 +2,12 @@ import { AbstractRabbitMqJobHandler, BackoffStrategy } from "@/jobs/abstract-rab
 import _ from "lodash";
 
 import { logger } from "@/common/logger";
-import { RabbitMQMessage } from "@/common/rabbit-mq";
 import { onchainMetadataProvider } from "@/metadata/providers/onchain-metadata-provider";
-import { onchainMetadataIndexProcessJob } from "./onchain-metadata-process-job";
+import { onchainMetadataProcessTokenUriJob } from "./onchain-metadata-process-job";
 import { RequestWasThrottledError } from "@/metadata/providers/utils";
 import { PendingFetchOnchainUriTokens } from "@/models/pending-fetch-onchain-uri-tokens";
 
-export default class OnchainMetadataProcessUriJob extends AbstractRabbitMqJobHandler {
+export default class OnchainMetadataFetchTokenUriJob extends AbstractRabbitMqJobHandler {
   queueName = "metadata-index-onchain-process-uri-queue";
   maxRetries = 3;
   concurrency = 3;
@@ -67,20 +66,12 @@ export default class OnchainMetadataProcessUriJob extends AbstractRabbitMqJobHan
       }
     });
 
-    await onchainMetadataIndexProcessJob.addToQueueBulk(tokensToProcess);
+    await onchainMetadataProcessTokenUriJob.addToQueueBulk(tokensToProcess);
 
     // If there are potentially more token uris to process, trigger another job
     const queueLength = await PendingFetchOnchainUriTokens.len();
     if (queueLength > 0) {
-      return 1;
-    }
-
-    return 0;
-  }
-
-  public async onCompleted(rabbitMqMessage: RabbitMQMessage, processResult: undefined | number) {
-    if (processResult) {
-      await this.addToQueue(processResult * 1000);
+      await this.addToQueue();
     }
   }
 
@@ -89,4 +80,4 @@ export default class OnchainMetadataProcessUriJob extends AbstractRabbitMqJobHan
   }
 }
 
-export const onchainMetadataProcessUriJob = new OnchainMetadataProcessUriJob();
+export const onchainMetadataFetchTokenUriJob = new OnchainMetadataFetchTokenUriJob();

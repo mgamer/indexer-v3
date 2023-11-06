@@ -4,13 +4,13 @@ import { metadataIndexWriteJob } from "@/jobs/metadata-index/metadata-write-job"
 import { onchainMetadataProvider } from "@/metadata/providers/onchain-metadata-provider";
 import { RequestWasThrottledError } from "@/metadata/providers/utils";
 
-export type OnchainMetadataIndexProcessJobPayload = {
+export type OnchainMetadataProcessTokenUriJobPayload = {
   contract: string;
   tokenId: string;
   uri: string;
 };
 
-export default class OnchainMetadataIndexProcessJob extends AbstractRabbitMqJobHandler {
+export default class OnchainMetadataProcessTokenUriJob extends AbstractRabbitMqJobHandler {
   queueName = "onchain-metadata-index-process-queue";
   maxRetries = 3;
   concurrency = 5;
@@ -20,7 +20,7 @@ export default class OnchainMetadataIndexProcessJob extends AbstractRabbitMqJobH
     delay: 20000,
   } as BackoffStrategy;
 
-  protected async process(payload: OnchainMetadataIndexProcessJobPayload) {
+  protected async process(payload: OnchainMetadataProcessTokenUriJobPayload) {
     const { contract, tokenId, uri } = payload;
 
     try {
@@ -55,11 +55,11 @@ export default class OnchainMetadataIndexProcessJob extends AbstractRabbitMqJobH
     }
   }
 
-  public async addToQueue(params: OnchainMetadataIndexProcessJobPayload, delay = 0) {
+  public async addToQueue(params: OnchainMetadataProcessTokenUriJobPayload, delay = 0) {
     await this.send({ payload: params }, delay);
   }
 
-  public async addToQueueBulk(params: OnchainMetadataIndexProcessJobPayload[]) {
+  public async addToQueueBulk(params: OnchainMetadataProcessTokenUriJobPayload[]) {
     await this.sendBatch(
       params.map((param) => {
         return { payload: param };
@@ -68,4 +68,4 @@ export default class OnchainMetadataIndexProcessJob extends AbstractRabbitMqJobH
   }
 }
 
-export const onchainMetadataIndexProcessJob = new OnchainMetadataIndexProcessJob();
+export const onchainMetadataProcessTokenUriJob = new OnchainMetadataProcessTokenUriJob();
