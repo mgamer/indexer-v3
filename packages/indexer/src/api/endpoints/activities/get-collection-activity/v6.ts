@@ -433,7 +433,7 @@ export const getCollectionActivityV6Options: RouteOptions = {
             fillSource: fillSource ? getJoiSourceObject(fillSource, false) : undefined,
             order,
           },
-          tokenMetadata.metadata_disabled,
+          tokenMetadata?.metadata_disabled,
           disabledCollectionMetadata
         );
       });
