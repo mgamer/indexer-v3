@@ -1,8 +1,7 @@
 import { logger } from "@/common/logger";
-import { redis } from "@/common/redis";
+import { acquireLock, redis } from "@/common/redis";
 import { AbstractRabbitMqJobHandler, BackoffStrategy } from "@/jobs/abstract-rabbit-mq-job-handler";
 import { refreshMintsForCollection } from "@/orderbook/mints/calldata";
-import { acquireLock } from "@/common/redis";
 
 export type MintsRefreshJobPayload = {
   collection: string;
@@ -34,12 +33,11 @@ export default class MintsRefreshJob extends AbstractRabbitMqJobHandler {
   }
 }
 
-export const generateMintRefreshJobIfNeed = async (collection: string) => {
+export const triggerDelayedRefresh = async (collection: string) => {
   const DAY = 86400;
   const timeIntervals = [DAY, DAY * 7, DAY * 31];
 
-  const acquiredLock = await acquireLock(`mint-refresh-delayed-job-lock:${collection}`, DAY * 31);
-
+  const acquiredLock = await acquireLock(`mint-refresh-lock-delayed:${collection}`, DAY * 31);
   if (!acquiredLock) {
     return;
   }

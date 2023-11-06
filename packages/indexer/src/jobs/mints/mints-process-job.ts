@@ -3,7 +3,7 @@ import { logger } from "@/common/logger";
 import { fromBuffer, toBuffer } from "@/common/utils";
 import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handler";
 import { collectionNewContractDeployedJob } from "@/jobs/collections/collection-contract-deployed";
-import { mintsRefreshJob, generateMintRefreshJobIfNeed } from "@/jobs/mints/mints-refresh-job";
+import { mintsRefreshJob, triggerDelayedRefresh } from "@/jobs/mints/mints-refresh-job";
 import MetadataProviderRouter from "@/metadata/metadata-provider-router";
 import {
   CollectionMint,
@@ -237,7 +237,11 @@ export default class MintsProcessJob extends AbstractRabbitMqJobHandler {
       for (const collectionMint of collectionMints) {
         const result = await simulateAndUpsertCollectionMint(collectionMint);
         logger.info("mints-process", JSON.stringify({ success: result, collectionMint }));
-        await generateMintRefreshJobIfNeed(collectionMint.collection);
+
+        // Refresh the collection with a delay
+        if (result) {
+          await triggerDelayedRefresh(collectionMint.collection);
+        }
       }
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
