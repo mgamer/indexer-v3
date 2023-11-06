@@ -8,7 +8,6 @@ import { mintsRefreshJob } from "@/jobs/mints/mints-refresh-job";
 import { MintTxSchema, CustomInfo } from "@/orderbook/mints/calldata";
 import { getAmountMinted, getCurrentSupply } from "@/orderbook/mints/calldata/helpers";
 import { simulateCollectionMint } from "@/orderbook/mints/simulation";
-import { acquireLock } from "@/common/redis";
 
 export type CollectionMintKind = "public" | "allowlist";
 export type CollectionMintStatus = "open" | "closed";
@@ -380,19 +379,4 @@ export const getAmountMintableByWallet = async (
   }
 
   return amountMintable;
-};
-
-export const generateMintRefreshJobIfNeed = async (collection: string) => {
-  const DAY = 86400;
-  const timeIntervals = [DAY, DAY * 7, DAY * 31];
-
-  const acquiredLock = await acquireLock(`mint-refresh-delayed-job-lock:${collection}`, DAY * 31);
-
-  if (!acquiredLock) {
-    return;
-  }
-
-  for (const timeInterval of timeIntervals) {
-    await mintsRefreshJob.addToQueue({ collection }, timeInterval);
-  }
 };
