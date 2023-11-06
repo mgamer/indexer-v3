@@ -39,8 +39,6 @@ export class MetadataStatus {
         if (disabled[i]) {
           result[ids[i]] = true;
           MetadataStatus.disabled[ids[i]] = true;
-        } else {
-          MetadataStatus.disabled[ids[i]] = false;
         }
       }
     }
