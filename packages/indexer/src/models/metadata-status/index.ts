@@ -1,4 +1,5 @@
 import { redis } from "@/common/redis";
+import { Channel } from "@/pubsub/channels";
 
 export class MetadataStatus {
   public static disabled: { [id: string]: boolean } = {};
@@ -16,6 +17,8 @@ export class MetadataStatus {
   public static async enable(ids: string[]): Promise<void> {
     if (ids.length) {
       await redis.hdel(`metadata-disabled-collection`, ids);
+      await redis.publish(Channel.MetadataReenabled, JSON.stringify({ ids }));
+
       for (const id of ids) {
         delete MetadataStatus.disabled[id];
       }
