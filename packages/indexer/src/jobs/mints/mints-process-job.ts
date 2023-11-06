@@ -3,13 +3,12 @@ import { logger } from "@/common/logger";
 import { fromBuffer, toBuffer } from "@/common/utils";
 import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handler";
 import { collectionNewContractDeployedJob } from "@/jobs/collections/collection-contract-deployed";
-import { mintsRefreshJob } from "@/jobs/mints/mints-refresh-job";
+import { mintsRefreshJob, generateMintRefreshJobIfNeed } from "@/jobs/mints/mints-refresh-job";
 import MetadataProviderRouter from "@/metadata/metadata-provider-router";
 import {
   CollectionMint,
   CollectionMintStandard,
   simulateAndUpsertCollectionMint,
-  generateMintRefreshJobIfNeed,
 } from "@/orderbook/mints";
 import * as detector from "@/orderbook/mints/calldata/detector";
 import { getContractKind } from "@/orderbook/mints/calldata/helpers";
