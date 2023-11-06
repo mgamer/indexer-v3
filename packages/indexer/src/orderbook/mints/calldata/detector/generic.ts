@@ -29,8 +29,9 @@ const checkIsComplexParam = (abiType: string) => {
   return complexKeywords.some((c) => abiType.includes(c));
 };
 
-export async function getSampleTxs(collection: string) {
-  const mintTxHashs = await idb
+export async function getSampleMintTxs(collection: string) {
+  // TODO might need to use the latest mint transactions?
+  const mintTxHashes = await idb
     .manyOrNone(
       `
         SELECT
@@ -52,7 +53,7 @@ export async function getSampleTxs(collection: string) {
       }))
     );
   const mintTxs: Transaction[] = await Promise.all(
-    mintTxHashs.map((c) => utils.fetchTransaction(c.txHash))
+    mintTxHashes.map((c) => utils.fetchTransaction(c.txHash))
   );
   return mintTxs;
 }
@@ -184,7 +185,7 @@ export const extractByTx = async (
     });
 
     if (!emptyOrZero) {
-      const sampleMintTxs = sampleTxs ? sampleTxs : await getSampleTxs(collection);
+      const sampleMintTxs = sampleTxs ? sampleTxs : await getSampleMintTxs(collection);
       if (sampleMintTxs.length) {
         possibleConstantParams = await getConstantParamsWithSampleTxs(
           methodSignature,
