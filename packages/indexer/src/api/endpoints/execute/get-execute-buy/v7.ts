@@ -1521,7 +1521,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
                 chainId: config.chainId,
                 token: items[0].token,
               },
-              { timeout: 1000 }
+              { timeout: 500 }
             );
           }
         }
