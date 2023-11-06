@@ -1515,10 +1515,14 @@ export const getExecuteBuyV7Options: RouteOptions = {
             items[0].token &&
             items[0].fillType !== "mint"
           ) {
-            await axios.post(`${config.seaportSolverBaseUrl}/simulate`, {
-              chainId: config.chainId,
-              token: items[0].token,
-            });
+            await axios.post(
+              `${config.seaportSolverBaseUrl}/simulate`,
+              {
+                chainId: config.chainId,
+                token: items[0].token,
+              },
+              { timeout: 1000 }
+            );
           }
         }
       } catch {
