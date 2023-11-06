@@ -1506,6 +1506,20 @@ export const getExecuteBuyV7Options: RouteOptions = {
         },
       ];
 
+      try {
+        // Simulate filling via a Seaport intent for testing things
+        if (config.seaportSolverBaseUrl) {
+          if (items.length === 1 && items[0].token && items[0].fillType !== "mint") {
+            await axios.post(`${config.seaportSolverBaseUrl}/simulate`, {
+              chainId: config.chainId,
+              token: items[0].token,
+            });
+          }
+        }
+      } catch {
+        // Skip errors
+      }
+
       // Seaport intent purchasing MVP
       if (payload.executionMethod === "seaport-intent") {
         if (!config.seaportSolverBaseUrl) {
