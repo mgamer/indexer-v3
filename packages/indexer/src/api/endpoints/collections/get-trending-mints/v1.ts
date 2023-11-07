@@ -146,8 +146,12 @@ export const getTrendingMintsV1Options: RouteOptions = {
         limit,
       });
 
-      const collectionsMetadata = await getCollectionsMetadata(elasticMintData, true);
+      const collectionsMetadata = await getCollectionsMetadata(elasticMintData);
+
+      const mintStages = await getMintStages(Object.keys(collectionsMetadata));
+
       const mints = await formatCollections(
+        mintStages,
         mintingCollections,
         elasticMintData,
         collectionsMetadata,
@@ -164,8 +168,40 @@ export const getTrendingMintsV1Options: RouteOptions = {
   },
 };
 
+async function getMintStages(contracts: string[]): Promise<Record<string, Mint["mint_stages"]>> {
+  const baseQuery = `
+    SELECT collection_id, array_agg(
+      json_build_object(
+        'stage', collection_mints.stage,
+        'tokenId', collection_mints.token_id::TEXT,
+        'kind', collection_mints.kind,
+        'currency', concat('0x', encode(collection_mints.currency, 'hex')),
+        'price', collection_mints.price::TEXT,
+        'startTime', floor(extract(epoch from collection_mints.start_time)),
+        'endTime', floor(extract(epoch from collection_mints.end_time)),
+        'maxMintsPerWallet', collection_mints.max_mints_per_wallet
+      )
+    ) as mint_stages
+    FROM collection_mints
+    WHERE collection_mints.collection_id IN (${contracts
+      .map((contract) => `'${contract}'`)
+      .join(",")})
+    GROUP BY collection_id`;
+
+  const result = await redb.manyOrNone<{ collection_id: string; mint_stages: Mint["mint_stages"] }>(
+    baseQuery
+  );
+
+  const data: Record<string, Mint["mint_stages"]> = {};
+  result.forEach((res) => {
+    data[res.collection_id] = [...res.mint_stages];
+  });
+
+  return data;
+}
+
 async function getMintingCollections(type: "paid" | "free" | "any"): Promise<Mint[]> {
-  const cacheKey = `minting-collections-cache:v1:${type}`;
+  const cacheKey = `minting-collection-cache:v1:${type}`;
 
   const cachedResult = await redis.get(cacheKey);
   if (cachedResult) {
@@ -194,6 +230,7 @@ ${whereClause}
 }
 
 async function formatCollections(
+  mintStages: Record<string, Mint["mint_stages"]>,
   mintingCollections: Mint[],
   collectionsResult: ElasticMintResult[],
   collectionsMetadata: Record<string, Metadata>,
@@ -204,7 +241,10 @@ async function formatCollections(
 
   const collections = await Promise.all(
     collectionsResult.map(async (r) => {
-      const mintData = mintingCollections.find((c) => c.collection_id == r.id);
+      const mintData = {
+        ...mintingCollections.find((c) => c.collection_id == r.id),
+        mint_stages: mintStages[r.id],
+      };
       const metadata = collectionsMetadata[r.id];
       let floorAsk;
       let prefix = "";
@@ -242,41 +282,20 @@ async function formatCollections(
 
       return {
         ...r,
+
         image: metadata?.metadata?.imageUrl,
-        isSpam: Number(metadata.is_spam) > 0,
+        banner: metadata?.metadata?.bannerImageUrl,
         name: metadata?.name || "",
+        description: metadata?.metadata?.description,
+
+        isSpam: Number(metadata.is_spam) > 0,
         onSaleCount: Number(metadata.on_sale_count) || 0,
+
         volumeChange: {
           "1day": Number(metadata.day1_volume_change),
           "7day": Number(metadata.day7_volume_change),
           "30day": Number(metadata.day30_volume_change),
         },
-
-        mintType: Number(mintData?.price) > 0 ? "paid" : "free",
-        maxSupply: Number.isSafeInteger(mintData?.max_supply) ? mintData?.max_supply : null,
-        createdAt: mintData?.created_at && new Date(mintData?.created_at).toISOString(),
-        startDate: mintData?.start_time && new Date(mintData?.start_time).toISOString(),
-        endDate: mintData?.end_time && new Date(mintData?.end_time).toISOString(),
-        mintCount: r.count,
-        mintVolume: r.volume,
-        mintStages: metadata?.mint_stages
-          ? await Promise.all(
-              metadata.mint_stages.map(async (m: any) => {
-                return {
-                  stage: m?.stage || null,
-                  kind: m?.kind || null,
-                  tokenId: m?.tokenId || null,
-                  price: m?.price
-                    ? await getJoiPriceObject({ gross: { amount: m.price } }, m.currency)
-                    : m?.price,
-                  startTime: m?.startTime,
-                  endTime: m?.endTime,
-                  maxMintsPerWallet: m?.maxMintsPerWallet,
-                };
-              })
-            )
-          : [],
-
         collectionVolume: {
           "1day": metadata.day1_volume ? formatEth(metadata.day1_volume) : null,
           "7day": metadata.day7_volume ? formatEth(metadata.day7_volume) : null,
@@ -286,8 +305,33 @@ async function formatCollections(
 
         tokenCount: Number(metadata.token_count || 0),
         ownerCount: Number(metadata.owner_count || 0),
-        banner: metadata?.metadata?.bannerImageUrl,
-        description: metadata?.metadata?.description,
+
+        mintType: Number(mintData?.price) > 0 ? "paid" : "free",
+        maxSupply: Number.isSafeInteger(mintData?.max_supply) ? mintData?.max_supply : null,
+        createdAt: mintData?.created_at && new Date(mintData?.created_at).toISOString(),
+        startDate: mintData?.start_time && new Date(mintData?.start_time).toISOString(),
+        endDate: mintData?.end_time && new Date(mintData?.end_time).toISOString(),
+        mintCount: r.count,
+        mintVolume: r.volume,
+        mintStages:
+          mintData.mint_stages.length > 0
+            ? await Promise.all(
+                mintData.mint_stages.map(async (m: Mint["mint_stages"][0]) => {
+                  return {
+                    stage: m?.stage || null,
+                    kind: m?.kind || null,
+                    tokenId: m?.tokenId || null,
+                    price: m?.price
+                      ? await getJoiPriceObject({ gross: { amount: m.price } }, m.currency)
+                      : null,
+                    startTime: m?.startTime ? m?.startTime : null,
+                    endTime: m?.endTime ? m?.endTime : null,
+                    maxMintsPerWallet: m?.maxMintsPerWallet || null,
+                  };
+                })
+              )
+            : [],
+
         floorAsk,
       };
     })

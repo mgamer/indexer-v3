@@ -156,10 +156,7 @@ export const getTrendingCollectionsV1Options: RouteOptions = {
   },
 };
 
-export async function getCollectionsMetadata(
-  collectionsResult: any[],
-  includeMintStages?: boolean
-) {
+export async function getCollectionsMetadata(collectionsResult: any[]) {
   const collectionIds = collectionsResult.map((collection: any) => collection.id);
   const collectionsToFetch = collectionIds.map((id: string) => `collection-cache:v2:${id}`);
   const batches = chunk(collectionsToFetch, REDIS_BATCH_SIZE);
@@ -188,27 +185,6 @@ export async function getCollectionsMetadata(
     );
 
     const collectionIdList = collectionsToFetchFromDb.map((id: string) => `'${id}'`).join(", ");
-
-    const mintStageQuery = includeMintStages
-      ? `LEFT JOIN LATERAL (
-        SELECT
-          array_agg(
-            json_build_object(
-              'stage', collection_mints.stage,
-              'tokenId', collection_mints.token_id::TEXT,
-              'kind', collection_mints.kind,
-              'currency', concat('0x', encode(collection_mints.currency, 'hex')),
-              'price', collection_mints.price::TEXT,
-              'startTime', floor(extract(epoch from collection_mints.start_time)),
-              'endTime', floor(extract(epoch from collection_mints.end_time)),
-              'maxMintsPerWallet', collection_mints.max_mints_per_wallet
-            )
-          ) AS mint_stages
-        FROM collection_mints
-        WHERE collection_mints.collection_id = collections.id
-          AND collection_mints.status = 'open'
-      ) v ON TRUE`
-      : "";
 
     const baseQuery = `
     SELECT
@@ -256,7 +232,6 @@ export async function getCollectionsMetadata(
 
       collections.top_buy_source_id_int,
       
-      ${includeMintStages && "v.mint_stages,"}
       (
             SELECT
               COUNT(*)
@@ -265,8 +240,6 @@ export async function getCollectionsMetadata(
               AND tokens.floor_sell_value IS NOT NULL
           ) AS on_sale_count
     FROM collections
-
-    ${mintStageQuery}
 
     LEFT JOIN LATERAL (
       SELECT
