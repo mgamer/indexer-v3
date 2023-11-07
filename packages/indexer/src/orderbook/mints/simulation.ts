@@ -13,6 +13,7 @@ import { EventData } from "@/events-sync/data";
 import * as erc721 from "@/events-sync/data/erc721";
 import * as erc1155 from "@/events-sync/data/erc1155";
 import { baseProvider } from "@/common/provider";
+import _ from "lodash";
 
 export const simulateCollectionMint = async (
   collectionMint: CollectionMint,
@@ -59,10 +60,19 @@ export const simulateCollectionMint = async (
     );
 
   if (detectMaxMintsPerWallet && collectionMint.maxMintsPerWallet === undefined) {
-    // TODO: Improve accuracy of `maxMintsPerWallet` via binary search
-    const results = await Promise.all([simulate(1), simulate(2)]);
-    if (results[0] && !results[1]) {
-      collectionMint.maxMintsPerWallet = "1";
+    const quantitiesToSearch = [1, 2, 5, 10, 11];
+    const results = await Promise.all(quantitiesToSearch.map((q) => simulate(q)));
+
+    if (!results.every((c) => c === true)) {
+      const mintableQunanties = results.map((status, index) =>
+        status ? quantitiesToSearch[index] : -1
+      );
+      const maxQuantity = _.max(mintableQunanties);
+      if (!maxQuantity) return false;
+      if (maxQuantity > 0) {
+        collectionMint.maxMintsPerWallet = String(maxQuantity);
+      }
+      return true;
     }
 
     return results[0];
