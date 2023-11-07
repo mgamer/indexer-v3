@@ -258,6 +258,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
           buyInRawQuote: Joi.string().pattern(regex.number),
           totalPrice: Joi.number().unsafe(),
           totalRawPrice: Joi.string().pattern(regex.number),
+          gasCost: Joi.string().pattern(regex.number),
           builtInFees: Joi.array()
             .items(JoiExecuteFee)
             .description("Can be marketplace fees or royalties"),
@@ -316,6 +317,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
         totalRawPrice?: string;
         builtInFees: ExecuteFee[];
         feesOnTop: ExecuteFee[];
+        gasCost?: string;
         fromChainId?: number;
       }[] = [];
 
@@ -1558,16 +1560,19 @@ export const getExecuteBuyV7Options: RouteOptions = {
           throw Boom.badRequest("Only erc721 token intent purchases are supported");
         }
 
-        const quote = await axios
+        const item = path[0];
+
+        const { quote, gasCost } = await axios
           .post(`${config.seaportSolverBaseUrl}/intents/quote`, {
             chainId: config.chainId,
             token: `${details.contract}:${details.tokenId}`,
             amount: details.amount ?? "1",
           })
-          .then((response) => response.data.price);
+          .then((response) => ({ quote: response.data.price, gasCost: response.data.gasCost }));
 
-        path[0].totalPrice = formatPrice(quote);
-        path[0].totalRawPrice = quote;
+        item.totalPrice = formatPrice(quote);
+        item.totalRawPrice = quote;
+        item.gasCost = gasCost;
 
         if (payload.onlyPath) {
           return {
@@ -1702,7 +1707,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
         // Only set when minting
         const isCollectionRequest = item.orderId.startsWith("mint");
 
-        const quote = await axios
+        const { quote, gasCost } = await axios
           .post(`${config.crossChainSolverBaseUrl}/intents/quote`, {
             fromChainId,
             toChainId,
@@ -1710,7 +1715,10 @@ export const getExecuteBuyV7Options: RouteOptions = {
             token,
             amount: item.quantity,
           })
-          .then((response) => response.data.price)
+          .then((response) => ({
+            quote: response.data.price,
+            gasCost: response.data.gasCost,
+          }))
           .catch((error) => {
             throw Boom.badRequest(
               error.response?.data ? JSON.stringify(error.response.data) : "Error getting quote"
@@ -1722,8 +1730,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
         }
 
         item.fromChainId = fromChainId;
-        item.totalPrice = formatPrice(quote);
-        item.totalRawPrice = quote;
+        item.gasCost = gasCost;
 
         if (payload.onlyPath) {
           return {
