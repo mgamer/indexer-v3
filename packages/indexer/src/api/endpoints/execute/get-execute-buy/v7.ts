@@ -1434,13 +1434,6 @@ export const getExecuteBuyV7Options: RouteOptions = {
         }
       }
 
-      if (payload.onlyPath) {
-        return {
-          path,
-          maxQuantities: preview ? maxQuantities : undefined,
-        };
-      }
-
       type StepType = {
         id: string;
         action: string;
@@ -1506,43 +1499,45 @@ export const getExecuteBuyV7Options: RouteOptions = {
         },
       ];
 
-      try {
-        // Simulate filling via seaport / cross-chain intent for testing things
-        if (
-          !payload.skipBalanceCheck &&
-          items.length === 1 &&
-          items[0].token &&
-          items[0].fillType !== "mint"
-        ) {
-          const seaportSimulate = async () => {
-            if (config.seaportSolverBaseUrl) {
-              await axios.post(
-                `${config.seaportSolverBaseUrl}/intents/simulate`,
-                {
-                  chainId: config.chainId,
-                  token: items[0].token,
-                },
-                { timeout: 500 }
-              );
-            }
-          };
-          const crossChainSimulate = async () => {
-            if (config.crossChainSolverBaseUrl) {
-              await axios.post(
-                `${config.crossChainSolverBaseUrl}/intents/simulate`,
-                {
-                  chainId: config.chainId,
-                  token: items[0].token,
-                },
-                { timeout: 500 }
-              );
-            }
-          };
+      if (!payload.onlyPath) {
+        try {
+          // Simulate filling via seaport / cross-chain intent for testing things
+          if (
+            !payload.skipBalanceCheck &&
+            items.length === 1 &&
+            items[0].token &&
+            items[0].fillType !== "mint"
+          ) {
+            const seaportSimulate = async () => {
+              if (config.seaportSolverBaseUrl) {
+                await axios.post(
+                  `${config.seaportSolverBaseUrl}/intents/simulate`,
+                  {
+                    chainId: config.chainId,
+                    token: items[0].token,
+                  },
+                  { timeout: 500 }
+                );
+              }
+            };
+            const crossChainSimulate = async () => {
+              if (config.crossChainSolverBaseUrl) {
+                await axios.post(
+                  `${config.crossChainSolverBaseUrl}/intents/simulate`,
+                  {
+                    chainId: config.chainId,
+                    token: items[0].token,
+                  },
+                  { timeout: 500 }
+                );
+              }
+            };
 
-          await Promise.all([seaportSimulate(), crossChainSimulate()]);
+            await Promise.all([seaportSimulate(), crossChainSimulate()]);
+          }
+        } catch {
+          // Skip errors
         }
-      } catch {
-        // Skip errors
       }
 
       // Seaport intent purchasing MVP
@@ -1573,6 +1568,13 @@ export const getExecuteBuyV7Options: RouteOptions = {
 
         path[0].totalPrice = formatPrice(quote);
         path[0].totalRawPrice = quote;
+
+        if (payload.onlyPath) {
+          return {
+            path,
+            maxQuantities: preview ? maxQuantities : undefined,
+          };
+        }
 
         const order = new Sdk.SeaportV15.Order(config.chainId, {
           offerer: payload.taker,
@@ -1723,6 +1725,13 @@ export const getExecuteBuyV7Options: RouteOptions = {
         item.totalPrice = formatPrice(quote);
         item.totalRawPrice = quote;
 
+        if (payload.onlyPath) {
+          return {
+            path,
+            maxQuantities: preview ? maxQuantities : undefined,
+          };
+        }
+
         const customSteps: StepType[] = [
           {
             id: "sale",
@@ -1805,6 +1814,13 @@ export const getExecuteBuyV7Options: RouteOptions = {
         return {
           steps: customSteps.filter((s) => s.items.length),
           path,
+        };
+      }
+
+      if (payload.onlyPath) {
+        return {
+          path,
+          maxQuantities: preview ? maxQuantities : undefined,
         };
       }
 
