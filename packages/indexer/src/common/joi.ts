@@ -1020,63 +1020,37 @@ export const getJoiCollectionObject = (
   contract?: string
 ) => {
   if (metadataDisabled) {
-    if (collection.id) {
-      collection.id = collection.primaryContract ?? contract;
+    const metadataDisabledCollection: any = {
+      description: null,
+      metadata: null,
+      image: null,
+      imageUrl: null,
+      sampleImages: [],
+      banner: null,
+      discordUrl: null,
+      externalUrl: null,
+      twitterUsername: null,
+      openseaVerificationStatus: null,
+      community: null,
+      tokenIdRange: null,
+      id: collection.primaryContract ?? contract,
+      name: collection.primaryContract ?? contract,
+      slug: collection.primaryContract ?? contract,
+      tokenSetId: `contract:${collection.primaryContract ?? contract}`,
+      royalties: null,
+      newRoyalties: null,
+    };
+
+    for (const key in Object.keys(metadataDisabledCollection)) {
+      if (collection[key] !== undefined) {
+        collection[key] = metadataDisabledCollection[key];
+      }
     }
-    if (collection.name) {
-      collection.name = collection.primaryContract ?? contract;
-    }
-    if (collection.slug) {
-      collection.slug = collection.primaryContract ?? contract;
-    }
-    if (collection.description) {
-      collection.description = null;
-    }
-    if (collection.metadata) {
-      collection.metadata = null;
-    }
-    if (collection.image) {
-      collection.image = null;
-    }
-    if (collection.imageUrl) {
-      collection.imageUrl = null;
-    }
-    if (collection.sampleImages) {
-      collection.sampleImages = [];
-    }
-    if (collection.banner) {
-      collection.banner = null;
-    }
-    if (collection.discordUrl) {
-      collection.discordUrl = null;
-    }
-    if (collection.externalUrl) {
-      collection.externalUrl = null;
-    }
-    if (collection.twitterUsername) {
-      collection.twitterUsername = null;
-    }
-    if (collection.openseaVerificationStatus) {
-      collection.openseaVerificationStatus = null;
-    }
-    if (collection.community) {
-      collection.community = null;
-    }
-    if (collection.tokenIdRange) {
-      collection.tokenIdRange = null;
-    }
-    if (collection.tokenSetId) {
-      collection.tokenSetId = `contract:${collection.primaryContract ?? contract}`;
-    }
-    if (collection.royalties) {
-      collection.royalties = null;
-    }
-    if (collection.newRoyalties) {
-      collection.newRoyalties = null;
-    }
+
     if (collection.floorAsk?.token) {
       collection.floorAsk.token = getJoiTokenObject(collection.floorAsk.token, true, true);
     }
+
     if (collection.recentSales) {
       for (const sale of collection.recentSales) {
         if (sale.token) {
@@ -1100,33 +1074,24 @@ export const getJoiTokenObject = (
   collectionMetadataDisabled: boolean
 ) => {
   if (tokenMetadataDisabled || collectionMetadataDisabled) {
-    if (token.name) {
-      token.name = null;
+    const metadataDisabledToken: any = {
+      name: null,
+      isFlagged: false,
+      media: null,
+      description: null,
+      image: null,
+      imageSmall: null,
+      imageLarge: null,
+      metadata: null,
+      attributes: [],
+    };
+
+    for (const key in Object.keys(metadataDisabledToken)) {
+      if (token[key] !== undefined) {
+        token[key] = metadataDisabledToken[key];
+      }
     }
-    if (token.isFlagged !== undefined) {
-      token.isFlagged = false;
-    }
-    if (token.media) {
-      token.media = null;
-    }
-    if (token.description) {
-      token.description = null;
-    }
-    if (token.image) {
-      token.image = null;
-    }
-    if (token.imageSmall) {
-      token.imageSmall = null;
-    }
-    if (token.imageLarge) {
-      token.imageLarge = null;
-    }
-    if (token.metadata) {
-      token.metadata = null;
-    }
-    if (token.attributes) {
-      token.attributes = [];
-    }
+
     if (collectionMetadataDisabled && token.collection) {
       token.collection = getJoiCollectionObject(
         token.collection,
