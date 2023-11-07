@@ -28,7 +28,7 @@ const isComplexParam = (abiType: string) => {
   return complexKeywords.some((c) => abiType.includes(c));
 };
 
-export const getSampleMintTxs = async (contract: string) => {
+const getSampleMintTxs = async (contract: string) => {
   // TODO: For better accuracy we should use the latest mint transactions
   const mintTxHashes = await idb
     .manyOrNone(
@@ -181,8 +181,7 @@ export const extractByTx = async (
     });
 
     if (!emptyOrZero) {
-      // const sampleMintTxs = await getSampleMintTxs(collection);
-      const sampleMintTxs: Transaction[] = [];
+      const sampleMintTxs = await getSampleMintTxs(collection);
       if (sampleMintTxs.length) {
         constantParamsIndexes = await getConstantParams(methodSignature, sampleMintTxs);
       }
