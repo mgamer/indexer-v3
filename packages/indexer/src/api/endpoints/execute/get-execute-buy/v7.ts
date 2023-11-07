@@ -1542,7 +1542,11 @@ export const getExecuteBuyV7Options: RouteOptions = {
         }
       }
 
-      if (payload.onlyPath) {
+      const useSeaportIntent = payload.executionMethod === "seaport-intent";
+      const useCrossChainIntent =
+        payload.currencyChainId !== undefined && payload.currencyChainId !== config.chainId;
+
+      if (payload.onlyPath && !useSeaportIntent && !useCrossChainIntent) {
         return {
           path,
           maxQuantities: preview ? maxQuantities : undefined,
@@ -1550,7 +1554,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
       }
 
       // Seaport intent purchasing MVP
-      if (payload.executionMethod === "seaport-intent") {
+      if (useSeaportIntent) {
         if (!config.seaportSolverBaseUrl) {
           throw Boom.badRequest("Intent purchasing not supported");
         }
@@ -1668,7 +1672,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
       }
 
       // Cross-chain intent purchasing MVP
-      if (payload.currencyChainId !== undefined && payload.currencyChainId !== config.chainId) {
+      if (useCrossChainIntent) {
         if (!config.crossChainSolverBaseUrl) {
           throw Boom.badRequest("Cross-chain purchasing not supported");
         }
