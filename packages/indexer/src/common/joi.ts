@@ -1029,11 +1029,17 @@ export const getJoiCollectionObject = (
     if (collection.slug) {
       collection.slug = collection.primaryContract ?? contract;
     }
+    if (collection.description) {
+      collection.description = null;
+    }
     if (collection.metadata) {
       collection.metadata = null;
     }
     if (collection.image) {
       collection.image = null;
+    }
+    if (collection.imageUrl) {
+      collection.imageUrl = null;
     }
     if (collection.sampleImages) {
       collection.sampleImages = [];
