@@ -142,22 +142,22 @@ export default class MetadataIndexFetchJob extends AbstractRabbitMqJobHandler {
       });
     }
 
-    // if a fetch token has an extend logic, we dont want to use onchain metadata processing, default to using opensea
-    const fetchTokensOffchain = refreshTokens.filter(
-      (token) => hasExtendCollectionHandler(token.contract) || data.method !== "onchain"
-    );
-
     const fetchTokensOnchain = refreshTokens.filter(
       (token) => !hasExtendCollectionHandler(token.contract) && data.method === "onchain"
     );
 
     // Add the tokens to the list
-    if (fetchTokensOffchain.length > 0) {
+    if (fetchTokensOnchain.length > 0) {
       await PendingFetchOnchainUriTokens.add(fetchTokensOnchain, prioritized);
       await onchainMetadataFetchTokenUriJob.addToQueue();
     }
 
-    if (fetchTokensOnchain.length > 0) {
+    // if a fetch token has an extend logic, we dont want to use onchain metadata processing, default to using opensea
+    const fetchTokensOffchain = refreshTokens.filter(
+      (token) => hasExtendCollectionHandler(token.contract) || data.method !== "onchain"
+    );
+
+    if (fetchTokensOffchain.length > 0) {
       const pendingRefreshTokens = new PendingRefreshTokens(data.method);
       await pendingRefreshTokens.add(fetchTokensOffchain, prioritized);
 
