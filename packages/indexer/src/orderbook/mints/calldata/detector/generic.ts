@@ -206,7 +206,7 @@ export const extractByTx = async (
           params.push({
             kind: "unknown",
             abiType: ParamType.fromObject(methodSignature.inputs[i]).format(),
-            abiValue: decodedValue.toString().toLowerCase(),
+            abiValue: decodedValue,
           });
         } else if (
           abiType.includes("int") &&
@@ -242,13 +242,13 @@ export const extractByTx = async (
           params.push({
             kind: "unknown",
             abiType: ParamType.fromObject(methodSignature.inputs[i]).format(),
-            abiValue: decodedValue.toString().toLowerCase(),
+            abiValue: decodedValue,
           });
         } else {
           params.push({
             kind: "unknown",
             abiType,
-            abiValue: decodedValue.toString().toLowerCase(),
+            abiValue: decodedValue,
           });
         }
       });
