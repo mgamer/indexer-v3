@@ -1506,6 +1506,45 @@ export const getExecuteBuyV7Options: RouteOptions = {
         },
       ];
 
+      try {
+        // Simulate filling via seaport / cross-chain intent for testing things
+        if (
+          !payload.skipBalanceCheck &&
+          items.length === 1 &&
+          items[0].token &&
+          items[0].fillType !== "mint"
+        ) {
+          const seaportSimulate = async () => {
+            if (config.seaportSolverBaseUrl) {
+              await axios.post(
+                `${config.seaportSolverBaseUrl}/intents/simulate`,
+                {
+                  chainId: config.chainId,
+                  token: items[0].token,
+                },
+                { timeout: 500 }
+              );
+            }
+          };
+          const crossChainSimulate = async () => {
+            if (config.crossChainSolverBaseUrl) {
+              await axios.post(
+                `${config.crossChainSolverBaseUrl}/intents/simulate`,
+                {
+                  chainId: config.chainId,
+                  token: items[0].token,
+                },
+                { timeout: 500 }
+              );
+            }
+          };
+
+          await Promise.all([seaportSimulate(), crossChainSimulate()]);
+        }
+      } catch {
+        // Skip errors
+      }
+
       // Seaport intent purchasing MVP
       if (payload.executionMethod === "seaport-intent") {
         if (!config.seaportSolverBaseUrl) {
@@ -1525,7 +1564,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
         }
 
         const quote = await axios
-          .post(`${config.seaportSolverBaseUrl}/quote`, {
+          .post(`${config.seaportSolverBaseUrl}/intents/quote`, {
             chainId: config.chainId,
             token: `${details.contract}:${details.tokenId}`,
             amount: details.amount ?? "1",
@@ -1644,7 +1683,8 @@ export const getExecuteBuyV7Options: RouteOptions = {
         const ccConfig: {
           enabled: boolean;
           solver?: string;
-          deposit?: string;
+          availableBalance?: string;
+          maxPrice?: string;
         } = await axios
           .get(
             `${config.crossChainSolverBaseUrl}/config?fromChainId=${fromChainId}&toChainId=${toChainId}&user=${payload.taker}`
@@ -1656,21 +1696,28 @@ export const getExecuteBuyV7Options: RouteOptions = {
         }
 
         const item = path[0];
-        const token = item.tokenId
-          ? `${item.contract}:${item.tokenId}`.toLowerCase()
-          : `${item.contract}:${MaxUint256.toString()}`.toLowerCase();
+        const token = `${item.contract}:${item.tokenId ?? MaxUint256.toString()}`.toLowerCase();
+        // Only set when minting
+        const isCollectionRequest = item.orderId.startsWith("mint");
 
         const quote = await axios
           .post(`${config.crossChainSolverBaseUrl}/intents/quote`, {
             fromChainId,
             toChainId,
+            isCollectionRequest,
             token,
             amount: item.quantity,
           })
           .then((response) => response.data.price)
           .catch((error) => {
-            throw Boom.badRequest(error.response?.data ?? "Error getting quote");
+            throw Boom.badRequest(
+              error.response?.data ? JSON.stringify(error.response.data) : "Error getting quote"
+            );
           });
+
+        if (ccConfig.maxPrice && bn(quote).gt(ccConfig.maxPrice)) {
+          throw Boom.badRequest("Price too high");
+        }
 
         item.fromChainId = fromChainId;
         item.totalPrice = formatPrice(quote);
@@ -1678,9 +1725,9 @@ export const getExecuteBuyV7Options: RouteOptions = {
 
         const customSteps: StepType[] = [
           {
-            id: "deposit",
-            action: "Deposit",
-            description: "Deposit funds on origin chain",
+            id: "sale",
+            action: "Confirm transaction in your wallet",
+            description: "Deposit funds for purchasing cross-chain",
             kind: "transaction",
             items: [],
           },
@@ -1693,31 +1740,8 @@ export const getExecuteBuyV7Options: RouteOptions = {
           },
         ];
 
-        if (bn(ccConfig.deposit!).lte(quote)) {
-          const exchange = new Sdk.CrossChain.Exchange(fromChainId);
-          customSteps[0].items.push({
-            status: "incomplete",
-            data: {
-              ...exchange.depositTx(
-                payload.taker,
-                ccConfig.solver!,
-                bn(quote).sub(ccConfig.deposit!).toString()
-              ),
-              chainId: fromChainId,
-            },
-            check: {
-              endpoint: "/execute/status/v1",
-              method: "POST",
-              body: {
-                kind: "cross-chain-transaction",
-                chainId: fromChainId,
-              },
-            },
-          });
-        }
-
         const order = new Sdk.CrossChain.Order(fromChainId, {
-          isCollectionRequest: Boolean(items[0].collection),
+          isCollectionRequest,
           maker: payload.taker,
           solver: ccConfig.solver!,
           token: item.contract,
@@ -1730,29 +1754,53 @@ export const getExecuteBuyV7Options: RouteOptions = {
           salt: getRandomBytes(20).toString(),
         });
 
-        customSteps[1].items.push({
-          status: "incomplete",
-          data: {
-            sign: order.getSignatureData(),
-            post: {
-              endpoint: "/execute/solve/v1",
+        if (bn(ccConfig.availableBalance!).lte(quote)) {
+          const exchange = new Sdk.CrossChain.Exchange(fromChainId);
+          customSteps[0].items.push({
+            status: "incomplete",
+            data: {
+              ...exchange.depositAndPrevalidateTx(
+                payload.taker,
+                ccConfig.solver!,
+                bn(quote).sub(ccConfig.availableBalance!).toString(),
+                order
+              ),
+              chainId: fromChainId,
+            },
+            check: {
+              endpoint: "/execute/status/v1",
               method: "POST",
               body: {
                 kind: "cross-chain-intent",
-                order: order.params,
-                chainId: fromChainId,
+                id: order.hash(),
               },
             },
-          },
-          check: {
-            endpoint: "/execute/status/v1",
-            method: "POST",
-            body: {
-              kind: "cross-chain-intent",
-              id: order.hash(),
+          });
+        } else {
+          customSteps[1].items.push({
+            status: "incomplete",
+            data: {
+              sign: order.getSignatureData(),
+              post: {
+                endpoint: "/execute/solve/v1",
+                method: "POST",
+                body: {
+                  kind: "cross-chain-intent",
+                  order: order.params,
+                  chainId: fromChainId,
+                },
+              },
             },
-          },
-        });
+            check: {
+              endpoint: "/execute/status/v1",
+              method: "POST",
+              body: {
+                kind: "cross-chain-intent",
+                id: order.hash(),
+              },
+            },
+          });
+        }
 
         return {
           steps: customSteps.filter((s) => s.items.length),
@@ -2314,6 +2362,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
         JSON.stringify({
           request: payload,
           uuid: randomUUID(),
+          timestampAccurate: Date.now(),
           httpCode: error instanceof Boom.Boom ? error.output.statusCode : 500,
           error:
             error instanceof Boom.Boom ? error.output.payload : { error: "Internal Server Error" },

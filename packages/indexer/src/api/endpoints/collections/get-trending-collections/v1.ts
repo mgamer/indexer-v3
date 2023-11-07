@@ -19,7 +19,7 @@ import {
   TopSellingFillOptions,
 } from "@/elasticsearch/indexes/activities";
 
-import { getJoiPriceObject, JoiPrice } from "@/common/joi";
+import { getJoiCollectionObject, getJoiPriceObject, JoiPrice } from "@/common/joi";
 import { Sources } from "@/models/sources";
 
 const version = "v1";
@@ -194,6 +194,7 @@ export async function getCollectionsMetadata(collectionsResult: any[]) {
       collections.creator,
       collections.token_count,
       collections.owner_count,
+      collections.metadata_disabled,
       collections.is_spam,
       collections.day1_volume_change,
       collections.day7_volume_change,
@@ -256,15 +257,18 @@ export async function getCollectionsMetadata(collectionsResult: any[]) {
 
     // need to convert buffers before saving to redis
     collectionMetadataResponse = collectionMetadataResponse.map((metadata: any) => {
-      const { contract, floor_sell_currency, ...rest } = metadata;
+      const { contract, floor_sell_currency, metadata_disabled, ...rest } = metadata;
 
-      return {
-        ...rest,
-        contract: fromBuffer(contract),
-        floor_sell_currency: floor_sell_currency
-          ? fromBuffer(floor_sell_currency)
-          : Sdk.Common.Addresses.Native[config.chainId],
-      };
+      return getJoiCollectionObject(
+        {
+          ...rest,
+          contract: fromBuffer(contract),
+          floor_sell_currency: floor_sell_currency
+            ? fromBuffer(floor_sell_currency)
+            : Sdk.Common.Addresses.Native[config.chainId],
+        },
+        metadata_disabled
+      );
     });
 
     const commands = flatMap(collectionMetadataResponse, (metadata: any) => {
