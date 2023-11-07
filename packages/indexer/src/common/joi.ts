@@ -1041,7 +1041,7 @@ export const getJoiCollectionObject = (
       newRoyalties: null,
     };
 
-    for (const key in Object.keys(metadataDisabledCollection)) {
+    for (const key in metadataDisabledCollection) {
       if (collection[key] !== undefined) {
         collection[key] = metadataDisabledCollection[key];
       }
@@ -1086,7 +1086,7 @@ export const getJoiTokenObject = (
       attributes: [],
     };
 
-    for (const key in Object.keys(metadataDisabledToken)) {
+    for (const key in metadataDisabledToken) {
       if (token[key] !== undefined) {
         token[key] = metadataDisabledToken[key];
       }
