@@ -1542,8 +1542,19 @@ export const getExecuteBuyV7Options: RouteOptions = {
         }
       }
 
+      const useSeaportIntent = payload.executionMethod === "seaport-intent";
+      const useCrossChainIntent =
+        payload.currencyChainId !== undefined && payload.currencyChainId !== config.chainId;
+
+      if (payload.onlyPath && !useSeaportIntent && !useCrossChainIntent) {
+        return {
+          path,
+          maxQuantities: preview ? maxQuantities : undefined,
+        };
+      }
+
       // Seaport intent purchasing MVP
-      if (payload.executionMethod === "seaport-intent") {
+      if (useSeaportIntent) {
         if (!config.seaportSolverBaseUrl) {
           throw Boom.badRequest("Intent purchasing not supported");
         }
@@ -1661,7 +1672,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
       }
 
       // Cross-chain intent purchasing MVP
-      if (payload.currencyChainId !== undefined && payload.currencyChainId !== config.chainId) {
+      if (useCrossChainIntent) {
         if (!config.crossChainSolverBaseUrl) {
           throw Boom.badRequest("Cross-chain purchasing not supported");
         }
@@ -1821,13 +1832,6 @@ export const getExecuteBuyV7Options: RouteOptions = {
         return {
           steps: customSteps.filter((s) => s.items.length),
           path,
-        };
-      }
-
-      if (payload.onlyPath) {
-        return {
-          path,
-          maxQuantities: preview ? maxQuantities : undefined,
         };
       }
 
