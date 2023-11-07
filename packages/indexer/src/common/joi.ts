@@ -1021,6 +1021,9 @@ export const getJoiCollectionObject = (
 ) => {
   if (metadataDisabled) {
     const metadataDisabledCollection: any = {
+      id: collection.primaryContract ?? contract,
+      name: collection.primaryContract ?? contract,
+      slug: collection.primaryContract ?? contract,
       description: null,
       metadata: null,
       image: null,
@@ -1033,9 +1036,6 @@ export const getJoiCollectionObject = (
       openseaVerificationStatus: null,
       community: null,
       tokenIdRange: null,
-      id: collection.primaryContract ?? contract,
-      name: collection.primaryContract ?? contract,
-      slug: collection.primaryContract ?? contract,
       tokenSetId: `contract:${collection.primaryContract ?? contract}`,
       royalties: null,
       newRoyalties: null,
