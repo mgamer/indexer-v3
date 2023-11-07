@@ -202,13 +202,7 @@ export const extractByTx = async (
         const complexParam = isComplexParam(abiType);
         const constantParam = constantParamsIndexes.some((cpi) => cpi === i);
 
-        if (constantParam) {
-          params.push({
-            kind: "unknown",
-            abiType: ParamType.fromObject(methodSignature.inputs[i]).format(),
-            abiValue: decodedValue,
-          });
-        } else if (
+        if (
           abiType.includes("int") &&
           (complexParam
             ? decodedValue.length === 1 && bn(decodedValue[0]).eq(amountMinted)
@@ -238,7 +232,7 @@ export const extractByTx = async (
             kind: "recipient",
             abiType,
           });
-        } else if (abiType.includes("tuple") || abiType.includes("[]")) {
+        } else if (constantParam || abiType.includes("tuple") || abiType.includes("[]")) {
           params.push({
             kind: "unknown",
             abiType: ParamType.fromObject(methodSignature.inputs[i]).format(),
