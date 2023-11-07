@@ -1542,6 +1542,13 @@ export const getExecuteBuyV7Options: RouteOptions = {
         }
       }
 
+      if (payload.onlyPath) {
+        return {
+          path,
+          maxQuantities: preview ? maxQuantities : undefined,
+        };
+      }
+
       // Seaport intent purchasing MVP
       if (payload.executionMethod === "seaport-intent") {
         if (!config.seaportSolverBaseUrl) {
@@ -1821,13 +1828,6 @@ export const getExecuteBuyV7Options: RouteOptions = {
         return {
           steps: customSteps.filter((s) => s.items.length),
           path,
-        };
-      }
-
-      if (payload.onlyPath) {
-        return {
-          path,
-          maxQuantities: preview ? maxQuantities : undefined,
         };
       }
 
