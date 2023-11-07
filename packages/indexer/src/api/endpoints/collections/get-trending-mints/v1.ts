@@ -2,20 +2,18 @@
 
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
-import { fromBuffer, regex } from "@/common/utils";
-import { config } from "@/config/index";
+import { formatEth, regex } from "@/common/utils";
 import { getStartTime } from "@/models/top-selling-collections/top-selling-collections";
 import { Request, RouteOptions } from "@hapi/hapi";
-import * as Sdk from "@reservoir0x/sdk";
 import Joi from "joi";
 
 import { redis } from "@/common/redis";
 
-const REDIS_EXPIRATION = 60 * 60 * 24; // 24 hours
 const REDIS_EXPIRATION_MINTS = 120; // Assuming an hour, adjust as needed.
 
 import { getTrendingMints } from "@/elasticsearch/indexes/activities";
 
+import { getCollectionsMetadata } from "@/api/endpoints/collections/get-trending-collections/v1";
 import {
   ElasticMintResult,
   Metadata,
@@ -64,9 +62,16 @@ export const getTrendingMintsV1Options: RouteOptions = {
           name: Joi.string().allow("", null),
           image: Joi.string().allow("", null),
           banner: Joi.string().allow("", null),
+          isSpam: Joi.boolean().default(false),
           description: Joi.string().allow("", null),
           primaryContract: Joi.string().lowercase().pattern(regex.address),
+          contract: Joi.string().lowercase().pattern(regex.address),
+          count: Joi.number().integer(),
+          volume: Joi.number(),
+          volumePercentChange: Joi.number().unsafe().allow(null),
+          countPercentChange: Joi.number().unsafe().allow(null),
           creator: Joi.string().allow("", null),
+          onSaleCount: Joi.number().integer(),
           floorAsk: {
             id: Joi.string().allow(null),
             sourceDomain: Joi.string().allow("", null),
@@ -83,6 +88,9 @@ export const getTrendingMintsV1Options: RouteOptions = {
               .allow(null)
               .description("Lowest Ask Price."),
           },
+          tokenCount: Joi.number().description("Total tokens within the collection."),
+          ownerCount: Joi.number().description("Unique number of owners."),
+
           createdAt: Joi.date().allow("", null),
           startDate: Joi.date().allow("", null),
           endDate: Joi.date().allow("", null),
@@ -103,15 +111,20 @@ export const getTrendingMintsV1Options: RouteOptions = {
               maxMintsPerWallet: Joi.number().unsafe().allow(null),
             })
           ),
-          tokenCount: Joi.number().description("Total tokens within the collection."),
-          ownerCount: Joi.number().description("Unique number of owners."),
-          volumeChange: Joi.object({
+
+          collectionVolume: Joi.object({
             "1day": Joi.number().unsafe().allow(null),
             "7day": Joi.number().unsafe().allow(null),
             "30day": Joi.number().unsafe().allow(null),
             allTime: Joi.number().unsafe().allow(null),
+          }).description("Total volume in given time period."),
+
+          volumeChange: Joi.object({
+            "1day": Joi.number().unsafe().allow(null),
+            "7day": Joi.number().unsafe().allow(null),
+            "30day": Joi.number().unsafe().allow(null),
           }).description(
-            "Total volume chang e X-days vs previous X-days. (e.g. 7day [days 1-7] vs 7day prior [days 8-14]). A value over 1 is a positive gain, under 1 is a negative loss. e.g. 1 means no change; 1.1 means 10% increase; 0.9 means 10% decrease."
+            "Total volume change X-days vs previous X-days. (e.g. 7day [days 1-7] vs 7day prior [days 8-14]). A value over 1 is a positive gain, under 1 is a negative loss. e.g. 1 means no change; 1.1 means 10% increase; 0.9 means 10% decrease."
           ),
         })
       ),
@@ -133,10 +146,7 @@ export const getTrendingMintsV1Options: RouteOptions = {
         limit,
       });
 
-      const collectionsMetadata = await getCollectionsMetadata(
-        elasticMintData.map((res) => res.id)
-      );
-
+      const collectionsMetadata = await getCollectionsMetadata(elasticMintData, true);
       const mints = await formatCollections(
         mintingCollections,
         elasticMintData,
@@ -144,6 +154,7 @@ export const getTrendingMintsV1Options: RouteOptions = {
         normalizeRoyalties,
         useNonFlaggedFloorAsk
       );
+
       const response = h.response({ mints });
       return response;
     } catch (error) {
@@ -206,24 +217,21 @@ async function formatCollections(
 
       const floorAskId = metadata[(prefix + "floor_sell_id") as MetadataKey];
       const floorAskValue = metadata[(prefix + "floor_sell_value") as MetadataKey];
-      let floorAskCurrency = metadata[(prefix + "floor_sell_currency") as MetadataKey];
+      const floorAskCurrency = metadata[(prefix + "floor_sell_currency") as MetadataKey];
       const floorAskSource = metadata[(prefix + "floor_sell_source_id_int") as MetadataKey];
       const floorAskCurrencyValue =
         metadata[(prefix + `${prefix}floor_sell_currency_value`) as MetadataKey];
 
       if (metadata) {
-        floorAskCurrency = floorAskCurrency
-          ? fromBuffer(floorAskCurrency)
-          : Sdk.Common.Addresses.Native[config.chainId];
         floorAsk = {
           id: floorAskId,
           sourceDomain: sources.get(floorAskSource)?.domain,
-          price: metadata.floor_sell_id
+          price: floorAskId
             ? await getJoiPriceObject(
                 {
                   gross: {
                     amount: floorAskCurrencyValue ?? floorAskValue,
-                    nativeAmount: floorAskValue,
+                    nativeAmount: floorAskValue || 0,
                   },
                 },
                 floorAskCurrency
@@ -233,11 +241,17 @@ async function formatCollections(
       }
 
       return {
-        id: r.id,
-        banner: metadata.metadata.bannerImageUrl,
-        description: metadata.metadata.description,
+        ...r,
         image: metadata?.metadata?.imageUrl,
-        name: metadata?.name,
+        isSpam: Number(metadata.is_spam) > 0,
+        name: metadata?.name || "",
+        onSaleCount: Number(metadata.on_sale_count) || 0,
+        volumeChange: {
+          "1day": Number(metadata.day1_volume_change),
+          "7day": Number(metadata.day7_volume_change),
+          "30day": Number(metadata.day30_volume_change),
+        },
+
         mintType: Number(mintData?.price) > 0 ? "paid" : "free",
         maxSupply: Number.isSafeInteger(mintData?.max_supply) ? mintData?.max_supply : null,
         createdAt: mintData?.created_at && new Date(mintData?.created_at).toISOString(),
@@ -262,126 +276,22 @@ async function formatCollections(
               })
             )
           : [],
-        volumeChange: {
-          "1day": metadata.day1_volume_change,
-          "7day": metadata.day7_volume_change,
-          "30day": metadata.day30_volume_change,
-          allTime: metadata.all_time_volume,
+
+        collectionVolume: {
+          "1day": metadata.day1_volume ? formatEth(metadata.day1_volume) : null,
+          "7day": metadata.day7_volume ? formatEth(metadata.day7_volume) : null,
+          "30day": metadata.day30_volume ? formatEth(metadata.day30_volume) : null,
+          allTime: metadata.all_time_volume ? formatEth(metadata.all_time_volume) : null,
         },
+
         tokenCount: Number(metadata.token_count || 0),
         ownerCount: Number(metadata.owner_count || 0),
+        banner: metadata?.metadata?.bannerImageUrl,
+        description: metadata?.metadata?.description,
         floorAsk,
       };
     })
   );
 
   return collections;
-}
-
-async function getCollectionsMetadata(collectionIds: string[]): Promise<Record<string, Metadata>> {
-  const collectionsToFetch = collectionIds.map((id: string) => `collection-cache:v1:${id}`);
-  const collectionMetadataCache = await redis
-    .mget(collectionsToFetch)
-    .then((results) =>
-      results.filter((result) => !!result).map((result: any) => JSON.parse(result))
-    );
-
-  logger.info(
-    "top-selling-collections",
-    `using ${collectionMetadataCache.length} collections from cache`
-  );
-
-  const collectionsToFetchFromDb = collectionIds.filter((id: string) => {
-    return !collectionMetadataCache.find((cache: any) => cache.id === id);
-  });
-
-  let collectionMetadataResponse: any = [];
-  if (collectionsToFetchFromDb.length > 0) {
-    logger.info(
-      "top-selling-collections",
-      `Fetching ${collectionsToFetchFromDb.length} collections from DB`
-    );
-
-    const collectionIdList = collectionsToFetchFromDb.map((id: string) => `'${id}'`).join(", ");
-
-    const baseQuery = `
-    WITH MintStages AS (
-      SELECT 
-          collection_id,
-          array_agg(
-              json_build_object(
-                  'stage', stage::TEXT,
-                  'tokenId', token_id::TEXT,
-                  'kind', kind,
-                  'currency', concat('0x', encode(collection_mints.currency, 'hex')),
-                  'price', price::TEXT,
-                  'startTime', EXTRACT(epoch FROM start_time)::INTEGER,
-                  'endTime', EXTRACT(epoch FROM end_time)::INTEGER,
-                  'maxMintsPerWallet', max_mints_per_wallet
-              )
-          ) AS mint_stages
-      FROM collection_mints
-      WHERE collection_id IN (${collectionIdList})
-      GROUP BY collection_id
-  )
-  SELECT 
-      c.id,
-      c.name,
-      c.contract,
-      c.creator,
-      c.token_count,
-      c.owner_count,
-      c.day1_volume_change,
-      c.day7_volume_change,
-      c.day30_volume_change,
-      c.all_time_volume,
-      json_build_object(
-          'imageUrl', c.metadata ->> 'imageUrl',
-          'bannerImageUrl', c.metadata ->> 'bannerImageUrl',
-          'description', c.metadata ->> 'description'
-      ) AS metadata,
-      c.non_flagged_floor_sell_id,
-      c.non_flagged_floor_sell_value,
-      c.non_flagged_floor_sell_maker,
-      c.non_flagged_floor_sell_valid_between,
-      c.non_flagged_floor_sell_source_id_int,
-      c.floor_sell_id,
-      c.floor_sell_value,
-      c.floor_sell_maker,
-      c.floor_sell_valid_between,
-      c.floor_sell_source_id_int,
-      c.normalized_floor_sell_id,
-      c.normalized_floor_sell_value,
-      c.normalized_floor_sell_maker,
-      c.normalized_floor_sell_valid_between,
-      c.normalized_floor_sell_source_id_int,
-      c.top_buy_id,
-      c.top_buy_value,
-      c.top_buy_maker,
-      c.top_buy_valid_between,
-      c.top_buy_source_id_int,
-      ms.mint_stages
-  FROM collections c
-  LEFT JOIN MintStages ms ON c.id = ms.collection_id
-  WHERE c.id IN (${collectionIdList});  
-  `;
-
-    collectionMetadataResponse = await redb.manyOrNone(baseQuery);
-
-    const redisMulti = redis.multi();
-
-    for (const metadata of collectionMetadataResponse) {
-      redisMulti.set(`collection-cache:v1:${metadata.id}`, JSON.stringify(metadata));
-      redisMulti.expire(`collection-cache:v1:${metadata.id}`, REDIS_EXPIRATION);
-    }
-    await redisMulti.exec();
-  }
-
-  const collectionsMetadata: Record<string, Metadata> = {};
-
-  [...collectionMetadataResponse, ...collectionMetadataCache].forEach((metadata: any) => {
-    collectionsMetadata[metadata.id] = metadata;
-  });
-
-  return collectionsMetadata;
 }

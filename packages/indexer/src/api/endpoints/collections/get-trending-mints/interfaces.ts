@@ -44,7 +44,12 @@ export interface Mint {
 
 export interface Metadata {
   id: string;
+  day1_volume: number;
+  day7_volume: number;
+  day30_volume: number;
+  on_sale_count: number;
   name: string;
+  is_spam: number | null;
   contract: {
     type: string;
     data: number[];
