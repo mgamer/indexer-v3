@@ -223,7 +223,7 @@ export class Collections {
         slug = $/slug/,
         payment_tokens = $/paymentTokens/,
         creator = $/creator/,
-        is_spam = $/isSpamContract/,
+        ${isSpamContract ? `is_spam = $/isSpamContract/,` : ""}
         updated_at = now()
       WHERE id = $/id/
       AND (metadata IS DISTINCT FROM $/metadata:json/ 
