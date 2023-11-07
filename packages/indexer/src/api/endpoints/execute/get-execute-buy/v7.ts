@@ -1507,23 +1507,39 @@ export const getExecuteBuyV7Options: RouteOptions = {
       ];
 
       try {
-        // Simulate filling via a Seaport intent for testing things
-        if (config.seaportSolverBaseUrl) {
-          if (
-            !payload.skipBalanceCheck &&
-            items.length === 1 &&
-            items[0].token &&
-            items[0].fillType !== "mint"
-          ) {
-            await axios.post(
-              `${config.seaportSolverBaseUrl}/simulate`,
-              {
-                chainId: config.chainId,
-                token: items[0].token,
-              },
-              { timeout: 500 }
-            );
-          }
+        // Simulate filling via seaport / cross-chain intent for testing things
+        if (
+          !payload.skipBalanceCheck &&
+          items.length === 1 &&
+          items[0].token &&
+          items[0].fillType !== "mint"
+        ) {
+          const seaportSimulate = async () => {
+            if (config.seaportSolverBaseUrl) {
+              await axios.post(
+                `${config.seaportSolverBaseUrl}/intents/simulate`,
+                {
+                  chainId: config.chainId,
+                  token: items[0].token,
+                },
+                { timeout: 500 }
+              );
+            }
+          };
+          const crossChainSimulate = async () => {
+            if (config.crossChainSolverBaseUrl) {
+              await axios.post(
+                `${config.crossChainSolverBaseUrl}/intents/simulate`,
+                {
+                  chainId: config.chainId,
+                  token: items[0].token,
+                },
+                { timeout: 500 }
+              );
+            }
+          };
+
+          await Promise.all([seaportSimulate(), crossChainSimulate()]);
         }
       } catch {
         // Skip errors
@@ -1548,7 +1564,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
         }
 
         const quote = await axios
-          .post(`${config.seaportSolverBaseUrl}/quote`, {
+          .post(`${config.seaportSolverBaseUrl}/intents/quote`, {
             chainId: config.chainId,
             token: `${details.contract}:${details.tokenId}`,
             amount: details.amount ?? "1",
@@ -2346,6 +2362,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
         JSON.stringify({
           request: payload,
           uuid: randomUUID(),
+          timestampAccurate: Date.now(),
           httpCode: error instanceof Boom.Boom ? error.output.statusCode : 500,
           error:
             error instanceof Boom.Boom ? error.output.payload : { error: "Internal Server Error" },

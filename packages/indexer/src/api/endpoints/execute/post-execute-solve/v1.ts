@@ -108,7 +108,7 @@ export const postExecuteSolveV1Options: RouteOptions = {
               signature: payload.order.signature ?? query.signature,
             });
 
-            await axios.post(`${config.seaportSolverBaseUrl}/trigger`, {
+            await axios.post(`${config.seaportSolverBaseUrl}/intents/trigger`, {
               chainId: config.chainId,
               order: order.params,
             });
