@@ -1282,7 +1282,7 @@ export const updateActivitiesCollectionId = async (
         logger.error(
           "elasticsearch-activities",
           JSON.stringify({
-            topic: "updateActivitiesCollection",
+            topic: "updateActivitiesCollectionId",
             message: `Errors in response`,
             data: {
               contract,
@@ -1324,7 +1324,7 @@ export const updateActivitiesCollectionId = async (
       logger.warn(
         "elasticsearch-activities",
         JSON.stringify({
-          topic: "updateActivitiesCollection",
+          topic: "updateActivitiesCollectionId",
           message: `Unexpected error`,
           data: {
             contract,
@@ -1341,7 +1341,7 @@ export const updateActivitiesCollectionId = async (
       logger.error(
         "elasticsearch-activities",
         JSON.stringify({
-          topic: "updateActivitiesCollection",
+          topic: "updateActivitiesCollectionId",
           message: `Unexpected error`,
           data: {
             contract,
@@ -1596,6 +1596,18 @@ export const updateActivitiesToken = async (
           should,
         },
       },
+      must: [
+        {
+          term: {
+            contract: contract.toLowerCase(),
+          },
+        },
+        {
+          term: {
+            "token.id": tokenId,
+          },
+        },
+      ],
     },
   };
 
@@ -1948,7 +1960,8 @@ export const updateActivitiesCollection = async (
           { update: { _index: document.index, _id: document.id, retry_on_conflict: 3 } },
           {
             script: {
-              source: "ctx._source.collection.isSpam = params.is_spam",
+              source:
+                "ctx._source.collection = [:]; ctx._source.collection.isSpam = params.is_spam",
               params: {
                 is_spam: isSpam,
               },
