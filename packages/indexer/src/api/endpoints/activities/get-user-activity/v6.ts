@@ -62,6 +62,9 @@ export const getUserActivityV6Options: RouteOptions = {
       ).description(
         "Filter to one or more collections. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
       ),
+      excludeSpam: Joi.boolean()
+        .default(false)
+        .description("If true, will filter any activities marked as spam."),
       collectionsSetId: Joi.string()
         .lowercase()
         .description("Filter to a particular collection set."),
@@ -215,6 +218,7 @@ export const getUserActivityV6Options: RouteOptions = {
         types: query.types,
         users: query.users,
         collections: query.collection,
+        excludeSpam: query.excludeSpam,
         contracts: query.contracts,
         sortBy: query.sortBy === "eventTimestamp" ? "timestamp" : query.sortBy,
         limit: query.limit,

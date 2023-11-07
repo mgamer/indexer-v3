@@ -593,7 +593,7 @@ export const updateAsksTokenData = async (
         must_not: [
           {
             term: {
-              "token.isSpam": Boolean(tokenData.isSpam),
+              "token.isSpam": tokenData.isSpam > 0,
             },
           },
         ],
@@ -663,7 +663,7 @@ export const updateAsksTokenData = async (
           {
             doc: {
               "token.isFlagged": Boolean(tokenData.isFlagged),
-              "token.isSpam": Boolean(tokenData.isSpam),
+              "token.isSpam": tokenData.isSpam > 0,
               "token.rarityRank": tokenData.rarityRank,
             },
           },

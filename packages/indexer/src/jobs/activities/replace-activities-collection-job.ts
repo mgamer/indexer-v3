@@ -34,7 +34,7 @@ export default class ReplaceActivitiesCollectionJob extends AbstractRabbitMqJobH
     const collection = await Collections.getById(newCollectionId);
 
     if (collection) {
-      const keepGoing = await ActivitiesIndex.updateActivitiesCollection(
+      const keepGoing = await ActivitiesIndex.updateActivitiesCollectionId(
         contract,
         tokenId,
         collection,

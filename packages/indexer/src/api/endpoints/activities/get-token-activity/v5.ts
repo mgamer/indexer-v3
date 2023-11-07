@@ -63,6 +63,9 @@ export const getTokenActivityV5Options: RouteOptions = {
       continuation: Joi.string().description(
         "Use continuation token to request next offset of items."
       ),
+      excludeSpam: Joi.boolean()
+        .default(false)
+        .description("If true, will filter any activities marked as spam."),
       types: Joi.alternatives()
         .try(
           Joi.array().items(
@@ -145,6 +148,7 @@ export const getTokenActivityV5Options: RouteOptions = {
         sortBy: query.sortBy === "eventTimestamp" ? "timestamp" : query.sortBy,
         limit: query.limit,
         continuation: query.continuation,
+        excludeSpam: query.excludeSpam,
       });
 
       if (activities.length === 0) {

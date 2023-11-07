@@ -57,6 +57,9 @@ export const getCollectionActivityV6Options: RouteOptions = {
         .description(
           "Filter to a particular attribute. Note: Our docs do not support this parameter correctly. To test, you can use the following URL in your browser. Example: `https://api.reservoir.tools/collections/activity/v6?collection=0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63&attribute[Type]=Original` or `https://api.reservoir.tools/collections/activity/v6?collection=0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63&attribute[Type]=Original&attribute[Type]=Sibling`"
         ),
+      excludeSpam: Joi.boolean()
+        .default(false)
+        .description("If true, will filter any activities marked as spam."),
       limit: Joi.number()
         .integer()
         .min(1)
@@ -210,6 +213,7 @@ export const getCollectionActivityV6Options: RouteOptions = {
         types: query.types,
         contracts,
         tokens,
+        excludeSpam: query.excludeSpam,
         collections: query.collection,
         sortBy: query.sortBy === "eventTimestamp" ? "timestamp" : query.sortBy,
         limit: query.limit,
