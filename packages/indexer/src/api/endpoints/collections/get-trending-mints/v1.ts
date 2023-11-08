@@ -146,6 +146,11 @@ export const getTrendingMintsV1Options: RouteOptions = {
         limit,
       });
 
+      if (elasticMintData.length < 1) {
+        const response = h.response({ mints: [] });
+        return response;
+      }
+
       const collectionsMetadata = await getCollectionsMetadata(elasticMintData);
 
       const mintStages = await getMintStages(Object.keys(collectionsMetadata));
@@ -283,10 +288,10 @@ async function formatCollections(
       return {
         ...r,
 
-        image: metadata?.metadata?.imageUrl,
-        banner: metadata?.metadata?.bannerImageUrl,
-        name: metadata?.name || "",
-        description: metadata?.metadata?.description,
+        image: metadata?.metadata ? metadata.metadata?.imageUrl : null,
+        banner: metadata?.metadata ? metadata.metadata?.bannerImageUrl : null,
+        name: metadata ? metadata?.name : "",
+        description: metadata?.metadata ? metadata.metadata?.description : null,
 
         isSpam: Number(metadata.is_spam) > 0,
         onSaleCount: Number(metadata.on_sale_count) || 0,
