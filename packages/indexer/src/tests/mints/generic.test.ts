@@ -139,4 +139,35 @@ describe("Mints - Generic", () => {
 
     expect(collectionMints.length).not.toBe(0);
   });
+
+  it("guess-constant-arguments-from-complex-arguments-by-multiple-mint-txs", async () => {
+    if (config.chainId != 10) {
+      return;
+    }
+    const collection = "0x513a87ab60777a306b6c40e3585d2bc4aea9ff52";
+    const txId = "0x36cf609d3607cf247c2f240374c868690a100b6a21c2f23336e840aad1ac0756";
+    const transcation = await utils.fetchTransaction(txId);
+    const collectionMints = await extractByTx(
+      collection,
+      transcation,
+      parseEther("0"),
+      BigNumber.from("1"),
+      [
+        await utils.fetchTransaction(
+          "0xfdf21e75d937fb33be24498e123d5f52a8de10e0bf8ef4f56d88b68a6ee87e47"
+        ),
+        await utils.fetchTransaction(
+          "0xc4977c26ef33524972bb7430442ba6b6aa111b015c2b8fe6554c57186f74d499"
+        ),
+      ]
+    );
+
+    for (const collectionMint of collectionMints) {
+      if (collectionMint.status === "open") {
+        const result = await simulateCollectionMint(collectionMint);
+        expect(result).toBe(true);
+      }
+    }
+    expect(collectionMints.length).not.toBe(0);
+  });
 });
