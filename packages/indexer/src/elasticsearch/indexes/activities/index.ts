@@ -799,7 +799,7 @@ export const search = async (
   }
 
   if (params.excludeSpam) {
-    (esQuery as any).bool.should.push({
+    (esQuery as any).bool.filter.push({
       bool: {
         must_not: [{ term: { "collection.isSpam": true } }, { term: { "token.isSpam": true } }],
       },
