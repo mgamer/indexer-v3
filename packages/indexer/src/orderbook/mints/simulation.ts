@@ -4,6 +4,7 @@ import { Network, TxData } from "@reservoir0x/sdk/dist/utils";
 
 import { idb } from "@/common/db";
 import { logger } from "@/common/logger";
+import { baseProvider } from "@/common/provider";
 import { bn, fromBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { CollectionMint } from "@/orderbook/mints";
@@ -12,8 +13,6 @@ import { generateCollectionMintTxData } from "@/orderbook/mints/calldata";
 import { EventData } from "@/events-sync/data";
 import * as erc721 from "@/events-sync/data/erc721";
 import * as erc1155 from "@/events-sync/data/erc1155";
-import { baseProvider } from "@/common/provider";
-import _ from "lodash";
 
 export const simulateCollectionMint = async (
   collectionMint: CollectionMint,
@@ -60,22 +59,23 @@ export const simulateCollectionMint = async (
     );
 
   if (detectMaxMintsPerWallet && collectionMint.maxMintsPerWallet === undefined) {
-    const quantitiesToSearch = [1, 2, 5, 10, 11];
-    const results = await Promise.all(quantitiesToSearch.map((q) => simulate(q)));
+    const quantitiesToTry = [1, 2, 5, 10, 11];
+    const results = await Promise.all(quantitiesToTry.map((q) => simulate(q)));
 
-    if (!results.every((c) => c === true)) {
-      const mintableQunanties = results.map((status, index) =>
-        status ? quantitiesToSearch[index] : -1
-      );
-      const maxQuantity = _.max(mintableQunanties);
-      if (!maxQuantity) return false;
-      if (maxQuantity > 0) {
-        collectionMint.maxMintsPerWallet = String(maxQuantity);
+    if (results.every((r) => r)) {
+      // Explicitly set to `undefined` which means an unlimited amount can be minted
+      collectionMint.maxMintsPerWallet = undefined;
+    } else {
+      // Find first quantity that failed, and take the one before it as the maximum
+      const firstFailedIndex = results.findIndex((r) => !r);
+      if (firstFailedIndex === 0) {
+        return false;
+      } else {
+        collectionMint.maxMintsPerWallet = quantitiesToTry[firstFailedIndex - 1].toString();
       }
-      return true;
     }
 
-    return results[0];
+    return true;
   } else {
     return simulate(1);
   }
