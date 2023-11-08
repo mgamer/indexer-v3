@@ -91,6 +91,12 @@ export class IndexerCollectionsHandler extends KafkaEventHandler {
         await redis.set(collectionKey, JSON.stringify(updatedPayload), "XX");
 
         const spamStatusChanged = payload.before.is_spam !== payload.after.is_spam;
+        if (payload.after.id === "0xc87eaedc40f5dcc87898ffeb352b4ecdb559d114") {
+          logger.info(
+            "collection-cdc-debug",
+            `spamStatusChanged ${spamStatusChanged} before: ${payload.before.is_spam} after: ${payload.after.is_spam}`
+          );
+        }
 
         // Update the elastic search activities index
         if (spamStatusChanged) {
