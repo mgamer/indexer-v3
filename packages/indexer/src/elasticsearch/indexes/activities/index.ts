@@ -1960,8 +1960,7 @@ export const updateActivitiesCollection = async (
           { update: { _index: document.index, _id: document.id, retry_on_conflict: 3 } },
           {
             script: {
-              source:
-                "ctx._source.collection = [:]; ctx._source.collection.isSpam = params.is_spam",
+              source: "ctx._source.collection.isSpam = params.is_spam",
               params: {
                 is_spam: isSpam > 0,
               },
