@@ -1636,7 +1636,7 @@ export const updateActivitiesToken = async (
             script: {
               source: "ctx._source.token.isSpam = params.is_spam",
               params: {
-                is_spam: isSpam,
+                is_spam: isSpam > 0,
               },
             },
           },
@@ -1963,7 +1963,7 @@ export const updateActivitiesCollection = async (
               source:
                 "ctx._source.collection = [:]; ctx._source.collection.isSpam = params.is_spam",
               params: {
-                is_spam: isSpam,
+                is_spam: isSpam > 0,
               },
             },
           },
