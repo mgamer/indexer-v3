@@ -24,7 +24,7 @@ export default class OnchainMetadataProcessTokenUriJob extends AbstractRabbitMqJ
     const { contract, tokenId, uri } = payload;
 
     try {
-      const metadata = await onchainMetadataProvider._getTokensMetadata([
+      const metadata = await onchainMetadataProvider.getTokensMetadata([
         { contract, tokenId, uri },
       ]);
 

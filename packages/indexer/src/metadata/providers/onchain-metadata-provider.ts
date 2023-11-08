@@ -47,8 +47,7 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
 
         return {
           ...metadata,
-          contract: token.contract,
-          tokenId: token.tokenId,
+          ...token,
         };
       })
     );
@@ -207,8 +206,10 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
       // so by default we ignore them (this behaviour can be overridden if needed).
       description: metadata.description || null,
       imageUrl: normalizeLink(metadata?.image) || null,
-      imageOriginalUrl: metadata?.metadata || null,
+      imageOriginalUrl: metadata?.image || null,
+      animationOriginalUrl: metadata?.animation_url || null,
       mediaUrl: normalizeLink(metadata?.animation_url) || null,
+      metadataOriginalUrl: this.parseIPFSURI(metadata.uri),
       attributes: (metadata.attributes || []).map((trait: any) => ({
         key: trait.trait_type ?? "property",
         value: trait.value,
@@ -421,11 +422,17 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
     }
   }
 
+  parseIPFSURI(uri: string) {
+    if (uri.includes("ipfs://")) {
+      uri = uri.replace("ipfs://", "https://ipfs.io/ipfs/");
+    }
+
+    return uri;
+  }
+
   async getTokenMetadataFromURI(uri: string, contract: string, tokenId: string) {
     try {
-      if (uri.includes("ipfs://")) {
-        uri = uri.replace("ipfs://", "https://ipfs.io/ipfs/");
-      }
+      uri = this.parseIPFSURI(uri);
 
       const isDataUri = uri.startsWith("data:application/json;base64,");
       if (isDataUri) {

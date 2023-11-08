@@ -71,7 +71,7 @@ export const getProviderMetadata: RouteOptions = {
 
           return await Promise.all(
             tokenURIs.map(async (tokenURI) => {
-              const metadata = await onchainMetadataProvider._getTokensMetadata([tokenURI]);
+              const metadata = await onchainMetadataProvider.getTokensMetadata([tokenURI]);
               return metadata[0];
             })
           );
