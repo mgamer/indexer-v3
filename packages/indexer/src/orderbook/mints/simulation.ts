@@ -3,7 +3,6 @@ import { Log } from "@georgeroman/evm-tx-simulator/dist/types";
 import { Network, TxData } from "@reservoir0x/sdk/dist/utils";
 
 import { idb } from "@/common/db";
-import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { bn, fromBuffer } from "@/common/utils";
 import { config } from "@/config/index";
@@ -169,10 +168,8 @@ const simulateMintTxData = async (
     let logs: Log[];
     try {
       logs = await getEmittedEvents(txData, config.chainId);
-      logger.info("mints-simulation", `Emitted events: ${JSON.stringify(logs)}`);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (error: any) {
-      logger.info("mints-simulation", `Error fetching events: ${error} (${error.stack})`);
+    } catch {
       return false;
     }
 
@@ -218,11 +215,8 @@ const simulateMintTxData = async (
     // Default to using `eth_call` (which isn't very accurate)
 
     try {
-      const result = await triggerCall(txData);
-      logger.info("mints-simulation", `Call result: ${result}`);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (error: any) {
-      logger.info("mints-simulation", `Error simulating call: ${error} (${error.stack})`);
+      await triggerCall(txData);
+    } catch {
       return false;
     }
 
