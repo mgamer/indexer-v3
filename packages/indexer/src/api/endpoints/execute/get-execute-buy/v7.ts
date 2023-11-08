@@ -520,6 +520,10 @@ export const getExecuteBuyV7Options: RouteOptions = {
       }[] = [];
       const preview = payload.onlyPath && payload.partial && items.every((i) => !i.quantity);
 
+      const useSeaportIntent = payload.executionMethod === "seaport-intent";
+      const useCrossChainIntent =
+        payload.currencyChainId !== undefined && payload.currencyChainId !== config.chainId;
+
       let lastError: string | undefined;
       for (let i = 0; i < items.length; i++) {
         const item = items[i];
@@ -528,7 +532,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
 
         if (!item.quantity) {
           if (preview) {
-            item.quantity = 30;
+            item.quantity = useSeaportIntent || useCrossChainIntent ? 1 : 30;
           } else {
             item.quantity = 1;
           }
@@ -1542,10 +1546,6 @@ export const getExecuteBuyV7Options: RouteOptions = {
         }
       }
 
-      const useSeaportIntent = payload.executionMethod === "seaport-intent";
-      const useCrossChainIntent =
-        payload.currencyChainId !== undefined && payload.currencyChainId !== config.chainId;
-
       if (payload.onlyPath && !useSeaportIntent && !useCrossChainIntent) {
         return {
           path,
@@ -1737,7 +1737,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
           });
 
         if (ccConfig.maxPrice && bn(quote).gt(ccConfig.maxPrice)) {
-          throw Boom.badRequest("Price too high");
+          throw Boom.badRequest("Price too high to purchase cross-chain");
         }
 
         item.fromChainId = fromChainId;
