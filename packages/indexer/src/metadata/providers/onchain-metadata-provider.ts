@@ -195,6 +195,23 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
   // parsers
 
   parseToken(metadata: any): TokenMetadata {
+    // add handling for metadata.properties, convert to attributes
+    if (metadata?.properties) {
+      metadata.attributes = Object.keys(metadata.properties).map((key) => {
+        if (typeof metadata.properties[key] === "object") {
+          return {
+            trait_type: key,
+            value: metadata.properties[key],
+          };
+        } else {
+          return {
+            trait_type: key,
+            value: metadata.properties[key],
+          };
+        }
+      });
+    }
+
     return {
       contract: metadata.contract,
       slug: null,
@@ -434,17 +451,16 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
     try {
       uri = this.parseIPFSURI(uri);
 
-      const isDataUri = uri.startsWith("data:application/json;base64,");
-      if (isDataUri) {
+      if (uri.startsWith("data:application/json;base64,")) {
         uri = uri.replace("data:application/json;base64,", "");
-      }
-
-      if (isDataUri) {
         return [JSON.parse(Buffer.from(uri, "base64").toString("utf-8")), null];
+      } else if (uri.startsWith("data:application/json")) {
+        // remove everything before the first comma
+        uri = uri.substring(uri.indexOf(",") + 1);
+        return [JSON.parse(uri), null];
       }
-
-      // if the uri is not a valid url, return null
       if (!uri.startsWith("http")) {
+        // if the uri is not a valid url, return null
         return [null, `Invalid URI: ${uri}`];
       }
 
@@ -459,6 +475,8 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
       });
 
       if (!response.ok) {
+        // eslint-disable-next-line
+        const body = await response.text();
         return [null, response.status];
       }
 
