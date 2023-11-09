@@ -288,7 +288,7 @@ export const extractByCollection = async (
       results.push({
         collection,
         contract: collection,
-        stage: `claim-${minterAddress.toLowerCase()}`,
+        stage: `public-sale-${minterAddress.toLowerCase()}-dynamic-price`,
         kind: "public",
         status: "open",
         standard: STANDARD,
