@@ -1711,7 +1711,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
           enabled: boolean;
           solver?: string;
           availableBalance?: string;
-          maxPrice?: string;
+          maxPricePerItem?: string;
         } = await axios
           .get(
             `${config.crossChainSolverBaseUrl}/config?fromChainId=${fromChainId}&toChainId=${toChainId}&user=${payload.taker}`
@@ -1745,7 +1745,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
             );
           });
 
-        if (ccConfig.maxPrice && bn(quote).gt(ccConfig.maxPrice)) {
+        if (ccConfig.maxPricePerItem && bn(quote).gt(ccConfig.maxPricePerItem)) {
           throw Boom.badRequest("Price too high to purchase cross-chain");
         }
 
