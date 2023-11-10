@@ -312,7 +312,9 @@ async function formatCollections(
         ownerCount: Number(metadata.owner_count || 0),
 
         mintType: Number(mintData?.price) > 0 ? "paid" : "free",
-        maxSupply: Number.isSafeInteger(mintData?.max_supply) ? mintData?.max_supply : null,
+        maxSupply: Number.isSafeInteger(Number(mintData?.max_supply))
+          ? Number(mintData?.max_supply)
+          : null,
         createdAt: mintData?.created_at && new Date(mintData?.created_at).toISOString(),
         startDate: mintData?.start_time && new Date(mintData?.start_time).toISOString(),
         endDate: mintData?.end_time && new Date(mintData?.end_time).toISOString(),
