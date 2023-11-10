@@ -58,6 +58,10 @@ export class SingleTokenBuilder extends BaseBuilder {
           }
         }
 
+        if (endPrice.gt(price)) {
+          throw new Error("Increasing-price listings are not supported");
+        }
+
         return {
           tokenKind,
           side,
@@ -73,7 +77,7 @@ export class SingleTokenBuilder extends BaseBuilder {
         };
       } else {
         if (isDynamic) {
-          throw new Error("Reverse dutch auctions are not supported");
+          throw new Error("Dynamic buy orders are not supported");
         }
 
         const paymentToken = offerItem.token;
