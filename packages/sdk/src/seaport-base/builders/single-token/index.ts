@@ -72,6 +72,10 @@ export class SingleTokenBuilder extends BaseBuilder {
           taker,
         };
       } else {
+        if (isDynamic) {
+          throw new Error("Reverse dutch auctions are not supported");
+        }
+
         const paymentToken = offerItem.token;
         const price = offerItem.startAmount;
         const endPrice = offerItem.endAmount;
