@@ -11,12 +11,20 @@ export const extendCollection = async (metadata: CollectionMetadata, _tokenId = 
     },
     "0x72106bbe2b447ecb9b52370ddc63cfa8e553b08c": {
       name: "ORL Ocean Racers",
+      metadata: {
+        description:
+          "Ocean Racing League's Ocean Racers are a collection of 8008 elephant & sea creature combinations, inhabiting the Polygon Blockchain. With well over 30 different creature types and a host of other traits, each racer is completely unique. Your Ocean Racers grant you access to the Ocean Racing League, where teams compete in weekly races to win $MATIC & $PEARL (The native token to the ORL universe). Tier, division and several team management factors such as Coaches also combine to determine how well your racer performs on the track.",
+        twitterUrl: "https://twitter.com/ElegantRacers",
+        discordUrl: "https://discord.gg/ocean-racing-league",
+        externalUrl: "https://oceanracingleague.com",
+      },
     },
     "0x71ef0488d78ed490c8ffa3112fb3d7b4614f76b5": {
       name: "Ocean Racing Coaches Association",
       metadata: {
         description:
           "ORCA member coaches are specially trained to work with compatible ORL Ocean Racers. Season 1 consists of 505 Coaches, living on the Polygon Blockchain. Appointing the right coach to your team will take your racers to new levels of performance that are otherwise unattainable. The impact your coach has is determined by 3 key factors; Coach Class, Specialties and Prestige.",
+        twitterUrl: "https://twitter.com/ElegantRacers",
         discordUrl: "https://discord.gg/ocean-racing-league",
         externalUrl: "https://oceanracingleague.com",
       },
@@ -52,6 +60,8 @@ export const extendCollection = async (metadata: CollectionMetadata, _tokenId = 
       name: "Degen Mercenaries",
       metadata: {
         description: "PvP shootout duel game on Polygon. S2E $MATIC instantly!",
+        imageUrl:
+          "https://lh3.googleusercontent.com/NUrNjqOzfDg6gyqXbgjhFYFRHOjJyO6bcll8DM_SgNWP2KaU3sFNHbCQ86D9C0YfO17AQVlWThzLCLNIIMTcImC_l6VWPfauF-o",
         twitterUrl: "https://twitter.com/degenmercsnft",
         discordUrl: "https://discord.com/invite/degenmercenaries",
         externalUrl: "https://www.degenmercenaries.com",
@@ -82,7 +92,7 @@ export const extendCollection = async (metadata: CollectionMetadata, _tokenId = 
         description:
           "In the realm of the digital world, where creativity and innovation converge, a new chapter is about to unfold. Behold, the grand tale of Valiant Vikings, an extraordinary NFT collection that brings to life the epic saga of fearless warriors, mythical creatures, and untamed lands....",
         imageUrl:
-          "https://bafybeibpmngr4muw4oppgpe3noevuwnhrkl4wd53vynlj42bkw2gmoov6m.ipfs.nftstorage.link",
+          "https://bafybeidsrz5usezfxp3d7pgmmokmmne4clwpqv3wxlrqy3vmfr576mhzge.ipfs.nftstorage.link",
         twitterUrl: "https://twitter.com/Valiantvikin",
         discordUrl: "https://discord.gg/Bx2Drr2t4f",
         externalUrl: "https://www.purplewavestudios.com",
@@ -121,6 +131,12 @@ export const extendCollection = async (metadata: CollectionMetadata, _tokenId = 
           bps: 500,
         },
       ],
+    },
+    "0xb32d51869d97218eb75e55f378205fdf658c37e1": {
+      metadata: {
+        twitterUrl: "https://twitter.com/GrumpiesNFT",
+        description: "2,000 Grumpies crash landing on Polygon!",
+      },
     },
   };
 
