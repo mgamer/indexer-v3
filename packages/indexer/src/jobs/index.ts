@@ -168,7 +168,6 @@ import { collectionRefreshSpamJob } from "@/jobs/collections-refresh/collections
 import { refreshAsksTokenJob } from "@/jobs/asks/refresh-asks-token-job";
 import { actionsLogJob } from "@/jobs/general-tracking/actions-log-job";
 import { refreshAsksCollectionJob } from "@/jobs/asks/refresh-asks-collection-job";
-import { refreshActivitiesCollectionJob } from "@/jobs/activities/refresh-activities-collection-job";
 import { refreshActivitiesTokenJob } from "@/jobs/activities/refresh-activities-token-job";
 
 export const allJobQueues = [
@@ -320,7 +319,6 @@ export class RabbitMqJobsConsumer {
       refreshAsksTokenJob,
       actionsLogJob,
       refreshAsksCollectionJob,
-      refreshActivitiesCollectionJob,
       refreshActivitiesTokenJob,
     ];
   }

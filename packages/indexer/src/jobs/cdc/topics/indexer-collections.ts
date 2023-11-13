@@ -12,7 +12,7 @@ import {
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { refreshAsksCollectionJob } from "@/jobs/asks/refresh-asks-collection-job";
-import { refreshActivitiesCollectionJob } from "@/jobs/activities/refresh-activities-collection-job";
+import { refreshActivitiesCollectionMetadataJob } from "@/jobs/activities/refresh-activities-collection-metadata-job";
 
 export class IndexerCollectionsHandler extends KafkaEventHandler {
   topicName = "indexer.public.collections";
@@ -95,7 +95,7 @@ export class IndexerCollectionsHandler extends KafkaEventHandler {
 
       // Update the elastic search activities index
       if (spamStatusChanged) {
-        await refreshActivitiesCollectionJob.addToQueue({
+        await refreshActivitiesCollectionMetadataJob.addToQueue({
           collectionId: payload.after.id,
         });
       }

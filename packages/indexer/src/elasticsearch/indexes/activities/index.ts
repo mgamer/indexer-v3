@@ -1204,7 +1204,7 @@ export const updateActivitiesMissingCollection = async (
   return keepGoing;
 };
 
-export const updateActivitiesCollectionId = async (
+export const updateActivitiesCollection = async (
   contract: string,
   tokenId: string,
   newCollection: CollectionsEntity,
@@ -1282,7 +1282,7 @@ export const updateActivitiesCollectionId = async (
         logger.error(
           "elasticsearch-activities",
           JSON.stringify({
-            topic: "updateActivitiesCollectionId",
+            topic: "updateActivitiesCollection",
             message: `Errors in response`,
             data: {
               contract,
@@ -1324,7 +1324,7 @@ export const updateActivitiesCollectionId = async (
       logger.warn(
         "elasticsearch-activities",
         JSON.stringify({
-          topic: "updateActivitiesCollectionId",
+          topic: "updateActivitiesCollection",
           message: `Unexpected error`,
           data: {
             contract,
@@ -1341,7 +1341,7 @@ export const updateActivitiesCollectionId = async (
       logger.error(
         "elasticsearch-activities",
         JSON.stringify({
-          topic: "updateActivitiesCollectionId",
+          topic: "updateActivitiesCollection",
           message: `Unexpected error`,
           data: {
             contract,
@@ -1710,13 +1710,24 @@ export const updateActivitiesToken = async (
   return keepGoing;
 };
 
-export const updateActivitiesCollectionMetadata = async (
+export const updateActivitiesCollectionData = async (
   collectionId: string,
-  collectionData: { name: string | null; image: string | null }
+  collectionData: { name: string | null; image: string | null; isSpam: number }
 ): Promise<boolean> => {
   let keepGoing = false;
 
   const should: any[] = [
+    {
+      bool: {
+        must_not: [
+          {
+            term: {
+              "collection.isSpam": collectionData.isSpam > 0,
+            },
+          },
+        ],
+      },
+    },
     {
       bool: collectionData.name
         ? {
@@ -1803,10 +1814,11 @@ export const updateActivitiesCollectionMetadata = async (
           {
             script: {
               source:
-                "if (params.collection_name == null) { ctx._source.collection.remove('name') } else { ctx._source.collection.name = params.collection_name } if (params.collection_image == null) { ctx._source.collection.remove('image') } else { ctx._source.collection.image = params.collection_image }",
+                "if (params.collection_name == null) { ctx._source.collection.remove('name') } else { ctx._source.collection.name = params.collection_name } if (params.collection_image == null) { ctx._source.collection.remove('image') } else { ctx._source.collection.image = params.collection_image }; ctx._source.collection.isSpam = params.is_spam",
               params: {
                 collection_name: collectionData.name ?? null,
                 collection_image: collectionData.image ?? null,
+                is_spam: collectionData.isSpam > 0,
               },
             },
           },
@@ -1822,7 +1834,7 @@ export const updateActivitiesCollectionMetadata = async (
         logger.error(
           "elasticsearch-activities",
           JSON.stringify({
-            topic: "updateActivitiesCollectionMetadata",
+            topic: "updateActivitiesCollectionData",
             message: `Errors in response. collectionId=${collectionId}, collectionData=${JSON.stringify(
               collectionData
             )}`,
@@ -1842,7 +1854,7 @@ export const updateActivitiesCollectionMetadata = async (
         logger.info(
           "elasticsearch-activities",
           JSON.stringify({
-            topic: "updateActivitiesCollectionMetadata",
+            topic: "updateActivitiesCollectionData",
             message: `Success. collectionId=${collectionId}, collectionData=${JSON.stringify(
               collectionData
             )}`,
@@ -1867,7 +1879,7 @@ export const updateActivitiesCollectionMetadata = async (
       logger.warn(
         "elasticsearch-activities",
         JSON.stringify({
-          topic: "updateActivitiesCollectionMetadata",
+          topic: "updateActivitiesCollectionData",
           message: `Unexpected error`,
           data: {
             collectionId,
@@ -1882,163 +1894,11 @@ export const updateActivitiesCollectionMetadata = async (
       logger.error(
         "elasticsearch-activities",
         JSON.stringify({
-          topic: "updateActivitiesCollectionMetadata",
+          topic: "updateActivitiesCollectionData",
           message: `Unexpected error`,
           data: {
             collectionId,
             collectionData,
-          },
-          error,
-        })
-      );
-
-      throw error;
-    }
-  }
-
-  return keepGoing;
-};
-
-export const updateActivitiesCollection = async (
-  collectionId: string,
-  isSpam: number
-): Promise<boolean> => {
-  let keepGoing = false;
-
-  const should: any[] = [
-    {
-      bool: {
-        must_not: [
-          {
-            term: {
-              "collection.isSpam": isSpam > 0,
-            },
-          },
-        ],
-      },
-    },
-  ];
-
-  const query = {
-    bool: {
-      must: [
-        {
-          term: {
-            "collection.id": collectionId.toLowerCase(),
-          },
-        },
-      ],
-      filter: {
-        bool: {
-          should,
-        },
-      },
-    },
-  };
-
-  try {
-    const esResult = await _search(
-      {
-        _source: ["id"],
-        // This is needed due to issue with elasticsearch DSL.
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore
-        query,
-        size: 1000,
-      },
-      0,
-      true
-    );
-
-    const pendingUpdateDocuments: { id: string; index: string }[] = esResult.hits.hits.map(
-      (hit) => ({ id: hit._source!.id, index: hit._index })
-    );
-
-    if (pendingUpdateDocuments.length) {
-      const bulkParams = {
-        body: pendingUpdateDocuments.flatMap((document) => [
-          { update: { _index: document.index, _id: document.id, retry_on_conflict: 3 } },
-          {
-            script: {
-              source: "ctx._source.collection.isSpam = params.is_spam",
-              params: {
-                is_spam: isSpam > 0,
-              },
-            },
-          },
-        ]),
-        filter_path: "items.*.error",
-      };
-
-      const response = await elasticsearch.bulk(bulkParams, { ignore: [404] });
-
-      if (response?.errors) {
-        keepGoing = response?.items.some((item) => item.update?.status !== 400);
-
-        logger.error(
-          "elasticsearch-activities",
-          JSON.stringify({
-            topic: "updateActivitiesCollection",
-            message: `Errors in response. collectionId=${collectionId}, isSpam=${isSpam}`,
-            data: {
-              collectionId,
-              isSpam,
-            },
-            bulkParams: JSON.stringify(bulkParams),
-            response,
-            keepGoing,
-            queryJson: JSON.stringify(query),
-          })
-        );
-      } else {
-        keepGoing = pendingUpdateDocuments.length === 1000;
-
-        logger.info(
-          "elasticsearch-activities",
-          JSON.stringify({
-            topic: "updateActivitiesCollection",
-            message: `Success. collectionId=${collectionId}, isSpam=${isSpam}`,
-            data: {
-              collectionId,
-              isSpam,
-            },
-            bulkParams: JSON.stringify(bulkParams),
-            response,
-            keepGoing,
-            queryJson: JSON.stringify(query),
-          })
-        );
-      }
-    }
-  } catch (error) {
-    const retryableError =
-      (error as any).meta?.meta?.aborted ||
-      (error as any).meta?.body?.error?.caused_by?.type === "node_not_connected_exception";
-
-    if (retryableError) {
-      logger.warn(
-        "elasticsearch-activities",
-        JSON.stringify({
-          topic: "updateActivitiesCollection",
-          message: `Unexpected error`,
-          data: {
-            collectionId,
-            isSpam,
-          },
-          error,
-        })
-      );
-
-      keepGoing = true;
-    } else {
-      logger.error(
-        "elasticsearch-activities",
-        JSON.stringify({
-          topic: "updateActivitiesCollection",
-          message: `Unexpected error`,
-          data: {
-            collectionId,
-            isSpam,
           },
           error,
         })
