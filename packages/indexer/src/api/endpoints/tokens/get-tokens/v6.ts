@@ -704,6 +704,7 @@ export const getTokensV6Options: RouteOptions = {
           t.metadata,
           t.media,
           t.collection_id,
+          t.image_version_updated_at,
           c.name AS collection_name,
           con.kind,
           con.symbol,
@@ -724,7 +725,6 @@ export const getTokensV6Options: RouteOptions = {
           c.token_count,
           c.is_spam AS c_is_spam,
           (c.metadata ->> 'imageUrl')::TEXT AS collection_image,
-          c.metadata_refresh_version AS collection_metadata_refresh_version,
           (
             SELECT
               nb.owner
@@ -1384,12 +1384,12 @@ export const getTokensV6Options: RouteOptions = {
               imageSmall: Assets.getResizedImageUrl(
                 r.image,
                 ImageSize.small,
-                r.collection_metadata_refresh_version
+                r.image_version_updated_at
               ),
               imageLarge: Assets.getResizedImageUrl(
                 r.image,
                 ImageSize.large,
-                r.collection_metadata_refresh_version
+                r.image_version_updated_at
               ),
               metadata: Object.values(metadata).every((el) => el === undefined)
                 ? undefined
@@ -2010,8 +2010,16 @@ export const getListedTokensFromES = async (query: any) => {
           name: r.name,
           description: r.description,
           image: Assets.getLocalAssetsLink(r.image),
-          imageSmall: Assets.getResizedImageUrl(r.image, ImageSize.small),
-          imageLarge: Assets.getResizedImageUrl(r.image, ImageSize.large),
+          imageSmall: Assets.getResizedImageUrl(
+            r.image,
+            ImageSize.small,
+            r.image_version_updated_at
+          ),
+          imageLarge: Assets.getResizedImageUrl(
+            r.image,
+            ImageSize.large,
+            r.image_version_updated_at
+          ),
           metadata: Object.values(metadata).every((el) => el === undefined) ? undefined : metadata,
           media: r.media,
           kind: r.kind,

@@ -704,6 +704,7 @@ export const getTokensV7Options: RouteOptions = {
           t.media,
           t.collection_id,
           c.name AS collection_name,
+          t.image_version_updated_at,
           con.kind,
           con.symbol,
           ${selectFloorData},
@@ -1377,8 +1378,16 @@ export const getTokensV7Options: RouteOptions = {
               name: r.name,
               description: r.description,
               image: Assets.getLocalAssetsLink(r.image),
-              imageSmall: Assets.getResizedImageUrl(r.image, ImageSize.small),
-              imageLarge: Assets.getResizedImageUrl(r.image, ImageSize.large),
+              imageSmall: Assets.getResizedImageUrl(
+                r.image,
+                ImageSize.small,
+                r.image_version_updated_at
+              ),
+              imageLarge: Assets.getResizedImageUrl(
+                r.image,
+                ImageSize.large,
+                r.image_version_updated_at
+              ),
               metadata: Object.values(metadata).every((el) => el === undefined)
                 ? undefined
                 : metadata,

@@ -552,18 +552,11 @@ export const getUserTokensV7Options: RouteOptions = {
         SELECT b.contract, b.token_id, b.token_count, extract(epoch from b.acquired_at) AS acquired_at, b.last_token_appraisal_value,
                t.name, t.image, t.metadata AS token_metadata, t.media, t.rarity_rank, t.collection_id, t.floor_sell_id, t.floor_sell_value, t.floor_sell_currency, t.floor_sell_currency_value,
                t.floor_sell_maker, t.floor_sell_valid_from, t.floor_sell_valid_to, t.floor_sell_source_id_int, t.supply, t.remaining_supply, t.description,
-               t.rarity_score, t.t_is_spam, ${selectLastSale}
+               t.rarity_score, t.t_is_spam, t.image_version_updated_at, ${selectLastSale}
                top_bid_id, top_bid_price, top_bid_value, top_bid_currency, top_bid_currency_price, top_bid_currency_value, top_bid_source_id_int,
                o.currency AS collection_floor_sell_currency, o.currency_price AS collection_floor_sell_currency_price,
-<<<<<<< HEAD
-               c.name as collection_name, con.kind, con.symbol, c.metadata, c.royalties,
-               (c.metadata ->> 'safelistRequestStatus')::TEXT AS "opensea_verification_status",
-               c.royalties_bps, ot.kind AS floor_sell_kind, c.slug, c.is_spam AS c_is_spam,
-               c.metadata_refresh_version AS collection_metadata_refresh_version,
-=======
                c.name as collection_name, con.kind, con.symbol, c.metadata, c.royalties, (c.metadata ->> 'safelistRequestStatus')::TEXT AS "opensea_verification_status",
                c.royalties_bps, ot.kind AS floor_sell_kind, c.slug, c.is_spam AS c_is_spam, c.metadata_disabled AS c_metadata_disabled, t_metadata_disabled,
->>>>>>> 1d2dce421502257680a3f1be0c20c6aa6b124fe5
                ${query.includeRawData ? "ot.raw_data AS floor_sell_raw_data," : ""}
                ${
                  query.useNonFlaggedFloorAsk
@@ -706,12 +699,12 @@ export const getUserTokensV7Options: RouteOptions = {
               imageSmall: Assets.getResizedImageUrl(
                 r.image,
                 ImageSize.small,
-                r.collection_metadata_refresh_version
+                r.image_version_updated_at
               ),
               imageLarge: Assets.getResizedImageUrl(
                 r.image,
                 ImageSize.large,
-                r.collection_metadata_refresh_version
+                r.image_version_updated_at
               ),
               metadata: r.token_metadata?.image_original_url
                 ? {
