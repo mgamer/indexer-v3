@@ -270,8 +270,8 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
-    path: "/admin/increment-metadata-version",
-    options: adminEndpoints.postIncrementCollectionMetadataVersionOptions,
+    path: "/admin/update-image-version",
+    options: adminEndpoints.postUpdateImageVersionOptions,
   });
 
   server.route({

@@ -66,7 +66,7 @@ export const postUpdateImageVersionOptions: RouteOptions = {
       );
       return { message: "Request accepted" };
     } catch (error) {
-      logger.error("post-increment-metadata-version-handler", `Handler failure: ${error}`);
+      logger.error("post-update-image-version-handler", `Handler failure: ${error}`);
       throw error;
     }
   },
