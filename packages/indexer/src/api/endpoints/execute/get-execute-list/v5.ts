@@ -45,9 +45,9 @@ import * as zeroExV4Check from "@/orderbook/orders/zeroex-v4/check";
 import * as paymentProcessorSellToken from "@/orderbook/orders/payment-processor/build/sell/token";
 import * as paymentProcessorCheck from "@/orderbook/orders/payment-processor/check";
 
-// CPort
-import * as cPortSellToken from "@/orderbook/orders/cport/build/sell/token";
-import * as cPortCheck from "@/orderbook/orders/cport/check";
+// PaymentProcessorV2
+import * as paymentProcessorV2SellToken from "@/orderbook/orders/payment-processor-v2/build/sell/token";
+import * as paymentProcessorV2Check from "@/orderbook/orders/payment-processor-v2/check";
 
 const version = "v5";
 
@@ -116,7 +116,7 @@ export const getExecuteListV5Options: RouteOptions = {
                 "x2y2",
                 "alienswap",
                 "payment-processor",
-                "cport"
+                "payment-processor-v2"
               )
               .default("seaport-v1.5")
               .description("Exchange protocol used to create order. Example: `seaport-v1.5`"),
@@ -1017,12 +1017,12 @@ export const getExecuteListV5Options: RouteOptions = {
                 break;
               }
 
-              case "cport": {
+              case "payment-processor-v2": {
                 if (!["reservoir"].includes(params.orderbook)) {
                   return errors.push({ message: "Unsupported orderbook", orderIndex: i });
                 }
 
-                const order = await cPortSellToken.build({
+                const order = await paymentProcessorV2SellToken.build({
                   ...params,
                   maker,
                   contract,
@@ -1034,7 +1034,7 @@ export const getExecuteListV5Options: RouteOptions = {
 
                 // Check the order's fillability
                 try {
-                  await cPortCheck.offChainCheck(order, {
+                  await paymentProcessorV2Check.offChainCheck(order, {
                     onChainApprovalRecheck: true,
                   });
                 } catch (error: any) {
@@ -1051,7 +1051,10 @@ export const getExecuteListV5Options: RouteOptions = {
                         kind === "erc721"
                           ? new Sdk.Common.Helpers.Erc721(baseProvider, order.params.tokenAddress)
                           : new Sdk.Common.Helpers.Erc1155(baseProvider, order.params.tokenAddress)
-                      ).approveTransaction(maker, Sdk.CPort.Addresses.Exchange[config.chainId]);
+                      ).approveTransaction(
+                        maker,
+                        Sdk.PaymentProcessorV2.Addresses.Exchange[config.chainId]
+                      );
 
                       break;
                     }
@@ -1074,7 +1077,7 @@ export const getExecuteListV5Options: RouteOptions = {
                         items: [
                           {
                             order: {
-                              kind: "cport",
+                              kind: "payment-processor-v2",
                               data: {
                                 ...order.params,
                               },

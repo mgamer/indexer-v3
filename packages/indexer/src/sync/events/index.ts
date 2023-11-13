@@ -275,8 +275,8 @@ export const extractEventsBatches = async (
             data: kindToEvents.get("createdotfun") ?? [],
           },
           {
-            kind: "cport",
-            data: kindToEvents.get("cport") ?? [],
+            kind: "payment-processor-v2",
+            data: kindToEvents.get("payment-processor-v2") ?? [],
           },
         ];
 

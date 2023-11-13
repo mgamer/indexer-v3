@@ -48,7 +48,7 @@ import * as PaymentProcessor from "./payment-processor";
 import * as Seadrop from "./seadrop";
 import * as BlurV2 from "./blur-v2";
 import * as Joepeg from "./joepeg";
-import * as CPort from "./cport";
+import * as PaymentProcessorV2 from "./payment-processor-v2";
 
 // Overrides (shouldn't belong here)
 if (process.env.SEAPORT_V15_OVERRIDE) {
@@ -125,5 +125,5 @@ export {
   Seadrop,
   BlurV2,
   Joepeg,
-  CPort,
+  PaymentProcessorV2,
 };

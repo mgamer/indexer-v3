@@ -432,17 +432,19 @@ export class Router {
       }
     }
 
-    // We don't have a module for CPort listings
-    if (details.some(({ kind }) => kind === "cport")) {
+    // We don't have a module for PaymentProcessorV2 listings
+    if (details.some(({ kind }) => kind === "payment-processor-v2")) {
       if (options?.relayer) {
-        throw new Error("Relayer not supported for CPort orders");
+        throw new Error("Relayer not supported for PaymentProcessorV2 orders");
       }
 
-      const cPortDetails = details.filter(({ kind }) => kind === "cport");
+      const cPortDetails = details.filter(({ kind }) => kind === "payment-processor-v2");
 
-      const exchange = new Sdk.CPort.Exchange(this.chainId);
+      const exchange = new Sdk.PaymentProcessorV2.Exchange(this.chainId);
       const operator = exchange.contract.address;
-      const orders: Sdk.CPort.Order[] = cPortDetails.map((c) => c.order as Sdk.CPort.Order);
+      const orders: Sdk.PaymentProcessorV2.Order[] = cPortDetails.map(
+        (c) => c.order as Sdk.PaymentProcessorV2.Order
+      );
 
       const useSweepCollection =
         cPortDetails.length > 1 &&
@@ -450,7 +452,7 @@ export class Router {
         cPortDetails.every((c) => c.currency === details[0].currency);
 
       for (const detail of cPortDetails) {
-        const order = detail.order as Sdk.CPort.Order;
+        const order = detail.order as Sdk.PaymentProcessorV2.Order;
         if (buyInCurrency !== Sdk.Common.Addresses.Native[this.chainId]) {
           swapDetails.push({
             tokenIn: buyInCurrency,
@@ -495,7 +497,7 @@ export class Router {
           permits: [],
           txTags: {
             kind: "sale",
-            listings: { cport: orders.length },
+            listings: { "payment-processor-v2": orders.length },
           },
           preSignatures: [],
           txData: exchange.fillOrdersTx(taker, orders, {
@@ -3761,12 +3763,14 @@ export class Router {
       });
     }
 
-    // We don't have a module for CPort offer
-    if (details.some(({ kind }) => kind === "cport")) {
-      const cPortDetails = details.filter(({ kind }) => kind === "cport");
-      const exchange = new Sdk.CPort.Exchange(this.chainId);
+    // We don't have a module for PaymentProcessorV2 offer
+    if (details.some(({ kind }) => kind === "payment-processor-v2")) {
+      const cPortDetails = details.filter(({ kind }) => kind === "payment-processor-v2");
+      const exchange = new Sdk.PaymentProcessorV2.Exchange(this.chainId);
       const operator = exchange.contract.address;
-      const orders: Sdk.CPort.Order[] = cPortDetails.map((c) => c.order as Sdk.CPort.Order);
+      const orders: Sdk.PaymentProcessorV2.Order[] = cPortDetails.map(
+        (c) => c.order as Sdk.PaymentProcessorV2.Order
+      );
       const approvals: NFTApproval[] = [];
       for (const { orderId, contract } of cPortDetails) {
         approvals.push({
@@ -3782,7 +3786,7 @@ export class Router {
         approvals,
         txTags: {
           kind: "sale",
-          listings: { cport: orders.length },
+          listings: { "payment-processor-v2": orders.length },
         },
         preSignatures: [],
         txData: exchange.fillOrdersTx(taker, orders, {
@@ -3794,34 +3798,6 @@ export class Router {
       for (const { orderId } of cPortDetails) {
         success[orderId] = true;
       }
-
-      // for (const detail of details.filter(({ kind }) => kind === "cport")) {
-      //   const order = detail.order as Sdk.CPort.Order;
-      //   const exchange = new Sdk.CPort.Exchange(this.chainId);
-
-      //   txs.push({
-      //     approvals: [
-      //       {
-      //         orderIds: [detail.orderId],
-      //         contract: detail.contract,
-      //         owner: taker,
-      //         operator: exchange.contract.address,
-      //         txData: generateNFTApprovalTxData(detail.contract, taker, exchange.contract.address),
-      //       },
-      //     ],
-      //     preSignatures: [],
-      //     txTags: {
-      //       kind: "sale",
-      //       bids: { cport: 1 },
-      //     },
-      //     txData: exchange.fillOrderTx(taker, order, {
-      //       taker,
-      //     }),
-      //     orderIds: [detail.orderId],
-      //   });
-
-      //   success[detail.orderId] = true;
-      // }
     }
 
     // CASE 2

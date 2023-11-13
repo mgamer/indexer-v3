@@ -51,9 +51,9 @@ import * as zeroExV4BuyCollection from "@/orderbook/orders/zeroex-v4/build/buy/c
 import * as paymentProcessorBuyToken from "@/orderbook/orders/payment-processor/build/buy/token";
 import * as paymentProcessorBuyCollection from "@/orderbook/orders/payment-processor/build/buy/collection";
 
-// CPort
-import * as cPortBuyToken from "@/orderbook/orders/cport/build/buy/token";
-import * as cPortBuyCollection from "@/orderbook/orders/cport/build/buy/collection";
+// PaymentProcessorV2
+import * as paymentProcessorV2BuyToken from "@/orderbook/orders/payment-processor-v2/build/buy/token";
+import * as paymentProcessorV2BuyCollection from "@/orderbook/orders/payment-processor-v2/build/buy/collection";
 
 const version = "v5";
 
@@ -128,7 +128,7 @@ export const getExecuteBidV5Options: RouteOptions = {
                 "x2y2",
                 "alienswap",
                 "payment-processor",
-                "cport"
+                "payment-processor-v2"
               )
               .default("seaport-v1.5")
               .description("Exchange protocol used to create order. Example: `seaport-v1.5`"),
@@ -1318,7 +1318,7 @@ export const getExecuteBidV5Options: RouteOptions = {
                 break;
               }
 
-              case "cport": {
+              case "payment-processor-v2": {
                 if (!["reservoir"].includes(params.orderbook)) {
                   return errors.push({
                     message: "Unsupported orderbook",
@@ -1326,17 +1326,17 @@ export const getExecuteBidV5Options: RouteOptions = {
                   });
                 }
 
-                let order: Sdk.CPort.Order;
+                let order: Sdk.PaymentProcessorV2.Order;
                 if (token) {
                   const [contract, tokenId] = token.split(":");
-                  order = await cPortBuyToken.build({
+                  order = await paymentProcessorV2BuyToken.build({
                     ...params,
                     maker,
                     contract,
                     tokenId,
                   });
                 } else if (collection) {
-                  order = await cPortBuyCollection.build({
+                  order = await paymentProcessorV2BuyCollection.build({
                     ...params,
                     maker,
                     collection,
@@ -1352,12 +1352,12 @@ export const getExecuteBidV5Options: RouteOptions = {
                 let approvalTx: TxData | undefined;
                 const currencyApproval = await currency.getAllowance(
                   maker,
-                  Sdk.CPort.Addresses.Exchange[config.chainId]
+                  Sdk.PaymentProcessorV2.Addresses.Exchange[config.chainId]
                 );
                 if (bn(currencyApproval).lt(bn(order.params.price))) {
                   approvalTx = currency.approveTransaction(
                     maker,
-                    Sdk.CPort.Addresses.Exchange[config.chainId]
+                    Sdk.PaymentProcessorV2.Addresses.Exchange[config.chainId]
                   );
                 }
 
@@ -1393,7 +1393,7 @@ export const getExecuteBidV5Options: RouteOptions = {
                         items: [
                           {
                             order: {
-                              kind: "cport",
+                              kind: "payment-processor-v2",
                               data: {
                                 ...order.params,
                               },

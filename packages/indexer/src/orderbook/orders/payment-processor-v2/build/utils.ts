@@ -1,6 +1,6 @@
 import { AddressZero } from "@ethersproject/constants";
 import * as Sdk from "@reservoir0x/sdk";
-import { BaseBuildParams } from "@reservoir0x/sdk/dist/cport/builders/base";
+import { BaseBuildParams } from "@reservoir0x/sdk/dist/payment-processor-v2/builders/base";
 
 import { redb } from "@/common/db";
 import { fromBuffer } from "@/common/utils";
@@ -49,8 +49,8 @@ export const getBuildInfo = async (
   const buildParams: BaseBuildParams = {
     protocol:
       collectionResult.kind === "erc721"
-        ? Sdk.CPort.Types.OrderProtocols.ERC721_FILL_OR_KILL
-        : Sdk.CPort.Types.OrderProtocols.ERC1155_FILL_PARTIAL,
+        ? Sdk.PaymentProcessorV2.Types.OrderProtocols.ERC721_FILL_OR_KILL
+        : Sdk.PaymentProcessorV2.Types.OrderProtocols.ERC1155_FILL_PARTIAL,
     marketplace: AddressZero,
     amount: options.quantity ?? "1",
     marketplaceFeeNumerator: "0",
@@ -66,7 +66,7 @@ export const getBuildInfo = async (
       (side === "sell"
         ? Sdk.Common.Addresses.Native[config.chainId]
         : Sdk.Common.Addresses.WNative[config.chainId]),
-    masterNonce: await commonHelpers.getMinNonce("cport", options.maker),
+    masterNonce: await commonHelpers.getMinNonce("payment-processor-v2", options.maker),
   };
 
   return {

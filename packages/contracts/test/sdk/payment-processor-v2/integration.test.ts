@@ -4,7 +4,7 @@
 import { Contract } from "@ethersproject/contracts";
 import { parseEther } from "@ethersproject/units";
 import * as Common from "@reservoir0x/sdk/src/common";
-import * as CPort from "@reservoir0x/sdk/src/cport";
+import * as PaymentProcessorV2 from "@reservoir0x/sdk/src/payment-processor-v2";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 import { expect } from "chai";
 import chalk from "chalk";
@@ -17,7 +17,7 @@ import { getChainId, getCurrentTimestamp, reset, setupNFTs } from "../../utils";
 const green = chalk.green;
 const error = chalk.red;
 
-describe("CPort - Indexer Integration Test", () => {
+describe("PaymentProcessorV2 - Indexer Integration Test", () => {
   const chainId = getChainId();
 
   let deployer: SignerWithAddress;
@@ -55,8 +55,8 @@ describe("CPort - Indexer Integration Test", () => {
     await weth.deposit(seller, price);
 
     // Approve the exchange contract for the buyer
-    await weth.approve(seller, CPort.Addresses.Exchange[chainId]);
-    await weth.approve(buyer, CPort.Addresses.Exchange[chainId]);
+    await weth.approve(seller, PaymentProcessorV2.Addresses.Exchange[chainId]);
+    await weth.approve(buyer, PaymentProcessorV2.Addresses.Exchange[chainId]);
 
     // Mint erc721 to seller
     await erc721.connect(seller).mint(boughtTokenId);
@@ -64,19 +64,19 @@ describe("CPort - Indexer Integration Test", () => {
     const nft = new Common.Helpers.Erc721(ethers.provider, erc721.address);
 
     // Approve the transfer manager
-    await nft.approve(seller, CPort.Addresses.Exchange[chainId]);
-    await nft.approve(buyer, CPort.Addresses.Exchange[chainId]);
+    await nft.approve(seller, PaymentProcessorV2.Addresses.Exchange[chainId]);
+    await nft.approve(buyer, PaymentProcessorV2.Addresses.Exchange[chainId]);
 
-    const exchange = new CPort.Exchange(chainId);
+    const exchange = new PaymentProcessorV2.Exchange(chainId);
     console.log(green("\n\n\t Build Order"));
 
     const buyerMasterNonce = await exchange.getMasterNonce(ethers.provider, buyer.address);
     const sellerMasterNonce = await exchange.getMasterNonce(ethers.provider, seller.address);
     const blockTime = await getCurrentTimestamp(ethers.provider);
 
-    const builder = new CPort.Builders.SingleToken(chainId);
+    const builder = new PaymentProcessorV2.Builders.SingleToken(chainId);
     const orderParameters = {
-      protocol: CPort.Types.OrderProtocols.ERC721_FILL_OR_KILL,
+      protocol: PaymentProcessorV2.Types.OrderProtocols.ERC721_FILL_OR_KILL,
       beneficiary: buyer.address,
       marketplace: constants.AddressZero,
       marketplaceFeeNumerator: "0",
@@ -100,7 +100,7 @@ describe("CPort - Indexer Integration Test", () => {
 
     if (isListing) {
       const listingParams = {
-        protocol: CPort.Types.OrderProtocols.ERC721_FILL_OR_KILL,
+        protocol: PaymentProcessorV2.Types.OrderProtocols.ERC721_FILL_OR_KILL,
         marketplace: constants.AddressZero,
         marketplaceFeeNumerator: "0",
         maxRoyaltyFeeNumerator: "0",
@@ -142,7 +142,7 @@ describe("CPort - Indexer Integration Test", () => {
         // Order Info
         {
           // export name from the @/orderbook/index
-          kind: "cport",
+          kind: "paymentProcessorV2",
           data: order.params,
         },
       ],
@@ -307,8 +307,8 @@ describe("CPort - Indexer Integration Test", () => {
 
     console.log(green("\t Event Parsing:"));
     console.log(`\t\t - fillTx: ${fillTxHash}`);
+    await new Promise(resolve => setTimeout(resolve, 3000));
     const parseResult = await indexerHelper.doEventParsing(fillTxHash, skipProcessing);
-
     const onChainData = parseResult.onChainData[0];
     if (!onChainData) {
       console.log("\t\t  Parse Event Failed");
@@ -364,12 +364,12 @@ describe("CPort - Indexer Integration Test", () => {
   //     executeByRouterAPI: true,
   //   }));
 
-  // it("Fill offer", async () => testCase({}));
+  it("Fill offer", async () => testCase({}));
 
-  it("Fill listing", async () =>
-    testCase({
-      isListing: true,
-    }));
+  // it("Fill listing", async () =>
+  //   testCase({
+  //     isListing: true,
+  //   }));
 
   // it("Fill listing with bulk Cancel", async () =>
   //   testCase({

@@ -48,7 +48,7 @@ import * as joepeg from "@/events-sync/data/joepeg";
 import * as metadataUpdate from "@/events-sync/data/metadata-update";
 import * as soundxyz from "@/events-sync/data/soundxyz";
 import * as createdotfun from "@/events-sync/data/createdotfun";
-import * as cport from "@/events-sync/data/cport";
+import * as paymentProcessorV2 from "@/events-sync/data/payment-processor-v2";
 
 // All events we're syncing should have an associated `EventData`
 // entry which dictates the way the event will be parsed and then
@@ -100,7 +100,7 @@ export type EventKind =
   | "metadata-update"
   | "soundxyz"
   | "createdotfun"
-  | "cport";
+  | "payment-processor-v2";
 
 // Event sub-kind in each of the above protocol/standard
 export type EventSubKind =
@@ -320,12 +320,12 @@ export type EventSubKind =
   | "soundxyz-range-edition-mint-created"
   | "soundxyz-merkle-drop-mint-created"
   | "createdotfun-configuration-updated"
-  | "cport-buy-listing-erc721"
-  | "cport-buy-listing-erc1155"
-  | "cport-accept-offer-erc721"
-  | "cport-accept-offer-erc1155"
-  | "cport-master-nonce-invalidated"
-  | "cport-nonce-invalidated";
+  | "payment-processor-v2-buy-listing-erc721"
+  | "payment-processor-v2-buy-listing-erc1155"
+  | "payment-processor-v2-accept-offer-erc721"
+  | "payment-processor-v2-accept-offer-erc1155"
+  | "payment-processor-v2-master-nonce-invalidated"
+  | "payment-processor-v2-nonce-invalidated";
 
 export type EventData = {
   kind: EventKind;
@@ -551,12 +551,12 @@ const allEventData = [
   soundxyz.rangeEditionMintCreated,
   soundxyz.merkleDropMintCreated,
   createdotfun.configurationUpdated,
-  cport.acceptOfferERC1155,
-  cport.acceptOfferERC721,
-  cport.buyListingERC1155,
-  cport.buyListingERC721,
-  cport.masterNonceInvalidated,
-  cport.nonceInvalidated,
+  paymentProcessorV2.acceptOfferERC1155,
+  paymentProcessorV2.acceptOfferERC721,
+  paymentProcessorV2.buyListingERC1155,
+  paymentProcessorV2.buyListingERC721,
+  paymentProcessorV2.masterNonceInvalidated,
+  paymentProcessorV2.nonceInvalidated,
 ];
 
 export const getEventData = (events?: string[]) => {

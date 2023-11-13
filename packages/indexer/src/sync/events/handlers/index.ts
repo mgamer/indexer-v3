@@ -50,7 +50,7 @@ import * as joepeg from "@/events-sync/handlers/joepeg";
 import * as metadataUpdate from "@/events-sync/handlers/metadata-update";
 import * as soundxyz from "@/events-sync/handlers/soundxyz";
 import * as createdotfun from "@/events-sync/handlers/createdotfun";
-import * as cport from "@/events-sync/handlers/cport";
+import * as paymentProcessorV2 from "@/events-sync/handlers/payment-processor-v2";
 
 // A list of events having the same high-level kind
 export type EventsByKind = {
@@ -113,7 +113,7 @@ export const eventKindToHandler = new Map<
   ["metadata-update", (e) => metadataUpdate.handleEvents(e)],
   ["soundxyz", (e, d) => soundxyz.handleEvents(e, d)],
   ["createdotfun", (e, d) => createdotfun.handleEvents(e, d)],
-  ["cport", (e, d) => cport.handleEvents(e, d)],
+  ["payment-processor-v2", (e, d) => paymentProcessorV2.handleEvents(e, d)],
 ]);
 
 export const processEventsBatch = async (batch: EventsBatch, skipProcessing?: boolean) => {

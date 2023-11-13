@@ -1,7 +1,7 @@
 import { Contract } from "@ethersproject/contracts";
 import { parseEther } from "@ethersproject/units";
 import * as Common from "@reservoir0x/sdk/src/common";
-import * as CPort from "@reservoir0x/sdk/src/cport";
+import * as PaymentProcessorV2 from "@reservoir0x/sdk/src/payment-processor-v2";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 import { expect } from "chai";
 import { ethers, network } from "hardhat";
@@ -9,7 +9,7 @@ import { constants } from "ethers";
 
 import { getChainId, getCurrentTimestamp, reset, setupNFTs } from "../../../utils";
 
-describe("CPort - SingleToken Erc1155", () => {
+describe("PaymentProcessorV2 - SingleToken Erc1155", () => {
   const chainId = getChainId();
 
   let deployer: SignerWithAddress;
@@ -40,18 +40,18 @@ describe("CPort - SingleToken Erc1155", () => {
   //   const nft = new Common.Helpers.Erc1155(ethers.provider, erc1155.address);
 
   //   // Approve the exchange
-  //   await nft.approve(seller, CPort.Addresses.Exchange[chainId]);
+  //   await nft.approve(seller, PaymentProcessorV2.Addresses.Exchange[chainId]);
 
-  //   const exchange = new CPort.Exchange(chainId);
+  //   const exchange = new PaymentProcessorV2.Exchange(chainId);
 
   //   const sellerMasterNonce = await exchange.getMasterNonce(ethers.provider, seller.address);
   //   const blockTime = await getCurrentTimestamp(ethers.provider);
 
-  //   const builder = new CPort.Builders.SingleToken(chainId);
+  //   const builder = new PaymentProcessorV2.Builders.SingleToken(chainId);
 
   //   // Build sell order
   //   const sellOrder = builder.build({
-  //     protocol: CPort.Types.OrderProtocols.ERC1155_FILL_OR_KILL,
+  //     protocol: PaymentProcessorV2.Types.OrderProtocols.ERC1155_FILL_OR_KILL,
   //     marketplace: constants.AddressZero,
   //     marketplaceFeeNumerator: "0",
   //     maxRoyaltyFeeNumerator: "0",
@@ -99,7 +99,7 @@ describe("CPort - SingleToken Erc1155", () => {
     await weth.deposit(buyer, price);
 
     // Approve the exchange contract for the buyer
-    await weth.approve(buyer, CPort.Addresses.Exchange[chainId]);
+    await weth.approve(buyer, PaymentProcessorV2.Addresses.Exchange[chainId]);
 
     // Mint erc1155 to seller
     await erc1155.connect(seller).mint(boughtTokenId);
@@ -107,17 +107,17 @@ describe("CPort - SingleToken Erc1155", () => {
     const nft = new Common.Helpers.Erc1155(ethers.provider, erc1155.address);
 
     // Approve the exchange
-    await nft.approve(seller, CPort.Addresses.Exchange[chainId]);
+    await nft.approve(seller, PaymentProcessorV2.Addresses.Exchange[chainId]);
 
-    const exchange = new CPort.Exchange(chainId);
+    const exchange = new PaymentProcessorV2.Exchange(chainId);
     const buyerMasterNonce = await exchange.getMasterNonce(ethers.provider, buyer.address);
     const blockTime = await getCurrentTimestamp(ethers.provider);
 
-    const builder = new CPort.Builders.SingleToken(chainId);
+    const builder = new PaymentProcessorV2.Builders.SingleToken(chainId);
    
     // Build buy order
     const buyOrder = builder.build({
-      protocol: CPort.Types.OrderProtocols.ERC1155_FILL_OR_KILL,
+      protocol: PaymentProcessorV2.Types.OrderProtocols.ERC1155_FILL_OR_KILL,
       beneficiary: buyer.address,
       marketplace: constants.AddressZero,
       marketplaceFeeNumerator: "0",

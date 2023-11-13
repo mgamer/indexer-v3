@@ -24,7 +24,7 @@ export * as sudoswapV2 from "@/orderbook/orders/sudoswap-v2";
 export * as midaswap from "@/orderbook/orders/midaswap";
 export * as caviarV1 from "@/orderbook/orders/caviar-v1";
 export * as paymentProcessor from "@/orderbook/orders/payment-processor";
-export * as cport from "@/orderbook/orders/cport";
+export * as paymentProcessorV2 from "@/orderbook/orders/payment-processor-v2";
 
 // Imports
 
@@ -86,7 +86,7 @@ export type OrderKind =
   | "payment-processor"
   | "blur-v2"
   | "joepeg"
-  | "cport";
+  | "payment-processor-v2";
 
 // In case we don't have the source of an order readily available, we use
 // a default value where possible (since very often the exchange protocol
@@ -451,11 +451,11 @@ export const generateListingDetailsV6 = (
       };
     }
 
-    case "cport": {
+    case "payment-processor-v2": {
       return {
-        kind: "cport",
+        kind: "payment-processor-v2",
         ...common,
-        order: new Sdk.CPort.Order(config.chainId, order.rawData),
+        order: new Sdk.PaymentProcessorV2.Order(config.chainId, order.rawData),
       };
     }
 
@@ -815,10 +815,10 @@ export const generateBidDetailsV6 = async (
       };
     }
 
-    case "cport": {
-      const sdkOrder = new Sdk.CPort.Order(config.chainId, order.rawData);
+    case "payment-processor-v2": {
+      const sdkOrder = new Sdk.PaymentProcessorV2.Order(config.chainId, order.rawData);
       return {
-        kind: "cport",
+        kind: "payment-processor-v2",
         ...common,
         order: sdkOrder,
         extraArgs: {

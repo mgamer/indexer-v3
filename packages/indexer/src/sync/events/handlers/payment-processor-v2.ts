@@ -31,12 +31,12 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
 
     const eventData = getEventData([subKind])[0];
     switch (subKind) {
-      case "cport-nonce-invalidated": {
+      case "payment-processor-v2-nonce-invalidated": {
         const parsedLog = eventData.abi.parseLog(log);
         const maker = parsedLog.args["account"].toLowerCase();
         const nonce = parsedLog.args["nonce"].toString();
         onChainData.nonceCancelEvents.push({
-          orderKind: "cport",
+          orderKind: "payment-processor-v2",
           maker,
           nonce,
           baseEventParams,
@@ -45,14 +45,14 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         break;
       }
 
-      case "cport-master-nonce-invalidated": {
+      case "payment-processor-v2-master-nonce-invalidated": {
         const parsedLog = eventData.abi.parseLog(log);
         const maker = parsedLog.args["account"].toLowerCase();
         const newNonce = parsedLog.args["nonce"].toString();
 
         // Cancel all maker's orders
         onChainData.bulkCancelEvents.push({
-          orderKind: "cport",
+          orderKind: "payment-processor-v2",
           maker,
           minNonce: newNonce,
           acrossAll: true,
@@ -62,10 +62,10 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         break;
       }
 
-      case "cport-accept-offer-erc1155":
-      case "cport-accept-offer-erc721":
-      case "cport-buy-listing-erc1155":
-      case "cport-buy-listing-erc721": {
+      case "payment-processor-v2-accept-offer-erc1155":
+      case "payment-processor-v2-accept-offer-erc721":
+      case "payment-processor-v2-buy-listing-erc1155":
+      case "payment-processor-v2-buy-listing-erc721": {
         // Again the events are extremely poorly designed (order hash is not emitted)
         // so we have to rely on complex tricks (using call tracing) to associate the
         // sales to order ids
@@ -74,7 +74,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         const tx = await utils.fetchTransaction(txHash);
         const parsedLog = eventData.abi.parseLog(log);
 
-        const exchange = new Sdk.CPort.Exchange(config.chainId);
+        const exchange = new Sdk.PaymentProcessorV2.Exchange(config.chainId);
         const exchangeAddress = exchange.contract.address;
 
         const tokenIdEvent = parsedLog.args["tokenId"].toString();
@@ -255,8 +255,8 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
 
           const orderSide = !isBuyOrder ? "sell" : "buy";
 
-          const makerMinNonce = await commonHelpers.getMinNonce("cport", maker);
-          const singleBuilder = new Sdk.CPort.Builders.SingleToken(config.chainId);
+          const makerMinNonce = await commonHelpers.getMinNonce("payment-processor-v2", maker);
+          const singleBuilder = new Sdk.PaymentProcessorV2.Builders.SingleToken(config.chainId);
 
           const orderSignature = saleSignature;
           const signature = {
@@ -312,7 +312,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           const orderId = isValidated ? order.hash() : undefined;
 
           // Handle: attribution
-          const orderKind = "cport";
+          const orderKind = "payment-processor-v2";
           const attributionData = await utils.extractAttributionData(
             baseEventParams.txHash,
             orderKind,
@@ -324,7 +324,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
 
           onChainData.fillEvents.push({
             orderId,
-            orderKind: "cport",
+            orderKind: "payment-processor-v2",
             orderSide,
             maker,
             taker,

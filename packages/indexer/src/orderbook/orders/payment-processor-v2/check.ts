@@ -7,7 +7,7 @@ import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import * as onChainData from "@/utils/on-chain-data";
 
 export const offChainCheck = async (
-  order: Sdk.CPort.Order,
+  order: Sdk.PaymentProcessorV2.Order,
   options?: {
     // Some NFTs pre-approve common exchanges so that users don't
     // spend gas approving them. In such cases we will be missing
@@ -30,7 +30,7 @@ export const offChainCheck = async (
 
   if (options?.checkFilledOrCancelled) {
     // Check: order is not cancelled
-    const cancelled = await commonHelpers.isOrderCancelled(id, "cport");
+    const cancelled = await commonHelpers.isOrderCancelled(id, "payment-processor-v2");
     if (cancelled) {
       throw new Error("cancelled");
     }
@@ -43,14 +43,17 @@ export const offChainCheck = async (
   }
 
   // Check: order's nonce was not bulk cancelled
-  const minNonce = await commonHelpers.getMinNonce("cport", order.params.sellerOrBuyer);
+  const minNonce = await commonHelpers.getMinNonce(
+    "payment-processor-v2",
+    order.params.sellerOrBuyer
+  );
   if (minNonce.gt(order.params.masterNonce)) {
     throw new Error("cancelled");
   }
 
   // Check: order's nonce was not individually cancelled
   const nonceCancelled = await commonHelpers.isNonceCancelled(
-    "cport",
+    "payment-processor-v2",
     order.params.sellerOrBuyer,
     order.params.nonce
   );
@@ -78,7 +81,7 @@ export const offChainCheck = async (
             .fetchAndUpdateFtApproval(
               order.params.paymentMethod,
               order.params.sellerOrBuyer,
-              Sdk.CPort.Addresses.Exchange[config.chainId],
+              Sdk.PaymentProcessorV2.Addresses.Exchange[config.chainId],
               true
             )
             .then((a) => a.value)
@@ -98,7 +101,7 @@ export const offChainCheck = async (
       hasBalance = false;
     }
 
-    const operator = Sdk.CPort.Addresses.Exchange[config.chainId];
+    const operator = Sdk.PaymentProcessorV2.Addresses.Exchange[config.chainId];
 
     // Check: maker has set the proper approval
     const nftApproval = await commonHelpers.getNftApproval(

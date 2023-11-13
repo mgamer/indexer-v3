@@ -13,17 +13,17 @@ import {
   OrderUpdatesByIdJobPayload,
   orderUpdatesByIdJob,
 } from "@/jobs/order-updates/order-updates-by-id-job";
-import { offChainCheck } from "@/orderbook/orders/cport/check";
+import { offChainCheck } from "@/orderbook/orders/payment-processor-v2/check";
 import { DbOrder, OrderMetadata, generateSchemaHash } from "@/orderbook/orders/utils";
 import * as tokenSet from "@/orderbook/token-sets";
 import * as erc721c from "@/utils/erc721c";
 import { checkMarketplaceIsFiltered } from "@/utils/marketplace-blacklists";
 import { getUSDAndNativePrices } from "@/utils/prices";
 import * as royalties from "@/utils/royalties";
-import * as cport from "@/utils/cport";
+import * as paymentProcessorV2 from "@/utils/payment-processor-v2";
 
 export type OrderInfo = {
-  orderParams: Sdk.CPort.Types.BaseOrder;
+  orderParams: Sdk.PaymentProcessorV2.Types.BaseOrder;
   metadata: OrderMetadata;
 };
 
@@ -39,7 +39,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
   const handleOrder = async ({ orderParams, metadata }: OrderInfo) => {
     try {
-      const order = new Sdk.CPort.Order(config.chainId, {
+      const order = new Sdk.PaymentProcessorV2.Order(config.chainId, {
         ...orderParams,
         // Force kind detection
         kind: undefined,
@@ -61,7 +61,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         });
       }
 
-      const cportPaymentSettings = await cport.getCollectionPaymentSettings(
+      const paymentSettings = await paymentProcessorV2.getCollectionPaymentSettings(
         order.params.tokenAddress
       );
       const exchange = new Sdk.PaymentProcessor.Exchange(config.chainId).contract.connect(
@@ -69,8 +69,8 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       );
 
       if (
-        cportPaymentSettings?.paymentSettings ===
-        cport.PaymentSettings.DefaultPaymentMethodWhitelist
+        paymentSettings?.paymentSettings ===
+        paymentProcessorV2.PaymentSettings.DefaultPaymentMethodWhitelist
       ) {
         // const isDefaultPaymentMethod = await exchange.isDefaultPaymentMethod(order.params.paymentMethod);
         // if (!isDefaultPaymentMethod) {
@@ -80,10 +80,11 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         //   });
         // }
       } else if (
-        cportPaymentSettings?.paymentSettings === cport.PaymentSettings.CustomPaymentMethodWhitelist
+        paymentSettings?.paymentSettings ===
+        paymentProcessorV2.PaymentSettings.CustomPaymentMethodWhitelist
       ) {
         const isCustomPaymentMethodWhitelist = await exchange.isPaymentMethodWhitelisted(
-          cportPaymentSettings.paymentMethodWhitelistId,
+          paymentSettings.paymentMethodWhitelistId,
           order.params.paymentMethod
         );
         if (!isCustomPaymentMethodWhitelist) {
@@ -93,10 +94,10 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
           });
         }
       } else if (
-        cportPaymentSettings?.paymentSettings === cport.PaymentSettings.PricingConstraints
+        paymentSettings?.paymentSettings === paymentProcessorV2.PaymentSettings.PricingConstraints
       ) {
         if (
-          cportPaymentSettings.constrainedPricingPaymentMethod.toLowerCase() !=
+          paymentSettings.constrainedPricingPaymentMethod.toLowerCase() !=
           order.params.paymentMethod.toLowerCase()
         ) {
           return results.push({
@@ -106,13 +107,13 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         }
 
         const price = bn(order.params.price).div(order.params.amount);
-        if (price.lt(cportPaymentSettings.pricingBounds!.floorPrice)) {
+        if (price.lt(paymentSettings.pricingBounds!.floorPrice)) {
           return results.push({
             id,
             status: "sale-price-below-configured-floor-price",
           });
         }
-        if (price.gt(cportPaymentSettings.pricingBounds!.ceilingPrice)) {
+        if (price.gt(paymentSettings.pricingBounds!.ceilingPrice)) {
           return results.push({
             id,
             status: "sale-price-above-configured-ceiling-price",
@@ -121,7 +122,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       }
 
       const isFiltered = await checkMarketplaceIsFiltered(order.params.tokenAddress, [
-        Sdk.CPort.Addresses.Exchange[config.chainId],
+        Sdk.PaymentProcessorV2.Addresses.Exchange[config.chainId],
       ]);
       if (isFiltered) {
         return results.push({
@@ -386,14 +387,14 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       const isReservoir = false;
 
       // Handle: conduit
-      const conduit = Sdk.CPort.Addresses.Exchange[config.chainId];
+      const conduit = Sdk.PaymentProcessorV2.Addresses.Exchange[config.chainId];
 
       const validFrom = `date_trunc('seconds', now())`;
       const validTo = `date_trunc('seconds', to_timestamp(${order.params.expiration}))`;
       const orderNonce = order.params.nonce;
       orderValues.push({
         id,
-        kind: "cport",
+        kind: "payment-processor-v2",
         side,
         fillability_status: fillabilityStatus,
         approval_status: approvalStatus,
@@ -434,7 +435,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       logger.error(
-        "cport",
+        "payment-processor-v2",
         `Failed to handle order with params ${JSON.stringify(orderParams)}: ${error} (${
           error.stack
         })`

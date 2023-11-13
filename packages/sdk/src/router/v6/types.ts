@@ -187,8 +187,8 @@ export type GenericOrder =
       order: Sdk.PaymentProcessor.Order;
     }
   | {
-      kind: "cport";
-      order: Sdk.CPort.Order;
+      kind: "payment-processor-v2";
+      order: Sdk.PaymentProcessorV2.Order;
     };
 
 // Listings
