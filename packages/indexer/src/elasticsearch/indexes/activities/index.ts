@@ -1710,9 +1710,15 @@ export const updateActivitiesToken = async (
   return keepGoing;
 };
 
+export type ActivitiesCollectionUpdateData = {
+  name: string | null;
+  image: string | null;
+  isSpam: number;
+};
+
 export const updateActivitiesCollectionData = async (
   collectionId: string,
-  collectionData: { name: string | null; image: string | null; isSpam: number }
+  collectionData: ActivitiesCollectionUpdateData
 ): Promise<boolean> => {
   let keepGoing = false;
 

@@ -5,10 +5,11 @@ import { Collections } from "@/models/collections";
 import _ from "lodash";
 import { logger } from "@/common/logger";
 import { RabbitMQMessage } from "@/common/rabbit-mq";
+import { ActivitiesCollectionUpdateData } from "@/elasticsearch/indexes/activities";
 
 export type RefreshActivitiesCollectionMetadataJobPayload = {
   collectionId: string;
-  collectionUpdateData?: { name: string | null; image: string | null };
+  collectionUpdateData?: ActivitiesCollectionUpdateData;
 };
 
 export default class RefreshActivitiesCollectionMetadataJob extends AbstractRabbitMqJobHandler {
