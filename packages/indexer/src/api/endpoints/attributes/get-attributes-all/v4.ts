@@ -71,23 +71,78 @@ export const getAttributesAllV4Options: RouteOptions = {
 
     try {
       const baseQuery = `
-        SELECT key, kind, rank, attribute_count, array_agg(info) AS "values"
-        FROM attribute_keys
-        WHERE collection_id = $/collection/
-        AND kind = 'number'
-        GROUP BY id
-        
-        UNION
-        
-        SELECT attribute_keys.key, attribute_keys.kind, rank, attribute_count,
-               array_agg(jsonb_build_object('value', attributes.value, 'count', attributes.token_count, 'floor_sell_value', attributes.floor_sell_value::text)) AS "values"
-        FROM attribute_keys
-        JOIN attributes ON attribute_keys.id = attributes.attribute_key_id
-        WHERE attribute_keys.collection_id = $/collection/
-        AND attribute_keys.kind = 'string'
-        AND attributes.token_count > 0
-        GROUP BY attribute_keys.id
-        ORDER BY rank DESC
+        SELECT 
+          key, 
+          kind, 
+          rank, 
+          attribute_count, 
+          array_agg(info) AS "values" 
+        FROM 
+          attribute_keys 
+        WHERE 
+          collection_id = $/collection/
+          AND kind = 'number' 
+        GROUP BY 
+          id 
+        UNION 
+        SELECT 
+          attribute_keys.key, 
+          attribute_keys.kind, 
+          rank, 
+          attribute_count, 
+          array_agg(
+            jsonb_build_object(
+              'value', attributes.value, 'count', 
+              attributes.token_count, 'floor_sell_value', 
+              attributes.floor_sell_value :: text
+            )
+          ) AS "values" 
+        FROM 
+          attribute_keys 
+          JOIN attributes ON attribute_keys.id = attributes.attribute_key_id 
+        WHERE 
+          attribute_keys.collection_id = $/collection/ 
+          AND attribute_keys.kind = 'string' 
+          AND attribute_keys.attribute_count <= 500
+          AND attributes.token_count > 0 
+        GROUP BY 
+          attribute_keys.id 
+        UNION 
+        SELECT 
+          attribute_keys.key, 
+          attribute_keys.kind, 
+          rank, 
+          '500' AS "attribute_count", 
+          o.* 
+        FROM 
+          attribute_keys 
+          LEFT JOIN LATERAL (
+            SELECT 
+              array_agg(
+                jsonb_build_object (
+                  'value', tmp.value, 'count', tmp.token_count, 
+                  'floor_sell_value', tmp.floor_sell_value :: text
+                )
+              ) AS "values" 
+            FROM 
+              (
+                SELECT 
+                  * 
+                FROM 
+                  attributes 
+                WHERE 
+                  attributes.attribute_key_id = attribute_keys.id
+                  AND attributes.token_count > 0
+                LIMIT 
+                  500
+              ) tmp
+          ) o ON TRUE 
+        WHERE 
+          attribute_keys.collection_id = $/collection/
+          AND attribute_keys.kind = 'string' 
+          AND attribute_keys.attribute_count > 500 
+        ORDER BY 
+          rank DESC
       `;
 
       const result = await redb.manyOrNone(baseQuery, params).then((result) => {
