@@ -80,6 +80,7 @@ export class ProcessAskEventJob extends AbstractRabbitMqJobHandler {
               ) AS "order_valid_until",
               orders.token_set_id AS "order_token_set_id",
               (${criteriaBuildQuery}) AS order_criteria,
+              orders.created_at AS "order_created_at",
               t.*
             FROM orders
             JOIN LATERAL (
@@ -128,7 +129,7 @@ export class ProcessAskEventJob extends AbstractRabbitMqJobHandler {
         if (rawResult) {
           askDocument = new AskDocumentBuilder().buildDocument({
             id: data.id,
-            created_at: new Date(data.created_at),
+            created_at: new Date(rawResult.order_created_at),
             contract: toBuffer(data.contract),
             token_id: rawResult.token_id,
             token_name: rawResult.token_name,
@@ -158,8 +159,8 @@ export class ProcessAskEventJob extends AbstractRabbitMqJobHandler {
             order_pricing_normalized_value: rawResult.order_pricing_normalized_value,
             order_pricing_currency_normalized_value:
               rawResult.order_pricing_currency_normalized_value,
-            order_maker: toBuffer(rawResult.order_maker),
-            order_taker: rawResult.taker ? toBuffer(rawResult.order_taker) : undefined,
+            order_maker: rawResult.order_maker,
+            order_taker: rawResult.order_taker,
             order_token_set_id: rawResult.order_token_set_id,
             order_valid_from: Number(rawResult.order_valid_from),
             order_valid_until: Number(rawResult.order_valid_until),
