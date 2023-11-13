@@ -30,24 +30,6 @@ export class Assets {
     }
 
     return assets;
-
-    // const baseUrl = `https://${getSubDomain()}.reservoir.tools/assets/v1?`;
-    //
-    // if (_.isArray(assets)) {
-    //   const assetsResult = [];
-    //   for (const asset of _.filter(assets, (a) => !_.isNull(a))) {
-    //     const queryParams = new URLSearchParams();
-    //     queryParams.append("asset", encrypt(asset));
-    //     assetsResult.push(`${baseUrl}${queryParams.toString()}`);
-    //   }
-    //
-    //   return assetsResult;
-    // } else {
-    //   const queryParams = new URLSearchParams();
-    //   queryParams.append("asset", encrypt(assets));
-    //
-    //   return `${baseUrl}${queryParams.toString()}`;
-    // }
   }
 
   public static addImageParams(image: string, query: MergeRefs<ReqRefDefaults>["Query"]): string {
@@ -66,7 +48,11 @@ export class Assets {
     return `${baseUrl}?${queryParams.toString()}`;
   }
 
-  public static getResizedImageUrl(imageUrl: string, size: number): string {
+  public static getResizedImageUrl(
+    imageUrl: string,
+    size: number,
+    collection_metadata_refresh_version?: number
+  ): string {
     try {
       if (config.enableImageResizing) {
         let resizeImageUrl = imageUrl;
@@ -80,7 +66,7 @@ export class Assets {
           }
         }
 
-        return Assets.signImage(resizeImageUrl, size);
+        return Assets.signImage(resizeImageUrl, size, collection_metadata_refresh_version);
       }
     } catch (error) {
       logger.error("getResizedImageUrl", `Error: ${error}`);
@@ -105,7 +91,11 @@ export class Assets {
     return imageUrl;
   }
 
-  public static signImage(imageUrl: string, width?: number): string {
+  public static signImage(
+    imageUrl: string,
+    width?: number,
+    collection_metadata_refresh_version?: number
+  ): string {
     if (config.imageResizingBaseUrl == null) {
       throw new Error("Image resizing base URL is not set");
     } else if (config.privateImageResizingSigningKey == null) {
@@ -119,6 +109,6 @@ export class Assets {
 
     return `${config.imageResizingBaseUrl}/${encodeURIComponent(ciphertext)}${
       width ? "?width=" + width : ""
-    }`;
+    }${collection_metadata_refresh_version ? "&v=" + collection_metadata_refresh_version : ""}`;
   }
 }

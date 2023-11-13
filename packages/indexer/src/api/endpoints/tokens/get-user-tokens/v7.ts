@@ -553,6 +553,7 @@ export const getUserTokensV7Options: RouteOptions = {
                c.name as collection_name, con.kind, con.symbol, c.metadata, c.royalties,
                (c.metadata ->> 'safelistRequestStatus')::TEXT AS "opensea_verification_status",
                c.royalties_bps, ot.kind AS floor_sell_kind, c.slug, c.is_spam AS c_is_spam,
+               c.metadata_refresh_version AS collection_metadata_refresh_version,
                ${query.includeRawData ? "ot.raw_data AS floor_sell_raw_data," : ""}
                ${
                  query.useNonFlaggedFloorAsk
@@ -691,8 +692,16 @@ export const getUserTokensV7Options: RouteOptions = {
             kind: r.kind,
             name: r.name,
             image: r.image,
-            imageSmall: Assets.getResizedImageUrl(r.image, ImageSize.small),
-            imageLarge: Assets.getResizedImageUrl(r.image, ImageSize.large),
+            imageSmall: Assets.getResizedImageUrl(
+              r.image,
+              ImageSize.small,
+              r.collection_metadata_refresh_version
+            ),
+            imageLarge: Assets.getResizedImageUrl(
+              r.image,
+              ImageSize.large,
+              r.collection_metadata_refresh_version
+            ),
             metadata: r.token_metadata
               ? {
                   imageOriginal: r.token_metadata.image_original_url,

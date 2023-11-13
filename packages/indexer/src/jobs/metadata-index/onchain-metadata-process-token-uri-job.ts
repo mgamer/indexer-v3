@@ -6,8 +6,8 @@ import { onchainMetadataProvider } from "@/metadata/providers/onchain-metadata-p
 import { onchainMetadataProcessTokenUriJob } from "./onchain-metadata-process-job";
 import { RequestWasThrottledError } from "@/metadata/providers/utils";
 import { PendingFetchOnchainUriTokens } from "@/models/pending-fetch-onchain-uri-tokens";
-import { metadataIndexWriteJob } from "@/jobs/metadata-index/metadata-write-job";
-import { TokenMetadata } from "@/metadata/types";
+import { PendingRefreshTokens } from "@/models/pending-refresh-tokens";
+import { hasExtendCollectionHandler } from "@/metadata/extend";
 
 export default class OnchainMetadataFetchTokenUriJob extends AbstractRabbitMqJobHandler {
   queueName = "metadata-index-onchain-process-uri-queue";
@@ -56,7 +56,11 @@ export default class OnchainMetadataFetchTokenUriJob extends AbstractRabbitMqJob
       error?: string;
     }[] = [];
 
-    const tokensToWrite: TokenMetadata[] = [];
+    const fallbackTokens: {
+      collection: string;
+      contract: string;
+      tokenId: string;
+    }[] = [];
 
     // Filter out tokens that have no metadata
     results.forEach((result) => {
@@ -68,22 +72,27 @@ export default class OnchainMetadataFetchTokenUriJob extends AbstractRabbitMqJob
           `No uri found. contract=${result.contract}, tokenId=${result.tokenId}, error=${result.error}`
         );
 
-        tokensToWrite.push({
-          slug: null,
-          flagged: null,
+        if (hasExtendCollectionHandler(result.contract)) {
+          logger.warn(
+            this.queueName,
+            `Token has extend collection handler. contract=${result.contract}, tokenId=${result.tokenId}`
+          );
+          return;
+        }
+
+        fallbackTokens.push({
           collection: result.contract,
           contract: result.contract,
           tokenId: result.tokenId,
-          name: "#" + result.tokenId,
-          attributes: [],
         });
       }
     });
 
     await onchainMetadataProcessTokenUriJob.addToQueueBulk(tokensToProcess);
 
-    // Write the tokens that have no metadata uri
-    await metadataIndexWriteJob.addToQueue(tokensToWrite);
+    // Default to simple hash if no uri found
+    const pendingRefreshTokens = new PendingRefreshTokens("simplehash");
+    await pendingRefreshTokens.add(fallbackTokens);
 
     // If there are potentially more token uris to process, trigger another job
     const queueLength = await PendingFetchOnchainUriTokens.len();

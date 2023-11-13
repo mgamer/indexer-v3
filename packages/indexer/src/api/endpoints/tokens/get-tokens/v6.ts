@@ -642,6 +642,7 @@ export const getTokensV6Options: RouteOptions = {
           c.token_count,
           c.is_spam AS c_is_spam,
           (c.metadata ->> 'imageUrl')::TEXT AS collection_image,
+          c.metadata_refresh_version AS collection_metadata_refresh_version,
           (
             SELECT
               nb.owner
@@ -1281,8 +1282,16 @@ export const getTokensV6Options: RouteOptions = {
             name: r.name,
             description: r.description,
             image: Assets.getLocalAssetsLink(r.image),
-            imageSmall: Assets.getResizedImageUrl(r.image, ImageSize.small),
-            imageLarge: Assets.getResizedImageUrl(r.image, ImageSize.large),
+            imageSmall: Assets.getResizedImageUrl(
+              r.image,
+              ImageSize.small,
+              r.collection_metadata_refresh_version
+            ),
+            imageLarge: Assets.getResizedImageUrl(
+              r.image,
+              ImageSize.large,
+              r.collection_metadata_refresh_version
+            ),
             metadata: Object.values(metadata).every((el) => el === undefined)
               ? undefined
               : metadata,

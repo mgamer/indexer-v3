@@ -270,6 +270,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
+    path: "/admin/increment-metadata-version",
+    options: adminEndpoints.postIncrementCollectionMetadataVersionOptions,
+  });
+
+  server.route({
+    method: "POST",
     path: "/admin/revalidate-order",
     options: adminEndpoints.postRevalidateOrderOptions,
   });
