@@ -13,7 +13,7 @@ import { ConduitController } from "../../seaport-base";
 import { constructOfferCounterOrderAndFulfillments } from "../../seaport-base/helpers";
 
 import * as Sdk from "../../index";
-import { bn, generateSourceBytes, getErrorMessage, uniqBy } from "../../utils";
+import { TxData, bn, generateSourceBytes, getErrorMessage, uniqBy } from "../../utils";
 import * as Addresses from "./addresses";
 import * as ApprovalProxy from "./approval-proxy";
 import { PermitHandler } from "./permit";
@@ -537,7 +537,7 @@ export class Router {
             listings: { "payment-processor": orders.length },
           },
           preSignatures: preSignatures,
-          txData: exchange.sweepCollectionTx(taker, bundledOrder, orders),
+          txData: exchange.sweepCollectionTx(taker, bundledOrder, orders, options),
           orderIds: blockedPaymentProcessorDetails.map((d) => d.orderId),
         });
       } else {
@@ -567,7 +567,7 @@ export class Router {
             listings: { "payment-processor": orders.length },
           },
           preSignatures: preSignatures,
-          txData: exchange.fillOrdersTx(taker, orders, takeOrders),
+          txData: exchange.fillOrdersTx(taker, orders, takeOrders, options),
           orderIds: blockedPaymentProcessorDetails.map((d) => d.orderId),
         });
       }
@@ -3025,10 +3025,13 @@ export class Router {
       const orders = superRareDetails.map((d) => d.order as Sdk.SuperRare.Order);
       const module = this.contracts.superRareModule;
 
+      // 3% charged on top of the price within the order
+      const percentageOnTop = 3;
+
       const fees = getFees(superRareDetails);
       const price = orders.map((order) => bn(order.params.price)).reduce((a, b) => a.add(b), bn(0));
       const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
-      const totalPrice = price.add(feeAmount);
+      const totalPrice = price.add(price.mul(percentageOnTop).div(100)).add(feeAmount);
 
       executions.push({
         info: {
@@ -3040,14 +3043,14 @@ export class Router {
                     ...orders[0].params,
                     token: orders[0].params.contract,
                     priceWithFees: bn(orders[0].params.price).add(
-                      bn(orders[0].params.price).mul(3).div(100)
+                      bn(orders[0].params.price).mul(percentageOnTop).div(100)
                     ),
                   },
                   {
                     fillTo: taker,
                     refundTo: relayer,
                     revertIfIncomplete: Boolean(!options?.partial),
-                    amount: price.add(price.mul(3).div(100)),
+                    amount: price.add(price.mul(percentageOnTop).div(100)),
                   },
                   fees,
                 ])
@@ -3056,14 +3059,14 @@ export class Router {
                     ...order.params,
                     token: order.params.contract,
                     priceWithFees: bn(orders[0].params.price).add(
-                      bn(orders[0].params.price).mul(3).div(100)
+                      bn(orders[0].params.price).mul(percentageOnTop).div(100)
                     ),
                   })),
                   {
                     fillTo: taker,
                     refundTo: relayer,
                     revertIfIncomplete: Boolean(!options?.partial),
-                    amount: price.add(price.mul(3).div(100)),
+                    amount: price.add(price.mul(percentageOnTop).div(100)),
                   },
                   fees,
                 ]),
@@ -3404,14 +3407,14 @@ export class Router {
             approvals: [],
             preSignatures: [],
             txTags: routerTxTags,
-            permits: await new PermitHandler(this.chainId, this.provider)
-              .generate(relayer, ftTransferItems)
-              .then((permits) =>
-                permits.map((p) => ({
-                  kind: "erc20",
-                  data: p,
-                }))
-              ),
+            permits: await new PermitHandler(this.chainId, this.provider).generate(
+              relayer,
+              Addresses.PermitProxy[this.chainId],
+              {
+                kind: "with-transfers",
+                transferItems: ftTransferItems,
+              }
+            ),
             txData: {
               from: relayer,
               ...{
@@ -4664,6 +4667,33 @@ export class Router {
       }
     }
 
+    // Permits have to be pre-executed
+    const preTxs: {
+      kind: "permit";
+      txData: TxData;
+      orderIds: string[];
+    }[] = [];
+
+    const detailsWithPermits = details.filter((d) => d.permit && success[d.orderId]);
+    const permitHandler = new PermitHandler(this.chainId, this.provider);
+    if (detailsWithPermits.length) {
+      const permitExecution = permitHandler.getRouterExecution(
+        detailsWithPermits.map((d) => d.permit!)
+      );
+
+      preTxs.push({
+        kind: "permit",
+        txData: {
+          from: taker,
+          to: this.contracts.router.address,
+          data:
+            this.contracts.router.interface.encodeFunctionData("execute", [[permitExecution]]) +
+            generateSourceBytes(options?.source),
+        },
+        orderIds: detailsWithPermits.map((d) => d.orderId),
+      });
+    }
+
     // Batch fill all protected offers in a single transaction
     if (protectedSeaportV15Offers.length) {
       const approvals: NFTApproval[] = [];
@@ -4780,7 +4810,6 @@ export class Router {
     if (executionsWithDetails.length === 1 && !options?.forceApprovalProxy) {
       const execution = executionsWithDetails[0].execution;
       const detail = executionsWithDetails[0].detail;
-
       const routerLevelTxData = this.contracts.router.interface.encodeFunctionData("execute", [
         [execution],
       ]);
@@ -4827,7 +4856,7 @@ export class Router {
           data:
             this.contracts.approvalProxy.interface.encodeFunctionData("bulkTransferWithExecute", [
               nftTransferItems,
-              executionsWithDetails.map(({ execution }) => execution),
+              [...executionsWithDetails.map(({ execution }) => execution)],
               Sdk.SeaportBase.Addresses.ReservoirConduitKey[this.chainId],
             ]) + generateSourceBytes(options?.source),
         },
@@ -4848,6 +4877,7 @@ export class Router {
     }
 
     return {
+      preTxs,
       txs,
       success,
     };

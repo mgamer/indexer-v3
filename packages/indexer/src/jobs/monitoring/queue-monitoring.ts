@@ -13,6 +13,7 @@ import { PendingFlagStatusSyncTokens } from "@/models/pending-flag-status-sync-t
 import { PendingFlagStatusSyncContracts } from "@/models/pending-flag-status-sync-contracts";
 import { PendingFlagStatusSyncCollectionSlugs } from "@/models/pending-flag-status-sync-collection-slugs";
 import { PendingFetchOnchainUriTokens } from "@/models/pending-fetch-onchain-uri-tokens";
+import { PendingAskEventsQueue } from "@/elasticsearch/indexes/asks/pending-ask-events-queue";
 
 if (config.doBackgroundWork) {
   cron.schedule(
@@ -110,6 +111,18 @@ if (config.doBackgroundWork) {
             JSON.stringify({
               topic: "queue-monitoring",
               pendingFlagStatusSyncTokensCount,
+            })
+          );
+
+          const pendingAskEventsQueue = new PendingAskEventsQueue();
+
+          const pendingAskEventsQueueCount = await pendingAskEventsQueue.count();
+
+          logger.info(
+            "pending-ask-events-metric",
+            JSON.stringify({
+              topic: "queue-monitoring",
+              pendingAskEventsQueueCount,
             })
           );
         })

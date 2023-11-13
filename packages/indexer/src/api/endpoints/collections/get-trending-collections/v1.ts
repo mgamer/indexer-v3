@@ -19,7 +19,7 @@ import {
   TopSellingFillOptions,
 } from "@/elasticsearch/indexes/activities";
 
-import { getJoiPriceObject, JoiPrice } from "@/common/joi";
+import { getJoiCollectionObject, getJoiPriceObject, JoiPrice } from "@/common/joi";
 import { Sources } from "@/models/sources";
 
 const version = "v1";
@@ -53,7 +53,6 @@ export const getTrendingCollectionsV1Options: RouteOptions = {
           "Amount of items returned in response. Default is 50 and max is 1000. Expected to be sorted and filtered on client side."
         ),
       sortBy: Joi.string().valid("volume", "sales").default("sales"),
-
       normalizeRoyalties: Joi.boolean()
         .default(false)
         .description("If true, prices will include missing royalties to be added on-top."),
@@ -76,6 +75,7 @@ export const getTrendingCollectionsV1Options: RouteOptions = {
           name: Joi.string().allow("", null),
           image: Joi.string().allow("", null),
           banner: Joi.string().allow("", null),
+          isSpam: Joi.boolean().default(false),
           description: Joi.string().allow("", null),
           primaryContract: Joi.string().lowercase().pattern(regex.address),
           contract: Joi.string().lowercase().pattern(regex.address),
@@ -204,6 +204,7 @@ async function formatCollections(
       return {
         ...response,
         image: metadata?.metadata?.imageUrl,
+        isSpam: Number(metadata.is_spam) > 0,
         name: metadata?.name || "",
         onSaleCount: Number(metadata.on_sale_count) || 0,
         volumeChange: {
@@ -269,6 +270,8 @@ async function getCollectionsMetadata(collectionsResult: any[]) {
       collections.creator,
       collections.token_count,
       collections.owner_count,
+      collections.metadata_disabled,
+      collections.is_spam,
       collections.day1_volume_change,
       collections.day7_volume_change,
       collections.day30_volume_change,
@@ -330,15 +333,18 @@ async function getCollectionsMetadata(collectionsResult: any[]) {
 
     // need to convert buffers before saving to redis
     collectionMetadataResponse = collectionMetadataResponse.map((metadata: any) => {
-      const { contract, floor_sell_currency, ...rest } = metadata;
+      const { contract, floor_sell_currency, metadata_disabled, ...rest } = metadata;
 
-      return {
-        ...rest,
-        contract: fromBuffer(contract),
-        floor_sell_currency: floor_sell_currency
-          ? fromBuffer(floor_sell_currency)
-          : Sdk.Common.Addresses.Native[config.chainId],
-      };
+      return getJoiCollectionObject(
+        {
+          ...rest,
+          contract: fromBuffer(contract),
+          floor_sell_currency: floor_sell_currency
+            ? fromBuffer(floor_sell_currency)
+            : Sdk.Common.Addresses.Native[config.chainId],
+        },
+        metadata_disabled
+      );
     });
 
     const commands = flatMap(collectionMetadataResponse, (metadata: any) => {

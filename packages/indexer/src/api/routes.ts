@@ -581,9 +581,21 @@ export const setupRoutes = (server: Server) => {
   });
 
   server.route({
+    method: "POST",
+    path: "/collections/disable-metadata/v1",
+    options: collectionsEndpoints.postSetCollectionDisableMetadataV1Options,
+  });
+
+  server.route({
     method: "GET",
     path: "/collections/{collection}/supported-marketplaces/v1",
     options: collectionsEndpoints.getCollectionSupportedMarketplacesV1Options,
+  });
+
+  server.route({
+    method: "POST",
+    path: "/collections/spam-status/v1",
+    options: collectionsEndpoints.postSpamStatusCollectionV1Options,
   });
 
   // Chain
@@ -772,6 +784,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
+    path: "/execute/mint/v1",
+    options: executeEndpoints.postExecuteMintV1Options,
+  });
+
+  server.route({
+    method: "POST",
     path: "/execute/results/v1",
     options: executeEndpoints.postExecuteResultsV1,
   });
@@ -780,6 +798,12 @@ export const setupRoutes = (server: Server) => {
     method: "POST",
     path: "/execute/solve/v1",
     options: executeEndpoints.postExecuteSolveV1Options,
+  });
+
+  server.route({
+    method: "POST",
+    path: "/execute/solve/capacity/v1",
+    options: executeEndpoints.postExecuteSolveCapacityV1Options,
   });
 
   server.route({
@@ -1180,6 +1204,12 @@ export const setupRoutes = (server: Server) => {
   // Tokens
 
   server.route({
+    method: "POST",
+    path: "/tokens/spam-status/v1",
+    options: tokensEndpoints.postSpamStatusTokenV1Options,
+  });
+
+  server.route({
     method: "GET",
     path: "/tokens/flag/changes/v1",
     options: tokensEndpoints.getFlaggedTokensChangesV1Options,
@@ -1225,6 +1255,12 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/tokens/v6",
     options: tokensEndpoints.getTokensV6Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/tokens/v7",
+    options: tokensEndpoints.getTokensV7Options,
   });
 
   server.route({
@@ -1320,7 +1356,13 @@ export const setupRoutes = (server: Server) => {
   server.route({
     method: "GET",
     path: "/tokens/ids/v1",
-    options: tokensEndpoints.getTokensIdsV4Options,
+    options: tokensEndpoints.getTokensIdsV1Options,
+  });
+
+  server.route({
+    method: "POST",
+    path: "/tokens/disable-metadata/v1",
+    options: tokensEndpoints.postSetTokenDisableMetadataV1Options,
   });
 
   // Token sets

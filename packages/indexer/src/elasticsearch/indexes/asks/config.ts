@@ -18,6 +18,7 @@ export const CONFIG_DEFAULT = {
           attributes: { type: "flattened" },
           isFlagged: { type: "boolean" },
           rarityRank: { type: "integer" },
+          isSpam: { type: "boolean" },
         },
       },
       collection: {
@@ -25,6 +26,7 @@ export const CONFIG_DEFAULT = {
           id: { type: "keyword" },
           name: { type: "keyword" },
           image: { type: "keyword" },
+          isSpam: { type: "boolean" },
         },
       },
       order: {
@@ -80,6 +82,9 @@ export const CONFIG_DEFAULT = {
               currencyNormalizedValue: { type: "keyword" },
             },
           },
+          isDynamic: { type: "boolean" },
+          rawData: { type: "flattened" },
+          missingRoyalties: { type: "flattened" },
         },
       },
     },
