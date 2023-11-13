@@ -21,7 +21,7 @@ export interface BaseBuildParams {
   masterNonce: BigNumberish;
   paymentMethod: string;
 
-  // beneficiary?: string;
+  cosigner?: string;
   marketplace?: string;
   marketplaceFeeNumerator?: BigNumberish;
   maxRoyaltyFeeNumerator?: BigNumberish;
@@ -41,6 +41,7 @@ export abstract class BaseBuilder {
 
   protected defaultInitialize(params: BaseBuildParams) {
     params.marketplace = params.marketplace ?? AddressZero;
+    params.cosigner = params.cosigner ?? AddressZero;
     params.marketplaceFeeNumerator = params.marketplaceFeeNumerator ?? "0";
     params.expiration = params.expiration ?? getCurrentTimestamp(60 * 60);
     params.nonce = params.nonce ?? getRandomBytes(10);

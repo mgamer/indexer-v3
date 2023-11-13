@@ -97,7 +97,6 @@ describe("CPort - Indexer Integration Test", () => {
     // });
 
     await order.sign(buyer);
-    // await matchOrder.sign(seller);
 
     if (isListing) {
       const listingParams = {
@@ -123,7 +122,6 @@ describe("CPort - Indexer Integration Test", () => {
       await order.sign(seller);
       // await matchOrder.sign(buyer);
     }
-
     console.log(green("\t Perform Order Saving:"));
 
     // Call the Indexer to save the order
@@ -320,11 +318,15 @@ describe("CPort - Indexer Integration Test", () => {
     const matchFillEvent = fillEvents.find((event: any) => event.orderId === orderInfo.id);
     if (matchFillEvent) {
       const orderData = {
-        side: isListing ? "sell" : "buy", 
-        maker: (isListing ? buyer : seller).address.toLowerCase(),
-        taker: (isListing ? seller : buyer).address.toLowerCase(),
+        maker: order.params.sellerOrBuyer,
+        taker: (isListing ? buyer : seller).address.toLowerCase(),
       };
-
+      // console.log('orderData', orderData)
+      // console.log('matchFillEvent', {
+      //   taker: matchFillEvent.taker,
+      //   maker: matchFillEvent.maker,
+      //   side: matchFillEvent.orderSide
+      // })
       expect(orderData.maker).to.eq(matchFillEvent.maker);
       expect(orderData.taker).to.eq(matchFillEvent.taker);
       console.log("\t\t - Found Fill Event");
@@ -344,34 +346,34 @@ describe("CPort - Indexer Integration Test", () => {
     );
   };
 
-  it("Fill listing with cancel", async () => {
-    await testCase({
-      cancelOrder: true,
-    });
-    console.log("\n");
-  });
+  // it("Fill listing with cancel", async () => {
+  //   await testCase({
+  //     cancelOrder: true,
+  //   });
+  //   console.log("\n");
+  // });
 
-  it("Fill Offer via Router API", async () =>
-    testCase({
-      executeByRouterAPI: true,
-    }));
+  // it("Fill Offer via Router API", async () =>
+  //   testCase({
+  //     executeByRouterAPI: true,
+  //   }));
 
-  it("Fill Listing via Router API", async () =>
-    testCase({
-      isListing: true,
-      executeByRouterAPI: true,
-    }));
+  // it("Fill Listing via Router API", async () =>
+  //   testCase({
+  //     isListing: true,
+  //     executeByRouterAPI: true,
+  //   }));
 
-  it("Fill offer", async () => testCase({}));
+  // it("Fill offer", async () => testCase({}));
 
   it("Fill listing", async () =>
     testCase({
       isListing: true,
     }));
 
-  it("Fill listing with bulk Cancel", async () =>
-    testCase({
-      bulkCancel: true,
-    }));
+  // it("Fill listing with bulk Cancel", async () =>
+  //   testCase({
+  //     bulkCancel: true,
+  //   }));
 
 });

@@ -444,6 +444,11 @@ export class Router {
       const operator = exchange.contract.address;
       const orders: Sdk.CPort.Order[] = cPortDetails.map((c) => c.order as Sdk.CPort.Order);
 
+      const useSweepCollection =
+        cPortDetails.length > 1 &&
+        cPortDetails.every((c) => c.contract === details[0].contract) &&
+        cPortDetails.every((c) => c.currency === details[0].currency);
+
       for (const detail of cPortDetails) {
         const order = detail.order as Sdk.CPort.Order;
         if (buyInCurrency !== Sdk.Common.Addresses.Native[this.chainId]) {
@@ -472,19 +477,33 @@ export class Router {
         }
       }
 
-      txs.push({
-        approvals,
-        permits: [],
-        txTags: {
-          kind: "sale",
-          listings: { cport: orders.length },
-        },
-        preSignatures: [],
-        txData: exchange.fillOrdersTx(taker, orders, {
-          taker,
-        }),
-        orderIds: cPortDetails.map((d) => d.orderId),
-      });
+      if (useSweepCollection) {
+        txs.push({
+          approvals,
+          permits: [],
+          txTags: {
+            kind: "sale",
+            listings: { "payment-processor": orders.length },
+          },
+          preSignatures: [],
+          txData: exchange.sweepCollectionTx(taker, orders),
+          orderIds: cPortDetails.map((d) => d.orderId),
+        });
+      } else {
+        txs.push({
+          approvals,
+          permits: [],
+          txTags: {
+            kind: "sale",
+            listings: { cport: orders.length },
+          },
+          preSignatures: [],
+          txData: exchange.fillOrdersTx(taker, orders, {
+            taker,
+          }),
+          orderIds: cPortDetails.map((d) => d.orderId),
+        });
+      }
 
       for (const { orderId } of cPortDetails) {
         success[orderId] = true;

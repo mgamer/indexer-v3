@@ -23,6 +23,15 @@ export type SignatureECDSA = {
   s: string;
 };
 
+export type CoSignature = {
+  v: number;
+  r: string;
+  s: string;
+  signer: string;
+  taker: string;
+  expiration: number;
+};
+
 export type MatchedOrder = {
   protocol: OrderProtocols;
   maker: string;
@@ -43,12 +52,39 @@ export type MatchedOrder = {
   signature: SignatureECDSA;
 };
 
+export type SweepOrder = {
+  protocol: OrderProtocols;
+  tokenAddress: string;
+  paymentMethod: string;
+  beneficiary: string;
+};
+
+export type SweepItem = {
+  maker: string;
+  marketplace: string;
+  tokenId: string;
+  amount: string;
+  itemPrice: string;
+  nonce: string;
+  expiration: string;
+  marketplaceFeeNumerator: string;
+  maxRoyaltyFeeNumerator: string;
+};
+
+export type SweepOrderParams = {
+  sweepOrder: SweepOrder;
+  items: SweepItem[];
+  signedSellOrders: SignatureECDSA[];
+  cosignatures: CoSignature[];
+};
+
 export type BaseOrder = {
   kind?: OrderKind;
 
   protocol: number;
   sellerOrBuyer: string;
 
+  cosigner?: string;
   // sale only
   maxRoyaltyFeeNumerator?: string;
 
@@ -80,6 +116,8 @@ export type BaseOrder = {
 export type SaleApproval = {
   protocol: number;
   seller: string;
+  cosigner: string;
+
   marketplace: string;
   paymentMethod: string;
   tokenAddress: string;
@@ -95,6 +133,7 @@ export type SaleApproval = {
 
 export type ItemOfferApproval = {
   protocol: number;
+  cosigner: string;
   buyer: string;
   beneficiary: string;
   marketplace: string;
@@ -112,6 +151,7 @@ export type ItemOfferApproval = {
 export type CollectionOfferApproval = {
   protocol: number;
   buyer: string;
+  cosigner: string;
   beneficiary: string;
   marketplace: string;
   paymentMethod: string;
@@ -127,6 +167,7 @@ export type CollectionOfferApproval = {
 export type TokenSetOfferApproval = {
   protocol: number;
   buyer: string;
+  cosigner: string;
   beneficiary: string;
   marketplace: string;
   paymentMethod: string;

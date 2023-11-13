@@ -8,9 +8,8 @@ import { getERC20Transfer } from "@/events-sync/handlers/utils/erc20";
 import * as utils from "@/events-sync/utils";
 import { config } from "@/config/index";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
-// import * as paymentProcessorUtils from "@/utils/payment-processor";
 import { getUSDAndNativePrices } from "@/utils/prices";
-import { defaultAbiCoder } from "@ethersproject/abi";
+import { defaultAbiCoder, Result } from "@ethersproject/abi";
 
 export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChainData) => {
   // For keeping track of all individual trades per transaction
@@ -37,7 +36,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         const maker = parsedLog.args["account"].toLowerCase();
         const nonce = parsedLog.args["nonce"].toString();
         onChainData.nonceCancelEvents.push({
-          orderKind: "payment-processor",
+          orderKind: "cport",
           maker,
           nonce,
           baseEventParams,
@@ -53,7 +52,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
 
         // Cancel all maker's orders
         onChainData.bulkCancelEvents.push({
-          orderKind: "payment-processor",
+          orderKind: "cport",
           maker,
           minNonce: newNonce,
           acrossAll: true,
@@ -78,6 +77,10 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         const exchange = new Sdk.CPort.Exchange(config.chainId);
         const exchangeAddress = exchange.contract.address;
 
+        const tokenIdEvent = parsedLog.args["tokenId"].toString();
+        const tokenAddressEvent = parsedLog.args["tokenAddress"].toLowerCase();
+        const paymentCoinEvent = parsedLog.args["paymentCoin"].toLowerCase();
+
         let relevantCalldata: string | undefined;
         const methods = [
           {
@@ -87,6 +90,8 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
               "bytes32 domainSeparator",
               "(uint8 protocol,address maker,address beneficiary,address marketplace,address paymentMethod,address tokenAddress,uint256 tokenId,uint248 amount,uint256 itemPrice,uint256 nonce,uint256 expiration,uint256 marketplaceFeeNumerator,uint256 maxRoyaltyFeeNumerator,uint248 requestedFillAmount,uint248 minimumFillAmount) saleDetails",
               "(uint8 v,bytes32 r,bytes32 s) sellerSignature",
+              "(address signer,address taker,uint256 expiration,uint8 v,bytes32 r,bytes32 s) cosignature",
+              "(address recipient,uint256 amount) feeOnTop",
             ],
           },
           {
@@ -98,6 +103,46 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
               "(uint8 protocol,address maker,address beneficiary,address marketplace,address paymentMethod,address tokenAddress,uint256 tokenId,uint248 amount,uint256 itemPrice,uint256 nonce,uint256 expiration,uint256 marketplaceFeeNumerator,uint256 maxRoyaltyFeeNumerator,uint248 requestedFillAmount,uint248 minimumFillAmount) saleDetails",
               "(uint8 v,bytes32 r,bytes32 s) buyerSignature",
               "(bytes32 rootHash,bytes32[] proof) tokenSetProof",
+              "(address signer,address taker,uint256 expiration,uint8 v,bytes32 r,bytes32 s) cosignature",
+              "(address recipient,uint256 amount) feeOnTop",
+            ],
+          },
+          {
+            selector: "0x88d64fe8",
+            name: "bulkAcceptOffers",
+            abi: [
+              "bytes32 domainSeparator",
+              `(
+                bool[] isCollectionLevelOfferArray,
+                (uint8 protocol,address maker,address beneficiary,address marketplace,address paymentMethod,address tokenAddress,uint256 tokenId,uint248 amount,uint256 itemPrice,uint256 nonce,uint256 expiration,uint256 marketplaceFeeNumerator,uint256 maxRoyaltyFeeNumerator,uint248 requestedFillAmount,uint248 minimumFillAmount)[] saleDetailsArray,
+                (uint8 v,bytes32 r,bytes32 s)[] buyerSignaturesArray,
+                (bytes32 rootHash,bytes32[] proof)[] tokenSetProofsArray,
+                (address signer,address taker,uint256 expiration,uint8 v,bytes32 r,bytes32 s)[] cosignaturesArray,
+                (address recipient,uint256 amount)[] feesOnTopArray
+              ) params`,
+            ],
+          },
+          {
+            selector: "0x863eb2d2",
+            name: "bulkBuyListings",
+            abi: [
+              "bytes32 domainSeparator",
+              "(uint8 protocol,address maker,address beneficiary,address marketplace,address paymentMethod,address tokenAddress,uint256 tokenId,uint248 amount,uint256 itemPrice,uint256 nonce,uint256 expiration,uint256 marketplaceFeeNumerator,uint256 maxRoyaltyFeeNumerator,uint248 requestedFillAmount,uint248 minimumFillAmount)[] saleDetailsArray",
+              "(uint8 v,bytes32 r,bytes32 s)[] sellerSignatures",
+              "(address signer,address taker,uint256 expiration,uint8 v,bytes32 r,bytes32 s)[] cosignatures",
+              "(address recipient,uint256 amount)[] feesOnTop",
+            ],
+          },
+          {
+            selector: "0x96c3ae25",
+            name: "sweepCollection",
+            abi: [
+              "bytes32 domainSeparator",
+              "(address recipient,uint256 amount) feeOnTop",
+              "(uint8 protocol,address tokenAddress,address paymentMethod,address beneficiary) sweepOrder",
+              "(address maker,address marketplace,uint256 tokenId,uint248 amount,uint256 itemPrice,uint256 nonce,uint256 expiration,uint256 marketplaceFeeNumerator,uint256 maxRoyaltyFeeNumerator)[] items",
+              "(uint8 v,bytes32 r,bytes32 s)[] signedSellOrders",
+              "(address signer,address taker,uint256 expiration,uint8 v,bytes32 r,bytes32 s)[] cosignatures",
             ],
           },
         ];
@@ -142,33 +187,71 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         );
 
         const inputData = defaultAbiCoder.decode(matchedMethod.abi, agrs.data);
+        let saleDetailsArray = [inputData.saleDetails];
+        let saleSignatures = [inputData.buyerSignature || inputData.sellerSignature];
 
-        const isBatch = matchedMethod.name === "buyBatchOfListings";
-        const saleDetailsArray = isBatch ? inputData.saleDetailsArray : [inputData.saleDetails];
-        const saleSignatures = isBatch
-          ? inputData.signedListings
-          : [inputData.buyerSignature || inputData.sellerSignature];
+        if (matchedMethod.name === "sweepCollection") {
+          const sweepOrder = inputData.sweepOrder;
+          saleSignatures = inputData.signedSellOrders;
+          saleDetailsArray = inputData.items.map((c: Result) => {
+            return {
+              protocol: sweepOrder.protocol,
+              tokenAddress: sweepOrder.tokenAddress,
+              paymentMethod: sweepOrder.paymentMethod,
+              beneficiary: sweepOrder.beneficiary,
+              maker: c.maker,
+              itemPrice: c.itemPrice,
+              tokenId: c.tokenId,
+              amount: c.amount,
+              marketplace: c.marketplace,
+              marketplaceFeeNumerator: c.marketplaceFeeNumerator,
+              maxRoyaltyFeeNumerator: c.maxRoyaltyFeeNumerator,
+              expiration: c.expiration,
+              nonce: c.nonce,
+            };
+          });
+        } else if (matchedMethod.name === "bulkBuyListings") {
+          saleDetailsArray = inputData.saleDetailsArray;
+          saleSignatures = inputData.sellerSignatures;
+        } else if (matchedMethod.name === "bulkAcceptOffers") {
+          saleDetailsArray = inputData.params.saleDetailsArray;
+          saleSignatures = inputData.params.buyerSignaturesArray;
+        }
 
         for (let i = 0; i < saleDetailsArray.length; i++) {
           const [saleDetail, saleSignature] = [saleDetailsArray[i], saleSignatures[i]];
-
+          if (!saleDetail) continue;
           const tokenAddress = saleDetail["tokenAddress"].toLowerCase();
           const tokenId = saleDetail["tokenId"].toString();
           const amount = saleDetail["amount"].toString();
           const currency = saleDetail["paymentMethod"].toLowerCase();
           const currencyPrice = saleDetail["itemPrice"].div(saleDetail["amount"]).toString();
+          const paymentMethod = saleDetail["paymentMethod"].toLowerCase();
 
-          const orderBeneficiary = saleDetail["beneficiary"].toLowerCase();
-          const orderMaker = saleDetail["maker"].toLowerCase();
+          // For bulk fill, we need to select the ones that match with current event
+          if (
+            ["bulkAcceptOffers", "bulkBuyListings", "sweepCollection"].includes(matchedMethod.name)
+          ) {
+            if (
+              !(
+                tokenAddress === tokenAddressEvent &&
+                tokenId === tokenIdEvent &&
+                paymentMethod === paymentCoinEvent
+              )
+            ) {
+              // Skip
+              continue;
+            }
+          }
 
-          const isBuyOrder = orderBeneficiary != orderMaker ? false : true;
+          const isBuyOrder = subKind.includes("accept-offer");
           const maker = isBuyOrder
             ? parsedLog.args["buyer"].toLowerCase()
-            : parsedLog.args["buyer"].toLowerCase();
+            : parsedLog.args["seller"].toLowerCase();
 
           let taker = isBuyOrder
             ? parsedLog.args["seller"].toLowerCase()
-            : parsedLog.args["seller"].toLowerCase();
+            : parsedLog.args["buyer"].toLowerCase();
 
           const orderSide = !isBuyOrder ? "sell" : "buy";
 

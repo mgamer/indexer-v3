@@ -5,7 +5,7 @@ import pLimit from "p-limit";
 
 import { idb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
-// import { baseProvider } from "@/common/provider";
+import { baseProvider } from "@/common/provider";
 import { bn, now, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
@@ -20,6 +20,7 @@ import * as erc721c from "@/utils/erc721c";
 import { checkMarketplaceIsFiltered } from "@/utils/marketplace-blacklists";
 import { getUSDAndNativePrices } from "@/utils/prices";
 import * as royalties from "@/utils/royalties";
+import * as cport from "@/utils/cport";
 
 export type OrderInfo = {
   orderParams: Sdk.CPort.Types.BaseOrder;
@@ -60,46 +61,64 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         });
       }
 
-      // const ppConfig = await paymentProcessor.getConfigByContract(order.params.tokenAddress);
-      // if (ppConfig && ppConfig.securityPolicy.enforcePricingConstraints) {
-      //   if (order.params.coin.toLowerCase() != ppConfig.paymentCoin!.toLowerCase()) {
-      //     return results.push({
-      //       id,
-      //       status: "payment-token-not-whitelisted",
-      //     });
-      //   }
+      const cportPaymentSettings = await cport.getCollectionPaymentSettings(
+        order.params.tokenAddress
+      );
+      const exchange = new Sdk.PaymentProcessor.Exchange(config.chainId).contract.connect(
+        baseProvider
+      );
 
-      //   const price = bn(order.params.price).div(order.params.amount);
-      //   if (price.lt(ppConfig.pricingBounds!.floorPrice)) {
-      //     return results.push({
-      //       id,
-      //       status: "sale-price-below-configured-floor-price",
-      //     });
-      //   }
-      //   if (price.gt(ppConfig.pricingBounds!.ceilingPrice)) {
-      //     return results.push({
-      //       id,
-      //       status: "sale-price-above-configured-ceiling-price",
-      //     });
-      //   }
-      // } else if (ppConfig?.securityPolicy.enforcePaymentMethodWhitelist) {
-      //   const exchange = new Sdk.PaymentProcessor.Exchange(config.chainId).contract.connect(
-      //     baseProvider
-      //   );
+      if (
+        cportPaymentSettings?.paymentSettings ===
+        cport.PaymentSettings.DefaultPaymentMethodWhitelist
+      ) {
+        // const isDefaultPaymentMethod = await exchange.isDefaultPaymentMethod(order.params.paymentMethod);
+        // if (!isDefaultPaymentMethod) {
+        //   return results.push({
+        //     id,
+        //     status: "payment-token-not-approved",
+        //   });
+        // }
+      } else if (
+        cportPaymentSettings?.paymentSettings === cport.PaymentSettings.CustomPaymentMethodWhitelist
+      ) {
+        const isCustomPaymentMethodWhitelist = await exchange.isPaymentMethodWhitelisted(
+          cportPaymentSettings.paymentMethodWhitelistId,
+          order.params.paymentMethod
+        );
+        if (!isCustomPaymentMethodWhitelist) {
+          return results.push({
+            id,
+            status: "payment-token-not-approved",
+          });
+        }
+      } else if (
+        cportPaymentSettings?.paymentSettings === cport.PaymentSettings.PricingConstraints
+      ) {
+        if (
+          cportPaymentSettings.constrainedPricingPaymentMethod.toLowerCase() !=
+          order.params.paymentMethod.toLowerCase()
+        ) {
+          return results.push({
+            id,
+            status: "payment-token-not-approved",
+          });
+        }
 
-      //   if (order.params.coin !== Sdk.Common.Addresses.Native[config.chainId]) {
-      //     const isWhitelisted = await exchange.isPaymentMethodApproved(
-      //       ppConfig.securityPolicy.id,
-      //       order.params.coin
-      //     );
-      //     if (!isWhitelisted) {
-      //       return results.push({
-      //         id,
-      //         status: "payment-token-not-whitelisted",
-      //       });
-      //     }
-      //   }
-      // }
+        const price = bn(order.params.price).div(order.params.amount);
+        if (price.lt(cportPaymentSettings.pricingBounds!.floorPrice)) {
+          return results.push({
+            id,
+            status: "sale-price-below-configured-floor-price",
+          });
+        }
+        if (price.gt(cportPaymentSettings.pricingBounds!.ceilingPrice)) {
+          return results.push({
+            id,
+            status: "sale-price-above-configured-ceiling-price",
+          });
+        }
+      }
 
       const isFiltered = await checkMarketplaceIsFiltered(order.params.tokenAddress, [
         Sdk.CPort.Addresses.Exchange[config.chainId],

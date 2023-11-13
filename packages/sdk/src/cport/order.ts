@@ -1,7 +1,7 @@
 import { Provider } from "@ethersproject/abstract-provider";
 import { TypedDataSigner } from "@ethersproject/abstract-signer";
 import { splitSignature } from "@ethersproject/bytes";
-import { HashZero } from "@ethersproject/constants";
+import { HashZero, AddressZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import { _TypedDataEncoder } from "@ethersproject/hash";
 import { verifyTypedData } from "@ethersproject/wallet";
@@ -47,6 +47,17 @@ export class Order {
     return {
       rootHash: HashZero,
       proof: [],
+    };
+  }
+
+  public getCosignature() {
+    return {
+      signer: AddressZero,
+      taker: AddressZero,
+      expiration: 0,
+      v: 0,
+      r: HashZero,
+      s: HashZero,
     };
   }
 
@@ -126,6 +137,40 @@ export class Order {
         s: this.params.s!,
         v: this.params.v!,
       },
+    };
+  }
+
+  public static getSweepOrderParams(taker: string, orders: Order[]): Types.SweepOrderParams {
+    const firstOrder = orders[0];
+    const matchedOrder = firstOrder.buildMatching({
+      taker,
+    });
+    return {
+      sweepOrder: {
+        protocol: matchedOrder.protocol,
+        tokenAddress: matchedOrder.tokenAddress,
+        paymentMethod: matchedOrder.paymentMethod,
+        beneficiary: matchedOrder.beneficiary!,
+      },
+      items: orders.map(({ params: sellOrder }) => ({
+        maker: sellOrder.sellerOrBuyer,
+        marketplace: sellOrder.marketplace,
+        tokenId: sellOrder.tokenId ?? "0",
+        amount: sellOrder.amount,
+        itemPrice: sellOrder.price,
+        nonce: sellOrder.nonce,
+        expiration: sellOrder.expiration,
+        marketplaceFeeNumerator: sellOrder.marketplaceFeeNumerator,
+        maxRoyaltyFeeNumerator: sellOrder.maxRoyaltyFeeNumerator ?? "0",
+      })),
+      signedSellOrders: orders.map((c) => {
+        return {
+          r: c.params.r!,
+          s: c.params.s!,
+          v: c.params.v!,
+        };
+      }),
+      cosignatures: orders.map((c) => c.getCosignature()),
     };
   }
 
@@ -219,6 +264,7 @@ export class Order {
     if (this.params.kind === "sale-approval") {
       const listing: Types.SaleApproval = {
         protocol: this.params.protocol,
+        cosigner: this.params.cosigner ?? AddressZero,
         seller: this.params.sellerOrBuyer,
         marketplace: this.params.marketplace,
         paymentMethod: this.params.paymentMethod,
@@ -236,6 +282,7 @@ export class Order {
     } else if (this.params.kind === "item-offer-approval") {
       const offer: Types.ItemOfferApproval = {
         protocol: this.params.protocol,
+        cosigner: this.params.cosigner ?? AddressZero,
         buyer: this.params.sellerOrBuyer,
         beneficiary: this.params.beneficiary!,
         marketplace: this.params.marketplace,
@@ -253,6 +300,7 @@ export class Order {
     } else if (this.params.kind === "collection-offer-approval") {
       const collectionOffer: Types.CollectionOfferApproval = {
         protocol: this.params.protocol,
+        cosigner: this.params.cosigner ?? AddressZero,
         buyer: this.params.sellerOrBuyer,
         beneficiary: this.params.beneficiary!,
         marketplace: this.params.marketplace,
@@ -269,6 +317,7 @@ export class Order {
     } else if (this.params.kind === "tokenset-offer-approval") {
       const bundleOffer: Types.TokenSetOfferApproval = {
         protocol: this.params.protocol,
+        cosigner: this.params.cosigner ?? AddressZero,
         buyer: this.params.sellerOrBuyer,
         beneficiary: this.params.beneficiary!,
         marketplace: this.params.marketplace,
@@ -311,6 +360,7 @@ export class Order {
 export const EIP712_SALE_APPROVAL_TYPES = {
   SaleApproval: [
     { name: "protocol", type: "uint8" },
+    { name: "cosigner", type: "address" },
     { name: "seller", type: "address" },
     { name: "marketplace", type: "address" },
     { name: "paymentMethod", type: "address" },
@@ -329,6 +379,7 @@ export const EIP712_SALE_APPROVAL_TYPES = {
 export const EIP712_ITEM_OFFER_APPROVAL_TYPES = {
   ItemOfferApproval: [
     { name: "protocol", type: "uint8" },
+    { name: "cosigner", type: "address" },
     { name: "buyer", type: "address" },
     { name: "beneficiary", type: "address" },
     { name: "marketplace", type: "address" },
@@ -347,6 +398,7 @@ export const EIP712_ITEM_OFFER_APPROVAL_TYPES = {
 export const EIP712_COLLECTION_OFFER_APPROVAL_TYPES = {
   CollectionOfferApproval: [
     { name: "protocol", type: "uint8" },
+    { name: "cosigner", type: "address" },
     { name: "buyer", type: "address" },
     { name: "beneficiary", type: "address" },
     { name: "marketplace", type: "address" },
@@ -364,6 +416,7 @@ export const EIP712_COLLECTION_OFFER_APPROVAL_TYPES = {
 export const EIP712_TOKEN_SET_OFFER_APPROVAL_TYPES = {
   TokenSetOfferApproval: [
     { name: "protocol", type: "uint8" },
+    { name: "cosigner", type: "address" },
     { name: "buyer", type: "address" },
     { name: "beneficiary", type: "address" },
     { name: "marketplace", type: "address" },

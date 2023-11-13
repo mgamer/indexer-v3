@@ -131,552 +131,63 @@
         "internalType": "struct TokenSetProof",
         "name": "tokenSetProof",
         "type": "tuple"
+      },
+      {
+        "components": [
+          {
+            "internalType": "address",
+            "name": "signer",
+            "type": "address"
+          },
+          {
+            "internalType": "address",
+            "name": "taker",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "expiration",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint8",
+            "name": "v",
+            "type": "uint8"
+          },
+          {
+            "internalType": "bytes32",
+            "name": "r",
+            "type": "bytes32"
+          },
+          {
+            "internalType": "bytes32",
+            "name": "s",
+            "type": "bytes32"
+          }
+        ],
+        "internalType": "struct Cosignature",
+        "name": "cosignature",
+        "type": "tuple"
+      },
+      {
+        "components": [
+          {
+            "internalType": "address",
+            "name": "recipient",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "amount",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct FeeOnTop",
+        "name": "feeOnTop",
+        "type": "tuple"
       }
     ],
     "name": "encodeAcceptOfferCalldata",
-    "outputs": [
-      {
-        "internalType": "bytes",
-        "name": "",
-        "type": "bytes"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "cPortAddress",
-        "type": "address"
-      },
-      {
-        "internalType": "bool",
-        "name": "isCollectionLevelOffer",
-        "type": "bool"
-      },
-      {
-        "components": [
-          {
-            "internalType": "enum OrderProtocols",
-            "name": "protocol",
-            "type": "uint8"
-          },
-          {
-            "internalType": "address",
-            "name": "maker",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "beneficiary",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "marketplace",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "paymentMethod",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "tokenAddress",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "tokenId",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint248",
-            "name": "amount",
-            "type": "uint248"
-          },
-          {
-            "internalType": "uint256",
-            "name": "itemPrice",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "nonce",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "expiration",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "marketplaceFeeNumerator",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "maxRoyaltyFeeNumerator",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint248",
-            "name": "requestedFillAmount",
-            "type": "uint248"
-          },
-          {
-            "internalType": "uint248",
-            "name": "minimumFillAmount",
-            "type": "uint248"
-          }
-        ],
-        "internalType": "struct Order",
-        "name": "saleDetails",
-        "type": "tuple"
-      },
-      {
-        "components": [
-          {
-            "internalType": "uint8",
-            "name": "v",
-            "type": "uint8"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "r",
-            "type": "bytes32"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "s",
-            "type": "bytes32"
-          }
-        ],
-        "internalType": "struct SignatureECDSA",
-        "name": "signature",
-        "type": "tuple"
-      },
-      {
-        "components": [
-          {
-            "internalType": "bytes32",
-            "name": "rootHash",
-            "type": "bytes32"
-          },
-          {
-            "internalType": "bytes32[]",
-            "name": "proof",
-            "type": "bytes32[]"
-          }
-        ],
-        "internalType": "struct TokenSetProof",
-        "name": "tokenSetProof",
-        "type": "tuple"
-      },
-      {
-        "components": [
-          {
-            "internalType": "address",
-            "name": "signer",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "taker",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "expiration",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint8",
-            "name": "v",
-            "type": "uint8"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "r",
-            "type": "bytes32"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "s",
-            "type": "bytes32"
-          }
-        ],
-        "internalType": "struct Cosignature",
-        "name": "cosignature",
-        "type": "tuple"
-      }
-    ],
-    "name": "encodeAcceptOfferCosignedCalldata",
-    "outputs": [
-      {
-        "internalType": "bytes",
-        "name": "",
-        "type": "bytes"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "cPortAddress",
-        "type": "address"
-      },
-      {
-        "internalType": "bool",
-        "name": "isCollectionLevelOffer",
-        "type": "bool"
-      },
-      {
-        "components": [
-          {
-            "internalType": "enum OrderProtocols",
-            "name": "protocol",
-            "type": "uint8"
-          },
-          {
-            "internalType": "address",
-            "name": "maker",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "beneficiary",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "marketplace",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "paymentMethod",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "tokenAddress",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "tokenId",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint248",
-            "name": "amount",
-            "type": "uint248"
-          },
-          {
-            "internalType": "uint256",
-            "name": "itemPrice",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "nonce",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "expiration",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "marketplaceFeeNumerator",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "maxRoyaltyFeeNumerator",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint248",
-            "name": "requestedFillAmount",
-            "type": "uint248"
-          },
-          {
-            "internalType": "uint248",
-            "name": "minimumFillAmount",
-            "type": "uint248"
-          }
-        ],
-        "internalType": "struct Order",
-        "name": "saleDetails",
-        "type": "tuple"
-      },
-      {
-        "components": [
-          {
-            "internalType": "uint8",
-            "name": "v",
-            "type": "uint8"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "r",
-            "type": "bytes32"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "s",
-            "type": "bytes32"
-          }
-        ],
-        "internalType": "struct SignatureECDSA",
-        "name": "signature",
-        "type": "tuple"
-      },
-      {
-        "components": [
-          {
-            "internalType": "bytes32",
-            "name": "rootHash",
-            "type": "bytes32"
-          },
-          {
-            "internalType": "bytes32[]",
-            "name": "proof",
-            "type": "bytes32[]"
-          }
-        ],
-        "internalType": "struct TokenSetProof",
-        "name": "tokenSetProof",
-        "type": "tuple"
-      },
-      {
-        "components": [
-          {
-            "internalType": "address",
-            "name": "signer",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "taker",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "expiration",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint8",
-            "name": "v",
-            "type": "uint8"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "r",
-            "type": "bytes32"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "s",
-            "type": "bytes32"
-          }
-        ],
-        "internalType": "struct Cosignature",
-        "name": "cosignature",
-        "type": "tuple"
-      },
-      {
-        "components": [
-          {
-            "internalType": "address",
-            "name": "recipient",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "amount",
-            "type": "uint256"
-          }
-        ],
-        "internalType": "struct FeeOnTop",
-        "name": "feeOnTop",
-        "type": "tuple"
-      }
-    ],
-    "name": "encodeAcceptOfferCosignedWithFeeOnTopCalldata",
-    "outputs": [
-      {
-        "internalType": "bytes",
-        "name": "",
-        "type": "bytes"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "cPortAddress",
-        "type": "address"
-      },
-      {
-        "internalType": "bool",
-        "name": "isCollectionLevelOffer",
-        "type": "bool"
-      },
-      {
-        "components": [
-          {
-            "internalType": "enum OrderProtocols",
-            "name": "protocol",
-            "type": "uint8"
-          },
-          {
-            "internalType": "address",
-            "name": "maker",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "beneficiary",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "marketplace",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "paymentMethod",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "tokenAddress",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "tokenId",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint248",
-            "name": "amount",
-            "type": "uint248"
-          },
-          {
-            "internalType": "uint256",
-            "name": "itemPrice",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "nonce",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "expiration",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "marketplaceFeeNumerator",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "maxRoyaltyFeeNumerator",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint248",
-            "name": "requestedFillAmount",
-            "type": "uint248"
-          },
-          {
-            "internalType": "uint248",
-            "name": "minimumFillAmount",
-            "type": "uint248"
-          }
-        ],
-        "internalType": "struct Order",
-        "name": "saleDetails",
-        "type": "tuple"
-      },
-      {
-        "components": [
-          {
-            "internalType": "uint8",
-            "name": "v",
-            "type": "uint8"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "r",
-            "type": "bytes32"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "s",
-            "type": "bytes32"
-          }
-        ],
-        "internalType": "struct SignatureECDSA",
-        "name": "signature",
-        "type": "tuple"
-      },
-      {
-        "components": [
-          {
-            "internalType": "bytes32",
-            "name": "rootHash",
-            "type": "bytes32"
-          },
-          {
-            "internalType": "bytes32[]",
-            "name": "proof",
-            "type": "bytes32[]"
-          }
-        ],
-        "internalType": "struct TokenSetProof",
-        "name": "tokenSetProof",
-        "type": "tuple"
-      },
-      {
-        "components": [
-          {
-            "internalType": "address",
-            "name": "recipient",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "amount",
-            "type": "uint256"
-          }
-        ],
-        "internalType": "struct FeeOnTop",
-        "name": "feeOnTop",
-        "type": "tuple"
-      }
-    ],
-    "name": "encodeAcceptOfferWithFeeOnTopCalldata",
     "outputs": [
       {
         "internalType": "bytes",
@@ -818,6 +329,60 @@
         ],
         "internalType": "struct TokenSetProof[]",
         "name": "tokenSetProofsArray",
+        "type": "tuple[]"
+      },
+      {
+        "components": [
+          {
+            "internalType": "address",
+            "name": "signer",
+            "type": "address"
+          },
+          {
+            "internalType": "address",
+            "name": "taker",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "expiration",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint8",
+            "name": "v",
+            "type": "uint8"
+          },
+          {
+            "internalType": "bytes32",
+            "name": "r",
+            "type": "bytes32"
+          },
+          {
+            "internalType": "bytes32",
+            "name": "s",
+            "type": "bytes32"
+          }
+        ],
+        "internalType": "struct Cosignature[]",
+        "name": "cosignaturesArray",
+        "type": "tuple[]"
+      },
+      {
+        "components": [
+          {
+            "internalType": "address",
+            "name": "recipient",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "amount",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct FeeOnTop[]",
+        "name": "feesOnTopArray",
         "type": "tuple[]"
       }
     ],
@@ -840,11 +405,6 @@
         "type": "address"
       },
       {
-        "internalType": "bool[]",
-        "name": "isCollectionLevelOfferArray",
-        "type": "bool[]"
-      },
-      {
         "components": [
           {
             "internalType": "enum OrderProtocols",
@@ -946,23 +506,6 @@
         ],
         "internalType": "struct SignatureECDSA[]",
         "name": "signatures",
-        "type": "tuple[]"
-      },
-      {
-        "components": [
-          {
-            "internalType": "bytes32",
-            "name": "rootHash",
-            "type": "bytes32"
-          },
-          {
-            "internalType": "bytes32[]",
-            "name": "proof",
-            "type": "bytes32[]"
-          }
-        ],
-        "internalType": "struct TokenSetProof[]",
-        "name": "tokenSetProofsArray",
         "type": "tuple[]"
       },
       {
@@ -999,189 +542,7 @@
           }
         ],
         "internalType": "struct Cosignature[]",
-        "name": "cosignaturesArray",
-        "type": "tuple[]"
-      }
-    ],
-    "name": "encodeBulkAcceptOffersCosignedCalldata",
-    "outputs": [
-      {
-        "internalType": "bytes",
-        "name": "",
-        "type": "bytes"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "cPortAddress",
-        "type": "address"
-      },
-      {
-        "internalType": "bool[]",
-        "name": "isCollectionLevelOfferArray",
-        "type": "bool[]"
-      },
-      {
-        "components": [
-          {
-            "internalType": "enum OrderProtocols",
-            "name": "protocol",
-            "type": "uint8"
-          },
-          {
-            "internalType": "address",
-            "name": "maker",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "beneficiary",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "marketplace",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "paymentMethod",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "tokenAddress",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "tokenId",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint248",
-            "name": "amount",
-            "type": "uint248"
-          },
-          {
-            "internalType": "uint256",
-            "name": "itemPrice",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "nonce",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "expiration",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "marketplaceFeeNumerator",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "maxRoyaltyFeeNumerator",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint248",
-            "name": "requestedFillAmount",
-            "type": "uint248"
-          },
-          {
-            "internalType": "uint248",
-            "name": "minimumFillAmount",
-            "type": "uint248"
-          }
-        ],
-        "internalType": "struct Order[]",
-        "name": "saleDetailsArray",
-        "type": "tuple[]"
-      },
-      {
-        "components": [
-          {
-            "internalType": "uint8",
-            "name": "v",
-            "type": "uint8"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "r",
-            "type": "bytes32"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "s",
-            "type": "bytes32"
-          }
-        ],
-        "internalType": "struct SignatureECDSA[]",
-        "name": "signatures",
-        "type": "tuple[]"
-      },
-      {
-        "components": [
-          {
-            "internalType": "bytes32",
-            "name": "rootHash",
-            "type": "bytes32"
-          },
-          {
-            "internalType": "bytes32[]",
-            "name": "proof",
-            "type": "bytes32[]"
-          }
-        ],
-        "internalType": "struct TokenSetProof[]",
-        "name": "tokenSetProofsArray",
-        "type": "tuple[]"
-      },
-      {
-        "components": [
-          {
-            "internalType": "address",
-            "name": "signer",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "taker",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "expiration",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint8",
-            "name": "v",
-            "type": "uint8"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "r",
-            "type": "bytes32"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "s",
-            "type": "bytes32"
-          }
-        ],
-        "internalType": "struct Cosignature[]",
-        "name": "cosignaturesArray",
+        "name": "cosignatures",
         "type": "tuple[]"
       },
       {
@@ -1198,292 +559,7 @@
           }
         ],
         "internalType": "struct FeeOnTop[]",
-        "name": "feesOnTopArray",
-        "type": "tuple[]"
-      }
-    ],
-    "name": "encodeBulkAcceptOffersCosignedWithFeesOnTopCalldata",
-    "outputs": [
-      {
-        "internalType": "bytes",
-        "name": "",
-        "type": "bytes"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "cPortAddress",
-        "type": "address"
-      },
-      {
-        "internalType": "bool[]",
-        "name": "isCollectionLevelOfferArray",
-        "type": "bool[]"
-      },
-      {
-        "components": [
-          {
-            "internalType": "enum OrderProtocols",
-            "name": "protocol",
-            "type": "uint8"
-          },
-          {
-            "internalType": "address",
-            "name": "maker",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "beneficiary",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "marketplace",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "paymentMethod",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "tokenAddress",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "tokenId",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint248",
-            "name": "amount",
-            "type": "uint248"
-          },
-          {
-            "internalType": "uint256",
-            "name": "itemPrice",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "nonce",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "expiration",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "marketplaceFeeNumerator",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "maxRoyaltyFeeNumerator",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint248",
-            "name": "requestedFillAmount",
-            "type": "uint248"
-          },
-          {
-            "internalType": "uint248",
-            "name": "minimumFillAmount",
-            "type": "uint248"
-          }
-        ],
-        "internalType": "struct Order[]",
-        "name": "saleDetailsArray",
-        "type": "tuple[]"
-      },
-      {
-        "components": [
-          {
-            "internalType": "uint8",
-            "name": "v",
-            "type": "uint8"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "r",
-            "type": "bytes32"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "s",
-            "type": "bytes32"
-          }
-        ],
-        "internalType": "struct SignatureECDSA[]",
-        "name": "signatures",
-        "type": "tuple[]"
-      },
-      {
-        "components": [
-          {
-            "internalType": "bytes32",
-            "name": "rootHash",
-            "type": "bytes32"
-          },
-          {
-            "internalType": "bytes32[]",
-            "name": "proof",
-            "type": "bytes32[]"
-          }
-        ],
-        "internalType": "struct TokenSetProof[]",
-        "name": "tokenSetProofsArray",
-        "type": "tuple[]"
-      },
-      {
-        "components": [
-          {
-            "internalType": "address",
-            "name": "recipient",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "amount",
-            "type": "uint256"
-          }
-        ],
-        "internalType": "struct FeeOnTop[]",
-        "name": "feesOnTopArray",
-        "type": "tuple[]"
-      }
-    ],
-    "name": "encodeBulkAcceptOffersWithFeesOnTopCalldata",
-    "outputs": [
-      {
-        "internalType": "bytes",
-        "name": "",
-        "type": "bytes"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "cPortAddress",
-        "type": "address"
-      },
-      {
-        "components": [
-          {
-            "internalType": "enum OrderProtocols",
-            "name": "protocol",
-            "type": "uint8"
-          },
-          {
-            "internalType": "address",
-            "name": "maker",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "beneficiary",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "marketplace",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "paymentMethod",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "tokenAddress",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "tokenId",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint248",
-            "name": "amount",
-            "type": "uint248"
-          },
-          {
-            "internalType": "uint256",
-            "name": "itemPrice",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "nonce",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "expiration",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "marketplaceFeeNumerator",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "maxRoyaltyFeeNumerator",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint248",
-            "name": "requestedFillAmount",
-            "type": "uint248"
-          },
-          {
-            "internalType": "uint248",
-            "name": "minimumFillAmount",
-            "type": "uint248"
-          }
-        ],
-        "internalType": "struct Order[]",
-        "name": "saleDetailsArray",
-        "type": "tuple[]"
-      },
-      {
-        "components": [
-          {
-            "internalType": "uint8",
-            "name": "v",
-            "type": "uint8"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "r",
-            "type": "bytes32"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "s",
-            "type": "bytes32"
-          }
-        ],
-        "internalType": "struct SignatureECDSA[]",
-        "name": "signatures",
+        "name": "feesOnTop",
         "type": "tuple[]"
       }
     ],
@@ -1583,483 +659,6 @@
             "type": "uint248"
           }
         ],
-        "internalType": "struct Order[]",
-        "name": "saleDetailsArray",
-        "type": "tuple[]"
-      },
-      {
-        "components": [
-          {
-            "internalType": "uint8",
-            "name": "v",
-            "type": "uint8"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "r",
-            "type": "bytes32"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "s",
-            "type": "bytes32"
-          }
-        ],
-        "internalType": "struct SignatureECDSA[]",
-        "name": "signatures",
-        "type": "tuple[]"
-      },
-      {
-        "components": [
-          {
-            "internalType": "address",
-            "name": "signer",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "taker",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "expiration",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint8",
-            "name": "v",
-            "type": "uint8"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "r",
-            "type": "bytes32"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "s",
-            "type": "bytes32"
-          }
-        ],
-        "internalType": "struct Cosignature[]",
-        "name": "cosignatures",
-        "type": "tuple[]"
-      }
-    ],
-    "name": "encodeBulkBuyListingsCosignedCalldata",
-    "outputs": [
-      {
-        "internalType": "bytes",
-        "name": "",
-        "type": "bytes"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "cPortAddress",
-        "type": "address"
-      },
-      {
-        "components": [
-          {
-            "internalType": "enum OrderProtocols",
-            "name": "protocol",
-            "type": "uint8"
-          },
-          {
-            "internalType": "address",
-            "name": "maker",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "beneficiary",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "marketplace",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "paymentMethod",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "tokenAddress",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "tokenId",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint248",
-            "name": "amount",
-            "type": "uint248"
-          },
-          {
-            "internalType": "uint256",
-            "name": "itemPrice",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "nonce",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "expiration",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "marketplaceFeeNumerator",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "maxRoyaltyFeeNumerator",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint248",
-            "name": "requestedFillAmount",
-            "type": "uint248"
-          },
-          {
-            "internalType": "uint248",
-            "name": "minimumFillAmount",
-            "type": "uint248"
-          }
-        ],
-        "internalType": "struct Order[]",
-        "name": "saleDetailsArray",
-        "type": "tuple[]"
-      },
-      {
-        "components": [
-          {
-            "internalType": "uint8",
-            "name": "v",
-            "type": "uint8"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "r",
-            "type": "bytes32"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "s",
-            "type": "bytes32"
-          }
-        ],
-        "internalType": "struct SignatureECDSA[]",
-        "name": "signatures",
-        "type": "tuple[]"
-      },
-      {
-        "components": [
-          {
-            "internalType": "address",
-            "name": "signer",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "taker",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "expiration",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint8",
-            "name": "v",
-            "type": "uint8"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "r",
-            "type": "bytes32"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "s",
-            "type": "bytes32"
-          }
-        ],
-        "internalType": "struct Cosignature[]",
-        "name": "cosignatures",
-        "type": "tuple[]"
-      },
-      {
-        "components": [
-          {
-            "internalType": "address",
-            "name": "recipient",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "amount",
-            "type": "uint256"
-          }
-        ],
-        "internalType": "struct FeeOnTop[]",
-        "name": "feesOnTop",
-        "type": "tuple[]"
-      }
-    ],
-    "name": "encodeBulkBuyListingsCosignedWithFeesOnTopCalldata",
-    "outputs": [
-      {
-        "internalType": "bytes",
-        "name": "",
-        "type": "bytes"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "cPortAddress",
-        "type": "address"
-      },
-      {
-        "components": [
-          {
-            "internalType": "enum OrderProtocols",
-            "name": "protocol",
-            "type": "uint8"
-          },
-          {
-            "internalType": "address",
-            "name": "maker",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "beneficiary",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "marketplace",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "paymentMethod",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "tokenAddress",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "tokenId",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint248",
-            "name": "amount",
-            "type": "uint248"
-          },
-          {
-            "internalType": "uint256",
-            "name": "itemPrice",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "nonce",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "expiration",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "marketplaceFeeNumerator",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "maxRoyaltyFeeNumerator",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint248",
-            "name": "requestedFillAmount",
-            "type": "uint248"
-          },
-          {
-            "internalType": "uint248",
-            "name": "minimumFillAmount",
-            "type": "uint248"
-          }
-        ],
-        "internalType": "struct Order[]",
-        "name": "saleDetailsArray",
-        "type": "tuple[]"
-      },
-      {
-        "components": [
-          {
-            "internalType": "uint8",
-            "name": "v",
-            "type": "uint8"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "r",
-            "type": "bytes32"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "s",
-            "type": "bytes32"
-          }
-        ],
-        "internalType": "struct SignatureECDSA[]",
-        "name": "signatures",
-        "type": "tuple[]"
-      },
-      {
-        "components": [
-          {
-            "internalType": "address",
-            "name": "recipient",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "amount",
-            "type": "uint256"
-          }
-        ],
-        "internalType": "struct FeeOnTop[]",
-        "name": "feesOnTop",
-        "type": "tuple[]"
-      }
-    ],
-    "name": "encodeBulkBuyListingsWithFeesOnTopCalldata",
-    "outputs": [
-      {
-        "internalType": "bytes",
-        "name": "",
-        "type": "bytes"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "cPortAddress",
-        "type": "address"
-      },
-      {
-        "components": [
-          {
-            "internalType": "enum OrderProtocols",
-            "name": "protocol",
-            "type": "uint8"
-          },
-          {
-            "internalType": "address",
-            "name": "maker",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "beneficiary",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "marketplace",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "paymentMethod",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "tokenAddress",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "tokenId",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint248",
-            "name": "amount",
-            "type": "uint248"
-          },
-          {
-            "internalType": "uint256",
-            "name": "itemPrice",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "nonce",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "expiration",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "marketplaceFeeNumerator",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "maxRoyaltyFeeNumerator",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint248",
-            "name": "requestedFillAmount",
-            "type": "uint248"
-          },
-          {
-            "internalType": "uint248",
-            "name": "minimumFillAmount",
-            "type": "uint248"
-          }
-        ],
         "internalType": "struct Order",
         "name": "saleDetails",
         "type": "tuple"
@@ -2084,487 +683,64 @@
         ],
         "internalType": "struct SignatureECDSA",
         "name": "signature",
+        "type": "tuple"
+      },
+      {
+        "components": [
+          {
+            "internalType": "address",
+            "name": "signer",
+            "type": "address"
+          },
+          {
+            "internalType": "address",
+            "name": "taker",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "expiration",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint8",
+            "name": "v",
+            "type": "uint8"
+          },
+          {
+            "internalType": "bytes32",
+            "name": "r",
+            "type": "bytes32"
+          },
+          {
+            "internalType": "bytes32",
+            "name": "s",
+            "type": "bytes32"
+          }
+        ],
+        "internalType": "struct Cosignature",
+        "name": "cosignature",
+        "type": "tuple"
+      },
+      {
+        "components": [
+          {
+            "internalType": "address",
+            "name": "recipient",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "amount",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct FeeOnTop",
+        "name": "feeOnTop",
         "type": "tuple"
       }
     ],
     "name": "encodeBuyListingCalldata",
-    "outputs": [
-      {
-        "internalType": "bytes",
-        "name": "",
-        "type": "bytes"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "cPortAddress",
-        "type": "address"
-      },
-      {
-        "components": [
-          {
-            "internalType": "enum OrderProtocols",
-            "name": "protocol",
-            "type": "uint8"
-          },
-          {
-            "internalType": "address",
-            "name": "maker",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "beneficiary",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "marketplace",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "paymentMethod",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "tokenAddress",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "tokenId",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint248",
-            "name": "amount",
-            "type": "uint248"
-          },
-          {
-            "internalType": "uint256",
-            "name": "itemPrice",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "nonce",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "expiration",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "marketplaceFeeNumerator",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "maxRoyaltyFeeNumerator",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint248",
-            "name": "requestedFillAmount",
-            "type": "uint248"
-          },
-          {
-            "internalType": "uint248",
-            "name": "minimumFillAmount",
-            "type": "uint248"
-          }
-        ],
-        "internalType": "struct Order",
-        "name": "saleDetails",
-        "type": "tuple"
-      },
-      {
-        "components": [
-          {
-            "internalType": "uint8",
-            "name": "v",
-            "type": "uint8"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "r",
-            "type": "bytes32"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "s",
-            "type": "bytes32"
-          }
-        ],
-        "internalType": "struct SignatureECDSA",
-        "name": "signature",
-        "type": "tuple"
-      },
-      {
-        "components": [
-          {
-            "internalType": "address",
-            "name": "signer",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "taker",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "expiration",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint8",
-            "name": "v",
-            "type": "uint8"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "r",
-            "type": "bytes32"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "s",
-            "type": "bytes32"
-          }
-        ],
-        "internalType": "struct Cosignature",
-        "name": "cosignature",
-        "type": "tuple"
-      }
-    ],
-    "name": "encodeBuyListingCosignedCalldata",
-    "outputs": [
-      {
-        "internalType": "bytes",
-        "name": "",
-        "type": "bytes"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "cPortAddress",
-        "type": "address"
-      },
-      {
-        "components": [
-          {
-            "internalType": "enum OrderProtocols",
-            "name": "protocol",
-            "type": "uint8"
-          },
-          {
-            "internalType": "address",
-            "name": "maker",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "beneficiary",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "marketplace",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "paymentMethod",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "tokenAddress",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "tokenId",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint248",
-            "name": "amount",
-            "type": "uint248"
-          },
-          {
-            "internalType": "uint256",
-            "name": "itemPrice",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "nonce",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "expiration",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "marketplaceFeeNumerator",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "maxRoyaltyFeeNumerator",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint248",
-            "name": "requestedFillAmount",
-            "type": "uint248"
-          },
-          {
-            "internalType": "uint248",
-            "name": "minimumFillAmount",
-            "type": "uint248"
-          }
-        ],
-        "internalType": "struct Order",
-        "name": "saleDetails",
-        "type": "tuple"
-      },
-      {
-        "components": [
-          {
-            "internalType": "uint8",
-            "name": "v",
-            "type": "uint8"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "r",
-            "type": "bytes32"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "s",
-            "type": "bytes32"
-          }
-        ],
-        "internalType": "struct SignatureECDSA",
-        "name": "signature",
-        "type": "tuple"
-      },
-      {
-        "components": [
-          {
-            "internalType": "address",
-            "name": "signer",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "taker",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "expiration",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint8",
-            "name": "v",
-            "type": "uint8"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "r",
-            "type": "bytes32"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "s",
-            "type": "bytes32"
-          }
-        ],
-        "internalType": "struct Cosignature",
-        "name": "cosignature",
-        "type": "tuple"
-      },
-      {
-        "components": [
-          {
-            "internalType": "address",
-            "name": "recipient",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "amount",
-            "type": "uint256"
-          }
-        ],
-        "internalType": "struct FeeOnTop",
-        "name": "feeOnTop",
-        "type": "tuple"
-      }
-    ],
-    "name": "encodeBuyListingCosignedWithFeeOnTopCalldata",
-    "outputs": [
-      {
-        "internalType": "bytes",
-        "name": "",
-        "type": "bytes"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "cPortAddress",
-        "type": "address"
-      },
-      {
-        "components": [
-          {
-            "internalType": "enum OrderProtocols",
-            "name": "protocol",
-            "type": "uint8"
-          },
-          {
-            "internalType": "address",
-            "name": "maker",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "beneficiary",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "marketplace",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "paymentMethod",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "tokenAddress",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "tokenId",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint248",
-            "name": "amount",
-            "type": "uint248"
-          },
-          {
-            "internalType": "uint256",
-            "name": "itemPrice",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "nonce",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "expiration",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "marketplaceFeeNumerator",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "maxRoyaltyFeeNumerator",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint248",
-            "name": "requestedFillAmount",
-            "type": "uint248"
-          },
-          {
-            "internalType": "uint248",
-            "name": "minimumFillAmount",
-            "type": "uint248"
-          }
-        ],
-        "internalType": "struct Order",
-        "name": "saleDetails",
-        "type": "tuple"
-      },
-      {
-        "components": [
-          {
-            "internalType": "uint8",
-            "name": "v",
-            "type": "uint8"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "r",
-            "type": "bytes32"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "s",
-            "type": "bytes32"
-          }
-        ],
-        "internalType": "struct SignatureECDSA",
-        "name": "signature",
-        "type": "tuple"
-      },
-      {
-        "components": [
-          {
-            "internalType": "address",
-            "name": "recipient",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "amount",
-            "type": "uint256"
-          }
-        ],
-        "internalType": "struct FeeOnTop",
-        "name": "feeOnTop",
-        "type": "tuple"
-      }
-    ],
-    "name": "encodeBuyListingWithFeeOnTopCalldata",
     "outputs": [
       {
         "internalType": "bytes",
@@ -2589,6 +765,30 @@
       }
     ],
     "name": "encodeCreatePaymentMethodWhitelistCalldata",
+    "outputs": [
+      {
+        "internalType": "bytes",
+        "name": "",
+        "type": "bytes"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "digest",
+        "type": "bytes32"
+      }
+    ],
+    "name": "encodeRevokeOrderDigestCalldata",
     "outputs": [
       {
         "internalType": "bytes",
@@ -2789,6 +989,23 @@
       {
         "components": [
           {
+            "internalType": "address",
+            "name": "recipient",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "amount",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct FeeOnTop",
+        "name": "feeOnTop",
+        "type": "tuple"
+      },
+      {
+        "components": [
+          {
             "internalType": "enum OrderProtocols",
             "name": "protocol",
             "type": "uint8"
@@ -2885,478 +1102,47 @@
         ],
         "internalType": "struct SignatureECDSA[]",
         "name": "signatures",
+        "type": "tuple[]"
+      },
+      {
+        "components": [
+          {
+            "internalType": "address",
+            "name": "signer",
+            "type": "address"
+          },
+          {
+            "internalType": "address",
+            "name": "taker",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "expiration",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint8",
+            "name": "v",
+            "type": "uint8"
+          },
+          {
+            "internalType": "bytes32",
+            "name": "r",
+            "type": "bytes32"
+          },
+          {
+            "internalType": "bytes32",
+            "name": "s",
+            "type": "bytes32"
+          }
+        ],
+        "internalType": "struct Cosignature[]",
+        "name": "cosignatures",
         "type": "tuple[]"
       }
     ],
     "name": "encodeSweepCollectionCalldata",
-    "outputs": [
-      {
-        "internalType": "bytes",
-        "name": "",
-        "type": "bytes"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "cPortAddress",
-        "type": "address"
-      },
-      {
-        "components": [
-          {
-            "internalType": "enum OrderProtocols",
-            "name": "protocol",
-            "type": "uint8"
-          },
-          {
-            "internalType": "address",
-            "name": "tokenAddress",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "paymentMethod",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "beneficiary",
-            "type": "address"
-          }
-        ],
-        "internalType": "struct SweepOrder",
-        "name": "sweepOrder",
-        "type": "tuple"
-      },
-      {
-        "components": [
-          {
-            "internalType": "address",
-            "name": "maker",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "marketplace",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "tokenId",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint248",
-            "name": "amount",
-            "type": "uint248"
-          },
-          {
-            "internalType": "uint256",
-            "name": "itemPrice",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "nonce",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "expiration",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "marketplaceFeeNumerator",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "maxRoyaltyFeeNumerator",
-            "type": "uint256"
-          }
-        ],
-        "internalType": "struct SweepItem[]",
-        "name": "items",
-        "type": "tuple[]"
-      },
-      {
-        "components": [
-          {
-            "internalType": "uint8",
-            "name": "v",
-            "type": "uint8"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "r",
-            "type": "bytes32"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "s",
-            "type": "bytes32"
-          }
-        ],
-        "internalType": "struct SignatureECDSA[]",
-        "name": "signatures",
-        "type": "tuple[]"
-      },
-      {
-        "components": [
-          {
-            "internalType": "address",
-            "name": "signer",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "taker",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "expiration",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint8",
-            "name": "v",
-            "type": "uint8"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "r",
-            "type": "bytes32"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "s",
-            "type": "bytes32"
-          }
-        ],
-        "internalType": "struct Cosignature[]",
-        "name": "cosignatures",
-        "type": "tuple[]"
-      }
-    ],
-    "name": "encodeSweepCollectionCosignedCalldata",
-    "outputs": [
-      {
-        "internalType": "bytes",
-        "name": "",
-        "type": "bytes"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "cPortAddress",
-        "type": "address"
-      },
-      {
-        "components": [
-          {
-            "internalType": "address",
-            "name": "recipient",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "amount",
-            "type": "uint256"
-          }
-        ],
-        "internalType": "struct FeeOnTop",
-        "name": "feeOnTop",
-        "type": "tuple"
-      },
-      {
-        "components": [
-          {
-            "internalType": "enum OrderProtocols",
-            "name": "protocol",
-            "type": "uint8"
-          },
-          {
-            "internalType": "address",
-            "name": "tokenAddress",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "paymentMethod",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "beneficiary",
-            "type": "address"
-          }
-        ],
-        "internalType": "struct SweepOrder",
-        "name": "sweepOrder",
-        "type": "tuple"
-      },
-      {
-        "components": [
-          {
-            "internalType": "address",
-            "name": "maker",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "marketplace",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "tokenId",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint248",
-            "name": "amount",
-            "type": "uint248"
-          },
-          {
-            "internalType": "uint256",
-            "name": "itemPrice",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "nonce",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "expiration",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "marketplaceFeeNumerator",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "maxRoyaltyFeeNumerator",
-            "type": "uint256"
-          }
-        ],
-        "internalType": "struct SweepItem[]",
-        "name": "items",
-        "type": "tuple[]"
-      },
-      {
-        "components": [
-          {
-            "internalType": "uint8",
-            "name": "v",
-            "type": "uint8"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "r",
-            "type": "bytes32"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "s",
-            "type": "bytes32"
-          }
-        ],
-        "internalType": "struct SignatureECDSA[]",
-        "name": "signatures",
-        "type": "tuple[]"
-      },
-      {
-        "components": [
-          {
-            "internalType": "address",
-            "name": "signer",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "taker",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "expiration",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint8",
-            "name": "v",
-            "type": "uint8"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "r",
-            "type": "bytes32"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "s",
-            "type": "bytes32"
-          }
-        ],
-        "internalType": "struct Cosignature[]",
-        "name": "cosignatures",
-        "type": "tuple[]"
-      }
-    ],
-    "name": "encodeSweepCollectionCosignedWithFeeOnTopCalldata",
-    "outputs": [
-      {
-        "internalType": "bytes",
-        "name": "",
-        "type": "bytes"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "cPortAddress",
-        "type": "address"
-      },
-      {
-        "components": [
-          {
-            "internalType": "address",
-            "name": "recipient",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "amount",
-            "type": "uint256"
-          }
-        ],
-        "internalType": "struct FeeOnTop",
-        "name": "feeOnTop",
-        "type": "tuple"
-      },
-      {
-        "components": [
-          {
-            "internalType": "enum OrderProtocols",
-            "name": "protocol",
-            "type": "uint8"
-          },
-          {
-            "internalType": "address",
-            "name": "tokenAddress",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "paymentMethod",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "beneficiary",
-            "type": "address"
-          }
-        ],
-        "internalType": "struct SweepOrder",
-        "name": "sweepOrder",
-        "type": "tuple"
-      },
-      {
-        "components": [
-          {
-            "internalType": "address",
-            "name": "maker",
-            "type": "address"
-          },
-          {
-            "internalType": "address",
-            "name": "marketplace",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "tokenId",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint248",
-            "name": "amount",
-            "type": "uint248"
-          },
-          {
-            "internalType": "uint256",
-            "name": "itemPrice",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "nonce",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "expiration",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "marketplaceFeeNumerator",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "maxRoyaltyFeeNumerator",
-            "type": "uint256"
-          }
-        ],
-        "internalType": "struct SweepItem[]",
-        "name": "items",
-        "type": "tuple[]"
-      },
-      {
-        "components": [
-          {
-            "internalType": "uint8",
-            "name": "v",
-            "type": "uint8"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "r",
-            "type": "bytes32"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "s",
-            "type": "bytes32"
-          }
-        ],
-        "internalType": "struct SignatureECDSA[]",
-        "name": "signatures",
-        "type": "tuple[]"
-      }
-    ],
-    "name": "encodeSweepCollectionWithFeeOnTopCalldata",
     "outputs": [
       {
         "internalType": "bytes",
