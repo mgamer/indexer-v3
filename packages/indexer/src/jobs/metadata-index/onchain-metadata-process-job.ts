@@ -4,6 +4,7 @@ import { metadataIndexWriteJob } from "@/jobs/metadata-index/metadata-write-job"
 import { onchainMetadataProvider } from "@/metadata/providers/onchain-metadata-provider";
 import { RequestWasThrottledError } from "@/metadata/providers/utils";
 import { PendingRefreshTokens } from "@/models/pending-refresh-tokens";
+import { metadataIndexProcessJob } from "./metadata-process-job";
 
 export type OnchainMetadataProcessTokenUriJobPayload = {
   contract: string;
@@ -64,6 +65,8 @@ export default class OnchainMetadataProcessTokenUriJob extends AbstractRabbitMqJ
         tokenId,
       },
     ]);
+
+    await metadataIndexProcessJob.addToQueue({ method: "simplehash" });
   }
 
   public async addToQueue(params: OnchainMetadataProcessTokenUriJobPayload, delay = 0) {

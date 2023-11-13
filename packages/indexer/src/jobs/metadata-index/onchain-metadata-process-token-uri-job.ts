@@ -8,6 +8,7 @@ import { RequestWasThrottledError } from "@/metadata/providers/utils";
 import { PendingFetchOnchainUriTokens } from "@/models/pending-fetch-onchain-uri-tokens";
 import { PendingRefreshTokens } from "@/models/pending-refresh-tokens";
 import { hasExtendCollectionHandler } from "@/metadata/extend";
+import { metadataIndexProcessJob } from "./metadata-process-job";
 
 export default class OnchainMetadataFetchTokenUriJob extends AbstractRabbitMqJobHandler {
   queueName = "metadata-index-onchain-process-uri-queue";
@@ -93,6 +94,7 @@ export default class OnchainMetadataFetchTokenUriJob extends AbstractRabbitMqJob
     // Default to simple hash if no uri found
     const pendingRefreshTokens = new PendingRefreshTokens("simplehash");
     await pendingRefreshTokens.add(fallbackTokens);
+    await metadataIndexProcessJob.addToQueue({ method: "simplehash" });
 
     // If there are potentially more token uris to process, trigger another job
     const queueLength = await PendingFetchOnchainUriTokens.len();
