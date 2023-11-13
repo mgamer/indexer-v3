@@ -425,6 +425,12 @@ export const setupRoutes = (server: Server) => {
   // Collections
 
   server.route({
+    method: "POST",
+    path: "/collections/{collection}/override/v1",
+    options: collectionsEndpoints.postCollectionsOverrideV1Options,
+  });
+
+  server.route({
     method: "GET",
     path: "/collections/sources/v1",
     options: collectionsEndpoints.getSourcesListingsV1Options,
