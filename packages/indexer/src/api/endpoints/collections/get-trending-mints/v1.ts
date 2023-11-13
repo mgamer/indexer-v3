@@ -140,7 +140,7 @@ export const getTrendingMintsV1Options: RouteOptions = {
     try {
       const mintingCollections = await getMintingCollections(type);
 
-      if (mintingCollections.length < 1)  {
+      if (mintingCollections.length < 1) {
         const response = h.response({ mints: [] });
         return response;
       }
