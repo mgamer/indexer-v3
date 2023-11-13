@@ -521,7 +521,7 @@ export const updateAsksTokenData = async (
         must_not: [
           {
             term: {
-              "token.isSpam": tokenData.isSpam > 0,
+              "token.isSpam": Number(tokenData.isSpam) > 0,
             },
           },
         ],
