@@ -43,7 +43,7 @@ export const postCollectionsOverrideV1Options: RouteOptions = {
         .items(
           Joi.object({
             bps: Joi.number(),
-            recipient: Joi.string(),
+            recipient: Joi.string().lowercase(),
           })
         )
         .allow(null)
