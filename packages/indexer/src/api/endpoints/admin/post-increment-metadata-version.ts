@@ -62,7 +62,7 @@ export const postUpdateImageVersionOptions: RouteOptions = {
           SET image_version_updated_at = NOW()
         WHERE collection_id = $1
       `,
-        [toBuffer(collectionId)]
+        [collectionId]
       );
       return { message: "Request accepted" };
     } catch (error) {
