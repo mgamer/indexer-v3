@@ -473,14 +473,9 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
         headers: {
           "Content-Type": "application/json",
         },
-        // timeout: FETCH_TIMEOUT,
-        // TODO: add proxy support to avoid rate limiting
-        // agent:
       });
 
       if (!response.ok) {
-        // eslint-disable-next-line
-        const body = await response.text();
         return [null, response.status];
       }
 

@@ -7,7 +7,6 @@ import { onchainMetadataProcessTokenUriJob } from "./onchain-metadata-process-jo
 import { RequestWasThrottledError } from "@/metadata/providers/utils";
 import { PendingFetchOnchainUriTokens } from "@/models/pending-fetch-onchain-uri-tokens";
 import { PendingRefreshTokens } from "@/models/pending-refresh-tokens";
-import { hasExtendCollectionHandler } from "@/metadata/extend";
 import { metadataIndexProcessJob } from "./metadata-process-job";
 
 export default class OnchainMetadataFetchTokenUriJob extends AbstractRabbitMqJobHandler {
@@ -72,14 +71,6 @@ export default class OnchainMetadataFetchTokenUriJob extends AbstractRabbitMqJob
           this.queueName,
           `No uri found. contract=${result.contract}, tokenId=${result.tokenId}, error=${result.error}`
         );
-
-        if (hasExtendCollectionHandler(result.contract)) {
-          logger.warn(
-            this.queueName,
-            `Token has extend collection handler. contract=${result.contract}, tokenId=${result.tokenId}`
-          );
-          return;
-        }
 
         fallbackTokens.push({
           collection: result.contract,
