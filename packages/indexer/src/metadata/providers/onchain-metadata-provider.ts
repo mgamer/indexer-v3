@@ -212,6 +212,10 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
       });
     }
 
+    if (!metadata?.name) {
+      metadata.name = metadata.tokenId;
+    }
+
     return {
       contract: metadata.contract,
       slug: null,
