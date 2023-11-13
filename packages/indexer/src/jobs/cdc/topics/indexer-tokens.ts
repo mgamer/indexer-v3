@@ -64,12 +64,12 @@ export class IndexerTokensHandler extends KafkaEventHandler {
     try {
       const spamStatusChanged = payload.before.is_spam !== payload.after.is_spam;
 
-      // Update the elastic search activities index
+      // Update the elasticsearch activities index
       if (spamStatusChanged) {
         await refreshActivitiesTokenJob.addToQueue(payload.after.contract, payload.after.token_id);
       }
 
-      // Update the elastic search asks index
+      // Update the elasticsearch asks index
       if (payload.after.floor_sell_id) {
         const flagStatusChanged = payload.before.is_flagged !== payload.after.is_flagged;
         const rarityRankChanged = payload.before.rarity_rank !== payload.after.rarity_rank;
