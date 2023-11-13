@@ -1728,7 +1728,7 @@ export const updateActivitiesCollectionData = async (
         must_not: [
           {
             term: {
-              "collection.isSpam": !(collectionData.isSpam > 0),
+              "collection.isSpam": collectionData.isSpam > 0,
             },
           },
         ],
@@ -1820,7 +1820,7 @@ export const updateActivitiesCollectionData = async (
           {
             script: {
               source:
-                "if (params.collection_name == null) { ctx._source.collection.remove('name') } else { ctx._source.collection.name = params.collection_name } if (params.collection_image == null) { ctx._source.collection.remove('image') } else { ctx._source.collection.image = params.collection_image }; ctx._source.collection.isSpam = params.is_spam",
+                "if (params.collection_name == null) { ctx._source.collection.remove('name') } else { ctx._source.collection.name = params.collection_name } if (params.collection_image == null) { ctx._source.collection.remove('image') } else { ctx._source.collection.image = params.collection_image } ctx._source.collection.isSpam = params.is_spam",
               params: {
                 collection_name: collectionData.name ?? null,
                 collection_image: collectionData.image ?? null,
