@@ -1813,15 +1813,26 @@ export const updateActivitiesCollectionData = async (
 
   const should: any[] = [
     {
-      bool: {
-        must_not: [
-          {
-            term: {
-              "collection.isSpam": collectionData.isSpam > 0,
+      bool:
+        collectionData.isSpam > 0
+          ? {
+              must_not: [
+                {
+                  term: {
+                    "collection.isSpam": collectionData.isSpam > 0,
+                  },
+                },
+              ],
+            }
+          : {
+              must: [
+                {
+                  exists: {
+                    field: "collection.isSpam",
+                  },
+                },
+              ],
             },
-          },
-        ],
-      },
     },
     {
       bool: collectionData.name
