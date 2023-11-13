@@ -1827,6 +1827,9 @@ export const updateActivitiesCollectionData = async (
           : {
               must: [
                 {
+                  term: {
+                    "collection.isSpam": true,
+                  },
                   exists: {
                     field: "collection.isSpam",
                   },
