@@ -461,13 +461,15 @@ export const extractByCollectionERC1155 = async (
       let claim: Result | undefined;
       let tokenId: string | undefined;
       let instanceId: string | undefined;
-      let hasMintFee = false;
-      let mintFee = bn(0);
 
       const missesDetails = () => !claim || !tokenId || !instanceId;
 
+      let hasMintFee = false;
+      let mintFee = bn(0);
+      let mintFeeMerkle = bn(0);
       try {
         mintFee = await c.MINT_FEE();
+        mintFeeMerkle = await c.MINT_FEE_MERKLE();
         hasMintFee = true;
       } catch {
         // Skip errors
@@ -604,8 +606,7 @@ export const extractByCollectionERC1155 = async (
         // Allowlist sale
         if (claim.merkleRoot !== HashZero) {
           // Include the Manifold mint fee into the price
-          const fee = await c.MINT_FEE_MERKLE().catch(() => "0");
-          const price = bn(claim.cost).add(fee).toString();
+          const price = bn(claim.cost).add(mintFeeMerkle).toString();
 
           const merkleTreeId = await fetchMetadata(
             `https://apps.api.manifoldxyz.dev/public/instance/data?id=${instanceId}`

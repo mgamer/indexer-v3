@@ -1,9 +1,11 @@
+import { Interface } from "@ethersproject/abi";
 import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero, HashZero, MaxUint256 } from "@ethersproject/constants";
 import { keccak256 } from "@ethersproject/solidity";
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
+import { Network } from "@reservoir0x/sdk/dist/utils";
 import { PermitHandler } from "@reservoir0x/sdk/dist/router/v6/permit";
 import {
   FillListingsResult,
@@ -20,7 +22,7 @@ import _ from "lodash";
 import { inject } from "@/api/index";
 import { idb } from "@/common/db";
 import { logger } from "@/common/logger";
-import { JoiExecuteFee } from "@/common/joi";
+import { JoiExecuteFee, JoiPrice, getJoiPriceObject } from "@/common/joi";
 import { baseProvider } from "@/common/provider";
 import { bn, formatPrice, fromBuffer, now, regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
@@ -142,6 +144,9 @@ export const getExecuteBuyV7Options: RouteOptions = {
       forceRouter: Joi.boolean().description(
         "If true, all fills will be executed through the router (where possible)"
       ),
+      alternativeCurrencies: Joi.array()
+        .items(Joi.string().lowercase())
+        .description("Alternative currencies to return the quote in."),
       currency: Joi.string().lowercase().description("Currency to be used for purchases."),
       currencyChainId: Joi.number().description("The chain id of the purchase currency"),
       normalizeRoyalties: Joi.boolean().default(false).description("Charge any missing royalties."),
@@ -256,8 +261,10 @@ export const getExecuteBuyV7Options: RouteOptions = {
           buyInCurrencyDecimals: Joi.number().optional().allow(null),
           buyInQuote: Joi.number().unsafe(),
           buyInRawQuote: Joi.string().pattern(regex.number),
+          buyIn: Joi.array().items(JoiPrice),
           totalPrice: Joi.number().unsafe(),
           totalRawPrice: Joi.string().pattern(regex.number),
+          gasCost: Joi.string().pattern(regex.number),
           builtInFees: Joi.array()
             .items(JoiExecuteFee)
             .description("Can be marketplace fees or royalties"),
@@ -311,11 +318,14 @@ export const getExecuteBuyV7Options: RouteOptions = {
         buyInCurrencyDecimals?: number;
         buyInQuote?: number;
         buyInRawQuote?: string;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        buyIn?: any[];
         // Total price (with fees on top) = price + feesOnTop
         totalPrice?: number;
         totalRawPrice?: string;
         builtInFees: ExecuteFee[];
         feesOnTop: ExecuteFee[];
+        gasCost?: string;
         fromChainId?: number;
       }[] = [];
 
@@ -518,6 +528,10 @@ export const getExecuteBuyV7Options: RouteOptions = {
       }[] = [];
       const preview = payload.onlyPath && payload.partial && items.every((i) => !i.quantity);
 
+      const useSeaportIntent = payload.executionMethod === "seaport-intent";
+      const useCrossChainIntent =
+        payload.currencyChainId !== undefined && payload.currencyChainId !== config.chainId;
+
       let lastError: string | undefined;
       for (let i = 0; i < items.length; i++) {
         const item = items[i];
@@ -526,7 +540,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
 
         if (!item.quantity) {
           if (preview) {
-            item.quantity = 30;
+            item.quantity = useSeaportIntent || useCrossChainIntent ? 1 : 30;
           } else {
             item.quantity = 1;
           }
@@ -990,7 +1004,16 @@ export const getExecuteBuyV7Options: RouteOptions = {
             // processed by the next pipeline of the same API rather than
             // building something custom for it.
 
-            for (const t of tokenResults) {
+            for (
+              let i = 0;
+              i <
+              Math.min(
+                useCrossChainIntent || useSeaportIntent ? item.quantity : tokenResults.length,
+                tokenResults.length
+              );
+              i++
+            ) {
+              const t = tokenResults[i];
               items.push({
                 token: `${fromBuffer(t.contract)}:${t.token_id}`,
                 fillType: item.fillType,
@@ -1217,7 +1240,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
               }
 
               // Stop if we filled the total quantity
-              if (quantityToFill <= 0 && !preview) {
+              if (quantityToFill <= 0 && (!preview || useCrossChainIntent || useSeaportIntent)) {
                 break;
               }
 
@@ -1410,6 +1433,79 @@ export const getExecuteBuyV7Options: RouteOptions = {
         }
       }
 
+      const getCrossChainQuote = async (chainId: number, item: (typeof path)[0]) => {
+        // Mainnet requests will get routed to base
+        const actualFromChainId = chainId === Network.Ethereum ? Network.Base : chainId;
+        const toChainId = config.chainId;
+
+        const ccConfig: {
+          enabled: boolean;
+          solver?: string;
+          availableBalance?: string;
+          maxPricePerItem?: string;
+        } = await axios
+          .get(
+            `${config.crossChainSolverBaseUrl}/config?fromChainId=${actualFromChainId}&toChainId=${toChainId}&user=${payload.taker}`
+          )
+          .then((response) => response.data);
+
+        if (!ccConfig.enabled) {
+          throw Boom.badRequest("Cross-chain swap not supported between requested chains");
+        }
+
+        // Only set when minting
+        const isCollectionRequest = item.orderId.startsWith("mint");
+
+        let tokenId = item.tokenId;
+
+        if (isCollectionRequest && !tokenId) {
+          // Hacky way to support "range" collections like ones from artblocks engine
+          if (item.orderId.match(/^mint:0x[a-f0-9]{40}:\d+:\d+$/g)) {
+            const [, , startTokenId, endTokenId] = item.orderId.split(":");
+            tokenId = bn(
+              "0x111111111111111111111111" +
+                Number(startTokenId).toString(16).padStart(20, "0") +
+                Number(endTokenId).toString(16).padStart(20, "0")
+            ).toString();
+          } else {
+            tokenId = MaxUint256.toString();
+          }
+        }
+
+        const token = `${item.contract}:${tokenId}`.toLowerCase();
+
+        const { quote, gasCost } = await axios
+          .post(`${config.crossChainSolverBaseUrl}/intents/quote`, {
+            fromChainId: actualFromChainId,
+            toChainId,
+            isCollectionRequest,
+            token,
+            amount: item.quantity,
+          })
+          .then((response) => ({
+            quote: response.data.price,
+            gasCost: response.data.gasCost,
+          }))
+          .catch((error) => {
+            throw Boom.badRequest(
+              error.response?.data ? JSON.stringify(error.response.data) : "Error getting quote"
+            );
+          });
+
+        if (ccConfig.maxPricePerItem && bn(quote).gt(ccConfig.maxPricePerItem)) {
+          throw Boom.badRequest("Price too high to purchase cross-chain");
+        }
+
+        return {
+          actualFromChainId,
+          isCollectionRequest,
+          tokenId,
+          ccConfig,
+          quote,
+          gasCost,
+        };
+      };
+
       // Add the quotes in the "buy-in" currency to the path items
       for (const item of path) {
         if (item.currency !== buyInCurrency) {
@@ -1432,13 +1528,53 @@ export const getExecuteBuyV7Options: RouteOptions = {
             item.buyInRawQuote = buyInPrices.currencyPrice;
           }
         }
-      }
 
-      if (payload.onlyPath) {
-        return {
-          path,
-          maxQuantities: preview ? maxQuantities : undefined,
-        };
+        if (payload.alternativeCurrencies) {
+          if (preview) {
+            throw Boom.badRequest("Cannot use alternative currencies with preview");
+          }
+
+          if (!item.buyIn) {
+            item.buyIn = [];
+          }
+
+          await Promise.all(
+            payload.alternativeCurrencies.map(async (c: string) => {
+              const [currency, chainId] = c.split(":");
+              if (Number(chainId) === config.chainId) {
+                item.buyIn!.push(
+                  await getJoiPriceObject(
+                    {
+                      gross: { amount: item.rawQuote },
+                    },
+                    item.currency,
+                    currency
+                  )
+                );
+              } else {
+                if (currency !== Sdk.Common.Addresses.Native[Number(chainId)]) {
+                  throw Boom.badRequest("Unsupported alternative currency");
+                }
+
+                const { quote } = await getCrossChainQuote(Number(chainId), item);
+                item.buyIn!.push(
+                  await getJoiPriceObject(
+                    {
+                      gross: { amount: quote },
+                    },
+                    currency
+                  ).then((p) => ({
+                    ...p,
+                    currency: {
+                      ...p.currency,
+                      chainId: Number(chainId),
+                    },
+                  }))
+                );
+              }
+            })
+          );
+        }
       }
 
       type StepType = {
@@ -1506,8 +1642,56 @@ export const getExecuteBuyV7Options: RouteOptions = {
         },
       ];
 
+      if (!payload.onlyPath) {
+        try {
+          // Simulate filling via seaport / cross-chain intent for testing things
+          if (
+            !payload.skipBalanceCheck &&
+            items.length === 1 &&
+            items[0].token &&
+            items[0].fillType !== "mint"
+          ) {
+            const seaportSimulate = async () => {
+              if (config.seaportSolverBaseUrl) {
+                await axios.post(
+                  `${config.seaportSolverBaseUrl}/intents/simulate`,
+                  {
+                    chainId: config.chainId,
+                    token: items[0].token,
+                  },
+                  { timeout: 500 }
+                );
+              }
+            };
+            const crossChainSimulate = async () => {
+              if (config.crossChainSolverBaseUrl) {
+                await axios.post(
+                  `${config.crossChainSolverBaseUrl}/intents/simulate`,
+                  {
+                    chainId: config.chainId,
+                    token: items[0].token,
+                  },
+                  { timeout: 500 }
+                );
+              }
+            };
+
+            await Promise.all([seaportSimulate(), crossChainSimulate()]);
+          }
+        } catch {
+          // Skip errors
+        }
+      }
+
+      if (payload.onlyPath && !useSeaportIntent && !useCrossChainIntent) {
+        return {
+          path,
+          maxQuantities: preview ? maxQuantities : undefined,
+        };
+      }
+
       // Seaport intent purchasing MVP
-      if (payload.executionMethod === "seaport-intent") {
+      if (useSeaportIntent) {
         if (!config.seaportSolverBaseUrl) {
           throw Boom.badRequest("Intent purchasing not supported");
         }
@@ -1524,16 +1708,26 @@ export const getExecuteBuyV7Options: RouteOptions = {
           throw Boom.badRequest("Only erc721 token intent purchases are supported");
         }
 
-        const quote = await axios
-          .post(`${config.seaportSolverBaseUrl}/quote`, {
+        const item = path[0];
+
+        const { quote, gasCost } = await axios
+          .post(`${config.seaportSolverBaseUrl}/intents/quote`, {
             chainId: config.chainId,
             token: `${details.contract}:${details.tokenId}`,
             amount: details.amount ?? "1",
           })
-          .then((response) => response.data.price);
+          .then((response) => ({ quote: response.data.price, gasCost: response.data.gasCost }));
 
-        path[0].totalPrice = formatPrice(quote);
-        path[0].totalRawPrice = quote;
+        item.totalPrice = formatPrice(quote);
+        item.totalRawPrice = quote;
+        item.gasCost = gasCost;
+
+        if (payload.onlyPath) {
+          return {
+            path,
+            maxQuantities: preview ? maxQuantities : undefined,
+          };
+        }
 
         const order = new Sdk.SeaportV15.Order(config.chainId, {
           offerer: payload.taker,
@@ -1615,7 +1809,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
       }
 
       // Cross-chain intent purchasing MVP
-      if (payload.currencyChainId !== undefined && payload.currencyChainId !== config.chainId) {
+      if (useCrossChainIntent) {
         if (!config.crossChainSolverBaseUrl) {
           throw Boom.badRequest("Cross-chain purchasing not supported");
         }
@@ -1638,49 +1832,28 @@ export const getExecuteBuyV7Options: RouteOptions = {
           throw Boom.badRequest("Fees on top are not supported when purchasing cross-chain");
         }
 
-        const fromChainId = payload.currencyChainId;
-        const toChainId = config.chainId;
-
-        const ccConfig: {
-          enabled: boolean;
-          solver?: string;
-          deposit?: string;
-        } = await axios
-          .get(
-            `${config.crossChainSolverBaseUrl}/config?fromChainId=${fromChainId}&toChainId=${toChainId}&user=${payload.taker}`
-          )
-          .then((response) => response.data);
-
-        if (!ccConfig.enabled) {
-          throw Boom.badRequest("Cross-chain swap not supported between requested chains");
-        }
+        const requestedFromChainId = payload.currencyChainId;
 
         const item = path[0];
-        const token = item.tokenId
-          ? `${item.contract}:${item.tokenId}`.toLowerCase()
-          : `${item.contract}:${MaxUint256.toString()}`.toLowerCase();
 
-        const quote = await axios
-          .post(`${config.crossChainSolverBaseUrl}/intents/quote`, {
-            fromChainId,
-            toChainId,
-            token,
-            amount: item.quantity,
-          })
-          .then((response) => response.data.price)
-          .catch((error) => {
-            throw Boom.badRequest(error.response?.data ?? "Error getting quote");
-          });
+        const { actualFromChainId, ccConfig, isCollectionRequest, tokenId, quote, gasCost } =
+          await getCrossChainQuote(requestedFromChainId, item);
 
-        item.fromChainId = fromChainId;
-        item.totalPrice = formatPrice(quote);
-        item.totalRawPrice = quote;
+        item.fromChainId = actualFromChainId;
+        item.gasCost = gasCost;
+
+        if (payload.onlyPath) {
+          return {
+            path,
+            maxQuantities: preview ? maxQuantities : undefined,
+          };
+        }
 
         const customSteps: StepType[] = [
           {
-            id: "deposit",
-            action: "Deposit",
-            description: "Deposit funds on origin chain",
+            id: "sale",
+            action: "Confirm transaction in your wallet",
+            description: "Deposit funds for purchasing cross-chain",
             kind: "transaction",
             items: [],
           },
@@ -1693,35 +1866,12 @@ export const getExecuteBuyV7Options: RouteOptions = {
           },
         ];
 
-        if (bn(ccConfig.deposit!).lte(quote)) {
-          const exchange = new Sdk.CrossChain.Exchange(fromChainId);
-          customSteps[0].items.push({
-            status: "incomplete",
-            data: {
-              ...exchange.depositTx(
-                payload.taker,
-                ccConfig.solver!,
-                bn(quote).sub(ccConfig.deposit!).toString()
-              ),
-              chainId: fromChainId,
-            },
-            check: {
-              endpoint: "/execute/status/v1",
-              method: "POST",
-              body: {
-                kind: "cross-chain-transaction",
-                chainId: fromChainId,
-              },
-            },
-          });
-        }
-
-        const order = new Sdk.CrossChain.Order(fromChainId, {
-          isCollectionRequest: Boolean(items[0].collection),
+        const order = new Sdk.CrossChain.Order(actualFromChainId, {
+          isCollectionRequest,
           maker: payload.taker,
           solver: ccConfig.solver!,
           token: item.contract,
-          tokenId: item.tokenId ?? MaxUint256.toString(),
+          tokenId: tokenId!,
           amount: String(item.quantity),
           price: quote,
           recipient: payload.taker,
@@ -1730,29 +1880,74 @@ export const getExecuteBuyV7Options: RouteOptions = {
           salt: getRandomBytes(20).toString(),
         });
 
-        customSteps[1].items.push({
-          status: "incomplete",
-          data: {
-            sign: order.getSignatureData(),
-            post: {
-              endpoint: "/execute/solve/v1",
+        if (bn(ccConfig.availableBalance!).lte(quote)) {
+          const exchange = new Sdk.CrossChain.Exchange(actualFromChainId);
+          let depositTx = exchange.depositAndPrevalidateTx(
+            payload.taker,
+            ccConfig.solver!,
+            bn(quote).sub(ccConfig.availableBalance!).toString(),
+            order
+          );
+
+          // Never deposit to mainnet, but bridge-and-deposit to base
+          if (requestedFromChainId === Network.Ethereum) {
+            depositTx = {
+              from: payload.taker,
+              // Base Portal (https://etherscan.io/address/0x49048044d57e1c92a77f79988d21fa8faf74e97e)
+              to: "0x49048044d57e1c92a77f79988d21fa8faf74e97e",
+              data: new Interface([
+                "function depositTransaction(address to, uint256 value, uint64 gasLimit, bool isCreation, bytes data)",
+              ]).encodeFunctionData("depositTransaction", [
+                Sdk.CrossChain.Addresses.Exchange[Network.Base],
+                depositTx.value ?? 0,
+                150000,
+                false,
+                depositTx.data,
+              ]),
+              value: depositTx.value ?? "0",
+            };
+          }
+
+          customSteps[0].items.push({
+            status: "incomplete",
+            data: {
+              ...depositTx,
+              chainId: requestedFromChainId,
+            },
+            check: {
+              endpoint: "/execute/status/v1",
               method: "POST",
               body: {
                 kind: "cross-chain-intent",
-                order: order.params,
-                chainId: fromChainId,
+                id: order.hash(),
               },
             },
-          },
-          check: {
-            endpoint: "/execute/status/v1",
-            method: "POST",
-            body: {
-              kind: "cross-chain-intent",
-              id: order.hash(),
+          });
+        } else {
+          customSteps[1].items.push({
+            status: "incomplete",
+            data: {
+              sign: order.getSignatureData(),
+              post: {
+                endpoint: "/execute/solve/v1",
+                method: "POST",
+                body: {
+                  kind: "cross-chain-intent",
+                  order: order.params,
+                  chainId: actualFromChainId,
+                },
+              },
             },
-          },
-        });
+            check: {
+              endpoint: "/execute/status/v1",
+              method: "POST",
+              body: {
+                kind: "cross-chain-intent",
+                id: order.hash(),
+              },
+            },
+          });
+        }
 
         return {
           steps: customSteps.filter((s) => s.items.length),

@@ -537,7 +537,7 @@ export class Router {
             listings: { "payment-processor": orders.length },
           },
           preSignatures: preSignatures,
-          txData: exchange.sweepCollectionTx(taker, bundledOrder, orders),
+          txData: exchange.sweepCollectionTx(taker, bundledOrder, orders, options),
           orderIds: blockedPaymentProcessorDetails.map((d) => d.orderId),
         });
       } else {
@@ -567,7 +567,7 @@ export class Router {
             listings: { "payment-processor": orders.length },
           },
           preSignatures: preSignatures,
-          txData: exchange.fillOrdersTx(taker, orders, takeOrders),
+          txData: exchange.fillOrdersTx(taker, orders, takeOrders, options),
           orderIds: blockedPaymentProcessorDetails.map((d) => d.orderId),
         });
       }
@@ -3025,10 +3025,13 @@ export class Router {
       const orders = superRareDetails.map((d) => d.order as Sdk.SuperRare.Order);
       const module = this.contracts.superRareModule;
 
+      // 3% charged on top of the price within the order
+      const percentageOnTop = 3;
+
       const fees = getFees(superRareDetails);
       const price = orders.map((order) => bn(order.params.price)).reduce((a, b) => a.add(b), bn(0));
       const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
-      const totalPrice = price.add(feeAmount);
+      const totalPrice = price.add(price.mul(percentageOnTop).div(100)).add(feeAmount);
 
       executions.push({
         info: {
@@ -3040,14 +3043,14 @@ export class Router {
                     ...orders[0].params,
                     token: orders[0].params.contract,
                     priceWithFees: bn(orders[0].params.price).add(
-                      bn(orders[0].params.price).mul(3).div(100)
+                      bn(orders[0].params.price).mul(percentageOnTop).div(100)
                     ),
                   },
                   {
                     fillTo: taker,
                     refundTo: relayer,
                     revertIfIncomplete: Boolean(!options?.partial),
-                    amount: price.add(price.mul(3).div(100)),
+                    amount: price.add(price.mul(percentageOnTop).div(100)),
                   },
                   fees,
                 ])
@@ -3056,14 +3059,14 @@ export class Router {
                     ...order.params,
                     token: order.params.contract,
                     priceWithFees: bn(orders[0].params.price).add(
-                      bn(orders[0].params.price).mul(3).div(100)
+                      bn(orders[0].params.price).mul(percentageOnTop).div(100)
                     ),
                   })),
                   {
                     fillTo: taker,
                     refundTo: relayer,
                     revertIfIncomplete: Boolean(!options?.partial),
-                    amount: price.add(price.mul(3).div(100)),
+                    amount: price.add(price.mul(percentageOnTop).div(100)),
                   },
                   fees,
                 ]),
