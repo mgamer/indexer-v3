@@ -1728,7 +1728,7 @@ export const updateActivitiesCollectionData = async (
         must_not: [
           {
             term: {
-              "collection.isSpam": collectionData.isSpam > 0,
+              "collection.isSpam": !(collectionData.isSpam > 0),
             },
           },
         ],
