@@ -31,8 +31,8 @@ export enum InterfaceId {
 
 export const extractByCollection = async (
   collection: string,
-  mintId: string,
-  minterAddress: string
+  minterAddress: string,
+  mintId?: string
 ): Promise<CollectionMint[]> => {
   const results: CollectionMint[] = [];
 
@@ -92,7 +92,7 @@ export const extractByCollection = async (
 
       // Public sale
       if (!mintInfo.mintPaused) {
-        // Include the Manifold mint fee into the price
+        // Include the mint fee into the price
         const price = totalPrice.total.toString();
 
         results.push({
@@ -185,7 +185,7 @@ export const extractByCollection = async (
 
       // Allowlist sale
       if (mintInfo.merkleRootHash !== HashZero && !mintInfo.mintPaused) {
-        // Include the Manifold mint fee into the price
+        // Include the mint fee into the price
         const price = totalPrice.total.toString();
 
         results.push({
@@ -282,13 +282,13 @@ export const extractByCollection = async (
 
       const totalPrice = await minter.totalBuyPriceAndFees(collection, mintInfo.supply, 1);
 
-      // Include the Manifold mint fee into the price
+      // Include the mint fee into the price
       const price = totalPrice.total.toString();
 
       results.push({
         collection,
         contract: collection,
-        stage: `public-sale-${minterAddress.toLowerCase()}-dynamic-price`,
+        stage: `claim-${minterAddress.toLowerCase()}`,
         kind: "public",
         status: "open",
         standard: STANDARD,
@@ -330,7 +330,7 @@ export const extractByCollection = async (
           },
           info: {
             minter: minterAddress.toLowerCase(),
-            mintId,
+            hasDynamicPrice: true,
           },
         },
         currency: Sdk.Common.Addresses.Native[config.chainId],
@@ -376,14 +376,13 @@ export const extractByTx = async (
         "function mint(address edition, uint128 mintId, uint32 quantity, bytes32[] proof, address affiliate)",
         "function mintTo(address edition, uint128 mintId, address to, uint32 quantity, address affiliate, bytes32[] affiliateProof, uint256 attributionId)",
         "function mintTo(address edition, uint128 mintId, address to, uint32 quantity, address allowlisted, bytes32[] proof, address affiliate, bytes32[] affiliateProof, uint256 attributionId)",
-        "function buy(address edition,address to,uint32 quantity,address affiliate,bytes32[] affiliateProof,uint256 attributonId)",
+        "function buy(address edition, address to, uint32 quantity, address affiliate, bytes32[] affiliateProof, uint256 attributonId)",
       ]).parseTransaction({
         data: tx.data,
       });
 
-      // Use zero as default for old version
-      const mintId = parsed.args.mintId ? parsed.args.mintId.toString() : "0";
-      return extractByCollection(collection, mintId, tx.to);
+      const mintId = parsed.args.mintId ? parsed.args.mintId.toString() : undefined;
+      return extractByCollection(collection, tx.to, mintId);
     } catch {
       // Skip errors
     }
@@ -399,8 +398,8 @@ export const refreshByCollection = async (collection: string) => {
     // Fetch and save/update the currently available mints
     const latestCollectionMints = await extractByCollection(
       collection,
-      (details.info! as Info).mintId!,
-      (details.info! as Info).minter!
+      (details.info! as Info).minter!,
+      (details.info! as Info).mintId!
     );
     for (const collectionMint of latestCollectionMints) {
       await simulateAndUpsertCollectionMint(collectionMint);
