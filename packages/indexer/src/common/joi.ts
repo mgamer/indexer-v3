@@ -36,6 +36,7 @@ const JoiPriceCurrency = Joi.object({
   name: Joi.string().allow(null),
   symbol: Joi.string().allow(null),
   decimals: Joi.number().allow(null),
+  chainId: Joi.number().optional(),
 });
 
 export const JoiPrice = Joi.object({
