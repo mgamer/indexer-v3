@@ -689,7 +689,7 @@ export const search = async (
   const esQuery = {};
   params.sortDirection = params.sortDirection ?? "desc";
 
-  (esQuery as any).bool = { filter: [], should: [] };
+  (esQuery as any).bool = { filter: [] };
 
   if (params.types?.length) {
     (esQuery as any).bool.filter.push({ terms: { type: params.types } });
