@@ -240,6 +240,7 @@ export const JoiOrderCriteriaCollection = Joi.object({
   id: Joi.string().allow("", null),
   name: Joi.string().allow("", null),
   image: Joi.string().allow("", null),
+  isSpam: Joi.boolean().allow("", null),
 });
 
 export const JoiOrderCriteria = Joi.alternatives(
@@ -250,6 +251,7 @@ export const JoiOrderCriteria = Joi.alternatives(
         tokenId: Joi.string().pattern(regex.number),
         name: Joi.string().allow("", null),
         image: Joi.string().allow("", null),
+        isSpam: Joi.boolean().allow("", null),
       }),
       collection: JoiOrderCriteriaCollection,
     }),
