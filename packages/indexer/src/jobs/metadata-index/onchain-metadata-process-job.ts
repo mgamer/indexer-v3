@@ -3,6 +3,7 @@ import { AbstractRabbitMqJobHandler, BackoffStrategy } from "@/jobs/abstract-rab
 import { metadataIndexWriteJob } from "@/jobs/metadata-index/metadata-write-job";
 import { onchainMetadataProvider } from "@/metadata/providers/onchain-metadata-provider";
 import { RequestWasThrottledError } from "@/metadata/providers/utils";
+import { PendingRefreshTokens } from "@/models/pending-refresh-tokens";
 
 export type OnchainMetadataProcessTokenUriJobPayload = {
   contract: string;
@@ -30,6 +31,7 @@ export default class OnchainMetadataProcessTokenUriJob extends AbstractRabbitMqJ
 
       if (metadata) {
         await metadataIndexWriteJob.addToQueue(metadata);
+        return;
       } else {
         logger.warn(
           this.queueName,
@@ -43,16 +45,25 @@ export default class OnchainMetadataProcessTokenUriJob extends AbstractRabbitMqJ
           `Request was throttled. contract=${contract}, tokenId=${tokenId}, uri=${uri}`
         );
 
-        // Add to queue again with a delay from the error
+        // Add to queue again with a delay from the error if its a rate limit
         await this.addToQueue(payload, e.delay);
-      } else {
-        logger.error(
-          this.queueName,
-          `Error. contract=${contract}, tokenId=${tokenId}, uri=${uri}, error=${e}`
-        );
-        throw e;
+        return;
       }
+      logger.error(
+        this.queueName,
+        `Error. contract=${contract}, tokenId=${tokenId}, uri=${uri}, error=${e}`
+      );
     }
+
+    // for whatever reason, we didn't find the metadata, we fallback to simplehash
+    const pendingRefreshTokens = new PendingRefreshTokens("simplehash");
+    await pendingRefreshTokens.add([
+      {
+        collection: contract,
+        contract,
+        tokenId,
+      },
+    ]);
   }
 
   public async addToQueue(params: OnchainMetadataProcessTokenUriJobPayload, delay = 0) {
