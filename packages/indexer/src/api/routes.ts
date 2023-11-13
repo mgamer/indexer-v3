@@ -516,7 +516,7 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
-    path: "/collections/get-trending-mints/v1",
+    path: "/collections/trending-mints/v1",
     options: collectionsEndpoints.getTrendingMintsV1Options,
   });
 
