@@ -1979,23 +1979,23 @@ export const updateActivitiesCollectionData = async (
       } else {
         keepGoing = pendingUpdateDocuments.length === batchSize;
 
-        logger.info(
-          "elasticsearch-activities",
-          JSON.stringify({
-            topic: "updateActivitiesCollectionData",
-            message: `Success. collectionId=${collectionId}, collectionData=${JSON.stringify(
-              collectionData
-            )}`,
-            data: {
-              collectionId,
-              collectionData,
-            },
-            bulkParams: JSON.stringify(bulkParams),
-            response,
-            keepGoing,
-            queryJson: JSON.stringify(query),
-          })
-        );
+        // logger.info(
+        //   "elasticsearch-activities",
+        //   JSON.stringify({
+        //     topic: "updateActivitiesCollectionData",
+        //     message: `Success. collectionId=${collectionId}, collectionData=${JSON.stringify(
+        //       collectionData
+        //     )}`,
+        //     data: {
+        //       collectionId,
+        //       collectionData,
+        //     },
+        //     bulkParams: JSON.stringify(bulkParams),
+        //     response,
+        //     keepGoing,
+        //     queryJson: JSON.stringify(query),
+        //   })
+        // );
       }
     }
   } catch (error) {
