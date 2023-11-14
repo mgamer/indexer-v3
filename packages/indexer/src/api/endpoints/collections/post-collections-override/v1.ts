@@ -22,7 +22,6 @@ export const postCollectionsOverrideV1Options: RouteOptions = {
   plugins: {
     "hapi-swagger": {
       order: 31,
-      deprecated: true,
     },
   },
   validate: {
