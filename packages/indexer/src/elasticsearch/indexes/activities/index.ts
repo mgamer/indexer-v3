@@ -1809,7 +1809,7 @@ export const updateActivitiesCollectionData = async (
   collectionId: string,
   collectionData: ActivitiesCollectionUpdateData
 ): Promise<boolean> => {
-  const batchSize = 500;
+  const batchSize = 1000;
   let keepGoing = false;
 
   const should: any[] = [
