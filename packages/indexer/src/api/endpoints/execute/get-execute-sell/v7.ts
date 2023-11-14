@@ -6,7 +6,7 @@ import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
 import { BidDetails, FillBidsResult } from "@reservoir0x/sdk/dist/router/v6/types";
-import { estimateGas } from "@reservoir0x/sdk/dist/router/v6/utils";
+import { estimateGasFromTxTags } from "@reservoir0x/sdk/dist/router/v6/utils";
 import { TxData } from "@reservoir0x/sdk/dist/utils";
 import axios from "axios";
 import { randomUUID } from "crypto";
@@ -1310,7 +1310,7 @@ export const getExecuteSellV7Options: RouteOptions = {
                 maxPriorityFeePerGas,
               }
             : undefined,
-          gasEstimate: txTags ? estimateGas(txTags) : undefined,
+          gasEstimate: txTags ? estimateGasFromTxTags(txTags) : undefined,
         });
       }
 
