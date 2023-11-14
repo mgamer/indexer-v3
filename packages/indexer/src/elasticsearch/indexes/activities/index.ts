@@ -1666,15 +1666,31 @@ export const updateActivitiesToken = async (
 
   const should: any[] = [
     {
-      bool: {
-        must_not: [
-          {
-            term: {
-              "token.isSpam": isSpam > 0,
+      bool:
+        isSpam > 0
+          ? {
+              must_not: [
+                {
+                  term: {
+                    "token.isSpam": isSpam > 0,
+                  },
+                },
+              ],
+            }
+          : {
+              must: [
+                {
+                  exists: {
+                    field: "token.isSpam",
+                  },
+                },
+                {
+                  term: {
+                    "token.isSpam": true,
+                  },
+                },
+              ],
             },
-          },
-        ],
-      },
     },
   ];
 
