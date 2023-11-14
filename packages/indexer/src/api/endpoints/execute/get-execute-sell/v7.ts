@@ -896,16 +896,16 @@ export const getExecuteSellV7Options: RouteOptions = {
         // Global fees get split across all eligible orders
         let adjustedFeeAmount = bn(feeAmount).div(ordersEligibleForGlobalFees.length).toString();
 
-        // If the item's currency is not the same with the buy-in currency,
-        if (item.currency !== Sdk.Common.Addresses.Native[config.chainId]) {
+        // If the item's currency is not the same with the sell-in currency
+        if (item.currency !== Sdk.Common.Addresses.WNative[config.chainId]) {
           feeAmount = await getUSDAndCurrencyPrices(
-            Sdk.Common.Addresses.Native[config.chainId],
+            Sdk.Common.Addresses.WNative[config.chainId],
             item.currency,
             feeAmount,
             now()
           ).then((p) => p.currencyPrice!);
           adjustedFeeAmount = await getUSDAndCurrencyPrices(
-            Sdk.Common.Addresses.Native[config.chainId],
+            Sdk.Common.Addresses.WNative[config.chainId],
             item.currency,
             adjustedFeeAmount,
             now()
