@@ -4,7 +4,7 @@ import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
 import { MintDetails } from "@reservoir0x/sdk/dist/router/v6/types";
-import { estimateGas } from "@reservoir0x/sdk/dist/router/v6/utils";
+import { estimateGasFromTxTags, initializeTxTags } from "@reservoir0x/sdk/dist/router/v6/utils";
 import { Network, TxData, getRandomBytes } from "@reservoir0x/sdk/dist/utils";
 import axios from "axios";
 import { randomUUID } from "crypto";
@@ -180,6 +180,7 @@ export const postExecuteMintV1Options: RouteOptions = {
           maxQuantity: Joi.string().pattern(regex.number).allow(null),
         })
       ),
+      gasEstimate: Joi.number(),
     }).label(`postExecuteMint${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(`post-execute-mint-${version}-handler`, `Wrong response schema: ${error}`);
@@ -232,6 +233,9 @@ export const postExecuteMintV1Options: RouteOptions = {
         await sources.getOrInsert(payload.source);
       }
 
+      // First pass at estimating the gas costs
+      const txTags = initializeTxTags();
+
       const addToPath = async (
         order: {
           id: string;
@@ -280,6 +284,9 @@ export const postExecuteMintV1Options: RouteOptions = {
             })),
           ],
         });
+
+        txTags.feesOnTop! += additionalFees.length;
+        txTags.mints! += 1;
       };
 
       const items: {
@@ -875,6 +882,7 @@ export const postExecuteMintV1Options: RouteOptions = {
         return {
           path,
           maxQuantities: preview ? maxQuantities : undefined,
+          gasEstimate: estimateGasFromTxTags(txTags),
         };
       }
 
@@ -902,10 +910,13 @@ export const postExecuteMintV1Options: RouteOptions = {
         item.fromChainId = actualFromChainId;
         item.gasCost = gasCost;
 
+        const needsDeposit = bn(ccConfig.availableBalance!).lte(quote);
+
         if (payload.onlyPath) {
           return {
             path,
             maxQuantities: preview ? maxQuantities : undefined,
+            gasEstimate: needsDeposit ? 100000 : 0,
           };
         }
 
@@ -940,7 +951,7 @@ export const postExecuteMintV1Options: RouteOptions = {
           salt: getRandomBytes(20).toString(),
         });
 
-        if (bn(ccConfig.availableBalance!).lte(quote)) {
+        if (needsDeposit) {
           const exchange = new Sdk.CrossChain.Exchange(actualFromChainId);
 
           const isCustomMint = Boolean(items[0].custom);
@@ -1171,7 +1182,7 @@ export const postExecuteMintV1Options: RouteOptions = {
               kind: "transaction",
             },
           },
-          gasEstimate: txTags ? estimateGas(txTags) : undefined,
+          gasEstimate: txTags ? estimateGasFromTxTags(txTags) : undefined,
         });
       }
 

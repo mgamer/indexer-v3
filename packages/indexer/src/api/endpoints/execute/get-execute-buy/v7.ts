@@ -12,7 +12,7 @@ import {
   ListingDetails,
   MintDetails,
 } from "@reservoir0x/sdk/dist/router/v6/types";
-import { estimateGas } from "@reservoir0x/sdk/dist/router/v6/utils";
+import { estimateGasFromTxTags, initializeTxTags } from "@reservoir0x/sdk/dist/router/v6/utils";
 import { getRandomBytes } from "@reservoir0x/sdk/dist/utils";
 import axios from "axios";
 import { randomUUID } from "crypto";
@@ -278,6 +278,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
           maxQuantity: Joi.string().pattern(regex.number).allow(null),
         })
       ),
+      gasEstimate: Joi.number(),
     }).label(`getExecuteBuy${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(`get-execute-buy-${version}-handler`, `Wrong response schema: ${error}`);
@@ -346,6 +347,9 @@ export const getExecuteBuyV7Options: RouteOptions = {
       if (payload.source) {
         await sources.getOrInsert(payload.source);
       }
+
+      // First pass at estimating the gas costs
+      const txTags = initializeTxTags();
 
       const addToPath = async (
         order: {
@@ -495,6 +499,16 @@ export const getExecuteBuyV7Options: RouteOptions = {
               }
             )
           );
+        }
+
+        txTags.feesOnTop! += additionalFees.length;
+        if (order.kind === "mint") {
+          txTags.mints! += 1;
+        } else {
+          if (!txTags.listings![order.kind]) {
+            txTags.listings![order.kind] = 0;
+          }
+          txTags.listings![order.kind] += 1;
         }
       };
 
@@ -1336,6 +1350,10 @@ export const getExecuteBuyV7Options: RouteOptions = {
         }
       }
 
+      txTags.swaps! += new Set(
+        path.filter((p) => p.currency !== buyInCurrency).map((p) => p.currency)
+      ).size;
+
       // Include the global fees in the path
 
       const globalFees = (payload.feesOnTop ?? []).map((fee: string) => {
@@ -1687,6 +1705,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
         return {
           path,
           maxQuantities: preview ? maxQuantities : undefined,
+          gasEstimate: estimateGasFromTxTags(txTags),
         };
       }
 
@@ -1842,10 +1861,13 @@ export const getExecuteBuyV7Options: RouteOptions = {
         item.fromChainId = actualFromChainId;
         item.gasCost = gasCost;
 
+        const needsDeposit = bn(ccConfig.availableBalance!).lte(quote);
+
         if (payload.onlyPath) {
           return {
             path,
             maxQuantities: preview ? maxQuantities : undefined,
+            gasEstimate: needsDeposit ? 100000 : 0,
           };
         }
 
@@ -1880,7 +1902,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
           salt: getRandomBytes(20).toString(),
         });
 
-        if (bn(ccConfig.availableBalance!).lte(quote)) {
+        if (needsDeposit) {
           const exchange = new Sdk.CrossChain.Exchange(actualFromChainId);
           let depositTx = exchange.depositAndPrevalidateTx(
             payload.taker,
@@ -2413,7 +2435,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
               kind: "transaction",
             },
           },
-          gasEstimate: txTags ? estimateGas(txTags) : undefined,
+          gasEstimate: txTags ? estimateGasFromTxTags(txTags) : undefined,
         });
       }
 
