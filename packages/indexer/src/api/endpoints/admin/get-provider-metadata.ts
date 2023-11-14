@@ -10,7 +10,6 @@ import { config } from "@/config/index";
 import { regex } from "@/common/utils";
 import MetadataProviderRouter from "@/metadata/metadata-provider-router";
 import { onchainMetadataProvider } from "@/metadata/providers/onchain-metadata-provider";
-// import { Assets } from "@/utils/assets";
 
 export const getProviderMetadata: RouteOptions = {
   description: "Get metadata for a token or collection",
@@ -73,8 +72,6 @@ export const getProviderMetadata: RouteOptions = {
           return await Promise.all(
             tokenURIs.map(async (tokenURI) => {
               const metadata = await onchainMetadataProvider.getTokensMetadata([tokenURI]);
-              // if (metadata[0].imageUrl)
-              //   metadata[0].imageUrl = Assets.getResizedImageUrl(metadata[0].imageUrl, 500);
               return metadata[0];
             })
           );
