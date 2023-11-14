@@ -1928,7 +1928,7 @@ export const updateActivitiesCollectionData = async (
         size: batchSize,
       },
       0,
-      true
+      false
     );
 
     const pendingUpdateDocuments: { id: string; index: string }[] = esResult.hits.hits.map(
