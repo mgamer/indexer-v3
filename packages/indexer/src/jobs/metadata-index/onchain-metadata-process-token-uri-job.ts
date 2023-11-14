@@ -83,9 +83,11 @@ export default class OnchainMetadataFetchTokenUriJob extends AbstractRabbitMqJob
     await onchainMetadataProcessTokenUriJob.addToQueueBulk(tokensToProcess);
 
     // Default to simple hash if no uri found
-    const pendingRefreshTokens = new PendingRefreshTokens("simplehash");
-    await pendingRefreshTokens.add(fallbackTokens);
-    await metadataIndexProcessJob.addToQueue({ method: "simplehash" });
+    if (!_.isEmpty(fallbackTokens)) {
+      const pendingRefreshTokens = new PendingRefreshTokens("simplehash");
+      await pendingRefreshTokens.add(fallbackTokens);
+      await metadataIndexProcessJob.addToQueue({ method: "simplehash" });
+    }
 
     // If there are potentially more token uris to process, trigger another job
     const queueLength = await PendingFetchOnchainUriTokens.len();
