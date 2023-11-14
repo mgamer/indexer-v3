@@ -116,7 +116,7 @@ export const getExecuteSellV7Options: RouteOptions = {
       feesOnTop: Joi.array()
         .items(Joi.string().pattern(regex.fee))
         .description(
-          "List of fees (formatted as `feeRecipient:feeAmount`) to be taken when filling.\nThe currency used for any fees on top matches the accepted bid's currency.\nExample: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00:1000000000000000`"
+          "List of fees (formatted as `feeRecipient:feeAmount`) to be taken when filling.\nThe currency used for any fees on top is always the wrapped native currency of the chain.\nExample: `0xF296178d553C8Ec21A2fBD2c5dDa8CA9ac905A00:1000000000000000`"
         ),
       onlyPath: Joi.boolean()
         .default(false)
