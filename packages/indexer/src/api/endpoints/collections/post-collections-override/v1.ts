@@ -7,6 +7,11 @@ import { logger } from "@/common/logger";
 import { CollectionsOverride } from "@/models/collections-override";
 import { ApiKeyManager } from "@/models/api-keys";
 import * as Boom from "@hapi/boom";
+import {
+  ActionsLogContext,
+  actionsLogJob,
+  ActionsLogOrigin,
+} from "@/jobs/general-tracking/actions-log-job";
 
 const version = "v1";
 
@@ -93,6 +98,17 @@ export const postCollectionsOverrideV1Options: RouteOptions = {
         },
         payload.royalties
       );
+
+      // Track the override
+      await actionsLogJob.addToQueue([
+        {
+          context: ActionsLogContext.CollectionDataOverride,
+          origin: ActionsLogOrigin.API,
+          actionTakerIdentifier: apiKey.key,
+          collection: params.collection,
+          data: payload,
+        },
+      ]);
 
       return { message: `collection ${params.collection} updated with ${JSON.stringify(payload)}` };
     } catch (error) {
