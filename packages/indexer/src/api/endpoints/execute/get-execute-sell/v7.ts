@@ -388,9 +388,8 @@ export const getExecuteSellV7Options: RouteOptions = {
             };
           }),
           feesOnTop: [
-            // For now, the only additional fees are the normalized royalties
             ...additionalFees.map((f) => ({
-              kind: "royalty",
+              kind: "marketplace",
               recipient: f.recipient,
               bps: bn(f.amount).mul(10000).div(unitPrice).toNumber(),
               amount: formatPrice(f.amount, currency.decimals, true),
