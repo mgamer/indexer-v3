@@ -821,6 +821,12 @@ export const postExecuteMintV1Options: RouteOptions = {
             item.buyIn = [];
           }
 
+          // Add the first path item's currency in the `alternativeCurrencies` list
+          const firstPathItemCurrency = `${path[0].currency}:${config.chainId}`;
+          if (!payload.alternativeCurrencies.includes(firstPathItemCurrency)) {
+            payload.alternativeCurrencies.push(firstPathItemCurrency);
+          }
+
           await Promise.all(
             payload.alternativeCurrencies.map(async (c: string) => {
               const [currency, chainId] = c.split(":");
