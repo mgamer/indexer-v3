@@ -860,7 +860,7 @@ export const getJoiSaleObject = async (sale: {
   contract?: Buffer;
   tokenId?: string;
   name?: string;
-  image?: string;
+  image?: string | string[] | null;
   collectionId?: string;
   collectionName?: string;
   washTradingScore?: number;
