@@ -1,106 +1,67 @@
 import { AbstractRabbitMqJobHandler, BackoffStrategy } from "@/jobs/abstract-rabbit-mq-job-handler";
-import { EventSubKind } from "@/events-sync/data";
-import { syncEvents } from "@/events-sync/index";
 import { logger } from "@/common/logger";
-import { getNetworkSettings } from "@/config/network";
-import _ from "lodash";
+import { syncEvents } from "@/events-sync/index";
 
-export type ProcessResyncRequestJobPayload = {
-  fromBlock: number;
-  toBlock: number;
-  backfill?: boolean;
-  syncDetails?:
-    | {
-        method: "events";
-        events: EventSubKind[];
-      }
-    | {
-        method: "address";
-        address: string;
-      };
-  blocksPerBatch?: number;
+export type EventSyncBackfillJobPayload = {
+  block: number;
 };
 
 export default class EventsSyncBackfillJob extends AbstractRabbitMqJobHandler {
   queueName = "events-sync-backfill";
   maxRetries = 10;
-  concurrency = 2;
-  lazyMode = true;
+  concurrency = 10;
   timeout = 60000;
   backoff = {
     type: "exponential",
     delay: 10000,
   } as BackoffStrategy;
 
-  protected async process(payload: ProcessResyncRequestJobPayload) {
-    const { fromBlock, toBlock, syncDetails, backfill } = payload;
+  protected async process(payload: EventSyncBackfillJobPayload) {
+    const { block } = payload;
 
     try {
-      await syncEvents(fromBlock, toBlock, { backfill, syncDetails });
-      //logger.info(this.queueName, `Events backfill syncing block range [${fromBlock}, ${toBlock}]`);
+      await syncEvents(block);
     } catch (error) {
-      logger.error(
-        this.queueName,
-        `Events for [${fromBlock}, ${toBlock}] backfill syncing failed: ${error}`
-      );
+      logger.error(this.queueName, `Events for [${block}] backfill syncing failed: ${error}`);
       throw error;
     }
   }
 
   public async addToQueue(
-    fromBlock: number,
-    toBlock: number,
+    block: number,
     options?: {
-      attempts?: number;
+      prioritized?: number;
       delay?: number;
-      blocksPerBatch?: number;
-      prioritized?: boolean;
-      backfill?: boolean;
-      syncDetails?:
-        | {
-            method: "events";
-            events: EventSubKind[];
-          }
-        | {
-            method: "address";
-            address: string;
-          };
     }
   ) {
-    // Syncing is done in several batches since the requested block
-    // range might result in lots of events which could potentially
-    // not fit within a single provider response
-    const blocksPerBatch = options?.blocksPerBatch ?? getNetworkSettings().backfillBlockBatchSize;
-
-    // Sync in reverse to handle more recent events first
-    const jobs = [];
-    for (let to = toBlock; to >= fromBlock; to -= blocksPerBatch) {
-      const from = Math.max(fromBlock, to - blocksPerBatch + 1);
-      const jobId = options?.attempts ? `${from}-${to}-${options.attempts}` : `${from}-${to}`;
-
-      jobs.push({
+    await this.send(
+      {
         payload: {
-          fromBlock: from,
-          toBlock: to,
-          backfill: options?.backfill,
-          syncDetails: options?.syncDetails,
+          block,
         },
-        jobId,
-        delay: Number(options?.delay),
-        priority: options?.prioritized ? 1 : 0,
-      });
-    }
+      },
+      options?.delay || 0,
+      options?.prioritized || 1
+    );
+  }
 
-    for (const chunkedJobs of _.chunk(jobs, 1000)) {
-      await this.sendBatch(
-        chunkedJobs.map((job) => ({
-          payload: job.payload,
-          jobId: job.jobId,
-          delay: job.delay,
-          priority: job.priority,
-        }))
-      );
+  public async addToQueueBulk(
+    blocks: number[],
+    options?: {
+      prioritized?: number;
+      delay?: number;
     }
+  ) {
+    // Sync in reverse to handle more recent events first
+    await this.sendBatch(
+      blocks.map((block) => ({
+        payload: {
+          block,
+        },
+        delay: options?.delay || 0,
+        priority: options?.prioritized || 1,
+      }))
+    );
   }
 }
 
