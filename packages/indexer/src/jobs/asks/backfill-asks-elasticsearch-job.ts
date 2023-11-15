@@ -18,14 +18,16 @@ export class BackfillAsksElasticsearchJob extends AbstractRabbitMqJobHandler {
   lazyMode = true;
 
   protected async process(payload: BackfillAsksElasticsearchJobPayload) {
-    logger.info(
-      this.queueName,
-      JSON.stringify({
-        topic: "debugAskIndex",
-        message: `Start. fromTimestamp=${payload.fromTimestamp}, onlyActive=${payload.onlyActive}, cursor=${payload.cursor}`,
-        payload,
-      })
-    );
+    if (!payload.cursor) {
+      logger.info(
+        this.queueName,
+        JSON.stringify({
+          topic: "debugAskIndex",
+          message: `Start. fromTimestamp=${payload.fromTimestamp}, onlyActive=${payload.onlyActive}`,
+          payload,
+        })
+      );
+    }
 
     let nextCursor;
 
@@ -42,7 +44,7 @@ export class BackfillAsksElasticsearchJob extends AbstractRabbitMqJobHandler {
       }
 
       if (payload.fromTimestamp) {
-        fromTimestampFilter = `AND (orders.updated_at) > (to_timestamp($/updatedAt/))`;
+        fromTimestampFilter = `AND (orders.updated_at) > (to_timestamp($/fromTimestamp/))`;
       }
 
       const criteriaBuildQuery = Orders.buildCriteriaQuery("orders", "token_set_id", true);
@@ -66,6 +68,9 @@ export class BackfillAsksElasticsearchJob extends AbstractRabbitMqJobHandler {
               orders.maker AS "order_maker",
               orders.taker AS "order_taker",
               orders.kind AS "order_kind",
+              orders.dynamic AS "order_dynamic",
+              orders.raw_data AS "order_raw_data",
+              orders.missing_royalties AS "order_missing_royalties",
               DATE_PART('epoch', LOWER(orders.valid_between)) AS "order_valid_from",
               COALESCE(
                 NULLIF(DATE_PART('epoch', UPPER(orders.valid_between)), 'Infinity'),
@@ -73,6 +78,7 @@ export class BackfillAsksElasticsearchJob extends AbstractRabbitMqJobHandler {
               ) AS "order_valid_until",
               orders.token_set_id AS "order_token_set_id",
               (${criteriaBuildQuery}) AS order_criteria,
+              orders.created_at AS "order_created_at",
               extract(epoch from orders.updated_at) updated_ts,
                         (
                 CASE
@@ -93,8 +99,12 @@ export class BackfillAsksElasticsearchJob extends AbstractRabbitMqJobHandler {
                       tokens.name AS "token_name", 
                       tokens.image AS "token_image", 
                       tokens.media AS "token_media", 
+                      tokens.is_flagged AS "token_is_flagged",
+                      tokens.is_spam AS "token_is_spam",
+                      tokens.rarity_rank AS "token_rarity_rank",
                       collections.id AS "collection_id", 
                       collections.name AS "collection_name", 
+                      collections.is_spam AS "collection_is_spam",
                       (
                         collections.metadata ->> 'imageUrl'
                       ):: TEXT AS "collection_image", 
@@ -146,16 +156,22 @@ export class BackfillAsksElasticsearchJob extends AbstractRabbitMqJobHandler {
           if (rawResult.status === "active") {
             const askDocument = new AskDocumentBuilder().buildDocument({
               id: rawResult.order_id,
-              created_at: new Date(rawResult.updated_ts * 1000),
+              created_at: new Date(rawResult.order_created_at),
               contract: rawResult.contract,
               token_id: rawResult.token_id,
               token_name: rawResult.token_name,
               token_image: rawResult.token_image,
               token_media: rawResult.token_media,
               token_attributes: rawResult.token_attributes,
+              token_is_flagged: Number(rawResult.token_is_flagged),
+              token_is_spam: Number(rawResult.token_is_spam),
+              token_rarity_rank: rawResult.token_rarity_rank
+                ? Number(rawResult.token_rarity_rank)
+                : undefined,
               collection_id: rawResult.collection_id,
               collection_name: rawResult.collection_name,
               collection_image: rawResult.collection_image,
+              collection_is_spam: Number(rawResult.collection_is_spam),
               order_id: rawResult.order_id,
               order_source_id_int: Number(rawResult.order_source_id_int),
               order_criteria: rawResult.order_criteria,
@@ -176,6 +192,9 @@ export class BackfillAsksElasticsearchJob extends AbstractRabbitMqJobHandler {
               order_valid_from: Number(rawResult.order_valid_from),
               order_valid_until: Number(rawResult.order_valid_until),
               order_kind: rawResult.order_kind,
+              order_dynamic: rawResult.order_dynamic,
+              order_raw_data: rawResult.order_raw_data,
+              order_missing_royalties: rawResult.order_missing_royalties,
             });
 
             askEvents.push({ kind: "index", document: askDocument });
@@ -206,38 +225,35 @@ export class BackfillAsksElasticsearchJob extends AbstractRabbitMqJobHandler {
     }
 
     if (askEvents.length) {
-      const bulkOps = [];
+      const bulkIndexOps = askEvents
+        .filter((askEvent) => askEvent.kind == "index")
+        .flatMap((askEvent) => [
+          { index: { _index: AskIndex.getIndexName(), _id: askEvent.document.id } },
+          askEvent.document,
+        ]);
+      const bulkDeleteOps = askEvents
+        .filter((askEvent) => askEvent.kind == "delete")
+        .flatMap((askEvent) => ({
+          delete: { _index: AskIndex.getIndexName(), _id: askEvent.document.id },
+        }));
 
-      for (const askEvent of askEvents) {
-        if (askEvent.kind === "index") {
-          bulkOps.push({
-            index: {
-              _index: AskIndex.getIndexName(),
-              _id: askEvent.document.id,
-            },
-          });
-          bulkOps.push(askEvent.document);
-        }
-
-        if (askEvent.kind === "delete") {
-          bulkOps.push({
-            delete: {
-              _index: AskIndex.getIndexName(),
-              _id: askEvent.document.id,
-            },
-          });
-        }
+      if (bulkIndexOps.length) {
+        await elasticsearch.bulk({
+          body: bulkIndexOps,
+        });
       }
 
-      await elasticsearch.bulk({
-        body: bulkOps,
-      });
+      if (bulkDeleteOps.length) {
+        await elasticsearch.bulk({
+          body: bulkDeleteOps,
+        });
+      }
 
       logger.info(
         this.queueName,
         JSON.stringify({
           topic: "debugAskIndex",
-          message: `Processed ${bulkOps.length} ask events. nextCursor=${nextCursor}`,
+          message: `Indexed ${bulkIndexOps.length} asks. Deleted ${bulkDeleteOps.length} asks`,
           payload,
           nextCursor,
         })
@@ -266,6 +282,7 @@ export class BackfillAsksElasticsearchJob extends AbstractRabbitMqJobHandler {
     await this.send({
       payload: {
         fromTimestamp,
+        onlyActive,
         cursor,
       },
     });

@@ -1,10 +1,9 @@
-import { JsonRpcProvider } from "@ethersproject/providers";
 import { getCallResult, getCallTraceLogs } from "@georgeroman/evm-tx-simulator";
 import { Log } from "@georgeroman/evm-tx-simulator/dist/types";
 import { Network, TxData } from "@reservoir0x/sdk/dist/utils";
 
 import { idb } from "@/common/db";
-import { logger } from "@/common/logger";
+import { baseProvider } from "@/common/provider";
 import { bn, fromBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { CollectionMint } from "@/orderbook/mints";
@@ -59,13 +58,23 @@ export const simulateCollectionMint = async (
     );
 
   if (detectMaxMintsPerWallet && collectionMint.maxMintsPerWallet === undefined) {
-    // TODO: Improve accuracy of `maxMintsPerWallet` via binary search
-    const results = await Promise.all([simulate(1), simulate(2)]);
-    if (results[0] && !results[1]) {
-      collectionMint.maxMintsPerWallet = "1";
+    const quantitiesToTry = [1, 2, 5, 10, 11];
+    const results = await Promise.all(quantitiesToTry.map((q) => simulate(q)));
+
+    if (results.every((r) => r)) {
+      // Explicitly set to `undefined` which means an unlimited amount can be minted
+      collectionMint.maxMintsPerWallet = undefined;
+    } else {
+      // Find first quantity that failed, and take the one before it as the maximum
+      const firstFailedIndex = results.findIndex((r) => !r);
+      if (firstFailedIndex === 0) {
+        return false;
+      } else {
+        collectionMint.maxMintsPerWallet = quantitiesToTry[firstFailedIndex - 1].toString();
+      }
     }
 
-    return results[0];
+    return true;
   } else {
     return simulate(1);
   }
@@ -159,10 +168,8 @@ const simulateMintTxData = async (
     let logs: Log[];
     try {
       logs = await getEmittedEvents(txData, config.chainId);
-      logger.info("mints-simulation", `Emitted events: ${JSON.stringify(logs)}`);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (error: any) {
-      logger.info("mints-simulation", `Error fetching events: ${error} (${error.stack})`);
+    } catch {
       return false;
     }
 
@@ -208,11 +215,8 @@ const simulateMintTxData = async (
     // Default to using `eth_call` (which isn't very accurate)
 
     try {
-      const result = await triggerCall(txData);
-      logger.info("mints-simulation", `Call result: ${result}`);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (error: any) {
-      logger.info("mints-simulation", `Error simulating call: ${error} (${error.stack})`);
+      await triggerCall(txData);
+    } catch {
       return false;
     }
 
@@ -221,7 +225,6 @@ const simulateMintTxData = async (
 };
 
 const getEmittedEvents = async (txData: TxData, chainId: number) => {
-  const provider = new JsonRpcProvider(config.traceNetworkHttpUrl);
   const value = txData.value ?? bn(0);
   return getCallTraceLogs(
     {
@@ -235,7 +238,7 @@ const getEmittedEvents = async (txData: TxData, chainId: number) => {
         [txData.from]: value,
       },
     },
-    provider,
+    baseProvider,
     {
       method: [Network.Polygon, Network.Arbitrum].includes(chainId) ? "opcodeTrace" : "withLog",
     }
@@ -243,8 +246,8 @@ const getEmittedEvents = async (txData: TxData, chainId: number) => {
 };
 
 const triggerCall = async (txData: TxData) => {
-  const provider = new JsonRpcProvider(config.traceNetworkHttpUrl);
   const value = bn(txData.value ?? 0);
+
   return getCallResult(
     {
       from: txData.from,
@@ -257,6 +260,6 @@ const triggerCall = async (txData: TxData) => {
         [txData.from]: value,
       },
     },
-    provider
+    baseProvider
   );
 };

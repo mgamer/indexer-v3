@@ -80,6 +80,7 @@ export class FillEventCreatedEventHandler extends BaseActivityEventHandler {
                   log_index AS "event_log_index",
                   batch_index AS "event_batch_index",
                   fill_source_id AS "event_fill_source_id",
+                  wash_trading_score AS "event_wash_trading_score",
                   currency AS "pricing_currency",
                   price AS "pricing_price",
                   currency_price AS "pricing_currency_price",
@@ -93,6 +94,8 @@ export class FillEventCreatedEventHandler extends BaseActivityEventHandler {
                         tokens.name AS "token_name",
                         tokens.image AS "token_image",
                         tokens.media AS "token_media",
+                        tokens.is_spam AS "token_is_spam",
+                        collections.is_spam AS "collection_is_spam",
                         collections.id AS "collection_id",
                         collections.name AS "collection_name",
                         (collections.metadata ->> 'imageUrl')::TEXT AS "collection_image"

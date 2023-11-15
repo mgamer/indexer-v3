@@ -393,6 +393,7 @@ export const getExecuteSellV6Options: RouteOptions = {
           amount: payload.quantity,
           owner,
         },
+        undefined,
         payload.taker
       );
 

@@ -58,6 +58,8 @@ export class BidCancelledEventHandler extends BidCreatedEventHandler {
                         tokens.name AS "token_name",
                         tokens.image AS "token_image",   
                         tokens.media AS "token_media",
+                        tokens.is_spam AS "token_is_spam",
+                        collections.is_spam AS "collection_is_spam",
                         collections.id AS "collection_id",
                         collections.name AS "collection_name",
                         (collections.metadata ->> 'imageUrl')::TEXT AS "collection_image"
@@ -66,7 +68,7 @@ export class BidCancelledEventHandler extends BidCreatedEventHandler {
                     JOIN collections ON collections.id = tokens.collection_id
                     WHERE token_sets_tokens.token_set_id = orders.token_set_id AND token_sets_tokens.contract = orders.contract
                  ) t ON TRUE
-        JOIN LATERAL (
+        LEFT JOIN LATERAL (
                     SELECT
                         cancel_events."timestamp" AS "event_timestamp",
                         cancel_events.tx_hash AS "event_tx_hash",

@@ -44,17 +44,20 @@ export interface ActivityDocument extends BaseDocument {
     batchIndex: number;
     blockHash: string;
     fillSourceId?: number;
+    washTradingScore: number;
   };
   token?: {
     id: string;
     name: string;
     image: string;
     media: string;
+    isSpam: boolean;
   };
   collection?: {
     id: string;
     name: string;
     image: string;
+    isSpam: boolean;
   };
   order?: {
     id: string;
@@ -118,10 +121,13 @@ export interface BuildActivityData extends BuildDocumentData {
   event_log_index?: number;
   event_batch_index?: number;
   event_fill_source_id?: number;
+  event_wash_trading_score?: number;
   order_id?: string | null;
   order_side?: string;
   order_source_id_int?: number;
   order_kind?: string;
+  collection_is_spam?: number | null;
+  token_is_spam?: number | null;
   order_criteria?: {
     kind: string;
     data: Record<string, unknown>;
@@ -178,6 +184,7 @@ export class ActivityBuilder extends DocumentBuilder {
             batchIndex: data.event_batch_index,
             blockHash: fromBuffer(data.event_block_hash!),
             fillSourceId: data.event_fill_source_id,
+            washTradingScore: data.event_wash_trading_score,
           }
         : undefined,
       token: data.token_id
@@ -186,6 +193,7 @@ export class ActivityBuilder extends DocumentBuilder {
             name: data.token_name,
             image: data.token_image,
             // media: data.token_media,
+            isSpam: Number(data.token_is_spam) > 0,
           }
         : undefined,
       collection: data.collection_id
@@ -193,6 +201,7 @@ export class ActivityBuilder extends DocumentBuilder {
             id: data.collection_id,
             name: data.collection_name,
             image: data.collection_image,
+            isSpam: Number(data.collection_is_spam) > 0,
           }
         : undefined,
       order: data.order_id

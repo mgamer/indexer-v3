@@ -15,20 +15,17 @@ export const config = {
 
   baseNetworkHttpUrl: String(process.env.BASE_NETWORK_HTTP_URL),
   baseNetworkWsUrl: String(process.env.BASE_NETWORK_WS_URL),
-  traceNetworkHttpUrl: String(
-    process.env.TRACE_NETWORK_HTTP_URL ?? process.env.BASE_NETWORK_HTTP_URL
-  ),
+
   openseaIndexerApiBaseUrl: String(process.env.OPENSEA_INDEXER_API_BASE_URL),
 
   // When running in liquidity-only mode, all metadata processes are disabled
-  liquidityOnly: !process.env.METADATA_API_BASE_URL,
+  liquidityOnly: Boolean(Number(process.env.LIQUIDITY_ONLY)),
   metadataIndexingMethod: String(process.env.METADATA_INDEXING_METHOD || "opensea"),
   metadataIndexingMethodCollection: String(
     process.env.METADATA_INDEXING_METHOD_COLLECTION ||
       process.env.METADATA_INDEXING_METHOD ||
       "opensea"
   ),
-  metadataApiBaseUrl: String(process.env.METADATA_API_BASE_URL),
   disableFlagStatusRefreshJob: Boolean(Number(process.env.DISABLE_FLAG_STATUS_REFRESH_JOB)),
 
   disableRealtimeMetadataRefresh: Boolean(Number(process.env.DISABLE_REALTIME_METADATA_REFRESH)),
@@ -126,6 +123,10 @@ export const config = {
 
   ordinalsApiKey: String(process.env.ORDINALS_API_KEY),
 
+  enableImageResizing: Boolean(Number(process.env.ENABLE_IMAGE_RESIZING)),
+  privateImageResizingSigningKey: String(process.env.PRIVATE_IMAGE_RESIZING_SIGNING_KEY),
+  imageResizingBaseUrl: String(process.env.IMAGE_RESIZING_BASE_URL),
+
   x2y2ApiKey: String(process.env.X2Y2_API_KEY),
   cbApiKey: String(process.env.CB_API_KEY),
   orderFetcherApiKey: String(process.env.ORDER_FETCHER_API_KEY),
@@ -151,6 +152,7 @@ export const config = {
   // Elasticsearch
   elasticsearchUrl: String(process.env.ELASTICSEARCH_URL || ""),
   doElasticsearchWork: Boolean(Number(process.env.DO_ELASTICSEARCH_WORK)),
+  enableElasticsearchAsks: Boolean(Number(process.env.ENABLE_ELASTICSEARCH_ASKS)),
 
   // RabbitMq
   rabbitHttpUrl: `http://${String(process.env.RABBIT_USERNAME)}:${String(
