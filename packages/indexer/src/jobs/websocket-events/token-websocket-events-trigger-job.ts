@@ -10,7 +10,7 @@ import {
   getJoiTokenObject,
 } from "@/common/joi";
 import { fromBuffer, toBuffer } from "@/common/utils";
-import { Assets, ImageSize } from "@/utils/assets";
+import { Assets } from "@/utils/assets";
 import * as Sdk from "@reservoir0x/sdk";
 import { Sources } from "@/models/sources";
 import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handler";
@@ -413,7 +413,7 @@ export class TokenWebsocketEventsTriggerJob extends AbstractRabbitMqJobHandler {
             name: r.name,
             isSpam: Number(r.is_spam) > 0,
             description: r.description,
-            image: Assets.getResizedImageUrl(r.image, ImageSize.medium),
+            image: Assets.getResizedImageUrl(r.image),
             media: r.media,
             kind: r.kind,
             metadataDisabled:

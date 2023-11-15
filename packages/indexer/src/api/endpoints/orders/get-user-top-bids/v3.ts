@@ -14,7 +14,7 @@ import {
   toBuffer,
 } from "@/common/utils";
 import { Sources } from "@/models/sources";
-import { Assets, ImageSize } from "@/utils/assets";
+import { Assets } from "@/utils/assets";
 import _ from "lodash";
 import {
   getJoiPriceObject,
@@ -362,7 +362,7 @@ export const getUserTopBidsV3Options: RouteOptions = {
               contract: contract,
               tokenId: tokenId,
               name: r.name,
-              image: Assets.getResizedImageUrl(r.image, ImageSize.medium),
+              image: Assets.getResizedImageUrl(r.image),
               floorAskPrice: r.token_floor_sell_value ? formatEth(r.token_floor_sell_value) : null,
               lastSalePrice: r.token_last_sell_value ? formatEth(r.token_last_sell_value) : null,
               collection: {

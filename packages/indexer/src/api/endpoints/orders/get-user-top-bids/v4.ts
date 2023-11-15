@@ -28,7 +28,7 @@ import { config } from "@/config/index";
 import { CollectionSets } from "@/models/collection-sets";
 import { ContractSets } from "@/models/contract-sets";
 import { Sources } from "@/models/sources";
-import { Assets, ImageSize } from "@/utils/assets";
+import { Assets } from "@/utils/assets";
 import { Orders } from "@/utils/orders";
 
 const version = "v4";
@@ -389,7 +389,7 @@ export const getUserTopBidsV4Options: RouteOptions = {
               contract: contract,
               tokenId: tokenId,
               name: r.name,
-              image: Assets.getResizedImageUrl(r.image, ImageSize.medium),
+              image: Assets.getResizedImageUrl(r.image),
               floorAskPrice: r.token_floor_sell_value
                 ? await getJoiPriceObject(
                     {

@@ -66,7 +66,7 @@ export class Assets {
     return `${baseUrl}?${queryParams.toString()}`;
   }
 
-  public static getResizedImageUrl(imageUrl: string, size: number): string {
+  public static getResizedImageUrl(imageUrl: string, size?: number): string {
     try {
       if (config.enableImageResizing) {
         let resizeImageUrl = imageUrl;

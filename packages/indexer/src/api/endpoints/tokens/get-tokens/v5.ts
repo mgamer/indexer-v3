@@ -27,7 +27,7 @@ import {
 } from "@/common/utils";
 import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
-import { Assets, ImageSize } from "@/utils/assets";
+import { Assets } from "@/utils/assets";
 import { CollectionSets } from "@/models/collection-sets";
 
 const version = "v5";
@@ -1054,7 +1054,7 @@ export const getTokensV5Options: RouteOptions = {
               tokenId,
               name: r.name,
               description: r.description,
-              image: Assets.getResizedImageUrl(r.image, ImageSize.medium),
+              image: Assets.getResizedImageUrl(r.image),
               media: r.media,
               kind: r.kind,
               isFlagged: Boolean(Number(r.is_flagged)),

@@ -13,7 +13,7 @@ import {
   splitContinuation,
   toBuffer,
 } from "@/common/utils";
-import { Assets, ImageSize } from "@/utils/assets";
+import { Assets } from "@/utils/assets";
 
 const version = "v2";
 
@@ -245,7 +245,7 @@ export const getTransfersV2Options: RouteOptions = {
           contract: fromBuffer(r.address),
           tokenId: r.token_id,
           name: r.name,
-          image: Assets.getResizedImageUrl(r.image, ImageSize.medium),
+          image: Assets.getResizedImageUrl(r.image),
           collection: {
             id: r.collection_id,
             name: r.collection_name,

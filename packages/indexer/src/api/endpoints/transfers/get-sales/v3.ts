@@ -21,7 +21,7 @@ import {
 } from "@/common/utils";
 import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
-import { Assets, ImageSize } from "@/utils/assets";
+import { Assets } from "@/utils/assets";
 
 const version = "v3";
 
@@ -320,7 +320,7 @@ export const getSalesV3Options: RouteOptions = {
             contract: fromBuffer(r.contract),
             tokenId: r.token_id,
             name: r.name,
-            image: Assets.getResizedImageUrl(r.image, ImageSize.medium),
+            image: Assets.getResizedImageUrl(r.image),
             collection: {
               id: r.collection_id,
               name: r.collection_name,

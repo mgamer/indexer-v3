@@ -15,7 +15,7 @@ import {
   splitContinuation,
   toBuffer,
 } from "@/common/utils";
-import { Assets, ImageSize } from "@/utils/assets";
+import { Assets } from "@/utils/assets";
 import { getJoiTokenObject } from "@/common/joi";
 
 const version = "v4";
@@ -421,7 +421,7 @@ export const getTokensV4Options: RouteOptions = {
             contract: fromBuffer(r.contract),
             tokenId: r.token_id,
             name: r.name,
-            image: Assets.getResizedImageUrl(r.image, ImageSize.medium),
+            image: Assets.getResizedImageUrl(r.image),
             media: r.media,
             collection: {
               id: r.collection_id,
