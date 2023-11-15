@@ -23,7 +23,6 @@ import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import * as b from "@/utils/auth/blur";
 import { getCurrency } from "@/utils/currencies";
 import { ExecutionsBuffer } from "@/utils/executions";
-import { tryGetTokensSuspiciousStatus } from "@/utils/opensea";
 
 const version = "v6";
 
@@ -393,8 +392,9 @@ export const getExecuteSellV6Options: RouteOptions = {
           amount: payload.quantity,
           owner,
         },
-        undefined,
-        payload.taker
+        {
+          taker: payload.taker,
+        }
       );
 
       if (
@@ -406,13 +406,7 @@ export const getExecuteSellV6Options: RouteOptions = {
           "seaport-v1.5-partial",
         ].includes(bidDetails!.kind)
       ) {
-        const tokenToSuspicious = await tryGetTokensSuspiciousStatus(
-          tokenResult.last_flag_update < now() - 3600 ? [payload.token] : []
-        );
-        if (
-          (tokenToSuspicious.has(payload.token) && tokenToSuspicious.get(payload.token)) ||
-          tokenResult.is_flagged
-        ) {
+        if (tokenResult.is_flagged) {
           throw Boom.badData("Token is flagged");
         }
       }

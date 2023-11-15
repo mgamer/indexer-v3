@@ -18,9 +18,9 @@ import { DbOrder, OrderMetadata, generateSchemaHash } from "@/orderbook/orders/u
 import * as tokenSet from "@/orderbook/token-sets";
 import * as erc721c from "@/utils/erc721c";
 import { checkMarketplaceIsFiltered } from "@/utils/marketplace-blacklists";
+import * as paymentProcessorV2 from "@/utils/payment-processor-v2";
 import { getUSDAndNativePrices } from "@/utils/prices";
 import * as royalties from "@/utils/royalties";
-import * as paymentProcessorV2 from "@/utils/payment-processor-v2";
 
 export type OrderInfo = {
   orderParams: Sdk.PaymentProcessorV2.Types.BaseOrder;
@@ -106,7 +106,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
           });
         }
 
-        const price = bn(order.params.price).div(order.params.amount);
+        const price = bn(order.params.itemPrice).div(order.params.amount);
         if (price.lt(paymentSettings.pricingBounds!.floorPrice)) {
           return results.push({
             id,
@@ -132,7 +132,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       }
 
       // Check: order doesn't already exist
-      const orderExists = await idb.oneOrNone(`SELECT 1 FROM "orders" "o" WHERE "o"."id" = $/id/`, {
+      const orderExists = await idb.oneOrNone(`SELECT 1 FROM orders WHERE orders.id = $/id/`, {
         id,
       });
       if (orderExists) {
@@ -279,7 +279,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         .reduce((a, b) => a + b, 0);
       const totalDefaultBps = defaultRoyalties.map(({ bps }) => bps).reduce((a, b) => a + b, 0);
 
-      const currencyPrice = bn(order.params.price).div(order.params.amount).toString();
+      const currencyPrice = bn(order.params.itemPrice).div(order.params.amount).toString();
 
       const missingRoyalties = [];
       let missingRoyaltyAmount = bn(0);

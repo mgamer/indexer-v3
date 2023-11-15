@@ -40,6 +40,7 @@ import * as sudoswapV2 from "@/events-sync/data/sudoswap-v2";
 import * as midaswap from "@/events-sync/data/midaswap";
 import * as caviarV1 from "@/events-sync/data/caviar-v1";
 import * as paymentProcessor from "@/events-sync/data/payment-processor";
+import * as paymentProcessorV2 from "@/events-sync/data/payment-processor-v2";
 import * as thirdweb from "@/events-sync/data/thirdweb";
 import * as blurV2 from "@/events-sync/data/blur-v2";
 import * as seadrop from "@/events-sync/data/seadrop";
@@ -48,7 +49,6 @@ import * as joepeg from "@/events-sync/data/joepeg";
 import * as metadataUpdate from "@/events-sync/data/metadata-update";
 import * as soundxyz from "@/events-sync/data/soundxyz";
 import * as createdotfun from "@/events-sync/data/createdotfun";
-import * as paymentProcessorV2 from "@/events-sync/data/payment-processor-v2";
 
 // All events we're syncing should have an associated `EventData`
 // entry which dictates the way the event will be parsed and then

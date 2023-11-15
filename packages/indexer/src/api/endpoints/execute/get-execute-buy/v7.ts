@@ -497,7 +497,9 @@ export const getExecuteBuyV7Options: RouteOptions = {
                 amount: token.quantity,
                 isFlagged: Boolean(flaggedResult.is_flagged),
               },
-              payload.taker
+              {
+                taker: payload.taker,
+              }
             )
           );
         }
@@ -735,6 +737,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
               excludedOrderIds: item.exclusions?.map((e) => e.orderId) ?? [],
             }
           );
+
           let error: string | undefined;
           if (!result) {
             error = "No fillable orders";
@@ -2142,6 +2145,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
       });
 
       const errors: { orderId: string; message: string }[] = [];
+
       let result: FillListingsResult;
       try {
         result = await router.fillListingsTx(listingDetails, payload.taker, buyInCurrency, {

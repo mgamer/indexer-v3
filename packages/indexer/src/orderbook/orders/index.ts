@@ -38,9 +38,9 @@ import { idb } from "@/common/db";
 import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
 import { SourcesEntity } from "@/models/sources/sources-entity";
+import { getCosigner } from "@/utils/cosign";
 import { checkMarketplaceIsFiltered } from "@/utils/marketplace-blacklists";
 import * as registry from "@/utils/royalties/registry";
-import { getCoSigner } from "@/utils/cosign";
 
 // Whenever a new order kind is added, make sure to also include an
 // entry/implementation in the below types/methods in order to have
@@ -226,7 +226,9 @@ export const generateListingDetailsV6 = async (
     amount?: number;
     isFlagged?: boolean;
   },
-  taker?: string
+  options?: {
+    taker?: string;
+  }
 ): Promise<ListingDetails> => {
   const common = {
     orderId: order.id,
@@ -456,9 +458,9 @@ export const generateListingDetailsV6 = async (
 
     case "payment-processor-v2": {
       const rawOrder = new Sdk.PaymentProcessorV2.Order(config.chainId, order.rawData);
-      if (rawOrder.isCosignOrder() && taker) {
-        const cosigner = getCoSigner();
-        await rawOrder.cosign(cosigner, taker);
+      if (rawOrder.isCosignedOrder() && options?.taker) {
+        const cosigner = getCosigner();
+        await rawOrder.cosign(cosigner, options.taker);
       }
 
       return {
@@ -493,8 +495,10 @@ export const generateBidDetailsV6 = async (
     amount?: number;
     owner?: string;
   },
-  permit?: Permit,
-  taker?: string
+  options?: {
+    permit?: Permit;
+    taker?: string;
+  }
 ): Promise<BidDetails> => {
   const common = {
     orderId: order.id,
@@ -507,7 +511,7 @@ export const generateBidDetailsV6 = async (
     owner: token.owner,
     isProtected: order.isProtected,
     fees: order.fees ?? [],
-    permit,
+    permit: options?.permit,
   };
 
   switch (order.kind) {
@@ -829,9 +833,9 @@ export const generateBidDetailsV6 = async (
 
     case "payment-processor-v2": {
       const sdkOrder = new Sdk.PaymentProcessorV2.Order(config.chainId, order.rawData);
-      if (sdkOrder.isCosignOrder() && taker) {
-        const cosigner = getCoSigner();
-        await sdkOrder.cosign(cosigner, taker);
+      if (sdkOrder.isCosignedOrder() && options?.taker) {
+        const cosigner = getCosigner();
+        await sdkOrder.cosign(cosigner, options.taker);
       }
 
       return {
