@@ -87,7 +87,11 @@ export class ProcessActivityEventsJob extends AbstractRabbitMqJobHandler {
       } catch (error) {
         logger.error(
           this.queueName,
-          `failed to process activity events. eventKind=${eventKind}, error=${error}`
+          JSON.stringify({
+            message: `failed to process activity events. eventKind=${eventKind}, error=${error}`,
+            pendingActivityEvents,
+            error,
+          })
         );
 
         await pendingActivityEventsQueue.add(pendingActivityEvents);

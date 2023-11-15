@@ -111,6 +111,7 @@ export class IndexerCollectionsHandler extends KafkaEventHandler {
       if (spamStatusChanged) {
         await refreshActivitiesCollectionMetadataJob.addToQueue({
           collectionId: payload.after.id,
+          context: "spamStatusChanged",
         });
       }
 
