@@ -480,7 +480,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
           );
 
           listingDetails.push(
-            generateListingDetailsV6(
+            await generateListingDetailsV6(
               {
                 id: order.id,
                 kind: order.kind,
@@ -496,6 +496,9 @@ export const getExecuteBuyV7Options: RouteOptions = {
                 tokenId: token.tokenId!,
                 amount: token.quantity,
                 isFlagged: Boolean(flaggedResult.is_flagged),
+              },
+              {
+                taker: payload.taker,
               }
             )
           );
