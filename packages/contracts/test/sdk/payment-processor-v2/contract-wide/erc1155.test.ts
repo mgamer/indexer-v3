@@ -15,12 +15,11 @@ describe("PaymentProcessorV2 - ContractWide ERC1155", () => {
   let deployer: SignerWithAddress;
   let alice: SignerWithAddress;
   let bob: SignerWithAddress;
-  let carol: SignerWithAddress;
 
   let erc1155: Contract;
 
   beforeEach(async () => {
-    [deployer, alice, bob, carol] = await ethers.getSigners();
+    [deployer, alice, bob] = await ethers.getSigners();
 
     ({ erc1155 } = await setupNFTs(deployer));
   });
@@ -30,10 +29,8 @@ describe("PaymentProcessorV2 - ContractWide ERC1155", () => {
   it("Build and fill buy order", async () => {
     const buyer = alice;
     const seller = bob;
-    const feeRecipient = carol;
 
     const price = parseEther("1");
-    const fee = 250;
     const soldTokenId = 100;
 
     const weth = new Common.Helpers.WNative(ethers.provider, chainId);
@@ -69,10 +66,10 @@ describe("PaymentProcessorV2 - ContractWide ERC1155", () => {
       beneficiary: buyer.address,
       marketplaceFeeNumerator: "0",
       maxRoyaltyFeeNumerator: "0",
-      trader: buyer.address,
+      maker: buyer.address,
       tokenAddress: erc1155.address,
       amount: "1",
-      price: price,
+      itemPrice: price,
       expiration: (blockTime + 60 * 60).toString(),
       nonce: "0",
       paymentMethod: Common.Addresses.WNative[chainId],
@@ -89,7 +86,7 @@ describe("PaymentProcessorV2 - ContractWide ERC1155", () => {
     // Create matching sell order
     await exchange.fillOrder(seller, buyOrder, {
       tokenId: soldTokenId,
-      taker: seller.address
+      taker: seller.address,
     });
 
     const sellerBalanceAfter = await weth.getBalance(seller.address);
@@ -98,7 +95,7 @@ describe("PaymentProcessorV2 - ContractWide ERC1155", () => {
     const sellerNftBalanceAfter = await nft.getBalance(seller.address, soldTokenId);
     const buyerNftBalanceAfter = await nft.getBalance(buyer.address, soldTokenId);
 
-    expect(receiveAmount).to.gte(price);  
+    expect(receiveAmount).to.gte(price);
     expect(sellerNftBalanceAfter).to.eq(0);
     expect(buyerNftBalanceAfter).to.eq(1);
   });

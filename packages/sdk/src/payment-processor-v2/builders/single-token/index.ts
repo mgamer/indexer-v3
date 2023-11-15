@@ -16,7 +16,7 @@ export class SingleTokenBuilder extends BaseBuilder {
     try {
       const copyOrder = this.build({
         ...order.params,
-        trader: order.params.sellerOrBuyer,
+        maker: order.params.sellerOrBuyer,
         tokenId: order.params.tokenId!,
         beneficiary: order.params.beneficiary ?? undefined,
       });
@@ -37,24 +37,29 @@ export class SingleTokenBuilder extends BaseBuilder {
 
   public build(params: BuildParams) {
     this.defaultInitialize(params);
+
     return new Order(this.chainId, {
       kind: params.beneficiary ? "item-offer-approval" : "sale-approval",
       protocol: params.protocol,
+      cosigner: params.cosigner,
+      sellerOrBuyer: params.maker,
       marketplace: params.marketplace ?? AddressZero,
-      beneficiary: params.beneficiary ?? undefined,
+      paymentMethod: params.paymentMethod,
+      tokenAddress: params.tokenAddress,
+      amount: s(params.amount),
+      itemPrice: s(params.itemPrice),
+      expiration: s(params.expiration),
       marketplaceFeeNumerator: s(params.marketplaceFeeNumerator) ?? "0",
+      nonce: s(params.nonce),
+      masterNonce: s(params.masterNonce),
+
       maxRoyaltyFeeNumerator:
         params.maxRoyaltyFeeNumerator != undefined ? s(params.maxRoyaltyFeeNumerator) : undefined,
-      sellerOrBuyer: params.trader,
-      tokenAddress: params.tokenAddress,
+
+      beneficiary: params.beneficiary ?? undefined,
+
       tokenId: s(params.tokenId),
-      amount: s(params.amount),
-      price: s(params.price),
-      expiration: s(params.expiration),
-      nonce: s(params.nonce),
-      paymentMethod: params.paymentMethod,
-      masterNonce: s(params.masterNonce),
-      cosigner: params.cosigner,
+
       v: params.v,
       r: params.r,
       s: params.s,

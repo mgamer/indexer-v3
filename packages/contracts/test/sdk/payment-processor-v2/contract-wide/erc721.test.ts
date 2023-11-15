@@ -57,10 +57,10 @@ describe("PaymentProcessorV2 - ContractWide - ERC721", () => {
       beneficiary: buyer.address,
       marketplaceFeeNumerator: "0",
       maxRoyaltyFeeNumerator: "0",
-      trader: buyer.address,
+      maker: buyer.address,
       tokenAddress: erc721.address,
       amount: "1",
-      price: price,
+      itemPrice: price,
       expiration: (blockTime + 60 * 60).toString(),
       nonce: "0",
       paymentMethod: Common.Addresses.WNative[chainId],
@@ -76,7 +76,7 @@ describe("PaymentProcessorV2 - ContractWide - ERC721", () => {
 
     await exchange.fillOrder(seller, buyOrder, {
       tokenId: soldTokenId,
-      taker: seller.address
+      taker: seller.address,
     });
 
     const sellerBalanceAfter = await weth.getBalance(seller.address);

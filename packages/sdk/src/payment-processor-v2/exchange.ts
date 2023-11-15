@@ -1,17 +1,17 @@
-import { Interface } from "@ethersproject/abi";
+import { Interface, defaultAbiCoder } from "@ethersproject/abi";
 import { Provider } from "@ethersproject/abstract-provider";
 import { Signer } from "@ethersproject/abstract-signer";
 import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
 import { Contract, ContractTransaction } from "@ethersproject/contracts";
-import { defaultAbiCoder } from "@ethersproject/abi";
-import { MatchingOptions } from "./builders/base";
 
 import * as Addresses from "./addresses";
+import { MatchingOptions } from "./builders/base";
 import { Order } from "./order";
+import { SweepOrderParams } from "./types";
 import { TxData, bn, generateSourceBytes } from "../utils";
 
-import ExchangeAbi from "./abis/cPort.json";
+import ExchangeAbi from "./abis/Exchange.json";
 
 export class Exchange {
   public chainId: number;
@@ -72,10 +72,7 @@ export class Exchange {
     }
   ): Promise<ContractTransaction> {
     const tx = this.fillOrderTx(await taker.getAddress(), order, matchOptions, options);
-    return taker.sendTransaction({
-      ...tx,
-      gasLimit: 1000000,
-    });
+    return taker.sendTransaction(tx);
   }
 
   public fillOrderTx(
@@ -92,18 +89,35 @@ export class Exchange {
     };
 
     const matchedOrder = order.buildMatching(matchOptions);
-    const isCollectionOffer = order.isCollectionLevelOffer();
+
+    const isCollectionOffer = order.params.kind === "collection-offer-approval";
     const data = order.isBuyOrder()
       ? this.contract.interface.encodeFunctionData("acceptOffer", [
           defaultAbiCoder.encode(
             [
               "bytes32 domainSeparator",
               "bool isCollectionLevelOffer",
-              "(uint8 protocol,address maker,address beneficiary,address marketplace,address paymentMethod,address tokenAddress,uint256 tokenId,uint248 amount,uint256 itemPrice,uint256 nonce,uint256 expiration,uint256 marketplaceFeeNumerator,uint256 maxRoyaltyFeeNumerator,uint248 requestedFillAmount,uint248 minimumFillAmount) saleDetails",
-              "(uint8 v,bytes32 r,bytes32 s) buyerSignature",
-              "(bytes32 rootHash,bytes32[] proof) tokenSetProof",
-              "(address signer,address taker,uint256 expiration,uint8 v,bytes32 r,bytes32 s) cosignature",
-              "(address recipient,uint256 amount) feeOnTop",
+              `(
+                uint8 protocol,
+                address maker,
+                address beneficiary,
+                address marketplace,
+                address paymentMethod,
+                address tokenAddress,
+                uint256 tokenId,
+                uint248 amount,
+                uint256 itemPrice,
+                uint256 nonce,
+                uint256 expiration,
+                uint256 marketplaceFeeNumerator,
+                uint256 maxRoyaltyFeeNumerator,
+                uint248 requestedFillAmount,
+                uint248 minimumFillAmount
+              ) saleDetails`,
+              "(uint8 v, bytes32 r, bytes32 s) buyerSignature",
+              "(bytes32 rootHash, bytes32[] proof) tokenSetProof",
+              "(address signer, address taker, uint256 expiration, uint8 v, bytes32 r, bytes32 s) cosignature",
+              "(address recipient, uint256 amount) feeOnTop",
             ],
             [
               Addresses.DomainSeparator[this.chainId],
@@ -120,10 +134,26 @@ export class Exchange {
           defaultAbiCoder.encode(
             [
               "bytes32 domainSeparator",
-              "(uint8 protocol,address maker,address beneficiary,address marketplace,address paymentMethod,address tokenAddress,uint256 tokenId,uint248 amount,uint256 itemPrice,uint256 nonce,uint256 expiration,uint256 marketplaceFeeNumerator,uint256 maxRoyaltyFeeNumerator,uint248 requestedFillAmount,uint248 minimumFillAmount) saleDetails",
-              "(uint8 v,bytes32 r,bytes32 s) sellerSignature",
-              "(address signer,address taker,uint256 expiration,uint8 v,bytes32 r,bytes32 s) cosignature",
-              "(address recipient,uint256 amount) feeOnTop",
+              `(
+                uint8 protocol,
+                address maker,
+                address beneficiary,
+                address marketplace,
+                address paymentMethod,
+                address tokenAddress,
+                uint256 tokenId,
+                uint248 amount,
+                uint256 itemPrice,
+                uint256 nonce,
+                uint256 expiration,
+                uint256 marketplaceFeeNumerator,
+                uint256 maxRoyaltyFeeNumerator,
+                uint248 requestedFillAmount,
+                uint248 minimumFillAmount
+              ) saleDetails`,
+              "(uint8 v, bytes32 r, bytes32 s) sellerSignature",
+              "(address signer, address taker, uint256 expiration, uint8 v, bytes32 r, bytes32 s) cosignature",
+              "(address recipient, uint256 amount) feeOnTop",
             ],
             [
               Addresses.DomainSeparator[this.chainId],
@@ -143,7 +173,7 @@ export class Exchange {
     return {
       from: taker,
       to: this.contract.address,
-      value: passValue ? order.params.price.toString() : "0",
+      value: passValue ? order.params.itemPrice.toString() : "0",
       data: data + generateSourceBytes(options?.source),
     };
   }
@@ -168,17 +198,19 @@ export class Exchange {
     };
 
     let price = bn(0);
+
     const isBuyOrder = orders[0].isBuyOrder();
     if (isBuyOrder) {
       const saleDetails = orders.map((order) => {
         const matchedOrder = order.buildMatching(matchOptions);
+
         const passValue =
           !order.isBuyOrder() &&
           order.params.sellerOrBuyer != taker.toLowerCase() &&
           matchedOrder.paymentMethod === AddressZero;
 
         if (passValue) {
-          price = price.add(order.params.price);
+          price = price.add(order.params.itemPrice);
         }
 
         return matchedOrder;
@@ -188,21 +220,37 @@ export class Exchange {
         defaultAbiCoder.encode(
           [
             "bytes32",
-            `
-            (
+            `(
               bool[] isCollectionLevelOfferArray,
-              (uint8 protocol,address maker,address beneficiary,address marketplace,address paymentMethod,address tokenAddress,uint256 tokenId,uint248 amount,uint256 itemPrice,uint256 nonce,uint256 expiration,uint256 marketplaceFeeNumerator,uint256 maxRoyaltyFeeNumerator,uint248 requestedFillAmount,uint248 minimumFillAmount)[] saleDetailsArray,
-              (uint8 v,bytes32 r,bytes32 s)[] buyerSignaturesArray,
-              (bytes32 rootHash,bytes32[] proof)[] tokenSetProofsArray,
-              (address signer,address taker,uint256 expiration,uint8 v,bytes32 r,bytes32 s)[] cosignaturesArray,
-              (address recipient,uint256 amount)[] feesOnTopArray
-            )
-            `,
+              (
+                uint8 protocol,
+                address maker,
+                address beneficiary,
+                address marketplace,
+                address paymentMethod,
+                address tokenAddress,
+                uint256 tokenId,
+                uint248 amount,
+                uint256 itemPrice,
+                uint256 nonce,
+                uint256 expiration,
+                uint256 marketplaceFeeNumerator,
+                uint256 maxRoyaltyFeeNumerator,
+                uint248 requestedFillAmount,
+                uint248 minimumFillAmount
+              )[] saleDetailsArray,
+              (uint8 v, bytes32 r, bytes32 s)[] buyerSignaturesArray,
+              (bytes32 rootHash, bytes32[] proof)[] tokenSetProofsArray,
+              (address signer, address taker, uint256 expiration, uint8 v, bytes32 r, bytes32 s)[] cosignaturesArray,
+              (address recipient, uint256 amount)[] feesOnTopArray
+            )`,
           ],
           [
             Addresses.DomainSeparator[this.chainId],
             {
-              isCollectionLevelOfferArray: orders.map((c) => c.isCollectionLevelOffer()),
+              isCollectionLevelOfferArray: orders.map(
+                (c) => c.params.kind === "collection-offer-approval"
+              ),
               saleDetailsArray: saleDetails,
               buyerSignaturesArray: saleDetails.map((c) => c.signature),
               tokenSetProofsArray: orders.map((c) => c.getTokenSetProof()),
@@ -223,13 +271,14 @@ export class Exchange {
 
     const saleDetails = orders.map((order) => {
       const matchedOrder = order.buildMatching(matchOptions);
+
       const passValue =
         !order.isBuyOrder() &&
         order.params.sellerOrBuyer != taker.toLowerCase() &&
         matchedOrder.paymentMethod === AddressZero;
 
       if (passValue) {
-        price = price.add(order.params.price);
+        price = price.add(order.params.itemPrice);
       }
 
       return matchedOrder;
@@ -239,10 +288,26 @@ export class Exchange {
       defaultAbiCoder.encode(
         [
           "bytes32",
-          "(uint8 protocol,address maker,address beneficiary,address marketplace,address paymentMethod,address tokenAddress,uint256 tokenId,uint248 amount,uint256 itemPrice,uint256 nonce,uint256 expiration,uint256 marketplaceFeeNumerator,uint256 maxRoyaltyFeeNumerator,uint248 requestedFillAmount,uint248 minimumFillAmount)[]",
-          "(uint8 v,bytes32 r,bytes32 s)[]",
-          "(address signer,address taker,uint256 expiration,uint8 v,bytes32 r,bytes32 s)[]",
-          "(address recipient,uint256 amount)[]",
+          `(
+            uint8 protocol,
+            address maker,
+            address beneficiary,
+            address marketplace,
+            address paymentMethod,
+            address tokenAddress,
+            uint256 tokenId,
+            uint248 amount,
+            uint256 itemPrice,
+            uint256 nonce,
+            uint256 expiration,
+            uint256 marketplaceFeeNumerator,
+            uint256 maxRoyaltyFeeNumerator,
+            uint248 requestedFillAmount,
+            uint248 minimumFillAmount
+          )[]`,
+          "(uint8 v, bytes32 r, bytes32 s)[]",
+          "(address signer, address taker, uint256 expiration, uint8 v, bytes32 r, bytes32 s)[]",
+          "(address recipient, uint256 amount)[]",
         ],
         [
           Addresses.DomainSeparator[this.chainId],
@@ -271,29 +336,39 @@ export class Exchange {
       source?: string;
     }
   ): TxData {
-    let price = bn(0);
     const feeOnTop = {
       recipient: AddressZero,
       amount: 0,
     };
 
+    let price = bn(0);
     orders.forEach((order) => {
       const passValue = order.params.paymentMethod === AddressZero;
       if (passValue) {
-        price = price.add(order.params.price);
+        price = price.add(order.params.itemPrice);
       }
     });
 
-    const sweepCollectionParams = Order.getSweepOrderParams(taker, orders);
+    const sweepCollectionParams = this.getSweepOrderParams(taker, orders);
     const data = this.contract.interface.encodeFunctionData("sweepCollection", [
       defaultAbiCoder.encode(
         [
           "bytes32",
-          "(address recipient,uint256 amount)",
-          "(uint8 protocol,address tokenAddress,address paymentMethod,address beneficiary)",
-          "(address maker,address marketplace,uint256 tokenId,uint248 amount,uint256 itemPrice,uint256 nonce,uint256 expiration,uint256 marketplaceFeeNumerator,uint256 maxRoyaltyFeeNumerator)[]",
-          "(uint8 v,bytes32 r,bytes32 s)[]",
-          "(address signer,address taker,uint256 expiration,uint8 v,bytes32 r,bytes32 s)[]",
+          "(address recipient, uint256 amount)",
+          "(uint8 protocol, address tokenAddress, address paymentMethod, address beneficiary)",
+          `(
+            address maker,
+            address marketplace,
+            uint256 tokenId,
+            uint248 amount,
+            uint256 itemPrice,
+            uint256 nonce,
+            uint256 expiration,
+            uint256 marketplaceFeeNumerator,
+            uint256 maxRoyaltyFeeNumerator
+          )[]`,
+          "(uint8 v, bytes32 r, bytes32 s)[]",
+          "(address signer, address taker, uint256 expiration, uint8 v, bytes32 r, bytes32 s)[]",
         ],
         [
           Addresses.DomainSeparator[this.chainId],
@@ -311,6 +386,43 @@ export class Exchange {
       to: this.contract.address,
       value: price.toString(),
       data: data + generateSourceBytes(options?.source),
+    };
+  }
+
+  // --- Get parameters for sweeping multiple orders from the same collection ---
+
+  public getSweepOrderParams(taker: string, orders: Order[]): SweepOrderParams {
+    const firstOrder = orders[0];
+    const matchedOrder = firstOrder.buildMatching({
+      taker,
+    });
+
+    return {
+      sweepOrder: {
+        protocol: matchedOrder.protocol,
+        tokenAddress: matchedOrder.tokenAddress,
+        paymentMethod: matchedOrder.paymentMethod,
+        beneficiary: matchedOrder.beneficiary!,
+      },
+      items: orders.map(({ params: sellOrder }) => ({
+        maker: sellOrder.sellerOrBuyer,
+        marketplace: sellOrder.marketplace,
+        tokenId: sellOrder.tokenId ?? "0",
+        amount: sellOrder.amount,
+        itemPrice: sellOrder.itemPrice,
+        nonce: sellOrder.nonce,
+        expiration: sellOrder.expiration,
+        marketplaceFeeNumerator: sellOrder.marketplaceFeeNumerator,
+        maxRoyaltyFeeNumerator: sellOrder.maxRoyaltyFeeNumerator ?? "0",
+      })),
+      signedSellOrders: orders.map((c) => {
+        return {
+          r: c.params.r!,
+          s: c.params.s!,
+          v: c.params.v!,
+        };
+      }),
+      cosignatures: orders.map((c) => c.getCosignature()),
     };
   }
 
