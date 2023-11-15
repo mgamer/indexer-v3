@@ -417,7 +417,8 @@ export const getExecuteSellV7Options: RouteOptions = {
               tokenId: token.tokenId,
               amount: token.quantity,
               owner: token.owner,
-            }
+            },
+            payload.taker
           )
         );
       };

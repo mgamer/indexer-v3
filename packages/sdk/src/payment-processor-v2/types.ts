@@ -111,6 +111,8 @@ export type BaseOrder = {
   v?: number;
   r?: string;
   s?: string;
+
+  cosignature?: CoSignature;
 };
 
 export type SaleApproval = {

@@ -17,9 +17,10 @@ describe("PaymentProcessorV2 - SingleToken ERC721", () => {
   let bob: SignerWithAddress;
   let erc721: Contract;
   let erc721New: Contract;
+  let cosigner: SignerWithAddress;
 
   beforeEach(async () => {
-    [deployer, alice, bob] = await ethers.getSigners();
+    [deployer, alice, bob, cosigner] = await ethers.getSigners();
 
     ({ erc721 } = await setupNFTs(deployer));
     ({ erc721: erc721New } = await setupNFTs(deployer));
@@ -496,5 +497,66 @@ describe("PaymentProcessorV2 - SingleToken ERC721", () => {
     expect(receiveAmount).to.gte(price.mul(2));
     expect(ownerAfter).to.eq(buyer.address);
     expect(ownerAfter2).to.eq(buyer.address);
+  });
+
+  it("Build and fill sell order - cosignature", async () => {
+    const buyer = alice;
+    const seller = bob;
+    const price = parseEther("1");
+    const soldTokenId = 1;
+
+    // Mint erc721 to seller
+    await erc721.connect(seller).mint(soldTokenId);
+    const nft = new Common.Helpers.Erc721(ethers.provider, erc721.address);
+
+    // Approve the exchange
+    await nft.approve(seller, PaymentProcessorV2.Addresses.Exchange[chainId]);
+    
+    const exchange = new PaymentProcessorV2.Exchange(chainId);
+
+    const sellerMasterNonce = await exchange.getMasterNonce(ethers.provider, seller.address);
+    const blockTime = await getCurrentTimestamp(ethers.provider);
+
+    const builder = new PaymentProcessorV2.Builders.SingleToken(chainId);
+    const orderParameters = {
+      protocol: PaymentProcessorV2.Types.OrderProtocols.ERC721_FILL_OR_KILL,
+      marketplace: constants.AddressZero,
+      marketplaceFeeNumerator: "0",
+      maxRoyaltyFeeNumerator: "0",
+      trader: seller.address,
+      tokenAddress: erc721.address,
+      tokenId: soldTokenId,
+      amount: "1",
+      price: price,
+      expiration: (blockTime + 60 * 60).toString(),
+      paymentMethod: constants.AddressZero,
+      masterNonce: sellerMasterNonce,
+      cosigner: cosigner.address
+    };
+
+    // Build sell order
+    const sellOrder = builder.build(orderParameters);
+    await sellOrder.sign(seller);
+
+    sellOrder.checkSignature();
+    await sellOrder.checkFillability(ethers.provider);
+
+    const sellerBalanceBefore = await ethers.provider.getBalance(seller.address);
+
+    // sign it if it's a cosign-order
+    if (sellOrder.isCosignOrder()) {
+      await sellOrder.cosign(cosigner, buyer.address);
+    }
+
+    await exchange.fillOrder(buyer, sellOrder, {
+      taker: buyer.address
+    });
+
+    const sellerBalanceAfter = await ethers.provider.getBalance(seller.address);
+    const ownerAfter = await nft.getOwner(soldTokenId);
+    const receiveAmount = sellerBalanceAfter.sub(sellerBalanceBefore);
+
+    expect(receiveAmount).to.gte(price);
+    expect(ownerAfter).to.eq(buyer.address);
   });
 });

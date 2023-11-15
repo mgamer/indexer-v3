@@ -67,6 +67,7 @@ export const getBuildInfo = async (
         ? Sdk.Common.Addresses.Native[config.chainId]
         : Sdk.Common.Addresses.WNative[config.chainId]),
     masterNonce: await commonHelpers.getMinNonce("payment-processor-v2", options.maker),
+    cosigner: config.cosigner,
   };
 
   return {

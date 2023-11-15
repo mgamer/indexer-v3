@@ -392,7 +392,8 @@ export const getExecuteSellV6Options: RouteOptions = {
           tokenId,
           amount: payload.quantity,
           owner,
-        }
+        },
+        payload.taker
       );
 
       if (

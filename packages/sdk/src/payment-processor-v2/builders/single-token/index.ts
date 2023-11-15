@@ -54,6 +54,7 @@ export class SingleTokenBuilder extends BaseBuilder {
       nonce: s(params.nonce),
       paymentMethod: params.paymentMethod,
       masterNonce: s(params.masterNonce),
+      cosigner: params.cosigner,
       v: params.v,
       r: params.r,
       s: params.s,

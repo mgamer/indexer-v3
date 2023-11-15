@@ -11,7 +11,7 @@ import { Builders } from "./builders";
 import { BaseBuilder, MatchingOptions } from "./builders/base";
 import * as Types from "./types";
 import * as Common from "../common";
-import { lc, s, n, bn } from "../utils";
+import { lc, s, n, bn, getCurrentTimestamp } from "../utils";
 import ExchangeAbi from "./abis/cPort.json";
 
 export class Order {
@@ -50,15 +50,21 @@ export class Order {
     };
   }
 
+  public isCosignOrder() {
+    return this.params.cosigner !== AddressZero;
+  }
+
   public getCosignature() {
-    return {
-      signer: AddressZero,
-      taker: AddressZero,
-      expiration: 0,
-      v: 0,
-      r: HashZero,
-      s: HashZero,
-    };
+    return (
+      this.params.cosignature ?? {
+        signer: AddressZero,
+        taker: AddressZero,
+        expiration: 0,
+        v: 0,
+        r: HashZero,
+        s: HashZero,
+      }
+    );
   }
 
   public isCollectionLevelOffer() {
@@ -86,6 +92,30 @@ export class Order {
     }
 
     throw new Error("Could not detect order kind (order might have unsupported params/calldata)");
+  }
+
+  public async cosign(cosigner: TypedDataSigner, taker: string) {
+    const cosignature = {
+      signer: this.params.cosigner!,
+      taker: taker,
+      expiration: getCurrentTimestamp(300),
+      v: this.params.v!,
+      r: this.params.r!,
+      s: this.params.s!,
+    };
+
+    const signature = await cosigner._signTypedData(
+      EIP712_DOMAIN(this.chainId),
+      EIP712_COSIGNATURE_TYPES,
+      cosignature
+    );
+    const { r, s, v } = splitSignature(signature);
+    this.params.cosignature = {
+      ...cosignature,
+      r,
+      s,
+      v,
+    };
   }
 
   public async sign(signer: TypedDataSigner) {
@@ -432,6 +462,16 @@ export const EIP712_TOKEN_SET_OFFER_APPROVAL_TYPES = {
   ],
 };
 
+export const EIP712_COSIGNATURE_TYPES = {
+  Cosignature: [
+    { name: "v", type: "uint8" },
+    { name: "r", type: "bytes32" },
+    { name: "s", type: "bytes32" },
+    { name: "expiration", type: "uint256" },
+    { name: "taker", type: "address" },
+  ],
+};
+
 export const EIP712_DOMAIN = (chainId: number) => ({
   name: "cPort",
   version: "1",
@@ -446,7 +486,7 @@ const normalize = (order: Types.BaseOrder): Types.BaseOrder => {
   // - lowercase all strings
   return {
     kind: order.kind,
-
+    cosigner: lc(order.cosigner ?? AddressZero),
     protocol: n(order.protocol),
     marketplace: lc(order.marketplace),
     marketplaceFeeNumerator: s(order.marketplaceFeeNumerator),

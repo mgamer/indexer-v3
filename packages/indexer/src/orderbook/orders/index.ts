@@ -39,6 +39,7 @@ import { Sources } from "@/models/sources";
 import { SourcesEntity } from "@/models/sources/sources-entity";
 import { checkMarketplaceIsFiltered } from "@/utils/marketplace-blacklists";
 import * as registry from "@/utils/royalties/registry";
+import { getCoSigner } from "@/utils/cosign";
 
 // Whenever a new order kind is added, make sure to also include an
 // entry/implementation in the below types/methods in order to have
@@ -207,7 +208,7 @@ export const getOrderSourceByOrderKind = async (
 };
 
 // Support for filling listings
-export const generateListingDetailsV6 = (
+export const generateListingDetailsV6 = async (
   order: {
     id: string;
     kind: OrderKind;
@@ -223,8 +224,9 @@ export const generateListingDetailsV6 = (
     tokenId: string;
     amount?: number;
     isFlagged?: boolean;
-  }
-): ListingDetails => {
+  },
+  taker?: string
+): Promise<ListingDetails> => {
   const common = {
     orderId: order.id,
     contractKind: token.kind,
@@ -452,10 +454,16 @@ export const generateListingDetailsV6 = (
     }
 
     case "payment-processor-v2": {
+      const rawOrder = new Sdk.PaymentProcessorV2.Order(config.chainId, order.rawData);
+      if (rawOrder.isCosignOrder() && taker) {
+        const cosigner = getCoSigner();
+        await rawOrder.cosign(cosigner, taker);
+      }
+
       return {
         kind: "payment-processor-v2",
         ...common,
-        order: new Sdk.PaymentProcessorV2.Order(config.chainId, order.rawData),
+        order: rawOrder,
       };
     }
 
@@ -483,7 +491,8 @@ export const generateBidDetailsV6 = async (
     tokenId: string;
     amount?: number;
     owner?: string;
-  }
+  },
+  taker?: string
 ): Promise<BidDetails> => {
   const common = {
     orderId: order.id,
@@ -817,6 +826,11 @@ export const generateBidDetailsV6 = async (
 
     case "payment-processor-v2": {
       const sdkOrder = new Sdk.PaymentProcessorV2.Order(config.chainId, order.rawData);
+      if (sdkOrder.isCosignOrder() && taker) {
+        const cosigner = getCoSigner();
+        await sdkOrder.cosign(cosigner, taker);
+      }
+
       return {
         kind: "payment-processor-v2",
         ...common,
