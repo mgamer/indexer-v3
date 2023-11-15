@@ -52,6 +52,18 @@ export const getTrendingMintsV1Options: RouteOptions = {
         .description(
           "Amount of items returned in response. Default is 50 and max is 50. Expected to be sorted and filtered on client side."
         ),
+      normalizeRoyalties: Joi.boolean()
+        .default(false)
+        .description("If true, prices will include missing royalties to be added on-top."),
+      useNonFlaggedFloorAsk: Joi.boolean()
+        .when("normalizeRoyalties", {
+          is: Joi.boolean().valid(true),
+          then: Joi.valid(false),
+        })
+        .default(false)
+        .description(
+          "If true, return the non flagged floor ask. Supported only when `normalizeRoyalties` is false."
+        ),
     }),
   },
   response: {
