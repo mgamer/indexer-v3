@@ -9,7 +9,7 @@ import { logger } from "@/common/logger";
 import { getJoiSaleObject, JoiSale } from "@/common/joi";
 import { buildContinuation, regex, splitContinuation, toBuffer } from "@/common/utils";
 import * as Boom from "@hapi/boom";
-import { Assets } from "@/utils/assets";
+import { Assets, ImageSize } from "@/utils/assets";
 
 const version = "v6";
 
@@ -399,7 +399,7 @@ export const getSalesV6Options: RouteOptions = {
           contract: r.contract,
           tokenId: r.token_id,
           name: r.name,
-          image: Assets.getLocalAssetsLink(r.image),
+          image: Assets.getResizedImageUrl(r.image, ImageSize.medium),
           collectionId: r.collection_id,
           collectionName: r.collection_name,
           washTradingScore: r.wash_trading_score,

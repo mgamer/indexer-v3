@@ -695,7 +695,7 @@ export const getUserTokensV7Options: RouteOptions = {
               tokenId: tokenId,
               kind: r.kind,
               name: r.name,
-              image: Assets.getLocalAssetsLink(r.image),
+              image: Assets.getResizedImageUrl(r.image, ImageSize.medium),
               imageSmall: Assets.getResizedImageUrl(r.image, ImageSize.small),
               imageLarge: Assets.getResizedImageUrl(r.image, ImageSize.large),
               metadata: r.token_metadata?.image_original_url

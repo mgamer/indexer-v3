@@ -7,7 +7,7 @@ import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 import { getJoiTokenObject } from "@/common/joi";
-import { Assets } from "@/utils/assets";
+import { Assets, ImageSize } from "@/utils/assets";
 
 const version = "v1";
 
@@ -173,7 +173,7 @@ export const getUserTokensV1Options: RouteOptions = {
                 contract: fromBuffer(r.contract),
                 tokenId: r.token_id,
                 name: r.name,
-                image: Assets.getLocalAssetsLink(r.image),
+                image: Assets.getResizedImageUrl(r.image, ImageSize.medium),
                 collection: {
                   id: r.collection_id,
                   name: r.collection_name,

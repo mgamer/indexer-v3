@@ -6,7 +6,7 @@ import * as Sdk from "@reservoir0x/sdk";
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { buildContinuation, fromBuffer, regex, splitContinuation, toBuffer } from "@/common/utils";
-import { Assets } from "@/utils/assets";
+import { Assets, ImageSize } from "@/utils/assets";
 import { getJoiPriceObject, JoiPrice } from "@/common/joi";
 import { config } from "@/config/index";
 import _ from "lodash";
@@ -340,7 +340,7 @@ export const getTransfersV4Options: RouteOptions = {
           contract: fromBuffer(r.address),
           tokenId: r.token_id,
           name: r.name,
-          image: Assets.getLocalAssetsLink(r.image),
+          image: Assets.getResizedImageUrl(r.image, ImageSize.medium),
           collection: {
             id: r.collection_id,
             name: r.collection_name,
