@@ -437,26 +437,27 @@ export class Router {
         throw new Error("Relayer not supported for PaymentProcessorV2 orders");
       }
 
-      const cPortDetails = details.filter(({ kind }) => kind === "payment-processor-v2");
+      const ppv2Details = details.filter(({ kind }) => kind === "payment-processor-v2");
 
       const exchange = new Sdk.PaymentProcessorV2.Exchange(this.chainId);
       const operator = exchange.contract.address;
-      const orders: Sdk.PaymentProcessorV2.Order[] = cPortDetails.map(
+
+      const orders: Sdk.PaymentProcessorV2.Order[] = ppv2Details.map(
         (c) => c.order as Sdk.PaymentProcessorV2.Order
       );
 
       const useSweepCollection =
-        cPortDetails.length > 1 &&
-        cPortDetails.every((c) => c.contract === details[0].contract) &&
-        cPortDetails.every((c) => c.currency === details[0].currency);
+        ppv2Details.length > 1 &&
+        ppv2Details.every((c) => c.contract === details[0].contract) &&
+        ppv2Details.every((c) => c.currency === details[0].currency);
 
-      for (const detail of cPortDetails) {
+      for (const detail of ppv2Details) {
         const order = detail.order as Sdk.PaymentProcessorV2.Order;
         if (buyInCurrency !== Sdk.Common.Addresses.Native[this.chainId]) {
           swapDetails.push({
             tokenIn: buyInCurrency,
             tokenOut: Sdk.Common.Addresses.Native[this.chainId],
-            tokenOutAmount: order.params.price,
+            tokenOutAmount: order.params.itemPrice,
             recipient: taker,
             refundTo: taker,
             details: [detail],
@@ -466,7 +467,7 @@ export class Router {
       }
 
       const approvals: FTApproval[] = [];
-      for (const { currency, price } of cPortDetails) {
+      for (const { currency, price } of ppv2Details) {
         if (!isETH(this.chainId, currency)) {
           approvals.push({
             currency,
@@ -483,30 +484,28 @@ export class Router {
           approvals,
           permits: [],
           txTags: {
-            kind: "sale",
-            listings: { "payment-processor": orders.length },
+            listings: { "payment-processor-v2": orders.length },
           },
           preSignatures: [],
           txData: exchange.sweepCollectionTx(taker, orders),
-          orderIds: cPortDetails.map((d) => d.orderId),
+          orderIds: ppv2Details.map((d) => d.orderId),
         });
       } else {
         txs.push({
           approvals,
           permits: [],
           txTags: {
-            kind: "sale",
             listings: { "payment-processor-v2": orders.length },
           },
           preSignatures: [],
           txData: exchange.fillOrdersTx(taker, orders, {
             taker,
           }),
-          orderIds: cPortDetails.map((d) => d.orderId),
+          orderIds: ppv2Details.map((d) => d.orderId),
         });
       }
 
-      for (const { orderId } of cPortDetails) {
+      for (const { orderId } of ppv2Details) {
         success[orderId] = true;
       }
     }
@@ -3755,16 +3754,19 @@ export class Router {
       });
     }
 
-    // We don't have a module for PaymentProcessorV2 offer
+    // Fill PaymentProcessorV2 offers directly
     if (details.some(({ kind }) => kind === "payment-processor-v2")) {
-      const cPortDetails = details.filter(({ kind }) => kind === "payment-processor-v2");
+      const ppv2Details = details.filter(({ kind }) => kind === "payment-processor-v2");
+
       const exchange = new Sdk.PaymentProcessorV2.Exchange(this.chainId);
       const operator = exchange.contract.address;
-      const orders: Sdk.PaymentProcessorV2.Order[] = cPortDetails.map(
+
+      const orders: Sdk.PaymentProcessorV2.Order[] = ppv2Details.map(
         (c) => c.order as Sdk.PaymentProcessorV2.Order
       );
+
       const approvals: NFTApproval[] = [];
-      for (const { orderId, contract } of cPortDetails) {
+      for (const { orderId, contract } of ppv2Details) {
         approvals.push({
           orderIds: [orderId],
           contract: contract,
@@ -3777,17 +3779,16 @@ export class Router {
       txs.push({
         approvals,
         txTags: {
-          kind: "sale",
           listings: { "payment-processor-v2": orders.length },
         },
         preSignatures: [],
         txData: exchange.fillOrdersTx(taker, orders, {
           taker,
         }),
-        orderIds: cPortDetails.map((d) => d.orderId),
+        orderIds: ppv2Details.map((d) => d.orderId),
       });
 
-      for (const { orderId } of cPortDetails) {
+      for (const { orderId } of ppv2Details) {
         success[orderId] = true;
       }
     }
