@@ -4,15 +4,15 @@ import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
 import { MintDetails } from "@reservoir0x/sdk/dist/router/v6/types";
-import { estimateGas } from "@reservoir0x/sdk/dist/router/v6/utils";
-import { Network, getRandomBytes } from "@reservoir0x/sdk/dist/utils";
+import { estimateGasFromTxTags, initializeTxTags } from "@reservoir0x/sdk/dist/router/v6/utils";
+import { Network, TxData, getRandomBytes } from "@reservoir0x/sdk/dist/utils";
 import axios from "axios";
 import { randomUUID } from "crypto";
 import Joi from "joi";
 
 import { idb } from "@/common/db";
 import { logger } from "@/common/logger";
-import { JoiExecuteFee } from "@/common/joi";
+import { JoiExecuteFee, JoiPrice, getJoiPriceObject } from "@/common/joi";
 import { baseProvider } from "@/common/provider";
 import { bn, formatPrice, now, regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
@@ -90,6 +90,9 @@ export const postExecuteMintV1Options: RouteOptions = {
       onlyPath: Joi.boolean()
         .default(false)
         .description("If true, only the path will be returned."),
+      alternativeCurrencies: Joi.array()
+        .items(Joi.string().lowercase())
+        .description("Alternative currencies to return the quote in."),
       currencyChainId: Joi.number().description("The chain id of the purchase currency."),
       source: Joi.string()
         .lowercase()
@@ -165,6 +168,7 @@ export const postExecuteMintV1Options: RouteOptions = {
           rawQuote: Joi.string().pattern(regex.number),
           totalPrice: Joi.number().unsafe(),
           totalRawPrice: Joi.string().pattern(regex.number),
+          buyIn: Joi.array().items(JoiPrice),
           gasCost: Joi.string().pattern(regex.number),
           feesOnTop: Joi.array().items(JoiExecuteFee).description("Can be referral fees."),
           fromChainId: Joi.number().description("Chain id buying from"),
@@ -176,9 +180,10 @@ export const postExecuteMintV1Options: RouteOptions = {
           maxQuantity: Joi.string().pattern(regex.number).allow(null),
         })
       ),
-    }).label(`postExecuteBuy${version.toUpperCase()}Response`),
+      gasEstimate: Joi.number(),
+    }).label(`postExecuteMint${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
-      logger.error(`post-execute-buy-${version}-handler`, `Wrong response schema: ${error}`);
+      logger.error(`post-execute-mint-${version}-handler`, `Wrong response schema: ${error}`);
       throw error;
     },
   },
@@ -213,6 +218,8 @@ export const postExecuteMintV1Options: RouteOptions = {
         // Total price (with fees on top) = price + feesOnTop
         totalPrice?: number;
         totalRawPrice?: string;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        buyIn?: any[];
         feesOnTop: ExecuteFee[];
         gasCost?: string;
         fromChainId?: number;
@@ -225,6 +232,9 @@ export const postExecuteMintV1Options: RouteOptions = {
       if (payload.source) {
         await sources.getOrInsert(payload.source);
       }
+
+      // First pass at estimating the gas costs
+      const txTags = initializeTxTags();
 
       const addToPath = async (
         order: {
@@ -274,6 +284,9 @@ export const postExecuteMintV1Options: RouteOptions = {
             })),
           ],
         });
+
+        txTags.feesOnTop! += additionalFees.length;
+        txTags.mints! += 1;
       };
 
       const items: {
@@ -720,6 +733,127 @@ export const postExecuteMintV1Options: RouteOptions = {
         }
       }
 
+      const getCrossChainQuote = async (
+        chainId: number,
+        item: (typeof path)[0],
+        customMint?: object
+      ) => {
+        // Mainnet requests will get routed to base
+        const actualFromChainId = chainId === Network.Ethereum ? Network.Base : chainId;
+        const toChainId = config.chainId;
+
+        const ccConfig: {
+          enabled: boolean;
+          solver?: string;
+          availableBalance?: string;
+          maxPricePerItem?: string;
+        } = await axios
+          .get(
+            `${config.crossChainSolverBaseUrl}/config?fromChainId=${actualFromChainId}&toChainId=${toChainId}&user=${payload.taker}`
+          )
+          .then((response) => response.data);
+
+        if (!ccConfig.enabled) {
+          throw Boom.badRequest("Cross-chain swap not supported between requested chains");
+        }
+
+        // Only set when minting
+        const isCollectionRequest = true;
+
+        let tokenId = item.tokenId;
+        if (!tokenId) {
+          // Hacky way to support "range" collections like ones from artblocks engine
+          if (item.orderId.match(/^mint:0x[a-f0-9]{40}:\d+:\d+$/g)) {
+            const [, , startTokenId, endTokenId] = item.orderId.split(":");
+            tokenId = bn(
+              "0x111111111111111111111111" +
+                Number(startTokenId).toString(16).padStart(20, "0") +
+                Number(endTokenId).toString(16).padStart(20, "0")
+            ).toString();
+          } else {
+            tokenId = MaxUint256.toString();
+          }
+        }
+
+        const token = `${item.contract}:${tokenId}`.toLowerCase();
+
+        const { quote, gasCost } = await axios
+          .post(`${config.crossChainSolverBaseUrl}/intents/quote`, {
+            fromChainId: actualFromChainId,
+            toChainId,
+            isCollectionRequest,
+            token,
+            amount: item.quantity,
+            customMint,
+          })
+          .then((response) => ({
+            quote: response.data.price,
+            gasCost: response.data.gasCost,
+          }))
+          .catch((error) => {
+            throw Boom.badRequest(
+              error.response?.data ? JSON.stringify(error.response.data) : "Error getting quote"
+            );
+          });
+
+        if (ccConfig.maxPricePerItem && bn(quote).gt(ccConfig.maxPricePerItem)) {
+          throw Boom.badRequest("Price too high to purchase cross-chain");
+        }
+
+        return {
+          actualFromChainId,
+          isCollectionRequest,
+          tokenId,
+          ccConfig,
+          quote,
+          gasCost,
+        };
+      };
+
+      // Add the quotes in the "buy-in" currency to the path items
+      for (const item of path) {
+        if (payload.alternativeCurrencies) {
+          if (preview) {
+            throw Boom.badRequest("Cannot use alternative currencies with preview");
+          }
+
+          if (!item.buyIn) {
+            item.buyIn = [];
+          }
+
+          // Add the first path item's currency in the `alternativeCurrencies` list
+          const firstPathItemCurrency = `${path[0].currency}:${config.chainId}`;
+          if (!payload.alternativeCurrencies.includes(firstPathItemCurrency)) {
+            payload.alternativeCurrencies.push(firstPathItemCurrency);
+          }
+
+          await Promise.all(
+            payload.alternativeCurrencies.map(async (c: string) => {
+              const [currency, chainId] = c.split(":");
+              if (currency !== Sdk.Common.Addresses.Native[Number(chainId)]) {
+                throw Boom.badRequest("Unsupported alternative currency");
+              }
+
+              const { quote } = await getCrossChainQuote(Number(chainId), item);
+              item.buyIn!.push(
+                await getJoiPriceObject(
+                  {
+                    gross: { amount: quote },
+                  },
+                  currency
+                ).then((p) => ({
+                  ...p,
+                  currency: {
+                    ...p.currency,
+                    chainId: Number(chainId),
+                  },
+                }))
+              );
+            })
+          );
+        }
+      }
+
       type StepType = {
         id: string;
         action: string;
@@ -754,6 +888,7 @@ export const postExecuteMintV1Options: RouteOptions = {
         return {
           path,
           maxQuantities: preview ? maxQuantities : undefined,
+          gasEstimate: estimateGasFromTxTags(txTags),
         };
       }
 
@@ -772,77 +907,22 @@ export const postExecuteMintV1Options: RouteOptions = {
         }
 
         const requestedFromChainId = payload.currencyChainId;
-        // Mainnet requests will get routed to base
-        const actualFromChainId =
-          requestedFromChainId === Network.Ethereum ? Network.Base : requestedFromChainId;
-        const toChainId = config.chainId;
-
-        const ccConfig: {
-          enabled: boolean;
-          solver?: string;
-          availableBalance?: string;
-          maxPricePerItem?: string;
-        } = await axios
-          .get(
-            `${config.crossChainSolverBaseUrl}/config?fromChainId=${actualFromChainId}&toChainId=${toChainId}&user=${payload.taker}`
-          )
-          .then((response) => response.data);
-
-        if (!ccConfig.enabled) {
-          throw Boom.badRequest("Cross-chain swap not supported between requested chains");
-        }
 
         const item = path[0];
 
-        // Only set when minting
-        const isCollectionRequest = true;
-
-        let tokenId = item.tokenId;
-        if (!tokenId) {
-          // Hacky way to support "range" collections like ones from artblocks engine
-          if (item.orderId.match(/^mint:0x[a-f0-9]{40}:\d+:\d+$/g)) {
-            const [, , startTokenId, endTokenId] = item.orderId.split(":");
-            tokenId = bn(
-              "0x111111111111111111111111" +
-                Number(startTokenId).toString(16).padStart(20, "0") +
-                Number(endTokenId).toString(16).padStart(20, "0")
-            ).toString();
-          } else {
-            tokenId = MaxUint256.toString();
-          }
-        }
-
-        const token = `${item.contract}:${tokenId}`.toLowerCase();
-
-        const { quote, gasCost } = await axios
-          .post(`${config.crossChainSolverBaseUrl}/intents/quote`, {
-            fromChainId: actualFromChainId,
-            toChainId,
-            isCollectionRequest,
-            token,
-            amount: item.quantity,
-          })
-          .then((response) => ({
-            quote: response.data.price,
-            gasCost: response.data.gasCost,
-          }))
-          .catch((error) => {
-            throw Boom.badRequest(
-              error.response?.data ? JSON.stringify(error.response.data) : "Error getting quote"
-            );
-          });
-
-        if (ccConfig.maxPricePerItem && bn(quote).gt(ccConfig.maxPricePerItem)) {
-          throw Boom.badRequest("Price too high to purchase cross-chain");
-        }
+        const { actualFromChainId, ccConfig, isCollectionRequest, tokenId, quote, gasCost } =
+          await getCrossChainQuote(requestedFromChainId, item, items[0].custom);
 
         item.fromChainId = actualFromChainId;
         item.gasCost = gasCost;
+
+        const needsDeposit = bn(ccConfig.availableBalance!).lte(quote);
 
         if (payload.onlyPath) {
           return {
             path,
             maxQuantities: preview ? maxQuantities : undefined,
+            gasEstimate: needsDeposit ? 100000 : 0,
           };
         }
 
@@ -877,14 +957,26 @@ export const postExecuteMintV1Options: RouteOptions = {
           salt: getRandomBytes(20).toString(),
         });
 
-        if (bn(ccConfig.availableBalance!).lte(quote)) {
+        if (needsDeposit) {
           const exchange = new Sdk.CrossChain.Exchange(actualFromChainId);
-          let depositTx = exchange.depositAndPrevalidateTx(
-            payload.taker,
-            ccConfig.solver!,
-            bn(quote).sub(ccConfig.availableBalance!).toString(),
-            order
-          );
+
+          const isCustomMint = Boolean(items[0].custom);
+
+          let depositTx: TxData;
+          if (isCustomMint) {
+            depositTx = exchange.depositTx(
+              payload.taker,
+              ccConfig.solver!,
+              bn(quote).sub(ccConfig.availableBalance!).toString()
+            );
+          } else {
+            depositTx = exchange.depositAndPrevalidateTx(
+              payload.taker,
+              ccConfig.solver!,
+              bn(quote).sub(ccConfig.availableBalance!).toString(),
+              order
+            );
+          }
 
           // Never deposit to mainnet, but bridge-and-deposit to base
           if (requestedFromChainId === Network.Ethereum) {
@@ -905,21 +997,65 @@ export const postExecuteMintV1Options: RouteOptions = {
             };
           }
 
-          customSteps[0].items.push({
-            status: "incomplete",
-            data: {
-              ...depositTx,
-              chainId: requestedFromChainId,
-            },
-            check: {
-              endpoint: "/execute/status/v1",
-              method: "POST",
-              body: {
-                kind: "cross-chain-intent",
-                id: order.hash(),
+          if (isCustomMint) {
+            customSteps[0].items.push({
+              status: "incomplete",
+              data: {
+                ...depositTx,
+                chainId: requestedFromChainId,
               },
-            },
-          });
+              check: {
+                endpoint: "/execute/status/v1",
+                method: "POST",
+                body: {
+                  kind: "cross-chain-transaction",
+                },
+              },
+            });
+
+            customSteps[1].items.push({
+              status: "incomplete",
+              data: {
+                sign: order.getSignatureData(),
+                post: {
+                  endpoint: "/execute/solve/v1",
+                  method: "POST",
+                  body: {
+                    kind: "cross-chain-intent",
+                    order: order.params,
+                    chainId: actualFromChainId,
+                    context: {
+                      customMint: items[0].custom,
+                    },
+                  },
+                },
+              },
+              check: {
+                endpoint: "/execute/status/v1",
+                method: "POST",
+                body: {
+                  kind: "cross-chain-intent",
+                  id: order.hash(),
+                },
+              },
+            });
+          } else {
+            customSteps[0].items.push({
+              status: "incomplete",
+              data: {
+                ...depositTx,
+                chainId: requestedFromChainId,
+              },
+              check: {
+                endpoint: "/execute/status/v1",
+                method: "POST",
+                body: {
+                  kind: "cross-chain-intent",
+                  id: order.hash(),
+                },
+              },
+            });
+          }
         } else {
           customSteps[1].items.push({
             status: "incomplete",
@@ -932,6 +1068,9 @@ export const postExecuteMintV1Options: RouteOptions = {
                   kind: "cross-chain-intent",
                   order: order.params,
                   chainId: actualFromChainId,
+                  context: {
+                    customMint: items[0].custom,
+                  },
                 },
               },
             },
@@ -1038,7 +1177,7 @@ export const postExecuteMintV1Options: RouteOptions = {
           throw getExecuteError("Balance too low to proceed with transaction");
         }
 
-        steps[5].items.push({
+        steps[0].items.push({
           status: "incomplete",
           orderIds,
           data: txData,
@@ -1049,7 +1188,7 @@ export const postExecuteMintV1Options: RouteOptions = {
               kind: "transaction",
             },
           },
-          gasEstimate: txTags ? estimateGas(txTags) : undefined,
+          gasEstimate: txTags ? estimateGasFromTxTags(txTags) : undefined,
         });
       }
 

@@ -50,7 +50,7 @@ export class Assets {
 
   public static getResizedImageUrl(
     imageUrl: string,
-    size: number,
+    size?: number,
     image_version_updated_at?: number
   ): string {
     try {

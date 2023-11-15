@@ -1377,7 +1377,7 @@ export const getTokensV7Options: RouteOptions = {
               tokenId,
               name: r.name,
               description: r.description,
-              image: Assets.getLocalAssetsLink(r.image),
+              image: Assets.getResizedImageUrl(r.image, undefined, r.image_version_updated_at),
               imageSmall: Assets.getResizedImageUrl(
                 r.image,
                 ImageSize.small,
@@ -1548,7 +1548,7 @@ export const getTokensV7Options: RouteOptions = {
             tokenId,
             name: r.name,
             description: r.description,
-            image: Assets.getLocalAssetsLink(r.image),
+            image: Assets.getResizedImageUrl(r.image),
             imageSmall: Assets.getResizedImageUrl(r.image, ImageSize.small),
             imageLarge: Assets.getResizedImageUrl(r.image, ImageSize.large),
             metadata: Object.values(metadata).every((el) => el === undefined)
