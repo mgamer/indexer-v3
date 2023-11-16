@@ -419,7 +419,6 @@ describe("PaymentProcessorV2 - SingleToken Erc1155", () => {
     expect(buyerNftBalanceAfter).to.eq(1);
   });
 
-
   it("Build and fill sell order - partial - multiple", async () => {
     const buyer = alice;
     const seller = bob;
