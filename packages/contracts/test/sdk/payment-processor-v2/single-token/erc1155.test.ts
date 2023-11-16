@@ -1,12 +1,12 @@
 import { Contract } from "@ethersproject/contracts";
 import { parseEther } from "@ethersproject/units";
+import * as Sdk from "@reservoir0x/sdk/src";
 import * as Common from "@reservoir0x/sdk/src/common";
 import * as PaymentProcessorV2 from "@reservoir0x/sdk/src/payment-processor-v2";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import { constants } from "ethers";
-import * as Sdk from "@reservoir0x/sdk/src";
 
 import { getChainId, getCurrentTimestamp, reset, setupNFTs } from "../../../utils";
 
