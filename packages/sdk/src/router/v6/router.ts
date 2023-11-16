@@ -463,7 +463,8 @@ export class Router {
         paymentProcessorV2Details.length > 1 &&
         paymentProcessorV2Details.every((c) => c.contract === details[0].contract) &&
         paymentProcessorV2Details.every((c) => c.currency === details[0].currency) &&
-        paymentProcessorV2Details.every((c) => c.fees?.length === 0);
+        paymentProcessorV2Details.every((c) => (c.fees ? c.fees.length === 0 : true)) &&
+        orders.every((c) => !c.isPartial());
 
       for (const detail of paymentProcessorV2Details) {
         const order = detail.order as Sdk.PaymentProcessorV2.Order;
@@ -514,9 +515,12 @@ export class Router {
           txData: exchange.fillOrdersTx(
             taker,
             orders,
-            {
-              taker,
-            },
+            orders.map((c, i) => {
+              return {
+                taker,
+                amount: paymentProcessorV2Details[i].amount ?? 1,
+              };
+            }),
             options,
             allFees.map((c) => c[0])
           ),
@@ -3800,7 +3804,12 @@ export class Router {
         txData: exchange.fillOrdersTx(
           taker,
           orders,
-          { taker },
+          orders.map((c, i) => {
+            return {
+              taker,
+              amount: details[i].amount ?? 1,
+            };
+          }),
           options,
           allFees.map((c) => c[0])
         ),

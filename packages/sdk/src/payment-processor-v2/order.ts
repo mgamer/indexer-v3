@@ -5,6 +5,7 @@ import { HashZero, AddressZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import { _TypedDataEncoder } from "@ethersproject/hash";
 import { verifyTypedData } from "@ethersproject/wallet";
+import { BigNumberish } from "@ethersproject/bignumber";
 
 import * as Addresses from "./addresses";
 import { Builders } from "./builders";
@@ -69,6 +70,10 @@ export class Order {
 
   public isCollectionLevelOffer() {
     return this.params.kind === "collection-offer-approval";
+  }
+
+  public isPartial() {
+    return this.params.protocol === Types.OrderProtocols.ERC1155_FILL_PARTIAL;
   }
 
   public checkValidity() {
@@ -141,7 +146,7 @@ export class Order {
     };
   }
 
-  public getMatchedOrder(taker: string): Types.MatchedOrder {
+  public getMatchedOrder(taker: string, amount?: BigNumberish): Types.MatchedOrder {
     const isBuyOrder = this.isBuyOrder();
     const sellOrder = this.params;
     return {
@@ -159,8 +164,8 @@ export class Order {
 
       marketplaceFeeNumerator: sellOrder.marketplaceFeeNumerator,
       maxRoyaltyFeeNumerator: sellOrder.maxRoyaltyFeeNumerator ?? "0",
-      requestedFillAmount: "0",
-      minimumFillAmount: "0",
+      requestedFillAmount: amount ? amount.toString() : "0",
+      minimumFillAmount: amount ? amount.toString() : "0",
 
       signature: {
         r: this.params.r!,

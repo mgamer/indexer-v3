@@ -6,9 +6,10 @@ import { Contract, ContractTransaction } from "@ethersproject/contracts";
 import { defaultAbiCoder } from "@ethersproject/abi";
 import { MatchingOptions } from "./builders/base";
 import { BigNumberish } from "@ethersproject/bignumber";
+import { _TypedDataEncoder } from "@ethersproject/hash";
 
 import * as Addresses from "./addresses";
-import { Order } from "./order";
+import { Order, EIP712_DOMAIN } from "./order";
 import { TxData, bn, generateSourceBytes } from "../utils";
 
 import ExchangeAbi from "./abis/cPort.json";
@@ -16,10 +17,17 @@ import ExchangeAbi from "./abis/cPort.json";
 export class Exchange {
   public chainId: number;
   public contract: Contract;
+  public domainSeparator: string;
 
   constructor(chainId: number) {
     this.chainId = chainId;
     this.contract = new Contract(Addresses.Exchange[this.chainId], ExchangeAbi);
+    this.domainSeparator = this.buildDomainSeparator();
+  }
+
+  private buildDomainSeparator() {
+    const domain = EIP712_DOMAIN(this.chainId);
+    return _TypedDataEncoder.hashDomain(domain);
   }
 
   // --- Get master nonce ---
@@ -110,7 +118,7 @@ export class Exchange {
               "(address recipient,uint256 amount) feeOnTop",
             ],
             [
-              Addresses.DomainSeparator[this.chainId],
+              this.domainSeparator,
               isCollectionOffer,
               matchedOrder,
               matchedOrder.signature,
@@ -130,7 +138,7 @@ export class Exchange {
               "(address recipient,uint256 amount) feeOnTop",
             ],
             [
-              Addresses.DomainSeparator[this.chainId],
+              this.domainSeparator,
               matchedOrder,
               matchedOrder.signature,
               order.getCosignature(),
@@ -144,10 +152,16 @@ export class Exchange {
       order.params.sellerOrBuyer != taker.toLowerCase() &&
       matchedOrder.paymentMethod === AddressZero;
 
+    const fillAmount = matchOptions.amount ?? 1;
+    const fillValue = bn(order.params.price)
+      .div(order.params.amount)
+      .mul(bn(fillAmount))
+      .add(feeOnTop.amount);
+
     return {
       from: taker,
       to: this.contract.address,
-      value: passValue ? bn(order.params.price).add(feeOnTop.amount).toString() : "0",
+      value: passValue ? fillValue.toString() : "0",
       data: data + generateSourceBytes(options?.source),
     };
   }
@@ -157,7 +171,7 @@ export class Exchange {
   public fillOrdersTx(
     taker: string,
     orders: Order[],
-    matchOptions: MatchingOptions,
+    matchOptions: MatchingOptions[],
     options?: {
       source?: string;
     },
@@ -167,7 +181,13 @@ export class Exchange {
     }[]
   ): TxData {
     if (orders.length === 1) {
-      return this.fillOrderTx(taker, orders[0], matchOptions, options, fees ? fees[0] : undefined);
+      return this.fillOrderTx(
+        taker,
+        orders[0],
+        matchOptions[0],
+        options,
+        fees ? fees[0] : undefined
+      );
     }
 
     const feeOnTop = {
@@ -184,7 +204,7 @@ export class Exchange {
     const isBuyOrder = orders[0].isBuyOrder();
     if (isBuyOrder) {
       const saleDetails = orders.map((order, index) => {
-        const matchedOrder = order.buildMatching(matchOptions);
+        const matchedOrder = order.buildMatching(matchOptions[index]);
         const fee = fees && fees[index] ? fees[index] : feeOnTop;
         allFees.push(fee);
         return matchedOrder;
@@ -206,7 +226,7 @@ export class Exchange {
             `,
           ],
           [
-            Addresses.DomainSeparator[this.chainId],
+            this.domainSeparator,
             {
               isCollectionLevelOfferArray: orders.map((c) => c.isCollectionLevelOffer()),
               saleDetailsArray: saleDetails,
@@ -227,21 +247,23 @@ export class Exchange {
     }
 
     const saleDetails = orders.map((order, index) => {
-      const matchedOrder = order.buildMatching(matchOptions);
+      const matchedOrder = order.buildMatching(matchOptions[index]);
       const passValue =
         !order.isBuyOrder() &&
         order.params.sellerOrBuyer != taker.toLowerCase() &&
         matchedOrder.paymentMethod === AddressZero;
 
       const fee = fees && fees[index] ? fees[index] : feeOnTop;
+
+      const fillAmount = matchOptions[index].amount ?? 1;
+      const fillValue = bn(order.params.price)
+        .div(order.params.amount)
+        .mul(bn(fillAmount))
+        .add(fee.amount);
       if (passValue) {
-        price = price.add(order.params.price);
+        price = price.add(fillValue);
       }
-
-      price = price.add(fee.amount);
-
       allFees.push(fee);
-
       return matchedOrder;
     });
 
@@ -255,7 +277,7 @@ export class Exchange {
           "(address recipient,uint256 amount)[]",
         ],
         [
-          Addresses.DomainSeparator[this.chainId],
+          this.domainSeparator,
           saleDetails,
           saleDetails.map((c) => c.signature),
           orders.map((c) => c.getCosignature()),
@@ -310,7 +332,7 @@ export class Exchange {
           "(address signer,address taker,uint256 expiration,uint8 v,bytes32 r,bytes32 s)[]",
         ],
         [
-          Addresses.DomainSeparator[this.chainId],
+          this.domainSeparator,
           feeOnTop,
           sweepCollectionParams.sweepOrder,
           sweepCollectionParams.items,

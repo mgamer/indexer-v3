@@ -65,9 +65,10 @@ export class SingleTokenBuilder extends BaseBuilder {
     order: Order,
     options: {
       taker: string;
+      amount?: BigNumberish;
       maxRoyaltyFeeNumerator?: BigNumberish;
     }
   ): MatchedOrder {
-    return order.getMatchedOrder(options.taker);
+    return order.getMatchedOrder(options.taker, options.amount);
   }
 }
