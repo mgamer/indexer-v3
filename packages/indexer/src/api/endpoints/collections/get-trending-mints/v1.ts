@@ -53,9 +53,6 @@ export const getTrendingMintsV1Options: RouteOptions = {
         .description(
           "Amount of items returned in response. Default is 50 and max is 50. Expected to be sorted and filtered on client side."
         ),
-      includeImages: Joi.boolean()
-        .default(false)
-        .description("If true, sample token images will be returned."),
       normalizeRoyalties: Joi.boolean()
         .default(false)
         .description("If true, prices will include missing royalties to be added on-top."),
@@ -152,7 +149,7 @@ export const getTrendingMintsV1Options: RouteOptions = {
     },
   },
   handler: async ({ query }: Request, h) => {
-    const { normalizeRoyalties, useNonFlaggedFloorAsk, type, period, limit, includeImages } = query;
+    const { normalizeRoyalties, useNonFlaggedFloorAsk, type, period, limit } = query;
 
     try {
       const mintingCollections = await getMintingCollections(type);
@@ -166,7 +163,6 @@ export const getTrendingMintsV1Options: RouteOptions = {
         contracts: mintingCollections.map(({ collection_id }) => collection_id),
         startTime: getStartTime(period),
         limit,
-        includeImages,
       });
 
       if (elasticMintData.length < 1) {
