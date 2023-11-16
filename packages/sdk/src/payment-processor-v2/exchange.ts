@@ -1,4 +1,3 @@
-import { Interface } from "@ethersproject/abi";
 import { Provider } from "@ethersproject/abstract-provider";
 import { Signer } from "@ethersproject/abstract-signer";
 import { BigNumber } from "@ethersproject/bignumber";
@@ -6,9 +5,11 @@ import { AddressZero } from "@ethersproject/constants";
 import { Contract, ContractTransaction } from "@ethersproject/contracts";
 import { defaultAbiCoder } from "@ethersproject/abi";
 import { MatchingOptions } from "./builders/base";
+import { BigNumberish } from "@ethersproject/bignumber";
 
 import * as Addresses from "./addresses";
 import { Order } from "./order";
+import {} from "./types";
 import { TxData, bn, generateSourceBytes } from "../utils";
 
 import ExchangeAbi from "./abis/cPort.json";
@@ -84,11 +85,15 @@ export class Exchange {
     matchOptions: MatchingOptions,
     options?: {
       source?: string;
+    },
+    fee?: {
+      recipient: string;
+      amount: BigNumberish;
     }
   ): TxData {
-    const feeOnTop = {
+    const feeOnTop = fee ?? {
       recipient: AddressZero,
-      amount: 0,
+      amount: bn(0),
     };
 
     const matchedOrder = order.buildMatching(matchOptions);
@@ -143,7 +148,7 @@ export class Exchange {
     return {
       from: taker,
       to: this.contract.address,
-      value: passValue ? order.params.price.toString() : "0",
+      value: passValue ? bn(order.params.price).add(feeOnTop.amount).toString() : "0",
       data: data + generateSourceBytes(options?.source),
     };
   }
@@ -156,31 +161,33 @@ export class Exchange {
     matchOptions: MatchingOptions,
     options?: {
       source?: string;
-    }
+    },
+    fees?: {
+      recipient: string;
+      amount: BigNumberish;
+    }[]
   ): TxData {
     if (orders.length === 1) {
-      return this.fillOrderTx(taker, orders[0], matchOptions, options);
+      return this.fillOrderTx(taker, orders[0], matchOptions, options, fees ? fees[0] : undefined);
     }
 
     const feeOnTop = {
       recipient: AddressZero,
-      amount: 0,
+      amount: bn(0),
     };
+
+    const allFees: {
+      recipient: string;
+      amount: BigNumberish;
+    }[] = [];
 
     let price = bn(0);
     const isBuyOrder = orders[0].isBuyOrder();
     if (isBuyOrder) {
-      const saleDetails = orders.map((order) => {
+      const saleDetails = orders.map((order, index) => {
         const matchedOrder = order.buildMatching(matchOptions);
-        const passValue =
-          !order.isBuyOrder() &&
-          order.params.sellerOrBuyer != taker.toLowerCase() &&
-          matchedOrder.paymentMethod === AddressZero;
-
-        if (passValue) {
-          price = price.add(order.params.price);
-        }
-
+        const fee = fees && fees[index] ? fees[index] : feeOnTop;
+        allFees.push(fee);
         return matchedOrder;
       });
 
@@ -207,7 +214,7 @@ export class Exchange {
               buyerSignaturesArray: saleDetails.map((c) => c.signature),
               tokenSetProofsArray: orders.map((c) => c.getTokenSetProof()),
               cosignaturesArray: orders.map((c) => c.getCosignature()),
-              feesOnTopArray: orders.map(() => feeOnTop),
+              feesOnTopArray: allFees,
             },
           ]
         ),
@@ -216,21 +223,25 @@ export class Exchange {
       return {
         from: taker,
         to: this.contract.address,
-        value: price.toString(),
         data: data + generateSourceBytes(options?.source),
       };
     }
 
-    const saleDetails = orders.map((order) => {
+    const saleDetails = orders.map((order, index) => {
       const matchedOrder = order.buildMatching(matchOptions);
       const passValue =
         !order.isBuyOrder() &&
         order.params.sellerOrBuyer != taker.toLowerCase() &&
         matchedOrder.paymentMethod === AddressZero;
 
+      const fee = fees && fees[index] ? fees[index] : feeOnTop;
       if (passValue) {
         price = price.add(order.params.price);
       }
+
+      price = price.add(fee.amount);
+
+      allFees.push(fee);
 
       return matchedOrder;
     });
@@ -249,7 +260,7 @@ export class Exchange {
           saleDetails,
           saleDetails.map((c) => c.signature),
           orders.map((c) => c.getCosignature()),
-          orders.map(() => feeOnTop),
+          allFees,
         ]
       ),
     ]);
@@ -269,12 +280,16 @@ export class Exchange {
     orders: Order[],
     options?: {
       source?: string;
+    },
+    fee?: {
+      recipient: string;
+      amount: BigNumberish;
     }
   ): TxData {
     let price = bn(0);
-    const feeOnTop = {
+    const feeOnTop = fee ?? {
       recipient: AddressZero,
-      amount: 0,
+      amount: bn(0),
     };
 
     orders.forEach((order) => {
@@ -312,24 +327,5 @@ export class Exchange {
       value: price.toString(),
       data: data + generateSourceBytes(options?.source),
     };
-  }
-
-  // --- Check if operator is allowed to transfer ---
-
-  public async isTransferAllowed(
-    provider: Provider,
-    contract: string,
-    operator: string,
-    from: string,
-    to: string
-  ) {
-    const c = new Contract(
-      contract,
-      new Interface([
-        "function isTransferAllowed(address caller, address from, address to) view returns (bool)",
-      ]),
-      provider
-    );
-    return c.isTransferAllowed(operator, from, to);
   }
 }
