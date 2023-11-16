@@ -5,9 +5,9 @@ import { logger } from "@/common/logger";
 import { onchainMetadataProvider } from "@/metadata/providers/onchain-metadata-provider";
 import { onchainMetadataProcessTokenUriJob } from "./onchain-metadata-process-job";
 import { RequestWasThrottledError } from "@/metadata/providers/utils";
-import { PendingFetchOnchainUriTokens } from "@/models/pending-fetch-onchain-uri-tokens";
 import { PendingRefreshTokens } from "@/models/pending-refresh-tokens";
 import { metadataIndexProcessJob } from "./metadata-process-job";
+import { config } from "@/config/index";
 
 export default class OnchainMetadataFetchTokenUriJob extends AbstractRabbitMqJobHandler {
   queueName = "metadata-index-onchain-process-uri-queue";
@@ -23,7 +23,8 @@ export default class OnchainMetadataFetchTokenUriJob extends AbstractRabbitMqJob
     const count = 50; // Default number of tokens to fetch
 
     // Get the onchain tokens from the list
-    const fetchTokens = await PendingFetchOnchainUriTokens.get(count);
+    const pendingRefreshTokens = new PendingRefreshTokens("onchain");
+    const fetchTokens = await pendingRefreshTokens.get(count);
 
     // If no more tokens
     if (_.isEmpty(fetchTokens)) {
@@ -84,13 +85,13 @@ export default class OnchainMetadataFetchTokenUriJob extends AbstractRabbitMqJob
 
     // Default to simple hash if no uri found
     if (!_.isEmpty(fallbackTokens)) {
-      const pendingRefreshTokens = new PendingRefreshTokens("simplehash");
+      const pendingRefreshTokens = new PendingRefreshTokens(config.fallbackMetadataIndexingMethod);
       await pendingRefreshTokens.add(fallbackTokens);
-      await metadataIndexProcessJob.addToQueue({ method: "simplehash" });
+      await metadataIndexProcessJob.addToQueue({ method: config.fallbackMetadataIndexingMethod });
     }
 
     // If there are potentially more token uris to process, trigger another job
-    const queueLength = await PendingFetchOnchainUriTokens.len();
+    const queueLength = await pendingRefreshTokens.length();
     if (queueLength > 0) {
       await this.addToQueue();
     }

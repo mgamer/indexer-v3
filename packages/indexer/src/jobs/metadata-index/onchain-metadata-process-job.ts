@@ -5,6 +5,7 @@ import { onchainMetadataProvider } from "@/metadata/providers/onchain-metadata-p
 import { RequestWasThrottledError } from "@/metadata/providers/utils";
 import { PendingRefreshTokens } from "@/models/pending-refresh-tokens";
 import { metadataIndexProcessJob } from "./metadata-process-job";
+import { config } from "@/config/index";
 
 export type OnchainMetadataProcessTokenUriJobPayload = {
   contract: string;
@@ -57,7 +58,7 @@ export default class OnchainMetadataProcessTokenUriJob extends AbstractRabbitMqJ
     }
 
     // for whatever reason, we didn't find the metadata, we fallback to simplehash
-    const pendingRefreshTokens = new PendingRefreshTokens("simplehash");
+    const pendingRefreshTokens = new PendingRefreshTokens(config.fallbackMetadataIndexingMethod);
     await pendingRefreshTokens.add([
       {
         collection: contract,
@@ -66,7 +67,7 @@ export default class OnchainMetadataProcessTokenUriJob extends AbstractRabbitMqJ
       },
     ]);
 
-    await metadataIndexProcessJob.addToQueue({ method: "simplehash" });
+    await metadataIndexProcessJob.addToQueue({ method: config.fallbackMetadataIndexingMethod });
   }
 
   public async addToQueue(params: OnchainMetadataProcessTokenUriJobPayload, delay = 0) {

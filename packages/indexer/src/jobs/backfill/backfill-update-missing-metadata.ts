@@ -16,9 +16,7 @@ import { collectionMetadataQueueJob } from "@/jobs/collection-updates/collection
 import { metadataIndexFetchJob } from "@/jobs/metadata-index/metadata-fetch-job";
 import { metadataIndexProcessJob } from "@/jobs/metadata-index/metadata-process-job";
 import { metadataIndexProcessBySlugJob } from "@/jobs/metadata-index/metadata-process-by-slug-job";
-import { PendingFetchOnchainUriTokens } from "@/models/pending-fetch-onchain-uri-tokens";
 import { onchainMetadataFetchTokenUriJob } from "../metadata-index/onchain-metadata-process-token-uri-job";
-import { hasExtendCollectionHandler } from "@/metadata/extend";
 
 const QUEUE_NAME = "backfill-update-missing-metadata-queue";
 
@@ -143,25 +141,12 @@ async function processCollectionTokens(
     return;
   }
 
-  const fetchTokensOnchain = unindexedTokens.filter(
-    (token) => !hasExtendCollectionHandler(token.contract) && indexingMethod === "onchain"
-  );
+  const pendingRefreshTokens = new PendingRefreshTokens(indexingMethod);
+  await pendingRefreshTokens.add(unindexedTokens);
 
-  // Add the tokens to the list
-  if (fetchTokensOnchain.length > 0) {
-    await PendingFetchOnchainUriTokens.add(fetchTokensOnchain);
+  if (indexingMethod === "onchain") {
     await onchainMetadataFetchTokenUriJob.addToQueue();
-  }
-
-  // if a fetch token has an extend logic, we dont want to use onchain metadata processing, default to using opensea
-  const fetchTokensOffchain = unindexedTokens.filter(
-    (token) => hasExtendCollectionHandler(token.contract) || indexingMethod !== "onchain"
-  );
-
-  if (fetchTokensOffchain.length > 0) {
-    const pendingRefreshTokens = new PendingRefreshTokens(indexingMethod);
-    await pendingRefreshTokens.add(fetchTokensOffchain);
-
+  } else {
     await metadataIndexProcessJob.addToQueue({ method: indexingMethod });
   }
 }

@@ -9,9 +9,7 @@ import { PendingRefreshTokensBySlug } from "@/models/pending-refresh-tokens-by-s
 import { AddressZero } from "@ethersproject/constants";
 import { metadataIndexProcessJob } from "@/jobs/metadata-index/metadata-process-job";
 import { metadataIndexProcessBySlugJob } from "@/jobs/metadata-index/metadata-process-by-slug-job";
-import { PendingFetchOnchainUriTokens } from "@/models/pending-fetch-onchain-uri-tokens";
 import { onchainMetadataFetchTokenUriJob } from "./onchain-metadata-process-token-uri-job";
-import { hasExtendCollectionHandler } from "@/metadata/extend";
 
 export type MetadataIndexFetchJobPayload =
   | {
@@ -142,25 +140,12 @@ export default class MetadataIndexFetchJob extends AbstractRabbitMqJobHandler {
       });
     }
 
-    const fetchTokensOnchain = refreshTokens.filter(
-      (token) => !hasExtendCollectionHandler(token.contract) && data.method === "onchain"
-    );
+    const pendingRefreshTokens = new PendingRefreshTokens(data.method);
+    await pendingRefreshTokens.add(refreshTokens, prioritized);
 
-    // Add the tokens to the list
-    if (fetchTokensOnchain.length > 0) {
-      await PendingFetchOnchainUriTokens.add(fetchTokensOnchain, prioritized);
+    if (data.method === "onchain") {
       await onchainMetadataFetchTokenUriJob.addToQueue();
-    }
-
-    // if a fetch token has an extend logic, we dont want to use onchain metadata processing, default to using opensea
-    const fetchTokensOffchain = refreshTokens.filter(
-      (token) => hasExtendCollectionHandler(token.contract) || data.method !== "onchain"
-    );
-
-    if (fetchTokensOffchain.length > 0) {
-      const pendingRefreshTokens = new PendingRefreshTokens(data.method);
-      await pendingRefreshTokens.add(fetchTokensOffchain, prioritized);
-
+    } else {
       await metadataIndexProcessJob.addToQueue({ method: data.method });
     }
   }

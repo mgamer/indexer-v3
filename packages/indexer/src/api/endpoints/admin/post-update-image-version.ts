@@ -61,6 +61,7 @@ export const postUpdateImageVersionOptions: RouteOptions = {
         UPDATE tokens
           SET image_version_updated_at = NOW()
         WHERE collection_id = $1
+        LIMIT 10000
       `,
         [collectionId]
       );
