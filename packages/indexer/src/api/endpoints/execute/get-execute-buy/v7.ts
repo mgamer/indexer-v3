@@ -1718,6 +1718,8 @@ export const getExecuteBuyV7Options: RouteOptions = {
         };
       }
 
+      const txSender = payload.relayer ?? payload.taker;
+
       // Seaport intent purchasing MVP
       if (useSeaportIntent) {
         if (!config.seaportSolverBaseUrl) {
@@ -1758,7 +1760,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
         }
 
         const order = new Sdk.SeaportV15.Order(config.chainId, {
-          offerer: payload.taker,
+          offerer: txSender,
           zone: AddressZero,
           offer: [
             {
