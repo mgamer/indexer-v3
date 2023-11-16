@@ -403,10 +403,7 @@ describe("PaymentProcessorV2 - SingleToken Erc721", () => {
 
     expect(nonPartialTx.txs.length).to.eq(1);
     for (const tx of nonPartialTx.txs) {
-      await seller.sendTransaction({
-        ...tx.txData,
-        gasLimit: 1000000,
-      });
+      await seller.sendTransaction(tx.txData);
     }
 
     const sellerBalanceAfter = await weth.getBalance(seller.address);

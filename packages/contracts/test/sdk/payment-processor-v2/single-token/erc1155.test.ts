@@ -522,10 +522,7 @@ describe("PaymentProcessorV2 - SingleToken Erc1155", () => {
     expect(nonPartialTx.txs.length).to.eq(1);
 
     for (const tx of nonPartialTx.txs) {
-      await buyer.sendTransaction({
-        ...tx.txData,
-        gasLimit: 1000000,
-      });
+      await buyer.sendTransaction(tx.txData);
     }
 
     const sellerBalanceAfter = await ethers.provider.getBalance(seller.address);
