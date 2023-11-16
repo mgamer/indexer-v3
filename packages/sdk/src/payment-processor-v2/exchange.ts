@@ -9,7 +9,6 @@ import { BigNumberish } from "@ethersproject/bignumber";
 
 import * as Addresses from "./addresses";
 import { Order } from "./order";
-import {} from "./types";
 import { TxData, bn, generateSourceBytes } from "../utils";
 
 import ExchangeAbi from "./abis/cPort.json";
