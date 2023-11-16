@@ -22,6 +22,7 @@ import {
 } from "@/api/endpoints/collections/get-trending-mints/interfaces";
 import { JoiPrice, getJoiPriceObject } from "@/common/joi";
 import { Sources } from "@/models/sources";
+import { Assets } from "@/utils/assets";
 
 const version = "v1";
 
@@ -52,6 +53,9 @@ export const getTrendingMintsV1Options: RouteOptions = {
         .description(
           "Amount of items returned in response. Default is 50 and max is 50. Expected to be sorted and filtered on client side."
         ),
+      includeImages: Joi.boolean()
+        .default(false)
+        .description("If true, sample token images will be returned."),
       normalizeRoyalties: Joi.boolean()
         .default(false)
         .description("If true, prices will include missing royalties to be added on-top."),
@@ -107,7 +111,8 @@ export const getTrendingMintsV1Options: RouteOptions = {
           startDate: Joi.date().allow("", null),
           endDate: Joi.date().allow("", null),
           maxSupply: Joi.number().allow(null),
-          mintPrice: Joi.number().allow(null),
+          mintPrice: Joi.string().allow(null),
+          sampleImages: Joi.array().items(Joi.string().allow("", null)),
           mintVolume: Joi.any(),
           mintCount: Joi.number().allow(null),
           mintType: Joi.string().allow("free", "paid", "", null),
@@ -147,7 +152,7 @@ export const getTrendingMintsV1Options: RouteOptions = {
     },
   },
   handler: async ({ query }: Request, h) => {
-    const { normalizeRoyalties, useNonFlaggedFloorAsk, type, period, limit } = query;
+    const { normalizeRoyalties, useNonFlaggedFloorAsk, type, period, limit, includeImages } = query;
 
     try {
       const mintingCollections = await getMintingCollections(type);
@@ -161,6 +166,7 @@ export const getTrendingMintsV1Options: RouteOptions = {
         contracts: mintingCollections.map(({ collection_id }) => collection_id),
         startTime: getStartTime(period),
         limit,
+        includeImages,
       });
 
       if (elasticMintData.length < 1) {
@@ -327,8 +333,13 @@ async function formatCollections(
 
         tokenCount: Number(metadata.token_count || 0),
         ownerCount: Number(metadata.owner_count || 0),
+        sampleImages:
+          r.sampleImages && r.sampleImages.length > 0
+            ? Assets.getLocalAssetsLink(r.sampleImages)
+            : [],
 
         mintType: Number(mintData?.price) > 0 ? "paid" : "free",
+        mintPrice: mintData?.price,
         maxSupply: Number.isSafeInteger(Number(mintData?.max_supply))
           ? Number(mintData?.max_supply)
           : null,

@@ -111,6 +111,7 @@ export interface ElasticMintResult {
   volume: number;
   count: number;
   id: string;
+  sampleImages: string[];
 }
 
 export type MetadataKey = keyof Metadata;

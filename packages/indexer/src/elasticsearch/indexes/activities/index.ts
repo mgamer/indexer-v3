@@ -348,8 +348,9 @@ export const getTrendingMints = async (params: {
   contracts: string[];
   startTime: number;
   limit: number;
+  includeImages: boolean;
 }): Promise<ElasticMintResult[]> => {
-  const { contracts, startTime, limit } = params;
+  const { contracts, startTime, limit, includeImages } = params;
 
   const salesQuery = {
     bool: {
@@ -396,6 +397,16 @@ export const getTrendingMints = async (params: {
             field: "pricing.priceDecimal",
           },
         },
+        ...(includeImages && {
+          top_token_images: {
+            top_hits: {
+              size: 4,
+              _source: {
+                includes: ["token.image"],
+              },
+            },
+          },
+        }),
       },
     },
   } as any;
@@ -410,9 +421,15 @@ export const getTrendingMints = async (params: {
   })) as any;
 
   return esResult?.aggregations?.collections?.buckets?.map((bucket: any) => {
+    const images = includeImages
+      ? bucket?.top_token_images?.hits?.hits
+          ?.map((hit: Record<string | number, any>) => hit._source?.token?.image)
+          .filter((image: string) => image)
+      : [];
     return {
       volume: bucket?.total_volume?.value,
-      count: bucket?.total_mints.value,
+      count: bucket?.total_mints?.value,
+      sampleImages: images,
       id: bucket.key,
     };
   });
