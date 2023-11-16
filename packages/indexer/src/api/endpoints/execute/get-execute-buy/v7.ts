@@ -1870,7 +1870,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
         item.fromChainId = actualFromChainId;
         item.gasCost = gasCost;
 
-        const needsDeposit = bn(ccConfig.availableBalance!).lte(quote);
+        const needsDeposit = bn(ccConfig.availableBalance!).lt(quote);
 
         if (payload.onlyPath) {
           return {
