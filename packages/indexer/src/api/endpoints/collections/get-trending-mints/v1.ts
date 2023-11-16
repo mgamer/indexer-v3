@@ -340,9 +340,9 @@ async function formatCollections(
         createdAt: mintData?.created_at && new Date(mintData?.created_at).toISOString(),
         startDate: mintData?.start_time && new Date(mintData?.start_time).toISOString(),
         endDate: mintData?.end_time && new Date(mintData?.end_time).toISOString(),
-        mintCount: r.mintCount,
-        sixHourCount: r.countLast6Hours,
-        oneHourCount: r.countLast1Hours,
+        mintCount: r?.mintCount || 0,
+        sixHourCount: r?.countLast6Hours || 0,
+        oneHourCount: r?.countLast1Hours || 0,
         mintVolume: r.volume,
         mintStages:
           mintData.mint_stages.length > 0
