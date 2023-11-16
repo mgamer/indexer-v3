@@ -1,15 +1,15 @@
+import { Result, defaultAbiCoder } from "@ethersproject/abi";
 import { Log } from "@ethersproject/abstract-provider";
 import { searchForCall } from "@georgeroman/evm-tx-simulator";
 import * as Sdk from "@reservoir0x/sdk";
 
+import { config } from "@/config/index";
 import { getEventData } from "@/events-sync/data";
 import { EnhancedEvent, OnChainData } from "@/events-sync/handlers/utils";
 import { getERC20Transfer } from "@/events-sync/handlers/utils/erc20";
 import * as utils from "@/events-sync/utils";
-import { config } from "@/config/index";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import { getUSDAndNativePrices } from "@/utils/prices";
-import { defaultAbiCoder, Result } from "@ethersproject/abi";
 
 export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChainData) => {
   // For keeping track of all individual trades per transaction
@@ -35,6 +35,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         const parsedLog = eventData.abi.parseLog(log);
         const maker = parsedLog.args["account"].toLowerCase();
         const nonce = parsedLog.args["nonce"].toString();
+
         onChainData.nonceCancelEvents.push({
           orderKind: "payment-processor-v2",
           maker,
@@ -49,6 +50,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         const parsedLog = eventData.abi.parseLog(log);
         const orderId = parsedLog.args["orderDigest"].toLowerCase();
         const wasCancellation = parsedLog.args["wasCancellation"];
+
         if (wasCancellation) {
           onChainData.cancelEventsOnChain.push({
             orderKind: "payment-processor-v2",
@@ -85,16 +87,17 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         // so we have to rely on complex tricks (using call tracing) to associate the
         // sales to order ids
 
+        const parsedLog = eventData.abi.parseLog(log);
+
         const txHash = baseEventParams.txHash;
         const tx = await utils.fetchTransaction(txHash);
-        const parsedLog = eventData.abi.parseLog(log);
 
         const exchange = new Sdk.PaymentProcessorV2.Exchange(config.chainId);
         const exchangeAddress = exchange.contract.address;
 
-        const tokenIdEvent = parsedLog.args["tokenId"].toString();
-        const tokenAddressEvent = parsedLog.args["tokenAddress"].toLowerCase();
-        const paymentCoinEvent = parsedLog.args["paymentCoin"].toLowerCase();
+        const tokenIdOfEvent = parsedLog.args["tokenId"].toString();
+        const tokenAddressOfEvent = parsedLog.args["tokenAddress"].toLowerCase();
+        const paymentCoinOfEvent = parsedLog.args["paymentCoin"].toLowerCase();
 
         let relevantCalldata: string | undefined;
         const methods = [
@@ -103,10 +106,10 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
             name: "buyListing",
             abi: [
               "bytes32 domainSeparator",
-              "(uint8 protocol,address maker,address beneficiary,address marketplace,address paymentMethod,address tokenAddress,uint256 tokenId,uint248 amount,uint256 itemPrice,uint256 nonce,uint256 expiration,uint256 marketplaceFeeNumerator,uint256 maxRoyaltyFeeNumerator,uint248 requestedFillAmount,uint248 minimumFillAmount) saleDetails",
-              "(uint8 v,bytes32 r,bytes32 s) sellerSignature",
-              "(address signer,address taker,uint256 expiration,uint8 v,bytes32 r,bytes32 s) cosignature",
-              "(address recipient,uint256 amount) feeOnTop",
+              "(uint8 protocol, address maker, address beneficiary, address marketplace, address paymentMethod, address tokenAddress, uint256 tokenId, uint248 amount, uint256 itemPrice, uint256 nonce ,uint256 expiration, uint256 marketplaceFeeNumerator, uint256 maxRoyaltyFeeNumerator, uint248 requestedFillAmount, uint248 minimumFillAmount) saleDetails",
+              "(uint8 v, bytes32 r, bytes32 s) sellerSignature",
+              "(address signer, address taker, uint256 expiration, uint8 v, bytes32 r, bytes32 s) cosignature",
+              "(address recipient, uint256 amount) feeOnTop",
             ],
           },
           {
@@ -115,11 +118,11 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
             abi: [
               "bytes32 domainSeparator",
               "bool isCollectionLevelOffer",
-              "(uint8 protocol,address maker,address beneficiary,address marketplace,address paymentMethod,address tokenAddress,uint256 tokenId,uint248 amount,uint256 itemPrice,uint256 nonce,uint256 expiration,uint256 marketplaceFeeNumerator,uint256 maxRoyaltyFeeNumerator,uint248 requestedFillAmount,uint248 minimumFillAmount) saleDetails",
-              "(uint8 v,bytes32 r,bytes32 s) buyerSignature",
-              "(bytes32 rootHash,bytes32[] proof) tokenSetProof",
-              "(address signer,address taker,uint256 expiration,uint8 v,bytes32 r,bytes32 s) cosignature",
-              "(address recipient,uint256 amount) feeOnTop",
+              "(uint8 protocol, address maker, address beneficiary, address marketplace, address paymentMethod, address tokenAddress, uint256 tokenId, uint248 amount, uint256 itemPrice, uint256 nonce, uint256 expiration, uint256 marketplaceFeeNumerator, uint256 maxRoyaltyFeeNumerator, uint248 requestedFillAmount, uint248 minimumFillAmount) saleDetails",
+              "(uint8 v, bytes32 r, bytes32 s) buyerSignature",
+              "(bytes32 rootHash, bytes32[] proof) tokenSetProof",
+              "(address signer, address taker, uint256 expiration, uint8 v, bytes32 r, bytes32 s) cosignature",
+              "(address recipient, uint256 amount) feeOnTop",
             ],
           },
           {
@@ -129,11 +132,11 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
               "bytes32 domainSeparator",
               `(
                 bool[] isCollectionLevelOfferArray,
-                (uint8 protocol,address maker,address beneficiary,address marketplace,address paymentMethod,address tokenAddress,uint256 tokenId,uint248 amount,uint256 itemPrice,uint256 nonce,uint256 expiration,uint256 marketplaceFeeNumerator,uint256 maxRoyaltyFeeNumerator,uint248 requestedFillAmount,uint248 minimumFillAmount)[] saleDetailsArray,
-                (uint8 v,bytes32 r,bytes32 s)[] buyerSignaturesArray,
-                (bytes32 rootHash,bytes32[] proof)[] tokenSetProofsArray,
-                (address signer,address taker,uint256 expiration,uint8 v,bytes32 r,bytes32 s)[] cosignaturesArray,
-                (address recipient,uint256 amount)[] feesOnTopArray
+                (uint8 protocol, address maker, address beneficiary, address marketplace, address paymentMethod, address tokenAddress, uint256 tokenId, uint248 amount, uint256 itemPrice, uint256 nonce, uint256 expiration, uint256 marketplaceFeeNumerator, uint256 maxRoyaltyFeeNumerator, uint248 requestedFillAmount, uint248 minimumFillAmount)[] saleDetailsArray,
+                (uint8 v, bytes32 r, bytes32 s)[] buyerSignaturesArray,
+                (bytes32 rootHash, bytes32[] proof)[] tokenSetProofsArray,
+                (address signer, address taker, uint256 expiration, uint8 v, bytes32 r, bytes32 s)[] cosignaturesArray,
+                (address recipient, uint256 amount)[] feesOnTopArray
               ) params`,
             ],
           },
@@ -142,10 +145,10 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
             name: "bulkBuyListings",
             abi: [
               "bytes32 domainSeparator",
-              "(uint8 protocol,address maker,address beneficiary,address marketplace,address paymentMethod,address tokenAddress,uint256 tokenId,uint248 amount,uint256 itemPrice,uint256 nonce,uint256 expiration,uint256 marketplaceFeeNumerator,uint256 maxRoyaltyFeeNumerator,uint248 requestedFillAmount,uint248 minimumFillAmount)[] saleDetailsArray",
-              "(uint8 v,bytes32 r,bytes32 s)[] sellerSignatures",
-              "(address signer,address taker,uint256 expiration,uint8 v,bytes32 r,bytes32 s)[] cosignatures",
-              "(address recipient,uint256 amount)[] feesOnTop",
+              "(uint8 protocol, address maker, address beneficiary, address marketplace, address paymentMethod, address tokenAddress, uint256 tokenId, uint248 amount, uint256 itemPrice, uint256 nonce, uint256 expiration, uint256 marketplaceFeeNumerator, uint256 maxRoyaltyFeeNumerator, uint248 requestedFillAmount, uint248 minimumFillAmount)[] saleDetailsArray",
+              "(uint8 v, bytes32 r, bytes32 s)[] sellerSignatures",
+              "(address signer, address taker, uint256 expiration, uint8 v, bytes32 r, bytes32 s)[] cosignatures",
+              "(address recipient, uint256 amount)[] feesOnTop",
             ],
           },
           {
@@ -153,11 +156,11 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
             name: "sweepCollection",
             abi: [
               "bytes32 domainSeparator",
-              "(address recipient,uint256 amount) feeOnTop",
-              "(uint8 protocol,address tokenAddress,address paymentMethod,address beneficiary) sweepOrder",
-              "(address maker,address marketplace,uint256 tokenId,uint248 amount,uint256 itemPrice,uint256 nonce,uint256 expiration,uint256 marketplaceFeeNumerator,uint256 maxRoyaltyFeeNumerator)[] items",
-              "(uint8 v,bytes32 r,bytes32 s)[] signedSellOrders",
-              "(address signer,address taker,uint256 expiration,uint8 v,bytes32 r,bytes32 s)[] cosignatures",
+              "(address recipient, uint256 amount) feeOnTop",
+              "(uint8 protocol, address tokenAddress, address paymentMethod, address beneficiary) sweepOrder",
+              "(address maker, address marketplace, uint256 tokenId, uint248 amount, uint256 itemPrice, uint256 nonce, uint256 expiration, uint256 marketplaceFeeNumerator, uint256 maxRoyaltyFeeNumerator)[] items",
+              "(uint8 v, bytes32 r, bytes32 s)[] signedSellOrders",
+              "(address signer, address taker, uint256 expiration, uint8 v, bytes32 r, bytes32 s)[] cosignatures",
             ],
           },
         ];
@@ -235,7 +238,10 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
 
         for (let i = 0; i < saleDetailsArray.length; i++) {
           const [saleDetail, saleSignature] = [saleDetailsArray[i], saleSignatures[i]];
-          if (!saleDetail) continue;
+          if (!saleDetail) {
+            continue;
+          }
+
           const tokenAddress = saleDetail["tokenAddress"].toLowerCase();
           const tokenId = saleDetail["tokenId"].toString();
           const amount = saleDetail["amount"].toString();
@@ -249,9 +255,9 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           ) {
             if (
               !(
-                tokenAddress === tokenAddressEvent &&
-                tokenId === tokenIdEvent &&
-                paymentMethod === paymentCoinEvent
+                tokenAddress === tokenAddressOfEvent &&
+                tokenId === tokenIdOfEvent &&
+                paymentMethod === paymentCoinOfEvent
               )
             ) {
               // Skip
@@ -289,8 +295,8 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
             amount: saleDetail["amount"],
             tokenId: saleDetail["tokenId"],
             expiration: saleDetail["expiration"],
-            price: saleDetail["itemPrice"],
-            trader: saleDetail["maker"],
+            itemPrice: saleDetail["itemPrice"],
+            maker: saleDetail["maker"],
             ...(isBuyOrder
               ? {
                   beneficiary: saleDetail["beneficiary"],

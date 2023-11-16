@@ -1,15 +1,16 @@
 import { Contract } from "@ethersproject/contracts";
-import { parseEther, formatEther } from "@ethersproject/units";
+import { parseEther } from "@ethersproject/units";
 import * as Common from "@reservoir0x/sdk/src/common";
+import * as Sdk from "@reservoir0x/sdk/src";
 import * as PaymentProcessorV2 from "@reservoir0x/sdk/src/payment-processor-v2";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import { constants } from "ethers";
-import * as Sdk from "@reservoir0x/sdk/src";
-import { getChainId, bn, getCurrentTimestamp, reset, setupNFTs } from "../../../utils";
 
-describe("PaymentProcessorV2 - SingleToken ERC721", () => {
+import { bn, getChainId, getCurrentTimestamp, reset, setupNFTs } from "../../../utils";
+
+describe("PaymentProcessorV2 - SingleToken Erc721", () => {
   const chainId = getChainId();
 
   let deployer: SignerWithAddress;
@@ -40,7 +41,7 @@ describe("PaymentProcessorV2 - SingleToken ERC721", () => {
 
     // Approve the exchange
     await nft.approve(seller, PaymentProcessorV2.Addresses.Exchange[chainId]);
-    
+
     const exchange = new PaymentProcessorV2.Exchange(chainId);
 
     const sellerMasterNonce = await exchange.getMasterNonce(ethers.provider, seller.address);
@@ -52,11 +53,11 @@ describe("PaymentProcessorV2 - SingleToken ERC721", () => {
       marketplace: constants.AddressZero,
       marketplaceFeeNumerator: "0",
       maxRoyaltyFeeNumerator: "0",
-      trader: seller.address,
+      maker: seller.address,
       tokenAddress: erc721.address,
       tokenId: soldTokenId,
       amount: "1",
-      price: price,
+      itemPrice: price,
       expiration: (blockTime + 60 * 60).toString(),
       paymentMethod: constants.AddressZero,
       masterNonce: sellerMasterNonce,
@@ -72,7 +73,7 @@ describe("PaymentProcessorV2 - SingleToken ERC721", () => {
     const sellerBalanceBefore = await ethers.provider.getBalance(seller.address);
 
     await exchange.fillOrder(buyer, sellOrder, {
-      taker: buyer.address
+      taker: buyer.address,
     });
 
     const sellerBalanceAfter = await ethers.provider.getBalance(seller.address);
@@ -115,11 +116,11 @@ describe("PaymentProcessorV2 - SingleToken ERC721", () => {
       marketplace: constants.AddressZero,
       marketplaceFeeNumerator: "0",
       maxRoyaltyFeeNumerator: "0",
-      trader: buyer.address,
+      maker: buyer.address,
       tokenAddress: erc721.address,
       tokenId: soldTokenId,
       amount: "1",
-      price: price,
+      itemPrice: price,
       expiration: (blockTime + 60 * 60).toString(),
       paymentMethod: Common.Addresses.WNative[chainId],
       masterNonce: buyerMasterNonce,
@@ -135,7 +136,7 @@ describe("PaymentProcessorV2 - SingleToken ERC721", () => {
     const sellerBalanceBefore = await weth.getBalance(seller.address);
 
     await exchange.fillOrder(seller, buyOrder, {
-      taker: buyer.address
+      taker: buyer.address,
     });
 
     const sellerBalanceAfter = await weth.getBalance(seller.address);
@@ -175,11 +176,11 @@ describe("PaymentProcessorV2 - SingleToken ERC721", () => {
       marketplace: constants.AddressZero,
       marketplaceFeeNumerator: "0",
       maxRoyaltyFeeNumerator: "0",
-      trader: seller.address,
+      maker: seller.address,
       tokenAddress: erc721.address,
       tokenId: soldTokenId,
       amount: "1",
-      price: price,
+      itemPrice: price,
       expiration: (blockTime + 60 * 60).toString(),
       paymentMethod: constants.AddressZero,
       masterNonce: sellerMasterNonce,
@@ -197,11 +198,11 @@ describe("PaymentProcessorV2 - SingleToken ERC721", () => {
       marketplace: constants.AddressZero,
       marketplaceFeeNumerator: "0",
       maxRoyaltyFeeNumerator: "0",
-      trader: seller.address,
+      maker: seller.address,
       tokenAddress: erc721New.address,
       tokenId: soldTokenId2,
       amount: "1",
-      price: price,
+      itemPrice: price,
       expiration: (blockTime + 60 * 60).toString(),
       paymentMethod: constants.AddressZero,
       masterNonce: sellerMasterNonce,
@@ -252,13 +253,13 @@ describe("PaymentProcessorV2 - SingleToken ERC721", () => {
               recipient: deployer.address,
             },
           ],
-        }
+        },
       ],
       buyer.address,
       Sdk.Common.Addresses.Native[chainId],
       {
         source: "reservoir.market",
-      },
+      }
     );
 
     expect(nonPartialTx.txs.length).to.eq(1);
@@ -316,11 +317,11 @@ describe("PaymentProcessorV2 - SingleToken ERC721", () => {
       marketplace: constants.AddressZero,
       marketplaceFeeNumerator: "0",
       maxRoyaltyFeeNumerator: "0",
-      trader: buyer.address,
+      maker: buyer.address,
       tokenAddress: erc721.address,
       tokenId: soldTokenId,
       amount: "1",
-      price: price,
+      itemPrice: price,
       expiration: (blockTime + 60 * 60).toString(),
       paymentMethod: Common.Addresses.WNative[chainId],
       masterNonce: buyerMasterNonce,
@@ -339,11 +340,11 @@ describe("PaymentProcessorV2 - SingleToken ERC721", () => {
       marketplace: constants.AddressZero,
       marketplaceFeeNumerator: "0",
       maxRoyaltyFeeNumerator: "0",
-      trader: buyer.address,
+      maker: buyer.address,
       tokenAddress: erc721.address,
       tokenId: soldTokenId2,
       amount: "1",
-      price: price,
+      itemPrice: price,
       expiration: (blockTime + 60 * 60).toString(),
       paymentMethod: Common.Addresses.WNative[chainId],
       masterNonce: buyerMasterNonce,
@@ -404,7 +405,7 @@ describe("PaymentProcessorV2 - SingleToken ERC721", () => {
     for (const tx of nonPartialTx.txs) {
       await seller.sendTransaction({
         ...tx.txData,
-        gasLimit: 1000000
+        gasLimit: 1000000,
       });
     }
 
@@ -423,7 +424,7 @@ describe("PaymentProcessorV2 - SingleToken ERC721", () => {
     expect(ownerAfter).to.eq(buyer.address);
     expect(ownerAfter2).to.eq(buyer.address);
   });
-  
+
   it("Build and fill multiple sell orders with sweepCollection", async () => {
     const buyer = alice;
     const seller = bob;
@@ -451,11 +452,11 @@ describe("PaymentProcessorV2 - SingleToken ERC721", () => {
       marketplace: constants.AddressZero,
       marketplaceFeeNumerator: "0",
       maxRoyaltyFeeNumerator: "0",
-      trader: seller.address,
+      maker: seller.address,
       tokenAddress: erc721.address,
       tokenId: soldTokenId,
       amount: "1",
-      price: price,
+      itemPrice: price,
       expiration: (blockTime + 60 * 60).toString(),
       paymentMethod: constants.AddressZero,
       masterNonce: sellerMasterNonce,
@@ -473,11 +474,11 @@ describe("PaymentProcessorV2 - SingleToken ERC721", () => {
       marketplace: constants.AddressZero,
       marketplaceFeeNumerator: "0",
       maxRoyaltyFeeNumerator: "0",
-      trader: seller.address,
+      maker: seller.address,
       tokenAddress: erc721.address,
       tokenId: soldTokenId2,
       amount: "1",
-      price: price,
+      itemPrice: price,
       expiration: (blockTime + 60 * 60).toString(),
       paymentMethod: constants.AddressZero,
       masterNonce: sellerMasterNonce,
@@ -514,7 +515,7 @@ describe("PaymentProcessorV2 - SingleToken ERC721", () => {
           order: sellOrder2,
           currency: Sdk.Common.Addresses.Native[chainId],
           price: price.toString(),
-        }
+        },
       ],
       buyer.address,
       Sdk.Common.Addresses.Native[chainId],
@@ -566,11 +567,11 @@ describe("PaymentProcessorV2 - SingleToken ERC721", () => {
       marketplace: constants.AddressZero,
       marketplaceFeeNumerator: "0",
       maxRoyaltyFeeNumerator: "0",
-      trader: seller.address,
+      maker: seller.address,
       tokenAddress: erc721.address,
       tokenId: soldTokenId,
       amount: "1",
-      price: price,
+      itemPrice: price,
       expiration: (blockTime + 60 * 60).toString(),
       paymentMethod: constants.AddressZero,
       masterNonce: sellerMasterNonce,
@@ -588,18 +589,18 @@ describe("PaymentProcessorV2 - SingleToken ERC721", () => {
       marketplace: constants.AddressZero,
       marketplaceFeeNumerator: "0",
       maxRoyaltyFeeNumerator: "0",
-      trader: seller.address,
+      maker: seller.address,
       tokenAddress: erc721.address,
       tokenId: soldTokenId2,
       amount: "1",
-      price: price,
+      itemPrice: price,
       expiration: (blockTime + 60 * 60).toString(),
       paymentMethod: constants.AddressZero,
       masterNonce: sellerMasterNonce,
     };
 
     const fee1 = bn(550);
-    
+
     // Build sell order
     const sellOrder2 = builder.build(orderParameters2);
     await sellOrder2.sign(seller);
@@ -637,7 +638,7 @@ describe("PaymentProcessorV2 - SingleToken ERC721", () => {
           order: sellOrder2,
           currency: Sdk.Common.Addresses.Native[chainId],
           price: price.toString(),
-        }
+        },
       ],
       buyer.address,
       Sdk.Common.Addresses.Native[chainId],
@@ -650,7 +651,9 @@ describe("PaymentProcessorV2 - SingleToken ERC721", () => {
 
     for (const tx of nonPartialTx.txs) {
       // Should switch to fillOrders when there has fee
-      expect(tx.txData.data.includes(exchange.contract.interface.getSighash('sweepCollection'))).to.eq(false);
+      expect(
+        tx.txData.data.includes(exchange.contract.interface.getSighash("sweepCollection"))
+      ).to.eq(false);
       await buyer.sendTransaction(tx.txData);
     }
 
@@ -676,7 +679,7 @@ describe("PaymentProcessorV2 - SingleToken ERC721", () => {
 
     // Approve the exchange
     await nft.approve(seller, PaymentProcessorV2.Addresses.Exchange[chainId]);
-    
+
     const exchange = new PaymentProcessorV2.Exchange(chainId);
 
     const sellerMasterNonce = await exchange.getMasterNonce(ethers.provider, seller.address);
@@ -688,15 +691,15 @@ describe("PaymentProcessorV2 - SingleToken ERC721", () => {
       marketplace: constants.AddressZero,
       marketplaceFeeNumerator: "0",
       maxRoyaltyFeeNumerator: "0",
-      trader: seller.address,
+      maker: seller.address,
       tokenAddress: erc721.address,
       tokenId: soldTokenId,
       amount: "1",
-      price: price,
+      itemPrice: price,
       expiration: (blockTime + 60 * 60).toString(),
       paymentMethod: constants.AddressZero,
       masterNonce: sellerMasterNonce,
-      cosigner: cosigner.address
+      cosigner: cosigner.address,
     };
 
     // Build sell order
@@ -708,13 +711,13 @@ describe("PaymentProcessorV2 - SingleToken ERC721", () => {
 
     const sellerBalanceBefore = await ethers.provider.getBalance(seller.address);
 
-    // sign it if it's a cosign-order
-    if (sellOrder.isCosignOrder()) {
+    // Cosign the order
+    if (sellOrder.isCosignedOrder()) {
       await sellOrder.cosign(cosigner, buyer.address);
     }
 
     await exchange.fillOrder(buyer, sellOrder, {
-      taker: buyer.address
+      taker: buyer.address,
     });
 
     const sellerBalanceAfter = await ethers.provider.getBalance(seller.address);

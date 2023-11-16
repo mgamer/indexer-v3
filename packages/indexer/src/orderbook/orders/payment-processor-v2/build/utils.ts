@@ -57,9 +57,9 @@ export const getBuildInfo = async (
     maxRoyaltyFeeNumerator: await getRoyalties(contract, undefined, "onchain").then((royalties) =>
       royalties.map((r) => r.bps).reduce((a, b) => a + b, 0)
     ),
-    trader: options.maker,
+    maker: options.maker,
     tokenAddress: contract,
-    price: options.weiPrice,
+    itemPrice: options.weiPrice,
     expiration: options.expirationTime!,
     paymentMethod:
       options.currency ??
@@ -67,7 +67,6 @@ export const getBuildInfo = async (
         ? Sdk.Common.Addresses.Native[config.chainId]
         : Sdk.Common.Addresses.WNative[config.chainId]),
     masterNonce: await commonHelpers.getMinNonce("payment-processor-v2", options.maker),
-    cosigner: config.cosigner,
   };
 
   return {

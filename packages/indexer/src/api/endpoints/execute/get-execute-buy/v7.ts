@@ -497,7 +497,9 @@ export const getExecuteBuyV7Options: RouteOptions = {
                 amount: token.quantity,
                 isFlagged: Boolean(flaggedResult.is_flagged),
               },
-              payload.taker
+              {
+                taker: payload.taker,
+              }
             )
           );
         }
@@ -735,6 +737,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
               excludedOrderIds: item.exclusions?.map((e) => e.orderId) ?? [],
             }
           );
+
           let error: string | undefined;
           if (!result) {
             error = "No fillable orders";
@@ -1556,6 +1559,12 @@ export const getExecuteBuyV7Options: RouteOptions = {
             item.buyIn = [];
           }
 
+          // Add the first path item's currency in the `alternativeCurrencies` list
+          const firstPathItemCurrency = `${path[0].currency}:${config.chainId}`;
+          if (!payload.alternativeCurrencies.includes(firstPathItemCurrency)) {
+            payload.alternativeCurrencies.push(firstPathItemCurrency);
+          }
+
           await Promise.all(
             payload.alternativeCurrencies.map(async (c: string) => {
               const [currency, chainId] = c.split(":");
@@ -1709,6 +1718,8 @@ export const getExecuteBuyV7Options: RouteOptions = {
         };
       }
 
+      const txSender = payload.relayer ?? payload.taker;
+
       // Seaport intent purchasing MVP
       if (useSeaportIntent) {
         if (!config.seaportSolverBaseUrl) {
@@ -1749,7 +1760,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
         }
 
         const order = new Sdk.SeaportV15.Order(config.chainId, {
-          offerer: payload.taker,
+          offerer: txSender,
           zone: AddressZero,
           offer: [
             {
@@ -1861,7 +1872,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
         item.fromChainId = actualFromChainId;
         item.gasCost = gasCost;
 
-        const needsDeposit = bn(ccConfig.availableBalance!).lte(quote);
+        const needsDeposit = bn(ccConfig.availableBalance!).lt(quote);
 
         if (payload.onlyPath) {
           return {
@@ -2136,6 +2147,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
       });
 
       const errors: { orderId: string; message: string }[] = [];
+
       let result: FillListingsResult;
       try {
         result = await router.fillListingsTx(listingDetails, payload.taker, buyInCurrency, {

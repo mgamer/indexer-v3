@@ -377,6 +377,14 @@ export class Router {
     let txs: FillListingsResult["txs"][0][] = [];
     const success: { [orderId: string]: boolean } = {};
 
+    // Keep track of any swaps that need to be executed
+    const swapDetails: SwapDetail[] = [];
+
+    // When filling a single order in partial mode, propagate any errors back directly
+    if (options?.partial && details.length === 1) {
+      options.partial = false;
+    }
+
     const getFees = (ownDetails: ListingDetails[]) =>
       // TODO: Should not split the local fees among all executions
       ownDetails
@@ -386,14 +394,6 @@ export class Router {
             // Skip zero amounts and/or recipients
             bn(amount).gt(0) && recipient !== AddressZero
         );
-
-    // Keep track of any swaps that need to be executed
-    const swapDetails: SwapDetail[] = [];
-
-    // When filling a single order in partial mode, propagate any errors back directly
-    if (options?.partial && details.length === 1) {
-      options.partial = false;
-    }
 
     // We don't have a module for Manifold listings
     if (details.some(({ kind }) => kind === "manifold")) {
@@ -447,32 +447,31 @@ export class Router {
         throw new Error("Relayer not supported for PaymentProcessorV2 orders");
       }
 
-      const paymentProcessorV2Details = details.filter(
-        ({ kind }) => kind === "payment-processor-v2"
-      );
+      const ppv2Details = details.filter(({ kind }) => kind === "payment-processor-v2");
 
       const exchange = new Sdk.PaymentProcessorV2.Exchange(this.chainId);
       const operator = exchange.contract.address;
-      const orders: Sdk.PaymentProcessorV2.Order[] = paymentProcessorV2Details.map(
+
+      const allFees = ppv2Details.map((c) => getFees([c]));
+
+      const orders: Sdk.PaymentProcessorV2.Order[] = ppv2Details.map(
         (c) => c.order as Sdk.PaymentProcessorV2.Order
       );
 
-      const allFees = paymentProcessorV2Details.map((c) => getFees([c]));
-
       const useSweepCollection =
-        paymentProcessorV2Details.length > 1 &&
-        paymentProcessorV2Details.every((c) => c.contract === details[0].contract) &&
-        paymentProcessorV2Details.every((c) => c.currency === details[0].currency) &&
-        paymentProcessorV2Details.every((c) => (c.fees ? c.fees.length === 0 : true)) &&
+        ppv2Details.length > 1 &&
+        ppv2Details.every((c) => c.contract === details[0].contract) &&
+        ppv2Details.every((c) => c.currency === details[0].currency) &&
+        ppv2Details.every((c) => (c.fees ? c.fees.length === 0 : true)) &&
         orders.every((c) => !c.isPartial());
 
-      for (const detail of paymentProcessorV2Details) {
+      for (const detail of ppv2Details) {
         const order = detail.order as Sdk.PaymentProcessorV2.Order;
         if (buyInCurrency !== Sdk.Common.Addresses.Native[this.chainId]) {
           swapDetails.push({
             tokenIn: buyInCurrency,
             tokenOut: Sdk.Common.Addresses.Native[this.chainId],
-            tokenOutAmount: order.params.price,
+            tokenOutAmount: order.params.itemPrice,
             recipient: taker,
             refundTo: taker,
             details: [detail],
@@ -482,7 +481,7 @@ export class Router {
       }
 
       const approvals: FTApproval[] = [];
-      for (const { currency, price } of paymentProcessorV2Details) {
+      for (const { currency, price } of ppv2Details) {
         if (!isETH(this.chainId, currency)) {
           approvals.push({
             currency,
@@ -501,8 +500,8 @@ export class Router {
             listings: { "payment-processor-v2": orders.length },
           },
           preSignatures: [],
-          txData: exchange.sweepCollectionTx(taker, orders, options),
-          orderIds: paymentProcessorV2Details.map((d) => d.orderId),
+          txData: exchange.sweepCollectionTx(taker, orders),
+          orderIds: ppv2Details.map((d) => d.orderId),
         });
       } else {
         txs.push({
@@ -518,17 +517,16 @@ export class Router {
             orders.map((c, i) => {
               return {
                 taker,
-                amount: paymentProcessorV2Details[i].amount ?? 1,
+                amount: ppv2Details[i].amount ?? 1,
               };
             }),
-            options,
-            allFees.map((c) => c[0])
+            { fees: allFees.map((c) => c[0]) }
           ),
-          orderIds: paymentProcessorV2Details.map((d) => d.orderId),
+          orderIds: ppv2Details.map((d) => d.orderId),
         });
       }
 
-      for (const { orderId } of paymentProcessorV2Details) {
+      for (const { orderId } of ppv2Details) {
         success[orderId] = true;
       }
     }
@@ -3609,12 +3607,6 @@ export class Router {
 
     const txs: FillBidsResult["txs"][0][] = [];
     const success: { [orderId: string]: boolean } = {};
-    const getFees = (ownDetail: BidDetails) =>
-      (ownDetail.fees ?? []).filter(
-        ({ amount, recipient }) =>
-          // Skip zero amounts and/or recipients
-          bn(amount).gt(0) && recipient !== AddressZero
-      );
 
     // CASE 1
     // Handle orders which require/support special handling such as direct filling
@@ -3720,6 +3712,13 @@ export class Router {
       }
     }
 
+    const getFees = (ownDetail: BidDetails) =>
+      (ownDetail.fees ?? []).filter(
+        ({ amount, recipient }) =>
+          // Skip zero amounts and/or recipients
+          bn(amount).gt(0) && recipient !== AddressZero
+      );
+
     // Fill PaymentProcessor offers directly
     const paymentProcessorDetails = details.filter((d) => d.kind === "payment-processor");
     if (paymentProcessorDetails.length) {
@@ -3773,19 +3772,20 @@ export class Router {
       });
     }
 
-    // We don't have a module for PaymentProcessorV2 offer
+    // Fill PaymentProcessorV2 offers directly
     if (details.some(({ kind }) => kind === "payment-processor-v2")) {
-      const paymentProcessorV2Details = details.filter(
-        ({ kind }) => kind === "payment-processor-v2"
-      );
+      const ppv2Details = details.filter(({ kind }) => kind === "payment-processor-v2");
+
       const exchange = new Sdk.PaymentProcessorV2.Exchange(this.chainId);
       const operator = exchange.contract.address;
-      const orders: Sdk.PaymentProcessorV2.Order[] = paymentProcessorV2Details.map(
+
+      const orders: Sdk.PaymentProcessorV2.Order[] = ppv2Details.map(
         (c) => c.order as Sdk.PaymentProcessorV2.Order
       );
-      const allFees = paymentProcessorV2Details.map((c) => getFees(c));
+      const allFees = ppv2Details.map((c) => getFees(c));
+
       const approvals: NFTApproval[] = [];
-      for (const { orderId, contract } of paymentProcessorV2Details) {
+      for (const { orderId, contract } of ppv2Details) {
         approvals.push({
           orderIds: [orderId],
           contract: contract,
@@ -3810,13 +3810,12 @@ export class Router {
               amount: details[i].amount ?? 1,
             };
           }),
-          options,
-          allFees.map((c) => c[0])
+          { fees: allFees.map((c) => c[0]) }
         ),
-        orderIds: paymentProcessorV2Details.map((d) => d.orderId),
+        orderIds: ppv2Details.map((d) => d.orderId),
       });
 
-      for (const { orderId } of paymentProcessorV2Details) {
+      for (const { orderId } of ppv2Details) {
         success[orderId] = true;
       }
     }

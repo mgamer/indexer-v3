@@ -1466,7 +1466,7 @@ export const getExecuteBidV5Options: RouteOptions = {
                   maker,
                   Sdk.PaymentProcessorV2.Addresses.Exchange[config.chainId]
                 );
-                if (bn(currencyApproval).lt(bn(order.params.price))) {
+                if (bn(currencyApproval).lt(bn(order.params.itemPrice))) {
                   approvalTx = currency.approveTransaction(
                     maker,
                     Sdk.PaymentProcessorV2.Addresses.Exchange[config.chainId]

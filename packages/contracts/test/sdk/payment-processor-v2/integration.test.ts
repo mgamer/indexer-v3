@@ -12,7 +12,7 @@ import { ethers } from "hardhat";
 import { constants } from "ethers";
 
 import * as indexerHelper from "../../indexer-helper";
-import { getChainId, getCurrentTimestamp, reset, setupNFTs } from "../../utils";
+import { getChainId, getCurrentTimestamp, setupNFTs } from "../../utils";
 
 const green = chalk.green;
 const error = chalk.red;
@@ -80,11 +80,11 @@ describe("PaymentProcessorV2 - Indexer Integration Test", () => {
       beneficiary: buyer.address,
       marketplace: constants.AddressZero,
       marketplaceFeeNumerator: "0",
-      trader: buyer.address,
+      maker: buyer.address,
       tokenAddress: erc721.address,
       tokenId: boughtTokenId,
       amount: "1",
-      price: price,
+      itemPrice: price,
       expiration: (blockTime + 60 * 60).toString(),
       paymentMethod: Common.Addresses.WNative[chainId],
       masterNonce: buyerMasterNonce,
@@ -104,11 +104,11 @@ describe("PaymentProcessorV2 - Indexer Integration Test", () => {
         marketplace: constants.AddressZero,
         marketplaceFeeNumerator: "0",
         maxRoyaltyFeeNumerator: "0",
-        trader: seller.address,
+        maker: seller.address,
         tokenAddress: erc721.address,
         tokenId: boughtTokenId,
         amount: "1",
-        price: price,
+        itemPrice: price,
         expiration: (blockTime + 60 * 60).toString(),
         paymentMethod: constants.AddressZero,
         masterNonce: sellerMasterNonce,
@@ -307,7 +307,7 @@ describe("PaymentProcessorV2 - Indexer Integration Test", () => {
 
     console.log(green("\t Event Parsing:"));
     console.log(`\t\t - fillTx: ${fillTxHash}`);
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    await new Promise((resolve) => setTimeout(resolve, 3000));
     const parseResult = await indexerHelper.doEventParsing(fillTxHash, skipProcessing);
     const onChainData = parseResult.onChainData[0];
     if (!onChainData) {
@@ -375,5 +375,4 @@ describe("PaymentProcessorV2 - Indexer Integration Test", () => {
   //   testCase({
   //     bulkCancel: true,
   //   }));
-
 });

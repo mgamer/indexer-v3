@@ -65,12 +65,14 @@ export const offChainCheck = async (
   let hasBalance = true;
   let hasApproval = true;
   if (order.isBuyOrder()) {
+    const balanceToCheck = bn(order.params.itemPrice).mul(order.params.amount);
+
     // Check: maker has enough balance
     const ftBalance = await commonHelpers.getFtBalance(
       order.params.paymentMethod,
       order.params.sellerOrBuyer
     );
-    if (ftBalance.lt(order.params.price)) {
+    if (ftBalance.lt(balanceToCheck)) {
       hasBalance = false;
     }
 
@@ -85,7 +87,7 @@ export const offChainCheck = async (
               true
             )
             .then((a) => a.value)
-        ).lt(order.params.price)
+        ).lt(balanceToCheck)
       ) {
         hasApproval = false;
       }

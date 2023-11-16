@@ -1,21 +1,14 @@
+export type OrderKind =
+  | "sale-approval"
+  | "item-offer-approval"
+  | "collection-offer-approval"
+  | "token-set-offer-approval";
+
 export enum OrderProtocols {
   ERC721_FILL_OR_KILL,
   ERC1155_FILL_OR_KILL,
   ERC1155_FILL_PARTIAL,
 }
-
-export enum PaymentSettings {
-  DefaultPaymentMethodWhitelist,
-  AllowAnyPaymentMethod,
-  CustomPaymentMethodWhitelist,
-  PricingConstraints,
-}
-
-export type OrderKind =
-  | "sale-approval"
-  | "item-offer-approval"
-  | "collection-offer-approval"
-  | "tokenset-offer-approval";
 
 export type SignatureECDSA = {
   v: number;
@@ -23,13 +16,13 @@ export type SignatureECDSA = {
   s: string;
 };
 
-export type CoSignature = {
-  v: number;
-  r: string;
-  s: string;
+export type Cosignature = {
   signer: string;
   taker: string;
   expiration: number;
+  v: number;
+  r: string;
+  s: string;
 };
 
 export type MatchedOrder = {
@@ -48,7 +41,6 @@ export type MatchedOrder = {
   maxRoyaltyFeeNumerator: string;
   requestedFillAmount: string;
   minimumFillAmount: string;
-
   signature: SignatureECDSA;
 };
 
@@ -75,51 +67,51 @@ export type SweepOrderParams = {
   sweepOrder: SweepOrder;
   items: SweepItem[];
   signedSellOrders: SignatureECDSA[];
-  cosignatures: CoSignature[];
+  cosignatures: Cosignature[];
 };
+
+// Type for generic order format
 
 export type BaseOrder = {
   kind?: OrderKind;
-
-  protocol: number;
-  sellerOrBuyer: string;
-
+  protocol: OrderProtocols;
   cosigner?: string;
-  // sale only
-  maxRoyaltyFeeNumerator?: string;
-
-  // offer only
-  beneficiary?: string;
-
-  // sale and item-offer only
-  tokenId?: string;
-
-  // tokenset offer
-  tokenSetMerkleRoot?: string;
-
+  sellerOrBuyer: string;
   marketplace: string;
   paymentMethod: string;
   tokenAddress: string;
-
   amount: string;
-  price: string;
+  itemPrice: string;
   expiration: string;
   marketplaceFeeNumerator: string;
   nonce: string;
   masterNonce: string;
 
+  // "sale-approval" only
+  maxRoyaltyFeeNumerator?: string;
+
+  // "*-offer-approval" only
+  beneficiary?: string;
+
+  // "sale-approval" and "item-offer-approval" only
+  tokenId?: string;
+
+  // "token-set-offer-approval" only
+  tokenSetMerkleRoot?: string;
+
+  cosignature?: Cosignature;
+
   v?: number;
   r?: string;
   s?: string;
-
-  cosignature?: CoSignature;
 };
 
-export type SaleApproval = {
-  protocol: number;
-  seller: string;
-  cosigner: string;
+// Types per individual order format
 
+export type SaleApproval = {
+  protocol: OrderProtocols;
+  cosigner: string;
+  seller: string;
   marketplace: string;
   paymentMethod: string;
   tokenAddress: string;
@@ -134,7 +126,7 @@ export type SaleApproval = {
 };
 
 export type ItemOfferApproval = {
-  protocol: number;
+  protocol: OrderProtocols;
   cosigner: string;
   buyer: string;
   beneficiary: string;
@@ -151,9 +143,9 @@ export type ItemOfferApproval = {
 };
 
 export type CollectionOfferApproval = {
-  protocol: number;
-  buyer: string;
+  protocol: OrderProtocols;
   cosigner: string;
+  buyer: string;
   beneficiary: string;
   marketplace: string;
   paymentMethod: string;
@@ -167,14 +159,13 @@ export type CollectionOfferApproval = {
 };
 
 export type TokenSetOfferApproval = {
-  protocol: number;
-  buyer: string;
+  protocol: OrderProtocols;
   cosigner: string;
+  buyer: string;
   beneficiary: string;
   marketplace: string;
   paymentMethod: string;
   tokenAddress: string;
-
   amount: string;
   itemPrice: string;
   expiration: string;

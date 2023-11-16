@@ -1,5 +1,6 @@
 import { Interface } from "@ethersproject/abi";
 import { PaymentProcessorV2 } from "@reservoir0x/sdk";
+
 import { config } from "@/config/index";
 import { EventData } from "@/events-sync/data";
 

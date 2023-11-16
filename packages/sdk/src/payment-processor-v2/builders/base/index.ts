@@ -13,11 +13,11 @@ export type MatchingOptions = {
 };
 
 export interface BaseBuildParams {
-  trader: string;
+  maker: string;
   protocol: OrderProtocols;
   tokenAddress: string;
   amount: BigNumberish;
-  price: BigNumberish;
+  itemPrice: BigNumberish;
   expiration: BigNumberish;
   masterNonce: BigNumberish;
   paymentMethod: string;

@@ -4,7 +4,7 @@ import * as Common from "@reservoir0x/sdk/src/common";
 import * as PaymentProcessorV2 from "@reservoir0x/sdk/src/payment-processor-v2";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 import { expect } from "chai";
-import { ethers, network } from "hardhat";
+import { ethers } from "hardhat";
 import { constants } from "ethers";
 import * as Sdk from "@reservoir0x/sdk/src";
 
@@ -16,13 +16,11 @@ describe("PaymentProcessorV2 - SingleToken Erc1155", () => {
   let deployer: SignerWithAddress;
   let alice: SignerWithAddress;
   let bob: SignerWithAddress;
-  let ted: SignerWithAddress;
-  let carol: SignerWithAddress;
 
   let erc1155: Contract;
 
   beforeEach(async () => {
-    [deployer, alice, bob, ted, carol] = await ethers.getSigners();
+    [deployer, alice, bob] = await ethers.getSigners();
 
     ({ erc1155 } = await setupNFTs(deployer));
   });
@@ -56,11 +54,11 @@ describe("PaymentProcessorV2 - SingleToken Erc1155", () => {
       marketplace: constants.AddressZero,
       marketplaceFeeNumerator: "0",
       maxRoyaltyFeeNumerator: "0",
-      trader: seller.address,
+      maker: seller.address,
       tokenAddress: erc1155.address,
       tokenId: soldTokenId,
       amount: "1",
-      price: price,
+      itemPrice: price,
       expiration: (blockTime + 60 * 60).toString(),
       paymentMethod: constants.AddressZero,
       masterNonce: sellerMasterNonce,
@@ -75,7 +73,7 @@ describe("PaymentProcessorV2 - SingleToken Erc1155", () => {
     const sellerBalanceBefore = await ethers.provider.getBalance(seller.address);
 
     await exchange.fillOrder(buyer, sellOrder, {
-      taker: buyer.address
+      taker: buyer.address,
     });
 
     const sellerBalanceAfter = await ethers.provider.getBalance(seller.address);
@@ -115,7 +113,7 @@ describe("PaymentProcessorV2 - SingleToken Erc1155", () => {
     const blockTime = await getCurrentTimestamp(ethers.provider);
 
     const builder = new PaymentProcessorV2.Builders.SingleToken(chainId);
-   
+
     // Build buy order
     const buyOrder = builder.build({
       protocol: PaymentProcessorV2.Types.OrderProtocols.ERC1155_FILL_OR_KILL,
@@ -123,11 +121,11 @@ describe("PaymentProcessorV2 - SingleToken Erc1155", () => {
       marketplace: constants.AddressZero,
       marketplaceFeeNumerator: "0",
       maxRoyaltyFeeNumerator: "0",
-      trader: buyer.address,
+      maker: buyer.address,
       tokenAddress: erc1155.address,
       tokenId: boughtTokenId,
       amount: "1",
-      price: price,
+      itemPrice: price,
       expiration: (blockTime + 60 * 60).toString(),
       paymentMethod: Common.Addresses.WNative[chainId],
       masterNonce: buyerMasterNonce,
@@ -142,7 +140,7 @@ describe("PaymentProcessorV2 - SingleToken Erc1155", () => {
     const sellerBalanceBefore = await weth.getBalance(seller.address);
 
     await exchange.fillOrder(seller, buyOrder, {
-      taker: buyer.address
+      taker: buyer.address,
     });
 
     const sellerBalanceAfter = await weth.getBalance(seller.address);
@@ -151,7 +149,7 @@ describe("PaymentProcessorV2 - SingleToken Erc1155", () => {
     const sellerNftBalanceAfter = await nft.getBalance(seller.address, boughtTokenId);
     const buyerNftBalanceAfter = await nft.getBalance(buyer.address, boughtTokenId);
 
-    expect(receiveAmount).to.gte(price);  
+    expect(receiveAmount).to.gte(price);
     expect(sellerNftBalanceAfter).to.eq(0);
     expect(buyerNftBalanceAfter).to.eq(1);
   });
@@ -186,11 +184,11 @@ describe("PaymentProcessorV2 - SingleToken Erc1155", () => {
       marketplace: constants.AddressZero,
       marketplaceFeeNumerator: "0",
       maxRoyaltyFeeNumerator: "0",
-      trader: seller.address,
+      maker: seller.address,
       tokenAddress: erc1155.address,
       tokenId: soldTokenId,
       amount: amount,
-      price: price.mul(amount),
+      itemPrice: price.mul(amount),
       expiration: (blockTime + 60 * 60).toString(),
       paymentMethod: constants.AddressZero,
       masterNonce: sellerMasterNonce,
@@ -206,7 +204,7 @@ describe("PaymentProcessorV2 - SingleToken Erc1155", () => {
 
     await exchange.fillOrder(buyer, sellOrder, {
       taker: buyer.address,
-      amount: "1"
+      amount: "1",
     });
 
     const sellerBalanceAfter = await ethers.provider.getBalance(seller.address);
@@ -249,7 +247,7 @@ describe("PaymentProcessorV2 - SingleToken Erc1155", () => {
     const blockTime = await getCurrentTimestamp(ethers.provider);
 
     const builder = new PaymentProcessorV2.Builders.SingleToken(chainId);
-   
+
     // Build buy order
     const buyOrder = builder.build({
       protocol: PaymentProcessorV2.Types.OrderProtocols.ERC1155_FILL_PARTIAL,
@@ -257,11 +255,11 @@ describe("PaymentProcessorV2 - SingleToken Erc1155", () => {
       marketplace: constants.AddressZero,
       marketplaceFeeNumerator: "0",
       maxRoyaltyFeeNumerator: "0",
-      trader: buyer.address,
+      maker: buyer.address,
       tokenAddress: erc1155.address,
       tokenId: boughtTokenId,
       amount: amount,
-      price: price.mul(amount),
+      itemPrice: price.mul(amount),
       expiration: (blockTime + 60 * 60).toString(),
       paymentMethod: Common.Addresses.WNative[chainId],
       masterNonce: buyerMasterNonce,
@@ -276,7 +274,7 @@ describe("PaymentProcessorV2 - SingleToken Erc1155", () => {
 
     await exchange.fillOrder(seller, buyOrder, {
       taker: buyer.address,
-      amount: "1"
+      amount: "1",
     });
 
     const sellerBalanceAfter = await weth.getBalance(seller.address);
@@ -285,7 +283,7 @@ describe("PaymentProcessorV2 - SingleToken Erc1155", () => {
     const sellerNftBalanceAfter = await nft.getBalance(seller.address, boughtTokenId);
     const buyerNftBalanceAfter = await nft.getBalance(buyer.address, boughtTokenId);
 
-    expect(receiveAmount).to.gte(price);  
+    expect(receiveAmount).to.gte(price);
     expect(sellerNftBalanceAfter).to.eq(2);
     expect(buyerNftBalanceAfter).to.eq(1);
   });
@@ -324,7 +322,7 @@ describe("PaymentProcessorV2 - SingleToken Erc1155", () => {
     const blockTime = await getCurrentTimestamp(ethers.provider);
 
     const builder = new PaymentProcessorV2.Builders.SingleToken(chainId);
-   
+
     // Build buy order
     const buyOrder = builder.build({
       protocol: PaymentProcessorV2.Types.OrderProtocols.ERC1155_FILL_PARTIAL,
@@ -332,11 +330,11 @@ describe("PaymentProcessorV2 - SingleToken Erc1155", () => {
       marketplace: constants.AddressZero,
       marketplaceFeeNumerator: "0",
       maxRoyaltyFeeNumerator: "0",
-      trader: buyer.address,
+      maker: buyer.address,
       tokenAddress: erc1155.address,
       tokenId: boughtTokenId,
       amount: amount,
-      price: price.mul(amount),
+      itemPrice: price.mul(amount),
       expiration: (blockTime + 60 * 60).toString(),
       paymentMethod: Common.Addresses.WNative[chainId],
       masterNonce: buyerMasterNonce,
@@ -355,11 +353,11 @@ describe("PaymentProcessorV2 - SingleToken Erc1155", () => {
       marketplace: constants.AddressZero,
       marketplaceFeeNumerator: "0",
       maxRoyaltyFeeNumerator: "0",
-      trader: buyer.address,
+      maker: buyer.address,
       tokenAddress: erc1155.address,
       tokenId: boughtTokenId2,
       amount: "1",
-      price: price,
+      itemPrice: price,
       expiration: (blockTime + 60 * 60).toString(),
       paymentMethod: Common.Addresses.WNative[chainId],
       masterNonce: buyerMasterNonce,
@@ -384,7 +382,7 @@ describe("PaymentProcessorV2 - SingleToken Erc1155", () => {
           tokenId: boughtTokenId.toString(),
           order: buyOrder,
           price: price.toString(),
-          amount: 1
+          amount: 1,
         },
         {
           orderId: "2",
@@ -394,7 +392,7 @@ describe("PaymentProcessorV2 - SingleToken Erc1155", () => {
           tokenId: boughtTokenId2.toString(),
           order: buyOrder2,
           price: price.toString(),
-        }
+        },
       ],
       seller.address,
       {
@@ -414,7 +412,7 @@ describe("PaymentProcessorV2 - SingleToken Erc1155", () => {
     const sellerNftBalanceAfter = await nft.getBalance(seller.address, boughtTokenId);
     const buyerNftBalanceAfter = await nft.getBalance(buyer.address, boughtTokenId);
 
-    expect(receiveAmount).to.gte(price.mul(2));  
+    expect(receiveAmount).to.gte(price.mul(2));
     expect(sellerNftBalanceAfter).to.eq(2);
     expect(buyerNftBalanceAfter).to.eq(1);
   });
@@ -452,16 +450,18 @@ describe("PaymentProcessorV2 - SingleToken Erc1155", () => {
       marketplace: constants.AddressZero,
       marketplaceFeeNumerator: "0",
       maxRoyaltyFeeNumerator: "0",
-      trader: seller.address,
+      maker: seller.address,
       tokenAddress: erc1155.address,
       tokenId: soldTokenId,
       amount: amount,
-      price: price.mul(amount),
+      itemPrice: price.mul(amount),
       expiration: (blockTime + 60 * 60).toString(),
       paymentMethod: constants.AddressZero,
       masterNonce: sellerMasterNonce,
     });
+
     await sellOrder.sign(seller);
+
     sellOrder.checkSignature();
     await sellOrder.checkFillability(ethers.provider);
 
@@ -470,23 +470,23 @@ describe("PaymentProcessorV2 - SingleToken Erc1155", () => {
       marketplace: constants.AddressZero,
       marketplaceFeeNumerator: "0",
       maxRoyaltyFeeNumerator: "0",
-      trader: seller.address,
+      maker: seller.address,
       tokenAddress: erc1155.address,
       tokenId: soldTokenId2,
       amount: "1",
-      price: price,
+      itemPrice: price,
       expiration: (blockTime + 60 * 60).toString(),
       paymentMethod: constants.AddressZero,
       masterNonce: sellerMasterNonce,
     });
 
     await sellOrder2.sign(seller);
+
     sellOrder2.checkSignature();
     await sellOrder2.checkFillability(ethers.provider);
 
     // Create matching params
     const sellerBalanceBefore = await ethers.provider.getBalance(seller.address);
-
 
     const router = new Sdk.RouterV6.Router(chainId, ethers.provider);
     const nonPartialTx = await router.fillListingsTx(
@@ -510,7 +510,7 @@ describe("PaymentProcessorV2 - SingleToken Erc1155", () => {
           order: sellOrder2,
           currency: Sdk.Common.Addresses.Native[chainId],
           price: price.toString(),
-        }
+        },
       ],
       buyer.address,
       Sdk.Common.Addresses.Native[chainId],
@@ -524,7 +524,7 @@ describe("PaymentProcessorV2 - SingleToken Erc1155", () => {
     for (const tx of nonPartialTx.txs) {
       await buyer.sendTransaction({
         ...tx.txData,
-        gasLimit: 1000000
+        gasLimit: 1000000,
       });
     }
 
@@ -537,5 +537,4 @@ describe("PaymentProcessorV2 - SingleToken Erc1155", () => {
     expect(buyerNftBalanceAfter).to.eq(1);
     expect(receiveAmount).to.gte(price);
   });
-
 });

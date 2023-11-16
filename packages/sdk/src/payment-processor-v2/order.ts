@@ -1,11 +1,11 @@
 import { Provider } from "@ethersproject/abstract-provider";
 import { TypedDataSigner } from "@ethersproject/abstract-signer";
+import { BigNumberish } from "@ethersproject/bignumber";
 import { splitSignature } from "@ethersproject/bytes";
 import { HashZero, AddressZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import { _TypedDataEncoder } from "@ethersproject/hash";
 import { verifyTypedData } from "@ethersproject/wallet";
-import { BigNumberish } from "@ethersproject/bignumber";
 
 import * as Addresses from "./addresses";
 import { Builders } from "./builders";
@@ -13,7 +13,8 @@ import { BaseBuilder, MatchingOptions } from "./builders/base";
 import * as Types from "./types";
 import * as Common from "../common";
 import { lc, s, n, bn, getCurrentTimestamp } from "../utils";
-import ExchangeAbi from "./abis/cPort.json";
+
+import ExchangeAbi from "./abis/Exchange.json";
 
 export class Order {
   public chainId: number;
@@ -39,33 +40,15 @@ export class Order {
   }
 
   public isBuyOrder() {
-    return ["item-offer-approval", "collection-offer-approval", "tokenset-offer-approval"].includes(
-      this.params.kind!
-    );
+    return [
+      "item-offer-approval",
+      "collection-offer-approval",
+      "token-set-offer-approval",
+    ].includes(this.params.kind!);
   }
 
-  public getTokenSetProof() {
-    return {
-      rootHash: HashZero,
-      proof: [],
-    };
-  }
-
-  public isCosignOrder() {
+  public isCosignedOrder() {
     return this.params.cosigner !== AddressZero;
-  }
-
-  public getCosignature() {
-    return (
-      this.params.cosignature ?? {
-        signer: AddressZero,
-        taker: AddressZero,
-        expiration: 0,
-        v: 0,
-        r: HashZero,
-        s: HashZero,
-      }
-    );
   }
 
   public isCollectionLevelOffer() {
@@ -84,43 +67,20 @@ export class Order {
 
   private detectKind(): Types.OrderKind {
     const params = this.params;
+
     if (params.maxRoyaltyFeeNumerator && !params.beneficiary) {
       return "sale-approval";
     }
 
-    if (params.beneficiary && !params.maxRoyaltyFeeNumerator && params.tokenId) {
+    if (!params.maxRoyaltyFeeNumerator && params.beneficiary && params.tokenId) {
       return "item-offer-approval";
     }
 
-    if (this.params.beneficiary && !this.params.maxRoyaltyFeeNumerator && !params.tokenId) {
+    if (!this.params.maxRoyaltyFeeNumerator && params.beneficiary && !params.tokenId) {
       return "collection-offer-approval";
     }
 
     throw new Error("Could not detect order kind (order might have unsupported params/calldata)");
-  }
-
-  public async cosign(cosigner: TypedDataSigner, taker: string) {
-    const cosignature = {
-      signer: this.params.cosigner!,
-      taker: taker,
-      expiration: getCurrentTimestamp(300),
-      v: this.params.v!,
-      r: this.params.r!,
-      s: this.params.s!,
-    };
-
-    const signature = await cosigner._signTypedData(
-      EIP712_DOMAIN(this.chainId),
-      EIP712_COSIGNATURE_TYPES,
-      cosignature
-    );
-    const { r, s, v } = splitSignature(signature);
-    this.params.cosignature = {
-      ...cosignature,
-      r,
-      s,
-      v,
-    };
   }
 
   public async sign(signer: TypedDataSigner) {
@@ -146,66 +106,76 @@ export class Order {
     };
   }
 
+  public async cosign(cosigner: TypedDataSigner, taker: string) {
+    const cosignature = {
+      signer: this.params.cosigner!,
+      taker,
+      expiration: getCurrentTimestamp(300),
+      v: this.params.v!,
+      r: this.params.r!,
+      s: this.params.s!,
+    };
+
+    const signature = await cosigner._signTypedData(
+      EIP712_DOMAIN(this.chainId),
+      EIP712_COSIGNATURE_TYPES,
+      cosignature
+    );
+    const { r, s, v } = splitSignature(signature);
+
+    this.params.cosignature = {
+      ...cosignature,
+      r,
+      s,
+      v,
+    };
+  }
+
+  public getCosignature() {
+    return (
+      this.params.cosignature ?? {
+        signer: AddressZero,
+        taker: AddressZero,
+        expiration: 0,
+        v: 0,
+        r: HashZero,
+        s: HashZero,
+      }
+    );
+  }
+
+  public getTokenSetProof() {
+    return {
+      rootHash: HashZero,
+      proof: [],
+    };
+  }
+
   public getMatchedOrder(taker: string, amount?: BigNumberish): Types.MatchedOrder {
     const isBuyOrder = this.isBuyOrder();
-    const sellOrder = this.params;
-    return {
-      protocol: sellOrder.protocol,
-      beneficiary: isBuyOrder ? sellOrder.beneficiary! : taker,
-      marketplace: sellOrder.marketplace,
-      paymentMethod: sellOrder.paymentMethod,
-      tokenAddress: sellOrder.tokenAddress,
-      maker: sellOrder.sellerOrBuyer,
-      tokenId: sellOrder.tokenId ?? "0",
-      amount: sellOrder.amount,
-      itemPrice: sellOrder.price,
-      nonce: sellOrder.nonce,
-      expiration: sellOrder.expiration,
+    const params = this.params;
 
-      marketplaceFeeNumerator: sellOrder.marketplaceFeeNumerator,
-      maxRoyaltyFeeNumerator: sellOrder.maxRoyaltyFeeNumerator ?? "0",
+    return {
+      protocol: params.protocol,
+      maker: params.sellerOrBuyer,
+      beneficiary: isBuyOrder ? params.beneficiary! : taker,
+      marketplace: params.marketplace,
+      paymentMethod: params.paymentMethod,
+      tokenAddress: params.tokenAddress,
+      tokenId: params.tokenId ?? "0",
+      amount: params.amount,
+      itemPrice: params.itemPrice,
+      nonce: params.nonce,
+      expiration: params.expiration,
+      marketplaceFeeNumerator: params.marketplaceFeeNumerator,
+      maxRoyaltyFeeNumerator: params.maxRoyaltyFeeNumerator ?? "0",
       requestedFillAmount: amount ? amount.toString() : "0",
       minimumFillAmount: amount ? amount.toString() : "0",
-
       signature: {
         r: this.params.r!,
         s: this.params.s!,
         v: this.params.v!,
       },
-    };
-  }
-
-  public static getSweepOrderParams(taker: string, orders: Order[]): Types.SweepOrderParams {
-    const firstOrder = orders[0];
-    const matchedOrder = firstOrder.buildMatching({
-      taker,
-    });
-    return {
-      sweepOrder: {
-        protocol: matchedOrder.protocol,
-        tokenAddress: matchedOrder.tokenAddress,
-        paymentMethod: matchedOrder.paymentMethod,
-        beneficiary: matchedOrder.beneficiary!,
-      },
-      items: orders.map(({ params: sellOrder }) => ({
-        maker: sellOrder.sellerOrBuyer,
-        marketplace: sellOrder.marketplace,
-        tokenId: sellOrder.tokenId ?? "0",
-        amount: sellOrder.amount,
-        itemPrice: sellOrder.price,
-        nonce: sellOrder.nonce,
-        expiration: sellOrder.expiration,
-        marketplaceFeeNumerator: sellOrder.marketplaceFeeNumerator,
-        maxRoyaltyFeeNumerator: sellOrder.maxRoyaltyFeeNumerator ?? "0",
-      })),
-      signedSellOrders: orders.map((c) => {
-        return {
-          r: c.params.r!,
-          s: c.params.s!,
-          v: c.params.v!,
-        };
-      }),
-      cosignatures: orders.map((c) => c.getCosignature()),
     };
   }
 
@@ -217,10 +187,10 @@ export class Order {
     };
 
     const [types, value] = this.getEip712TypesAndValue();
-    const recoverSinger = verifyTypedData(EIP712_DOMAIN(this.chainId), types, value, signature);
+    const recoveredSigner = verifyTypedData(EIP712_DOMAIN(this.chainId), types, value, signature);
 
-    if (lc(this.params.sellerOrBuyer) !== lc(recoverSinger)) {
-      throw new Error("Invalid listing signature");
+    if (lc(this.params.sellerOrBuyer) !== lc(recoveredSigner)) {
+      throw new Error("Invalid signature");
     }
   }
 
@@ -236,6 +206,7 @@ export class Order {
     if (!this.isBuyOrder()) {
       if (this.params.protocol === Types.OrderProtocols.ERC721_FILL_OR_KILL) {
         const erc721 = new Common.Helpers.Erc721(provider, this.params.tokenAddress);
+
         // Check ownership
         const owner = await erc721.getOwner(this.params.tokenId!);
         if (lc(owner) !== lc(this.params.sellerOrBuyer)) {
@@ -257,6 +228,7 @@ export class Order {
         ].includes(this.params.protocol)
       ) {
         const erc1155 = new Common.Helpers.Erc1155(provider, this.params.tokenAddress);
+
         // Check balance
         const balance = await erc1155.getBalance(this.params.sellerOrBuyer, this.params.tokenId!);
         if (bn(balance).lt(this.params.amount)) {
@@ -273,10 +245,9 @@ export class Order {
         }
       }
     } else {
-      const totalPrice = this.params.price;
+      const totalPrice = this.params.itemPrice;
 
-      // Check that maker has enough balance to cover the payment
-      // and the approval to the token transfer proxy is set
+      // Check that maker has enough balance to cover the payment and the approval is correctly set
       const erc20 = new Common.Helpers.Erc20(provider, this.params.paymentMethod);
       const balance = await erc20.getBalance(this.params.sellerOrBuyer);
       if (bn(balance).lt(totalPrice)) {
@@ -306,7 +277,7 @@ export class Order {
         tokenAddress: this.params.tokenAddress,
         tokenId: this.params.tokenId!,
         amount: this.params.amount,
-        itemPrice: this.params.price,
+        itemPrice: this.params.itemPrice,
         expiration: this.params.expiration,
         marketplaceFeeNumerator: this.params.marketplaceFeeNumerator,
         maxRoyaltyFeeNumerator: this.params.maxRoyaltyFeeNumerator!,
@@ -325,7 +296,7 @@ export class Order {
         tokenAddress: this.params.tokenAddress,
         tokenId: this.params.tokenId!,
         amount: this.params.amount,
-        itemPrice: this.params.price,
+        itemPrice: this.params.itemPrice,
         expiration: this.params.expiration,
         marketplaceFeeNumerator: this.params.marketplaceFeeNumerator,
         nonce: this.params.nonce,
@@ -342,14 +313,14 @@ export class Order {
         paymentMethod: this.params.paymentMethod,
         tokenAddress: this.params.tokenAddress,
         amount: this.params.amount,
-        itemPrice: this.params.price,
+        itemPrice: this.params.itemPrice,
         expiration: this.params.expiration,
         marketplaceFeeNumerator: this.params.marketplaceFeeNumerator,
         nonce: this.params.nonce,
         masterNonce: this.params.masterNonce,
       };
       return [EIP712_COLLECTION_OFFER_APPROVAL_TYPES, collectionOffer, "CollectionOfferApproval"];
-    } else if (this.params.kind === "tokenset-offer-approval") {
+    } else if (this.params.kind === "token-set-offer-approval") {
       const bundleOffer: Types.TokenSetOfferApproval = {
         protocol: this.params.protocol,
         cosigner: this.params.cosigner ?? AddressZero,
@@ -359,7 +330,7 @@ export class Order {
         paymentMethod: this.params.paymentMethod,
         tokenAddress: this.params.tokenAddress,
         amount: this.params.amount,
-        itemPrice: this.params.price,
+        itemPrice: this.params.itemPrice,
         expiration: this.params.expiration,
         marketplaceFeeNumerator: this.params.marketplaceFeeNumerator,
         nonce: this.params.nonce,
@@ -372,13 +343,13 @@ export class Order {
 
   private getBuilder(): BaseBuilder {
     switch (this.params.kind) {
-      case "collection-offer-approval": {
-        return new Builders.ContractWide(this.chainId);
-      }
-
       case "item-offer-approval":
       case "sale-approval": {
         return new Builders.SingleToken(this.chainId);
+      }
+
+      case "collection-offer-approval": {
+        return new Builders.ContractWide(this.chainId);
       }
 
       default: {
@@ -491,25 +462,28 @@ const normalize = (order: Types.BaseOrder): Types.BaseOrder => {
   // - lowercase all strings
   return {
     kind: order.kind,
-    cosigner: lc(order.cosigner ?? AddressZero),
     protocol: n(order.protocol),
+    cosigner: lc(order.cosigner ?? AddressZero),
+    sellerOrBuyer: lc(order.sellerOrBuyer),
     marketplace: lc(order.marketplace),
-    marketplaceFeeNumerator: s(order.marketplaceFeeNumerator),
+    paymentMethod: lc(order.paymentMethod),
     tokenAddress: lc(order.tokenAddress),
-    tokenId: order.tokenId !== undefined ? s(order.tokenId) : undefined,
     amount: s(order.amount),
-    price: s(order.price),
+    itemPrice: s(order.itemPrice),
     expiration: s(order.expiration),
+    marketplaceFeeNumerator: s(order.marketplaceFeeNumerator),
     nonce: s(order.nonce),
     masterNonce: s(order.masterNonce),
-    paymentMethod: lc(order.paymentMethod),
-
-    sellerOrBuyer: lc(order.sellerOrBuyer),
-
-    beneficiary: order.beneficiary !== undefined ? lc(order.beneficiary) : undefined,
 
     maxRoyaltyFeeNumerator:
       order.maxRoyaltyFeeNumerator !== undefined ? s(order.maxRoyaltyFeeNumerator) : undefined,
+
+    beneficiary: order.beneficiary !== undefined ? lc(order.beneficiary) : undefined,
+
+    tokenId: order.tokenId !== undefined ? s(order.tokenId) : undefined,
+
+    tokenSetMerkleRoot:
+      order.tokenSetMerkleRoot !== undefined ? lc(order.tokenSetMerkleRoot) : undefined,
 
     v: order.v ?? 0,
     r: order.r ?? HashZero,
