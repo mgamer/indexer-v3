@@ -1,6 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import axios from "axios";
 
 import { config } from "@/config/index";
+import { getOpenseaNetworkName } from "@/config/network";
 
 export const tryGetCollectionOpenseaFees = async (
   contract: string,
@@ -9,33 +12,32 @@ export const tryGetCollectionOpenseaFees = async (
 ) => {
   let openseaFees: { [recipient: string]: number } = {};
   let isSuccess = false;
+  const headers = {
+    headers:
+      config.chainId === 5
+        ? {
+            "Content-Type": "application/json",
+          }
+        : {
+            "Content-Type": "application/json",
+            "X-Api-Key": config.openSeaApiKey,
+          },
+  };
 
   await Promise.race([
     (async () => {
-      await axios
-        .get(
-          `https://${
-            config.chainId === 5 ? "testnets-api" : "api"
-          }.opensea.io/api/v1/asset/${contract}/${tokenId}`,
-          {
-            headers:
-              config.chainId === 5
-                ? {
-                    "Content-Type": "application/json",
-                  }
-                : {
-                    "Content-Type": "application/json",
-                    "X-Api-Key": config.openSeaApiKey,
-                  },
-          }
-        )
-        .then(async (response) => {
-          openseaFees = response.data.collection.fees.opensea_fees;
-          isSuccess = true;
-        })
-        .catch(() => {
-          // Skip errors
-        });
+      const nft: any = await axios.get(
+        `https://api.opensea.io/api/v2/chain/${getOpenseaNetworkName()}/contract/${contract}/nfts/${tokenId}`,
+        headers
+      );
+
+      const collection: any = await axios.get(
+        `https://api.opensea.io/api/v2/collections/${nft.data.nft?.collection}`,
+        headers
+      );
+
+      openseaFees = collection.data.fees;
+      isSuccess = true;
     })(),
     new Promise((resolve) => setTimeout(resolve, timeout)),
   ]);
