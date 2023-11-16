@@ -500,7 +500,7 @@ export class Router {
             listings: { "payment-processor-v2": orders.length },
           },
           preSignatures: [],
-          txData: exchange.sweepCollectionTx(taker, orders),
+          txData: exchange.sweepCollectionTx(taker, orders, options),
           orderIds: ppv2Details.map((d) => d.orderId),
         });
       } else {
@@ -520,7 +520,10 @@ export class Router {
                 amount: ppv2Details[i].amount ?? 1,
               };
             }),
-            { fees: allFees.map((c) => c[0]) }
+            {
+              source: options?.source,
+              fees: allFees.map((c) => c[0]),
+            }
           ),
           orderIds: ppv2Details.map((d) => d.orderId),
         });
