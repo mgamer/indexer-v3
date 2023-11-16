@@ -109,7 +109,9 @@ export interface Metadata {
 
 export interface ElasticMintResult {
   volume: number;
-  count: number;
+  mintCount: number;
+  countLast6Hours: number;
+  countLast1Hours: number;
   id: string;
   sampleImages: string[];
 }

@@ -79,8 +79,6 @@ export const getTrendingMintsV1Options: RouteOptions = {
           description: Joi.string().allow("", null),
           primaryContract: Joi.string().lowercase().pattern(regex.address),
           contract: Joi.string().lowercase().pattern(regex.address),
-          count: Joi.number().integer(),
-          volume: Joi.number(),
           volumePercentChange: Joi.number().unsafe().allow(null),
           countPercentChange: Joi.number().unsafe().allow(null),
           creator: Joi.string().allow("", null),
@@ -110,8 +108,10 @@ export const getTrendingMintsV1Options: RouteOptions = {
           maxSupply: Joi.number().allow(null),
           mintPrice: Joi.string().allow(null),
           sampleImages: Joi.array().items(Joi.string().allow("", null)),
-          mintVolume: Joi.any(),
+          mintVolume: Joi.number().allow(null),
           mintCount: Joi.number().allow(null),
+          sixHourCount: Joi.number().allow(null),
+          oneHourCount: Joi.number().allow(null),
           mintType: Joi.string().allow("free", "paid", "", null),
           mintStatus: Joi.string().allow("", null),
           mintStages: Joi.array().items(
@@ -305,8 +305,6 @@ async function formatCollections(
       }
 
       return {
-        ...r,
-
         image: metadata?.metadata ? metadata.metadata?.imageUrl : null,
         banner: metadata?.metadata ? metadata.metadata?.bannerImageUrl : null,
         name: metadata ? metadata?.name : "",
@@ -342,7 +340,9 @@ async function formatCollections(
         createdAt: mintData?.created_at && new Date(mintData?.created_at).toISOString(),
         startDate: mintData?.start_time && new Date(mintData?.start_time).toISOString(),
         endDate: mintData?.end_time && new Date(mintData?.end_time).toISOString(),
-        mintCount: r.count,
+        mintCount: r.mintCount,
+        sixHourCount: r.countLast6Hours,
+        oneHourCount: r.countLast1Hours,
         mintVolume: r.volume,
         mintStages:
           mintData.mint_stages.length > 0
