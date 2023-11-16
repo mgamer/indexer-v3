@@ -647,10 +647,9 @@ export const getExecuteSellV7Options: RouteOptions = {
             }
           }
 
-          // Do not fill X2Y2 and Seaport orders with flagged tokens
+          // Do not fill Seaport orders with flagged tokens
           if (
             [
-              "x2y2",
               "seaport-v1.4",
               "seaport-v1.5",
               "seaport-v1.4-partial",
@@ -772,10 +771,9 @@ export const getExecuteSellV7Options: RouteOptions = {
               }
             }
 
-            // Do not fill X2Y2 and Seaport orders with flagged tokens
+            // Do not fill Seaport orders with flagged tokens
             if (
               [
-                "x2y2",
                 "seaport-v1.4",
                 "seaport-v1.5",
                 "seaport-v1.4-partial",
