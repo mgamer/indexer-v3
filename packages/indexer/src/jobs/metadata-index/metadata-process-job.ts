@@ -90,7 +90,7 @@ export default class MetadataIndexProcessJob extends AbstractRabbitMqJobHandler 
             }
           }
 
-          return [];
+          return _.size(refreshTokens) == countTotal;
         })
       )
     );
