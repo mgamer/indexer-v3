@@ -23,13 +23,15 @@ export default class RefreshActivitiesCollectionMetadataJob extends AbstractRabb
   protected async process(payload: RefreshActivitiesCollectionMetadataJobPayload) {
     let addToQueue = false;
 
-    logger.info(
-      this.queueName,
-      JSON.stringify({
-        message: `Start. payload=${payload.collectionId}, context=${payload.context}`,
-        payload,
-      })
-    );
+    if (payload.collectionId === "0x1a92f7381b9f03921564a437210bb9396471050c") {
+      logger.info(
+        this.queueName,
+        JSON.stringify({
+          message: `Start. payload=${payload.collectionId}, context=${payload.context}`,
+          payload,
+        })
+      );
+    }
 
     const collectionId = payload.collectionId;
     const collection = await Collections.getById(collectionId);
