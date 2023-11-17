@@ -3,6 +3,7 @@ import { CallTrace } from "@georgeroman/evm-tx-simulator/dist/types";
 import Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
+import { Network } from "@reservoir0x/sdk/dist/utils";
 import axios from "axios";
 import Joi from "joi";
 
@@ -10,9 +11,10 @@ import { inject } from "@/api/index";
 import { idb, redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
-import { fromBuffer } from "@/common/utils";
+import { bn, fromBuffer, now } from "@/common/utils";
 import { config } from "@/config/index";
 import { getNetworkSettings } from "@/config/network";
+import { getUSDAndNativePrices } from "@/utils/prices";
 import { genericTaker, ensureBuyTxSucceeds, ensureSellTxSucceeds } from "@/utils/simulation";
 
 const version = "v1";
@@ -44,7 +46,7 @@ export const postSimulateOrderV1Options: RouteOptions = {
     },
   },
   handler: async (request: Request) => {
-    if (![1, 137].includes(config.chainId)) {
+    if (![Network.Ethereum, Network.EthereumGoerli, Network.Polygon].includes(config.chainId)) {
       return { message: "Simulation not supported" };
     }
 
@@ -97,13 +99,14 @@ export const postSimulateOrderV1Options: RouteOptions = {
           SELECT
             orders.kind,
             orders.side,
-            orders.price,
             orders.currency,
+            orders.currency_price,
             orders.contract,
             orders.token_set_id,
             orders.fillability_status,
             orders.approval_status,
-            orders.conduit
+            orders.conduit,
+            orders.raw_data
           FROM orders
           WHERE orders.id = $/id/
         `,
@@ -126,7 +129,7 @@ export const postSimulateOrderV1Options: RouteOptions = {
               ? parseEther(response.data.blurPrice).toString()
               : response.data.blurPrice
           );
-        if (orderResult.price !== blurPrice) {
+        if (orderResult.currency_price !== blurPrice) {
           logger.info("debug-blur-simulation", JSON.stringify({ contract, tokenId, id }));
           await logAndRevalidateOrder(id, "inactive", {
             revalidate: true,
@@ -134,12 +137,26 @@ export const postSimulateOrderV1Options: RouteOptions = {
         }
       }
 
+      const currency = fromBuffer(orderResult.currency);
+      if (currency !== Sdk.Common.Addresses.Native[config.chainId]) {
+        try {
+          const prices = await getUSDAndNativePrices(currency, orderResult.currency_price, now(), {
+            onlyUSD: true,
+          });
+          // Simulations for listings with a price >= $100k might fail due to insufficient liquidity
+          if (prices.usdPrice && bn(prices.usdPrice).gte(100000000000)) {
+            return { message: "Price too high to simulate" };
+          }
+        } catch {
+          // Skip errors
+        }
+      }
       if (
         ["blur", "nftx", "sudoswap", "sudoswap-v2", "payment-processor"].includes(orderResult.kind)
       ) {
         return { message: "Order not simulatable" };
       }
-      if (getNetworkSettings().whitelistedCurrencies.has(fromBuffer(orderResult.currency))) {
+      if (getNetworkSettings().whitelistedCurrencies.has(currency)) {
         return { message: "Order not simulatable" };
       }
       if (getNetworkSettings().nonSimulatableContracts.includes(fromBuffer(orderResult.contract))) {
@@ -149,14 +166,17 @@ export const postSimulateOrderV1Options: RouteOptions = {
         orderResult.side === "buy" &&
         // ENS on mainnet
         ((fromBuffer(orderResult.contract) === "0x57f1887a8bf19b14fc0df6fd9b2acc9af147ea85" &&
-          config.chainId === 1) ||
+          config.chainId === Network.Ethereum) ||
           // y00ts on polygon
           (fromBuffer(orderResult.contract) === "0x670fd103b1a08628e9557cd66b87ded841115190" &&
-            config.chainId === 137))
+            config.chainId === Network.Polygon))
       ) {
         return {
-          message: "ENS bids are not simulatable due to us not yet handling expiration of domains",
+          message: "Order not simulatable due to custom contract logic",
         };
+      }
+      if (orderResult.raw_data?.permitId) {
+        return { message: "Order not simulatable" };
       }
 
       const contractResult = await redb.one(

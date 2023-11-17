@@ -10,6 +10,7 @@ import { logger } from "@/common/logger";
 import { fromBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { getNetworkSettings, getSubDomain } from "@/config/network";
+import { OrderKind } from "@/orderbook/orders";
 import { getOrUpdateBlurRoyalties } from "@/utils/blur";
 import { checkMarketplaceIsFiltered } from "@/utils/erc721c";
 import * as marketplaceFees from "@/utils/marketplace-fees";
@@ -34,7 +35,7 @@ type Marketplace = {
     maxBps: number;
   };
   orderbook: string | null;
-  orderKind: string | null;
+  orderKind: OrderKind | null;
   listingEnabled: boolean;
   customFeesSupported: boolean;
   collectionBidSupported?: boolean;
@@ -161,8 +162,10 @@ export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
 
       const ns = getNetworkSettings();
 
-      const marketplaces: Marketplace[] = [
-        {
+      const marketplaces: Marketplace[] = [];
+
+      if (Sdk.LooksRareV2.Addresses.Exchange[config.chainId]) {
+        marketplaces.push({
           name: "LooksRare",
           domain: "looksrare.org",
           imageUrl: `https://${getSubDomain()}.reservoir.tools/redirect/sources/looksrare/logo/v2`,
@@ -177,8 +180,11 @@ export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
           supportedBidCurrencies: [Sdk.Common.Addresses.WNative[config.chainId]],
           partialBidSupported: false,
           traitBidSupported: false,
-        },
-        {
+        });
+      }
+
+      if (Sdk.X2Y2.Addresses.Exchange[config.chainId]) {
+        marketplaces.push({
           name: "X2Y2",
           domain: "x2y2.io",
           imageUrl: `https://${getSubDomain()}.reservoir.tools/redirect/sources/x2y2/logo/v2`,
@@ -192,8 +198,8 @@ export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
           supportedBidCurrencies: [Sdk.Common.Addresses.WNative[config.chainId]],
           partialBidSupported: false,
           traitBidSupported: false,
-        },
-      ];
+        });
+      }
 
       type Royalty = { bps: number; recipient: string };
 
@@ -211,7 +217,7 @@ export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
             maxBps: royalties.map((r) => r.bps).reduce((a, b) => a + b, 0),
           },
           orderbook: "reservoir",
-          orderKind: "seaport-v1.5",
+          orderKind: config.chainId === 11155111 ? "payment-processor-v2" : "seaport-v1.5",
           listingEnabled: true,
           customFeesSupported: true,
           collectionBidSupported: Number(collectionResult.token_count) <= config.maxTokenSetSize,

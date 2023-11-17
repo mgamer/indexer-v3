@@ -425,6 +425,12 @@ export const setupRoutes = (server: Server) => {
   // Collections
 
   server.route({
+    method: "POST",
+    path: "/collections/{collection}/override/v1",
+    options: collectionsEndpoints.postCollectionsOverrideV1Options,
+  });
+
+  server.route({
     method: "GET",
     path: "/collections/sources/v1",
     options: collectionsEndpoints.getSourcesListingsV1Options,
@@ -516,6 +522,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
+    path: "/collections/trending-mints/v1",
+    options: collectionsEndpoints.getTrendingMintsV1Options,
+  });
+
+  server.route({
+    method: "GET",
     path: "/collections/trending/v1",
     options: collectionsEndpoints.getTrendingCollectionsV1Options,
   });
@@ -572,6 +584,12 @@ export const setupRoutes = (server: Server) => {
     method: "PUT",
     path: "/collections/{collection}/community/v1",
     options: collectionsEndpoints.putSetCollectionCommunityV1Options,
+  });
+
+  server.route({
+    method: "POST",
+    path: "/collections/disable-metadata/v1",
+    options: collectionsEndpoints.postSetCollectionDisableMetadataV1Options,
   });
 
   server.route({
@@ -772,6 +790,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
+    path: "/execute/mint/v1",
+    options: executeEndpoints.postExecuteMintV1Options,
+  });
+
+  server.route({
+    method: "POST",
     path: "/execute/results/v1",
     options: executeEndpoints.postExecuteResultsV1,
   });
@@ -780,6 +804,12 @@ export const setupRoutes = (server: Server) => {
     method: "POST",
     path: "/execute/solve/v1",
     options: executeEndpoints.postExecuteSolveV1Options,
+  });
+
+  server.route({
+    method: "POST",
+    path: "/execute/solve/capacity/v1",
+    options: executeEndpoints.postExecuteSolveCapacityV1Options,
   });
 
   server.route({
@@ -1235,6 +1265,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
+    path: "/tokens/v7",
+    options: tokensEndpoints.getTokensV7Options,
+  });
+
+  server.route({
+    method: "GET",
     path: "/tokens/bootstrap/v1",
     options: tokensEndpoints.getTokensBootstrapV1Options,
   });
@@ -1327,6 +1363,12 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/tokens/ids/v1",
     options: tokensEndpoints.getTokensIdsV1Options,
+  });
+
+  server.route({
+    method: "POST",
+    path: "/tokens/disable-metadata/v1",
+    options: tokensEndpoints.postSetTokenDisableMetadataV1Options,
   });
 
   // Token sets

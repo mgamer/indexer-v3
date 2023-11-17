@@ -9,6 +9,7 @@ import {
 import { refreshAsksTokenJob } from "@/jobs/asks/refresh-asks-token-job";
 import { logger } from "@/common/logger";
 import { config } from "@/config/index";
+import { refreshActivitiesTokenJob } from "@/jobs/activities/refresh-activities-token-job";
 
 export class IndexerTokensHandler extends KafkaEventHandler {
   topicName = "indexer.public.tokens";
@@ -52,6 +53,7 @@ export class IndexerTokensHandler extends KafkaEventHandler {
           token_id: payload.after.token_id,
           name: payload.after.name,
           image: payload.after.image,
+          metadata_disabled: payload.after.metadata_disabled,
         }),
         "EX",
         60 * 60 * 24,
@@ -60,12 +62,28 @@ export class IndexerTokensHandler extends KafkaEventHandler {
     }
 
     try {
+      const spamStatusChanged = payload.before.is_spam !== payload.after.is_spam;
+
+      // Update the elasticsearch activities index
+      if (spamStatusChanged) {
+        await refreshActivitiesTokenJob.addToQueue(payload.after.contract, payload.after.token_id);
+      }
+
+      // Update the elasticsearch asks index
       if (payload.after.floor_sell_id) {
         const flagStatusChanged = payload.before.is_flagged !== payload.after.is_flagged;
         const rarityRankChanged = payload.before.rarity_rank !== payload.after.rarity_rank;
-        const spamStatusChanged = payload.before.is_spam !== payload.after.is_spam;
 
         if (flagStatusChanged || rarityRankChanged || spamStatusChanged) {
+          logger.info(
+            "elasticsearch-asks",
+            JSON.stringify({
+              topic: "IndexerTokensHandler",
+              message: `Debug. payload=${payload.after.collection_id}, flagStatusChanged=${flagStatusChanged}, rarityRankChanged=${rarityRankChanged}, spamStatusChanged=${spamStatusChanged}`,
+              payload,
+            })
+          );
+
           await refreshAsksTokenJob.addToQueue(payload.after.contract, payload.after.token_id);
         }
       }

@@ -24,7 +24,9 @@ describe("Mints - Manifold", () => {
     const infos = await extractByCollectionERC721(
       "0x6b779e2BefA6ea178ebd98E42426284D38c8b10f",
       "73697520",
-      "0x1eb73fee2090fb1c20105d5ba887e3c3ba14a17e"
+      {
+        extension: "0x1eb73fee2090fb1c20105d5ba887e3c3ba14a17e",
+      }
     );
     expect(infos[0].stage.includes("claim-")).not.toBe(false);
   });
@@ -91,6 +93,42 @@ describe("Mints - Manifold", () => {
       transcation
     );
     // console.log("collectionMints", collectionMints)
+    for (const collectionMint of collectionMints) {
+      if (collectionMint.status === "open") {
+        const result = await simulateCollectionMint(collectionMint);
+        expect(result).toBe(true);
+      }
+    }
+    expect(collectionMints[0].stage.includes("claim-")).not.toBe(false);
+  });
+
+  it("case-erc1155-4", async () => {
+    const transcation = await utils.fetchTransaction(
+      "0xb85c23530fa911593265789bdee9eea0ba3428e9a3fe46d05e5e27a383deb07d"
+    );
+    const collectionMints = await extractByTx(
+      "0xa4b9432c70c522951e8d40e1318e6ec41ae954f1",
+      transcation
+    );
+    // console.log("collectionMints", collectionMints);
+    for (const collectionMint of collectionMints) {
+      if (collectionMint.status === "open") {
+        const result = await simulateCollectionMint(collectionMint);
+        expect(result).toBe(true);
+      }
+    }
+    expect(collectionMints[0].stage.includes("claim-")).not.toBe(false);
+  });
+
+  it("case-erc1155-5", async () => {
+    const transcation = await utils.fetchTransaction(
+      "0x460824fae2b718cb2d1b1c11b0e22d070f433c22bd8791a4f268399d39a64377"
+    );
+    const collectionMints = await extractByTx(
+      "0x91ad60593710df6fd7995565702040808c2e182d",
+      transcation
+    );
+    // console.log("collectionMints", collectionMints);
     for (const collectionMint of collectionMints) {
       if (collectionMint.status === "open") {
         const result = await simulateCollectionMint(collectionMint);

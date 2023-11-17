@@ -25,6 +25,7 @@ import * as forgottenRunesWarriors from "./forgotten-runes-warriors";
 import * as forgottenSouls from "./forgotten-souls";
 import * as goldfinch from "./goldfinch";
 import * as lilnouns from "./lilnouns";
+
 // import * as loot from "./loot";
 import * as mirageGalleryCurated from "./mirage-gallery-curated";
 import * as moonbirds from "./moonbirds";
@@ -39,6 +40,8 @@ import * as utopiaAvatars from "./utopia-avatars";
 import * as superrareShared from "./superrare-shared";
 import * as foundationShared from "./foundation-shared";
 import * as kanpaiPandas from "./kanpai-pandas";
+import * as zedRun from "./zed-run";
+import { CollectionsOverride } from "@/models/collections-override";
 
 const extendCollection: any = {};
 const extend: any = {};
@@ -57,6 +60,24 @@ export const extendCollectionMetadata = async (metadata: any, tokenId?: string) 
     } else {
       return metadata;
     }
+  }
+};
+
+export const overrideCollectionMetadata = async (metadata: any) => {
+  if (metadata) {
+    const collectionsOverride = await CollectionsOverride.get(metadata.id);
+    if (collectionsOverride) {
+      return {
+        ...metadata,
+        ...collectionsOverride?.override,
+        metadata: {
+          ...metadata.metadata,
+          ...collectionsOverride?.override?.metadata,
+        },
+      };
+    }
+
+    return metadata;
   }
 };
 
@@ -319,3 +340,7 @@ extend["1,0x3b3ee1931dc30c1957379fac9aba94d1c48a5405"] = foundationShared;
 
 // Kanpai Pandas
 extend["1,0xacf63e56fd08970b43401492a02f6f38b6635c91"] = kanpaiPandas;
+
+// ZED Run
+extend["137,0x67f4732266c7300cca593c814d46bee72e40659f"] = zedRun;
+extend["80001,0xb8290f7a3ba474fe8e9179f419c1485c078e044b"] = zedRun;
