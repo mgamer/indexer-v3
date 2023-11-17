@@ -5,7 +5,7 @@ import { keccak256 } from "@ethersproject/solidity";
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
-import { Network } from "@reservoir0x/sdk/dist/utils";
+import { Network, TxData } from "@reservoir0x/sdk/dist/utils";
 import { PermitHandler } from "@reservoir0x/sdk/dist/router/v6/permit";
 import {
   FillListingsResult,
@@ -1502,6 +1502,10 @@ export const getExecuteBuyV7Options: RouteOptions = {
             isCollectionRequest,
             token,
             amount: item.quantity,
+            context: {
+              normalizeRoyalties: payload.normalizeRoyalties,
+              feesOnTop: payload.feesOnTop,
+            },
           })
           .then((response) => ({
             quote: response.data.price,
@@ -1718,6 +1722,8 @@ export const getExecuteBuyV7Options: RouteOptions = {
         };
       }
 
+      const txSender = payload.relayer ?? payload.taker;
+
       // Seaport intent purchasing MVP
       if (useSeaportIntent) {
         if (!config.seaportSolverBaseUrl) {
@@ -1758,7 +1764,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
         }
 
         const order = new Sdk.SeaportV15.Order(config.chainId, {
-          offerer: payload.taker,
+          offerer: txSender,
           zone: AddressZero,
           offer: [
             {
@@ -1850,16 +1856,6 @@ export const getExecuteBuyV7Options: RouteOptions = {
           throw Boom.badRequest("Only single item cross-chain purchases are supported");
         }
 
-        if (payload.normalizeRoyalties) {
-          throw Boom.badRequest(
-            "Royalty normalization is not supported when purchasing cross-chain"
-          );
-        }
-
-        if (payload.feeOnTop) {
-          throw Boom.badRequest("Fees on top are not supported when purchasing cross-chain");
-        }
-
         const requestedFromChainId = payload.currencyChainId;
 
         const item = path[0];
@@ -1870,7 +1866,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
         item.fromChainId = actualFromChainId;
         item.gasCost = gasCost;
 
-        const needsDeposit = bn(ccConfig.availableBalance!).lte(quote);
+        const needsDeposit = bn(ccConfig.availableBalance!).lt(quote);
 
         if (payload.onlyPath) {
           return {
@@ -1913,12 +1909,24 @@ export const getExecuteBuyV7Options: RouteOptions = {
 
         if (needsDeposit) {
           const exchange = new Sdk.CrossChain.Exchange(actualFromChainId);
-          let depositTx = exchange.depositAndPrevalidateTx(
-            payload.taker,
-            ccConfig.solver!,
-            bn(quote).sub(ccConfig.availableBalance!).toString(),
-            order
-          );
+
+          const hasContext = Boolean(payload.normalizeRoyalties) || Boolean(payload.feesOnTop);
+
+          let depositTx: TxData;
+          if (hasContext) {
+            depositTx = exchange.depositTx(
+              payload.taker,
+              ccConfig.solver!,
+              bn(quote).sub(ccConfig.availableBalance!).toString()
+            );
+          } else {
+            depositTx = exchange.depositAndPrevalidateTx(
+              payload.taker,
+              ccConfig.solver!,
+              bn(quote).sub(ccConfig.availableBalance!).toString(),
+              order
+            );
+          }
 
           // Never deposit to mainnet, but bridge-and-deposit to base
           if (requestedFromChainId === Network.Ethereum) {
@@ -1939,21 +1947,66 @@ export const getExecuteBuyV7Options: RouteOptions = {
             };
           }
 
-          customSteps[0].items.push({
-            status: "incomplete",
-            data: {
-              ...depositTx,
-              chainId: requestedFromChainId,
-            },
-            check: {
-              endpoint: "/execute/status/v1",
-              method: "POST",
-              body: {
-                kind: "cross-chain-intent",
-                id: order.hash(),
+          if (hasContext) {
+            customSteps[0].items.push({
+              status: "incomplete",
+              data: {
+                ...depositTx,
+                chainId: requestedFromChainId,
               },
-            },
-          });
+              check: {
+                endpoint: "/execute/status/v1",
+                method: "POST",
+                body: {
+                  kind: "cross-chain-transaction",
+                },
+              },
+            });
+
+            customSteps[1].items.push({
+              status: "incomplete",
+              data: {
+                sign: order.getSignatureData(),
+                post: {
+                  endpoint: "/execute/solve/v1",
+                  method: "POST",
+                  body: {
+                    kind: "cross-chain-intent",
+                    order: order.params,
+                    chainId: actualFromChainId,
+                    context: {
+                      normalizeRoyalties: payload.normalizeRoyalties,
+                      feesOnTop: payload.feesOnTop,
+                    },
+                  },
+                },
+              },
+              check: {
+                endpoint: "/execute/status/v1",
+                method: "POST",
+                body: {
+                  kind: "cross-chain-intent",
+                  id: order.hash(),
+                },
+              },
+            });
+          } else {
+            customSteps[0].items.push({
+              status: "incomplete",
+              data: {
+                ...depositTx,
+                chainId: requestedFromChainId,
+              },
+              check: {
+                endpoint: "/execute/status/v1",
+                method: "POST",
+                body: {
+                  kind: "cross-chain-intent",
+                  id: order.hash(),
+                },
+              },
+            });
+          }
         } else {
           customSteps[1].items.push({
             status: "incomplete",
@@ -1966,6 +2019,10 @@ export const getExecuteBuyV7Options: RouteOptions = {
                   kind: "cross-chain-intent",
                   order: order.params,
                   chainId: actualFromChainId,
+                  context: {
+                    normalizeRoyalties: payload.normalizeRoyalties,
+                    feesOnTop: payload.feesOnTop,
+                  },
                 },
               },
             },
