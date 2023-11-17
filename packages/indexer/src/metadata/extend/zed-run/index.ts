@@ -6,7 +6,9 @@ import axios from "axios";
 export const extend = async (metadata: any) => {
   const response = await axios.get(
     `${
-      config.chainId === 137 ? "https://api.zed.run" : "https://metadata-service.dev.zed.run"
+      config.chainId === 137
+        ? "https://api.zed.run"
+        : "https://metadata-service-reservoir-ved.zed.run"
     }/api/v1/horses/metadata/${metadata.tokenId}`
   );
 
