@@ -91,7 +91,7 @@ export class IndexerTokensHandler extends KafkaEventHandler {
       const metadataInitializedAtChanged =
         payload.before.metadata_initialized_at !== payload.after.metadata_initialized_at;
 
-      if (metadataInitializedAtChanged && config.chainId === 1) {
+      if (metadataInitializedAtChanged && [1, 137].includes(config.chainId)) {
         logger.info(
           "token-metadata-latency-metric",
           JSON.stringify({
