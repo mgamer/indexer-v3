@@ -1959,6 +1959,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
                 method: "POST",
                 body: {
                   kind: "cross-chain-transaction",
+                  chainId: requestedFromChainId,
                 },
               },
             });
