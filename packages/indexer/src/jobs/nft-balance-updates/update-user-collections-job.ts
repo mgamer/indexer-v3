@@ -42,7 +42,7 @@ export default class UpdateUserCollectionsJob extends AbstractRabbitMqJobHandler
         INSERT INTO user_collections (owner, collection_id, contract, token_count, is_spam)
         VALUES ($/fromAddress/, $/collection/, $/contract/, $/amount/, $/isSpam/)
         ON CONFLICT (owner, collection_id)
-        DO UPDATE SET token_count = GREATEST(token_count - $/amount/, 0);
+        DO UPDATE SET token_count = GREATEST(user_collections.token_count - $/amount/, 0);
       `);
     }
 
@@ -52,7 +52,7 @@ export default class UpdateUserCollectionsJob extends AbstractRabbitMqJobHandler
         INSERT INTO user_collections (owner, collection_id, contract, token_count, is_spam)
         VALUES ($/toAddress/, $/collection/, $/contract/, $/amount/, $/isSpam/)
         ON CONFLICT (owner, collection_id)
-        DO UPDATE SET token_count = token_count + $/amount/;
+        DO UPDATE SET token_count = user_collections.token_count + $/amount/;
       `);
     }
 
@@ -61,7 +61,7 @@ export default class UpdateUserCollectionsJob extends AbstractRabbitMqJobHandler
       toAddress: toBuffer(toAddress),
       collection: collection.id,
       contract: toBuffer(contract),
-      amount,
+      amount: Number(amount),
       isSpam: collection.isSpam,
     });
   }
