@@ -206,7 +206,8 @@ export async function getCollectionsMetadata(collectionsResult: any[]) {
       json_build_object(
         'imageUrl', (collections.metadata ->> 'imageUrl')::TEXT,
         'bannerImageUrl', (collections.metadata ->> 'bannerImageUrl')::TEXT,
-        'description', (collections.metadata ->> 'description')::TEXT
+        'description', (collections.metadata ->> 'description')::TEXT,
+        'openseaVerificationStatus', (collections.metadata ->> 'safelistRequestStatus')::TEXT
       ) AS metadata,
       collections.non_flagged_floor_sell_id,
       collections.non_flagged_floor_sell_value,

@@ -75,6 +75,7 @@ export interface Metadata {
     imageUrl: string;
     bannerImageUrl: string;
     description: string;
+    openseaVerificationStatus: string;
   };
   non_flagged_floor_sell_id: string;
   non_flagged_floor_sell_value: string;
