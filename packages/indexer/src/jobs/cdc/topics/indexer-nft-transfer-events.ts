@@ -6,7 +6,6 @@ import {
   WebsocketEventRouter,
 } from "@/jobs/websocket-events/websocket-event-router";
 import { updateUserCollectionsJob } from "@/jobs/nft-balance-updates/update-user-collections-job";
-import { fromBuffer } from "@/common/utils";
 
 export class IndexerTransferEventsHandler extends KafkaEventHandler {
   topicName = "indexer.public.nft_transfer_events";
@@ -29,9 +28,9 @@ export class IndexerTransferEventsHandler extends KafkaEventHandler {
     // Update the user collections
     await updateUserCollectionsJob.addToQueue([
       {
-        fromAddress: fromBuffer(payload.after.from),
-        toAddress: fromBuffer(payload.after.to),
-        contract: fromBuffer(payload.after.address),
+        fromAddress: payload.after.from,
+        toAddress: payload.after.to,
+        contract: payload.after.address,
         tokenId: payload.after.token_id,
         amount: payload.after.amount,
       },
@@ -59,9 +58,9 @@ export class IndexerTransferEventsHandler extends KafkaEventHandler {
       // If the transfer was marked as deleted revert the user collection update
       await updateUserCollectionsJob.addToQueue([
         {
-          fromAddress: fromBuffer(payload.after.to),
-          toAddress: fromBuffer(payload.after.from),
-          contract: fromBuffer(payload.after.address),
+          fromAddress: payload.after.to,
+          toAddress: payload.after.from,
+          contract: payload.after.address,
           tokenId: payload.after.token_id,
           amount: payload.after.amount,
         },
