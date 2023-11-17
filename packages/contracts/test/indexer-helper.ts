@@ -72,3 +72,10 @@ export async function reset() {
   const { data } = await axios.get(`${indexUrl}/debug/reset`);
   return data;
 }
+
+export async function executeCancelV3(payloady: any) {
+  const { data } = await axios.post(`${indexUrl}/execute/cancel/v3`, payloady, {
+    validateStatus: () => true,
+  });
+  return data;
+}

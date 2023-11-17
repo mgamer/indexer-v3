@@ -13,6 +13,7 @@ import { logger } from "@/common/logger";
 import { bn, fromBuffer, now, regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import * as b from "@/utils/auth/blur";
+import { generateOffChainCancleStep, getCosignerAddress } from "@/utils/cosign";
 
 const version = "v3";
 
@@ -37,6 +38,7 @@ export const getExecuteCancelV3Options: RouteOptions = {
         "looks-rare-v2",
         "zeroex-v4-erc721",
         "zeroex-v4-erc1155",
+        "payment-processor-v2",
         "rarible",
         "alienswap"
       ),
@@ -315,13 +317,41 @@ export const getExecuteCancelV3Options: RouteOptions = {
       const orderResult = orderResults[0];
 
       // When bulk-cancelling, make sure all orders have the same kind
-      const supportedKinds = ["seaport", "seaport-v1.4", "seaport-v1.5", "alienswap"];
+      const supportedKinds = [
+        "seaport",
+        "seaport-v1.4",
+        "seaport-v1.5",
+        "alienswap",
+        "payment-processor-v2",
+      ];
       if (isBulkCancel) {
         const supportsBulkCancel =
           supportedKinds.includes(orderResult.kind) &&
           orderResults.every((o) => o.kind === orderResult.kind);
         if (!supportsBulkCancel) {
           throw Boom.notImplemented("Bulk cancelling not supported");
+        }
+      }
+
+      // Handle off-chain cancellations
+      const paymentProcessorV2Details = orderResults.every((c) => {
+        return c.kind === "payment-processor-v2";
+      });
+
+      if (paymentProcessorV2Details) {
+        const cosigner = getCosignerAddress();
+        const allArePPV2OffChainCancellable = orderResults.every((c) => {
+          return c.raw_data.cosigner === cosigner.toLowerCase();
+        });
+        if (allArePPV2OffChainCancellable) {
+          return {
+            steps: [
+              generateOffChainCancleStep(
+                orderResults.map((o) => o.id),
+                cosigner
+              ),
+            ],
+          };
         }
       }
 

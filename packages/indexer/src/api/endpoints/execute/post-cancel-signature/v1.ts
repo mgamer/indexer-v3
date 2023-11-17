@@ -11,6 +11,12 @@ import { logger } from "@/common/logger";
 import { config } from "@/config/index";
 import { getNetworkName } from "@/config/network";
 import * as b from "@/utils/auth/blur";
+import {
+  verifyOffChainCancleSignature,
+  saveCancellation,
+  getCosignerAddress,
+} from "@/utils/cosign";
+import { orderUpdatesByIdJob } from "@/jobs/order-updates/order-updates-by-id-job";
 
 const version = "v1";
 
@@ -36,7 +42,7 @@ export const postCancelSignatureV1Options: RouteOptions = {
         .required()
         .description("Ids of the orders to cancel"),
       orderKind: Joi.string()
-        .valid("seaport-v1.4", "seaport-v1.5", "alienswap", "blur-bid")
+        .valid("seaport-v1.4", "seaport-v1.5", "alienswap", "blur-bid", "payment-processor-v2")
         .required()
         .description("Exchange protocol used to bulk cancel order. Example: `seaport-v1.5`"),
     }),
@@ -143,6 +149,49 @@ export const postCancelSignatureV1Options: RouteOptions = {
 
             throw Boom.badRequest("Cancellation failed");
           }
+        }
+
+        case "payment-processor-v2": {
+          const ordersResult = await idb.manyOrNone(
+            `
+              SELECT
+                orders.maker,
+                orders.raw_data
+              FROM orders
+              WHERE orders.id IN ($/ids:list/)
+              ORDER BY orders.id
+            `,
+            { ids: orderIds }
+          );
+          if (ordersResult.length !== orderIds.length) {
+            throw Boom.badRequest("Could not find all relevant orders");
+          }
+
+          const cosigner = getCosignerAddress();
+          const signer = ordersResult[0].raw_data.sellerOrBuyer;
+          const verified = verifyOffChainCancleSignature(orderIds, cosigner, signature, signer);
+
+          if (!verified) {
+            throw Boom.badRequest("Cancellation failed");
+          }
+
+          // Save cancellations
+          for (const orderId of orderIds) {
+            await saveCancellation(orderId, "payment-processor-v2", signer);
+          }
+
+          // Cancel all orders
+          await orderUpdatesByIdJob.addToQueue(
+            orderIds.map((orderId: string) => ({
+              context: `cancel-${orderId}`,
+              id: orderId,
+              trigger: {
+                kind: "cancel",
+              },
+            }))
+          );
+
+          return { message: "Success" };
         }
       }
     } catch (error) {

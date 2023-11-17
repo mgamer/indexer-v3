@@ -2,6 +2,7 @@ import { AddressZero } from "@ethersproject/constants";
 import * as Sdk from "@reservoir0x/sdk";
 import { BaseBuildParams } from "@reservoir0x/sdk/dist/payment-processor-v2/builders/base";
 
+import { getCosigner } from "@/utils/cosign";
 import { redb } from "@/common/db";
 import { fromBuffer } from "@/common/utils";
 import { config } from "@/config/index";
@@ -15,6 +16,7 @@ export interface BaseOrderBuildOptions {
   weiPrice: string;
   listingTime?: number;
   expirationTime?: number;
+  useOffChainCancellation?: boolean;
   quantity?: number;
 }
 
@@ -68,6 +70,11 @@ export const getBuildInfo = async (
         : Sdk.Common.Addresses.WNative[config.chainId]),
     masterNonce: await commonHelpers.getMinNonce("payment-processor-v2", options.maker),
   };
+
+  if (options.useOffChainCancellation) {
+    const cosigner = getCosigner();
+    buildParams.cosigner = cosigner.address;
+  }
 
   return {
     params: buildParams,

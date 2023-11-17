@@ -443,9 +443,9 @@ export class Router {
 
     // We don't have a module for PaymentProcessorV2 listings
     if (details.some(({ kind }) => kind === "payment-processor-v2")) {
-      if (options?.relayer) {
-        throw new Error("Relayer not supported for PaymentProcessorV2 orders");
-      }
+      // if (options?.relayer) {
+      //   throw new Error("Relayer not supported for PaymentProcessorV2 orders");
+      // }
 
       const ppv2Details = details.filter(({ kind }) => kind === "payment-processor-v2");
 
@@ -523,6 +523,7 @@ export class Router {
             {
               source: options?.source,
               fees: allFees.map((c) => c[0]),
+              relayer: options?.relayer,
             }
           ),
           orderIds: ppv2Details.map((d) => d.orderId),

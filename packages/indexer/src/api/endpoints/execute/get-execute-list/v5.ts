@@ -124,6 +124,9 @@ export const getExecuteListV5Options: RouteOptions = {
               .default("seaport-v1.5")
               .description("Exchange protocol used to create order. Example: `seaport-v1.5`"),
             options: Joi.object({
+              "payment-processor-v2": Joi.object({
+                useOffChainCancellation: Joi.boolean().required(),
+              }),
               "seaport-v1.4": Joi.object({
                 conduitKey: Joi.string().pattern(regex.bytes32),
                 useOffChainCancellation: Joi.boolean().required(),
@@ -1048,8 +1051,16 @@ export const getExecuteListV5Options: RouteOptions = {
                   return errors.push({ message: "Unsupported orderbook", orderIndex: i });
                 }
 
+                const options = (params.options?.["payment-processor-v2"] ??
+                  params.options?.["payment-processor-v2"]) as
+                  | {
+                      useOffChainCancellation?: boolean;
+                    }
+                  | undefined;
+
                 const order = await paymentProcessorV2SellToken.build({
                   ...params,
+                  ...options,
                   maker,
                   contract,
                   tokenId,
