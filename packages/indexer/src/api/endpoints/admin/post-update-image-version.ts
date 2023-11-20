@@ -17,18 +17,13 @@ export const postUpdateImageVersionOptions: RouteOptions = {
       "x-admin-api-key": Joi.string().required(),
     }).options({ allowUnknown: true }),
     payload: Joi.object({
-      collection: Joi.string()
-        .lowercase()
-        .pattern(/^0x[a-fA-F0-9]{40}$/)
-        .description(
-          "The collection for which to increment the metadata version, e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
-        ),
       token: Joi.string()
         .lowercase()
         .pattern(/^0x[a-fA-F0-9]{40}:[0-9]+$/)
         .description(
           "Refresh the given token. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:123`"
-        ),
+        )
+        .required(),
     }),
   },
   handler: async (request: Request) => {
@@ -39,31 +34,15 @@ export const postUpdateImageVersionOptions: RouteOptions = {
     const payload = request.payload as any;
 
     try {
-      // if token is provided, refresh the token
-      if (payload.token) {
-        const [contract, tokenId] = payload.token.split(":");
-        await idb.oneOrNone(
-          `
-          UPDATE tokens
-            SET image_version_updated_at = NOW()
-          WHERE contract = $1 AND token_id = $2
-        `,
-          [toBuffer(contract), tokenId]
-        );
-        return { message: "Request accepted" };
-      }
-
-      const collectionId = payload.collection;
-
-      // update all tokens in the collection
+      const [contract, tokenId] = payload.token.split(":");
       await idb.oneOrNone(
         `
-        UPDATE tokens
-          SET image_version_updated_at = NOW()
-        WHERE collection_id = $1
-        LIMIT 10000
-      `,
-        [collectionId]
+          UPDATE tokens
+            SET image_version_updated_at = NOW(),
+                updated_at = NOW()
+          WHERE contract = $1 AND token_id = $2
+        `,
+        [toBuffer(contract), tokenId]
       );
       return { message: "Request accepted" };
     } catch (error) {
