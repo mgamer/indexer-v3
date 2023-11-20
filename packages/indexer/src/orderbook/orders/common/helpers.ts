@@ -251,3 +251,26 @@ export const isListingOffChainCancelled = async (
   );
   return Boolean(result);
 };
+
+export const getOrderIdByNonce = async (
+  orderKind: OrderKind,
+  maker: string,
+  nonce: string
+): Promise<string | undefined> => {
+  const order = await idb.oneOrNone(
+    `
+      SELECT id FROM orders
+      WHERE order_kind = $/orderKind/
+        AND maker = $/maker/
+        AND nonce = $/nonce/
+      LIMIT 1
+    `,
+    {
+      orderKind,
+      maker: toBuffer(maker),
+      nonce,
+    }
+  );
+
+  return order?.id as string;
+};
