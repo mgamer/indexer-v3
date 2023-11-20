@@ -102,13 +102,15 @@ export class Assets {
       throw new Error("Private image resizing signing key is not set");
     }
 
+    const v = image_version_updated_at ? `?v=${image_version_updated_at}` : "";
+
     const ciphertext = crypto.AES.encrypt(
-      imageUrl,
+      imageUrl + v,
       config.privateImageResizingSigningKey
     ).toString();
 
     return `${config.imageResizingBaseUrl}/${encodeURIComponent(ciphertext)}${
       width ? "?width=" + width : ""
-    }${image_version_updated_at ? "&v=" + image_version_updated_at : ""}`;
+    }`;
   }
 }
