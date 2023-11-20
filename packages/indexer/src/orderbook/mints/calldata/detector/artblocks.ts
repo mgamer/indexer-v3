@@ -14,6 +14,7 @@ import { config } from "@/config/index";
 import { Transaction } from "@/models/transactions";
 import {
   CollectionMint,
+  CollectionMintStatusReason,
   getCollectionMints,
   simulateAndUpsertCollectionMint,
 } from "@/orderbook/mints";
@@ -24,6 +25,7 @@ import {
   createAllowlist,
 } from "@/orderbook/mints/allowlists";
 import { fetchMetadata, getStatus, toSafeTimestamp } from "@/orderbook/mints/calldata/helpers";
+import { now } from "@/common/utils";
 
 const STANDARD = "artblocks";
 
@@ -33,6 +35,7 @@ export type Info = {
 
 const MINTER_TYPES = {
   SET_PRICE_V4: "MinterSetPriceV4",
+  DA_EXP_SETTLEMENT_V1: "MinterDAExpSettlementV1",
 };
 
 interface ProjectInfo {
@@ -43,7 +46,7 @@ interface ProjectInfo {
   completedTimestamp: BigNumber;
   locked: boolean;
 }
-interface MinterTypeV4PriceInfo {
+interface MinterTypePriceInfo {
   isConfigured: boolean;
   tokenPriceInWei: BigNumber;
   currencySymbol: string;
@@ -103,38 +106,50 @@ export const extractByCollectionERC721 = async (
   }
 
   // let's get the minter itself
-  const minterContract = new Contract(
+  const minterTypeContract = new Contract(
     minterAddressForProject,
     new Interface([
       `function minterType() external view returns (string memory)`,
-      // for MinterSetPriceV4
       `function getPriceInfo(uint256 _projectId) external view returns (
-            bool isConfigured,
-            uint256 tokenPriceInWei,
-            string memory currencySymbol,
-            address currencyAddress
-        )`,
+        bool isConfigured,
+        uint256 tokenPriceInWei,
+        string memory currencySymbol,
+        address currencyAddress
+       )`,
     ]),
     baseProvider
   );
 
-  const minterType = await minterContract.minterType();
+  const minterType = await minterTypeContract.minterType();
+  const priceInfo: MinterTypePriceInfo = await minterTypeContract.getPriceInfo(projectId);
 
   const isOpen =
     projectInfo.active &&
     !projectInfo.paused &&
     !projectInfo.locked &&
-    projectInfo.maxInvocations != projectInfo.invocations;
+    projectInfo.maxInvocations.gt(projectInfo.invocations);
 
-  if (minterType === MINTER_TYPES.SET_PRICE_V4) {
-    const priceInfo: MinterTypeV4PriceInfo = await minterContract.getPriceInfo(projectId);
+  let statusReason: CollectionMintStatusReason | undefined = undefined;
+  if (!isOpen) {
+    if (projectInfo.maxInvocations.lte(projectInfo.invocations)) {
+      statusReason = "max-supply-exceeded";
+    }
+  }
+
+  // console.log(minterType, priceInfo);
+
+  if (
+    minterType === MINTER_TYPES.SET_PRICE_V4 ||
+    minterType === MINTER_TYPES.DA_EXP_SETTLEMENT_V1
+  ) {
     if (priceInfo.isConfigured) {
-      results.push({
+      const result: CollectionMint = {
         collection,
         contract: collection,
         stage: `public-sale-artblocks-${collection}-${projectId}`,
         kind: "public",
         status: isOpen ? "open" : "closed",
+        statusReason,
         standard: STANDARD,
         details: {
           tx: {
@@ -159,7 +174,36 @@ export const extractByCollectionERC721 = async (
         currency: priceInfo.currencyAddress,
         price: priceInfo.tokenPriceInWei.toString(),
         maxSupply: projectInfo.maxInvocations.toString(),
-      });
+      };
+
+      // if da with settlement, get timestampStart
+      if (minterType === MINTER_TYPES.DA_EXP_SETTLEMENT_V1) {
+        const minterContract = new Contract(
+          minterAddressForProject,
+          new Interface([
+            `function projectAuctionParameters(uint256 _projectId)
+            external
+            view
+            returns (
+                uint256 timestampStart,
+                uint256 priceDecayHalfLifeSeconds,
+                uint256 startPrice,
+                uint256 basePrice
+            )`,
+          ]),
+          baseProvider
+        );
+        const daInfo = await minterContract.projectAuctionParameters(projectId);
+
+        result.startTime = daInfo.timestampStart.toNumber();
+
+        if (daInfo.timestampStart.toNumber() > now()) {
+          result.status = "closed";
+          result.statusReason = "not-yet-started";
+        }
+      }
+
+      results.push(result);
     }
   }
 
