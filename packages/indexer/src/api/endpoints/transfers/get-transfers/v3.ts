@@ -118,7 +118,7 @@ export const getTransfersV3Options: RouteOptions = {
           tokens.name,
           tokens.image,
           tokens.collection_id,
-          extract(epoch from extract(epoch from tokens.image_version) as image_version) as image_version,
+          extract(epoch from tokens.image_version as image_version,
           collections.name as collection_name,
           nft_transfer_events.from,
           nft_transfer_events.to,

@@ -276,7 +276,7 @@ export const getCollectionActivityV6Options: RouteOptions = {
             tokens.token_id,
             tokens.name,
             tokens.image,
-            extract(epoch from extract(epoch from tokens.image_version) as image_version) as image_version,
+            extract(epoch from tokens.image_version as image_version,
             tokens.metadata_disabled
           FROM tokens
           WHERE (tokens.contract, tokens.token_id) IN ($/tokensFilter:raw/)
