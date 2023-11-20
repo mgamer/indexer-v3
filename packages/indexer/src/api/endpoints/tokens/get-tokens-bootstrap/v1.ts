@@ -94,7 +94,7 @@ export const getTokensBootstrapV1Options: RouteOptions = {
           "t"."floor_sell_source_id_int",
           "t"."floor_sell_valid_from",
           "t"."floor_sell_valid_to",
-          "t"."image_version"
+          extract(epoch from "t"."image_version") as "image_version"
         FROM "tokens" "t"
         JOIN "collections" "c"
           ON "t"."collection_id" = "c"."id"
