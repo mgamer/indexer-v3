@@ -72,7 +72,7 @@ export const getBuildInfo = async (
   };
 
   if (options.useOffChainCancellation) {
-    buildParams.cosigner = cosigner.address.toLowerCase();
+    buildParams.cosigner = cosigner().address.toLowerCase();
   }
 
   return {

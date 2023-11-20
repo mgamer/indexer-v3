@@ -5,7 +5,7 @@ import { idb, pgp } from "@/common/db";
 import { config } from "@/config/index";
 import { orderUpdatesByIdJob } from "@/jobs/order-updates/order-updates-by-id-job";
 
-export const cosigner = new Wallet(config.cosignerPrivateKey);
+export const cosigner = () => new Wallet(config.cosignerPrivateKey);
 
 // Reuse the cancellation format of `seaport` orders
 export const generateOffChainCancellationSignatureData = (orderIds: string[]) => {

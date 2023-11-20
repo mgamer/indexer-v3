@@ -459,7 +459,7 @@ export const generateListingDetailsV6 = async (
     case "payment-processor-v2": {
       const rawOrder = new Sdk.PaymentProcessorV2.Order(config.chainId, order.rawData);
       if (rawOrder.isCosignedOrder() && options?.taker) {
-        await rawOrder.cosign(cosigner, options.taker);
+        await rawOrder.cosign(cosigner(), options.taker);
       }
 
       return {
@@ -833,7 +833,7 @@ export const generateBidDetailsV6 = async (
     case "payment-processor-v2": {
       const sdkOrder = new Sdk.PaymentProcessorV2.Order(config.chainId, order.rawData);
       if (sdkOrder.isCosignedOrder() && options?.taker) {
-        await sdkOrder.cosign(cosigner, options.taker);
+        await sdkOrder.cosign(cosigner(), options.taker);
       }
 
       return {
