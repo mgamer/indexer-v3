@@ -704,7 +704,7 @@ export const getTokensV7Options: RouteOptions = {
           t.media,
           t.collection_id,
           c.name AS collection_name,
-          t.image_version,
+          extract(epoch from t.image_version) as image_version,
           con.kind,
           con.symbol,
           ${selectFloorData},

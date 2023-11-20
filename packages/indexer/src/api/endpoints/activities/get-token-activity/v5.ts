@@ -211,7 +211,7 @@ export const getTokenActivityV5Options: RouteOptions = {
             tokens.name,
             tokens.image,
             tokens.metadata_disabled,
-            tokens.image_version
+            extract(epoch from tokens.image_version) as image_version
           FROM tokens
           WHERE (tokens.contract, tokens.token_id) IN ($/tokensFilter:raw/)
         `,

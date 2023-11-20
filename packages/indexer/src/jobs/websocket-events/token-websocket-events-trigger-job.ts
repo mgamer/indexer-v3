@@ -336,7 +336,7 @@ export class TokenWebsocketEventsTriggerJob extends AbstractRabbitMqJobHandler {
           t.is_spam,
           t.description,
           t.image,
-          t.image_version,
+          extract(epoch from t.image_version) as image_version,
           t.media,
           t.collection_id,
           c.name AS collection_name,
