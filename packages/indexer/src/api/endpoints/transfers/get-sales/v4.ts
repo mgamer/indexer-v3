@@ -238,7 +238,6 @@ export const getSalesV4Options: RouteOptions = {
                   tokens_data.collection_id,
                   tokens_data.collection_name,
                   tokens_data.image_version
-
                 `
               : ""
           }
