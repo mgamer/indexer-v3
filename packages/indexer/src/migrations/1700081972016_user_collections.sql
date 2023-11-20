@@ -4,7 +4,7 @@ CREATE TABLE "user_collections" (
   "owner" BYTEA NOT NULL,
   "collection_id" TEXT,
   "contract" BYTEA NOT NULL,
-  "token_count" INT NOT NULL DEFAULT 0,
+  "token_count" NUMERIC(78, 0) NOT NULL DEFAULT 0,
   "floor_sell_value" NUMERIC(78, 0),
   "total_value" NUMERIC(78, 0),
   "is_spam" INT NOT NULL DEFAULT 0,
