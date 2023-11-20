@@ -12,6 +12,7 @@ import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { bn, fromBuffer, now, regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
+import { OrderKind } from "@/orderbook/orders";
 import * as b from "@/utils/auth/blur";
 import { cosigner, generateOffChainCancellationSignatureData } from "@/utils/cosign";
 
@@ -363,7 +364,7 @@ export const getExecuteCancelV3Options: RouteOptions = {
           o.raw_data.cosigner === cosigner.address.toLowerCase()
       );
 
-      let offChainCancellableKind: string | undefined;
+      let offChainCancellableKind: OrderKind | undefined;
       if (areAllSeaportV14OffChainCancellable) {
         offChainCancellableKind = "seaport-v1.4";
       } else if (areAllSeaportV15OffChainCancellable) {
@@ -374,7 +375,7 @@ export const getExecuteCancelV3Options: RouteOptions = {
         offChainCancellableKind = "payment-processor-v2";
       }
 
-      if (offChainCancellableKind === "payment-procesor-v2") {
+      if (offChainCancellableKind === "payment-processor-v2") {
         const orderIds = orderResults.map((o) => o.id).sort();
         return {
           steps: [
