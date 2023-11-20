@@ -135,7 +135,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       // Check: order has no cosigner or a known cosigner
       if (
         order.params.cosigner &&
-        order.params.cosigner.toLowerCase() !== cosigner.address.toLowerCase()
+        order.params.cosigner.toLowerCase() !== cosigner().address.toLowerCase()
       ) {
         return results.push({
           id,

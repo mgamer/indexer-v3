@@ -361,7 +361,7 @@ export const getExecuteCancelV3Options: RouteOptions = {
       const allArePPV2OffChainCancellable = orderResults.every(
         (o) =>
           o.kind === "payment-processor-v2" &&
-          o.raw_data.cosigner === cosigner.address.toLowerCase()
+          o.raw_data.cosigner === cosigner().address.toLowerCase()
       );
 
       let offChainCancellableKind: OrderKind | undefined;
