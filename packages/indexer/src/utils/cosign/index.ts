@@ -1,26 +1,20 @@
 import { Wallet } from "@ethersproject/wallet";
-import { config } from "@/config/index";
 import { verifyTypedData } from "@ethersproject/wallet";
-import { OrderKind } from "@/orderbook/orders";
-import { idb } from "@/common/db";
-import { toBuffer, now } from "@/common/utils";
 
-export function getCosigner() {
-  return new Wallet(config.cosignerPrivateKey);
-}
+import { idb, pgp } from "@/common/db";
+import { config } from "@/config/index";
+import { orderUpdatesByIdJob } from "@/jobs/order-updates/order-updates-by-id-job";
 
-export function getCosignerAddress() {
-  return getCosigner().address;
-}
+export const cosigner = new Wallet(config.cosignerPrivateKey);
 
-export function generateCancelMessage(orderIds: string[], cosigner: string) {
+// Reuse the cancellation format of `seaport` orders
+export const generateOffChainCancellationSignatureData = (orderIds: string[]) => {
   return {
     signatureKind: "eip712",
     domain: {
-      name: "SignedZone",
+      name: "Off-Chain Cancellation",
       version: "1.0.0",
       chainId: config.chainId,
-      verifyingContract: cosigner,
     },
     types: { OrderHashes: [{ name: "orderHashes", type: "bytes32[]" }] },
     value: {
@@ -28,64 +22,39 @@ export function generateCancelMessage(orderIds: string[], cosigner: string) {
     },
     primaryType: "OrderHashes",
   };
-}
+};
 
-export function generateOffChainCancleStep(orderIds: string[], cosigner: string) {
-  return {
-    id: "cancellation-signature",
-    action: "Cancel order",
-    description: "Authorize the cancellation of the order",
-    kind: "signature",
-    items: [
-      {
-        status: "incomplete",
-        data: {
-          sign: generateCancelMessage(orderIds, cosigner),
-          post: {
-            endpoint: "/execute/cancel-signature/v1",
-            method: "POST",
-            body: {
-              orderIds: orderIds.sort(),
-              orderKind: "payment-processor-v2",
-            },
-          },
-        },
-      },
-    ],
-  };
-}
-
-export function verifyOffChainCancleSignature(
+export const verifyOffChainCancellationSignature = (
   orderIds: string[],
-  cosigner: string,
   signature: string,
   signer: string
-) {
-  const message = generateCancelMessage(orderIds, cosigner);
+) => {
+  const message = generateOffChainCancellationSignatureData(orderIds);
   const recoveredSigner = verifyTypedData(message.domain, message.types, message.value, signature);
   return recoveredSigner.toLowerCase() === signer.toLowerCase();
-}
+};
 
-export async function saveCancellation(orderId: string, kind: OrderKind, owner: string) {
-  await idb.none(
-    `
-            INSERT INTO cancellations (
-                order_id,
-                owner,
-                order_kind,
-                timestamp
-            ) VALUES (
-                $/orderId/,
-                $/owner/,
-                $/kind/,
-                $/timestamp/
-            ) ON CONFLICT DO NOTHING
-            `,
+export const saveOffChainCancellations = async (orderIds: string[]) => {
+  const columns = new pgp.helpers.ColumnSet(
+    ["order_id", { name: "timestamp", mod: ":raw", init: () => "now()" }],
     {
-      orderId,
-      owner: toBuffer(owner),
-      kind,
-      timestamp: now(),
+      table: "off_chain_cancellations",
     }
   );
-}
+  await idb.none(
+    pgp.helpers.insert(
+      orderIds.map((orderId) => ({ orderId })),
+      columns
+    ) + " ON CONFLICT DO NOTHING"
+  );
+
+  await orderUpdatesByIdJob.addToQueue(
+    orderIds.map((orderId: string) => ({
+      context: `cancel-${orderId}`,
+      id: orderId,
+      trigger: {
+        kind: "cancel",
+      },
+    }))
+  );
+};

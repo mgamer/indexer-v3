@@ -124,9 +124,6 @@ export const getExecuteListV5Options: RouteOptions = {
               .default("seaport-v1.5")
               .description("Exchange protocol used to create order. Example: `seaport-v1.5`"),
             options: Joi.object({
-              "payment-processor-v2": Joi.object({
-                useOffChainCancellation: Joi.boolean().required(),
-              }),
               "seaport-v1.4": Joi.object({
                 conduitKey: Joi.string().pattern(regex.bytes32),
                 useOffChainCancellation: Joi.boolean().required(),
@@ -144,6 +141,9 @@ export const getExecuteListV5Options: RouteOptions = {
                   then: Joi.optional(),
                   otherwise: Joi.forbidden(),
                 }),
+              }),
+              "payment-processor-v2": Joi.object({
+                useOffChainCancellation: Joi.boolean().required(),
               }),
               alienswap: Joi.object({
                 useOffChainCancellation: Joi.boolean().required(),

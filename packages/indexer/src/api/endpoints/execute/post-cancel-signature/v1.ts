@@ -8,15 +8,11 @@ import Joi from "joi";
 
 import { idb } from "@/common/db";
 import { logger } from "@/common/logger";
+import { fromBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { getNetworkName } from "@/config/network";
 import * as b from "@/utils/auth/blur";
-import {
-  verifyOffChainCancleSignature,
-  saveCancellation,
-  getCosignerAddress,
-} from "@/utils/cosign";
-import { orderUpdatesByIdJob } from "@/jobs/order-updates/order-updates-by-id-job";
+import { saveOffChainCancellations, verifyOffChainCancellationSignature } from "@/utils/cosign";
 
 const version = "v1";
 
@@ -155,8 +151,7 @@ export const postCancelSignatureV1Options: RouteOptions = {
           const ordersResult = await idb.manyOrNone(
             `
               SELECT
-                orders.maker,
-                orders.raw_data
+                orders.maker
               FROM orders
               WHERE orders.id IN ($/ids:list/)
               ORDER BY orders.id
@@ -167,29 +162,18 @@ export const postCancelSignatureV1Options: RouteOptions = {
             throw Boom.badRequest("Could not find all relevant orders");
           }
 
-          const cosigner = getCosignerAddress();
-          const signer = ordersResult[0].raw_data.sellerOrBuyer;
-          const verified = verifyOffChainCancleSignature(orderIds, cosigner, signature, signer);
+          const maker = fromBuffer(ordersResult[0].maker);
+          if (!ordersResult.every((r) => fromBuffer(r.maker) === maker)) {
+            throw Boom.badRequest("Some or all of the orders have a different maker");
+          }
 
-          if (!verified) {
+          const success = verifyOffChainCancellationSignature(orderIds, signature, maker);
+          if (!success) {
             throw Boom.badRequest("Cancellation failed");
           }
 
           // Save cancellations
-          for (const orderId of orderIds) {
-            await saveCancellation(orderId, "payment-processor-v2", signer);
-          }
-
-          // Cancel all orders
-          await orderUpdatesByIdJob.addToQueue(
-            orderIds.map((orderId: string) => ({
-              context: `cancel-${orderId}`,
-              id: orderId,
-              trigger: {
-                kind: "cancel",
-              },
-            }))
-          );
+          await saveOffChainCancellations(orderIds);
 
           return { message: "Success" };
         }

@@ -2,11 +2,11 @@ import { AddressZero } from "@ethersproject/constants";
 import * as Sdk from "@reservoir0x/sdk";
 import { BaseBuildParams } from "@reservoir0x/sdk/dist/payment-processor-v2/builders/base";
 
-import { getCosigner } from "@/utils/cosign";
 import { redb } from "@/common/db";
 import { fromBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
+import { cosigner } from "@/utils/cosign";
 import { getRoyalties } from "@/utils/royalties";
 
 export interface BaseOrderBuildOptions {
@@ -16,8 +16,8 @@ export interface BaseOrderBuildOptions {
   weiPrice: string;
   listingTime?: number;
   expirationTime?: number;
-  useOffChainCancellation?: boolean;
   quantity?: number;
+  useOffChainCancellation?: boolean;
 }
 
 type OrderBuildInfo = {
@@ -72,8 +72,7 @@ export const getBuildInfo = async (
   };
 
   if (options.useOffChainCancellation) {
-    const cosigner = getCosigner();
-    buildParams.cosigner = cosigner.address;
+    buildParams.cosigner = cosigner.address.toLowerCase();
   }
 
   return {

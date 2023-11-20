@@ -199,12 +199,12 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           break;
         }
 
-        const agrs = exchange.contract.interface.decodeFunctionData(
+        const args = exchange.contract.interface.decodeFunctionData(
           matchedMethod.name,
           relevantCalldata!
         );
 
-        const inputData = defaultAbiCoder.decode(matchedMethod.abi, agrs.data);
+        const inputData = defaultAbiCoder.decode(matchedMethod.abi, args.data);
         let saleDetailsArray = [inputData.saleDetails];
         let saleSignatures = [inputData.buyerSignature || inputData.sellerSignature];
         const isCollectionLevelOffer = inputData.isCollectionLevelOffer;
@@ -353,9 +353,9 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
 
           let orderId = isValidated ? order.hash() : undefined;
 
-          // Lookup orderId by maker and nonce
+          // If we couldn't parse the order id from the calldata try to get it from our db
           if (!orderId) {
-            orderId = await commonHelpers.getOrderIdByNonce(
+            orderId = await commonHelpers.getOrderIdFromNonce(
               "payment-processor-v2",
               order.params.sellerOrBuyer,
               order.params.nonce
