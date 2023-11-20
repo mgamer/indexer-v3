@@ -97,7 +97,7 @@ export default class MetadataIndexWriteJob extends AbstractRabbitMqJobHandler {
                                  OR description IS DISTINCT FROM $/description/
                                  OR metadata IS DISTINCT FROM $/metadata:json/) THEN now()
                             ELSE updated_at
-                       END,
+                       END,       
           collection_id = collection_id,
           created_at = created_at,
           metadata_indexed_at = CASE 
