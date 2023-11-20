@@ -3807,6 +3807,7 @@ export class Router {
           orders.map((c, i) => {
             return {
               taker,
+              tokenId: details[i].tokenId,
               amount: details[i].amount ?? 1,
             };
           }),
