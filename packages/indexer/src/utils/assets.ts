@@ -48,11 +48,7 @@ export class Assets {
     return `${baseUrl}?${queryParams.toString()}`;
   }
 
-  public static getResizedImageUrl(
-    imageUrl: string,
-    size?: number,
-    image_version_updated_at?: number
-  ): string {
+  public static getResizedImageUrl(imageUrl: string, size?: number): string {
     try {
       if (config.enableImageResizing) {
         let resizeImageUrl = imageUrl;
@@ -66,7 +62,7 @@ export class Assets {
           }
         }
 
-        return Assets.signImage(resizeImageUrl, size, image_version_updated_at);
+        return Assets.signImage(resizeImageUrl, size);
       }
     } catch (error) {
       logger.error("getResizedImageUrl", `Error: ${error}`);
@@ -91,11 +87,7 @@ export class Assets {
     return imageUrl;
   }
 
-  public static signImage(
-    imageUrl: string,
-    width?: number,
-    image_version_updated_at?: number
-  ): string {
+  public static signImage(imageUrl: string, width?: number): string {
     if (config.imageResizingBaseUrl == null) {
       throw new Error("Image resizing base URL is not set");
     } else if (config.privateImageResizingSigningKey == null) {
@@ -109,6 +101,6 @@ export class Assets {
 
     return `${config.imageResizingBaseUrl}/${encodeURIComponent(ciphertext)}${
       width ? "?width=" + width : ""
-    }${image_version_updated_at ? "&v=" + image_version_updated_at : ""}`;
+    }`;
   }
 }
