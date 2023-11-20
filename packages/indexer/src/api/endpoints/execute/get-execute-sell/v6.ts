@@ -176,8 +176,6 @@ export const getExecuteSellV6Options: RouteOptions = {
         throw Boom.badData("Unknown token");
       }
 
-      const isFlagged = Boolean(tokenResult.is_flagged);
-
       // Scenario 3: pass raw orders that don't yet exist
       if (payload.rawOrder) {
         // Hack: As the raw order is processed, set it to the `orderId`
@@ -278,7 +276,6 @@ export const getExecuteSellV6Options: RouteOptions = {
                 AND (orders.taker = '\\x0000000000000000000000000000000000000000' OR orders.taker IS NULL)
                 ${payload.normalizeRoyalties ? " AND orders.normalized_value IS NOT NULL" : ""}
                 ${payload.excludeEOA ? " AND orders.kind != 'blur'" : ""}
-                ${isFlagged ? "AND orders.kind NOT IN ('x2y2', 'seaport')" : ""}
               ORDER BY orders.value DESC
             `,
             {
@@ -398,13 +395,9 @@ export const getExecuteSellV6Options: RouteOptions = {
       );
 
       if (
-        [
-          "x2y2",
-          "seaport-v1.4",
-          "seaport-v1.5",
-          "seaport-v1.4-partial",
-          "seaport-v1.5-partial",
-        ].includes(bidDetails!.kind)
+        ["seaport-v1.4", "seaport-v1.5", "seaport-v1.4-partial", "seaport-v1.5-partial"].includes(
+          bidDetails!.kind
+        )
       ) {
         if (tokenResult.is_flagged) {
           throw Boom.badData("Token is flagged");

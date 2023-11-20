@@ -385,6 +385,16 @@ export class Router {
       options.partial = false;
     }
 
+    const getFees = (ownDetails: ListingDetails[]) =>
+      // TODO: Should not split the local fees among all executions
+      ownDetails
+        .flatMap(({ fees }) => fees ?? [])
+        .filter(
+          ({ amount, recipient }) =>
+            // Skip zero amounts and/or recipients
+            bn(amount).gt(0) && recipient !== AddressZero
+        );
+
     // We don't have a module for Manifold listings
     if (details.some(({ kind }) => kind === "manifold")) {
       if (options?.relayer) {
@@ -433,14 +443,12 @@ export class Router {
 
     // We don't have a module for PaymentProcessorV2 listings
     if (details.some(({ kind }) => kind === "payment-processor-v2")) {
-      if (options?.relayer) {
-        throw new Error("Relayer not supported for PaymentProcessorV2 orders");
-      }
-
       const ppv2Details = details.filter(({ kind }) => kind === "payment-processor-v2");
 
       const exchange = new Sdk.PaymentProcessorV2.Exchange(this.chainId);
       const operator = exchange.contract.address;
+
+      const allFees = ppv2Details.map((c) => getFees([c]));
 
       const orders: Sdk.PaymentProcessorV2.Order[] = ppv2Details.map(
         (c) => c.order as Sdk.PaymentProcessorV2.Order
@@ -449,7 +457,9 @@ export class Router {
       const useSweepCollection =
         ppv2Details.length > 1 &&
         ppv2Details.every((c) => c.contract === details[0].contract) &&
-        ppv2Details.every((c) => c.currency === details[0].currency);
+        ppv2Details.every((c) => c.currency === details[0].currency) &&
+        ppv2Details.every((c) => (c.fees ? c.fees.length === 0 : true)) &&
+        orders.every((c) => !c.isPartial());
 
       for (const detail of ppv2Details) {
         const order = detail.order as Sdk.PaymentProcessorV2.Order;
@@ -478,7 +488,6 @@ export class Router {
           });
         }
       }
-
       if (useSweepCollection) {
         txs.push({
           approvals,
@@ -487,7 +496,11 @@ export class Router {
             listings: { "payment-processor-v2": orders.length },
           },
           preSignatures: [],
-          txData: exchange.sweepCollectionTx(taker, orders),
+          txData: exchange.sweepCollectionTx(taker, orders, {
+            source: options?.source,
+            fee: allFees[0][0],
+            relayer: options?.relayer,
+          }),
           orderIds: ppv2Details.map((d) => d.orderId),
         });
       } else {
@@ -498,9 +511,21 @@ export class Router {
             listings: { "payment-processor-v2": orders.length },
           },
           preSignatures: [],
-          txData: exchange.fillOrdersTx(taker, orders, {
+          txData: exchange.fillOrdersTx(
             taker,
-          }),
+            orders,
+            orders.map((_, i) => {
+              return {
+                taker,
+                amount: ppv2Details[i].amount ?? 1,
+              };
+            }),
+            {
+              source: options?.source,
+              fees: allFees.map((c) => c[0]),
+              relayer: options?.relayer,
+            }
+          ),
           orderIds: ppv2Details.map((d) => d.orderId),
         });
       }
@@ -1073,16 +1098,6 @@ export class Router {
         };
       }
     }
-
-    const getFees = (ownDetails: ListingDetails[]) =>
-      // TODO: Should not split the local fees among all executions
-      ownDetails
-        .flatMap(({ fees }) => fees ?? [])
-        .filter(
-          ({ amount, recipient }) =>
-            // Skip zero amounts and/or recipients
-            bn(amount).gt(0) && recipient !== AddressZero
-        );
 
     // Keep track of any approvals that might be needed
     const approvals: FTApproval[] = [];
@@ -3701,6 +3716,13 @@ export class Router {
       }
     }
 
+    const getFees = (ownDetail: BidDetails) =>
+      (ownDetail.fees ?? []).filter(
+        ({ amount, recipient }) =>
+          // Skip zero amounts and/or recipients
+          bn(amount).gt(0) && recipient !== AddressZero
+      );
+
     // Fill PaymentProcessor offers directly
     const paymentProcessorDetails = details.filter((d) => d.kind === "payment-processor");
     if (paymentProcessorDetails.length) {
@@ -3749,7 +3771,7 @@ export class Router {
         txTags: {
           bids: { "payment-processor": orders.length },
         },
-        txData: exchange.fillOrdersTx(taker, orders, takeOrders),
+        txData: exchange.fillOrdersTx(taker, orders, takeOrders, options),
         orderIds: paymentProcessorDetails.map((d) => d.orderId),
       });
     }
@@ -3764,6 +3786,7 @@ export class Router {
       const orders: Sdk.PaymentProcessorV2.Order[] = ppv2Details.map(
         (c) => c.order as Sdk.PaymentProcessorV2.Order
       );
+      const allFees = ppv2Details.map((c) => getFees(c));
 
       const approvals: NFTApproval[] = [];
       for (const { orderId, contract } of ppv2Details) {
@@ -3782,9 +3805,18 @@ export class Router {
           listings: { "payment-processor-v2": orders.length },
         },
         preSignatures: [],
-        txData: exchange.fillOrdersTx(taker, orders, {
+        txData: exchange.fillOrdersTx(
           taker,
-        }),
+          orders,
+          orders.map((c, i) => {
+            return {
+              taker,
+              tokenId: details[i].tokenId,
+              amount: details[i].amount ?? 1,
+            };
+          }),
+          { fees: allFees.map((c) => c[0]) }
+        ),
         orderIds: ppv2Details.map((d) => d.orderId),
       });
 
@@ -3941,13 +3973,6 @@ export class Router {
 
     // Step 2
     // Handle calldata generation
-
-    const getFees = (ownDetail: BidDetails) =>
-      (ownDetail.fees ?? []).filter(
-        ({ amount, recipient }) =>
-          // Skip zero amounts and/or recipients
-          bn(amount).gt(0) && recipient !== AddressZero
-      );
 
     // Generate router executions
     const executionsWithDetails: {

@@ -53,23 +53,27 @@ export class Assets {
     size?: number,
     image_version?: number
   ): string {
-    try {
-      if (config.enableImageResizing) {
-        let resizeImageUrl = imageUrl;
-        if (imageUrl?.includes("lh3.googleusercontent.com")) {
-          if (imageUrl.match(/=s\d+$/)) {
-            resizeImageUrl = imageUrl.replace(/=s\d+$/, `=s${ImageSize.large}`);
-          }
-        } else if (imageUrl?.includes("i.seadn.io")) {
-          if (imageUrl.match(/w=\d+/)) {
-            resizeImageUrl = imageUrl.replace(/w=\d+/, `w=${ImageSize.large}`);
-          }
-        }
+    if (imageUrl) {
+      try {
+        if (config.enableImageResizing) {
+          let resizeImageUrl = imageUrl;
+          if (imageUrl?.includes("lh3.googleusercontent.com")) {
+            if (imageUrl.match(/=s\d+$/)) {
+              resizeImageUrl = imageUrl.replace(/=s\d+$/, `=s${ImageSize.large}`);
+            }
+          } else if (imageUrl?.includes("i.seadn.io")) {
+            if (imageUrl.match(/w=\d+/)) {
+              resizeImageUrl = imageUrl.replace(/w=\d+/, `w=${ImageSize.large}`);
+            }
 
-        return Assets.signImage(resizeImageUrl, size, image_version);
+            return Assets.signImage(resizeImageUrl, size);
+          }
+
+          return Assets.signImage(resizeImageUrl, size, image_version);
+        }
+      } catch (error) {
+        logger.error("getResizedImageUrl", `Error: ${error}`);
       }
-    } catch (error) {
-      logger.error("getResizedImageUrl", `Error: ${error}`);
     }
 
     if (imageUrl?.includes("lh3.googleusercontent.com")) {

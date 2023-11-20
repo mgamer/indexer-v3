@@ -1,5 +1,6 @@
 import { Provider } from "@ethersproject/abstract-provider";
 import { TypedDataSigner } from "@ethersproject/abstract-signer";
+import { BigNumberish } from "@ethersproject/bignumber";
 import { splitSignature } from "@ethersproject/bytes";
 import { HashZero, AddressZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
@@ -50,6 +51,14 @@ export class Order {
     return this.params.cosigner !== AddressZero;
   }
 
+  public isCollectionLevelOffer() {
+    return this.params.kind === "collection-offer-approval";
+  }
+
+  public isPartial() {
+    return this.params.protocol === Types.OrderProtocols.ERC1155_FILL_PARTIAL;
+  }
+
   public checkValidity() {
     if (!this.getBuilder().isValid(this)) {
       throw new Error("Invalid order");
@@ -59,15 +68,27 @@ export class Order {
   private detectKind(): Types.OrderKind {
     const params = this.params;
 
-    if (params.maxRoyaltyFeeNumerator && !params.beneficiary) {
+    if (
+      params.maxRoyaltyFeeNumerator !== undefined &&
+      params.beneficiary === undefined &&
+      params.tokenId !== undefined
+    ) {
       return "sale-approval";
     }
 
-    if (!params.maxRoyaltyFeeNumerator && params.beneficiary && params.tokenId) {
+    if (
+      params.maxRoyaltyFeeNumerator === undefined &&
+      params.beneficiary !== undefined &&
+      params.tokenId !== undefined
+    ) {
       return "item-offer-approval";
     }
 
-    if (!this.params.maxRoyaltyFeeNumerator && params.beneficiary && !params.tokenId) {
+    if (
+      params.maxRoyaltyFeeNumerator === undefined &&
+      params.beneficiary !== undefined &&
+      params.tokenId === undefined
+    ) {
       return "collection-offer-approval";
     }
 
@@ -142,7 +163,7 @@ export class Order {
     };
   }
 
-  public getMatchedOrder(taker: string): Types.MatchedOrder {
+  public getMatchedOrder(taker: string, amount?: BigNumberish): Types.MatchedOrder {
     const isBuyOrder = this.isBuyOrder();
     const params = this.params;
 
@@ -160,8 +181,8 @@ export class Order {
       expiration: params.expiration,
       marketplaceFeeNumerator: params.marketplaceFeeNumerator,
       maxRoyaltyFeeNumerator: params.maxRoyaltyFeeNumerator ?? "0",
-      requestedFillAmount: "0",
-      minimumFillAmount: "0",
+      requestedFillAmount: amount ? amount.toString() : "0",
+      minimumFillAmount: amount ? amount.toString() : "0",
       signature: {
         r: this.params.r!,
         s: this.params.s!,
