@@ -21,6 +21,7 @@ import * as soundxyz from "@/orderbook/mints/calldata/detector/soundxyz";
 import * as thirdweb from "@/orderbook/mints/calldata/detector/thirdweb";
 import * as zora from "@/orderbook/mints/calldata/detector/zora";
 import * as titlesxyz from "@/orderbook/mints/calldata/detector/titlesxyz";
+import * as artblocks from "@/orderbook/mints/calldata/detector/artblocks";
 
 export {
   decent,
@@ -34,6 +35,7 @@ export {
   zora,
   createdotfun,
   titlesxyz,
+  artblocks,
 };
 
 export const extractByTx = async (txHash: string, skipCache = false) => {

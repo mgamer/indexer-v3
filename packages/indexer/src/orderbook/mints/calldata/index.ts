@@ -64,7 +64,8 @@ type BaseCustomInfo = {
 
 export type CustomInfo =
   | (BaseCustomInfo & mints.manifold.Info)
-  | (BaseCustomInfo & mints.soundxyz.Info);
+  | (BaseCustomInfo & mints.soundxyz.Info)
+  | (BaseCustomInfo & mints.artblocks.Info);
 
 export type PartialCollectionMint = Pick<
   CollectionMint,
