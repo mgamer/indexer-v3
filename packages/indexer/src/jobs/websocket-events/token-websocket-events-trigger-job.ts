@@ -336,7 +336,7 @@ export class TokenWebsocketEventsTriggerJob extends AbstractRabbitMqJobHandler {
           t.is_spam,
           t.description,
           t.image,
-          t.image_version_updated_at,
+          t.image_version,
           t.media,
           t.collection_id,
           c.name AS collection_name,
@@ -414,7 +414,7 @@ export class TokenWebsocketEventsTriggerJob extends AbstractRabbitMqJobHandler {
             name: r.name,
             isSpam: Number(r.is_spam) > 0,
             description: r.description,
-            image: Assets.getResizedImageUrl(r.image, undefined, r.image_version_updated_at),
+            image: Assets.getResizedImageUrl(r.image, undefined, r.image_version),
             media: r.media,
             kind: r.kind,
             metadataDisabled:

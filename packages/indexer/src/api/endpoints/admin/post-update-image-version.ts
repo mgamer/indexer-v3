@@ -38,7 +38,7 @@ export const postUpdateImageVersionOptions: RouteOptions = {
       await idb.oneOrNone(
         `
           UPDATE tokens
-            SET image_version_updated_at = NOW(),
+            SET image_version = NOW(),
                 updated_at = NOW()
           WHERE contract = $1 AND token_id = $2
         `,

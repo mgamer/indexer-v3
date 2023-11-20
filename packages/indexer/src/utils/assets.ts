@@ -51,7 +51,7 @@ export class Assets {
   public static getResizedImageUrl(
     imageUrl: string,
     size?: number,
-    image_version_updated_at?: number
+    image_version?: number
   ): string {
     try {
       if (config.enableImageResizing) {
@@ -66,7 +66,7 @@ export class Assets {
           }
         }
 
-        return Assets.signImage(resizeImageUrl, size, image_version_updated_at);
+        return Assets.signImage(resizeImageUrl, size, image_version);
       }
     } catch (error) {
       logger.error("getResizedImageUrl", `Error: ${error}`);
@@ -91,18 +91,14 @@ export class Assets {
     return imageUrl;
   }
 
-  public static signImage(
-    imageUrl: string,
-    width?: number,
-    image_version_updated_at?: number
-  ): string {
+  public static signImage(imageUrl: string, width?: number, image_version?: number): string {
     if (config.imageResizingBaseUrl == null) {
       throw new Error("Image resizing base URL is not set");
     } else if (config.privateImageResizingSigningKey == null) {
       throw new Error("Private image resizing signing key is not set");
     }
 
-    const v = image_version_updated_at ? `?v=${image_version_updated_at}` : "";
+    const v = image_version ? `?v=${image_version}` : "";
 
     const ciphertext = crypto.AES.encrypt(
       imageUrl + v,

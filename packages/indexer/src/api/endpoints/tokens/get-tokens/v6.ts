@@ -704,7 +704,7 @@ export const getTokensV6Options: RouteOptions = {
           t.metadata,
           t.media,
           t.collection_id,
-          t.image_version_updated_at,
+          t.image_version,
           c.name AS collection_name,
           con.kind,
           con.symbol,
@@ -1380,17 +1380,9 @@ export const getTokensV6Options: RouteOptions = {
               tokenId,
               name: r.name,
               description: r.description,
-              image: Assets.getResizedImageUrl(r.image, undefined, r.image_version_updated_at),
-              imageSmall: Assets.getResizedImageUrl(
-                r.image,
-                ImageSize.small,
-                r.image_version_updated_at
-              ),
-              imageLarge: Assets.getResizedImageUrl(
-                r.image,
-                ImageSize.large,
-                r.image_version_updated_at
-              ),
+              image: Assets.getResizedImageUrl(r.image, undefined, r.image_version),
+              imageSmall: Assets.getResizedImageUrl(r.image, ImageSize.small, r.image_version),
+              imageLarge: Assets.getResizedImageUrl(r.image, ImageSize.large, r.image_version),
               metadata: Object.values(metadata).every((el) => el === undefined)
                 ? undefined
                 : metadata,
@@ -2040,17 +2032,9 @@ export const getListedTokensFromES = async (query: any) => {
           tokenId,
           name: r.name,
           description: r.description,
-          image: Assets.getResizedImageUrl(r.image, undefined, r.image_version_updated_at),
-          imageSmall: Assets.getResizedImageUrl(
-            r.image,
-            ImageSize.small,
-            r.image_version_updated_at
-          ),
-          imageLarge: Assets.getResizedImageUrl(
-            r.image,
-            ImageSize.large,
-            r.image_version_updated_at
-          ),
+          image: Assets.getResizedImageUrl(r.image, undefined, r.image_version),
+          imageSmall: Assets.getResizedImageUrl(r.image, ImageSize.small, r.image_version),
+          imageLarge: Assets.getResizedImageUrl(r.image, ImageSize.large, r.image_version),
           metadata: Object.values(metadata).every((el) => el === undefined) ? undefined : metadata,
           media: r.media,
           kind: r.kind,

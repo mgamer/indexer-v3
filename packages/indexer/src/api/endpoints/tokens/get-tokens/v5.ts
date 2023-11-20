@@ -544,7 +544,7 @@ export const getTokensV5Options: RouteOptions = {
           t.last_buy_timestamp,
           t.last_sell_value,
           t.last_sell_timestamp,
-          t.image_version_updated_at,
+          t.image_version,
           (c.metadata ->> 'imageUrl')::TEXT AS collection_image,
           (
             SELECT
@@ -1055,7 +1055,7 @@ export const getTokensV5Options: RouteOptions = {
               tokenId,
               name: r.name,
               description: r.description,
-              image: Assets.getResizedImageUrl(r.image, undefined, r.image_version_updated_at),
+              image: Assets.getResizedImageUrl(r.image, undefined, r.image_version),
               media: r.media,
               kind: r.kind,
               isFlagged: Boolean(Number(r.is_flagged)),
