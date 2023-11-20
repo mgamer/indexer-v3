@@ -1,4 +1,3 @@
-import { redis } from "@/common/redis";
 import { idb } from "@/common/db";
 
 import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handler";
@@ -13,9 +12,9 @@ export class BackfillNftTransferEventsUpdatedAtJob extends AbstractRabbitMqJobHa
   singleActiveConsumer = true;
 
   protected async process() {
-    const limit = (await redis.get(`${this.queueName}-limit`)) || 250;
+    const limit = 250;
 
-    const results = await idb.manyOrNone(
+    const results = await idb.result(
       `
           WITH x AS (  
             SELECT
@@ -33,14 +32,13 @@ export class BackfillNftTransferEventsUpdatedAtJob extends AbstractRabbitMqJobHa
           WHERE nft_transfer_events.tx_hash = x.tx_hash
           AND nft_transfer_events.log_index = x.log_index
           AND nft_transfer_events.batch_index = x.batch_index
-          RETURNING 1
           `,
       {
         limit,
       }
     );
 
-    if (results.length === limit) {
+    if (results.rowCount === limit) {
       return { addToQueue: true };
     }
 
