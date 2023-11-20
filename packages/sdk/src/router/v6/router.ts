@@ -496,7 +496,11 @@ export class Router {
             listings: { "payment-processor-v2": orders.length },
           },
           preSignatures: [],
-          txData: exchange.sweepCollectionTx(taker, orders, options),
+          txData: exchange.sweepCollectionTx(taker, orders, {
+            source: options?.source,
+            fee: allFees[0][0],
+            relayer: options?.relayer,
+          }),
           orderIds: ppv2Details.map((d) => d.orderId),
         });
       } else {
@@ -510,7 +514,7 @@ export class Router {
           txData: exchange.fillOrdersTx(
             taker,
             orders,
-            orders.map((c, i) => {
+            orders.map((_, i) => {
               return {
                 taker,
                 amount: ppv2Details[i].amount ?? 1,

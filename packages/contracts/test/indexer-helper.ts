@@ -53,11 +53,15 @@ export async function executeBidV5(payload: any) {
 }
 
 export async function savePreSignature(signature: string, id: string) {
-  const { data } = await axios.post(`${indexUrl}/execute/pre-signature/v1?signature=${signature}`, {
-    id
-  }, {
-    validateStatus: () => true,
-  });
+  const { data } = await axios.post(
+    `${indexUrl}/execute/pre-signature/v1?signature=${signature}`,
+    {
+      id,
+    },
+    {
+      validateStatus: () => true,
+    }
+  );
   return data;
 }
 

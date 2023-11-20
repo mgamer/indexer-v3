@@ -29,6 +29,7 @@ describe("PaymentProcessorV2 - Indexer Integration Test", () => {
   beforeEach(async () => {
     // Reset Indexer
     await indexerHelper.reset();
+
     [deployer, alice, bob] = await ethers.getSigners();
     ({ erc721 } = await setupNFTs(deployer));
   });

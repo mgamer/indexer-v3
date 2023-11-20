@@ -831,7 +831,7 @@ describe("PaymentProcessorV2 - SingleToken Erc721", () => {
       Sdk.Common.Addresses.Native[chainId],
       {
         source: "reservoir.market",
-        relayer: relayer.address
+        relayer: relayer.address,
       }
     );
 
@@ -855,7 +855,7 @@ describe("PaymentProcessorV2 - SingleToken Erc721", () => {
     expect(ownerAfter2).to.eq(buyer.address);
   });
 
-  it("Build and fill multiple sell orders with sweepCollection - with fee - with relayer", async () => {
+  it("Build and fill multiple sell orders with sweepCollection, fee, and relayer", async () => {
     const buyer = alice;
     const seller = bob;
     const price = parseEther("1");
@@ -914,9 +914,6 @@ describe("PaymentProcessorV2 - SingleToken Erc721", () => {
       paymentMethod: constants.AddressZero,
       masterNonce: sellerMasterNonce,
     };
-
-    const fee1 = bn(550);
-
     // Build sell order
     const sellOrder2 = builder.build(orderParameters2);
     await sellOrder2.sign(seller);
@@ -938,8 +935,7 @@ describe("PaymentProcessorV2 - SingleToken Erc721", () => {
           order: sellOrder,
           currency: Sdk.Common.Addresses.Native[chainId],
           price: price.toString(),
-          fees: [
-          ],
+          fees: [],
         },
         {
           orderId: "2",
@@ -956,17 +952,18 @@ describe("PaymentProcessorV2 - SingleToken Erc721", () => {
       Sdk.Common.Addresses.Native[chainId],
       {
         source: "reservoir.market",
-        relayer: relayer.address
+        relayer: relayer.address,
       }
     );
 
     expect(nonPartialTx.txs.length).to.eq(1);
 
     for (const tx of nonPartialTx.txs) {
-      // Should switch to fillOrders when there has fee
+      // Should switch to fillOrders when there is a fee
       expect(
         tx.txData.data.includes(exchange.contract.interface.getSighash("sweepCollection"))
       ).to.eq(true);
+
       await relayer.sendTransaction(tx.txData);
     }
 
