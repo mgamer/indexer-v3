@@ -12,7 +12,6 @@ import { PendingExpiredBidActivitiesQueue } from "@/elasticsearch/indexes/activi
 import { PendingFlagStatusSyncTokens } from "@/models/pending-flag-status-sync-tokens";
 import { PendingFlagStatusSyncContracts } from "@/models/pending-flag-status-sync-contracts";
 import { PendingFlagStatusSyncCollectionSlugs } from "@/models/pending-flag-status-sync-collection-slugs";
-
 import { PendingAskEventsQueue } from "@/elasticsearch/indexes/asks/pending-ask-events-queue";
 import { PendingCollectionEventsQueue } from "@/elasticsearch/indexes/collections/pending-collection-events-queue";
 
