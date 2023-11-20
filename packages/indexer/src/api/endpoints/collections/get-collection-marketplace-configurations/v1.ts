@@ -34,29 +34,33 @@ type Marketplace = {
     maxBps: number;
   };
   orderbook: string | null;
-  orderKind: string | null;
-  listingEnabled: boolean;
-  customFeesSupported: boolean;
-  collectionBidSupported?: boolean;
-  traitBidSupported: boolean;
-  partialBidSupported: boolean;
-  minimumBidExpiry?: number;
-  minimumPrecision?: string;
-  supportedBidCurrencies: string[];
-  paymentTokens?: PaymentToken[];
+  exchanges: Record<
+    string,
+    {
+      enabled: boolean;
+      paymentTokens?: PaymentToken[];
+      traitBidSupported: boolean;
+      orderKind: string | null;
+      customFeesSupported: boolean;
+      collectionBidSupported?: boolean;
+      partialBidSupported: boolean;
+      minimumBidExpiry?: number;
+      minimumPrecision?: string;
+      supportedBidCurrencies: string[];
+    }
+  >;
 };
 
 const version = "v1";
 
-export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
+export const getCollectionMarketplaceConfigurationsV1Options: RouteOptions = {
   cache: {
     privacy: "public",
     expiresIn: 60000,
   },
-  description: "Supported marketplaces by collection",
-  notes:
-    "The ReservoirKit `ListModal` client utilizes this API to identify the marketplace(s) it can list on.",
-  tags: ["api", "x-deprecated"],
+  description: "Marketplace configurations by collection",
+  notes: "This API returns recommended marketplace configurations given a collection id",
+  tags: ["api", "Collections"],
   plugins: {
     "hapi-swagger": {
       order: 5,
@@ -92,29 +96,36 @@ export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
             maxBps: Joi.number(),
           }),
           orderbook: Joi.string().allow(null),
-          orderKind: Joi.string().allow(null),
-          listingEnabled: Joi.boolean(),
-          customFeesSupported: Joi.boolean(),
-          minimumBidExpiry: Joi.number(),
-          minimumPrecision: Joi.string(),
-          collectionBidSupported: Joi.boolean(),
-          traitBidSupported: Joi.boolean(),
-          partialBidSupported: Joi.boolean().description(
-            "This indicates whether or not multi quantity bidding is supported"
-          ),
-          supportedBidCurrencies: Joi.array()
-            .items(Joi.string())
-            .description("erc20 contract addresses"),
-          paymentTokens: Joi.array()
-            .items(
+          exchanges: Joi.object()
+            .unknown()
+            .pattern(
+              Joi.string(),
               Joi.object({
-                address: Joi.string(),
-                decimals: Joi.number(),
-                name: Joi.string().allow(null),
-                symbol: Joi.string(),
+                orderKind: Joi.string().allow(null),
+                enabled: Joi.boolean(),
+                customFeesSupported: Joi.boolean(),
+                minimumBidExpiry: Joi.number(),
+                minimumPrecision: Joi.string(),
+                collectionBidSupported: Joi.boolean(),
+                traitBidSupported: Joi.boolean(),
+                partialBidSupported: Joi.boolean().description(
+                  "This indicates whether or not multi quantity bidding is supported"
+                ),
+                supportedBidCurrencies: Joi.array()
+                  .items(Joi.string())
+                  .description("erc20 contract addresses"),
+                paymentTokens: Joi.array()
+                  .items(
+                    Joi.object({
+                      address: Joi.string(),
+                      decimals: Joi.number(),
+                      name: Joi.string().allow(null),
+                      symbol: Joi.string(),
+                    })
+                  )
+                  .allow(null),
               })
-            )
-            .allow(null),
+            ),
         })
       ),
     }),
@@ -160,7 +171,6 @@ export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
       }
 
       const ns = getNetworkSettings();
-
       const marketplaces: Marketplace[] = [];
 
       if (Sdk.LooksRareV2.Addresses.Exchange[config.chainId]) {
@@ -172,13 +182,26 @@ export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
             bps: 50,
           },
           orderbook: "looks-rare",
-          orderKind: "looks-rare-v2",
-          listingEnabled: false,
-          minimumBidExpiry: 15 * 60,
-          customFeesSupported: false,
-          supportedBidCurrencies: [Sdk.Common.Addresses.WNative[config.chainId]],
-          partialBidSupported: false,
-          traitBidSupported: false,
+          exchanges: {
+            "looks-rare-v2": {
+              enabled: false,
+              orderKind: "looks-rare-v2",
+              minimumBidExpiry: 15 * 60,
+              customFeesSupported: false,
+              supportedBidCurrencies: [Sdk.Common.Addresses.WNative[config.chainId]],
+              partialBidSupported: false,
+              traitBidSupported: false,
+            },
+            seaport: {
+              enabled: false,
+              orderKind: "seaport",
+              minimumBidExpiry: 15 * 60,
+              customFeesSupported: false,
+              supportedBidCurrencies: [Sdk.Common.Addresses.WNative[config.chainId]],
+              partialBidSupported: false,
+              traitBidSupported: false,
+            },
+          },
         });
       }
 
@@ -191,12 +214,16 @@ export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
             bps: 50,
           },
           orderbook: "x2y2",
-          orderKind: "x2y2",
-          listingEnabled: false,
-          customFeesSupported: false,
-          supportedBidCurrencies: [Sdk.Common.Addresses.WNative[config.chainId]],
-          partialBidSupported: false,
-          traitBidSupported: false,
+          exchanges: {
+            x2y2: {
+              orderKind: "x2y2",
+              enabled: false,
+              customFeesSupported: false,
+              supportedBidCurrencies: [Sdk.Common.Addresses.WNative[config.chainId]],
+              partialBidSupported: false,
+              traitBidSupported: false,
+            },
+          },
         });
       }
 
@@ -216,13 +243,32 @@ export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
             maxBps: royalties.map((r) => r.bps).reduce((a, b) => a + b, 0),
           },
           orderbook: "reservoir",
-          orderKind: "seaport-v1.5",
-          listingEnabled: true,
-          customFeesSupported: true,
-          collectionBidSupported: Number(collectionResult.token_count) <= config.maxTokenSetSize,
-          supportedBidCurrencies: Object.keys(ns.supportedBidCurrencies),
-          partialBidSupported: true,
-          traitBidSupported: true,
+          exchanges: {
+            seaport: {
+              orderKind: "seaport-v1.5",
+              enabled: true,
+              customFeesSupported: true,
+              collectionBidSupported:
+                Number(collectionResult.token_count) <= config.maxTokenSetSize,
+              supportedBidCurrencies: Object.keys(ns.supportedBidCurrencies),
+              partialBidSupported: true,
+              traitBidSupported: true,
+            },
+            "payment-processor": {
+              orderKind: "payment-processor",
+              enabled: true,
+              customFeesSupported: true,
+              collectionBidSupported:
+                Number(collectionResult.token_count) <= config.maxTokenSetSize,
+              supportedBidCurrencies:
+                config.chainId === 137 &&
+                params.collection === "0xa87dbcfa18adb7c00593e2c2469d83213c87aecd"
+                  ? ["0x456f931298065b1852647de005dd27227146d8b9"]
+                  : Object.keys(ns.supportedBidCurrencies),
+              partialBidSupported: false,
+              traitBidSupported: false,
+            },
+          },
         });
       }
 
@@ -259,14 +305,18 @@ export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
               }
             : undefined,
           orderbook: "opensea",
-          orderKind: "seaport-v1.5",
-          listingEnabled: false,
-          customFeesSupported: false,
-          minimumBidExpiry: 15 * 60,
-          supportedBidCurrencies: Object.keys(ns.supportedBidCurrencies),
-          paymentTokens: collectionResult.payment_tokens?.opensea,
-          partialBidSupported: true,
-          traitBidSupported: true,
+          exchanges: {
+            seaport: {
+              orderKind: "seaport-v1.5",
+              enabled: false,
+              customFeesSupported: false,
+              minimumBidExpiry: 15 * 60,
+              supportedBidCurrencies: Object.keys(ns.supportedBidCurrencies),
+              paymentTokens: collectionResult.payment_tokens?.opensea,
+              partialBidSupported: true,
+              traitBidSupported: true,
+            },
+          },
         });
       }
 
@@ -291,14 +341,18 @@ export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
                 }
               : undefined,
             orderbook: "blur",
-            orderKind: "blur",
-            listingEnabled: false,
-            customFeesSupported: false,
-            minimumPrecision: "0.01",
-            minimumBidExpiry: 10 * 24 * 60 * 60,
-            supportedBidCurrencies: [Sdk.Blur.Addresses.Beth[config.chainId]],
-            partialBidSupported: true,
-            traitBidSupported: false,
+            exchanges: {
+              blur: {
+                orderKind: "blur",
+                enabled: false,
+                customFeesSupported: false,
+                minimumPrecision: "0.01",
+                minimumBidExpiry: 10 * 24 * 60 * 60,
+                supportedBidCurrencies: [Sdk.Blur.Addresses.Beth[config.chainId]],
+                partialBidSupported: true,
+                traitBidSupported: false,
+              },
+            },
           });
         }
       }
@@ -334,89 +388,72 @@ export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
           }
         }
 
-        marketplace.listingEnabled = !!(
-          marketplace.orderbook && supportedOrderbooks.includes(marketplace.orderbook)
+        await Promise.allSettled(
+          Object.values(marketplace.exchanges).map(async (exchange) => {
+            exchange.enabled = !!(
+              marketplace.orderbook && supportedOrderbooks.includes(marketplace.orderbook)
+            );
+
+            if (exchange.enabled) {
+              let operators: string[] = [];
+
+              const seaportOperators = [Sdk.SeaportV15.Addresses.Exchange[config.chainId]];
+              if (Sdk.SeaportBase.Addresses.OpenseaConduitKey[config.chainId]) {
+                seaportOperators.push(
+                  new Sdk.SeaportBase.ConduitController(config.chainId).deriveConduit(
+                    Sdk.SeaportBase.Addresses.OpenseaConduitKey[config.chainId]
+                  )
+                );
+              }
+
+              switch (exchange.orderKind) {
+                case "blur": {
+                  operators = [
+                    Sdk.BlurV2.Addresses.Exchange[config.chainId],
+                    Sdk.BlurV2.Addresses.Delegate[config.chainId],
+                  ];
+                  break;
+                }
+
+                case "seaport-v1.5": {
+                  operators = seaportOperators;
+                  break;
+                }
+
+                case "x2y2": {
+                  operators = [
+                    Sdk.X2Y2.Addresses.Exchange[config.chainId],
+                    collectionResult.contract_kind === "erc1155"
+                      ? Sdk.X2Y2.Addresses.Erc1155Delegate[config.chainId]
+                      : Sdk.X2Y2.Addresses.Erc721Delegate[config.chainId],
+                  ];
+                  break;
+                }
+
+                case "looks-rare-v2": {
+                  operators = [
+                    Sdk.LooksRareV2.Addresses.Exchange[config.chainId],
+                    Sdk.LooksRareV2.Addresses.TransferManager[config.chainId],
+                  ];
+                  break;
+                }
+              }
+
+              const exchangeBlocked = await checkMarketplaceIsFiltered(
+                params.collection,
+                operators
+              );
+
+              exchange.enabled = !exchangeBlocked;
+            }
+          })
         );
-
-        // Check if the exchange is filtered
-        if (marketplace.listingEnabled) {
-          let operators: string[] = [];
-
-          const seaportOperators = [Sdk.SeaportV15.Addresses.Exchange[config.chainId]];
-          if (Sdk.SeaportBase.Addresses.OpenseaConduitKey[config.chainId]) {
-            seaportOperators.push(
-              new Sdk.SeaportBase.ConduitController(config.chainId).deriveConduit(
-                Sdk.SeaportBase.Addresses.OpenseaConduitKey[config.chainId]
-              )
-            );
-          }
-
-          switch (marketplace.orderKind) {
-            case "blur": {
-              operators = [
-                Sdk.BlurV2.Addresses.Exchange[config.chainId],
-                Sdk.BlurV2.Addresses.Delegate[config.chainId],
-              ];
-              break;
-            }
-
-            case "seaport-v1.5": {
-              operators = seaportOperators;
-              break;
-            }
-
-            case "x2y2": {
-              operators = [
-                Sdk.X2Y2.Addresses.Exchange[config.chainId],
-                collectionResult.contract_kind === "erc1155"
-                  ? Sdk.X2Y2.Addresses.Erc1155Delegate[config.chainId]
-                  : Sdk.X2Y2.Addresses.Erc721Delegate[config.chainId],
-              ];
-              break;
-            }
-
-            case "looks-rare-v2": {
-              operators = [
-                Sdk.LooksRareV2.Addresses.Exchange[config.chainId],
-                Sdk.LooksRareV2.Addresses.TransferManager[config.chainId],
-              ];
-              break;
-            }
-          }
-
-          const blocked = await checkMarketplaceIsFiltered(params.collection, operators);
-          if (blocked && marketplace.orderbook === "reservoir") {
-            marketplace.orderKind = "payment-processor";
-            marketplace.partialBidSupported = false;
-            marketplace.traitBidSupported = false;
-
-            if (
-              config.chainId === 137 &&
-              params.collection === "0xa87dbcfa18adb7c00593e2c2469d83213c87aecd"
-            ) {
-              marketplace.supportedBidCurrencies = ["0x456f931298065b1852647de005dd27227146d8b9"];
-            }
-          } else if (blocked && marketplace.orderbook === "looks-rare") {
-            const seaportBlocked = await checkMarketplaceIsFiltered(
-              params.collection,
-              seaportOperators
-            );
-
-            if (!seaportBlocked) {
-              marketplace.orderKind = "seaport-v1.5";
-            } else {
-              marketplace.listingEnabled = false;
-            }
-          } else if (blocked) {
-            marketplace.listingEnabled = false;
-          }
-        }
       }
 
       return { marketplaces };
     } catch (error) {
       logger.error(
-        `get-collection-supported-marketplaces-${version}-handler`,
+        `get-collection-marketplace-configurations-${version}-handler`,
         `Handler failure: ${error}`
       );
       throw error;
