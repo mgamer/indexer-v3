@@ -704,7 +704,7 @@ export const getTokensV6Options: RouteOptions = {
           t.metadata,
           t.media,
           t.collection_id,
-          extract(epoch from t.image_version) as image_version,
+          t.image_version,
           c.name AS collection_name,
           con.kind,
           con.symbol,

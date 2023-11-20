@@ -373,7 +373,7 @@ export const getStatsV2Options: RouteOptions = {
               "t"."token_id",
               "t"."name",
               "t"."image",
-              extract(epoch from "t"."image_version") as "image_version",
+              "t"."image_version",
               ${floorAskSelectQuery}
               date_part('epoch', lower("os"."valid_between")) AS "floor_sell_valid_from",
               coalesce(

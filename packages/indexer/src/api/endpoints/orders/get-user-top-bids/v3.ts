@@ -267,7 +267,7 @@ export const getUserTopBidsV3Options: RouteOptions = {
             LIMIT 1
         ) y ON TRUE
         LEFT JOIN LATERAL (
-            SELECT t.token_id, extract(epoch from t.image_version) as image_version, t.name, t.image, t.collection_id, floor_sell_value AS "token_floor_sell_value", last_sell_value AS "token_last_sell_value"
+            SELECT t.token_id, t.image_version, t.name, t.image, t.collection_id, floor_sell_value AS "token_floor_sell_value", last_sell_value AS "token_last_sell_value"
             FROM tokens t
             WHERE t.contract = nb.contract
             AND t.token_id = nb.token_id

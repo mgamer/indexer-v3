@@ -114,7 +114,7 @@ export const getTokensV3Options: RouteOptions = {
           "c"."slug",
           "t"."floor_sell_value",
           "t"."top_buy_value",
-          extract(epoch from "t"."image_version") as "image_version"
+          "t"."image_version"
         FROM "tokens" "t"
         JOIN "collections" "c"
           ON "t"."collection_id" = "c"."id"

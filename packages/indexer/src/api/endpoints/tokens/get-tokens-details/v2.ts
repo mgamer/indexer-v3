@@ -142,7 +142,7 @@ export const getTokensDetailsV2Options: RouteOptions = {
           "t"."last_buy_timestamp",
           "t"."last_sell_value",
           "t"."last_sell_timestamp",
-          extract(epoch from "t"."image_version") as "image_version",
+          "t"."image_version",
           (
             SELECT "nb"."owner" FROM "nft_balances" "nb"
             WHERE "nb"."contract" = "t"."contract"

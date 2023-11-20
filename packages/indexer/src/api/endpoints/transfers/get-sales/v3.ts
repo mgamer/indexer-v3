@@ -279,7 +279,7 @@ export const getSalesV3Options: RouteOptions = {
             tokens.name,
             tokens.image,
             tokens.collection_id,
-            extract(epoch from tokens.image_version) as image_version,
+            tokens.image_version,
             collections.name AS collection_name
           FROM tokens
           LEFT JOIN collections 

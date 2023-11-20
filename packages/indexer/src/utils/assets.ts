@@ -102,7 +102,14 @@ export class Assets {
       throw new Error("Private image resizing signing key is not set");
     }
 
-    const v = image_version ? `?v=${image_version}` : "";
+    let v = "";
+    if (image_version) {
+      try {
+        v = image_version ? `?v=${Math.floor(new Date(image_version).getTime() / 1000)}` : "";
+      } catch (error) {
+        logger.error("signImage", `Error: ${error}`);
+      }
+    }
 
     const ciphertext = crypto.AES.encrypt(
       imageUrl + v,

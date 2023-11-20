@@ -179,7 +179,7 @@ export const getTokensV4Options: RouteOptions = {
           "t"."rarity_rank",
           "t"."is_flagged",
           "t"."last_flag_update",
-          extract(epoch from "t"."image_version") as "image_version",
+          "t"."image_version",
           (
             SELECT owner
             FROM "nft_balances" "nb"
