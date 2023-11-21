@@ -85,6 +85,13 @@ export default class OnchainMetadataFetchTokenUriJob extends AbstractRabbitMqJob
 
     // Default to simple hash if no uri found
     if (!_.isEmpty(fallbackTokens)) {
+      if (!config.fallbackMetadataIndexingMethod) {
+        logger.error(
+          this.queueName,
+          `No fallbackMetadataIndexingMethod set. fallbackTokenCount=${fallbackTokens.length}`
+        );
+        return;
+      }
       const pendingRefreshTokens = new PendingRefreshTokens(config.fallbackMetadataIndexingMethod);
       await pendingRefreshTokens.add(fallbackTokens);
       await metadataIndexProcessJob.addToQueue({ method: config.fallbackMetadataIndexingMethod });

@@ -57,6 +57,13 @@ export default class OnchainMetadataProcessTokenUriJob extends AbstractRabbitMqJ
       );
     }
 
+    if (!config.fallbackMetadataIndexingMethod) {
+      logger.error(
+        this.queueName,
+        `No fallbackMetadataIndexingMethod set. contract=${contract}, tokenId=${tokenId}, uri=${uri}`
+      );
+      return;
+    }
     // for whatever reason, we didn't find the metadata, we fallback to simplehash
     const pendingRefreshTokens = new PendingRefreshTokens(config.fallbackMetadataIndexingMethod);
     await pendingRefreshTokens.add([
