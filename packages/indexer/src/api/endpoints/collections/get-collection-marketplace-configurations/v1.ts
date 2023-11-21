@@ -45,7 +45,7 @@ type Marketplace = {
       orderKind: string | null;
       customFeesSupported: boolean;
       collectionBidSupported?: boolean;
-      partialBidSupported: boolean;
+      partialOrderSupported: boolean;
       minimumBidExpiry?: number;
       minimumPrecision?: string;
       supportedBidCurrencies: string[];
@@ -112,7 +112,7 @@ export const getCollectionMarketplaceConfigurationsV1Options: RouteOptions = {
                 minimumPrecision: Joi.string(),
                 collectionBidSupported: Joi.boolean(),
                 traitBidSupported: Joi.boolean(),
-                partialBidSupported: Joi.boolean().description(
+                partialOrderSupported: Joi.boolean().description(
                   "This indicates whether or not multi quantity bidding is supported"
                 ),
                 supportedBidCurrencies: Joi.array()
@@ -195,7 +195,7 @@ export const getCollectionMarketplaceConfigurationsV1Options: RouteOptions = {
               minimumBidExpiry: 15 * 60,
               customFeesSupported: false,
               supportedBidCurrencies: [Sdk.Common.Addresses.WNative[config.chainId]],
-              partialBidSupported: false,
+              partialOrderSupported: false,
               traitBidSupported: false,
             },
             seaport: {
@@ -204,7 +204,7 @@ export const getCollectionMarketplaceConfigurationsV1Options: RouteOptions = {
               minimumBidExpiry: 15 * 60,
               customFeesSupported: false,
               supportedBidCurrencies: [Sdk.Common.Addresses.WNative[config.chainId]],
-              partialBidSupported: false,
+              partialOrderSupported: false,
               traitBidSupported: false,
             },
           },
@@ -226,7 +226,7 @@ export const getCollectionMarketplaceConfigurationsV1Options: RouteOptions = {
               enabled: false,
               customFeesSupported: false,
               supportedBidCurrencies: [Sdk.Common.Addresses.WNative[config.chainId]],
-              partialBidSupported: false,
+              partialOrderSupported: false,
               traitBidSupported: false,
             },
           },
@@ -257,7 +257,7 @@ export const getCollectionMarketplaceConfigurationsV1Options: RouteOptions = {
               collectionBidSupported:
                 Number(collectionResult.token_count) <= config.maxTokenSetSize,
               supportedBidCurrencies: Object.keys(ns.supportedBidCurrencies),
-              partialBidSupported: true,
+              partialOrderSupported: true,
               traitBidSupported: true,
             },
             "payment-processor": {
@@ -271,7 +271,21 @@ export const getCollectionMarketplaceConfigurationsV1Options: RouteOptions = {
                 params.collection === "0xa87dbcfa18adb7c00593e2c2469d83213c87aecd"
                   ? ["0x456f931298065b1852647de005dd27227146d8b9"]
                   : Object.keys(ns.supportedBidCurrencies),
-              partialBidSupported: false,
+              partialOrderSupported: false,
+              traitBidSupported: false,
+            },
+            "payment-processor-v2": {
+              orderKind: "payment-processor",
+              enabled: true,
+              customFeesSupported: true,
+              collectionBidSupported:
+                Number(collectionResult.token_count) <= config.maxTokenSetSize,
+              supportedBidCurrencies:
+                config.chainId === 137 &&
+                params.collection === "0xa87dbcfa18adb7c00593e2c2469d83213c87aecd"
+                  ? ["0x456f931298065b1852647de005dd27227146d8b9"]
+                  : Object.keys(ns.supportedBidCurrencies),
+              partialOrderSupported: collectionResult.contract_kind === "erc1155" ? true : false,
               traitBidSupported: false,
             },
           },
@@ -319,7 +333,7 @@ export const getCollectionMarketplaceConfigurationsV1Options: RouteOptions = {
               minimumBidExpiry: 15 * 60,
               supportedBidCurrencies: Object.keys(ns.supportedBidCurrencies),
               paymentTokens: collectionResult.payment_tokens?.opensea,
-              partialBidSupported: true,
+              partialOrderSupported: true,
               traitBidSupported: true,
             },
           },
@@ -355,7 +369,7 @@ export const getCollectionMarketplaceConfigurationsV1Options: RouteOptions = {
                 minimumPrecision: "0.01",
                 minimumBidExpiry: 10 * 24 * 60 * 60,
                 supportedBidCurrencies: [Sdk.Blur.Addresses.Beth[config.chainId]],
-                partialBidSupported: true,
+                partialOrderSupported: true,
                 traitBidSupported: false,
               },
             },
