@@ -61,7 +61,7 @@ export default class UpdateUserCollectionsJob extends AbstractRabbitMqJobHandler
       toAddress: toBuffer(toAddress),
       collection: collection.id,
       contract: toBuffer(contract),
-      amount: amount,
+      amount,
       isSpam: collection.isSpam,
     });
   }
