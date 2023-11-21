@@ -9,7 +9,6 @@ import { logger } from "@/common/logger";
 import { config } from "@/config/index";
 import { regex } from "@/common/utils";
 import MetadataProviderRouter from "@/metadata/metadata-provider-router";
-import { onchainMetadataProvider } from "@/metadata/providers/onchain-metadata-provider";
 
 export const getProviderMetadata: RouteOptions = {
   description: "Get metadata for a token or collection",
@@ -61,22 +60,6 @@ export const getProviderMetadata: RouteOptions = {
           indexingMethod: query.method,
         });
       } else {
-        if (query.method === "onchain") {
-          const tokenURIs = await onchainMetadataProvider._getTokensMetadataUri(
-            query.tokens.map((token: string) => {
-              const [contract, tokenId] = token.split(":");
-              return { contract, tokenId };
-            })
-          );
-
-          return await Promise.all(
-            tokenURIs.map(async (tokenURI) => {
-              const metadata = await onchainMetadataProvider.getTokensMetadata([tokenURI]);
-              return metadata[0];
-            })
-          );
-        }
-
         return await MetadataProviderRouter.getTokensMetadata(
           query.tokens.map((token: string) => {
             const [contract, tokenId] = token.split(":");

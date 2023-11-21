@@ -21,6 +21,7 @@ import { checkMarketplaceIsFiltered } from "@/utils/marketplace-blacklists";
 import * as paymentProcessorV2 from "@/utils/payment-processor-v2";
 import { getUSDAndNativePrices } from "@/utils/prices";
 import * as royalties from "@/utils/royalties";
+import { cosigner } from "@/utils/cosign";
 
 export type OrderInfo = {
   orderParams: Sdk.PaymentProcessorV2.Types.BaseOrder;
@@ -128,6 +129,18 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         return results.push({
           id,
           status: "filtered",
+        });
+      }
+
+      // Check: order has no cosigner or a known cosigner
+      if (
+        order.params.cosigner &&
+        order.params.cosigner !== AddressZero &&
+        order.params.cosigner.toLowerCase() !== cosigner().address.toLowerCase()
+      ) {
+        return results.push({
+          id,
+          status: "unsupported-cosigner",
         });
       }
 
@@ -267,6 +280,17 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
           ? await royalties.getRoyalties(order.params.tokenAddress, order.params.tokenId, "onchain")
           : await royalties.getRoyaltiesByTokenSet(tokenSetId, "onchain")
       ).map((r) => ({ kind: "royalty", ...r }));
+
+      if (
+        order.params.marketplace !== AddressZero &&
+        Number(order.params.marketplaceFeeNumerator) !== 0
+      ) {
+        feeBreakdown.push({
+          kind: "marketplace",
+          recipient: order.params.marketplace,
+          bps: Number(order.params.marketplaceFeeNumerator),
+        });
+      }
 
       // Handle: royalties on top
       const defaultRoyalties =

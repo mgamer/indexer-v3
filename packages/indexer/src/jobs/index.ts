@@ -114,8 +114,6 @@ import { metadataIndexFetchJob } from "@/jobs/metadata-index/metadata-fetch-job"
 import { metadataIndexProcessJob } from "@/jobs/metadata-index/metadata-process-job";
 import { metadataIndexWriteJob } from "@/jobs/metadata-index/metadata-write-job";
 import { metadataIndexProcessBySlugJob } from "@/jobs/metadata-index/metadata-process-by-slug-job";
-import { onchainMetadataFetchTokenUriJob } from "@/jobs/metadata-index/onchain-metadata-process-token-uri-job";
-import { onchainMetadataProcessTokenUriJob } from "@/jobs/metadata-index/onchain-metadata-process-job";
 import { mintsProcessJob } from "@/jobs/mints/mints-process-job";
 import { mintsRefreshJob } from "@/jobs/mints/mints-refresh-job";
 import { mintsCheckJob } from "@/jobs/mints/mints-check-job";
@@ -174,6 +172,7 @@ import { refreshActivitiesTokenJob } from "@/jobs/activities/refresh-activities-
 import { processCollectionEventJob } from "@/jobs/elasticsearch/collections/process-collection-event-job";
 import { processCollectionEventsJob } from "@/jobs/elasticsearch/collections/process-collection-events-job";
 import { backfillCollectionsElasticsearchJob } from "@/jobs/elasticsearch/collections/backfill-collections-elasticsearch-job";
+import { backfillNftTransferEventsUpdatedAtJob } from "@/jobs/backfill/backfill-nft-transfer-events-updated-at";
 
 export const allJobQueues = [
   backfillWrongNftBalances.queue,
@@ -268,8 +267,6 @@ export class RabbitMqJobsConsumer {
       metadataIndexProcessJob,
       metadataIndexWriteJob,
       metadataIndexProcessBySlugJob,
-      onchainMetadataFetchTokenUriJob,
-      onchainMetadataProcessTokenUriJob,
       mintsProcessJob,
       mintsRefreshJob,
       mintsCheckJob,
@@ -330,6 +327,7 @@ export class RabbitMqJobsConsumer {
       processCollectionEventJob,
       processCollectionEventsJob,
       backfillCollectionsElasticsearchJob,
+      backfillNftTransferEventsUpdatedAtJob,
     ];
   }
 

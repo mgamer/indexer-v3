@@ -91,13 +91,14 @@ export default class MetadataIndexWriteJob extends AbstractRabbitMqJobHandler {
           image = $/image/,
           metadata = $/metadata:json/,
           media = $/media/,
-          updated_at = CASE WHEN (name IS DISTINCT FROM $/name/
-                                 OR image IS DISTINCT FROM $/image/
-                                 OR media IS DISTINCT FROM $/media/
-                                 OR description IS DISTINCT FROM $/description/
-                                 OR metadata IS DISTINCT FROM $/metadata:json/) THEN now()
-                            ELSE updated_at
-                       END,       
+          updated_at = CASE 
+                WHEN (SELECT is_updated FROM updated_check) THEN now()
+                ELSE updated_at
+          END,
+          image_version = CASE 
+                WHEN (SELECT is_updated FROM updated_check) THEN now()
+                ELSE image_version
+          END,
           collection_id = collection_id,
           created_at = created_at,
           metadata_indexed_at = CASE 

@@ -48,24 +48,32 @@ export class Assets {
     return `${baseUrl}?${queryParams.toString()}`;
   }
 
-  public static getResizedImageUrl(imageUrl: string, size?: number): string {
-    try {
-      if (config.enableImageResizing) {
-        let resizeImageUrl = imageUrl;
-        if (imageUrl?.includes("lh3.googleusercontent.com")) {
-          if (imageUrl.match(/=s\d+$/)) {
-            resizeImageUrl = imageUrl.replace(/=s\d+$/, `=s${ImageSize.large}`);
-          }
-        } else if (imageUrl?.includes("i.seadn.io")) {
-          if (imageUrl.match(/w=\d+/)) {
-            resizeImageUrl = imageUrl.replace(/w=\d+/, `w=${ImageSize.large}`);
-          }
-        }
+  public static getResizedImageUrl(
+    imageUrl: string,
+    size?: number,
+    image_version?: number
+  ): string {
+    if (imageUrl) {
+      try {
+        if (config.enableImageResizing) {
+          let resizeImageUrl = imageUrl;
+          if (imageUrl?.includes("lh3.googleusercontent.com")) {
+            if (imageUrl.match(/=s\d+$/)) {
+              resizeImageUrl = imageUrl.replace(/=s\d+$/, `=s${ImageSize.large}`);
+            }
+          } else if (imageUrl?.includes("i.seadn.io")) {
+            if (imageUrl.match(/w=\d+/)) {
+              resizeImageUrl = imageUrl.replace(/w=\d+/, `w=${ImageSize.large}`);
+            }
 
-        return Assets.signImage(resizeImageUrl, size);
+            return Assets.signImage(resizeImageUrl, size);
+          }
+
+          return Assets.signImage(resizeImageUrl, size, image_version);
+        }
+      } catch (error) {
+        logger.error("getResizedImageUrl", `Error: ${error}`);
       }
-    } catch (error) {
-      logger.error("getResizedImageUrl", `Error: ${error}`);
     }
 
     if (imageUrl?.includes("lh3.googleusercontent.com")) {
@@ -87,15 +95,24 @@ export class Assets {
     return imageUrl;
   }
 
-  public static signImage(imageUrl: string, width?: number): string {
+  public static signImage(imageUrl: string, width?: number, image_version?: number): string {
     if (config.imageResizingBaseUrl == null) {
       throw new Error("Image resizing base URL is not set");
     } else if (config.privateImageResizingSigningKey == null) {
       throw new Error("Private image resizing signing key is not set");
     }
 
+    let v = "";
+    if (image_version) {
+      try {
+        v = image_version ? `?v=${Math.floor(new Date(image_version).getTime() / 1000)}` : "";
+      } catch (error) {
+        logger.error("signImage", `Error: ${error}`);
+      }
+    }
+
     const ciphertext = crypto.AES.encrypt(
-      imageUrl,
+      imageUrl + v,
       config.privateImageResizingSigningKey
     ).toString();
 

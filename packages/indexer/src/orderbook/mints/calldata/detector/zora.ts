@@ -267,14 +267,22 @@ export const extractByCollectionERC1155 = async (
       // Skip error for old version
     }
 
-    const zoraFactory = new Contract(
-      totalRewards
-        ? Sdk.Zora.Addresses.ERC1155FactoryV2[config.chainId]
-        : Sdk.Zora.Addresses.ERC1155Factory[config.chainId],
-      new Interface(["function defaultMinters() view returns (address[])"]),
-      baseProvider
-    );
-    const defaultMinters = await zoraFactory.defaultMinters();
+    const defaultMinters: string[] = [];
+    for (const factory of [
+      Sdk.Zora.Addresses.ERC1155Factory[config.chainId],
+      Sdk.Zora.Addresses.ERC1155FactoryV2[config.chainId],
+    ]) {
+      try {
+        const zoraFactory = new Contract(
+          factory,
+          new Interface(["function defaultMinters() view returns (address[])"]),
+          baseProvider
+        );
+        defaultMinters.push(...(await zoraFactory.defaultMinters()));
+      } catch {
+        // Skip errors
+      }
+    }
 
     for (const minter of defaultMinters) {
       // Try both `getPermissions` and `permissions` to cover as many versions as possible
@@ -555,15 +563,31 @@ export const extractByTx = async (
     [
       "0x731133e9", // `mint`
       "0x9dbb844d", // `mintWithRewards`
+      "0xc9a05470", // `premint`
     ].some((bytes4) => tx.data.startsWith(bytes4))
   ) {
-    const tokenId = new Interface([
+    const iface = new Interface([
       "function mint(address minter, uint256 tokenId, uint256 quantity, bytes data)",
       "function mintWithRewards(address minter,uint256 tokenId,uint256 quantity,bytes minterArguments,address mintReferral)",
-    ])
-      .decodeFunctionData(tx.data.startsWith("0x9dbb844d") ? "mintWithRewards" : "mint", tx.data)
-      .tokenId.toString();
-    return extractByCollectionERC1155(collection, tokenId);
+      "function premint((address, string, string) contractConfig, ((string, uint256, uint64, uint96, uint64, uint64, uint32, uint32, address, address), uint32 tokenId, uint32, bool) premintConfig, bytes signature, uint256 quantityToMint, string mintComment)",
+    ]);
+
+    let tokenId: string;
+    switch (tx.data.slice(0, 10)) {
+      case "0x731133e9":
+        tokenId = iface.decodeFunctionData("mint", tx.data).tokenId.toString();
+        break;
+
+      case "0x9dbb844d":
+        tokenId = iface.decodeFunctionData("mintWithRewards", tx.data).tokenId.toString();
+        break;
+
+      case "0xc9a05470":
+        tokenId = String(iface.decodeFunctionData("premint", tx.data).premintConfig.tokenId);
+        break;
+    }
+
+    return extractByCollectionERC1155(collection, tokenId!);
   }
 
   return [];
