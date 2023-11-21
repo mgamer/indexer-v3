@@ -14,12 +14,14 @@ import { getOrUpdateBlurRoyalties } from "@/utils/blur";
 import { checkMarketplaceIsFiltered } from "@/utils/erc721c";
 import * as marketplaceFees from "@/utils/marketplace-fees";
 import * as registry from "@/utils/royalties/registry";
+import * as paymentProcessor from "@/utils/payment-processor";
+import { getCurrency } from "@/utils/currencies";
 
 type PaymentToken = {
   address: string;
-  decimals: number;
-  name: string;
-  symbol: string;
+  decimals?: number;
+  name?: string;
+  symbol?: string;
 };
 
 type Marketplace = {
@@ -47,6 +49,8 @@ type Marketplace = {
       minimumBidExpiry?: number;
       minimumPrecision?: string;
       supportedBidCurrencies: string[];
+      maxPriceRaw?: string;
+      minPriceRaw?: string;
     }
   >;
 };
@@ -124,6 +128,8 @@ export const getCollectionMarketplaceConfigurationsV1Options: RouteOptions = {
                     })
                   )
                   .allow(null),
+                maxPriceRaw: Joi.string().allow(null),
+                minPriceRaw: Joi.string().allow(null),
               })
             ),
         })
@@ -445,6 +451,25 @@ export const getCollectionMarketplaceConfigurationsV1Options: RouteOptions = {
               );
 
               exchange.enabled = !exchangeBlocked;
+
+              if (exchange.enabled && exchange.orderKind === "payment-processor") {
+                const ppConfig = await paymentProcessor.getConfigByContract(params.collection);
+                if (ppConfig && ppConfig.securityPolicy.enforcePricingConstraints) {
+                  exchange.maxPriceRaw = ppConfig?.pricingBounds?.ceilingPrice;
+                  exchange.minPriceRaw = ppConfig?.pricingBounds?.floorPrice;
+                  if (ppConfig.paymentCoin) {
+                    const paymentToken = await getCurrency(ppConfig.paymentCoin);
+                    exchange.paymentTokens = [
+                      {
+                        address: ppConfig.paymentCoin,
+                        symbol: paymentToken.symbol,
+                        name: paymentToken.name,
+                        decimals: paymentToken.decimals,
+                      },
+                    ];
+                  }
+                }
+              }
             }
           })
         );
