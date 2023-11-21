@@ -5,14 +5,14 @@ import { keccak256 } from "@ethersproject/solidity";
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
-import { Network } from "@reservoir0x/sdk/dist/utils";
+import { Network, TxData } from "@reservoir0x/sdk/dist/utils";
 import { PermitHandler } from "@reservoir0x/sdk/dist/router/v6/permit";
 import {
   FillListingsResult,
   ListingDetails,
   MintDetails,
 } from "@reservoir0x/sdk/dist/router/v6/types";
-import { estimateGas } from "@reservoir0x/sdk/dist/router/v6/utils";
+import { estimateGasFromTxTags, initializeTxTags } from "@reservoir0x/sdk/dist/router/v6/utils";
 import { getRandomBytes } from "@reservoir0x/sdk/dist/utils";
 import axios from "axios";
 import { randomUUID } from "crypto";
@@ -278,6 +278,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
           maxQuantity: Joi.string().pattern(regex.number).allow(null),
         })
       ),
+      gasEstimate: Joi.number(),
     }).label(`getExecuteBuy${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(`get-execute-buy-${version}-handler`, `Wrong response schema: ${error}`);
@@ -346,6 +347,9 @@ export const getExecuteBuyV7Options: RouteOptions = {
       if (payload.source) {
         await sources.getOrInsert(payload.source);
       }
+
+      // First pass at estimating the gas costs
+      const txTags = initializeTxTags();
 
       const addToPath = async (
         order: {
@@ -476,7 +480,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
           );
 
           listingDetails.push(
-            generateListingDetailsV6(
+            await generateListingDetailsV6(
               {
                 id: order.id,
                 kind: order.kind,
@@ -492,9 +496,22 @@ export const getExecuteBuyV7Options: RouteOptions = {
                 tokenId: token.tokenId!,
                 amount: token.quantity,
                 isFlagged: Boolean(flaggedResult.is_flagged),
+              },
+              {
+                taker: payload.taker,
               }
             )
           );
+        }
+
+        txTags.feesOnTop! += additionalFees.length;
+        if (order.kind === "mint") {
+          txTags.mints! += 1;
+        } else {
+          if (!txTags.listings![order.kind]) {
+            txTags.listings![order.kind] = 0;
+          }
+          txTags.listings![order.kind] += 1;
         }
       };
 
@@ -540,7 +557,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
 
         if (!item.quantity) {
           if (preview) {
-            item.quantity = useSeaportIntent || useCrossChainIntent ? 1 : 30;
+            item.quantity = 30;
           } else {
             item.quantity = 1;
           }
@@ -840,9 +857,9 @@ export const getExecuteBuyV7Options: RouteOptions = {
                       : item.quantity
                   ).toNumber();
 
-                  // If minting by collection was request but the current mint is tied to a token,
-                  // only mint a single quantity of the current token in order to mimick the logic
-                  // of buying by collection (where we choose as many token ids as the quantity)
+                  // If minting by collection was requested but the current mint is tied to a token,
+                  // only mint a single quantity of the current token in order to match the logic of
+                  // buying by collection (where we choose as many token ids as the quantity)
                   if (mint.tokenId) {
                     quantityToMint = Math.min(quantityToMint, 1);
                   }
@@ -899,6 +916,11 @@ export const getExecuteBuyV7Options: RouteOptions = {
                             ? amountMintable.toString()
                             : null,
                         });
+
+                        // Solver filling is restricted to a single path item for now
+                        if ((useCrossChainIntent || useSeaportIntent) && path.length >= 1) {
+                          break;
+                        }
                       }
 
                       item.quantity -= quantityToMint;
@@ -979,24 +1001,27 @@ export const getExecuteBuyV7Options: RouteOptions = {
               // The max quantity is the total number of tokens which can be bought from the collection
               maxQuantities.push({
                 itemIndex: itemIndex,
-                maxQuantity: await idb
-                  .one(
-                    `
-                      SELECT
-                        count(*) AS on_sale_count
-                      FROM tokens
-                      WHERE tokens.collection_id = $/collection/
-                        AND ${
-                          payload.normalizeRoyalties
-                            ? "tokens.normalized_floor_sell_value"
-                            : "tokens.floor_sell_value"
-                        } IS NOT NULL
-                    `,
-                    {
-                      collection: item.collection,
-                    }
-                  )
-                  .then((r) => String(r.on_sale_count)),
+                maxQuantity:
+                  useSeaportIntent || useCrossChainIntent
+                    ? "1"
+                    : await idb
+                        .one(
+                          `
+                            SELECT
+                              count(*) AS on_sale_count
+                            FROM tokens
+                            WHERE tokens.collection_id = $/collection/
+                              AND ${
+                                payload.normalizeRoyalties
+                                  ? "tokens.normalized_floor_sell_value"
+                                  : "tokens.floor_sell_value"
+                              } IS NOT NULL
+                          `,
+                          {
+                            collection: item.collection,
+                          }
+                        )
+                        .then((r) => String(r.on_sale_count)),
               });
             }
 
@@ -1004,15 +1029,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
             // processed by the next pipeline of the same API rather than
             // building something custom for it.
 
-            for (
-              let i = 0;
-              i <
-              Math.min(
-                useCrossChainIntent || useSeaportIntent ? item.quantity : tokenResults.length,
-                tokenResults.length
-              );
-              i++
-            ) {
+            for (let i = 0; i < tokenResults.length; i++) {
               const t = tokenResults[i];
               items.push({
                 token: `${fromBuffer(t.contract)}:${t.token_id}`,
@@ -1124,6 +1141,11 @@ export const getExecuteBuyV7Options: RouteOptions = {
                           itemIndex,
                           maxQuantity: amountMintable ? amountMintable.toString() : null,
                         });
+
+                        // Solver filling is restricted to a single path item for now
+                        if ((useCrossChainIntent || useSeaportIntent) && path.length >= 1) {
+                          break;
+                        }
                       }
 
                       item.quantity -= quantityToMint;
@@ -1239,8 +1261,13 @@ export const getExecuteBuyV7Options: RouteOptions = {
                 continue;
               }
 
+              // Solver filling is restricted to a single path item for now
+              if (preview && (useCrossChainIntent || useSeaportIntent) && path.length >= 1) {
+                break;
+              }
+
               // Stop if we filled the total quantity
-              if (quantityToFill <= 0 && (!preview || useCrossChainIntent || useSeaportIntent)) {
+              if (quantityToFill <= 0 && !preview) {
                 break;
               }
 
@@ -1335,6 +1362,10 @@ export const getExecuteBuyV7Options: RouteOptions = {
           buyInCurrency = Sdk.Common.Addresses.Native[config.chainId];
         }
       }
+
+      txTags.swaps! += new Set(
+        path.filter((p) => p.currency !== buyInCurrency).map((p) => p.currency)
+      ).size;
 
       // Include the global fees in the path
 
@@ -1481,6 +1512,10 @@ export const getExecuteBuyV7Options: RouteOptions = {
             isCollectionRequest,
             token,
             amount: item.quantity,
+            context: {
+              normalizeRoyalties: payload.normalizeRoyalties,
+              feesOnTop: payload.feesOnTop,
+            },
           })
           .then((response) => ({
             quote: response.data.price,
@@ -1536,6 +1571,12 @@ export const getExecuteBuyV7Options: RouteOptions = {
 
           if (!item.buyIn) {
             item.buyIn = [];
+          }
+
+          // Add the first path item's currency in the `alternativeCurrencies` list
+          const firstPathItemCurrency = `${path[0].currency}:${config.chainId}`;
+          if (!payload.alternativeCurrencies.includes(firstPathItemCurrency)) {
+            payload.alternativeCurrencies.push(firstPathItemCurrency);
           }
 
           await Promise.all(
@@ -1687,8 +1728,11 @@ export const getExecuteBuyV7Options: RouteOptions = {
         return {
           path,
           maxQuantities: preview ? maxQuantities : undefined,
+          gasEstimate: estimateGasFromTxTags(txTags),
         };
       }
+
+      const txSender = payload.relayer ?? payload.taker;
 
       // Seaport intent purchasing MVP
       if (useSeaportIntent) {
@@ -1730,7 +1774,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
         }
 
         const order = new Sdk.SeaportV15.Order(config.chainId, {
-          offerer: payload.taker,
+          offerer: txSender,
           zone: AddressZero,
           offer: [
             {
@@ -1822,16 +1866,6 @@ export const getExecuteBuyV7Options: RouteOptions = {
           throw Boom.badRequest("Only single item cross-chain purchases are supported");
         }
 
-        if (payload.normalizeRoyalties) {
-          throw Boom.badRequest(
-            "Royalty normalization is not supported when purchasing cross-chain"
-          );
-        }
-
-        if (payload.feeOnTop) {
-          throw Boom.badRequest("Fees on top are not supported when purchasing cross-chain");
-        }
-
         const requestedFromChainId = payload.currencyChainId;
 
         const item = path[0];
@@ -1842,10 +1876,13 @@ export const getExecuteBuyV7Options: RouteOptions = {
         item.fromChainId = actualFromChainId;
         item.gasCost = gasCost;
 
+        const needsDeposit = bn(ccConfig.availableBalance!).lt(quote);
+
         if (payload.onlyPath) {
           return {
             path,
             maxQuantities: preview ? maxQuantities : undefined,
+            gasEstimate: needsDeposit ? 100000 : 0,
           };
         }
 
@@ -1880,14 +1917,26 @@ export const getExecuteBuyV7Options: RouteOptions = {
           salt: getRandomBytes(20).toString(),
         });
 
-        if (bn(ccConfig.availableBalance!).lte(quote)) {
+        if (needsDeposit) {
           const exchange = new Sdk.CrossChain.Exchange(actualFromChainId);
-          let depositTx = exchange.depositAndPrevalidateTx(
-            payload.taker,
-            ccConfig.solver!,
-            bn(quote).sub(ccConfig.availableBalance!).toString(),
-            order
-          );
+
+          const hasContext = Boolean(payload.normalizeRoyalties) || Boolean(payload.feesOnTop);
+
+          let depositTx: TxData;
+          if (hasContext) {
+            depositTx = exchange.depositTx(
+              payload.taker,
+              ccConfig.solver!,
+              bn(quote).sub(ccConfig.availableBalance!).toString()
+            );
+          } else {
+            depositTx = exchange.depositAndPrevalidateTx(
+              payload.taker,
+              ccConfig.solver!,
+              bn(quote).sub(ccConfig.availableBalance!).toString(),
+              order
+            );
+          }
 
           // Never deposit to mainnet, but bridge-and-deposit to base
           if (requestedFromChainId === Network.Ethereum) {
@@ -1908,21 +1957,67 @@ export const getExecuteBuyV7Options: RouteOptions = {
             };
           }
 
-          customSteps[0].items.push({
-            status: "incomplete",
-            data: {
-              ...depositTx,
-              chainId: requestedFromChainId,
-            },
-            check: {
-              endpoint: "/execute/status/v1",
-              method: "POST",
-              body: {
-                kind: "cross-chain-intent",
-                id: order.hash(),
+          if (hasContext) {
+            customSteps[0].items.push({
+              status: "incomplete",
+              data: {
+                ...depositTx,
+                chainId: requestedFromChainId,
               },
-            },
-          });
+              check: {
+                endpoint: "/execute/status/v1",
+                method: "POST",
+                body: {
+                  kind: "cross-chain-transaction",
+                  chainId: requestedFromChainId,
+                },
+              },
+            });
+
+            customSteps[1].items.push({
+              status: "incomplete",
+              data: {
+                sign: order.getSignatureData(),
+                post: {
+                  endpoint: "/execute/solve/v1",
+                  method: "POST",
+                  body: {
+                    kind: "cross-chain-intent",
+                    order: order.params,
+                    chainId: actualFromChainId,
+                    context: {
+                      normalizeRoyalties: payload.normalizeRoyalties,
+                      feesOnTop: payload.feesOnTop,
+                    },
+                  },
+                },
+              },
+              check: {
+                endpoint: "/execute/status/v1",
+                method: "POST",
+                body: {
+                  kind: "cross-chain-intent",
+                  id: order.hash(),
+                },
+              },
+            });
+          } else {
+            customSteps[0].items.push({
+              status: "incomplete",
+              data: {
+                ...depositTx,
+                chainId: requestedFromChainId,
+              },
+              check: {
+                endpoint: "/execute/status/v1",
+                method: "POST",
+                body: {
+                  kind: "cross-chain-intent",
+                  id: order.hash(),
+                },
+              },
+            });
+          }
         } else {
           customSteps[1].items.push({
             status: "incomplete",
@@ -1935,6 +2030,10 @@ export const getExecuteBuyV7Options: RouteOptions = {
                   kind: "cross-chain-intent",
                   order: order.params,
                   chainId: actualFromChainId,
+                  context: {
+                    normalizeRoyalties: payload.normalizeRoyalties,
+                    feesOnTop: payload.feesOnTop,
+                  },
                 },
               },
             },
@@ -2413,7 +2512,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
               kind: "transaction",
             },
           },
-          gasEstimate: txTags ? estimateGas(txTags) : undefined,
+          gasEstimate: txTags ? estimateGasFromTxTags(txTags) : undefined,
         });
       }
 

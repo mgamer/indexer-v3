@@ -272,7 +272,6 @@ export class Router {
             data: txData.data + generateSourceBytes(options?.source),
           },
           txTags: {
-            kind: "mint",
             mints: 1,
           },
           orderIds: [orderId],
@@ -328,7 +327,6 @@ export class Router {
           value,
         },
         txTags: {
-          kind: "mint",
           mints: details.length,
         },
         orderIds: details.map((d) => d.orderId),
@@ -387,6 +385,16 @@ export class Router {
       options.partial = false;
     }
 
+    const getFees = (ownDetails: ListingDetails[]) =>
+      // TODO: Should not split the local fees among all executions
+      ownDetails
+        .flatMap(({ fees }) => fees ?? [])
+        .filter(
+          ({ amount, recipient }) =>
+            // Skip zero amounts and/or recipients
+            bn(amount).gt(0) && recipient !== AddressZero
+        );
+
     // We don't have a module for Manifold listings
     if (details.some(({ kind }) => kind === "manifold")) {
       if (options?.relayer) {
@@ -400,10 +408,10 @@ export class Router {
         const amountFilled = Number(detail.amount) ?? 1;
         const orderPrice = bn(order.params.details.initialAmount).mul(amountFilled).toString();
 
-        if (buyInCurrency !== Sdk.Common.Addresses.Native[this.chainId]) {
+        if (buyInCurrency !== detail.currency) {
           swapDetails.push({
             tokenIn: buyInCurrency,
-            tokenOut: Sdk.Common.Addresses.Native[this.chainId],
+            tokenOut: detail.currency,
             tokenOutAmount: orderPrice,
             recipient: taker,
             refundTo: taker,
@@ -413,11 +421,22 @@ export class Router {
         }
 
         txs.push({
-          approvals: [],
+          approvals: [
+            {
+              currency: detail.currency,
+              amount: orderPrice,
+              owner: taker,
+              operator: exchange.contract.address.toLowerCase(),
+              txData: generateFTApprovalTxData(
+                detail.currency,
+                taker,
+                exchange.contract.address.toLowerCase()
+              ),
+            },
+          ],
           permits: [],
           preSignatures: [],
           txTags: {
-            kind: "sale",
             listings: { manifold: 1 },
           },
           txData: exchange.fillOrderTx(
@@ -431,6 +450,100 @@ export class Router {
         });
 
         success[detail.orderId] = true;
+      }
+    }
+
+    // We don't have a module for PaymentProcessorV2 listings
+    if (details.some(({ kind }) => kind === "payment-processor-v2")) {
+      const ppv2Details = details.filter(({ kind }) => kind === "payment-processor-v2");
+
+      const exchange = new Sdk.PaymentProcessorV2.Exchange(this.chainId);
+      const operator = exchange.contract.address;
+
+      const allFees = ppv2Details.map((c) => getFees([c]));
+
+      const orders: Sdk.PaymentProcessorV2.Order[] = ppv2Details.map(
+        (c) => c.order as Sdk.PaymentProcessorV2.Order
+      );
+
+      const useSweepCollection =
+        ppv2Details.length > 1 &&
+        ppv2Details.every((c) => c.contract === details[0].contract) &&
+        ppv2Details.every((c) => c.currency === details[0].currency) &&
+        ppv2Details.every((c) => (c.fees ? c.fees.length === 0 : true)) &&
+        orders.every((c) => !c.isPartial());
+
+      for (const detail of ppv2Details) {
+        const order = detail.order as Sdk.PaymentProcessorV2.Order;
+        if (buyInCurrency !== detail.currency) {
+          swapDetails.push({
+            tokenIn: buyInCurrency,
+            tokenOut: detail.currency,
+            tokenOutAmount: order.params.itemPrice,
+            recipient: taker,
+            refundTo: taker,
+            details: [detail],
+            txIndex: txs.length,
+          });
+        }
+      }
+
+      const approvals: FTApproval[] = [];
+      for (const { currency, price } of ppv2Details) {
+        if (!isETH(this.chainId, currency)) {
+          approvals.push({
+            currency,
+            amount: price,
+            owner: taker,
+            operator,
+            txData: generateFTApprovalTxData(currency, taker, operator),
+          });
+        }
+      }
+      if (useSweepCollection) {
+        txs.push({
+          approvals,
+          permits: [],
+          txTags: {
+            listings: { "payment-processor-v2": orders.length },
+          },
+          preSignatures: [],
+          txData: exchange.sweepCollectionTx(taker, orders, {
+            source: options?.source,
+            fee: allFees[0][0],
+            relayer: options?.relayer,
+          }),
+          orderIds: ppv2Details.map((d) => d.orderId),
+        });
+      } else {
+        txs.push({
+          approvals,
+          permits: [],
+          txTags: {
+            listings: { "payment-processor-v2": orders.length },
+          },
+          preSignatures: [],
+          txData: exchange.fillOrdersTx(
+            taker,
+            orders,
+            orders.map((_, i) => {
+              return {
+                taker,
+                amount: ppv2Details[i].amount ?? 1,
+              };
+            }),
+            {
+              source: options?.source,
+              fees: allFees.map((c) => c[0]),
+              relayer: options?.relayer,
+            }
+          ),
+          orderIds: ppv2Details.map((d) => d.orderId),
+        });
+      }
+
+      for (const { orderId } of ppv2Details) {
+        success[orderId] = true;
       }
     }
 
@@ -533,7 +646,6 @@ export class Router {
           approvals,
           permits: [],
           txTags: {
-            kind: "sale",
             listings: { "payment-processor": orders.length },
           },
           preSignatures: preSignatures,
@@ -563,7 +675,6 @@ export class Router {
           approvals,
           permits: [],
           txTags: {
-            kind: "sale",
             listings: { "payment-processor": orders.length },
           },
           preSignatures: preSignatures,
@@ -689,7 +800,6 @@ export class Router {
               permits: [],
               preSignatures: [],
               txTags: {
-                kind: "sale",
                 listings: { blur: orderIds.length },
               },
               txData: {
@@ -863,7 +973,6 @@ export class Router {
               permits: [],
               preSignatures: [],
               txTags: {
-                kind: "sale",
                 listings: { "seaport-v1.5": 1 },
               },
               txData: await exchange.fillOrderTx(
@@ -893,7 +1002,6 @@ export class Router {
               permits: [],
               preSignatures: [],
               txTags: {
-                kind: "sale",
                 listings: { "seaport-v1.5": details.length },
               },
               txData: await exchange.fillOrdersTx(
@@ -958,7 +1066,6 @@ export class Router {
               permits: [],
               preSignatures: [],
               txTags: {
-                kind: "sale",
                 listings: { alienswap: 1 },
               },
               txData: await exchange.fillOrderTx(
@@ -985,7 +1092,6 @@ export class Router {
               permits: [],
               preSignatures: [],
               txTags: {
-                kind: "sale",
                 listings: { alienswap: details.length },
               },
               txData: await exchange.fillOrdersTx(
@@ -1004,16 +1110,6 @@ export class Router {
         };
       }
     }
-
-    const getFees = (ownDetails: ListingDetails[]) =>
-      // TODO: Should not split the local fees among all executions
-      ownDetails
-        .flatMap(({ fees }) => fees ?? [])
-        .filter(
-          ({ amount, recipient }) =>
-            // Skip zero amounts and/or recipients
-            bn(amount).gt(0) && recipient !== AddressZero
-        );
 
     // Keep track of any approvals that might be needed
     const approvals: FTApproval[] = [];
@@ -1194,7 +1290,6 @@ export class Router {
 
     // Keep track of tags for the router execution
     const routerTxTags: TxTags = {
-      kind: "sale",
       listings: {},
       bids: {},
       mints: 0,
@@ -3595,7 +3690,6 @@ export class Router {
             txs.push({
               approvals: [],
               txTags: {
-                kind: "sale",
                 bids: { blur: blurDetails.length },
               },
               txData: {
@@ -3634,6 +3728,13 @@ export class Router {
       }
     }
 
+    const getFees = (ownDetail: BidDetails) =>
+      (ownDetail.fees ?? []).filter(
+        ({ amount, recipient }) =>
+          // Skip zero amounts and/or recipients
+          bn(amount).gt(0) && recipient !== AddressZero
+      );
+
     // Fill PaymentProcessor offers directly
     const paymentProcessorDetails = details.filter((d) => d.kind === "payment-processor");
     if (paymentProcessorDetails.length) {
@@ -3651,6 +3752,7 @@ export class Router {
           tokenId: detail.tokenId,
           taker,
           takerMasterNonce: await exchange.getMasterNonce(this.provider, taker),
+          maxRoyaltyFeeNumerator: detail.extraArgs?.maxRoyaltyFeeNumerator ?? "0",
         });
 
         orders.push(order);
@@ -3680,12 +3782,61 @@ export class Router {
         approvals: uniqBy(approvals, ({ txData: { from, to, data } }) => `${from}-${to}-${data}`),
         preSignatures,
         txTags: {
-          kind: "sale",
           bids: { "payment-processor": orders.length },
         },
-        txData: exchange.fillOrdersTx(taker, orders, takeOrders),
+        txData: exchange.fillOrdersTx(taker, orders, takeOrders, options),
         orderIds: paymentProcessorDetails.map((d) => d.orderId),
       });
+    }
+
+    // Fill PaymentProcessorV2 offers directly
+    if (details.some(({ kind }) => kind === "payment-processor-v2")) {
+      const ppv2Details = details.filter(({ kind }) => kind === "payment-processor-v2");
+
+      const exchange = new Sdk.PaymentProcessorV2.Exchange(this.chainId);
+      const operator = exchange.contract.address;
+
+      const orders: Sdk.PaymentProcessorV2.Order[] = ppv2Details.map(
+        (c) => c.order as Sdk.PaymentProcessorV2.Order
+      );
+      const allFees = ppv2Details.map((c) => getFees(c));
+
+      const approvals: NFTApproval[] = [];
+      for (const { orderId, contract } of ppv2Details) {
+        approvals.push({
+          orderIds: [orderId],
+          contract: contract,
+          owner: taker,
+          operator,
+          txData: generateNFTApprovalTxData(contract, taker, operator),
+        });
+      }
+
+      txs.push({
+        approvals,
+        txTags: {
+          listings: { "payment-processor-v2": orders.length },
+        },
+        preSignatures: [],
+        txData: exchange.fillOrdersTx(
+          taker,
+          orders,
+          orders.map((_, i) => {
+            return {
+              taker,
+              tokenId: details[i].tokenId,
+              amount: details[i].amount ?? 1,
+              maxRoyaltyFeeNumerator: details[i].extraArgs?.maxRoyaltyFeeNumerator ?? "0",
+            };
+          }),
+          { fees: allFees.map((c) => c[0]) }
+        ),
+        orderIds: ppv2Details.map((d) => d.orderId),
+      });
+
+      for (const { orderId } of ppv2Details) {
+        success[orderId] = true;
+      }
     }
 
     // CASE 2
@@ -3837,13 +3988,6 @@ export class Router {
     // Step 2
     // Handle calldata generation
 
-    const getFees = (ownDetail: BidDetails) =>
-      (ownDetail.fees ?? []).filter(
-        ({ amount, recipient }) =>
-          // Skip zero amounts and/or recipients
-          bn(amount).gt(0) && recipient !== AddressZero
-      );
-
     // Generate router executions
     const executionsWithDetails: {
       detail: BidDetails;
@@ -3852,7 +3996,6 @@ export class Router {
 
     // Keep track of tags for the router execution
     const routerTxTags: TxTags = {
-      kind: "sale",
       listings: {},
       bids: {},
       mints: 0,
@@ -4788,7 +4931,6 @@ export class Router {
       // Fill directly
       txs.push({
         txTags: {
-          kind: "sale",
           bids: { "seaport-v1.5": protectedSeaportV15Offers.length },
         },
         txData: {

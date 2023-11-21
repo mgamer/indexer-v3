@@ -1666,15 +1666,31 @@ export const updateActivitiesToken = async (
 
   const should: any[] = [
     {
-      bool: {
-        must_not: [
-          {
-            term: {
-              "token.isSpam": isSpam > 0,
+      bool:
+        isSpam > 0
+          ? {
+              must_not: [
+                {
+                  term: {
+                    "token.isSpam": isSpam > 0,
+                  },
+                },
+              ],
+            }
+          : {
+              must: [
+                {
+                  exists: {
+                    field: "token.isSpam",
+                  },
+                },
+                {
+                  term: {
+                    "token.isSpam": true,
+                  },
+                },
+              ],
             },
-          },
-        ],
-      },
     },
   ];
 
@@ -1809,6 +1825,7 @@ export const updateActivitiesCollectionData = async (
   collectionId: string,
   collectionData: ActivitiesCollectionUpdateData
 ): Promise<boolean> => {
+  const batchSize = 1000;
   let keepGoing = false;
 
   const should: any[] = [
@@ -1908,10 +1925,10 @@ export const updateActivitiesCollectionData = async (
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
         query,
-        size: 1000,
+        size: batchSize,
       },
       0,
-      true
+      false
     );
 
     const pendingUpdateDocuments: { id: string; index: string }[] = esResult.hits.hits.map(
@@ -1960,25 +1977,25 @@ export const updateActivitiesCollectionData = async (
           })
         );
       } else {
-        keepGoing = pendingUpdateDocuments.length === 1000;
+        keepGoing = pendingUpdateDocuments.length === batchSize;
 
-        logger.info(
-          "elasticsearch-activities",
-          JSON.stringify({
-            topic: "updateActivitiesCollectionData",
-            message: `Success. collectionId=${collectionId}, collectionData=${JSON.stringify(
-              collectionData
-            )}`,
-            data: {
-              collectionId,
-              collectionData,
-            },
-            bulkParams: JSON.stringify(bulkParams),
-            response,
-            keepGoing,
-            queryJson: JSON.stringify(query),
-          })
-        );
+        // logger.info(
+        //     "elasticsearch-activities",
+        //     JSON.stringify({
+        //       topic: "updateActivitiesCollectionData",
+        //       message: `Success. collectionId=${collectionId}, collectionData=${JSON.stringify(
+        //           collectionData
+        //       )}`,
+        //       data: {
+        //         collectionId,
+        //         collectionData,
+        //       },
+        //       bulkParams: JSON.stringify(bulkParams),
+        //       response,
+        //       keepGoing,
+        //       queryJson: JSON.stringify(query),
+        //     })
+        // );
       }
     }
   } catch (error) {
