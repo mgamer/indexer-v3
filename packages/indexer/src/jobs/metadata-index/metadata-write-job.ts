@@ -85,6 +85,19 @@ export default class MetadataIndexWriteJob extends AbstractRabbitMqJobHandler {
     // Update the token's metadata
     const result = await idb.oneOrNone(
       `
+        WITH updated_check AS (
+            SELECT
+                CASE WHEN (name IS DISTINCT FROM $/name/
+                    OR image IS DISTINCT FROM $/image/
+                    OR media IS DISTINCT FROM $/media/
+                    OR description IS DISTINCT FROM $/description/
+                    OR metadata IS DISTINCT FROM $/metadata:json/) THEN true
+                ELSE false
+                END AS is_updated
+            FROM tokens
+            WHERE tokens.contract = $/contract/
+            AND tokens.token_id = $/tokenId/
+        )
         UPDATE tokens SET
           name = $/name/,
           description = $/description/,
