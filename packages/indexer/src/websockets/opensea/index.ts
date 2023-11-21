@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import {
   BaseStreamMessage,
   CollectionOfferEventPayload,
@@ -74,17 +76,20 @@ if (config.doWebsocketWork && config.openSeaApiKey) {
           return;
         }
 
+        const chainName = (event.payload as any).chain;
         const eventType = event.event_type as EventType;
         const openSeaOrderParams = await handleEvent(eventType, event.payload);
 
-        if (config.chainId === 7777777) {
-          logger.debug(
+        if (config.chainId === 7777777 && !["matic", "ethereum"].includes(chainName)) {
+          logger.info(
             "opensea-websocket-debug",
             JSON.stringify({
               message: "Processing event.",
               network,
               event,
               isSupported: !!openSeaOrderParams,
+              chainName,
+              eventType,
             })
           );
         }
