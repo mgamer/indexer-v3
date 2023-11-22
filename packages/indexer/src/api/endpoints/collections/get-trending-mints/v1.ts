@@ -332,7 +332,7 @@ async function formatCollections(
 
         tokenCount: Number(metadata.token_count || 0),
         ownerCount: Number(metadata.owner_count || 0),
-        sampleImages: sampleImages.length > 0 ? [...sampleImages] : [],
+        sampleImages: sampleImages.length > 0 ? sampleImages : [],
         mintType: Number(mintData?.price) > 0 ? "paid" : "free",
         mintPrice: mintData?.price,
         maxSupply: Number.isSafeInteger(Number(mintData?.max_supply))
