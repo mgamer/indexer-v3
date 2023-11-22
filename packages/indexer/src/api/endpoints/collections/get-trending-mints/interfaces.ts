@@ -114,7 +114,6 @@ export interface ElasticMintResult {
   countLast6Hours: number;
   countLast1Hours: number;
   id: string;
-  sampleImages: string[];
 }
 
 export type MetadataKey = keyof Metadata;

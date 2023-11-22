@@ -22,7 +22,6 @@ import {
 } from "@/api/endpoints/collections/get-trending-mints/interfaces";
 import { JoiPrice, getJoiPriceObject } from "@/common/joi";
 import { Sources } from "@/models/sources";
-import { Assets } from "@/utils/assets";
 
 const version = "v1";
 
@@ -328,10 +327,7 @@ async function formatCollections(
 
         tokenCount: Number(metadata.token_count || 0),
         ownerCount: Number(metadata.owner_count || 0),
-        sampleImages:
-          r.sampleImages && r.sampleImages.length > 0
-            ? Assets.getLocalAssetsLink(r.sampleImages)
-            : [],
+        sampleImages: [],
 
         mintType: Number(mintData?.price) > 0 ? "paid" : "free",
         mintPrice: mintData?.price,
