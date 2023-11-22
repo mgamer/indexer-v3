@@ -1463,6 +1463,7 @@ export const getExecuteBidV5Options: RouteOptions = {
                     ...params,
                     ...options,
                     maker,
+                    collection: attribute.collection,
                     attributes: [attribute],
                   });
                 } else if (collection) {

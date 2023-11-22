@@ -513,6 +513,8 @@ const normalize = (order: Types.BaseOrder): Types.BaseOrder => {
 
     tokenSetMerkleRoot:
       order.tokenSetMerkleRoot !== undefined ? lc(order.tokenSetMerkleRoot) : undefined,
+    seaportStyleMerkleRoot:
+      order.seaportStyleMerkleRoot !== undefined ? lc(order.seaportStyleMerkleRoot) : undefined,
 
     v: order.v ?? 0,
     r: order.r ?? HashZero,

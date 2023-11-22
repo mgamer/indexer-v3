@@ -1,5 +1,4 @@
 import * as Sdk from "@reservoir0x/sdk";
-import { BigNumberish } from "@ethersproject/bignumber";
 
 import { redb } from "@/common/db";
 import { config } from "@/config/index";
@@ -25,7 +24,6 @@ export const build = async (options: BuildOrderOptions) => {
     throw new Error("Could not generate build info");
   }
 
-  let tokenIds: BigNumberish[] = [];
   if (options.attributes.length !== 1) {
     throw new Error("Attribute bids must be on a single attribute");
   }
@@ -90,11 +88,9 @@ export const build = async (options: BuildOrderOptions) => {
     }
   );
 
-  tokenIds = tokens.map(({ token_id }) => token_id);
-
   return builder?.build({
     ...buildInfo.params,
     beneficiary: options.maker,
-    tokenIds,
+    tokenIds: tokens.map(({ token_id }) => token_id),
   });
 };

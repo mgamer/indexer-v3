@@ -99,6 +99,8 @@ export type BaseOrder = {
   // "token-set-offer-approval" only
   tokenSetMerkleRoot?: string;
   tokenSetProof?: string[];
+  // Internally we store the token-sets based on the Seaport logic
+  seaportStyleMerkleRoot?: string;
 
   cosignature?: Cosignature;
 

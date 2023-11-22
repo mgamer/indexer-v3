@@ -7,6 +7,7 @@ import MerkleTree from "merkletreejs";
 import { BaseBuildParams, BaseBuilder } from "../base";
 import { Order } from "../../order";
 import { MatchedOrder } from "../../types";
+import * as common from "../../../common/helpers/merkle";
 import { s } from "../../../utils";
 
 // PaymentProcessorV2 has different hashing logic compared to Seaport (which can be found in `common/helpers/merkle.ts` logic)
@@ -65,6 +66,9 @@ export class TokenListBuilder extends BaseBuilder {
       params.tokenSetMerkleRoot ??
       generateMerkleTree(params.tokenAddress, params.tokenIds).getHexRoot();
 
+    const seaportStyleMerkleRoot =
+      params.tokenSetMerkleRoot ?? common.generateMerkleTree(params.tokenIds).getHexRoot();
+
     return new Order(this.chainId, {
       kind: "token-set-offer-approval",
       protocol: params.protocol,
@@ -83,6 +87,7 @@ export class TokenListBuilder extends BaseBuilder {
       beneficiary: params.beneficiary ?? undefined,
 
       tokenSetMerkleRoot: tokenSetMerkleRoot,
+      seaportStyleMerkleRoot,
 
       v: params.v,
       r: params.r,
