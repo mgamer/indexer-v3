@@ -1,8 +1,8 @@
 import { Result, defaultAbiCoder } from "@ethersproject/abi";
 import { Log } from "@ethersproject/abstract-provider";
+import { HashZero } from "@ethersproject/constants";
 import { searchForCall } from "@georgeroman/evm-tx-simulator";
 import * as Sdk from "@reservoir0x/sdk";
-import { HashZero } from "@ethersproject/constants";
 
 import { config } from "@/config/index";
 import { getEventData } from "@/events-sync/data";
