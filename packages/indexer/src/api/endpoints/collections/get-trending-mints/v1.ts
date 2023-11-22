@@ -23,6 +23,7 @@ import {
 import { JoiPrice, getJoiPriceObject } from "@/common/joi";
 import { Sources } from "@/models/sources";
 import { Assets } from "@/utils/assets";
+import _ from "lodash";
 
 const version = "v1";
 
@@ -304,6 +305,10 @@ async function formatCollections(
             : null,
         };
       }
+      const sampleImages = _.filter(
+        metadata.sample_images,
+        (image) => !_.isNull(image) && _.startsWith(image, "http")
+      );
 
       return {
         image: metadata?.metadata ? metadata.metadata?.imageUrl : null,
@@ -328,11 +333,7 @@ async function formatCollections(
 
         tokenCount: Number(metadata.token_count || 0),
         ownerCount: Number(metadata.owner_count || 0),
-        sampleImages:
-          metadata.sample_images && metadata.sample_images.length > 0
-            ? Assets.getLocalAssetsLink(metadata.sample_images)
-            : [],
-
+        sampleImages: sampleImages.length > 0 ? [...sampleImages] : [],
         mintType: Number(mintData?.price) > 0 ? "paid" : "free",
         mintPrice: mintData?.price,
         maxSupply: Number.isSafeInteger(Number(mintData?.max_supply))
