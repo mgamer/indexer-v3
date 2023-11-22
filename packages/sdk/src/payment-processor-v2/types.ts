@@ -100,9 +100,6 @@ export type BaseOrder = {
   tokenSetMerkleRoot?: string;
   tokenSetProof?: string[];
 
-  // generate by default standard
-  tokenSetRoot?: string;
-
   cosignature?: Cosignature;
 
   v?: number;

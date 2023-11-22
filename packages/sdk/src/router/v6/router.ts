@@ -3827,7 +3827,6 @@ export class Router {
               tokenId: details[i].tokenId,
               amount: details[i].amount ?? 1,
               ...(details[i].extraArgs ?? {}),
-              maxRoyaltyFeeNumerator: details[i].extraArgs?.maxRoyaltyFeeNumerator ?? "0",
             };
           }),
           { fees: allFees.map((c) => c[0]) }

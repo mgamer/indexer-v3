@@ -1,33 +1,30 @@
 import { BigNumberish } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
 import { defaultAbiCoder } from "@ethersproject/abi";
-import * as common from "../../../common/helpers";
+import { keccak256 } from "@ethersproject/keccak256";
+import MerkleTree from "merkletreejs";
 
 import { BaseBuildParams, BaseBuilder } from "../base";
 import { Order } from "../../order";
 import { MatchedOrder } from "../../types";
 import { s } from "../../../utils";
 
-import { keccak256 } from "@ethersproject/keccak256";
-import MerkleTree from "merkletreejs";
+// PaymentProcessorV2 has different hashing logic compared to Seaport (which can be found in `common/helpers/merkle.ts` logic)
 
-export const hashFn = (tokenId: BigNumberish, tokenAddress: string) =>
-  keccak256(defaultAbiCoder.encode(["address", "uint256"], [tokenAddress, tokenId]));
+export const hashFn = (token: string, tokenId: BigNumberish) =>
+  keccak256(defaultAbiCoder.encode(["address", "uint256"], [token, tokenId]));
 
-export const generateMerkleTree = (tokenAddress: string, tokenIds: BigNumberish[]) => {
+export const generateMerkleTree = (token: string, tokenIds: BigNumberish[]) => {
   if (!tokenIds.length) {
     throw new Error("Could not generate merkle tree");
   }
 
-  const leaves = tokenIds.map((id) => hashFn(id, tokenAddress));
+  const leaves = tokenIds.map((tokenId) => hashFn(token, tokenId));
   return new MerkleTree(leaves, keccak256, { sort: true });
 };
 
-export const generateMerkleProof = (
-  merkleTree: MerkleTree,
-  tokenId: BigNumberish,
-  tokenAddress: string
-) => merkleTree.getHexProof(hashFn(tokenId, tokenAddress));
+export const generateMerkleProof = (merkleTree: MerkleTree, token: string, tokenId: BigNumberish) =>
+  merkleTree.getHexProof(hashFn(token, tokenId));
 
 interface BuildParams extends BaseBuildParams {
   beneficiary: string;
@@ -68,9 +65,6 @@ export class TokenListBuilder extends BaseBuilder {
       params.tokenSetMerkleRoot ??
       generateMerkleTree(params.tokenAddress, params.tokenIds).getHexRoot();
 
-    const tokenSetRoot =
-      params.tokenSetRoot ?? common.generateMerkleTree(params.tokenIds).getHexRoot();
-
     return new Order(this.chainId, {
       kind: "token-set-offer-approval",
       protocol: params.protocol,
@@ -86,10 +80,9 @@ export class TokenListBuilder extends BaseBuilder {
       nonce: s(params.nonce),
       masterNonce: s(params.masterNonce),
 
-      tokenSetMerkleRoot: tokenSetMerkleRoot,
-      tokenSetRoot,
-
       beneficiary: params.beneficiary ?? undefined,
+
+      tokenSetMerkleRoot: tokenSetMerkleRoot,
 
       v: params.v,
       r: params.r,
@@ -107,15 +100,14 @@ export class TokenListBuilder extends BaseBuilder {
       maxRoyaltyFeeNumerator?: BigNumberish;
     }
   ): MatchedOrder {
-    order.params.tokenId = options.tokenId!.toString();
     const merkleTree = generateMerkleTree(order.params.tokenAddress, options.tokenIds!);
     const merkleProof = generateMerkleProof(
       merkleTree,
-      options.tokenId!,
-      order.params.tokenAddress
+      order.params.tokenAddress,
+      options.tokenId!
     );
     order.params.tokenSetProof = merkleProof;
 
-    return order.getMatchedOrder(options.taker, options.amount);
+    return order.getMatchedOrder(options.taker, options);
   }
 }

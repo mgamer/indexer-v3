@@ -1,3 +1,4 @@
+import { AddressZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import { parseEther } from "@ethersproject/units";
 import * as Common from "@reservoir0x/sdk/src/common";
@@ -6,22 +7,20 @@ import { Builders } from "@reservoir0x/sdk/src/payment-processor-v2";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import { constants } from "ethers";
 
 import { getChainId, getCurrentTimestamp, reset, setupNFTs } from "../../../utils";
 
-describe("PaymentProcessorV2 - TokenList ERC721", () => {
+describe("PaymentProcessorV2 - TokenList Erc721", () => {
   const chainId = getChainId();
 
   let deployer: SignerWithAddress;
   let alice: SignerWithAddress;
   let bob: SignerWithAddress;
-  let carol: SignerWithAddress;
 
   let erc721: Contract;
 
   beforeEach(async () => {
-    [deployer, alice, bob, carol] = await ethers.getSigners();
+    [deployer, alice, bob] = await ethers.getSigners();
 
     ({ erc721 } = await setupNFTs(deployer));
   });
@@ -56,14 +55,14 @@ describe("PaymentProcessorV2 - TokenList ERC721", () => {
     await nft.approve(seller, PaymentProcessorV2.Addresses.Exchange[chainId]);
 
     const exchange = new PaymentProcessorV2.Exchange(chainId);
-    const builder = new Builders.TokenList(chainId);
 
     const buyerMasterNonce = await exchange.getMasterNonce(ethers.provider, buyer.address);
     const blockTime = await getCurrentTimestamp(ethers.provider);
 
+    const builder = new Builders.TokenList(chainId);
     const buyOrder = builder.build({
       protocol: PaymentProcessorV2.Types.OrderProtocols.ERC721_FILL_OR_KILL,
-      marketplace: constants.AddressZero,
+      marketplace: AddressZero,
       beneficiary: buyer.address,
       marketplaceFeeNumerator: "0",
       maxRoyaltyFeeNumerator: "0",
@@ -80,6 +79,7 @@ describe("PaymentProcessorV2 - TokenList ERC721", () => {
 
     await buyOrder.sign(buyer);
     buyOrder.checkSignature();
+
     await buyOrder.checkFillability(ethers.provider);
 
     const buyerBalanceBefore = await weth.getBalance(buyer.address);

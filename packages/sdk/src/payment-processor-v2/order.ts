@@ -93,7 +93,7 @@ export class Order {
       return "collection-offer-approval";
     }
 
-    if (params.tokenSetMerkleRoot != undefined) {
+    if (params.tokenSetMerkleRoot !== undefined) {
       return "token-set-offer-approval";
     }
 
@@ -162,10 +162,9 @@ export class Order {
   }
 
   public getTokenSetProof() {
-    const { params } = this;
     return {
-      rootHash: params.tokenSetMerkleRoot ?? HashZero,
-      proof: params.tokenSetProof ?? [],
+      rootHash: this.params.tokenSetMerkleRoot ?? HashZero,
+      proof: this.params.tokenSetProof ?? [],
     };
   }
 
@@ -515,7 +514,6 @@ const normalize = (order: Types.BaseOrder): Types.BaseOrder => {
     tokenSetMerkleRoot:
       order.tokenSetMerkleRoot !== undefined ? lc(order.tokenSetMerkleRoot) : undefined,
 
-    tokenSetRoot: order.tokenSetRoot !== undefined ? lc(order.tokenSetRoot) : undefined,
     v: order.v ?? 0,
     r: order.r ?? HashZero,
     s: order.s ?? HashZero,

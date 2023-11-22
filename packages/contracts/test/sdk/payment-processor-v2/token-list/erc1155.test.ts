@@ -1,3 +1,4 @@
+import { AddressZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import { parseEther } from "@ethersproject/units";
 import * as Common from "@reservoir0x/sdk/src/common";
@@ -5,11 +6,10 @@ import * as PaymentProcessorV2 from "@reservoir0x/sdk/src/payment-processor-v2";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import { constants } from "ethers";
 
 import { getChainId, getCurrentTimestamp, reset, setupNFTs } from "../../../utils";
 
-describe("PaymentProcessorV2 - ContractWide ERC1155", () => {
+describe("PaymentProcessorV2 - TokenList Erc1155", () => {
   const chainId = getChainId();
 
   let deployer: SignerWithAddress;
@@ -63,7 +63,7 @@ describe("PaymentProcessorV2 - ContractWide ERC1155", () => {
     // Build buy order
     const buyOrder = builder.build({
       protocol: PaymentProcessorV2.Types.OrderProtocols.ERC1155_FILL_OR_KILL,
-      marketplace: constants.AddressZero,
+      marketplace: AddressZero,
       beneficiary: buyer.address,
       marketplaceFeeNumerator: "0",
       maxRoyaltyFeeNumerator: "0",
@@ -81,6 +81,7 @@ describe("PaymentProcessorV2 - ContractWide ERC1155", () => {
     // Sign the order
     await buyOrder.sign(buyer);
     buyOrder.checkSignature();
+
     await buyOrder.checkFillability(ethers.provider);
 
     const sellerBalanceBefore = await weth.getBalance(seller.address);
