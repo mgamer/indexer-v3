@@ -98,6 +98,7 @@ export type BaseOrder = {
 
   // "token-set-offer-approval" only
   tokenSetMerkleRoot?: string;
+  tokenSetProof?: string[];
 
   cosignature?: Cosignature;
 
