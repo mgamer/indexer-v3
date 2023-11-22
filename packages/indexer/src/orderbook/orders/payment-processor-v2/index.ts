@@ -69,6 +69,8 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         baseProvider
       );
 
+      // TODO: isDefaultPaymentMethod wasn't exported in cPort,
+      // have reported it to the limitbreak team, waiting for ready.
       if (
         paymentSettings?.paymentSettings ===
         paymentProcessorV2.PaymentSettings.DefaultPaymentMethodWhitelist
