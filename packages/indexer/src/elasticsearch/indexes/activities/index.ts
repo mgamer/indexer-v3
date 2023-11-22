@@ -435,14 +435,6 @@ export const getTrendingMints = async (params: {
             },
           },
         },
-        top_token_images: {
-          top_hits: {
-            size: 4,
-            _source: {
-              includes: ["token.image"],
-            },
-          },
-        },
       },
     },
   } as any;
@@ -457,15 +449,11 @@ export const getTrendingMints = async (params: {
   })) as any;
 
   return esResult?.aggregations?.collections?.buckets?.map((bucket: any) => {
-    const images = bucket?.top_token_images?.hits?.hits
-      ?.map((hit: Record<string | number, any>) => hit?._source?.token?.image)
-      ?.filter((image: string) => image);
     return {
       volume: bucket?.total_volume?.value,
       mintCount: bucket?.total_mints?.value,
       countLast6Hours: bucket?.mints_last_6_hours?.count?.value,
       countLast1Hour: bucket?.mints_last_1_hour?.count?.value,
-      sampleImages: images,
       id: bucket.key,
     };
   });
