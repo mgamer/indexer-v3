@@ -233,7 +233,15 @@ export async function getCollectionsMetadata(collectionsResult: any[]) {
       collections.top_buy_valid_between,
 
       collections.top_buy_source_id_int,
-      
+
+      ARRAY(
+        SELECT
+          tokens.image
+        FROM tokens
+        WHERE tokens.collection_id = collections.id
+        LIMIT 4
+      ) AS sample_images,
+
       (
             SELECT
               COUNT(*)
