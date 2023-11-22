@@ -328,7 +328,7 @@ export type EventSubKind =
   | "payment-processor-v2-nonce-invalidated"
   | "payment-processor-v2-order-digest-invalidated"
   | "payment-processor-v2-payment-method-added-to-whitelist"
-  | "payment-processor-v2-payment-method-removed-to-whitelist"
+  | "payment-processor-v2-payment-method-removed-from-whitelist"
   | "payment-processor-v2-updated-collection-level-pricing-boundaries"
   | "payment-processor-v2-updated-collection-payment-settings"
   | "payment-processor-v2-updated-token-level-pricing-boundaries";

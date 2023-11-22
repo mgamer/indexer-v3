@@ -134,7 +134,7 @@ export const paymentMethodAddedToWhitelist: EventData = {
   numTopics: 3,
   abi: new Interface([
     `event PaymentMethodAddedToWhitelist(
-      uint32 indexed paymentMethodWhitelistId, 
+      uint32 indexed paymentMethodWhitelistId,
       address indexed paymentMethod
     )`,
   ]),
@@ -142,13 +142,13 @@ export const paymentMethodAddedToWhitelist: EventData = {
 
 export const paymentMethodRemovedFromWhitelist: EventData = {
   kind: "payment-processor-v2",
-  subKind: "payment-processor-v2-payment-method-removed-to-whitelist",
+  subKind: "payment-processor-v2-payment-method-removed-from-whitelist",
   addresses: { [PaymentProcessorV2.Addresses.Exchange[config.chainId]?.toLowerCase()]: true },
   topic: "0xf156bd3efe5d358c94cc34b12810b94f524f03ef4e7f71158e22b6775ef75ba3",
   numTopics: 3,
   abi: new Interface([
     `event PaymentMethodRemovedFromWhitelist(
-      uint32 indexed paymentMethodWhitelistId, 
+      uint32 indexed paymentMethodWhitelistId,
       address indexed paymentMethod
     )`,
   ]),
@@ -162,8 +162,8 @@ export const updatedCollectionLevelPricingBoundaries: EventData = {
   numTopics: 2,
   abi: new Interface([
     `event UpdatedCollectionLevelPricingBoundaries(
-      address indexed tokenAddress, 
-      uint256 floorPrice, 
+      address indexed tokenAddress,
+      uint256 floorPrice,
       uint256 ceilingPrice
     )`,
   ]),
@@ -173,13 +173,13 @@ export const updatedCollectionPaymentSettings: EventData = {
   kind: "payment-processor-v2",
   subKind: "payment-processor-v2-updated-collection-payment-settings",
   addresses: { [PaymentProcessorV2.Addresses.Exchange[config.chainId]?.toLowerCase()]: true },
-  topic: "0x316c538d6d2ad793951486190cb20ebf2bcc8098f5575be5f953687779287035",
+  topic: "0x0e73abd6d60e5d56d0b22d84e13b838d5266e8b6fa897e36645565dce796dce5",
   numTopics: 2,
   abi: new Interface([
     `event UpdatedCollectionPaymentSettings(
-      address indexed tokenAddress, 
-      PaymentSettings paymentSettings, 
-      uint32 paymentMethodWhitelistId, 
+      address indexed tokenAddress,
+      uint8 paymentSettings,
+      uint32 paymentMethodWhitelistId,
       address constrainedPricingPaymentMethod,
       uint16 royaltyBackfillNumerator,
       address royaltyBackfillReceiver,
@@ -197,9 +197,9 @@ export const updatedTokenLevelPricingBoundaries: EventData = {
   numTopics: 3,
   abi: new Interface([
     `event UpdatedTokenLevelPricingBoundaries(
-      address indexed tokenAddress, 
-      uint256 indexed tokenId, 
-      uint256 floorPrice, 
+      address indexed tokenAddress,
+      uint256 indexed tokenId,
+      uint256 floorPrice,
       uint256 ceilingPrice
     )`,
   ]),
