@@ -87,7 +87,8 @@ export class Order {
     if (
       params.maxRoyaltyFeeNumerator === undefined &&
       params.beneficiary !== undefined &&
-      params.tokenId === undefined
+      params.tokenId === undefined &&
+      params.tokenSetMerkleRoot === undefined
     ) {
       return "collection-offer-approval";
     }
@@ -506,6 +507,7 @@ const normalize = (order: Types.BaseOrder): Types.BaseOrder => {
     tokenSetMerkleRoot:
       order.tokenSetMerkleRoot !== undefined ? lc(order.tokenSetMerkleRoot) : undefined,
 
+    tokenSetRoot: order.tokenSetRoot !== undefined ? lc(order.tokenSetRoot) : undefined,
     v: order.v ?? 0,
     r: order.r ?? HashZero,
     s: order.s ?? HashZero,

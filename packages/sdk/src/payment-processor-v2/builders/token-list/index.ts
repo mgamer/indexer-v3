@@ -1,6 +1,7 @@
 import { BigNumberish } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
 import { defaultAbiCoder } from "@ethersproject/abi";
+import * as common from "../../../common/helpers";
 
 import { BaseBuildParams, BaseBuilder } from "../base";
 import { Order } from "../../order";
@@ -67,6 +68,9 @@ export class TokenListBuilder extends BaseBuilder {
       params.tokenSetMerkleRoot ??
       generateMerkleTree(params.tokenAddress, params.tokenIds).getHexRoot();
 
+    const tokenSetRoot =
+      params.tokenSetRoot ?? common.generateMerkleTree(params.tokenIds).getHexRoot();
+
     return new Order(this.chainId, {
       kind: "token-set-offer-approval",
       protocol: params.protocol,
@@ -83,6 +87,7 @@ export class TokenListBuilder extends BaseBuilder {
       masterNonce: s(params.masterNonce),
 
       tokenSetMerkleRoot: tokenSetMerkleRoot,
+      tokenSetRoot,
 
       beneficiary: params.beneficiary ?? undefined,
 

@@ -16,11 +16,11 @@ interface BuildOrderOptions extends utils.BaseOrderBuildOptions {
 export const build = async (options: BuildOrderOptions) => {
   const builder = new Sdk.PaymentProcessorV2.Builders.TokenList(config.chainId);
 
-  if (!(options.contract && options.attributes)) {
+  if (!(options.collection && options.attributes)) {
     throw new Error("Could not generate build info");
   }
 
-  const buildInfo = await utils.getBuildInfo(options, options.contract, "buy");
+  const buildInfo = await utils.getBuildInfo(options, options.collection, "buy");
   if (!buildInfo) {
     throw new Error("Could not generate build info");
   }
@@ -51,6 +51,7 @@ export const build = async (options: BuildOrderOptions) => {
       value: options.attributes[0].value,
     }
   );
+
   if (!attributeResult) {
     throw new Error("Could not retrieve attribute info");
   }

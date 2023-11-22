@@ -1458,20 +1458,19 @@ export const getExecuteBidV5Options: RouteOptions = {
                     contract,
                     tokenId,
                   });
+                } else if (attribute) {
+                  order = await paymentProcessorV2BuyAttribute.build({
+                    ...params,
+                    ...options,
+                    maker,
+                    attributes: [attribute],
+                  });
                 } else if (collection) {
                   order = await paymentProcessorV2BuyCollection.build({
                     ...params,
                     ...options,
                     maker,
                     collection,
-                  });
-                } else if (attribute) {
-                  order = await paymentProcessorV2BuyAttribute.build({
-                    ...params,
-                    ...options,
-                    maker,
-                    collection,
-                    attributes: [attribute],
                   });
                 } else {
                   return errors.push({

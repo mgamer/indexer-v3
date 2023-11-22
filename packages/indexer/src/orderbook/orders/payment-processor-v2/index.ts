@@ -240,7 +240,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         }
 
         case "token-set-offer-approval": {
-          const merkleRoot = order.params.tokenSetMerkleRoot;
+          const merkleRoot = order.params.tokenSetRoot;
           if (merkleRoot) {
             [{ id: tokenSetId }] = await tokenSet.tokenList.save([
               {
