@@ -22,7 +22,6 @@ import {
 } from "@/api/endpoints/collections/get-trending-mints/interfaces";
 import { JoiPrice, getJoiPriceObject } from "@/common/joi";
 import { Sources } from "@/models/sources";
-import { Assets } from "@/utils/assets";
 import _ from "lodash";
 
 const version = "v1";
