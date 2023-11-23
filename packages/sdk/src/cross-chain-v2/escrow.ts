@@ -4,7 +4,7 @@ import * as Addresses from "./addresses";
 import * as CommonAddresses from "../common/addresses";
 import { TxData } from "../utils";
 
-import EscrowAbi from "./abis/CrossChainEscrow.json";
+import EscrowAbi from "./abis/Escrow.json";
 
 export class Escrow {
   public chainId: number;
