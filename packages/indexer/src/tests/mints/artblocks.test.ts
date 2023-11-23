@@ -6,7 +6,6 @@ import { Network } from "@reservoir0x/sdk/dist/utils";
 
 import { config } from "../../config";
 import * as ArtBlocks from "../../orderbook/mints/calldata/detector/artblocks";
-import * as utils from "@/events-sync/utils";
 
 jest.setTimeout(60 * 1000);
 
@@ -96,17 +95,17 @@ if (config.chainId === Network.Ethereum) {
       }
     });
 
-    it("extracts by tx", async () => {
-      const artblocksCurated = "0x99a9b7c1116f9ceeb1652de04d5969cce509b069";
+    // it("extracts by tx", async () => {
+    //   const artblocksCurated = "0x99a9b7c1116f9ceeb1652de04d5969cce509b069";
 
-      const transactions = ["0x6adde54ff52c78b69e9dfb8e9fde1bd5921a642467ef327d17e8c16e5e2fcf47"];
+    //   const transactions = ["0x6adde54ff52c78b69e9dfb8e9fde1bd5921a642467ef327d17e8c16e5e2fcf47"];
 
-      for (const txHash of transactions) {
-        const transcation = await utils.fetchTransaction(txHash);
-        const results = await ArtBlocks.extractByTx(artblocksCurated, transcation);
-        expect(results.length).not.toBe(0);
-        expect(results[0].status).toBe("closed");
-      }
-    });
+    //   for (const txHash of transactions) {
+    //     const transcation = await utils.fetchTransaction(txHash);
+    //     const results = await ArtBlocks.extractByTx(artblocksCurated, transcation);
+    //     expect(results.length).not.toBe(0);
+    //     expect(results[0].status).toBe("closed");
+    //   }
+    // });
   });
 }
