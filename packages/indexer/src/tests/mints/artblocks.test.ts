@@ -73,6 +73,12 @@ if (config.chainId === Network.Ethereum) {
         // this will work until the project is minted
         const info = await ArtBlocks.extractByCollectionERC721(artblocksCurated, {
           projectId: 483,
+          daConfig: {
+            timestampStart: 1700676050,
+            priceDecayHalfLifeSeconds: 804,
+            startPrice: "4000000000000000000",
+            basePrice: "190000000000000000",
+          },
         });
         expect(info.length).not.toBe(0);
         expect(info[0].statusReason).toBe("not-yet-started");
