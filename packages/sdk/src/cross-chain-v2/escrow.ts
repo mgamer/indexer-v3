@@ -6,7 +6,7 @@ import { TxData } from "../utils";
 
 import EscrowAbi from "./abis/CrossChainEscrow.json";
 
-export class Module {
+export class Escrow {
   public chainId: number;
   public contract: Contract;
 
