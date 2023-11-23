@@ -6,6 +6,7 @@ import { Network } from "@reservoir0x/sdk/dist/utils";
 
 import { config } from "../../config";
 import * as ArtBlocks from "../../orderbook/mints/calldata/detector/artblocks";
+import * as utils from "@/events-sync/utils";
 
 jest.setTimeout(60 * 1000);
 
@@ -37,6 +38,11 @@ if (config.chainId === Network.Ethereum) {
     // MinterDAExpSettlementV1 0xfdE58c821D1c226b4a45c22904de20b114EDe7E7
     // emit SetAuctionDetails( _projectId, _auctionTimestampStart, _priceDecayHalfLifeSeconds, _startPrice, _basePrice );
 
+    // MinterMerkleV5 0xB8Bd1D2836C466DB149f665F777928bEE267304d
+    // allowlist
+    // emit PricePerTokenInWeiUpdated(_projectId, _pricePerTokenInWei);
+    // @TODO: ask artblocks where to get the merkletree?
+
     // whenever we have an event to:
     // - create a project
     // - set the minter for a projectId
@@ -44,8 +50,9 @@ if (config.chainId === Network.Ethereum) {
     // - pause / unpause projectId
     // - set price for projectId
     // THEN
-    // - call extractByCollectionERC721(collection, projectId, {
-    //    minterContractAddress? // the address of the minter contract, if known
+    // - call extractByCollectionERC721(collection, {
+    //    projectId
+    //    daConfig?: DAInfoConfig
     //  })
 
     // old minter contract: 0x0e8bd86663e3c2418900178e96e14c51b2859957
@@ -55,40 +62,51 @@ if (config.chainId === Network.Ethereum) {
 
     it("set-price-minter-v4", async () => {
       const artblocksCurated = "0x99a9b7c1116f9ceeb1652de04d5969cce509b069";
-      const info = await ArtBlocks.extractByCollectionERC721(artblocksCurated, { projectId: 484 });
+      const results = await ArtBlocks.extractByCollectionERC721(artblocksCurated, {
+        projectId: 484,
+      });
 
-      expect(info.length).not.toBe(0);
+      expect(results.length).not.toBe(0);
     });
 
     it("da-exp-settlement-v1", async () => {
       const artblocksCurated = "0x99a9b7c1116f9ceeb1652de04d5969cce509b069";
       {
-        const info = await ArtBlocks.extractByCollectionERC721(artblocksCurated, {
+        const results = await ArtBlocks.extractByCollectionERC721(artblocksCurated, {
           projectId: 482,
         });
-        expect(info.length).not.toBe(0);
-        expect(info[0].statusReason).toBe("max-supply-exceeded");
+        expect(results.length).not.toBe(0);
+        expect(results[0].statusReason).toBe("max-supply-exceeded");
       }
       {
-        // this will work until the project is minted
-        const info = await ArtBlocks.extractByCollectionERC721(artblocksCurated, {
+        const results = await ArtBlocks.extractByCollectionERC721(artblocksCurated, {
           projectId: 483,
-          daConfig: {
-            timestampStart: 1700676050,
-            priceDecayHalfLifeSeconds: 804,
-            startPrice: "4000000000000000000",
-            basePrice: "190000000000000000",
-          },
         });
-        expect(info.length).not.toBe(0);
-        expect(info[0].statusReason).toBe("not-yet-started");
+
+        expect(results.length).not.toBe(0);
+        expect(results[0].statusReason).toBe("max-supply-exceeded");
+
+        const daInfo: ArtBlocks.Info = results[0].details.info as ArtBlocks.Info;
+        expect(daInfo.daConfig).toMatchObject({
+          timestampStart: 1700676050,
+          priceDecayHalfLifeSeconds: 804,
+          startPrice: "4000000000000000000",
+          basePrice: "190000000000000000",
+        });
       }
     });
 
-    // it("allowlist-sale", async () => {
-    //   const collection = "0x738541f5ed9bc7ac8943df55709d5002693b43e3";
-    //   const info = await ArtBlocks.extractByCollectionERC721(collection);
-    //   expect(info.length).not.toBe(0);
-    // });
+    it("extracts by tx", async () => {
+      const artblocksCurated = "0x99a9b7c1116f9ceeb1652de04d5969cce509b069";
+
+      const transactions = ["0x6adde54ff52c78b69e9dfb8e9fde1bd5921a642467ef327d17e8c16e5e2fcf47"];
+
+      for (const txHash of transactions) {
+        const transcation = await utils.fetchTransaction(txHash);
+        const results = await ArtBlocks.extractByTx(artblocksCurated, transcation);
+        expect(results.length).not.toBe(0);
+        expect(results[0].status).toBe("closed");
+      }
+    });
   });
 }

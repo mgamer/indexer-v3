@@ -10,6 +10,7 @@ import {
   simulateAndUpsertCollectionMint,
 } from "@/orderbook/mints";
 import { now } from "@/common/utils";
+import { Transaction } from "@/models/transactions";
 
 const STANDARD = "artblocks";
 
@@ -25,10 +26,10 @@ export interface Info {
 }
 
 export interface DAConfigInfo {
-  timestampStart: BigNumber;
-  priceDecayHalfLifeSeconds: BigNumber;
-  startPrice: BigNumber;
-  basePrice: BigNumber;
+  timestampStart: number;
+  priceDecayHalfLifeSeconds: number;
+  startPrice: string;
+  basePrice: string;
 }
 interface ProjectInfo {
   invocations: BigNumber;
@@ -170,10 +171,10 @@ export const extractByCollectionERC721 = async (
         };
 
         // if da with settlement, get timestampStart
-        if (minterType === MINTER_TYPES.DA_EXP_SETTLEMENT_V1)
+        if (minterType === MINTER_TYPES.DA_EXP_SETTLEMENT_V1) {
           if (daConfig !== undefined) {
             // if it's a DA with settlement, and the config wasn't provided, we get the config
-            result.details.info.daConfig = daConfig;
+            (result.details.info! as Info).daConfig = daConfig;
           } else {
             const minterContract = new Contract(
               minterAddressForProject,
@@ -193,14 +194,21 @@ export const extractByCollectionERC721 = async (
 
             const daInfo = await minterContract.projectAuctionParameters(projectId);
 
-            result.startTime = daInfo.timestampStart.toNumber();
-
-            if (result.startTime > now()) {
+            const startTime = daInfo.timestampStart.toNumber();
+            result.startTime = startTime;
+            if (startTime > now()) {
               result.status = "closed";
               result.statusReason = "not-yet-started";
             }
-          }
 
+            (result.details.info! as Info).daConfig = {
+              timestampStart: startTime,
+              priceDecayHalfLifeSeconds: daInfo.priceDecayHalfLifeSeconds.toNumber(),
+              startPrice: daInfo.startPrice.toString(),
+              basePrice: daInfo.basePrice.toString(),
+            };
+          }
+        }
         results.push(result);
       }
     }
@@ -219,13 +227,13 @@ export const refreshByCollection = async (collection: string) => {
       latestCollectionMints.findIndex((found) => {
         return (
           existing.collection == found.collection &&
-          existing.details.info.projectId == found.details.info.projectId
+          (existing.details.info! as Info).projectId == (found.details.info! as Info).projectId
         );
       })
     );
   });
 
-  let latestCollectionMints = [];
+  let latestCollectionMints: CollectionMint[] = [];
   for (const { details } of dedupedExistingMints) {
     // Fetch the currently available mints
     latestCollectionMints = latestCollectionMints.concat(
@@ -255,4 +263,25 @@ export const refreshByCollection = async (collection: string) => {
       });
     }
   }
+};
+
+export const extractByTx = async (
+  collection: string,
+  tx: Transaction
+): Promise<CollectionMint[]> => {
+  const iface = new Interface([
+    "function purchase(uint256 projectId) external payable returns (uint256 tokenId)",
+    "function purchase_H4M(uint256 projectId) external payable returns (uint256 tokenId)",
+    "function purchaseTo(address _to, uint256 projectId) external payable returns (uint256 tokenId)",
+    "function purchaseTo_do6(address _to, uint256 projectId) external payable returns (uint256 tokenId)",
+  ]);
+
+  const result = iface.parseTransaction({ data: tx.data });
+  if (result && result?.args.projectId) {
+    const projectId: number = result.args.projectId.toNumber();
+
+    return extractByCollectionERC721(collection, { projectId });
+  }
+
+  return [];
 };
