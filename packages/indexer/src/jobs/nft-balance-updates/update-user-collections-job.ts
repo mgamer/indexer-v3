@@ -56,14 +56,16 @@ export default class UpdateUserCollectionsJob extends AbstractRabbitMqJobHandler
       `);
     }
 
-    await idb.none(pgp.helpers.concat(queries), {
-      fromAddress: toBuffer(fromAddress),
-      toAddress: toBuffer(toAddress),
-      collection: collection.id,
-      contract: toBuffer(contract),
-      amount,
-      isSpam: collection.isSpam,
-    });
+    if (!_.isEmpty(queries)) {
+      await idb.none(pgp.helpers.concat(queries), {
+        fromAddress: toBuffer(fromAddress),
+        toAddress: toBuffer(toAddress),
+        collection: collection.id,
+        contract: toBuffer(contract),
+        amount,
+        isSpam: collection.isSpam,
+      });
+    }
   }
 
   public async addToQueue(payload: UpdateUserCollectionsJobPayload[]) {
