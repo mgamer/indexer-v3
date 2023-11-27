@@ -25,9 +25,16 @@ export class BackfillUserCollectionsJob extends AbstractRabbitMqJobHandler {
   protected async process(payload: BackfillUserCollectionsJobCursorInfo) {
     const { owner, acquiredAt } = payload;
     const redisKey = "sync-user-collections";
-    const values: { limit: number; AddressZero: Buffer; owner?: Buffer; acquiredAt?: string } = {
+    const values: {
+      limit: number;
+      AddressZero: Buffer;
+      deadAddress: Buffer;
+      owner?: Buffer;
+      acquiredAt?: string;
+    } = {
       limit: 200,
       AddressZero: toBuffer(AddressZero),
+      deadAddress: toBuffer("0x000000000000000000000000000000000000dead"),
     };
 
     let cursor = "";
@@ -48,7 +55,7 @@ export class BackfillUserCollectionsJob extends AbstractRabbitMqJobHandler {
              WHERE nb.contract = tokens.contract
              AND nb.token_id = tokens.token_id
           ) t ON TRUE
-          WHERE nb.owner != $/AddressZero/
+          WHERE nb.owner NOT IN ($/AddressZero/, $/deadAddress/)
           AND amount > 0
           ${cursor}
           ORDER BY nb.owner, acquired_at
@@ -110,3 +117,14 @@ export class BackfillUserCollectionsJob extends AbstractRabbitMqJobHandler {
 }
 
 export const backfillUserCollectionsJob = new BackfillUserCollectionsJob();
+
+// if (config.chainId === 1) {
+//   redlock
+//     .acquire([`${QUEUE_NAME}-lock-8`], 60 * 60 * 24 * 30 * 1000)
+//     .then(async () => {
+//       await addToQueue();
+//     })
+//     .catch(() => {
+//       // Skip on any errors
+//     });
+// }
