@@ -5,9 +5,10 @@ import { RabbitMQMessage } from "@/common/rabbit-mq";
 import _ from "lodash";
 import { fromBuffer, toBuffer } from "@/common/utils";
 import { AddressZero } from "@ethersproject/constants";
-import { redis } from "@/common/redis";
+import { redis, redlock } from "@/common/redis";
 import { format } from "date-fns";
 import { resyncUserCollectionsJob } from "@/jobs/nft-balance-updates/reynsc-user-collections-job";
+import { config } from "@/config/index";
 
 export type BackfillUserCollectionsJobCursorInfo = {
   owner: string;
@@ -118,13 +119,13 @@ export class BackfillUserCollectionsJob extends AbstractRabbitMqJobHandler {
 
 export const backfillUserCollectionsJob = new BackfillUserCollectionsJob();
 
-// if (config.chainId === 1) {
-//   redlock
-//     .acquire([`${QUEUE_NAME}-lock-8`], 60 * 60 * 24 * 30 * 1000)
-//     .then(async () => {
-//       await addToQueue();
-//     })
-//     .catch(() => {
-//       // Skip on any errors
-//     });
-// }
+if (config.chainId !== 1) {
+  redlock
+    .acquire(["backfill-user-collections-lock"], 60 * 60 * 24 * 30 * 1000)
+    .then(async () => {
+      await backfillUserCollectionsJob.addToQueue();
+    })
+    .catch(() => {
+      // Skip on any errors
+    });
+}
