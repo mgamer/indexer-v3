@@ -240,6 +240,7 @@ export const NFTXZeroExModule: ChainIdToAddress = {
 
 export const NFTXV3Module: ChainIdToAddress = {
   [Network.EthereumGoerli]: "0xfe6A828fF94A0F027402A56711F71526593422e5",
+  [Network.EthereumSepolia]: "0xfe6A828fF94A0F027402A56711F71526593422e5",
 };
 
 export const RaribleModule: ChainIdToAddress = {
