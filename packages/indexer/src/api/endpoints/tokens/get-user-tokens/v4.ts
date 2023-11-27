@@ -308,7 +308,7 @@ export const getUserTokensV4Options: RouteOptions = {
               collection: {
                 id: r.collection_id,
                 name: r.collection_name,
-                imageUrl: r.metadata?.imageUrl,
+                imageUrl: Assets.getResizedImageUrl(r.image, ImageSize.small, r.image_version),
                 floorAskPrice: r.collection_floor_sell_value
                   ? formatEth(r.collection_floor_sell_value)
                   : null,

@@ -8,7 +8,7 @@ import { logger } from "@/common/logger";
 import { redb } from "@/common/db";
 import { formatEth, fromBuffer, now, regex } from "@/common/utils";
 import { CollectionSets } from "@/models/collection-sets";
-import { Assets } from "@/utils/assets";
+import { Assets, ImageSize } from "@/utils/assets";
 import { getUSDAndCurrencyPrices } from "@/utils/prices";
 import { AddressZero } from "@ethersproject/constants";
 import { getJoiPriceObject, JoiPrice } from "@/common/joi";
@@ -148,7 +148,7 @@ export const getSearchCollectionsV2Options: RouteOptions = {
             name: collection.name,
             slug: collection.slug,
             contract: fromBuffer(collection.contract),
-            image: Assets.getLocalAssetsLink(collection.image),
+            image: Assets.getResizedImageUrl(collection.image, ImageSize.small),
             isSpam: Number(collection.is_spam) > 0,
             allTimeVolume: allTimeVolume ? formatEth(allTimeVolume) : null,
             floorAskPrice: collection.floor_sell_value

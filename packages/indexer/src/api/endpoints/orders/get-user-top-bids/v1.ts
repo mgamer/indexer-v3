@@ -13,7 +13,7 @@ import {
   toBuffer,
 } from "@/common/utils";
 import { Sources } from "@/models/sources";
-import { Assets } from "@/utils/assets";
+import { Assets, ImageSize } from "@/utils/assets";
 import _ from "lodash";
 import { JoiAttributeKeyValueObject, JoiSource, getJoiSourceObject } from "@/common/joi";
 
@@ -340,7 +340,7 @@ export const getUserTopBidsV1Options: RouteOptions = {
             collection: {
               id: r.collection_id,
               name: r.collection_name,
-              imageUrl: Assets.getLocalAssetsLink(r.collection_metadata?.imageUrl),
+              imageUrl: Assets.getResizedImageUrl(r.collection_metadata?.imageUrl, ImageSize.small),
               floorAskPrice: r.collection_floor_sell_value
                 ? formatEth(r.collection_floor_sell_value)
                 : null,

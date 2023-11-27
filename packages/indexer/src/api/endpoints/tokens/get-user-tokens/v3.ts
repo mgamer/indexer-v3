@@ -8,7 +8,7 @@ import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 import { CollectionSets } from "@/models/collection-sets";
-import { Assets } from "@/utils/assets";
+import { Assets, ImageSize } from "@/utils/assets";
 import { getJoiTokenObject } from "@/common/joi";
 
 const version = "v3";
@@ -270,7 +270,7 @@ export const getUserTokensV3Options: RouteOptions = {
             collection: {
               id: r.collection_id,
               name: r.collection_name,
-              imageUrl: Assets.getLocalAssetsLink(r.metadata?.imageUrl),
+              imageUrl: Assets.getResizedImageUrl(r.metadata?.imageUrl, ImageSize.small),
               floorAskPrice: r.collection_floor_sell_value
                 ? formatEth(r.collection_floor_sell_value)
                 : null,

@@ -727,7 +727,7 @@ export const getUserTokensV7Options: RouteOptions = {
                 name: r.collection_name,
                 slug: r.slug,
                 symbol: r.symbol,
-                imageUrl: r.metadata?.imageUrl,
+                imageUrl: Assets.getResizedImageUrl(r.image, ImageSize.small, r.image_version),
                 isSpam: Number(r.c_is_spam) > 0,
                 metadataDisabled: Boolean(Number(r.c_metadata_disabled)),
                 openseaVerificationStatus: r.opensea_verification_status,

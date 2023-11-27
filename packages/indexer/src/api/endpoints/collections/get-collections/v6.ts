@@ -21,7 +21,7 @@ import {
 import { config } from "@/config/index";
 import { CollectionSets } from "@/models/collection-sets";
 import { Sources } from "@/models/sources";
-import { Assets } from "@/utils/assets";
+import { Assets, ImageSize } from "@/utils/assets";
 
 const version = "v6";
 
@@ -595,6 +595,7 @@ export const getCollectionsV6Options: RouteOptions = {
              tokens.token_id AS floor_sell_token_id,
              tokens.name AS floor_sell_token_name,
              tokens.image AS floor_sell_token_image,
+             tokens.image_version AS floor_sell_token_image_version,
              orders.currency AS floor_sell_currency,
              ${
                query.normalizeRoyalties
@@ -652,16 +653,21 @@ export const getCollectionsV6Options: RouteOptions = {
             (image) => !_.isNull(image) && _.startsWith(image, "http")
           );
 
+          let imageUrl = r.image;
+          if (imageUrl) {
+            imageUrl = Assets.getResizedImageUrl(imageUrl, ImageSize.small);
+          } else if (sampleImages.length) {
+            imageUrl = Assets.getResizedImageUrl(sampleImages[0], ImageSize.small);
+          }
+
           return getJoiCollectionObject(
             {
               id: r.id,
               slug: r.slug,
               createdAt: new Date(r.created_at).toISOString(),
               name: r.name,
-              image:
-                r.image ??
-                (sampleImages.length ? Assets.getLocalAssetsLink(sampleImages[0]) : null),
-              banner: r.banner,
+              image: imageUrl ?? null,
+              banner: Assets.getResizedImageUrl(r.banner),
               discordUrl: r.discord_url,
               externalUrl: r.external_url,
               twitterUsername: r.twitter_username,
@@ -708,7 +714,11 @@ export const getCollectionsV6Options: RouteOptions = {
                     : null,
                   tokenId: r.floor_sell_token_id,
                   name: r.floor_sell_token_name,
-                  image: Assets.getLocalAssetsLink(r.floor_sell_token_image),
+                  image: Assets.getResizedImageUrl(
+                    r.floor_sell_token_image,
+                    undefined,
+                    r.floor_sell_token_image_version
+                  ),
                 },
               },
               topBid: {

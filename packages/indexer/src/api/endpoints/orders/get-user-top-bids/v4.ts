@@ -28,7 +28,7 @@ import { config } from "@/config/index";
 import { CollectionSets } from "@/models/collection-sets";
 import { ContractSets } from "@/models/contract-sets";
 import { Sources } from "@/models/sources";
-import { Assets } from "@/utils/assets";
+import { Assets, ImageSize } from "@/utils/assets";
 import { Orders } from "@/utils/orders";
 
 const version = "v4";
@@ -419,7 +419,10 @@ export const getUserTopBidsV4Options: RouteOptions = {
               collection: {
                 id: r.collection_id,
                 name: r.collection_name,
-                imageUrl: Assets.getLocalAssetsLink(r.collection_metadata?.imageUrl),
+                imageUrl: Assets.getResizedImageUrl(
+                  r.collection_metadata?.imageUrl,
+                  ImageSize.small
+                ),
                 floorAskPrice: r.collection_floor_sell_value
                   ? await getJoiPriceObject(
                       {

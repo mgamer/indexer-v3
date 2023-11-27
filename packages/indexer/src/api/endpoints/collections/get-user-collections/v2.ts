@@ -7,7 +7,7 @@ import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, fromBuffer, toBuffer } from "@/common/utils";
 import { CollectionSets } from "@/models/collection-sets";
-import { Assets } from "@/utils/assets";
+import { Assets, ImageSize } from "@/utils/assets";
 import { Sources } from "@/models/sources";
 import { getJoiCollectionObject } from "@/common/joi";
 
@@ -314,9 +314,9 @@ export const getUserCollectionsV2Options: RouteOptions = {
               createdAt: new Date(r.created_at).toISOString(),
               name: r.name,
               image:
-                Assets.getLocalAssetsLink(r.image) ||
-                (r.sample_images?.length ? Assets.getLocalAssetsLink(r.sample_images[0]) : null),
-              banner: r.banner,
+                Assets.getResizedImageUrl(r.image, ImageSize.small) ||
+                (r.sample_images?.length ? Assets.getResizedImageUrl(r.sample_images[0]) : null),
+              banner: Assets.getResizedImageUrl(r.banner),
               discordUrl: r.discord_url,
               externalUrl: r.external_url,
               twitterUsername: r.twitter_username,

@@ -16,7 +16,7 @@ import {
 } from "@/common/utils";
 import * as Boom from "@hapi/boom";
 import { getJoiTokenObject } from "@/common/joi";
-import { Assets } from "@/utils/assets";
+import { Assets, ImageSize } from "@/utils/assets";
 
 const version = "v3";
 
@@ -306,7 +306,7 @@ export const getTokensV3Options: RouteOptions = {
             collection: {
               id: r.collection_id,
               name: r.collection_name,
-              image: r.collection_image,
+              image: Assets.getResizedImageUrl(r.collection_image, ImageSize.small),
               slug: r.slug,
             },
             floorAskPrice: r.floor_sell_value ? formatEth(r.floor_sell_value) : null,

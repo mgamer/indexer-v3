@@ -21,6 +21,7 @@ import {
 
 import { getJoiCollectionObject, getJoiPriceObject, JoiPrice } from "@/common/joi";
 import { Sources } from "@/models/sources";
+import { Assets, ImageSize } from "@/utils/assets";
 
 const version = "v1";
 
@@ -351,7 +352,7 @@ async function formatCollections(
 
       return {
         ...response,
-        image: metadata?.metadata?.imageUrl,
+        image: Assets.getResizedImageUrl(metadata?.metadata?.imageUrl, ImageSize.small),
         isSpam: Number(metadata.is_spam) > 0,
         name: metadata?.name || "",
         onSaleCount: Number(metadata.on_sale_count) || 0,
