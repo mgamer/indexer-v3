@@ -2,10 +2,10 @@ import { idb, pgp } from "@/common/db";
 import { AbstractRabbitMqJobHandler, BackoffStrategy } from "@/jobs/abstract-rabbit-mq-job-handler";
 import { toBuffer } from "@/common/utils";
 import { AddressZero } from "@ethersproject/constants";
-import { Collections } from "@/models/collections";
 import { getNetworkSettings } from "@/config/network";
 import _ from "lodash";
 import { metadataIndexFetchJob } from "@/jobs/metadata-index/metadata-fetch-job";
+import { Tokens } from "@/models/tokens";
 
 export type UpdateUserCollectionsJobPayload = {
   fromAddress: string;
@@ -30,7 +30,7 @@ export default class UpdateUserCollectionsJob extends AbstractRabbitMqJobHandler
     const queries = [];
 
     // Get the collection for the contract
-    const collection = await Collections.getByContractAndTokenId(contract, Number(tokenId));
+    const collection = await Tokens.getCollection(contract, tokenId);
 
     // If no collection found throw an error to trigger a retry
     if (!collection) {
