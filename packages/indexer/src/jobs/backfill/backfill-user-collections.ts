@@ -33,7 +33,7 @@ export class BackfillUserCollectionsJob extends AbstractRabbitMqJobHandler {
       owner?: Buffer;
       acquiredAt?: string;
     } = {
-      limit: 200,
+      limit: 400,
       AddressZero: toBuffer(AddressZero),
       deadAddress: toBuffer("0x000000000000000000000000000000000000dead"),
     };
@@ -113,7 +113,7 @@ export class BackfillUserCollectionsJob extends AbstractRabbitMqJobHandler {
   }
 
   public async addToQueue(cursor?: BackfillUserCollectionsJobCursorInfo, delay = 0) {
-    await this.send({ payload: cursor }, delay);
+    await this.send({ payload: cursor ?? {} }, delay);
   }
 }
 
@@ -121,7 +121,7 @@ export const backfillUserCollectionsJob = new BackfillUserCollectionsJob();
 
 if (config.chainId !== 1) {
   redlock
-    .acquire(["backfill-user-collections-lock"], 60 * 60 * 24 * 30 * 1000)
+    .acquire(["backfill-user-collections-lock-2"], 60 * 60 * 24 * 30 * 1000)
     .then(async () => {
       await backfillUserCollectionsJob.addToQueue();
     })
