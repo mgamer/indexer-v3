@@ -31,7 +31,6 @@ import * as sudoswap from "@/orderbook/orders/sudoswap";
 import * as b from "@/utils/auth/blur";
 import { getCurrency } from "@/utils/currencies";
 import { ExecutionsBuffer } from "@/utils/executions";
-import { tryGetTokensSuspiciousStatus } from "@/utils/opensea";
 import { getPersistentPermit } from "@/utils/permits";
 import { getPreSignatureId, getPreSignature, savePreSignature } from "@/utils/pre-signatures";
 import { getUSDAndCurrencyPrices } from "@/utils/prices";
@@ -425,7 +424,10 @@ export const getExecuteSellV7Options: RouteOptions = {
               amount: token.quantity,
               owner: token.owner,
             },
-            permit
+            {
+              permit,
+              taker: payload.taker,
+            }
           )
         );
       };
@@ -445,7 +447,6 @@ export const getExecuteSellV7Options: RouteOptions = {
         }[];
       }[] = payload.items;
 
-      const tokenToSuspicious = await tryGetTokensSuspiciousStatus(items.map((i) => i.token));
       for (const item of items) {
         const [contract, tokenId] = item.token.split(":");
 
@@ -646,20 +647,16 @@ export const getExecuteSellV7Options: RouteOptions = {
             }
           }
 
-          // Do not fill X2Y2 and Seaport orders with flagged tokens
+          // Do not fill Seaport orders with flagged tokens
           if (
             [
-              "x2y2",
               "seaport-v1.4",
               "seaport-v1.5",
               "seaport-v1.4-partial",
               "seaport-v1.5-partial",
             ].includes(result.kind)
           ) {
-            if (
-              (tokenToSuspicious.has(item.token) && tokenToSuspicious.get(item.token)) ||
-              tokenResult.is_flagged
-            ) {
+            if (tokenResult.is_flagged) {
               if (payload.partial) {
                 continue;
               } else {
@@ -774,20 +771,16 @@ export const getExecuteSellV7Options: RouteOptions = {
               }
             }
 
-            // Do not fill X2Y2 and Seaport orders with flagged tokens
+            // Do not fill Seaport orders with flagged tokens
             if (
               [
-                "x2y2",
                 "seaport-v1.4",
                 "seaport-v1.5",
                 "seaport-v1.4-partial",
                 "seaport-v1.5-partial",
               ].includes(result.kind)
             ) {
-              if (
-                (tokenToSuspicious.has(item.token) && tokenToSuspicious.get(item.token)) ||
-                tokenResult.is_flagged
-              ) {
+              if (tokenResult.is_flagged) {
                 if (payload.partial) {
                   continue;
                 }

@@ -3,13 +3,13 @@ import { config } from "@/config/index";
 import * as ActivitiesIndex from "@/elasticsearch/indexes/activities";
 import { Collections } from "@/models/collections";
 import _ from "lodash";
-// import { logger } from "@/common/logger";
 import { RabbitMQMessage } from "@/common/rabbit-mq";
 import { ActivitiesCollectionUpdateData } from "@/elasticsearch/indexes/activities";
 
 export type RefreshActivitiesCollectionMetadataJobPayload = {
   collectionId: string;
   collectionUpdateData?: ActivitiesCollectionUpdateData;
+  context?: string;
 };
 
 export default class RefreshActivitiesCollectionMetadataJob extends AbstractRabbitMqJobHandler {
@@ -37,22 +37,6 @@ export default class RefreshActivitiesCollectionMetadataJob extends AbstractRabb
         collectionUpdateData
       );
 
-      // logger.info(
-      //   this.queueName,
-      //   JSON.stringify({
-      //     topic: "updateActivitiesCollectionData",
-      //     message: `updateActivitiesCollectionData! collectionId=${collectionId}, collectionUpdateData=${JSON.stringify(
-      //       collectionUpdateData
-      //     )}`,
-      //     data: {
-      //       collectionId,
-      //       collectionUpdateData,
-      //     },
-      //     payload,
-      //     keepGoing,
-      //   })
-      // );
-
       if (keepGoing) {
         addToQueue = true;
       }
@@ -66,13 +50,7 @@ export default class RefreshActivitiesCollectionMetadataJob extends AbstractRabb
     processResult: { addToQueue: boolean }
   ) {
     if (processResult?.addToQueue) {
-      // logger.info(
-      //   this.queueName,
-      //   JSON.stringify({
-      //     topic: "updateActivitiesCollectionMetadata",
-      //     message: `addToQueue! collectionId=${rabbitMqMessage.payload.collectionId}`,
-      //   })
-      // );
+      rabbitMqMessage.payload.context = "onCompleted";
 
       await this.addToQueue(rabbitMqMessage.payload);
     }

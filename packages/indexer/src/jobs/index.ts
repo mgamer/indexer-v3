@@ -171,6 +171,7 @@ import { refreshActivitiesTokenJob } from "@/jobs/activities/refresh-activities-
 import { processCollectionEventJob } from "@/jobs/elasticsearch/collections/process-collection-event-job";
 import { processCollectionEventsJob } from "@/jobs/elasticsearch/collections/process-collection-events-job";
 import { backfillCollectionsElasticsearchJob } from "@/jobs/elasticsearch/collections/backfill-collections-elasticsearch-job";
+import { backfillNftTransferEventsUpdatedAtJob } from "@/jobs/backfill/backfill-nft-transfer-events-updated-at";
 
 export const allJobQueues = [
   backfillWrongNftBalances.queue,
@@ -324,6 +325,7 @@ export class RabbitMqJobsConsumer {
       processCollectionEventJob,
       processCollectionEventsJob,
       backfillCollectionsElasticsearchJob,
+      backfillNftTransferEventsUpdatedAtJob,
     ];
   }
 

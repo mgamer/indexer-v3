@@ -83,6 +83,12 @@ export class NewCollectionForTokenJob extends AbstractRabbitMqJobHandler {
           tokenIdRange = `'(,)'::numrange`;
         }
 
+        // Check we have a name for the collection
+        if (_.isNull(collectionMetadata.name)) {
+          logger.warn(this.queueName, `no name for ${JSON.stringify(payload)}`);
+          return;
+        }
+
         // For covering the case where the token id range is null
         const tokenIdRangeParam = tokenIdRange ? "$/tokenIdRange:raw/" : "$/tokenIdRange/";
 
@@ -180,17 +186,6 @@ export class NewCollectionForTokenJob extends AbstractRabbitMqJobHandler {
           newCollectionId: collection.id,
           oldCollectionId,
         });
-      }
-
-      if (config.chainId === 11155111) {
-        logger.info(
-          this.queueName,
-          JSON.stringify({
-            topic: "debugTokenUpdate",
-            message: `Update token. contract=${contract}, tokenId=${tokenId}`,
-            token: `${contract}:${tokenId}`,
-          })
-        );
       }
 
       // Update the token new collection

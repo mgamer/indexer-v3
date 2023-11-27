@@ -4,9 +4,7 @@ import * as Sdk from "../../index";
 import { TxData } from "../../utils";
 import { Permit } from "./permit";
 
-// Approvals and permits
-
-// NFTs
+// NFT
 
 export type NFTToken = {
   kind: "erc721" | "erc1155";
@@ -23,7 +21,7 @@ export type NFTApproval = {
   txData: TxData;
 };
 
-// FTs
+// FT
 
 export type FTApproval = {
   currency: string;
@@ -178,6 +176,10 @@ export type GenericOrder =
   | {
       kind: "payment-processor";
       order: Sdk.PaymentProcessor.Order;
+    }
+  | {
+      kind: "payment-processor-v2";
+      order: Sdk.PaymentProcessorV2.Order;
     };
 
 // Listings
