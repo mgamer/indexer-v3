@@ -5,6 +5,7 @@ import { AddressZero } from "@ethersproject/constants";
 import { Collections } from "@/models/collections";
 import { getNetworkSettings } from "@/config/network";
 import _ from "lodash";
+import { metadataIndexFetchJob } from "@/jobs/metadata-index/metadata-fetch-job";
 
 export type UpdateUserCollectionsJobPayload = {
   fromAddress: string;
@@ -33,6 +34,23 @@ export default class UpdateUserCollectionsJob extends AbstractRabbitMqJobHandler
 
     // If no collection found throw an error to trigger a retry
     if (!collection) {
+      // Try refreshing the token
+      await metadataIndexFetchJob.addToQueue(
+        [
+          {
+            kind: "single-token",
+            data: {
+              method: metadataIndexFetchJob.getIndexingMethod(null),
+              contract,
+              tokenId,
+              collection: contract,
+            },
+            context: "update-user-collections",
+          },
+        ],
+        true
+      );
+
       throw new Error(`no collection found`);
     }
 
