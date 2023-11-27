@@ -3,10 +3,10 @@ import _ from "lodash";
 
 import { logger } from "@/common/logger";
 import { onchainMetadataProvider } from "@/metadata/providers/onchain-metadata-provider";
-import { onchainMetadataProcessTokenUriJob } from "./onchain-metadata-process-token-uri-job";
+import { onchainMetadataProcessTokenUriJob } from "@/jobs/metadata-index/onchain-metadata-process-token-uri-job";
 import { RequestWasThrottledError } from "@/metadata/providers/utils";
 import { PendingRefreshTokens } from "@/models/pending-refresh-tokens";
-import { metadataIndexProcessJob } from "./metadata-process-job";
+import { metadataIndexProcessJob } from "@/jobs/metadata-index/metadata-process-job";
 import { config } from "@/config/index";
 
 export default class OnchainMetadataFetchTokenUriJob extends AbstractRabbitMqJobHandler {
