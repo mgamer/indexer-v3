@@ -165,7 +165,10 @@ export const getTrendingCollectionsV1Options: RouteOptions = {
   },
 };
 
-async function getCollectionsMetadata(collectionsResult: any[], floorAskPercentChange: string) {
+export async function getCollectionsMetadata(
+  collectionsResult: any[],
+  floorAskPercentChange: string
+) {
   const collectionIds = collectionsResult.map((collection: any) => collection.id);
   const collectionsToFetch = collectionIds.map((id: string) => `collection-cache:v3:${id}`);
   const batches = chunk(collectionsToFetch, REDIS_BATCH_SIZE);
