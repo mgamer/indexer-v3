@@ -210,6 +210,7 @@ export async function getCollectionsMetadata(collectionsResult: any[]) {
         'description', (collections.metadata ->> 'description')::TEXT,
         'openseaVerificationStatus', (collections.metadata ->> 'safelistRequestStatus')::TEXT
       ) AS metadata,
+      collections.image_version,
       collections.non_flagged_floor_sell_id,
       collections.non_flagged_floor_sell_value,
       collections.non_flagged_floor_sell_maker,
@@ -352,7 +353,11 @@ async function formatCollections(
 
       return {
         ...response,
-        image: Assets.getResizedImageUrl(metadata?.metadata?.imageUrl, ImageSize.small),
+        image: Assets.getResizedImageUrl(
+          metadata?.metadata?.imageUrl,
+          ImageSize.small,
+          metadata.image_version
+        ),
         isSpam: Number(metadata.is_spam) > 0,
         name: metadata?.name || "",
         onSaleCount: Number(metadata.on_sale_count) || 0,
