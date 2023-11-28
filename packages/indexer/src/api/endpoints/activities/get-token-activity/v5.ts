@@ -211,8 +211,11 @@ export const getTokenActivityV5Options: RouteOptions = {
             tokens.name,
             tokens.image,
             tokens.metadata_disabled,
-            tokens.image_version
+            tokens.image_version,
+            collections.image_version AS collection_image_version
           FROM tokens
+          LEFT JOIN collections
+            ON tokens.collection_id = collections.id
           WHERE (tokens.contract, tokens.token_id) IN ($/tokensFilter:raw/)
         `,
               { tokensFilter: _.join(tokensFilter, ",") }
@@ -226,6 +229,7 @@ export const getTokenActivityV5Options: RouteOptions = {
                   name: token.name,
                   image: token.image,
                   image_version: token.image_version,
+                  collection_image_version: token.collection_image_version,
                   metadata_disabled: token.metadata_disabled,
                 }))
               );
@@ -243,6 +247,7 @@ export const getTokenActivityV5Options: RouteOptions = {
                     name: tokenResult.name,
                     image: tokenResult.image,
                     image_version: tokenResult.image_version,
+                    collection_image_version: tokenResult.collection_image_version,
                     metadata_disabled: tokenResult.metadata_disabled,
                   })
                 );
@@ -356,7 +361,7 @@ export const getTokenActivityV5Options: RouteOptions = {
           collectionImageUrl = Assets.getResizedImageUrl(
             activity.collection?.image,
             undefined,
-            activity.collection?.image_version
+            tokenMetadata?.collection_image_version
           );
         }
 

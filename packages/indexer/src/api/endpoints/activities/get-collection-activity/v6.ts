@@ -277,8 +277,11 @@ export const getCollectionActivityV6Options: RouteOptions = {
             tokens.name,
             tokens.image,
             tokens.image_version,
-            tokens.metadata_disabled
+            tokens.metadata_disabled,
+            collections.image_version AS collection_image_version
           FROM tokens
+          LEFT JOIN collections
+            ON tokens.collection_id = collections.id
           WHERE (tokens.contract, tokens.token_id) IN ($/tokensFilter:raw/)
         `,
                 { tokensFilter: _.join(tokensFilter, ",") }
@@ -292,6 +295,7 @@ export const getCollectionActivityV6Options: RouteOptions = {
                     name: token.name,
                     image: token.image,
                     image_version: token.image_version,
+                    collection_image_version: token.collection_image_version,
                     metadata_disabled: token.metadata_disabled,
                   }))
                 );
@@ -309,6 +313,7 @@ export const getCollectionActivityV6Options: RouteOptions = {
                       name: tokenResult.name,
                       image: tokenResult.image,
                       image_version: tokenResult.image_version,
+                      collection_image_version: tokenResult.collection_image_version,
                       metadata_disabled: tokenResult.metadata_disabled,
                     })
                   );
@@ -420,7 +425,8 @@ export const getCollectionActivityV6Options: RouteOptions = {
         if (query.includeMetadata && activity.collection?.image) {
           collectionImageUrl = Assets.getResizedImageUrl(
             activity.collection?.image,
-            ImageSize.small
+            ImageSize.small,
+            tokenMetadata?.collection_image_version
           );
         }
 
