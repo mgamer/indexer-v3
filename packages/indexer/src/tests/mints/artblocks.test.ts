@@ -5,7 +5,8 @@ import { describe, expect, it, jest } from "@jest/globals";
 import { Network } from "@reservoir0x/sdk/dist/utils";
 
 import { config } from "../../config";
-import * as ArtBlocks from "../../orderbook/mints/calldata/detector/artblocks";
+import { extractByCollectionERC721 } from "../../orderbook/mints/calldata/detector/artblocks";
+import type { Info } from "../../orderbook/mints/calldata/detector/artblocks";
 
 jest.setTimeout(60 * 1000);
 
@@ -61,7 +62,7 @@ if (config.chainId === Network.Ethereum) {
 
     it("set-price-minter-v4", async () => {
       const artblocksCurated = "0x99a9b7c1116f9ceeb1652de04d5969cce509b069";
-      const results = await ArtBlocks.extractByCollectionERC721(artblocksCurated, {
+      const results = await extractByCollectionERC721(artblocksCurated, {
         projectId: 484,
       });
 
@@ -71,21 +72,21 @@ if (config.chainId === Network.Ethereum) {
     it("da-exp-settlement-v1", async () => {
       const artblocksCurated = "0x99a9b7c1116f9ceeb1652de04d5969cce509b069";
       {
-        const results = await ArtBlocks.extractByCollectionERC721(artblocksCurated, {
+        const results = await extractByCollectionERC721(artblocksCurated, {
           projectId: 482,
         });
         expect(results.length).not.toBe(0);
         expect(results[0].statusReason).toBe("max-supply-exceeded");
       }
       {
-        const results = await ArtBlocks.extractByCollectionERC721(artblocksCurated, {
+        const results = await extractByCollectionERC721(artblocksCurated, {
           projectId: 483,
         });
 
         expect(results.length).not.toBe(0);
         expect(results[0].statusReason).toBe("max-supply-exceeded");
 
-        const daInfo: ArtBlocks.Info = results[0].details.info as ArtBlocks.Info;
+        const daInfo: Info = results[0].details.info as Info;
         expect(daInfo.daConfig).toMatchObject({
           timestampStart: 1700676050,
           priceDecayHalfLifeSeconds: 804,
@@ -95,17 +96,17 @@ if (config.chainId === Network.Ethereum) {
       }
     });
 
-    // it("extracts by tx", async () => {
-    //   const artblocksCurated = "0x99a9b7c1116f9ceeb1652de04d5969cce509b069";
+    it("extracts by tx", async () => {
+      const artblocksCurated = "0x99a9b7c1116f9ceeb1652de04d5969cce509b069";
 
-    //   const transactions = ["0x6adde54ff52c78b69e9dfb8e9fde1bd5921a642467ef327d17e8c16e5e2fcf47"];
+      const transactions = ["0x6adde54ff52c78b69e9dfb8e9fde1bd5921a642467ef327d17e8c16e5e2fcf47"];
 
-    //   for (const txHash of transactions) {
-    //     const transcation = await utils.fetchTransaction(txHash);
-    //     const results = await ArtBlocks.extractByTx(artblocksCurated, transcation);
-    //     expect(results.length).not.toBe(0);
-    //     expect(results[0].status).toBe("closed");
-    //   }
-    // });
+      for (const txHash of transactions) {
+        const transcation = await utils.fetchTransaction(txHash);
+        const results = await ArtBlocks.extractByTx(artblocksCurated, transcation);
+        expect(results.length).not.toBe(0);
+        expect(results[0].status).toBe("closed");
+      }
+    });
   });
 }

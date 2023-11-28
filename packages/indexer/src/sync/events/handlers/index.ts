@@ -52,6 +52,7 @@ import * as soundxyz from "@/events-sync/handlers/soundxyz";
 import * as createdotfun from "@/events-sync/handlers/createdotfun";
 import * as paymentProcessorV2 from "@/events-sync/handlers/payment-processor-v2";
 import * as titlesxyz from "@/events-sync/handlers/titlesxyz";
+import * as artblocks from "@/events-sync/handlers/artblocks";
 
 // A list of events having the same high-level kind
 export type EventsByKind = {
@@ -116,6 +117,7 @@ export const eventKindToHandler = new Map<
   ["createdotfun", (e, d) => createdotfun.handleEvents(e, d)],
   ["payment-processor-v2", (e, d) => paymentProcessorV2.handleEvents(e, d)],
   ["titlesxyz", (e, d) => titlesxyz.handleEvents(e, d)],
+  ["artblocks", (e, d) => artblocks.handleEvents(e, d)],
 ]);
 
 export const processEventsBatch = async (batch: EventsBatch, skipProcessing?: boolean) => {

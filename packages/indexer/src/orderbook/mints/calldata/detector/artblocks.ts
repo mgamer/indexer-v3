@@ -217,71 +217,65 @@ export const extractByCollectionERC721 = async (
   return results;
 };
 
-// export const refreshByCollection = async (collection: string) => {
-//   const existingCollectionMints = await getCollectionMints(collection, { standard: STANDARD });
+export const refreshByCollection = async (collection: string) => {
+  const existingCollectionMints = await getCollectionMints(collection, { standard: STANDARD });
+  // we dedupe by projectId
+  const dedupedExistingMints = existingCollectionMints.filter((existing, index) => {
+    return (
+      index ==
+      latestCollectionMints.findIndex((found) => {
+        return (
+          existing.collection == found.collection &&
+          (existing.details.info! as Info).projectId == (found.details.info! as Info).projectId
+        );
+      })
+    );
+  });
+  let latestCollectionMints: CollectionMint[] = [];
+  for (const { details } of dedupedExistingMints) {
+    // Fetch the currently available mints
+    latestCollectionMints = latestCollectionMints.concat(
+      await extractByCollectionERC721(collection, details.info! as Info)
+    );
+  }
+  // simulate the one still available
+  for (const collectionMint of latestCollectionMints) {
+    await simulateAndUpsertCollectionMint(collectionMint);
+  }
+  // remove the existing ones not here anymore
+  for (const existing of existingCollectionMints) {
+    const stillExists = latestCollectionMints.find((latest) => {
+      return (
+        latest.collection == existing.collection &&
+        latest.stage == existing.stage &&
+        latest.kind == existing.kind
+      );
+    });
+    if (!stillExists) {
+      await simulateAndUpsertCollectionMint({
+        ...existing,
+        status: "closed",
+      });
+    }
+  }
+};
 
-//   // we dedupe by projectId
-//   const dedupedExistingMints = existingCollectionMints.filter((existing, index) => {
-//     return (
-//       index ==
-//       latestCollectionMints.findIndex((found) => {
-//         return (
-//           existing.collection == found.collection &&
-//           (existing.details.info! as Info).projectId == (found.details.info! as Info).projectId
-//         );
-//       })
-//     );
-//   });
+export const extractByTx = async (
+  collection: string,
+  tx: Transaction
+): Promise<CollectionMint[]> => {
+  const iface = new Interface([
+    "function purchase(uint256 projectId) external payable returns (uint256 tokenId)",
+    "function purchase_H4M(uint256 projectId) external payable returns (uint256 tokenId)",
+    "function purchaseTo(address _to, uint256 projectId) external payable returns (uint256 tokenId)",
+    "function purchaseTo_do6(address _to, uint256 projectId) external payable returns (uint256 tokenId)",
+  ]);
 
-//   let latestCollectionMints: CollectionMint[] = [];
-//   for (const { details } of dedupedExistingMints) {
-//     // Fetch the currently available mints
-//     latestCollectionMints = latestCollectionMints.concat(
-//       await extractByCollectionERC721(collection, details.info! as Info)
-//     );
-//   }
+  const result = iface.parseTransaction({ data: tx.data });
+  if (result && result?.args.projectId) {
+    const projectId: number = result.args.projectId.toNumber();
+    return extractByCollectionERC721(collection, { projectId });
+  }
 
-//   // simulate the one still available
-//   for (const collectionMint of latestCollectionMints) {
-//     await simulateAndUpsertCollectionMint(collectionMint);
-//   }
-
-//   // remove the existing ones not here anymore
-//   for (const existing of existingCollectionMints) {
-//     const stillExists = latestCollectionMints.find((latest) => {
-//       return (
-//         latest.collection == existing.collection &&
-//         latest.stage == existing.stage &&
-//         latest.kind == existing.kind
-//       );
-//     });
-
-//     if (!stillExists) {
-//       await simulateAndUpsertCollectionMint({
-//         ...existing,
-//         status: "closed",
-//       });
-//     }
-//   }
-// };
-
-// export const extractByTx = async (
-//   collection: string,
-//   tx: Transaction
-// ): Promise<CollectionMint[]> => {
-//   const iface = new Interface([
-//     "function purchase(uint256 projectId) external payable returns (uint256 tokenId)",
-//     "function purchase_H4M(uint256 projectId) external payable returns (uint256 tokenId)",
-//     "function purchaseTo(address _to, uint256 projectId) external payable returns (uint256 tokenId)",
-//     "function purchaseTo_do6(address _to, uint256 projectId) external payable returns (uint256 tokenId)",
-//   ]);
-
-//   const result = iface.parseTransaction({ data: tx.data });
-//   if (result && result?.args.projectId) {
-//     const projectId: number = result.args.projectId.toNumber();
-
-//     return extractByCollectionERC721(collection, { projectId });
-//   }
-
-//   return [];
-// };
+  return [];
+};

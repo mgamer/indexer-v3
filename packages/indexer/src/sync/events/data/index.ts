@@ -50,6 +50,7 @@ import * as metadataUpdate from "@/events-sync/data/metadata-update";
 import * as soundxyz from "@/events-sync/data/soundxyz";
 import * as createdotfun from "@/events-sync/data/createdotfun";
 import * as titlesxyz from "@/events-sync/data/titlesxyz";
+import * as artblocks from "@/events-sync/data/artblocks";
 
 // All events we're syncing should have an associated `EventData`
 // entry which dictates the way the event will be parsed and then
@@ -102,7 +103,8 @@ export type EventKind =
   | "soundxyz"
   | "createdotfun"
   | "payment-processor-v2"
-  | "titlesxyz";
+  | "titlesxyz"
+  | "artblocks";
 
 // Event sub-kind in each of the above protocol/standard
 export type EventSubKind =
@@ -334,7 +336,13 @@ export type EventSubKind =
   | "payment-processor-v2-payment-method-removed-from-whitelist"
   | "payment-processor-v2-updated-collection-level-pricing-boundaries"
   | "payment-processor-v2-updated-collection-payment-settings"
-  | "payment-processor-v2-updated-token-level-pricing-boundaries";
+  | "payment-processor-v2-updated-token-level-pricing-boundaries"
+  | "artblocks-project-updated"
+  | "artblocks-minter-registered"
+  | "artblocks-minter-removed"
+  | "artblocks-project-price-update"
+  | "artblocks-project-currency-update"
+  | "artblocks-project-set-auction-details";
 
 export type EventData = {
   kind: EventKind;
@@ -573,6 +581,12 @@ const allEventData = [
   paymentProcessorV2.updatedTokenLevelPricingBoundaries,
   paymentProcessorV2.updatedCollectionLevelPricingBoundaries,
   paymentProcessorV2.updatedCollectionPaymentSettings,
+  artblocks.projectUpdated,
+  artblocks.projectMinterRegistered,
+  artblocks.projectMinterRemoved,
+  artblocks.projectPriceUpdate,
+  artblocks.projectCurrentcyUpdate,
+  artblocks.projectSetAuctionDetails,
 ];
 
 export const getEventData = (events?: string[]) => {
