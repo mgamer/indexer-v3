@@ -154,6 +154,7 @@ export const getTokensDetailsV3Options: RouteOptions = {
           "c"."name" as "collection_name",
           "con"."kind",
           ("c".metadata ->> 'imageUrl')::TEXT AS "collection_image",
+          "c"."image_version" as "collection_image_version",
           "c"."slug",
           "t"."last_buy_value",
           "t"."last_buy_timestamp",
@@ -413,7 +414,11 @@ export const getTokensDetailsV3Options: RouteOptions = {
               collection: {
                 id: r.collection_id,
                 name: r.collection_name,
-                image: Assets.getResizedImageUrl(r.collection_image, ImageSize.small),
+                image: Assets.getResizedImageUrl(
+                  r.collection_image,
+                  ImageSize.small,
+                  r.collection_image_version
+                ),
                 slug: r.slug,
               },
               lastBuy: {
