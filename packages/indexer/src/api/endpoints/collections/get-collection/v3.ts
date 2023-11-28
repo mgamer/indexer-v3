@@ -166,6 +166,7 @@ export const getCollectionV3Options: RouteOptions = {
           "c"."day7_floor_sell_value",
           "c"."day30_floor_sell_value",               
           "c"."token_count",
+          "c"."image_version",
           (
             SELECT COUNT(*) FROM "tokens" "t"
             WHERE "t"."collection_id" = "c"."id"
@@ -269,9 +270,13 @@ export const getCollectionV3Options: RouteOptions = {
               metadata: {
                 ...r.metadata,
                 imageUrl:
-                  Assets.getResizedImageUrl(r.image, ImageSize.small) ||
+                  Assets.getResizedImageUrl(r.image, ImageSize.small, r.image_version) ||
                   (r.sample_images?.length
-                    ? Assets.getResizedImageUrl(r.sample_images[0], ImageSize.small)
+                    ? Assets.getResizedImageUrl(
+                        r.sample_images[0],
+                        ImageSize.small,
+                        r.image_version
+                      )
                     : null),
               },
               sampleImages: Assets.getLocalAssetsLink(r.sample_images) || [],
