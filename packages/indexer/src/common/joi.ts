@@ -14,7 +14,6 @@ import { FeeRecipients } from "@/models/fee-recipients";
 import { Sources } from "@/models/sources";
 import { SourcesEntity } from "@/models/sources/sources-entity";
 import { OrderKind } from "@/orderbook/orders";
-import { Assets } from "@/utils/assets";
 import { Currency, getCurrency } from "@/utils/currencies";
 import {
   getUSDAndCurrencyPrices,
@@ -272,7 +271,7 @@ export const JoiOrderCriteria = Joi.alternatives(
   Joi.object({
     kind: "custom",
     data: Joi.object({
-      collection: JoiOrderCriteriaCollection,
+      tokenSetId: Joi.string().allow("", null),
     }),
   })
 );
@@ -860,7 +859,7 @@ export const getJoiSaleObject = async (sale: {
   contract?: Buffer;
   tokenId?: string;
   name?: string;
-  image?: string;
+  image?: string | string[] | null;
   collectionId?: string;
   collectionName?: string;
   washTradingScore?: number;
@@ -915,7 +914,7 @@ export const getJoiSaleObject = async (sale: {
             contract: fromBuffer(sale.contract),
             tokenId: sale.tokenId,
             name: sale.name ?? null,
-            image: sale.image ? Assets.getLocalAssetsLink(sale.image) : null,
+            image: sale.image,
             collection: {
               id: sale.collectionId ?? null,
               name: sale.collectionName ?? null,
@@ -1027,10 +1026,11 @@ export const getJoiCollectionObject = (
   contract?: string
 ) => {
   if (metadataDisabled) {
+    const collectionContract = collection.primaryContract ?? collection.contract ?? contract;
     const metadataDisabledCollection: any = {
-      id: collection.primaryContract ?? contract,
-      name: collection.primaryContract ?? contract,
-      slug: collection.primaryContract ?? contract,
+      id: collectionContract,
+      name: collectionContract,
+      slug: collectionContract,
       description: null,
       metadata: null,
       image: null,
@@ -1043,7 +1043,7 @@ export const getJoiCollectionObject = (
       openseaVerificationStatus: null,
       community: null,
       tokenIdRange: null,
-      tokenSetId: `contract:${collection.primaryContract ?? contract}`,
+      tokenSetId: `contract:${collectionContract}`,
       royalties: null,
       newRoyalties: null,
     };

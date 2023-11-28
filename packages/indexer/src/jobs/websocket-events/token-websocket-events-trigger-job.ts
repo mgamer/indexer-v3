@@ -281,6 +281,20 @@ export class TokenWebsocketEventsTriggerJob extends AbstractRabbitMqJobHandler {
         }
       }
 
+      if (eventType === "token.created" && config.chainId === 1) {
+        logger.info(
+          this.queueName,
+          JSON.stringify({
+            topic: "processCDCEvent",
+            message: `Processing cdc event. contract=${contract}, tokenId=${tokenId}, eventType=${eventType}`,
+            data,
+            changed,
+            changedJson: JSON.stringify(changed),
+            token: `${contract}:${tokenId}`,
+          })
+        );
+      }
+
       await publishWebsocketEvent({
         event: eventType,
         tags: {
@@ -336,6 +350,7 @@ export class TokenWebsocketEventsTriggerJob extends AbstractRabbitMqJobHandler {
           t.is_spam,
           t.description,
           t.image,
+          t.image_version,
           t.media,
           t.collection_id,
           c.name AS collection_name,
@@ -413,7 +428,7 @@ export class TokenWebsocketEventsTriggerJob extends AbstractRabbitMqJobHandler {
             name: r.name,
             isSpam: Number(r.is_spam) > 0,
             description: r.description,
-            image: Assets.getLocalAssetsLink(r.image),
+            image: Assets.getResizedImageUrl(r.image, undefined, r.image_version),
             media: r.media,
             kind: r.kind,
             metadataDisabled:

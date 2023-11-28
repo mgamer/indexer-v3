@@ -25,6 +25,7 @@ import { buildContinuation, splitContinuation } from "@/common/utils";
 import { backfillActivitiesElasticsearchJob } from "@/jobs/activities/backfill/backfill-activities-elasticsearch-job";
 
 import * as CONFIG from "@/elasticsearch/indexes/activities/config";
+import { ElasticMintResult } from "@/api/endpoints/collections/get-trending-mints/interfaces";
 
 const INDEX_NAME = `${getNetworkName()}.activities`;
 
@@ -341,6 +342,121 @@ export const getTopSellingCollections = async (params: {
   return esResult?.aggregations?.collections?.buckets?.map((bucket: any) =>
     mapBucketToCollection(bucket, params.includeRecentSales)
   );
+};
+
+export const getTrendingMints = async (params: {
+  contracts: string[];
+  startTime: number;
+  limit: number;
+}): Promise<ElasticMintResult[]> => {
+  const { contracts, startTime, limit } = params;
+
+  const currentTime = Math.floor(Date.now() / 1000);
+  const sixHoursAgo = currentTime - 6 * 60 * 60;
+  const oneHourAgo = currentTime - 1 * 60 * 60;
+
+  const salesQuery = {
+    bool: {
+      filter: [
+        {
+          term: {
+            type: "mint",
+          },
+        },
+        {
+          range: {
+            timestamp: {
+              gte: startTime,
+              lte: currentTime,
+              format: "epoch_second",
+            },
+          },
+        },
+        {
+          terms: {
+            "collection.id": contracts,
+          },
+        },
+      ],
+    },
+  } as any;
+
+  const collectionAggregation = {
+    collections: {
+      terms: {
+        field: "collection.id",
+        size: limit,
+        order: {
+          total_mints: "desc",
+        },
+      },
+      aggs: {
+        total_mints: {
+          value_count: {
+            field: "id",
+          },
+        },
+        total_volume: {
+          sum: {
+            field: "pricing.priceDecimal",
+          },
+        },
+        mints_last_6_hours: {
+          filter: {
+            range: {
+              timestamp: {
+                gte: sixHoursAgo,
+                format: "epoch_second",
+              },
+            },
+          },
+          aggs: {
+            count: {
+              value_count: {
+                field: "id",
+              },
+            },
+          },
+        },
+        mints_last_1_hour: {
+          filter: {
+            range: {
+              timestamp: {
+                gte: oneHourAgo,
+                format: "epoch_second",
+              },
+            },
+          },
+          aggs: {
+            count: {
+              value_count: {
+                field: "id",
+              },
+            },
+          },
+        },
+      },
+    },
+  } as any;
+
+  const esResult = (await elasticsearch.search({
+    index: INDEX_NAME,
+    size: 0,
+    body: {
+      query: salesQuery,
+      aggs: collectionAggregation,
+    },
+  })) as any;
+
+  return esResult?.aggregations?.collections?.buckets?.map((bucket: any) => {
+    return {
+      volume: bucket?.total_volume?.value,
+      mintCount: bucket?.total_mints?.value,
+      countLast6Hours: bucket?.mints_last_6_hours?.count?.value,
+      countLast1Hour: bucket?.mints_last_1_hour?.count?.value,
+      id: bucket.key,
+    };
+  });
 };
 
 export const getRecentSalesByCollection = async (
@@ -1591,15 +1707,31 @@ export const updateActivitiesToken = async (
 
   const should: any[] = [
     {
-      bool: {
-        must_not: [
-          {
-            term: {
-              "token.isSpam": isSpam > 0,
+      bool:
+        isSpam > 0
+          ? {
+              must_not: [
+                {
+                  term: {
+                    "token.isSpam": isSpam > 0,
+                  },
+                },
+              ],
+            }
+          : {
+              must: [
+                {
+                  exists: {
+                    field: "token.isSpam",
+                  },
+                },
+                {
+                  term: {
+                    "token.isSpam": true,
+                  },
+                },
+              ],
             },
-          },
-        ],
-      },
     },
   ];
 
@@ -1734,19 +1866,36 @@ export const updateActivitiesCollectionData = async (
   collectionId: string,
   collectionData: ActivitiesCollectionUpdateData
 ): Promise<boolean> => {
+  const batchSize = 1000;
   let keepGoing = false;
 
   const should: any[] = [
     {
-      bool: {
-        must_not: [
-          {
-            term: {
-              "collection.isSpam": collectionData.isSpam > 0,
+      bool:
+        collectionData.isSpam > 0
+          ? {
+              must_not: [
+                {
+                  term: {
+                    "collection.isSpam": collectionData.isSpam > 0,
+                  },
+                },
+              ],
+            }
+          : {
+              must: [
+                {
+                  exists: {
+                    field: "collection.isSpam",
+                  },
+                },
+                {
+                  term: {
+                    "collection.isSpam": true,
+                  },
+                },
+              ],
             },
-          },
-        ],
-      },
     },
     {
       bool: collectionData.name
@@ -1817,10 +1966,10 @@ export const updateActivitiesCollectionData = async (
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
         query,
-        size: 1000,
+        size: batchSize,
       },
       0,
-      true
+      false
     );
 
     const pendingUpdateDocuments: { id: string; index: string }[] = esResult.hits.hits.map(
@@ -1869,25 +2018,25 @@ export const updateActivitiesCollectionData = async (
           })
         );
       } else {
-        keepGoing = pendingUpdateDocuments.length === 1000;
+        keepGoing = pendingUpdateDocuments.length === batchSize;
 
-        logger.info(
-          "elasticsearch-activities",
-          JSON.stringify({
-            topic: "updateActivitiesCollectionData",
-            message: `Success. collectionId=${collectionId}, collectionData=${JSON.stringify(
-              collectionData
-            )}`,
-            data: {
-              collectionId,
-              collectionData,
-            },
-            bulkParams: JSON.stringify(bulkParams),
-            response,
-            keepGoing,
-            queryJson: JSON.stringify(query),
-          })
-        );
+        // logger.info(
+        //     "elasticsearch-activities",
+        //     JSON.stringify({
+        //       topic: "updateActivitiesCollectionData",
+        //       message: `Success. collectionId=${collectionId}, collectionData=${JSON.stringify(
+        //           collectionData
+        //       )}`,
+        //       data: {
+        //         collectionId,
+        //         collectionData,
+        //       },
+        //       bulkParams: JSON.stringify(bulkParams),
+        //       response,
+        //       keepGoing,
+        //       queryJson: JSON.stringify(query),
+        //     })
+        // );
       }
     }
   } catch (error) {

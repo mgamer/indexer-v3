@@ -88,6 +88,7 @@ export const getTrendingCollectionsV1Options: RouteOptions = {
           volumePercentChange: Joi.number().unsafe().allow(null),
           countPercentChange: Joi.number().unsafe().allow(null),
           creator: Joi.string().allow("", null),
+          openseaVerificationStatus: Joi.string().allow("", null),
           onSaleCount: Joi.number().integer(),
           floorAsk: {
             id: Joi.string().allow(null),
@@ -166,7 +167,7 @@ export const getTrendingCollectionsV1Options: RouteOptions = {
 
 async function getCollectionsMetadata(collectionsResult: any[], floorAskPercentChange: string) {
   const collectionIds = collectionsResult.map((collection: any) => collection.id);
-  const collectionsToFetch = collectionIds.map((id: string) => `collection-cache:v2:${id}`);
+  const collectionsToFetch = collectionIds.map((id: string) => `collection-cache:v3:${id}`);
   const batches = chunk(collectionsToFetch, REDIS_BATCH_SIZE);
   const tasks = batches.map(async (batch) => redis.mget(batch));
   const results = await Promise.all(tasks);
@@ -214,7 +215,8 @@ async function getCollectionsMetadata(collectionsResult: any[], floorAskPercentC
       json_build_object(
         'imageUrl', (collections.metadata ->> 'imageUrl')::TEXT,
         'bannerImageUrl', (collections.metadata ->> 'bannerImageUrl')::TEXT,
-        'description', (collections.metadata ->> 'description')::TEXT
+        'description', (collections.metadata ->> 'description')::TEXT,
+        'openseaVerificationStatus', (collections.metadata ->> 'safelistRequestStatus')::TEXT
       ) AS metadata,
       collections.non_flagged_floor_sell_id,
       collections.non_flagged_floor_sell_value,
@@ -240,6 +242,15 @@ async function getCollectionsMetadata(collectionsResult: any[], floorAskPercentC
       collections.top_buy_valid_between,
 
       collections.top_buy_source_id_int,
+
+      ARRAY( 
+        SELECT 
+        tokens.image
+         FROM tokens
+          WHERE tokens.collection_id = collections.id 
+          ORDER BY rarity_rank DESC NULLS LAST 
+          LIMIT 4 
+        ) AS sample_images,
 
       (
             SELECT
@@ -281,8 +292,8 @@ async function getCollectionsMetadata(collectionsResult: any[], floorAskPercentC
 
     const commands = flatMap(collectionMetadataResponse, (metadata: any) => {
       return [
-        ["set", `collection-cache:v2:${metadata.id}`, JSON.stringify(metadata)],
-        ["expire", `collection-cache:v2:${metadata.id}`, REDIS_EXPIRATION],
+        ["set", `collection-cache:v3:${metadata.id}`, JSON.stringify(metadata)],
+        ["expire", `collection-cache:v3:${metadata.id}`, REDIS_EXPIRATION],
       ];
     });
 
@@ -408,6 +419,7 @@ async function formatCollections(
         ...response,
         image: metadata?.metadata?.imageUrl,
         isSpam: Number(metadata.is_spam) > 0,
+        openseaVerificationStatus: metadata?.metadata?.openseaVerificationStatus || null,
         name: metadata?.name || "",
         onSaleCount: Number(metadata.on_sale_count) || 0,
         volumeChange: {
