@@ -85,7 +85,10 @@ export class BackfillUserCollectionsJob extends AbstractRabbitMqJobHandler {
             collectionId: result.collection_id,
           });
         } else {
-          logger.info(this.queueName, `${result.owner} already synced for ${result.collection_id}`);
+          logger.info(
+            this.queueName,
+            `${fromBuffer(result.owner)} already synced for ${result.collection_id}`
+          );
         }
       }
     }
