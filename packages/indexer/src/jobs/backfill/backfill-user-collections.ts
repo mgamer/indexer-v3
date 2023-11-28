@@ -70,9 +70,9 @@ export class BackfillUserCollectionsJob extends AbstractRabbitMqJobHandler {
         }
 
         // Check if the user was already synced for this collection
-        const memberKey = `${fromBuffer(result.owner)}:${result.collection_id}`;
+        const lock = `${this.queueName}:${fromBuffer(result.owner)}:${result.collection_id}`;
 
-        if (await acquireLock(memberKey, 60 * 60 * 6)) {
+        if (await acquireLock(lock, 60 * 60 * 6)) {
           // Trigger resync for the user in the collection
           await resyncUserCollectionsJob.addToQueue({
             user: fromBuffer(result.owner),
