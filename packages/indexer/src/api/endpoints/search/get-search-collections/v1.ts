@@ -108,6 +108,7 @@ export const getSearchCollectionsV1Options: RouteOptions = {
               contract, 
               (metadata ->> 'imageUrl')::TEXT AS image, 
               token_count, 
+              image_version,
               all_time_volume, 
               floor_sell_value,
               (metadata ->> 'safelistRequestStatus')::TEXT AS opensea_verification_status
@@ -155,7 +156,11 @@ export const getSearchCollectionsV1Options: RouteOptions = {
             collectionId: collection.id,
             name: collection.name,
             contract: fromBuffer(collection.contract),
-            image: Assets.getResizedImageUrl(collection.image, ImageSize.small),
+            image: Assets.getResizedImageUrl(
+              collection.image,
+              ImageSize.small,
+              collection.image_version
+            ),
             tokenCount: String(collection.token_count),
             allTimeVolume: allTimeVolume ? formatEth(allTimeVolume) : null,
             floorAskPrice: floorAskPrice ? formatEth(floorAskPrice) : null,

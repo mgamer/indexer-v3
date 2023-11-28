@@ -114,7 +114,8 @@ export const getSearchCollectionsV2Options: RouteOptions = {
             SELECT c.id, c.name, c.contract, (c.metadata ->> 'imageUrl')::TEXT AS image, c.all_time_volume, c.floor_sell_value,
                    c.slug, (c.metadata ->> 'safelistRequestStatus')::TEXT AS opensea_verification_status,
                    o.currency AS floor_sell_currency, c.is_spam,
-                   o.currency_price AS floor_sell_currency_price
+                   o.currency_price AS floor_sell_currency_price,
+                   c.image_version
             FROM collections c
             LEFT JOIN orders o ON o.id = c.floor_sell_id
             ${whereClause}
@@ -148,7 +149,11 @@ export const getSearchCollectionsV2Options: RouteOptions = {
             name: collection.name,
             slug: collection.slug,
             contract: fromBuffer(collection.contract),
-            image: Assets.getResizedImageUrl(collection.image, ImageSize.small),
+            image: Assets.getResizedImageUrl(
+              collection.image,
+              ImageSize.small,
+              collection.image_version
+            ),
             isSpam: Number(collection.is_spam) > 0,
             allTimeVolume: allTimeVolume ? formatEth(allTimeVolume) : null,
             floorAskPrice: collection.floor_sell_value
