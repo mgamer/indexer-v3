@@ -146,6 +146,7 @@ export const getCollectionsV4Options: RouteOptions = {
           collections.slug,
           collections.name,
           (collections.metadata ->> 'imageUrl')::TEXT AS "image",
+          collections.image_version AS "image_version",
           (collections.metadata ->> 'bannerImageUrl')::TEXT AS "banner",
           (collections.metadata ->> 'discordUrl')::TEXT AS "discord_url",
           (collections.metadata ->> 'description')::TEXT AS "description",
@@ -296,7 +297,7 @@ export const getCollectionsV4Options: RouteOptions = {
         collections = result.map((r) => {
           let imageUrl = r.image;
           if (imageUrl) {
-            imageUrl = Assets.getResizedImageUrl(imageUrl, ImageSize.small);
+            imageUrl = Assets.getResizedImageUrl(imageUrl, ImageSize.small, r.image_version);
           } else if (r.sample_images.length) {
             imageUrl = Assets.getResizedImageUrl(r.sample_images[0], ImageSize.small);
           }

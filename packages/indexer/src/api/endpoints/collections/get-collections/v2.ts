@@ -92,6 +92,7 @@ export const getCollectionsV2Options: RouteOptions = {
           collections.slug,
           collections.name,
           (collections.metadata ->> 'imageUrl')::TEXT AS "image",
+          collections.image_version AS "image_version",
           (collections.metadata ->> 'bannerImageUrl')::TEXT AS "banner",
           collections.contract,
           collections.token_set_id,
@@ -188,9 +189,9 @@ export const getCollectionsV2Options: RouteOptions = {
               slug: r.slug,
               name: r.name,
               image:
-                Assets.getResizedImageUrl(r.image, ImageSize.small) ||
+                Assets.getResizedImageUrl(r.image, ImageSize.small, r.image_version) ||
                 (r.sample_images?.length
-                  ? Assets.getResizedImageUrl(r.sample_images[0], ImageSize.small)
+                  ? Assets.getResizedImageUrl(r.sample_images[0], ImageSize.small, r.image_version)
                   : null),
               banner: Assets.getResizedImageUrl(r.banner),
               sampleImages: r.sample_images || [],

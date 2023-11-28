@@ -423,6 +423,7 @@ export const getCollectionsV5Options: RouteOptions = {
           collections.slug,
           collections.name,
           (collections.metadata ->> 'imageUrl')::TEXT AS "image",
+          collections.image_version AS "image_version",
           (collections.metadata ->> 'bannerImageUrl')::TEXT AS "banner",
           (collections.metadata ->> 'discordUrl')::TEXT AS "discord_url",
           (collections.metadata ->> 'description')::TEXT AS "description",
@@ -662,9 +663,9 @@ export const getCollectionsV5Options: RouteOptions = {
 
           let imageUrl = r.image;
           if (imageUrl) {
-            imageUrl = Assets.getResizedImageUrl(imageUrl, ImageSize.small);
+            imageUrl = Assets.getResizedImageUrl(imageUrl, ImageSize.small, r.image_version);
           } else if (sampleImages.length) {
-            imageUrl = Assets.getResizedImageUrl(sampleImages[0], ImageSize.small);
+            imageUrl = Assets.getResizedImageUrl(sampleImages[0], ImageSize.small, r.image_version);
           }
 
           return getJoiCollectionObject(
