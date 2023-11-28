@@ -15,6 +15,7 @@ interface CollectionInfo {
   name: string;
   is_spam: number;
   metadata: string;
+  image_version: number;
   royalties: string;
   contract: string;
   token_set_id: string;
@@ -221,7 +222,7 @@ export class CollectionWebsocketEventsTriggerQueueJob extends AbstractRabbitMqJo
           isSpam: Number(r.is_spam) > 0,
           metadata: {
             imageUrl: !metadataDisabled
-              ? Assets.getResizedImageUrl(metadata?.imageUrl, ImageSize.small)
+              ? Assets.getResizedImageUrl(metadata?.imageUrl, ImageSize.small, r?.image_version)
               : null,
             bannerImageUrl: !metadataDisabled ? metadata?.bannerImageUrl : null,
             discordUrl: !metadataDisabled ? metadata?.discordUrl : null,
