@@ -12,6 +12,7 @@ import {
 } from "@/models/collections/collections-entity";
 import { updateBlurRoyalties } from "@/utils/blur";
 import * as erc721c from "@/utils/erc721c";
+import * as erc721cV2 from "@/utils/erc721c-v2";
 import * as marketplaceBlacklist from "@/utils/marketplace-blacklists";
 import * as marketplaceFees from "@/utils/marketplace-fees";
 import MetadataProviderRouter from "@/metadata/metadata-provider-router";
@@ -286,6 +287,9 @@ export class Collections {
 
     // Refresh ERC721C config
     await erc721c.refreshERC721CConfig(collection.contract);
+
+    // Refresh ERC721C V2 config
+    await erc721cV2.refreshERC721CV2Config(collection.contract);
   }
 
   public static async update(collectionId: string, fields: CollectionsEntityUpdateParams) {

@@ -257,6 +257,10 @@ export const extractEventsBatches = (enhancedEvents: EnhancedEvent[]): EventsBat
         kind: "payment-processor-v2",
         data: kindToEvents.get("payment-processor-v2") ?? [],
       },
+      {
+        kind: "erc721c-v2",
+        data: kindToEvents.get("erc721c-v2") ?? [],
+      },
     ];
 
     txHashToEventsBatch.set(txHash, {
