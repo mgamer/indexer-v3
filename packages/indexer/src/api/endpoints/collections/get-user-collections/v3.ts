@@ -208,6 +208,7 @@ export const getUserCollectionsV3Options: RouteOptions = {
                 collections.slug,
                 collections.name,
                 (collections.metadata ->> 'imageUrl')::TEXT AS "image",
+                collections.image_version AS "image_version",
                 (collections.metadata ->> 'bannerImageUrl')::TEXT AS "banner",
                 (collections.metadata ->> 'discordUrl')::TEXT AS "discord_url",
                 (collections.metadata ->> 'description')::TEXT AS "description",
@@ -334,8 +335,10 @@ export const getUserCollectionsV3Options: RouteOptions = {
               slug: r.slug,
               name: r.name,
               image:
-                Assets.getResizedImageUrl(r.image, ImageSize.small) ||
-                (r.sample_images?.length ? Assets.getResizedImageUrl(r.sample_images[0]) : null),
+                Assets.getResizedImageUrl(r.image, ImageSize.small, r.image_version) ||
+                (r.sample_images?.length
+                  ? Assets.getResizedImageUrl(r.sample_images[0], ImageSize.small, r.image_version)
+                  : null),
               isSpam: Number(r.is_spam) > 0,
               banner: Assets.getResizedImageUrl(r.banner),
               twitterUrl: r.twitter_url,

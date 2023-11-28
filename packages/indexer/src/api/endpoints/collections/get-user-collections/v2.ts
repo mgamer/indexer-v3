@@ -181,6 +181,7 @@ export const getUserCollectionsV2Options: RouteOptions = {
                 collections.slug,
                 collections.name,
                 (collections.metadata ->> 'imageUrl')::TEXT AS "image",
+                collections.image_version AS "image_version",
                 (collections.metadata ->> 'bannerImageUrl')::TEXT AS "banner",
                 (collections.metadata ->> 'discordUrl')::TEXT AS "discord_url",
                 (collections.metadata ->> 'description')::TEXT AS "description",
@@ -314,8 +315,10 @@ export const getUserCollectionsV2Options: RouteOptions = {
               createdAt: new Date(r.created_at).toISOString(),
               name: r.name,
               image:
-                Assets.getResizedImageUrl(r.image, ImageSize.small) ||
-                (r.sample_images?.length ? Assets.getResizedImageUrl(r.sample_images[0]) : null),
+                Assets.getResizedImageUrl(r.image, ImageSize.small, r.image_version) ||
+                (r.sample_images?.length
+                  ? Assets.getResizedImageUrl(r.sample_images[0], ImageSize.small, r.image_version)
+                  : null),
               banner: Assets.getResizedImageUrl(r.banner),
               discordUrl: r.discord_url,
               externalUrl: r.external_url,
