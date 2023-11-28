@@ -559,6 +559,7 @@ export const getUserTokensV7Options: RouteOptions = {
                o.currency AS collection_floor_sell_currency, o.currency_price AS collection_floor_sell_currency_price,
                c.name as collection_name, con.kind, con.symbol, c.metadata, c.royalties, (c.metadata ->> 'safelistRequestStatus')::TEXT AS "opensea_verification_status",
                c.royalties_bps, ot.kind AS floor_sell_kind, c.slug, c.is_spam AS c_is_spam, c.metadata_disabled AS c_metadata_disabled, t_metadata_disabled,
+               c.image_version AS "collection_image_version",
                ${query.includeRawData ? "ot.raw_data AS floor_sell_raw_data," : ""}
                ${
                  query.useNonFlaggedFloorAsk
@@ -727,7 +728,11 @@ export const getUserTokensV7Options: RouteOptions = {
                 name: r.collection_name,
                 slug: r.slug,
                 symbol: r.symbol,
-                imageUrl: Assets.getResizedImageUrl(r.image, ImageSize.small, r.image_version),
+                imageUrl: Assets.getResizedImageUrl(
+                  r.image,
+                  ImageSize.small,
+                  r.collection_image_version
+                ),
                 isSpam: Number(r.c_is_spam) > 0,
                 metadataDisabled: Boolean(Number(r.c_metadata_disabled)),
                 openseaVerificationStatus: r.opensea_verification_status,

@@ -238,6 +238,7 @@ export const getUserTokensV3Options: RouteOptions = {
                top_bid_value, c.name as collection_name, c.metadata,
                c.floor_sell_value AS "collection_floor_sell_value",
                c.metadata_disabled AS "c_metadata_disabled", t_metadata_disabled,
+               c.image_version AS "collection_image_version",
                (
                     CASE WHEN b.floor_sell_value IS NOT NULL
                     THEN 1
@@ -270,7 +271,11 @@ export const getUserTokensV3Options: RouteOptions = {
             collection: {
               id: r.collection_id,
               name: r.collection_name,
-              imageUrl: Assets.getResizedImageUrl(r.metadata?.imageUrl, ImageSize.small),
+              imageUrl: Assets.getResizedImageUrl(
+                r.metadata?.imageUrl,
+                ImageSize.small,
+                r.collection_image_version
+              ),
               floorAskPrice: r.collection_floor_sell_value
                 ? formatEth(r.collection_floor_sell_value)
                 : null,
