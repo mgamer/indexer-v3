@@ -47,7 +47,12 @@ export class BackfillAsksElasticsearchJob extends AbstractRabbitMqJobHandler {
         fromTimestampFilter = `AND (orders.updated_at) > (to_timestamp($/fromTimestamp/))`;
       }
 
-      const criteriaBuildQuery = Orders.buildCriteriaQuery("orders", "token_set_id", true);
+      const criteriaBuildQuery = Orders.buildCriteriaQuery(
+        "orders",
+        "token_set_id",
+        true,
+        "token_set_schema_hash"
+      );
 
       const rawResults = await idb.manyOrNone(
         `
@@ -175,8 +180,8 @@ export class BackfillAsksElasticsearchJob extends AbstractRabbitMqJobHandler {
               order_id: rawResult.order_id,
               order_source_id_int: Number(rawResult.order_source_id_int),
               order_criteria: rawResult.order_criteria,
-              order_quantity_filled: Number(rawResult.order_quantity_filled),
-              order_quantity_remaining: Number(rawResult.order_quantity_remaining),
+              order_quantity_filled: rawResult.order_quantity_filled,
+              order_quantity_remaining: rawResult.order_quantity_remaining,
               order_pricing_currency: rawResult.order_pricing_currency,
               order_pricing_fee_bps: rawResult.order_pricing_fee_bps,
               order_pricing_price: rawResult.order_pricing_price,

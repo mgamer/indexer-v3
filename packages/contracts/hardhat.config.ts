@@ -84,7 +84,7 @@ const getNetworkConfig = (chainId?: number) => {
         url = "https://alpha-rpc.scroll.io/l2";
         break;
       case 11155111:
-        url = "https://endpoints.omniatech.io/v1/eth/sepolia/public";
+        url = "https://1rpc.io/sepolia";
         break;
       case 2863311531:
         url = "https://rpc-testnet.ancient8.gg/";

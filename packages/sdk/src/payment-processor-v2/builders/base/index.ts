@@ -7,8 +7,10 @@ import { getCurrentTimestamp, getRandomBytes } from "../../../utils";
 
 export type MatchingOptions = {
   taker: string;
+  amount?: BigNumberish;
   tokenId?: BigNumberish;
   maxRoyaltyFeeNumerator?: BigNumberish;
+  tokenIds?: BigNumberish[];
 };
 
 export interface BaseBuildParams {
@@ -26,6 +28,8 @@ export interface BaseBuildParams {
   marketplaceFeeNumerator?: BigNumberish;
   maxRoyaltyFeeNumerator?: BigNumberish;
   nonce?: BigNumberish;
+  tokenSetMerkleRoot?: string;
+  fallbackRoyaltyRecipient?: string;
 
   v?: number;
   r?: string;
