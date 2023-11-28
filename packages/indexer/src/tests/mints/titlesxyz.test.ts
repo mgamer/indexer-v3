@@ -37,5 +37,16 @@ if (config.chainId === Network.Zora) {
       const results = await TitlesXYZ.extractByCollectionERC721(collection);
       expect(results.length).not.toBe(0);
     });
+
+    it("detects by tx", async () => {
+      const transactions = ["0xdb9b312f673c97897504e3ebb9e5c76874a945213e9778380ff31dc6443e1f5e"];
+
+      for (const txHash of transactions) {
+        const transaction = await utils.fetchTransaction(txHash);
+        const results = await TitlesXYZ.extractByTx(transaction.to, transaction);
+        expect(results.length).not.toBe(0);
+        expect(results[0].status).toBe("open");
+      }
+    });
   });
 }

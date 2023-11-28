@@ -7,6 +7,7 @@ import { CollectionMint } from "@/orderbook/mints";
 import { now } from "@/common/utils";
 import { config } from "@/config/index";
 import { BigNumber } from "ethers";
+import { Transaction } from "@/models/transactions";
 
 const STANDARD = "titlesxyz";
 
@@ -86,4 +87,18 @@ export const extractByCollectionERC721 = async (collection: string): Promise<Col
   });
 
   return results;
+};
+
+export const extractByTx = async (
+  collection: string,
+  tx: Transaction
+): Promise<CollectionMint[]> => {
+  const iface = new Interface(["function purchase(uint256 quantity) external payable"]);
+
+  const result = iface.parseTransaction({ data: tx.data });
+  if (result) {
+    return extractByCollectionERC721(collection);
+  }
+
+  return [];
 };
