@@ -49,6 +49,7 @@ import * as joepeg from "@/events-sync/data/joepeg";
 import * as metadataUpdate from "@/events-sync/data/metadata-update";
 import * as soundxyz from "@/events-sync/data/soundxyz";
 import * as createdotfun from "@/events-sync/data/createdotfun";
+import * as titlesxyz from "@/events-sync/data/titlesxyz";
 
 // All events we're syncing should have an associated `EventData`
 // entry which dictates the way the event will be parsed and then
@@ -100,7 +101,8 @@ export type EventKind =
   | "metadata-update"
   | "soundxyz"
   | "createdotfun"
-  | "payment-processor-v2";
+  | "payment-processor-v2"
+  | "titlesxyz";
 
 // Event sub-kind in each of the above protocol/standard
 export type EventSubKind =
@@ -326,7 +328,8 @@ export type EventSubKind =
   | "payment-processor-v2-accept-offer-erc1155"
   | "payment-processor-v2-master-nonce-invalidated"
   | "payment-processor-v2-nonce-invalidated"
-  | "payment-processor-v2-order-digest-invalidated";
+  | "payment-processor-v2-order-digest-invalidated"
+  | "titlesxyz-edition-published";
 
 export type EventData = {
   kind: EventKind;
@@ -559,6 +562,7 @@ const allEventData = [
   paymentProcessorV2.masterNonceInvalidated,
   paymentProcessorV2.nonceInvalidated,
   paymentProcessorV2.orderDigestInvalidated,
+  titlesxyz.editionPublished,
 ];
 
 export const getEventData = (events?: string[]) => {

@@ -13,13 +13,13 @@ const STANDARD = "titlesxyz";
 /*
   Network: ZORA
 
-  Factory:
-  emit EditionPublished({
-      creator: msg.sender,
-      remixContractAddress: remixClone,
-      creatorProceedRecipient: proceedRecipient,
-      derivativeFeeRecipient: feeRecipient
-  });
+  Factory: 0xAb359D0Eac42f94fd512f0a98D16Bf60D512CE72
+  event EditionPublished(
+      address indexed creator,
+      address remixContractAddress,
+      address creatorProceedRecipient,
+      address derivativeFeeRecipient
+  );
 
   EditionsV1:
   function purchase(uint256 quantity) external payable;
