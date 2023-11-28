@@ -3,7 +3,6 @@ import swagger2openapi from "swagger2openapi";
 
 import { inject } from "@/api/index";
 import { logger } from "@/common/logger";
-import { error } from "console";
 
 // eslint-disable-next-line
 const parseMethod = (object: { [key: string]: any }) => {
@@ -186,7 +185,7 @@ export const generateOpenApiSpec = async () => {
 
     openapiData = data.openapi;
   } catch (e) {
-    logger.error("generation-openapi-spec", `generate openapi spec error: ${error}`);
+    logger.error("generation-openapi-spec", `generate openapi spec error: ${e}`);
   }
 };
 
