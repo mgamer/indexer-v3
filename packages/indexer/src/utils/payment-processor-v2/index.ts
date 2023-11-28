@@ -21,6 +21,7 @@ export type CollectionPaymentSettings = {
   royaltyBackfillNumerator: number;
   royaltyBountyNumerator: number;
   isRoyaltyBountyExclusive: boolean;
+  blockTradesFromUntrustedChannels: boolean;
   pricingBounds?: PricingBounds;
 };
 
@@ -51,6 +52,7 @@ export const getCollectionPaymentSettings = async (
               uint16 royaltyBackfillNumerator,
               uint16 royaltyBountyNumerator,
               bool isRoyaltyBountyExclusive,
+              bool blockTradesFromUntrustedChannels,
             )
           )`,
         ]),
@@ -65,6 +67,7 @@ export const getCollectionPaymentSettings = async (
         royaltyBackfillNumerator: paymentSettings.royaltyBackfillNumerator,
         royaltyBountyNumerator: paymentSettings.royaltyBountyNumerator,
         isRoyaltyBountyExclusive: paymentSettings.isRoyaltyBountyExclusive,
+        blockTradesFromUntrustedChannels: paymentSettings.blockTradesFromUntrustedChannels,
       };
 
       if (result?.paymentSettings === PaymentSettings.PricingConstraints) {
