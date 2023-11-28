@@ -9,7 +9,6 @@ import { redis, redlock } from "@/common/redis";
 import { format } from "date-fns";
 import { resyncUserCollectionsJob } from "@/jobs/nft-balance-updates/reynsc-user-collections-job";
 import { config } from "@/config/index";
-import { logger } from "@/common/logger";
 
 export type BackfillUserCollectionsJobCursorInfo = {
   owner: string;
@@ -84,11 +83,6 @@ export class BackfillUserCollectionsJob extends AbstractRabbitMqJobHandler {
             user: fromBuffer(result.owner),
             collectionId: result.collection_id,
           });
-        } else {
-          logger.info(
-            this.queueName,
-            `${fromBuffer(result.owner)} already synced for ${result.collection_id}`
-          );
         }
       }
     }
