@@ -149,10 +149,24 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
     // Save the tokenURIs to the database
     await Promise.all(
       resolvedURIs.map(async (token) => {
-        if (!token.uri) {
-          return;
+        try {
+          if (!token.uri) {
+            return;
+          }
+          await Tokens.updateTokenURI(token.contract, token.tokenId, token.uri);
+        } catch (e) {
+          logger.error(
+            "onchain-fetcher",
+            JSON.stringify({
+              topic: "updateTokenURIError",
+              message: `Could not update tokenURI.  contract=${token.contract}, tokenId=${token.tokenId}, uri=${token.uri}, error=${e}`,
+              contract: token.contract,
+              tokenId: token.tokenId,
+              uri: token.uri,
+              error: e,
+            })
+          );
         }
-        await Tokens.updateTokenURI(token.contract, token.tokenId, token.uri);
       })
     );
 
