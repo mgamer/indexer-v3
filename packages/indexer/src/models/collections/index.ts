@@ -231,6 +231,9 @@ export class Collections {
                   FROM collections
                   WHERE collections.id = $/id/
                 ) AS old_metadata
+      UPDATE contracts SET
+        metadata = $/metadata:json/
+      WHERE address = $/contract/
     `;
 
     const values = {
