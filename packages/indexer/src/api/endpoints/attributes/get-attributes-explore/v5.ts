@@ -216,7 +216,7 @@ export const getAttributesExploreV5Options: RouteOptions = {
             `;
 
       if (query.continuation) {
-        const contArr = splitContinuation(query.continuation, /^[0-9]+_[^_]+_[^_]+$/);
+        const contArr = splitContinuation(query.continuation, /^([0-9]+|null)_[^_]+_[^_]+$/);
         if (contArr.length !== 3) {
           throw Boom.badRequest("Invalid continuation string used");
         }
