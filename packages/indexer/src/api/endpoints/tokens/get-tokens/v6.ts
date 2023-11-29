@@ -955,7 +955,6 @@ export const getTokensV6Options: RouteOptions = {
                   `(t.rarity_rank IS null AND (t.contract, t.token_id) ${sign} ($/contContract/, $/contTokenId/))`
                 );
               }
-
               (query as any).contRarity = contArr[0];
               (query as any).contContract = toBuffer(contArr[1]);
               (query as any).contTokenId = contArr[2];
