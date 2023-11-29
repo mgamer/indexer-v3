@@ -11,6 +11,7 @@ import { CollectionSets } from "@/models/collection-sets";
 import { Assets, ImageSize } from "@/utils/assets";
 import { getUSDAndCurrencyPrices } from "@/utils/prices";
 import { AddressZero } from "@ethersproject/constants";
+import { getJoiCollectionObject } from "@/common/joi";
 
 const version = "v1";
 
@@ -111,6 +112,7 @@ export const getSearchCollectionsV1Options: RouteOptions = {
               image_version,
               all_time_volume, 
               floor_sell_value,
+              metadata_disabled,
               (metadata ->> 'safelistRequestStatus')::TEXT AS opensea_verification_status
             FROM collections
             ${whereClause}
@@ -152,20 +154,23 @@ export const getSearchCollectionsV1Options: RouteOptions = {
               : null;
           }
 
-          return {
-            collectionId: collection.id,
-            name: collection.name,
-            contract: fromBuffer(collection.contract),
-            image: Assets.getResizedImageUrl(
-              collection.image,
-              ImageSize.small,
-              collection.image_version
-            ),
-            tokenCount: String(collection.token_count),
-            allTimeVolume: allTimeVolume ? formatEth(allTimeVolume) : null,
-            floorAskPrice: floorAskPrice ? formatEth(floorAskPrice) : null,
-            openseaVerificationStatus: collection.opensea_verification_status,
-          };
+          return getJoiCollectionObject(
+            {
+              collectionId: collection.id,
+              name: collection.name,
+              contract: fromBuffer(collection.contract),
+              image: Assets.getResizedImageUrl(
+                collection.image,
+                ImageSize.small,
+                collection.image_version
+              ),
+              tokenCount: String(collection.token_count),
+              allTimeVolume: allTimeVolume ? formatEth(allTimeVolume) : null,
+              floorAskPrice: floorAskPrice ? formatEth(floorAskPrice) : null,
+              openseaVerificationStatus: collection.opensea_verification_status,
+            },
+            collection.metadata_disabled
+          );
         })
       ),
     };
