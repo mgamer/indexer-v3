@@ -1138,7 +1138,7 @@ export const getTokensV7Options: RouteOptions = {
 
         baseQuery = `
           ${unionQueries.join(` UNION ALL `)}
-          ${getSort(query.sortBy, true)}
+          ${getSort(query.sortBy, unionValues.length > 1)}
         `;
       }
 
