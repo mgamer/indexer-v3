@@ -86,6 +86,7 @@ export const getTrendingCollectionsV1Options: RouteOptions = {
           countPercentChange: Joi.number().unsafe().allow(null),
           creator: Joi.string().allow("", null),
           openseaVerificationStatus: Joi.string().allow("", null),
+          sampleImages: Joi.array().items(Joi.string().allow("", null)),
           onSaleCount: Joi.number().integer(),
           floorAsk: {
             id: Joi.string().allow(null),
@@ -359,6 +360,10 @@ async function formatCollections(
           ImageSize.small,
           metadata.image_version
         ),
+        sampleImages:
+          metadata?.sample_images && metadata?.sample_images?.length > 0
+            ? Assets.getLocalAssetsLink(metadata?.sample_images, undefined, metadata.image_version)
+            : [],
         isSpam: Number(metadata.is_spam) > 0,
         openseaVerificationStatus: metadata?.metadata?.openseaVerificationStatus || null,
         name: metadata?.name || "",
