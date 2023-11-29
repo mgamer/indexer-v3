@@ -102,7 +102,7 @@ export class CollectionNewContractDeployedJob extends AbstractRabbitMqJobHandler
           symbol: symbol || null,
           name: name || null,
           deployed_at: payload.blockTimestamp ? new Date(payload.blockTimestamp * 1000) : null,
-          metadata: collectionMetadata ? JSON.stringify(collectionMetadata) : null,
+          metadata: collectionMetadata ? collectionMetadata : null,
           deployer: deployer ? toBuffer(deployer) : null,
         }
       ),
@@ -133,7 +133,7 @@ export class CollectionNewContractDeployedJob extends AbstractRabbitMqJobHandler
               contract: toBuffer(contract),
               creator: deployer ? toBuffer(deployer) : null,
               tokenSetId: `contract:${contract}`,
-              metadata: collectionMetadata ? JSON.stringify(collectionMetadata) : null,
+              metadata: collectionMetadata ? collectionMetadata : null,
             }
           )
         : null,
