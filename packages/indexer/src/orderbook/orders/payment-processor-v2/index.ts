@@ -437,14 +437,14 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
             WHERE orders.id = $/id/
           `,
           {
-            id: order.params.nonce,
+            id: bn(order.params.nonce).toHexString(),
           }
         );
 
         if (
           replacedOrderResult &&
           // Replacement is only possible if the replaced order is an off-chain cancellable order
-          replacedOrderResult.raw_data.cosigner != AddressZero
+          replacedOrderResult.raw_data.toLowerCase() !== cosigner().address.toLowerCase()
         ) {
           const rawOrder = new Sdk.PaymentProcessorV2.Order(
             config.chainId,
