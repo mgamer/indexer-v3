@@ -21,8 +21,7 @@ import { checkMarketplaceIsFiltered } from "@/utils/marketplace-blacklists";
 import * as paymentProcessorV2 from "@/utils/payment-processor-v2";
 import { getUSDAndNativePrices } from "@/utils/prices";
 import * as royalties from "@/utils/royalties";
-import { cosigner } from "@/utils/cosign";
-import { saveOffChainCancellations } from "@/utils/cosign";
+import { cosigner, saveOffChainCancellations } from "@/utils/cosign";
 
 export type OrderInfo = {
   orderParams: Sdk.PaymentProcessorV2.Types.BaseOrder;
