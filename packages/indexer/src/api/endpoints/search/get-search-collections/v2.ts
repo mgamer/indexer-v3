@@ -182,3 +182,6 @@ export const getSearchCollectionsV2Options: RouteOptions = {
     };
   },
 };
+let getSearchCollectionsV2: any;
+// eslint-disable-next-line
+getSearchCollectionsV2 = getSearchCollectionsV2Options.handler;
