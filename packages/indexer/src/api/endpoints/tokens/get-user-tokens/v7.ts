@@ -569,7 +569,7 @@ export const getUserTokensV7Options: RouteOptions = {
                    : "c.non_flagged_floor_sell_value"
                } AS "collection_floor_sell_value",
                (
-                    CASE WHEN t.floor_sell_value IS NOT NULL
+                    CASE WHEN ot.value IS NOT NULL
                     THEN 1
                     ELSE 0
                     END
@@ -607,13 +607,6 @@ export const getUserTokensV7Options: RouteOptions = {
               AND o.fillability_status = 'fillable'
               AND o.approval_status = 'approved'
               AND o.maker = $/user/
-              AND EXISTS(
-                SELECT FROM nft_balances nb
-                  WHERE nb.contract = b.contract
-                  AND nb.token_id = b.token_id
-                  AND nb.amount > 0
-                  AND nb.owner = o.maker
-              )
             ORDER BY o.value ASC
             LIMIT 1
           ) AS ot ON TRUE
