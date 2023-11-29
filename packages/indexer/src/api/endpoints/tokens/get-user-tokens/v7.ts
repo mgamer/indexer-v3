@@ -595,8 +595,29 @@ export const getUserTokensV7Options: RouteOptions = {
           JOIN collections c ON c.id = t.collection_id ${
             query.excludeSpam ? `AND (c.is_spam IS NULL OR c.is_spam <= 0)` : ""
           }
+          LEFT JOIN LATERAL (
+            SELECT
+              *
+            FROM orders o
+            JOIN token_sets_tokens tst
+              ON o.token_set_id = tst.token_set_id
+            WHERE tst.contract = b.contract
+              AND tst.token_id = b.token_id
+              AND o.side = 'sell'
+              AND o.fillability_status = 'fillable'
+              AND o.approval_status = 'approved'
+              AND o.maker = $/user/
+              AND EXISTS(
+                SELECT FROM nft_balances nb
+                  WHERE nb.contract = b.contract
+                  AND nb.token_id = b.token_id
+                  AND nb.amount > 0
+                  AND nb.owner = o.maker
+              )
+            ORDER BY o.value ASC
+            LIMIT 1
+          ) AS ot ON TRUE
           LEFT JOIN orders o ON o.id = c.floor_sell_id
-          LEFT JOIN orders ot ON ot.id = t.floor_sell_id AND ot.maker = $/user/
           JOIN contracts con ON b.contract = con.address
       `;
 
