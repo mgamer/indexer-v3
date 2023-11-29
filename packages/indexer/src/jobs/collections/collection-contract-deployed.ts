@@ -88,7 +88,7 @@ export class CollectionNewContractDeployedJob extends AbstractRabbitMqJobHandler
           $/symbol/,
           $/name/,
           $/deployed_at/,
-          metadata = $/metadata:json/,
+          $/metadata:json/,
           $/deployer/
         )
         ON CONFLICT (address) DO UPDATE SET
@@ -124,7 +124,7 @@ export class CollectionNewContractDeployedJob extends AbstractRabbitMqJobHandler
                 $/creator/,
                 '(,)'::numrange,
                 $/tokenSetId/,
-                metadata = $/metadata:json/
+                $/metadata:json/
               ) ON CONFLICT DO NOTHING
             `,
             {
