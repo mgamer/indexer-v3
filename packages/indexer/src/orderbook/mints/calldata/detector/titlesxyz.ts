@@ -105,10 +105,11 @@ export const extractByTx = async (
   collection: string,
   tx: Transaction
 ): Promise<CollectionMint[]> => {
-  const iface = new Interface(["function purchase(uint256 quantity) external payable"]);
-
-  const result = iface.parseTransaction({ data: tx.data });
-  if (result) {
+  if (
+    [
+      "0xefef39a1", // `purchase`
+    ].some((bytes4) => tx.data.startsWith(bytes4))
+  ) {
     return extractByCollectionERC721(collection);
   }
 
