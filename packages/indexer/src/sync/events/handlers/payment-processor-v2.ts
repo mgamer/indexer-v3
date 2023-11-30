@@ -528,6 +528,19 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
 
         break;
       }
+
+      case "payment-processor-v2-trusted-channel-removed-for-collection":
+      case "payment-processor-v2-trusted-channel-added-for-collection": {
+        const parsedLog = eventData.abi.parseLog(log);
+        const tokenAddress = parsedLog.args["tokenAddress"].toLowerCase();
+        const channel = parsedLog.args["channel"].toLowerCase();
+
+        const isRemove = subKind.includes("removed");
+
+        if (isRemove) await paymentProcessorV2Utils.removeTrustedChannel(tokenAddress, channel);
+        if (!isRemove) await paymentProcessorV2Utils.addTrustedChannel(tokenAddress, channel);
+        break;
+      }
     }
   }
 };

@@ -5,6 +5,7 @@ import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
 import { Contract, ContractTransaction } from "@ethersproject/contracts";
 import { _TypedDataEncoder } from "@ethersproject/hash";
+import { Interface } from "@ethersproject/abi";
 
 import * as Addresses from "./addresses";
 import { MatchingOptions } from "./builders/base";
@@ -99,7 +100,8 @@ export class Exchange {
         recipient: string;
         amount: BigNumberish;
       };
-    }
+    },
+    trustedChannel?: string
   ): TxData {
     const feeOnTop = options?.fee ?? {
       recipient: AddressZero,
@@ -198,12 +200,19 @@ export class Exchange {
       .mul(bn(fillAmount))
       .add(feeOnTop.amount);
 
-    return {
+    let tx: TxData = {
       from: sender,
       to: this.contract.address,
       value: passValue ? fillValue.toString() : "0",
       data: data + generateSourceBytes(options?.source),
     };
+
+    if (trustedChannel) {
+      tx = this.forwardCallTx(tx, trustedChannel);
+    }
+
+    tx.data = tx.data + generateSourceBytes(options?.source);
+    return tx;
   }
 
   // --- Fill multiple orders ---
@@ -219,13 +228,20 @@ export class Exchange {
         recipient: string;
         amount: BigNumberish;
       }[];
-    }
+    },
+    trustedChannel?: string
   ): TxData {
     if (orders.length === 1) {
-      return this.fillOrderTx(taker, orders[0], matchOptions[0], {
-        source: options?.source,
-        fee: options?.fees?.length ? options.fees[0] : undefined,
-      });
+      return this.fillOrderTx(
+        taker,
+        orders[0],
+        matchOptions[0],
+        {
+          source: options?.source,
+          fee: options?.fees?.length ? options.fees[0] : undefined,
+        },
+        trustedChannel
+      );
     }
 
     const sender = options?.relayer ?? taker;
@@ -373,12 +389,19 @@ export class Exchange {
       ),
     ]);
 
-    return {
+    let tx: TxData = {
       from: sender,
       to: this.contract.address,
       value: price.toString(),
-      data: data + generateSourceBytes(options?.source),
+      data,
     };
+
+    if (trustedChannel) {
+      tx = this.forwardCallTx(tx, trustedChannel);
+    }
+
+    tx.data = tx.data + generateSourceBytes(options?.source);
+    return tx;
   }
 
   // --- Fill multiple listings from the same collection ---
@@ -393,7 +416,8 @@ export class Exchange {
         recipient: string;
         amount: BigNumberish;
       };
-    }
+    },
+    trustedChannel?: string
   ): TxData {
     const feeOnTop = options?.fee ?? {
       recipient: AddressZero,
@@ -443,12 +467,28 @@ export class Exchange {
       ),
     ]);
 
-    return {
+    let tx: TxData = {
       from: sender,
       to: this.contract.address,
       value: price.toString(),
-      data: data + generateSourceBytes(options?.source),
+      data: data,
     };
+
+    if (trustedChannel) {
+      tx = this.forwardCallTx(tx, trustedChannel);
+    }
+
+    tx.data = tx.data + generateSourceBytes(options?.source);
+
+    return tx;
+  }
+
+  public forwardCallTx(tx: TxData, channel: string) {
+    tx.data = new Interface([
+      `function forwardCall(address target, bytes calldata message) external payable`,
+    ]).encodeFunctionData("forwardCall", [tx.to, tx.data]);
+    tx.to = channel;
+    return tx;
   }
 
   // --- Get parameters for sweeping multiple orders from the same collection ---

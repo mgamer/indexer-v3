@@ -26,6 +26,7 @@ export * as caviarV1 from "@/orderbook/orders/caviar-v1";
 export * as paymentProcessor from "@/orderbook/orders/payment-processor";
 export * as paymentProcessorV2 from "@/orderbook/orders/payment-processor-v2";
 
+import * as paymentProcessorV2Utils from "@/utils/payment-processor-v2";
 // Imports
 
 import { HashZero } from "@ethersproject/constants";
@@ -462,9 +463,23 @@ export const generateListingDetailsV6 = async (
         await rawOrder.cosign(cosigner(), options.taker);
       }
 
+      const extraArgs: any = {};
+      const settings = await paymentProcessorV2Utils.getCollectionPaymentSettings(
+        rawOrder.params.tokenAddress
+      );
+      if (settings?.blockTradesFromUntrustedChannels) {
+        const trustedChannels = await paymentProcessorV2Utils.getAllTrustedChannels(
+          rawOrder.params.tokenAddress
+        );
+        if (trustedChannels.length) {
+          extraArgs.trustedChannel = trustedChannels[0];
+        }
+      }
+
       return {
         kind: "payment-processor-v2",
         ...common,
+        extraArgs,
         order: rawOrder,
       };
     }
@@ -857,6 +872,18 @@ export const generateBidDetailsV6 = async (
           { id: sdkOrder.hash() }
         );
         extraArgs.tokenIds = tokens.map(({ token_id }) => token_id);
+      }
+
+      const settings = await paymentProcessorV2Utils.getCollectionPaymentSettings(
+        sdkOrder.params.tokenAddress
+      );
+      if (settings?.blockTradesFromUntrustedChannels) {
+        const trustedChannels = await paymentProcessorV2Utils.getAllTrustedChannels(
+          sdkOrder.params.tokenAddress
+        );
+        if (trustedChannels.length) {
+          extraArgs.trustedChannel = trustedChannels[0];
+        }
       }
 
       return {

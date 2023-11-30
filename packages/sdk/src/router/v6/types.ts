@@ -208,6 +208,10 @@ export type PerCurrencyListingDetails = {
   [currency: string]: ListingDetails[];
 };
 
+export type PerChannelListingDetails = {
+  [channel: string]: ListingDetails[];
+};
+
 export type FillListingsResult = {
   txs: {
     approvals: FTApproval[];
@@ -257,6 +261,10 @@ export type FillBidsResult = {
     preSignatures: PreSignature[];
   }[];
   success: { [orderId: string]: boolean };
+};
+
+export type PerChannelBidDetails = {
+  [channel: string]: BidDetails[];
 };
 
 // Mints
