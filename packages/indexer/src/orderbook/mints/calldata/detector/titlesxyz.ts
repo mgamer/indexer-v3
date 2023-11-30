@@ -43,17 +43,26 @@ export const extractByCollectionERC721 = async (collection: string): Promise<Col
       "function maxSupply() external view returns (uint256)",
       "function mintLimitPerWallet() external view returns (uint256)",
       "function saleEndTime() external view returns (uint256)",
+      "function DERIVATIVE_FEE() external view returns (uint256)",
     ]),
     baseProvider
   );
 
-  const [price, maxSupply, mintLimitPerWallet, endTime]: [string, string, string, number] =
-    await Promise.all([
-      contract.price().then((res: BigNumber) => res.toString()),
-      contract.maxSupply().then((res: BigNumber) => res.toString()),
-      contract.mintLimitPerWallet().then((res: BigNumber) => res.toString()),
-      contract.saleEndTime().then((res: BigNumber) => res.toNumber()),
-    ]);
+  const [price, maxSupply, mintLimitPerWallet, endTime, derivativeFee]: [
+    BigNumber,
+    string,
+    string,
+    number,
+    BigNumber
+  ] = await Promise.all([
+    contract.price(),
+    contract.maxSupply().then((res: BigNumber) => res.toString()),
+    contract.mintLimitPerWallet().then((res: BigNumber) => res.toString()),
+    contract.saleEndTime().then((res: BigNumber) => res.toNumber()),
+    contract.DERIVATIVE_FEE(),
+  ]);
+
+  const endPrice = price.add(derivativeFee).toString();
 
   const isOpen = endTime < now();
 
@@ -80,10 +89,10 @@ export const extractByCollectionERC721 = async (collection: string): Promise<Col
       },
     },
     currency: Sdk.Common.Addresses.Native[config.chainId],
-    price: price,
-    maxSupply: maxSupply,
-    maxMintsPerWallet: mintLimitPerWallet,
-    endTime,
+    price: endPrice,
+    maxSupply: maxSupply === "0" ? undefined : maxSupply,
+    maxMintsPerWallet: mintLimitPerWallet === "0" ? undefined : mintLimitPerWallet,
+    endTime: endTime == 0 ? undefined : endTime,
   });
 
   return results;

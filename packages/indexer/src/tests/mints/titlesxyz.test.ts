@@ -33,7 +33,7 @@ if (config.chainId === Network.Zora) {
     */
 
     it("mint", async () => {
-      const collection = "0xA279aF774A0dd6c88f4a330c9CC7dD7d22594454";
+      const collection = "0xa279af774a0dd6c88f4a330c9cc7dd7d22594454";
       const results = await TitlesXYZ.extractByCollectionERC721(collection);
       expect(results.length).not.toBe(0);
     });
