@@ -5,5 +5,5 @@ export const Collection: ChainIdToAddress = {
 };
 
 export const MinterFilter: ChainIdToAddress = {
-  [Network.Ethereum]: "0x092B8F64e713d66b38522978BCf4649db14b931E",
+  [Network.Ethereum]: "0x092b8f64e713d66b38522978bcf4649db14b931e",
 };
