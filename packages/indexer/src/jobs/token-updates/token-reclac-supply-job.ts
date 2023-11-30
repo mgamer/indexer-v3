@@ -16,7 +16,7 @@ export type TokenRecalcSupplyPayload = {
 
 export default class TokenReclacSupplyJob extends AbstractRabbitMqJobHandler {
   queueName = "token-reclac-supply";
-  maxRetries = 10;
+  maxRetries = 1;
   concurrency = 10;
   useSharedChannel = true;
   lazyMode = true;
