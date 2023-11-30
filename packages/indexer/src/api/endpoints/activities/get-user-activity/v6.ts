@@ -283,12 +283,9 @@ export const getUserActivityV6Options: RouteOptions = {
             tokens.image,
             tokens.metadata_disabled,
             tokens.image_version,
-            collections.image_version AS collection_image_version,
             tokens.rarity_score,
             tokens.rarity_rank
           FROM tokens
-          LEFT JOIN collections
-            ON collections.id = tokens.collection_id
           WHERE (tokens.contract, tokens.token_id) IN ($/tokensFilter:raw/)
         `,
                 { tokensFilter: _.join(tokensFilter, ",") }
@@ -302,7 +299,6 @@ export const getUserActivityV6Options: RouteOptions = {
                     name: token.name,
                     image: token.image,
                     image_version: token.image_version,
-                    collection_image_version: token.collection_image_version,
                     metadata_disabled: token.metadata_disabled,
                     rarity_score: token.rarity_score,
                     rarity_rank: token.rarity_rank,
@@ -322,7 +318,6 @@ export const getUserActivityV6Options: RouteOptions = {
                       name: tokenResult.name,
                       image: tokenResult.image,
                       image_version: tokenResult.image_version,
-                      collection_image_version: tokenResult.collection_image_version,
                       metadata_disabled: tokenResult.metadata_disabled,
                       rarity_score: tokenResult.rarity_score,
                       rarity_rank: tokenResult.rarity_rank,
@@ -472,7 +467,7 @@ export const getUserActivityV6Options: RouteOptions = {
                   ? Assets.getResizedImageUrl(
                       activity.collection?.image,
                       undefined,
-                      tokenMetadata?.collection_image_version
+                      activity.collection?.imageVersion
                     )
                   : undefined,
               isSpam: activity.collection?.isSpam,
