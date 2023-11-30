@@ -225,6 +225,9 @@ export const getNetworkSettings = (): NetworkSettings => {
         asks: {
           numberOfShards: 1,
         },
+        collections: {
+          numberOfShards: 2,
+        },
       },
     },
     isTestnet: false,
@@ -1323,6 +1326,7 @@ export const getNetworkSettings = (): NetworkSettings => {
         realtimeSyncMaxBlockLag: 32,
         realtimeSyncFrequencySeconds: 5,
         lastBlockLatency: 5,
+        metadataMintDelay: 0,
         coingecko: {
           networkId: "linea",
         },
@@ -1389,9 +1393,9 @@ export const getNetworkSettings = (): NetworkSettings => {
     case 2863311531: {
       return {
         ...defaultNetworkSettings,
-        enableWebSocket: false,
+        enableWebSocket: true,
         realtimeSyncMaxBlockLag: 32,
-        realtimeSyncFrequencySeconds: 5,
+        realtimeSyncFrequencySeconds: 2,
         lastBlockLatency: 5,
         onStartup: async () => {
           // Insert the native currency

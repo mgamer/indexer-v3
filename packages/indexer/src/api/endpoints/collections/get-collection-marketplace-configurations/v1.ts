@@ -10,6 +10,7 @@ import { logger } from "@/common/logger";
 import { fromBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { getNetworkSettings, getSubDomain } from "@/config/network";
+import { OrderKind } from "@/orderbook/orders";
 import { getOrUpdateBlurRoyalties } from "@/utils/blur";
 import { checkMarketplaceIsFiltered } from "@/utils/erc721c";
 import * as marketplaceFees from "@/utils/marketplace-fees";
@@ -42,7 +43,7 @@ type Marketplace = {
       enabled: boolean;
       paymentTokens?: PaymentToken[];
       traitBidSupported: boolean;
-      orderKind: string | null;
+      orderKind: OrderKind | null;
       customFeesSupported: boolean;
       collectionBidSupported?: boolean;
       partialOrderSupported: boolean;
@@ -296,10 +297,7 @@ export const getCollectionMarketplaceConfigurationsV1Options: RouteOptions = {
       {
         let openseaMarketplaceFees: Royalty[] = collectionResult.marketplace_fees?.opensea;
         if (collectionResult.marketplace_fees?.opensea == null) {
-          openseaMarketplaceFees = await marketplaceFees.getCollectionOpenseaFees(
-            params.collection,
-            collectionResult.contract
-          );
+          openseaMarketplaceFees = marketplaceFees.getCollectionOpenseaFees();
         }
 
         const openseaRoyalties: Royalty[] = collectionResult.new_royalties?.opensea;
@@ -457,6 +455,16 @@ export const getCollectionMarketplaceConfigurationsV1Options: RouteOptions = {
                   ];
                   break;
                 }
+
+                case "payment-processor": {
+                  operators = [Sdk.PaymentProcessor.Addresses.Exchange[config.chainId]];
+                  break;
+                }
+
+                case "payment-processor-v2": {
+                  operators = [Sdk.PaymentProcessorV2.Addresses.Exchange[config.chainId]];
+                  break;
+                }
               }
 
               const exchangeBlocked = await checkMarketplaceIsFiltered(
@@ -466,7 +474,11 @@ export const getCollectionMarketplaceConfigurationsV1Options: RouteOptions = {
 
               exchange.enabled = !exchangeBlocked;
 
-              if (exchange.enabled && exchange.orderKind === "payment-processor") {
+              if (
+                exchange.enabled &&
+                (exchange.orderKind === "payment-processor" ||
+                  exchange.orderKind === "payment-processor-v2")
+              ) {
                 const ppConfig = await paymentProcessor.getConfigByContract(params.collection);
                 if (ppConfig && ppConfig.securityPolicy.enforcePricingConstraints) {
                   exchange.maxPriceRaw = ppConfig?.pricingBounds?.ceilingPrice;
