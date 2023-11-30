@@ -69,7 +69,7 @@ export class CollectionNewContractDeployedJob extends AbstractRabbitMqJobHandler
 
     const { symbol, name } = await getContractNameAndSymbol(contract);
 
-    const collectionMetadata = await onchainMetadataProvider._getCollectionMetadata(contract);
+    const contractMetadata = await onchainMetadataProvider._getCollectionMetadata(contract);
 
     await Promise.all([
       idb.none(
@@ -91,10 +91,7 @@ export class CollectionNewContractDeployedJob extends AbstractRabbitMqJobHandler
           $/metadata:json/,
           $/deployer/
         )
-        ON CONFLICT (address) DO UPDATE SET
-          symbol = EXCLUDED.symbol,
-          name = EXCLUDED.name,
-          metadata = EXCLUDED.metadata,
+        ON CONFLICT DO NOTHING
       `,
         {
           address: toBuffer(contract),
@@ -102,7 +99,7 @@ export class CollectionNewContractDeployedJob extends AbstractRabbitMqJobHandler
           symbol: symbol || null,
           name: name || null,
           deployed_at: payload.blockTimestamp ? new Date(payload.blockTimestamp * 1000) : null,
-          metadata: collectionMetadata ? collectionMetadata : null,
+          metadata: contractMetadata ? contractMetadata : null,
           deployer: deployer ? toBuffer(deployer) : null,
         }
       ),
@@ -133,7 +130,7 @@ export class CollectionNewContractDeployedJob extends AbstractRabbitMqJobHandler
               contract: toBuffer(contract),
               creator: deployer ? toBuffer(deployer) : null,
               tokenSetId: `contract:${contract}`,
-              metadata: collectionMetadata ? collectionMetadata : null,
+              metadata: contractMetadata ? contractMetadata : null,
             }
           )
         : null,
