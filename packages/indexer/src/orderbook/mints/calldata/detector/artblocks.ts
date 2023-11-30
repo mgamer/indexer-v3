@@ -277,10 +277,16 @@ export const extractByTx = async (
     "function purchaseTo_do6(address _to, uint256 projectId) external payable returns (uint256 tokenId)",
   ]);
 
-  const result = iface.parseTransaction({ data: tx.data });
-  if (result && result?.args.projectId) {
-    const projectId: number = result.args.projectId.toNumber();
-    return extractByCollectionERC721(collection, { projectId });
+  const found = iface.fragments.find((fragment) => {
+    return tx.data.startsWith(iface.getSighash(fragment));
+  });
+
+  if (found) {
+    const result = iface.parseTransaction({ data: tx.data });
+    if (result && result?.args.projectId) {
+      const projectId: number = result.args.projectId.toNumber();
+      return extractByCollectionERC721(collection, { projectId });
+    }
   }
 
   return [];
