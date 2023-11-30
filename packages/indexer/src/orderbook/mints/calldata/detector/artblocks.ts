@@ -99,10 +99,7 @@ export const extractByCollectionERC721 = async (
   try {
     // getMinterForProject will revert if project minter not set!
     minterAddressForProject = await minterFilter.getMinterForProject(projectId);
-  } catch (e) {
-    // @TODO handle if the error is the expected error (no minter for project)
-    // or if the error is something else?
-  }
+  } catch (e) {}
 
   // we go further only if there is a minter associated with project
   if (minterAddressForProject !== null) {

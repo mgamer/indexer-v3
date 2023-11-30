@@ -403,6 +403,10 @@ export const refreshMintsForCollection = async (collection: string) => {
       case "zora":
         await mints.zora.refreshByCollection(collection);
         break;
+
+      case "artblocks":
+        await mints.artblocks.refreshByCollection(collection);
+        break;
     }
   }
 
