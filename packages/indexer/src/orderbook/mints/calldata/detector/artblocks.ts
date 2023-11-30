@@ -11,6 +11,7 @@ import {
 } from "@/orderbook/mints";
 import { now } from "@/common/utils";
 import { Transaction } from "@/models/transactions";
+import { logger } from "@/common/logger";
 
 const STANDARD = "artblocks";
 
@@ -74,7 +75,14 @@ export const extractByCollectionERC721 = async (
     baseProvider
   );
 
-  const projectInfo: ProjectInfo = await projectHolder.projectStateData(projectId);
+  let projectInfo: ProjectInfo;
+
+  try {
+    projectInfo = await projectHolder.projectStateData(projectId);
+  } catch (error) {
+    logger.error("mint-detector", JSON.stringify({ kind: STANDARD, error }));
+    return [];
+  }
 
   // we will also need info from MinterFilter, about the projectId
   const minterFilterAddress = await projectHolder.minterContract();
