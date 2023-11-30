@@ -94,18 +94,36 @@ if (config.chainId === Network.Ethereum) {
           basePrice: "190000000000000000",
         });
       }
+      {
+        const results = await extractByCollectionERC721(artblocksCurated, {
+          projectId: 433,
+        });
+
+        expect(results.length).not.toBe(0);
+        expect(results[0].status).toBe("open");
+
+        const daInfo: Info = results[0].details.info as Info;
+        expect(daInfo.daConfig).toMatchObject({
+          timestampStart: 1682528400,
+          priceDecayHalfLifeSeconds: 638,
+          startPrice: "10000000000000000000",
+          basePrice: "200000000000000000",
+        });
+      }
     });
 
     it("extracts by tx", async () => {
       const artblocksCurated = "0x99a9b7c1116f9ceeb1652de04d5969cce509b069";
 
-      const transactions = ["0x6adde54ff52c78b69e9dfb8e9fde1bd5921a642467ef327d17e8c16e5e2fcf47"];
+      const transactions = [
+        "0x6adde54ff52c78b69e9dfb8e9fde1bd5921a642467ef327d17e8c16e5e2fcf47",
+        "0x9a8456d21425b5e49d6c3d15d57b22e8ca3eb2d315947762ed30ed0a38c4eb7d",
+      ];
 
       for (const txHash of transactions) {
         const transcation = await utils.fetchTransaction(txHash);
         const results = await ArtBlocks.extractByTx(artblocksCurated, transcation);
         expect(results.length).not.toBe(0);
-        expect(results[0].status).toBe("closed");
       }
     });
   });

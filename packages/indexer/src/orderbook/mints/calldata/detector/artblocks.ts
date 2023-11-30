@@ -53,6 +53,7 @@ export const extractByCollectionERC721 = async (
   const results: CollectionMint[] = [];
 
   const { projectId, daConfig } = info;
+  const collectionId = `${collection}:${projectId}000000:${projectId}999999`;
 
   // we will need info from collection about the projectId
   const projectHolder = new Contract(
@@ -134,7 +135,7 @@ export const extractByCollectionERC721 = async (
       const priceInfo: MinterTypePriceInfo = await minterTypeContract.getPriceInfo(projectId);
       if (priceInfo.isConfigured) {
         const result: CollectionMint = {
-          collection,
+          collection: collectionId,
           contract: collection,
           stage: `public-sale-artblocks-${collection}-${projectId}`,
           kind: "public",
