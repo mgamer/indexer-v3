@@ -468,49 +468,4 @@ export class Tokens {
       maker: fromBuffer(r.maker),
     }));
   }
-
-  /**
-   * Get the token uri for the given token
-   * @param contract
-   * @param tokenId
-   */
-  public static async getTokenURI(contract: string, tokenId: string) {
-    const query = `
-      SELECT token_uri
-      FROM tokens
-      WHERE contract = $/contract/
-      AND token_id = $/tokenId/
-    `;
-
-    const result = await idb.oneOrNone(query, {
-      contract: toBuffer(contract),
-      tokenId,
-    });
-
-    if (result) {
-      return result.token_uri;
-    }
-
-    return null;
-  }
-
-  /**
-   * Update the tokenURI for the given token
-   * @param contract
-   * @param tokenId
-   */
-  public static async updateTokenURI(contract: string, tokenId: string, tokenURI: string) {
-    const query = `
-      UPDATE tokens
-      SET token_uri = $/tokenURI/
-      WHERE contract = $/contract/
-      AND token_id = $/tokenId/
-    `;
-
-    await idb.none(query, {
-      contract: toBuffer(contract),
-      tokenId,
-      tokenURI,
-    });
-  }
 }
