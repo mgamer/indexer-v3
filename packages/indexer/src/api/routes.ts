@@ -138,6 +138,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
+    path: "/admin/resync-user-balance",
+    options: adminEndpoints.postResyncUserCollectionBalance,
+  });
+
+  server.route({
+    method: "POST",
     path: "/admin/retry-rabbit-queue",
     options: adminEndpoints.postRetryRabbitQueue,
   });
@@ -266,6 +272,12 @@ export const setupRoutes = (server: Server) => {
     method: "POST",
     path: "/admin/fix-token-cache",
     options: adminEndpoints.postFixTokenCacheOptions,
+  });
+
+  server.route({
+    method: "POST",
+    path: "/admin/update-image-version",
+    options: adminEndpoints.postUpdateImageVersionOptions,
   });
 
   server.route({
@@ -599,9 +611,21 @@ export const setupRoutes = (server: Server) => {
   });
 
   server.route({
+    method: "GET",
+    path: "/collections/{collection}/marketplace-configurations/v1",
+    options: collectionsEndpoints.getCollectionMarketplaceConfigurationsV1Options,
+  });
+
+  server.route({
     method: "POST",
     path: "/collections/spam-status/v1",
     options: collectionsEndpoints.postSpamStatusCollectionV1Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/collections/autocomplete/v1",
+    options: collectionsEndpoints.getAutocompleteCollectionsV1Options,
   });
 
   // Chain

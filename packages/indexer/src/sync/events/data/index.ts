@@ -329,7 +329,12 @@ export type EventSubKind =
   | "payment-processor-v2-master-nonce-invalidated"
   | "payment-processor-v2-nonce-invalidated"
   | "payment-processor-v2-order-digest-invalidated"
-  | "titlesxyz-edition-published";
+  | "titlesxyz-edition-published"
+  | "payment-processor-v2-payment-method-added-to-whitelist"
+  | "payment-processor-v2-payment-method-removed-from-whitelist"
+  | "payment-processor-v2-updated-collection-level-pricing-boundaries"
+  | "payment-processor-v2-updated-collection-payment-settings"
+  | "payment-processor-v2-updated-token-level-pricing-boundaries";
 
 export type EventData = {
   kind: EventKind;
@@ -563,6 +568,11 @@ const allEventData = [
   paymentProcessorV2.nonceInvalidated,
   paymentProcessorV2.orderDigestInvalidated,
   titlesxyz.editionPublished,
+  paymentProcessorV2.paymentMethodAddedToWhitelist,
+  paymentProcessorV2.paymentMethodRemovedFromWhitelist,
+  paymentProcessorV2.updatedTokenLevelPricingBoundaries,
+  paymentProcessorV2.updatedCollectionLevelPricingBoundaries,
+  paymentProcessorV2.updatedCollectionPaymentSettings,
 ];
 
 export const getEventData = (events?: string[]) => {
