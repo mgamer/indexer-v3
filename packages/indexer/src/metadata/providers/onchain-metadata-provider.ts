@@ -10,7 +10,6 @@ import { ethers } from "ethers";
 import { RequestWasThrottledError, normalizeLink, normalizeMetadata } from "./utils";
 import _ from "lodash";
 import { AbstractBaseMetadataProvider } from "./abstract-base-metadata-provider";
-import { Tokens } from "@/models/tokens";
 
 const erc721Interface = new ethers.utils.Interface([
   "function supportsInterface(bytes4 interfaceId) view returns (bool)",
@@ -146,30 +145,6 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
       })
     );
 
-    // Save the tokenURIs to the database
-    await Promise.all(
-      resolvedURIs.map(async (token) => {
-        try {
-          if (!token.uri) {
-            return;
-          }
-          await Tokens.updateTokenURI(token.contract, token.tokenId, token.uri);
-        } catch (e) {
-          logger.error(
-            "onchain-fetcher",
-            JSON.stringify({
-              topic: "updateTokenURIError",
-              message: `Could not update tokenURI.  contract=${token.contract}, tokenId=${token.tokenId}, uri=${token.uri}, error=${e}`,
-              contract: token.contract,
-              tokenId: token.tokenId,
-              uri: token.uri,
-              error: e,
-            })
-          );
-        }
-      })
-    );
-
     return resolvedURIs;
   }
 
@@ -244,6 +219,7 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
     return {
       contract: metadata.contract,
       slug: null,
+      tokenURI: metadata.uri,
       tokenId: metadata.tokenId,
       collection: _.toLower(metadata.contract),
       name: metadata?.name || null,
