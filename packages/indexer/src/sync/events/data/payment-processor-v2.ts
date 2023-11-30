@@ -232,8 +232,3 @@ export const trustedChannelAddedForCollection: EventData = {
     )`,
   ]),
 };
-
-// console.log({
-//   trustedChannelAddedForCollection: trustedChannelAddedForCollection.abi.getEventTopic("TrustedChannelAddedForCollection"),
-//   trustedChannelRemovedForCollection: trustedChannelRemovedForCollection.abi.getEventTopic("TrustedChannelRemovedForCollection"),
-// })
