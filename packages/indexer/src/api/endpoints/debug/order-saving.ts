@@ -10,7 +10,7 @@ import PgPromise from "pg-promise";
 import { baseProvider } from "@/common/provider";
 import { toBuffer } from "@/common/utils";
 import * as allOrderHandlers from "@/orderbook/orders";
-import * as erc721cV2 from "@/utils/erc721c-v2";
+import * as erc721c from "@/utils/erc721c";
 import { logger } from "@/common/logger";
 
 async function refreshBalance(owner: string, contract: string) {
@@ -179,7 +179,7 @@ async function refreshNFTBalance(owner: string, contract: string, tokenId: strin
 
 export async function saveContract(address: string, kind: string) {
   try {
-    await erc721cV2.refreshERC721CV2Config(address);
+    await erc721c.v2.refreshConfig(address);
   } catch (error) {
     logger.error(`refreshERC721CV2Config`, `${error}`);
   }

@@ -11,7 +11,7 @@ import {
   OrderBuildInfo,
   padSourceToSalt,
 } from "@/orderbook/orders/seaport-base/build/utils";
-import * as erc721c from "@/utils/erc721c";
+import * as erc721c from "@/utils/erc721c/v1";
 import * as marketplaceFees from "@/utils/marketplace-fees";
 import * as registry from "@/utils/royalties/registry";
 

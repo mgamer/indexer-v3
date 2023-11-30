@@ -6,15 +6,7 @@ import { baseProvider } from "@/common/provider";
 import { fromBuffer, toBuffer } from "@/common/utils";
 import { orderRevalidationsJob } from "@/jobs/order-fixes/order-revalidations-job";
 
-export type ERC721CV2Config = {
-  transferValidator: string;
-  transferSecurityLevel: number;
-  listId: string;
-  blacklist: List;
-  whitelist: List;
-};
-
-export enum TransferSecurityLevels {
+enum TransferSecurityLevel {
   Recommended,
   Zero,
   One,
@@ -26,12 +18,20 @@ export enum TransferSecurityLevels {
   Seven,
 }
 
+export type ERC721CV2Config = {
+  transferValidator: string;
+  transferSecurityLevel: TransferSecurityLevel;
+  listId: string;
+  blacklist: List;
+  whitelist: List;
+};
+
 export type List = {
   accounts: string[];
   codeHashes: string[];
 };
 
-export const getERC721CConfig = async (contract: string): Promise<ERC721CV2Config | undefined> => {
+export const getConfig = async (contract: string): Promise<ERC721CV2Config | undefined> => {
   try {
     const token = new Contract(
       contract,
@@ -56,8 +56,8 @@ export const getERC721CConfig = async (contract: string): Promise<ERC721CV2Confi
       transferValidator: transferValidator.toLowerCase(),
       transferSecurityLevel: securityPolicy.transferSecurityLevel,
       listId,
-      whitelist: await refreshERC721CV2Whitelist(transferValidator, listId),
-      blacklist: await refreshERC721CV2Blacklist(transferValidator, listId),
+      whitelist: await refreshWhitelist(transferValidator, listId),
+      blacklist: await refreshBlacklist(transferValidator, listId),
     };
   } catch {
     // Skip errors
@@ -66,22 +66,17 @@ export const getERC721CConfig = async (contract: string): Promise<ERC721CV2Confi
   return undefined;
 };
 
-export const getERC721CConfigFromDB = async (
-  contract: string
-): Promise<ERC721CV2Config | undefined> => {
+export const getConfigFromDb = async (contract: string): Promise<ERC721CV2Config | undefined> => {
   const result = await redb.oneOrNone(
     `
       SELECT
         erc721c_v2_configs.*,
-        erc721c_v2_whitelists.whitelist,
-        erc721c_v2_blacklist.blacklist
+        erc721c_v2_lists.blacklist,
+        erc721c_v2_lists.whitelist
       FROM erc721c_v2_configs
-      LEFT JOIN erc721c_v2_whitelists
-        ON erc721c_v2_configs.transfer_validator = erc721c_v2_whitelists.transfer_validator
-        AND erc721c_v2_configs.list_id = erc721c_v2_whitelists.id
-      LEFT JOIN erc721c_v2_blacklist
-        ON erc721c_v2_configs.transfer_validator = erc721c_v2_blacklist.transfer_validator
-        AND erc721c_v2_configs.list_id = erc721c_v2_blacklist.id
+      LEFT JOIN erc721c_v2_lists
+        ON erc721c_v2_configs.transfer_validator = erc721c_v2_lists.transfer_validator
+        AND erc721c_v2_configs.list_id = erc721c_v2_lists.id
       WHERE erc721c_v2_configs.contract = $/contract/
     `,
     { contract: toBuffer(contract) }
@@ -99,8 +94,8 @@ export const getERC721CConfigFromDB = async (
   };
 };
 
-export const refreshERC721CV2Config = async (contract: string) => {
-  const config = await getERC721CConfig(contract);
+export const refreshConfig = async (contract: string) => {
+  const config = await getConfig(contract);
   if (config) {
     await idb.none(
       `
@@ -136,7 +131,7 @@ export const refreshERC721CV2Config = async (contract: string) => {
   return undefined;
 };
 
-export const refreshERC721CV2Whitelist = async (transferValidator: string, id: string) => {
+export const refreshWhitelist = async (transferValidator: string, id: string) => {
   const tv = new Contract(
     transferValidator,
     new Interface([
@@ -161,13 +156,15 @@ export const refreshERC721CV2Whitelist = async (transferValidator: string, id: s
 
   await idb.none(
     `
-      INSERT INTO erc721c_v2_whitelists (
+      INSERT INTO erc721c_v2_lists(
         transfer_validator,
         id,
+        blacklist,
         whitelist
       ) VALUES (
         $/transferValidator/,
         $/id/,
+        $/blacklist:json/
         $/whitelist:json/
       )
       ON CONFLICT (transfer_validator, id)
@@ -177,6 +174,7 @@ export const refreshERC721CV2Whitelist = async (transferValidator: string, id: s
     {
       transferValidator: toBuffer(transferValidator),
       id,
+      blacklist: [],
       whitelist,
     }
   );
@@ -194,7 +192,7 @@ export const refreshERC721CV2Whitelist = async (transferValidator: string, id: s
     }
   );
 
-  // Invalid any orders relying on the blacklisted operator
+  // Invalid any orders relying on blacklisted operators
   await orderRevalidationsJob.addToQueue(
     relevantContracts.map((c) => ({
       by: "operator",
@@ -209,7 +207,7 @@ export const refreshERC721CV2Whitelist = async (transferValidator: string, id: s
   return whitelist;
 };
 
-export const refreshERC721CV2Blacklist = async (transferValidator: string, id: string) => {
+export const refreshBlacklist = async (transferValidator: string, id: string) => {
   const tv = new Contract(
     transferValidator,
     new Interface([
@@ -234,23 +232,26 @@ export const refreshERC721CV2Blacklist = async (transferValidator: string, id: s
 
   await idb.none(
     `
-      INSERT INTO erc721c_v2_blacklist(
+      INSERT INTO erc721c_v2_lists(
         transfer_validator,
         id,
-        blacklist
+        blacklist,
+        whitelist
       ) VALUES (
         $/transferValidator/,
         $/id/,
-        $/blacklist:json/
+        $/blacklist:json/,
+        $/whitelist:json/
       )
       ON CONFLICT (transfer_validator, id)
       DO UPDATE SET
-      blacklist = $/blacklist:json/
+        blacklist = $/blacklist:json/
     `,
     {
       transferValidator: toBuffer(transferValidator),
       id,
       blacklist,
+      whitelist: [],
     }
   );
 
@@ -267,7 +268,7 @@ export const refreshERC721CV2Blacklist = async (transferValidator: string, id: s
     }
   );
 
-  // Invalid any orders relying on the blacklisted operator
+  // Invalid any orders relying on blacklisted operators
   await orderRevalidationsJob.addToQueue(
     relevantContracts.map((c) => ({
       by: "operator",
@@ -283,50 +284,44 @@ export const refreshERC721CV2Blacklist = async (transferValidator: string, id: s
 };
 
 function getListByConfig(config: ERC721CV2Config): {
-  whitelist: string[];
-  blacklist: string[];
+  whitelist?: string[];
+  blacklist?: string[];
 } {
-  if (
-    config.transferSecurityLevel === TransferSecurityLevels.One ||
-    config.transferSecurityLevel === TransferSecurityLevels.Two
-  ) {
-    return {
-      blacklist: config.blacklist.accounts,
-      whitelist: [],
-    };
-  }
+  switch (config.transferSecurityLevel) {
+    // No restrictions
+    case TransferSecurityLevel.Zero: {
+      return {};
+    }
 
-  if (config.transferSecurityLevel === TransferSecurityLevels.Recommended) {
-    return {
-      whitelist: config.whitelist.accounts,
-      blacklist: [],
-    };
-  }
+    // Blacklist restrictions
+    case TransferSecurityLevel.One: {
+      return {
+        blacklist: config.blacklist.accounts,
+      };
+    }
 
-  return {
-    whitelist: [],
-    blacklist: [],
-  };
+    // Whitelist restrictions
+    default: {
+      return {
+        whitelist: config.whitelist.accounts,
+      };
+    }
+  }
 }
 
 export const checkMarketplaceIsFiltered = async (contract: string, operators: string[]) => {
-  const config = await getERC721CConfigFromDB(contract);
+  const config = await getConfigFromDb(contract);
   if (!config) {
     return false;
   }
 
   const { whitelist, blacklist } = getListByConfig(config);
 
-  let notInWhitelist = false;
-  let isFiltered = false;
-
   if (whitelist) {
-    notInWhitelist = operators.every((op) => !whitelist.includes(op));
+    return whitelist.length ? operators.some((op) => !whitelist.includes(op)) : true;
+  } else if (blacklist) {
+    return blacklist.length ? operators.some((op) => blacklist.includes(op)) : false;
+  } else {
+    return false;
   }
-
-  if (blacklist.length) {
-    isFiltered = operators.some((op) => blacklist.includes(op));
-  }
-
-  return isFiltered || notInWhitelist;
 };

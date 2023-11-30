@@ -10,7 +10,6 @@ import { config } from "@/config/index";
 import { orderRevalidationsJob } from "@/jobs/order-fixes/order-revalidations-job";
 import { OrderKind } from "@/orderbook/orders";
 import * as erc721c from "@/utils/erc721c";
-import * as erc721cV2 from "@/utils/erc721c-v2";
 
 export type Operator = {
   address: string;
@@ -48,12 +47,12 @@ export const checkMarketplaceIsFiltered = async (
     return customCheck;
   }
 
-  const erc721cCheck = await erc721c.checkMarketplaceIsFiltered(contract, operators);
+  const erc721cCheck = await erc721c.v1.checkMarketplaceIsFiltered(contract, operators);
   if (erc721cCheck) {
     return erc721cCheck;
   }
 
-  const erc721cV2Check = await erc721cV2.checkMarketplaceIsFiltered(contract, operators);
+  const erc721cV2Check = await erc721c.v2.checkMarketplaceIsFiltered(contract, operators);
   if (erc721cV2Check) {
     return erc721cV2Check;
   }
