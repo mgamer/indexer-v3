@@ -306,9 +306,9 @@ async function formatCollections(
       return {
         id: metadata?.id,
         image:
-          metadata.metadata.imageUrl ??
-          (metadata.sample_images?.length
-            ? Assets.getLocalAssetsLink(metadata.sample_images[0])
+          metadata?.metadata?.imageUrl ??
+          (metadata?.sample_images?.length
+            ? Assets.getLocalAssetsLink(metadata?.sample_images?.[0])
             : null),
         banner: metadata?.metadata ? metadata.metadata?.bannerImageUrl : null,
         name: metadata ? metadata?.name : "",
