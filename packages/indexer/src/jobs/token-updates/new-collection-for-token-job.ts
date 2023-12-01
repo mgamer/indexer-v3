@@ -43,6 +43,19 @@ export class NewCollectionForTokenJob extends AbstractRabbitMqJobHandler {
     const { contract, tokenId, mintedTimestamp, newCollectionId, oldCollectionId } = payload;
     const queries: PgPromiseQuery[] = [];
 
+    if (
+      config.chainId === 137 &&
+      _.includes(
+        [
+          "0x2953399124f0cbb46d2cbacd8a89cf0599974963:opensea-undefined",
+          "0x2953399124f0cbb46d2cbacd8a89cf0599974963:opensea-null",
+        ],
+        newCollectionId
+      )
+    ) {
+      return;
+    }
+
     try {
       // Fetch collection from local DB
       let collection = await Collections.getById(newCollectionId);
