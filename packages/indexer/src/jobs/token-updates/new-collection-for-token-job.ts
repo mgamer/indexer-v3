@@ -1,5 +1,5 @@
-import { idb, pgp, PgPromiseQuery, ridb } from "@/common/db";
-import { fromBuffer, toBuffer } from "@/common/utils";
+import { idb, pgp, PgPromiseQuery } from "@/common/db";
+import { toBuffer } from "@/common/utils";
 import { AbstractRabbitMqJobHandler, BackoffStrategy } from "@/jobs/abstract-rabbit-mq-job-handler";
 import { logger } from "@/common/logger";
 import { recalcTokenCountQueueJob } from "@/jobs/collection-updates/recalc-token-count-queue-job";
@@ -18,8 +18,7 @@ import * as royalties from "@/utils/royalties";
 import * as marketplaceFees from "@/utils/marketplace-fees";
 import MetadataProviderRouter from "@/metadata/metadata-provider-router";
 import PgPromise from "pg-promise";
-import { resyncUserCollectionsJob } from "@/jobs/nft-balance-updates/reynsc-user-collections-job";
-import { updateUserCollectionsJob } from "@/jobs/nft-balance-updates/update-user-collections-job";
+import { tokenReassignedUserCollectionsJob } from "@/jobs/nft-balance-updates/token-reassigned-user-collections-job";
 
 export type NewCollectionForTokenJobPayload = {
   contract: string;
@@ -233,38 +232,7 @@ export class NewCollectionForTokenJob extends AbstractRabbitMqJobHandler {
         collection: oldCollectionId,
       });
 
-      // Resync owners collections count
-      const results = await ridb.manyOrNone(
-        `
-        SELECT owner, amount
-        FROM nft_balances
-        WHERE contract = $/contract/
-        AND token_id = $/tokenId/
-        AND amount > 0
-      `,
-        {
-          contract: toBuffer(contract),
-          tokenId,
-        }
-      );
-
-      if (results) {
-        for (const result of results) {
-          const user = fromBuffer(result.owner);
-
-          await Promise.all([
-            resyncUserCollectionsJob.addToQueue({ user, collectionId: oldCollectionId }),
-            await updateUserCollectionsJob.addToQueue([
-              {
-                toAddress: user,
-                contract,
-                tokenId,
-                amount: result.amount,
-              },
-            ]),
-          ]);
-        }
-      }
+      await tokenReassignedUserCollectionsJob.addToQueue({ oldCollectionId, tokenId, contract });
 
       // If this is a new collection, recalculate floor price
       const floorAskInfo = {
