@@ -30,13 +30,13 @@ export default class UpdateUserCollectionsJob extends AbstractRabbitMqJobHandler
     const { fromAddress, toAddress, contract, tokenId, amount } = payload;
     const queries = [];
 
-    // Get the collection by token range
-    let collection = await Collections.getByContractAndTokenId(contract, Number(tokenId));
+    // Try to get the collection from the token record
+    let collection = await Tokens.getCollection(contract, tokenId);
 
     // If no collection found throw an error to trigger a retry
     if (!collection) {
-      // Try to get the collection from the token record
-      collection = await Tokens.getCollection(contract, tokenId);
+      // Get the collection by token range
+      collection = await Collections.getByContractAndTokenId(contract, Number(tokenId));
 
       if (!collection) {
         // Try refreshing the token
