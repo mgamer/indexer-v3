@@ -48,6 +48,10 @@ export type AbiParam =
   | {
       kind: "custom";
       abiType: string;
+    }
+  | {
+      kind: "components";
+      params: AbiParam[];
     };
 
 export type MintTxSchema = {
@@ -127,192 +131,213 @@ export const generateCollectionMintTxData = async (
   const abiData: { abiType: string; abiValue: any }[] = [];
 
   const tx = collectionMint.details.tx;
-  for (const p of tx.data.params) {
-    switch (p.kind) {
-      case "contract": {
-        abiData.push({
-          abiType: p.abiType,
-          abiValue: collectionMint.contract,
-        });
 
-        break;
-      }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async function encodeParams(abiData: { abiType: string; abiValue: any }[], params: AbiParam[]) {
+    for (const p of params) {
+      switch (p.kind) {
+        case "contract": {
+          abiData.push({
+            abiType: p.abiType,
+            abiValue: collectionMint.contract,
+          });
 
-      case "quantity": {
-        abiData.push({
-          abiType: p.abiType,
-          abiValue: quantity,
-        });
+          break;
+        }
 
-        break;
-      }
+        case "quantity": {
+          abiData.push({
+            abiType: p.abiType,
+            abiValue: quantity,
+          });
 
-      case "recipient": {
-        abiData.push({
-          abiType: p.abiType,
-          abiValue: minter,
-        });
+          break;
+        }
 
-        break;
-      }
+        case "recipient": {
+          abiData.push({
+            abiType: p.abiType,
+            abiValue: minter,
+          });
 
-      case "comment": {
-        abiData.push({
-          abiType: p.abiType,
-          abiValue: options?.comment ?? "",
-        });
+          break;
+        }
 
-        break;
-      }
+        case "comment": {
+          abiData.push({
+            abiType: p.abiType,
+            abiValue: options?.comment ?? "",
+          });
 
-      case "referrer": {
-        abiData.push({
-          abiType: p.abiType,
-          abiValue: options?.referrer ?? DEFAULT_REFERRER,
-        });
+          break;
+        }
 
-        break;
-      }
+        case "referrer": {
+          abiData.push({
+            abiType: p.abiType,
+            abiValue: options?.referrer ?? DEFAULT_REFERRER,
+          });
 
-      case "allowlist": {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        let abiValue: any;
+          break;
+        }
 
-        switch (collectionMint.standard) {
-          case "decent": {
-            if (allowlistItemIndex === 0) {
-              abiValue = allowlistData.max_mints;
-            } else if (allowlistItemIndex === 1) {
-              abiValue = allowlistData.price;
-            } else {
-              abiValue = await mints.decent.generateProofValue(collectionMint, minter);
-            }
+        case "allowlist": {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          let abiValue: any;
 
-            break;
-          }
-
-          case "manifold": {
-            if (allowlistItemIndex === 0) {
-              abiValue = [(await mints.manifold.generateProofValue(collectionMint, minter)).value];
-            } else {
-              abiValue = [
-                (await mints.manifold.generateProofValue(collectionMint, minter)).merkleProof,
-              ];
-            }
-
-            break;
-          }
-
-          case "thirdweb": {
-            if (allowlistItemIndex === 0) {
-              abiValue = allowlistData.price ?? collectionMint.price;
-            } else {
-              abiValue = await mints.thirdweb.generateProofValue(collectionMint, minter);
-            }
-
-            break;
-          }
-
-          case "zora": {
-            if (collectionMint.tokenId) {
-              // ERC1155
-              const proofData = await mints.zora.generateProofValue(collectionMint, minter);
-              abiValue = defaultAbiCoder.encode(
-                ["address", "uint256", "uint256", "bytes32[]"],
-                [minter, proofData.maxCanMint, proofData.price, proofData.proof]
-              );
-            } else {
-              // ERC721
+          switch (collectionMint.standard) {
+            case "decent": {
               if (allowlistItemIndex === 0) {
                 abiValue = allowlistData.max_mints;
               } else if (allowlistItemIndex === 1) {
                 abiValue = allowlistData.price;
               } else {
-                abiValue = (await mints.zora.generateProofValue(collectionMint, minter)).proof;
+                abiValue = await mints.decent.generateProofValue(collectionMint, minter);
               }
+
+              break;
             }
 
-            break;
-          }
+            case "manifold": {
+              if (allowlistItemIndex === 0) {
+                abiValue = [
+                  (await mints.manifold.generateProofValue(collectionMint, minter)).value,
+                ];
+              } else {
+                abiValue = [
+                  (await mints.manifold.generateProofValue(collectionMint, minter)).merkleProof,
+                ];
+              }
 
-          case "foundation": {
-            if (allowlistItemIndex === 0) {
-              abiValue = await mints.foundation.generateProofValue(collectionMint, minter);
+              break;
             }
 
-            break;
+            case "thirdweb": {
+              if (allowlistItemIndex === 0) {
+                abiValue = allowlistData.price ?? collectionMint.price;
+              } else {
+                abiValue = await mints.thirdweb.generateProofValue(collectionMint, minter);
+              }
+
+              break;
+            }
+
+            case "zora": {
+              if (collectionMint.tokenId) {
+                // ERC1155
+                const proofData = await mints.zora.generateProofValue(collectionMint, minter);
+                abiValue = defaultAbiCoder.encode(
+                  ["address", "uint256", "uint256", "bytes32[]"],
+                  [minter, proofData.maxCanMint, proofData.price, proofData.proof]
+                );
+              } else {
+                // ERC721
+                if (allowlistItemIndex === 0) {
+                  abiValue = allowlistData.max_mints;
+                } else if (allowlistItemIndex === 1) {
+                  abiValue = allowlistData.price;
+                } else {
+                  abiValue = (await mints.zora.generateProofValue(collectionMint, minter)).proof;
+                }
+              }
+
+              break;
+            }
+
+            case "foundation": {
+              if (allowlistItemIndex === 0) {
+                abiValue = await mints.foundation.generateProofValue(collectionMint, minter);
+              }
+
+              break;
+            }
+
+            case "mintdotfun": {
+              if (allowlistItemIndex === 0) {
+                abiValue = await mints.mintdotfun.generateProofValue(
+                  collectionMint,
+                  minter,
+                  options?.referrer ?? DEFAULT_REFERRER
+                );
+              }
+              break;
+            }
+
+            case "soundxyz": {
+              if (allowlistItemIndex === 0) {
+                abiValue = await mints.soundxyz.generateProofValue(collectionMint, minter);
+              }
+              break;
+            }
+
+            default: {
+              throw new Error("Allowlist fields not supported");
+            }
           }
 
-          case "mintdotfun": {
-            if (allowlistItemIndex === 0) {
-              abiValue = await mints.mintdotfun.generateProofValue(
-                collectionMint,
-                minter,
-                options?.referrer ?? DEFAULT_REFERRER
+          // We use the relative index of the `allowlist` parameter to determine the current value
+          allowlistItemIndex++;
+
+          abiData.push({
+            abiType: p.abiType,
+            abiValue,
+          });
+
+          break;
+        }
+
+        case "custom": {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          let abiValue: any;
+
+          switch (collectionMint.standard) {
+            case "zora": {
+              abiValue = defaultAbiCoder.encode(
+                ["bytes32"],
+                ["0x" + minter.slice(2).padStart(64, "0")]
               );
+              break;
             }
-            break;
+
+            default: {
+              throw new Error("Custom fields not supported");
+            }
           }
 
-          case "soundxyz": {
-            if (allowlistItemIndex === 0) {
-              abiValue = await mints.soundxyz.generateProofValue(collectionMint, minter);
-            }
-            break;
-          }
+          abiData.push({
+            abiType: p.abiType,
+            abiValue: abiValue,
+          });
 
-          default: {
-            throw new Error("Allowlist fields not supported");
-          }
+          break;
         }
 
-        // We use the relative index of the `allowlist` parameter to determine the current value
-        allowlistItemIndex++;
+        case "components": {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const refAbiData: { abiType: string; abiValue: any }[] = [];
+          await encodeParams(refAbiData, p.params);
+          const abiType = "(" + refAbiData.map((c) => `${c.abiType}`).join(",") + ")";
+          abiData.push({
+            abiType: abiType,
+            abiValue: refAbiData.map((c) => c.abiValue),
+          });
 
-        abiData.push({
-          abiType: p.abiType,
-          abiValue,
-        });
-
-        break;
-      }
-
-      case "custom": {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        let abiValue: any;
-
-        switch (collectionMint.standard) {
-          case "zora": {
-            abiValue = defaultAbiCoder.encode(
-              ["bytes32"],
-              ["0x" + minter.slice(2).padStart(64, "0")]
-            );
-            break;
-          }
-
-          default: {
-            throw new Error("Custom fields not supported");
-          }
+          break;
         }
 
-        abiData.push({
-          abiType: p.abiType,
-          abiValue: abiValue,
-        });
+        default: {
+          abiData.push({
+            abiType: p.abiType,
+            abiValue: p.abiValue,
+          });
 
-        break;
-      }
-
-      default: {
-        abiData.push({
-          abiType: p.abiType,
-          abiValue: p.abiValue,
-        });
-
-        break;
+          break;
+        }
       }
     }
   }
+
+  await encodeParams(abiData, tx.data.params);
 
   const data =
     tx.data.signature +
