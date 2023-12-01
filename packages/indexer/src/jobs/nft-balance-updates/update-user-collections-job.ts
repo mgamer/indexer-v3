@@ -7,6 +7,7 @@ import _ from "lodash";
 import { metadataIndexFetchJob } from "@/jobs/metadata-index/metadata-fetch-job";
 import { Tokens } from "@/models/tokens";
 import { Collections } from "@/models/collections";
+import { config } from "@/config/index";
 
 export type UpdateUserCollectionsJobPayload = {
   fromAddress?: string;
@@ -19,7 +20,7 @@ export type UpdateUserCollectionsJobPayload = {
 export default class UpdateUserCollectionsJob extends AbstractRabbitMqJobHandler {
   queueName = "user-collections";
   maxRetries = 15;
-  concurrency = 5;
+  concurrency = config.chainId === 56 ? 1 : 5;
   lazyMode = true;
   backoff = {
     type: "exponential",
