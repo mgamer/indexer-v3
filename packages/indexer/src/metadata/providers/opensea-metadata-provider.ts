@@ -88,43 +88,42 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
   protected async _getTokensMetadata(
     tokens: { contract: string; tokenId: string }[]
   ): Promise<TokenMetadata[]> {
-    const searchParams = new URLSearchParams();
+    const tokensMetadata: any[] = [];
     for (const { contract, tokenId } of tokens) {
-      searchParams.append("asset_contract_addresses", contract);
-      searchParams.append("token_ids", tokenId);
+      const url = `${
+        !this.isOSTestnet() ? "https://api.opensea.io" : "https://testnets-api.opensea.io"
+      }/api/v2/chain/${getOpenseaNetworkName()}/contract/${contract}/nfts/${tokenId}`;
+
+      const data = await axios
+        .get(!this.isOSTestnet() ? config.openSeaApiUrl || url : url, {
+          headers: !this.isOSTestnet()
+            ? {
+                url,
+                "X-API-KEY": config.openSeaTokenMetadataApiKey.trim(),
+                Accept: "application/json",
+              }
+            : {
+                Accept: "application/json",
+              },
+        })
+        .then((response) => response.data)
+        .catch((error) => {
+          logger.error(
+            "opensea-fetcher",
+            `fetchTokens error. url:${url}, message:${error.message},  status:${
+              error.response?.status
+            }, data:${JSON.stringify(error.response?.data)}, url:${JSON.stringify(
+              error.config?.url
+            )}, headers:${JSON.stringify(error.config?.headers?.url)}`
+          );
+
+          this.handleError(error);
+        });
+
+      tokensMetadata.push(data.nft);
     }
 
-    const url = `${
-      !this.isOSTestnet() ? "https://api.opensea.io" : "https://testnets-api.opensea.io"
-    }/api/v1/assets?${searchParams.toString()}`;
-
-    const data = await axios
-      .get(!this.isOSTestnet() ? config.openSeaApiUrl || url : url, {
-        headers: !this.isOSTestnet()
-          ? {
-              url,
-              "X-API-KEY": config.openSeaTokenMetadataApiKey.trim(),
-              Accept: "application/json",
-            }
-          : {
-              Accept: "application/json",
-            },
-      })
-      .then((response) => response.data)
-      .catch((error) => {
-        logger.error(
-          "opensea-fetcher",
-          `fetchTokens error. url:${url}, message:${error.message},  status:${
-            error.response?.status
-          }, data:${JSON.stringify(error.response?.data)}, url:${JSON.stringify(
-            error.config?.url
-          )}, headers:${JSON.stringify(error.config?.headers?.url)}`
-        );
-
-        this.handleError(error);
-      });
-
-    return data.assets.map(this.parseToken).filter(Boolean);
+    return tokensMetadata.map(this.parseToken).filter(Boolean);
   }
 
   protected async _getTokensMetadataBySlug(
@@ -370,19 +369,19 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
 
   parseToken(metadata: any): TokenMetadata {
     return {
-      contract: metadata.asset_contract.address,
-      tokenId: metadata.token_id,
-      collection: _.toLower(metadata.asset_contract.address),
-      slug: metadata.collection.slug,
+      contract: metadata.contract,
+      tokenId: metadata.identifier,
+      collection: _.toLower(metadata.contract),
+      slug: metadata.collection,
       name: metadata.name,
-      flagged: metadata.supports_wyvern != null ? !metadata.supports_wyvern : false,
+      flagged: metadata.is_disabled,
       // Token descriptions are a waste of space for most collections we deal with
       // so by default we ignore them (this behaviour can be overridden if needed).
       description: metadata.description,
       imageUrl: metadata.image_url,
-      imageOriginalUrl: metadata.image_original_url,
-      animationOriginalUrl: metadata.animation_original_url,
-      metadataOriginalUrl: metadata.token_metadata,
+      imageOriginalUrl: metadata.image_url,
+      animationOriginalUrl: metadata.animation_url,
+      metadataOriginalUrl: metadata.metadata_url,
       mediaUrl: metadata.animation_url,
       attributes: (metadata.traits || []).map((trait: any) => ({
         key: trait.trait_type ?? "property",
