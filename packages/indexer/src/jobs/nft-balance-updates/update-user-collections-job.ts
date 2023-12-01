@@ -19,7 +19,7 @@ export type UpdateUserCollectionsJobPayload = {
 export default class UpdateUserCollectionsJob extends AbstractRabbitMqJobHandler {
   queueName = "user-collections";
   maxRetries = 15;
-  concurrency = 1;
+  concurrency = 10;
   lazyMode = true;
   backoff = {
     type: "exponential",
