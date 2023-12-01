@@ -1,4 +1,4 @@
-import { idb, pgp } from "@/common/db";
+import { edb, pgp } from "@/common/db";
 import { AbstractRabbitMqJobHandler, BackoffStrategy } from "@/jobs/abstract-rabbit-mq-job-handler";
 import { toBuffer } from "@/common/utils";
 import { AddressZero } from "@ethersproject/constants";
@@ -81,7 +81,7 @@ export default class UpdateUserCollectionsJob extends AbstractRabbitMqJobHandler
     }
 
     if (!_.isEmpty(queries)) {
-      await idb.none(pgp.helpers.concat(queries), {
+      await edb.none(pgp.helpers.concat(queries), {
         fromAddress: fromAddress ? toBuffer(fromAddress) : "",
         toAddress: toBuffer(toAddress),
         collection: collection.id,
