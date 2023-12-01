@@ -53,7 +53,7 @@ export default class TokenReassignedUserCollectionsJob extends AbstractRabbitMqJ
         AND amount > 0
         ${cursor}
         ORDER BY owner ASC
-        LIMIT $/LIMIT/
+        LIMIT $/limit/
       `,
       values
     );
