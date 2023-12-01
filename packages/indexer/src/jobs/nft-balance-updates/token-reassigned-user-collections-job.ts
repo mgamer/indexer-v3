@@ -87,6 +87,8 @@ export default class TokenReassignedUserCollectionsJob extends AbstractRabbitMqJ
         };
       }
     }
+
+    return { addToQueue: false };
   }
 
   public async onCompleted(
