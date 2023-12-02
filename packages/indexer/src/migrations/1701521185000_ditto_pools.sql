@@ -4,7 +4,7 @@ CREATE TABLE "ditto_pools" (
   "address" BYTEA NOT NULL,
   "template" BYTEA NOT NULL,
   "lp_nft" BYTEA NOT NULL,
-  "permitter" INTEGER NOT NULL
+  "permitter" BYTEA NOT NULL
 );
 
 ALTER TABLE "ditto_pools"
