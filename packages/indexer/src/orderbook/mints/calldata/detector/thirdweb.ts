@@ -113,7 +113,7 @@ export const extractByCollectionERC721 = async (collection: string): Promise<Col
                       abiType: "(bytes32[],uint256,uint256,address)",
                       abiValue: [
                         [HashZero],
-                        claimCondition.maxClaimableSupply.toString() ?? 0,
+                        claimCondition.quantityLimitPerWallet.toString() ?? 0,
                         price,
                         currency,
                       ],
