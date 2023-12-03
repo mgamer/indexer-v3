@@ -26,6 +26,7 @@ import { CollectionSets } from "@/models/collection-sets";
 import { Sources } from "@/models/sources";
 import { ContractSets } from "@/models/contract-sets";
 import { Orders } from "@/utils/orders";
+import { ApiKeyManager } from "@/models/api-keys";
 
 const version = "v5";
 
@@ -200,6 +201,17 @@ export const getOrdersBidsV5Options: RouteOptions = {
   handler: async (request: Request) => {
     const query = request.query as any;
 
+    if (config.chainId === 137) {
+      const apiKey = await ApiKeyManager.getApiKey(request.headers["x-api-key"]);
+
+      if (apiKey?.key === "2928d17a-93f9-54e8-bba8-d416dda826f9") {
+        return {
+          orders: [],
+          continuation: null,
+        };
+      }
+    }
+
     try {
       // Since we treat Blur bids as a generic pool we cannot use the `orders`
       // table to fetch all the bids of a particular maker. However, filtering
@@ -303,7 +315,8 @@ export const getOrdersBidsV5Options: RouteOptions = {
       const criteriaBuildQuery = Orders.buildCriteriaQuery(
         "orders",
         "token_set_id",
-        query.includeCriteriaMetadata
+        query.includeCriteriaMetadata,
+        "token_set_schema_hash"
       );
 
       let baseQuery = `
