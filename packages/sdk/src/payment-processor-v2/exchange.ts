@@ -353,23 +353,23 @@ export class Exchange {
           [
             "bytes32",
             `(
-            uint8 protocol,
-            address maker,
-            address beneficiary,
-            address marketplace,
-            address fallbackRoyaltyRecipient,
-            address paymentMethod,
-            address tokenAddress,
-            uint256 tokenId,
-            uint248 amount,
-            uint256 itemPrice,
-            uint256 nonce,
-            uint256 expiration,
-            uint256 marketplaceFeeNumerator,
-            uint256 maxRoyaltyFeeNumerator,
-            uint248 requestedFillAmount,
-            uint248 minimumFillAmount
-          )[]`,
+              uint8 protocol,
+              address maker,
+              address beneficiary,
+              address marketplace,
+              address fallbackRoyaltyRecipient,
+              address paymentMethod,
+              address tokenAddress,
+              uint256 tokenId,
+              uint248 amount,
+              uint256 itemPrice,
+              uint256 nonce,
+              uint256 expiration,
+              uint256 marketplaceFeeNumerator,
+              uint256 maxRoyaltyFeeNumerator,
+              uint248 requestedFillAmount,
+              uint248 minimumFillAmount
+            )[]`,
             "(uint8 v, bytes32 r, bytes32 s)[]",
             "(address signer, address taker, uint256 expiration, uint8 v, bytes32 r, bytes32 s)[]",
             "(address recipient, uint256 amount)[]",
@@ -472,8 +472,6 @@ export class Exchange {
     if (options?.trustedChannel) {
       tx = this.forwardCallTx(tx, options?.trustedChannel, options);
     }
-
-    tx.data = tx.data + generateSourceBytes(options?.source);
 
     return tx;
   }
