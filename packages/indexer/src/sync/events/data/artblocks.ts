@@ -4,34 +4,6 @@ import { ArtBlocks } from "@reservoir0x/sdk";
 import { config } from "@/config/index";
 import { EventData } from "@/events-sync/data";
 
-// Project is created on CollectionContract
-// event is ProjectUpdated(projectId, FIELD_PROJECT_CREATED);
-
-// Project is activated / deactivate on the CollecitonContract
-// event is ProjectUpdated(projectId, FIELD_PROJECT_ACTIVE);
-
-// Project minting is paused / unpaused on the CollectionContract
-// event is ProjectUpdated(projectId, FIELD_PROJECT_PAUSED);
-
-// Project Minter is set on MinterFilter
-// event is ProjectMinterRegistered(projectId, _minterAddress, IFilteredMinterV0(_minterAddress).minterType());
-
-// Project Minter is removed on MinterFilter
-// event is ProjectMinterRemoved(projectId);
-
-// Project price is configured on MinterTypedContract
-
-// MinterSetPriceV4 0x234b25288011081817b5cc199c3754269ccb76d2
-// When price is changed, event is  PricePerTokenInWeiUpdated(projectId, _pricePerTokenInWei);
-
-// MinterDAExpSettlementV1 0xfdE58c821D1c226b4a45c22904de20b114EDe7E7
-// emit SetAuctionDetails( projectId, _auctionTimestampStart, _priceDecayHalfLifeSeconds, _startPrice, _basePrice );
-
-// MinterMerkleV5 0xB8Bd1D2836C466DB149f665F777928bEE267304d
-// allowlist
-// emit PricePerTokenInWeiUpdated(projectId, _pricePerTokenInWei);
-// @TODO: ask artblocks where to get the merkletree?
-
 let abi: Interface;
 
 abi = new Interface([`event ProjectUpdated(uint256 indexed projectId, bytes32 indexed update)`]);
