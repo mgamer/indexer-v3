@@ -14,7 +14,7 @@ import {
   getCollectionMints,
   simulateAndUpsertCollectionMint,
 } from "@/orderbook/mints";
-import { getStatus, toSafeTimestamp } from "@/orderbook/mints/calldata/helpers";
+import { getStatus, toSafeNumber, toSafeTimestamp } from "@/orderbook/mints/calldata/helpers";
 
 const STANDARD = "soundxyz";
 
@@ -219,8 +219,8 @@ export const extractByCollection = async (
           },
           currency: Sdk.Common.Addresses.Native[config.chainId],
           price,
-          maxMintsPerWallet: mintInfo.maxMintablePerAccount,
-          maxSupply: mintInfo.maxMintable,
+          maxMintsPerWallet: toSafeNumber(mintInfo.maxMintablePerAccount),
+          maxSupply: toSafeNumber(mintInfo.maxMintable),
           startTime: toSafeTimestamp(mintInfo.startTime),
           endTime: toSafeTimestamp(mintInfo.endTime),
         });
@@ -313,8 +313,8 @@ export const extractByCollection = async (
           },
           currency: Sdk.Common.Addresses.Native[config.chainId],
           price,
-          maxMintsPerWallet: mintInfo.maxMintablePerAccount,
-          maxSupply: mintInfo.maxMintableUpper,
+          maxMintsPerWallet: toSafeNumber(mintInfo.maxMintablePerAccount),
+          maxSupply: toSafeNumber(mintInfo.maxMintableUpper),
           startTime: toSafeTimestamp(mintInfo.startTime),
           endTime: toSafeTimestamp(mintInfo.cutoffTime),
         });
@@ -410,8 +410,8 @@ export const extractByCollection = async (
           },
           currency: Sdk.Common.Addresses.Native[config.chainId],
           price,
-          maxMintsPerWallet: mintInfo.maxMintablePerAccount,
-          maxSupply: mintInfo.maxMintable,
+          maxMintsPerWallet: toSafeNumber(mintInfo.maxMintablePerAccount),
+          maxSupply: toSafeNumber(mintInfo.maxMintable),
           startTime: toSafeTimestamp(mintInfo.startTime),
           endTime: toSafeTimestamp(mintInfo.cutoffTime),
           allowlistId: mintInfo.merkleRoot,
@@ -512,8 +512,7 @@ export const extractByCollection = async (
         },
         currency: Sdk.Common.Addresses.Native[config.chainId],
         price,
-        maxSupply: mintInfo.maxSupply,
-        startTime: undefined,
+        maxSupply: toSafeNumber(mintInfo.maxSupply),
         endTime: toSafeTimestamp(mintInfo.buyFreezeTime),
       });
     }
