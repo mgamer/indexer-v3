@@ -3,6 +3,7 @@ import { Contract } from "@ethersproject/contracts";
 import { BigNumber } from "@ethersproject/bignumber";
 
 import { logger } from "@/common/logger";
+import { bn } from "@/common/utils";
 import { baseProvider } from "@/common/provider";
 import { Transaction } from "@/models/transactions";
 import {
@@ -46,6 +47,30 @@ interface MinterTypePriceInfo {
   currencySymbol: string;
   currencyAddress: string;
 }
+
+// Mimick ArtBlocks `_getPrice()` method for DA projects
+export const getPrice = async (daConfig: DAConfigInfo) => {
+  const latestBlock = await baseProvider.getBlockNumber();
+  const timestamp = await baseProvider.getBlock(latestBlock - 1).then((b) => b.timestamp);
+
+  const elapsedTimeSeconds = timestamp - daConfig.timestampStart;
+
+  let decayedPrice = bn(daConfig.startPrice).div(
+    bn(2).pow(Math.floor(elapsedTimeSeconds / daConfig.priceDecayHalfLifeSeconds))
+  );
+  decayedPrice = decayedPrice.sub(
+    decayedPrice
+      .mul(elapsedTimeSeconds % daConfig.priceDecayHalfLifeSeconds)
+      .div(daConfig.priceDecayHalfLifeSeconds)
+      .div(2)
+  );
+
+  if (decayedPrice.lt(daConfig.basePrice)) {
+    return daConfig.basePrice;
+  }
+
+  return decayedPrice.toString();
+};
 
 export const extractByCollectionERC721 = async (
   collection: string,
@@ -171,10 +196,10 @@ export const extractByCollectionERC721 = async (
               );
 
               const daInfo = await minterContract.projectAuctionParameters(projectId);
-
               const startTime = daInfo.timestampStart.toNumber();
-              result.startTime = startTime;
 
+              // Enhance with `startTime` and `daConfig`
+              result.startTime = startTime;
               (result.details.info! as Info).daConfig = {
                 timestampStart: startTime,
                 priceDecayHalfLifeSeconds: daInfo.priceDecayHalfLifeSeconds.toNumber(),
