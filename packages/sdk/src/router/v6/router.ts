@@ -29,8 +29,6 @@ import {
   MintDetails,
   NFTApproval,
   PerCurrencyListingDetails,
-  PerChannelBidDetails,
-  PerChannelListingDetails,
   PerPoolSwapDetails,
   PreSignature,
   SwapDetail,
@@ -461,13 +459,15 @@ export class Router {
 
       const allPPv2Details = details.filter(({ kind }) => kind === "payment-processor-v2");
 
-      // Handle Tusted Channel
-      const hasTrustedChannelDetails = allPPv2Details.filter((c) => c.extraArgs?.trustedChannel);
-      if (hasTrustedChannelDetails.length) {
-        const channelDetails: PerChannelListingDetails = {};
-        for (const detail of hasTrustedChannelDetails) {
+      // Aggregate trusted channel listings by the channel they're using
+      const trustedChannelDetails = allPPv2Details.filter((c) => c.extraArgs?.trustedChannel);
+      if (trustedChannelDetails.length) {
+        const channelDetails: { [channel: string]: ListingDetails[] } = {};
+        for (const detail of trustedChannelDetails) {
           const channel = detail.extraArgs?.trustedChannel;
-          if (!channelDetails[channel]) channelDetails[channel] = [];
+          if (!channelDetails[channel]) {
+            channelDetails[channel] = [];
+          }
           channelDetails[channel].push(detail);
         }
 
@@ -478,6 +478,7 @@ export class Router {
         }
       }
 
+      // All other non-trusted channel listings are handled separately
       const nonChannelDetails = allPPv2Details.filter((c) => !c.extraArgs?.trustedChannel);
       splittedDetails.push(nonChannelDetails);
 
@@ -534,16 +535,12 @@ export class Router {
               listings: { "payment-processor-v2": orders.length },
             },
             preSignatures: [],
-            txData: exchange.sweepCollectionTx(
-              taker,
-              orders,
-              {
-                source: options?.source,
-                fee: allFees[0][0],
-                relayer: options?.relayer,
-              },
-              trustedChannel
-            ),
+            txData: exchange.sweepCollectionTx(taker, orders, {
+              trustedChannel,
+              source: options?.source,
+              fee: allFees[0][0],
+              relayer: options?.relayer,
+            }),
             orderIds: ppv2Details.map((d) => d.orderId),
           });
         } else {
@@ -564,11 +561,11 @@ export class Router {
                 };
               }),
               {
+                trustedChannel,
                 source: options?.source,
                 fees: allFees.map((c) => c[0]),
                 relayer: options?.relayer,
-              },
-              trustedChannel
+              }
             ),
             orderIds: ppv2Details.map((d) => d.orderId),
           });
@@ -3826,13 +3823,15 @@ export class Router {
 
       const allPPv2Details = details.filter(({ kind }) => kind === "payment-processor-v2");
 
-      // Handle Tusted Channel
-      const hasTrustedChannelDetails = allPPv2Details.filter((c) => c.extraArgs?.trustedChannel);
-      if (hasTrustedChannelDetails.length) {
-        const channelDetails: PerChannelBidDetails = {};
-        for (const detail of hasTrustedChannelDetails) {
+      // Aggregate trusted channel bids by the channel they're using
+      const trustedChannelDetails = allPPv2Details.filter((c) => c.extraArgs?.trustedChannel);
+      if (trustedChannelDetails.length) {
+        const channelDetails: { [channel: string]: BidDetails[] } = {};
+        for (const detail of trustedChannelDetails) {
           const channel = detail.extraArgs?.trustedChannel;
-          if (!channelDetails[channel]) channelDetails[channel] = [];
+          if (!channelDetails[channel]) {
+            channelDetails[channel] = [];
+          }
           channelDetails[channel].push(detail);
         }
 
@@ -3843,6 +3842,7 @@ export class Router {
         }
       }
 
+      // All other non-trusted channel bids are handled separately
       const nonChannelDetails = allPPv2Details.filter((c) => !c.extraArgs?.trustedChannel);
       splittedDetails.push(nonChannelDetails);
 
@@ -3885,8 +3885,11 @@ export class Router {
                 ...(details[i].extraArgs ?? {}),
               };
             }),
-            { fees: allFees.map((c) => c[0]) },
-            trustedChannel
+            {
+              trustedChannel,
+              source: options?.source,
+              fees: allFees.map((c) => c[0]),
+            }
           ),
           orderIds: [...new Set(ppv2Details.map((d) => d.orderId))],
         });

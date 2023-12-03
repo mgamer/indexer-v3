@@ -104,6 +104,7 @@ export type BaseOrder = {
   // Internally we store the token-sets based on the Seaport logic
   seaportStyleMerkleRoot?: string;
   fallbackRoyaltyRecipient?: string;
+
   cosignature?: Cosignature;
 
   v?: number;

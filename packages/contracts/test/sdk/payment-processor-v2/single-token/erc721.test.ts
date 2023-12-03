@@ -1,3 +1,4 @@
+import { Interface } from "@ethersproject/abi";
 import { Contract } from "@ethersproject/contracts";
 import { parseEther } from "@ethersproject/units";
 import * as Common from "@reservoir0x/sdk/src/common";
@@ -7,7 +8,6 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-wit
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import { constants } from "ethers";
-import { Interface } from "@ethersproject/abi";
 
 import { bn, getChainId, getCurrentTimestamp, reset, setupNFTs } from "../../../utils";
 
@@ -978,7 +978,7 @@ describe("PaymentProcessorV2 - SingleToken Erc721", () => {
     expect(ownerAfter2).to.eq(buyer.address);
   });
 
-  it("Build and fill multiple sell orders with trusted channel", async () => {
+  it("Build and fill multiple sell orders via a trusted channel", async () => {
     const buyer = alice;
     const seller = bob;
     const price = parseEther("1");
@@ -1047,8 +1047,6 @@ describe("PaymentProcessorV2 - SingleToken Erc721", () => {
     sellOrder2.checkSignature();
     await sellOrder2.checkFillability(ethers.provider);
 
-    const sellerBalanceBefore = await ethers.provider.getBalance(seller.address);
-
     const router = new Sdk.RouterV6.Router(chainId, ethers.provider);
     const nonPartialTx = await router.fillListingsTx(
       [
@@ -1068,8 +1066,8 @@ describe("PaymentProcessorV2 - SingleToken Erc721", () => {
             },
           ],
           extraArgs: {
-            trustedChannel: constants.AddressZero
-          }
+            trustedChannel: constants.AddressZero,
+          },
         },
         {
           orderId: "2",
@@ -1091,27 +1089,11 @@ describe("PaymentProcessorV2 - SingleToken Erc721", () => {
     );
 
     const forwardSelector = new Interface([
-      `function forwardCall(address target, bytes calldata message) external payable`,
+      "function forwardCall(address target, bytes calldata message) external payable",
     ]).getSighash("forwardCall");
 
     expect(nonPartialTx.txs.length).to.eq(2);
-    expect(
-      nonPartialTx.txs[0].txData.data.includes(forwardSelector)
-    ).to.eq(true);
-    expect(
-      nonPartialTx.txs[1].txData.data.includes(forwardSelector)
-    ).to.eq(false);
-    // for (const tx of nonPartialTx.txs) {
-    //   await relayer.sendTransaction(tx.txData);
-    // }
-
-    // const sellerBalanceAfter = await ethers.provider.getBalance(seller.address);
-    // const ownerAfter = await nft.getOwner(soldTokenId);
-    // const ownerAfter2 = await nft.getOwner(soldTokenId2);
-    // const receiveAmount = sellerBalanceAfter.sub(sellerBalanceBefore);
-
-    // expect(receiveAmount).to.gte(price.mul(2));
-    // expect(ownerAfter).to.eq(buyer.address);
-    // expect(ownerAfter2).to.eq(buyer.address);
+    expect(nonPartialTx.txs[0].txData.data.includes(forwardSelector)).to.eq(true);
+    expect(nonPartialTx.txs[1].txData.data.includes(forwardSelector)).to.eq(false);
   });
 });

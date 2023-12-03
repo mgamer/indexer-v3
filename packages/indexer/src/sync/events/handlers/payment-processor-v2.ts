@@ -1,17 +1,19 @@
-import { Result, defaultAbiCoder } from "@ethersproject/abi";
+import { Interface, Result, defaultAbiCoder } from "@ethersproject/abi";
 import { Log } from "@ethersproject/abstract-provider";
 import { HashZero } from "@ethersproject/constants";
+import { Contract } from "@ethersproject/contracts";
 import { searchForCall } from "@georgeroman/evm-tx-simulator";
 import * as Sdk from "@reservoir0x/sdk";
 
+import { baseProvider } from "@/common/provider";
 import { config } from "@/config/index";
 import { getEventData } from "@/events-sync/data";
 import { EnhancedEvent, OnChainData } from "@/events-sync/handlers/utils";
 import { getERC20Transfer } from "@/events-sync/handlers/utils/erc20";
 import * as utils from "@/events-sync/utils";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
-import { getUSDAndNativePrices } from "@/utils/prices";
 import * as paymentProcessorV2Utils from "@/utils/payment-processor-v2";
+import { getUSDAndNativePrices } from "@/utils/prices";
 
 export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChainData) => {
   // For keeping track of all individual trades per transaction
@@ -535,10 +537,24 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         const tokenAddress = parsedLog.args["tokenAddress"].toLowerCase();
         const channel = parsedLog.args["channel"].toLowerCase();
 
-        const isRemove = subKind.includes("removed");
+        const removed = subKind.includes("removed");
+        if (removed) {
+          await paymentProcessorV2Utils.removeTrustedChannel(tokenAddress, channel);
+        } else {
+          try {
+            const channelContract = new Contract(
+              channel,
+              new Interface(["function signer(address token) view returns (address)"]),
+              baseProvider
+            );
+            const signer = await channelContract.callStatic.signer();
 
-        if (isRemove) await paymentProcessorV2Utils.removeTrustedChannel(tokenAddress, channel);
-        if (!isRemove) await paymentProcessorV2Utils.addTrustedChannel(tokenAddress, channel);
+            await paymentProcessorV2Utils.addTrustedChannel(tokenAddress, channel, signer);
+          } catch {
+            // Skip errors
+          }
+        }
+
         break;
       }
     }

@@ -26,7 +26,6 @@ export * as caviarV1 from "@/orderbook/orders/caviar-v1";
 export * as paymentProcessor from "@/orderbook/orders/payment-processor";
 export * as paymentProcessorV2 from "@/orderbook/orders/payment-processor-v2";
 
-import * as paymentProcessorV2Utils from "@/utils/payment-processor-v2";
 // Imports
 
 import { HashZero } from "@ethersproject/constants";
@@ -41,6 +40,7 @@ import { Sources } from "@/models/sources";
 import { SourcesEntity } from "@/models/sources/sources-entity";
 import { cosigner } from "@/utils/cosign";
 import { checkMarketplaceIsFiltered } from "@/utils/marketplace-blacklists";
+import * as paymentProcessorV2Utils from "@/utils/payment-processor-v2";
 import * as registry from "@/utils/royalties/registry";
 
 // Whenever a new order kind is added, make sure to also include an
@@ -464,6 +464,7 @@ export const generateListingDetailsV6 = async (
       }
 
       const extraArgs: any = {};
+
       const settings = await paymentProcessorV2Utils.getCollectionPaymentSettings(
         rawOrder.params.tokenAddress
       );
@@ -472,7 +473,7 @@ export const generateListingDetailsV6 = async (
           rawOrder.params.tokenAddress
         );
         if (trustedChannels.length) {
-          extraArgs.trustedChannel = trustedChannels[0];
+          extraArgs.trustedChannel = trustedChannels[0].channel;
         }
       }
 
@@ -882,7 +883,7 @@ export const generateBidDetailsV6 = async (
           sdkOrder.params.tokenAddress
         );
         if (trustedChannels.length) {
-          extraArgs.trustedChannel = trustedChannels[0];
+          extraArgs.trustedChannel = trustedChannels[0].channel;
         }
       }
 

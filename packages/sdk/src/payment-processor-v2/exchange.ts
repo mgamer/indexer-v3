@@ -1,11 +1,10 @@
-import { defaultAbiCoder } from "@ethersproject/abi";
+import { Interface, defaultAbiCoder } from "@ethersproject/abi";
 import { Provider } from "@ethersproject/abstract-provider";
 import { Signer } from "@ethersproject/abstract-signer";
 import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
 import { Contract, ContractTransaction } from "@ethersproject/contracts";
 import { _TypedDataEncoder } from "@ethersproject/hash";
-import { Interface } from "@ethersproject/abi";
 
 import * as Addresses from "./addresses";
 import { MatchingOptions } from "./builders/base";
@@ -77,6 +76,7 @@ export class Exchange {
     order: Order,
     matchOptions: MatchingOptions,
     options?: {
+      trustedChannel?: string;
       source?: string;
       relayer?: string;
       fee?: {
@@ -94,14 +94,14 @@ export class Exchange {
     order: Order,
     matchOptions: MatchingOptions,
     options?: {
+      trustedChannel?: string;
       source?: string;
       relayer?: string;
       fee?: {
         recipient: string;
         amount: BigNumberish;
       };
-    },
-    trustedChannel?: string
+    }
   ): TxData {
     const feeOnTop = options?.fee ?? {
       recipient: AddressZero,
@@ -207,11 +207,10 @@ export class Exchange {
       data: data + generateSourceBytes(options?.source),
     };
 
-    if (trustedChannel) {
-      tx = this.forwardCallTx(tx, trustedChannel);
+    if (options?.trustedChannel) {
+      tx = this.forwardCallTx(tx, options?.trustedChannel, options);
     }
 
-    tx.data = tx.data + generateSourceBytes(options?.source);
     return tx;
   }
 
@@ -222,26 +221,21 @@ export class Exchange {
     orders: Order[],
     matchOptions: MatchingOptions[],
     options?: {
+      trustedChannel?: string;
       source?: string;
       relayer?: string;
       fees?: {
         recipient: string;
         amount: BigNumberish;
       }[];
-    },
-    trustedChannel?: string
+    }
   ): TxData {
     if (orders.length === 1) {
-      return this.fillOrderTx(
-        taker,
-        orders[0],
-        matchOptions[0],
-        {
-          source: options?.source,
-          fee: options?.fees?.length ? options.fees[0] : undefined,
-        },
-        trustedChannel
-      );
+      return this.fillOrderTx(taker, orders[0], matchOptions[0], {
+        trustedChannel: options?.trustedChannel,
+        source: options?.source,
+        fee: options?.fees?.length ? options.fees[0] : undefined,
+      });
     }
 
     const sender = options?.relayer ?? taker;
@@ -252,6 +246,8 @@ export class Exchange {
     }[] = [];
 
     let price = bn(0);
+
+    let tx: TxData;
 
     const isBuyOrder = orders[0].isBuyOrder();
     if (isBuyOrder) {
@@ -316,48 +312,47 @@ export class Exchange {
         ),
       ]);
 
-      return {
+      tx = {
         from: sender,
         to: this.contract.address,
         data: data + generateSourceBytes(options?.source),
       };
-    }
+    } else {
+      const saleDetails = orders.map((order, i) => {
+        const matchedOrder = order.buildMatching(matchOptions[i]);
 
-    const saleDetails = orders.map((order, i) => {
-      const matchedOrder = order.buildMatching(matchOptions[i]);
+        const associatedFee =
+          options?.fees && options.fees[i]
+            ? options.fees[i]
+            : {
+                recipient: AddressZero,
+                amount: bn(0),
+              };
 
-      const associatedFee =
-        options?.fees && options.fees[i]
-          ? options.fees[i]
-          : {
-              recipient: AddressZero,
-              amount: bn(0),
-            };
+        const fillAmount = matchOptions[i].amount ?? 1;
+        const fillValue = bn(order.params.itemPrice)
+          .div(order.params.amount)
+          .mul(bn(fillAmount))
+          .add(associatedFee.amount);
 
-      const fillAmount = matchOptions[i].amount ?? 1;
-      const fillValue = bn(order.params.itemPrice)
-        .div(order.params.amount)
-        .mul(bn(fillAmount))
-        .add(associatedFee.amount);
+        const passValue =
+          !order.isBuyOrder() &&
+          order.params.sellerOrBuyer != taker.toLowerCase() &&
+          matchedOrder.paymentMethod === AddressZero;
+        if (passValue) {
+          price = price.add(fillValue);
+        }
 
-      const passValue =
-        !order.isBuyOrder() &&
-        order.params.sellerOrBuyer != taker.toLowerCase() &&
-        matchedOrder.paymentMethod === AddressZero;
-      if (passValue) {
-        price = price.add(fillValue);
-      }
+        allFees.push(associatedFee);
 
-      allFees.push(associatedFee);
+        return matchedOrder;
+      });
 
-      return matchedOrder;
-    });
-
-    const data = this.contract.interface.encodeFunctionData("bulkBuyListings", [
-      defaultAbiCoder.encode(
-        [
-          "bytes32",
-          `(
+      const data = this.contract.interface.encodeFunctionData("bulkBuyListings", [
+        defaultAbiCoder.encode(
+          [
+            "bytes32",
+            `(
             uint8 protocol,
             address maker,
             address beneficiary,
@@ -375,32 +370,32 @@ export class Exchange {
             uint248 requestedFillAmount,
             uint248 minimumFillAmount
           )[]`,
-          "(uint8 v, bytes32 r, bytes32 s)[]",
-          "(address signer, address taker, uint256 expiration, uint8 v, bytes32 r, bytes32 s)[]",
-          "(address recipient, uint256 amount)[]",
-        ],
-        [
-          this.domainSeparator,
-          saleDetails,
-          saleDetails.map((c) => c.signature),
-          orders.map((c) => c.getCosignature()),
-          allFees,
-        ]
-      ),
-    ]);
+            "(uint8 v, bytes32 r, bytes32 s)[]",
+            "(address signer, address taker, uint256 expiration, uint8 v, bytes32 r, bytes32 s)[]",
+            "(address recipient, uint256 amount)[]",
+          ],
+          [
+            this.domainSeparator,
+            saleDetails,
+            saleDetails.map((c) => c.signature),
+            orders.map((c) => c.getCosignature()),
+            allFees,
+          ]
+        ),
+      ]);
 
-    let tx: TxData = {
-      from: sender,
-      to: this.contract.address,
-      value: price.toString(),
-      data,
-    };
-
-    if (trustedChannel) {
-      tx = this.forwardCallTx(tx, trustedChannel);
+      tx = {
+        from: sender,
+        to: this.contract.address,
+        value: price.toString(),
+        data: data + generateSourceBytes(options?.source),
+      };
     }
 
-    tx.data = tx.data + generateSourceBytes(options?.source);
+    if (options?.trustedChannel) {
+      tx = this.forwardCallTx(tx, options?.trustedChannel, options);
+    }
+
     return tx;
   }
 
@@ -410,14 +405,14 @@ export class Exchange {
     taker: string,
     orders: Order[],
     options?: {
+      trustedChannel?: string;
       source?: string;
       relayer?: string;
       fee?: {
         recipient: string;
         amount: BigNumberish;
       };
-    },
-    trustedChannel?: string
+    }
   ): TxData {
     const feeOnTop = options?.fee ?? {
       recipient: AddressZero,
@@ -471,11 +466,11 @@ export class Exchange {
       from: sender,
       to: this.contract.address,
       value: price.toString(),
-      data: data,
+      data: data + generateSourceBytes(options?.source),
     };
 
-    if (trustedChannel) {
-      tx = this.forwardCallTx(tx, trustedChannel);
+    if (options?.trustedChannel) {
+      tx = this.forwardCallTx(tx, options?.trustedChannel, options);
     }
 
     tx.data = tx.data + generateSourceBytes(options?.source);
@@ -483,12 +478,18 @@ export class Exchange {
     return tx;
   }
 
-  public forwardCallTx(tx: TxData, channel: string) {
-    tx.data = new Interface([
-      `function forwardCall(address target, bytes calldata message) external payable`,
-    ]).encodeFunctionData("forwardCall", [tx.to, tx.data]);
-    tx.to = channel;
-    return tx;
+  // --- Wrap tx data via a trusted channel forwarder ---
+
+  public forwardCallTx(tx: TxData, channel: string, options?: { source?: string }) {
+    return {
+      ...tx,
+      to: channel,
+      data:
+        new Interface([
+          "function forwardCall(address target, bytes calldata message) external payable",
+        ]).encodeFunctionData("forwardCall", [tx.to, tx.data]) +
+        generateSourceBytes(options?.source),
+    };
   }
 
   // --- Get parameters for sweeping multiple orders from the same collection ---
