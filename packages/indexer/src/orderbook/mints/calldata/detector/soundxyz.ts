@@ -1,5 +1,5 @@
 import { Interface } from "@ethersproject/abi";
-import { HashZero, AddressZero } from "@ethersproject/constants";
+import { AddressZero, HashZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import * as Sdk from "@reservoir0x/sdk";
 import axios from "axios";
@@ -21,6 +21,7 @@ const STANDARD = "soundxyz";
 export type Info = {
   minter?: string;
   mintId?: string;
+  // Relevant for `SuperMinter` mints
   scheduleNum?: string;
 };
 
@@ -52,6 +53,7 @@ export const extractByCollection = async (
   }
 
   try {
+    // Using `SuperMinter`
     if (scheduleNum && !moduleInterfaceId) {
       const minter = new Contract(
         minterAddress,
@@ -78,7 +80,7 @@ export const extractByCollection = async (
             address edition,
             uint8 tier,
             uint8 scheduleNum
-          ) external view returns (
+          ) view returns (
             (
               address edition,
               uint8 tier,
@@ -106,10 +108,11 @@ export const extractByCollection = async (
 
       const mintInfo = await minter.mintInfo(collection, mintId, scheduleNum);
       const totalPrice = await minter.totalPriceAndFees(collection, mintId, scheduleNum, 1);
+
       // Public sale
       if (!mintInfo.paused) {
-        // Include the mint fee into the price
         const price = totalPrice.total.toString();
+
         results.push({
           collection,
           contract: collection,
@@ -121,11 +124,11 @@ export const extractByCollection = async (
             tx: {
               to: minterAddress.toLowerCase(),
               data: {
-                // `mint`
+                // `mintTo`
                 signature: "0x4a04a1c9",
                 params: [
                   {
-                    kind: "components",
+                    kind: "tuple",
                     params: [
                       {
                         kind: "contract",
@@ -149,7 +152,6 @@ export const extractByCollection = async (
                         kind: "quantity",
                         abiType: "uint32",
                       },
-
                       {
                         kind: "unknown",
                         abiType: "address",
@@ -158,7 +160,7 @@ export const extractByCollection = async (
                       {
                         kind: "unknown",
                         abiType: "uint32",
-                        abiValue: 4294967295,
+                        abiValue: 0,
                       },
                       {
                         kind: "unknown",
@@ -543,7 +545,7 @@ export const extractByTx = async (
       "0x159a76bd", // `MerkleDropMinterV2_1.mint`
       "0xb24e737e", // `MerkleDropMinterV2_1.mintTo`
       "0xafab4364", // `SAM.buy`
-      "0x4a04a1c9", // `SuperMinter`
+      "0x4a04a1c9", // `SuperMinter.mintTo`
     ].some((bytes4) => tx.data.startsWith(bytes4))
   ) {
     try {
@@ -571,14 +573,15 @@ export const extractByTx = async (
             address affiliate,
             bytes32[] affiliateProof,
             uint256 attributionId
-          ) p
+          ) mintData
         )`,
       ]).parseTransaction({
         data: tx.data,
       });
 
-      if (parsed.args.p) {
-        const params = parsed.args.p;
+      // Using `SuperMinter`
+      if (parsed.args.mintData) {
+        const params = parsed.args.mintData;
         return extractByCollection(
           collection,
           tx.to,

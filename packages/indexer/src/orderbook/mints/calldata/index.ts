@@ -50,7 +50,7 @@ export type AbiParam =
       abiType: string;
     }
   | {
-      kind: "components";
+      kind: "tuple";
       params: AbiParam[];
     };
 
@@ -127,13 +127,12 @@ export const generateCollectionMintTxData = async (
       : undefined;
   let allowlistItemIndex = 0;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const abiData: { abiType: string; abiValue: any }[] = [];
-
   const tx = collectionMint.details.tx;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async function encodeParams(abiData: { abiType: string; abiValue: any }[], params: AbiParam[]) {
+  const encodeParams = async (params: AbiParam[]) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const abiData: { abiType: string; abiValue: any }[] = [];
+
     for (const p of params) {
       switch (p.kind) {
         case "contract": {
@@ -312,14 +311,13 @@ export const generateCollectionMintTxData = async (
           break;
         }
 
-        case "components": {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const refAbiData: { abiType: string; abiValue: any }[] = [];
-          await encodeParams(refAbiData, p.params);
-          const abiType = "(" + refAbiData.map((c) => `${c.abiType}`).join(",") + ")";
+        case "tuple": {
+          const subAbiData = await encodeParams(p.params);
+
+          const abiType = "(" + subAbiData.map((c) => `${c.abiType}`).join(",") + ")";
           abiData.push({
             abiType: abiType,
-            abiValue: refAbiData.map((c) => c.abiValue),
+            abiValue: subAbiData.map((c) => c.abiValue),
           });
 
           break;
@@ -335,9 +333,11 @@ export const generateCollectionMintTxData = async (
         }
       }
     }
-  }
 
-  await encodeParams(abiData, tx.data.params);
+    return abiData;
+  };
+
+  const abiData = await encodeParams(tx.data.params);
 
   const data =
     tx.data.signature +
