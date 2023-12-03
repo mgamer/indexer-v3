@@ -19,7 +19,7 @@ import * as royalties from "@/utils/royalties";
 
 import { recalcOwnerCountQueueJob } from "@/jobs/collection-updates/recalc-owner-count-queue-job";
 import { fetchCollectionMetadataJob } from "@/jobs/token-updates/fetch-collection-metadata-job";
-import { refreshActivitiesCollectionMetadataJob } from "@/jobs/activities/refresh-activities-collection-metadata-job";
+import { refreshActivitiesCollectionMetadataJob } from "@/jobs/elasticsearch/activities/refresh-activities-collection-metadata-job";
 import { orderUpdatesByIdJob } from "@/jobs/order-updates/order-updates-by-id-job";
 import {
   topBidCollectionJob,
@@ -247,9 +247,21 @@ export class Collections {
 
     try {
       if (
-        result?.old_metadata.name != collection.name ||
-        result?.old_metadata.metadata?.imageUrl != (collection.metadata as any)?.imageUrl
+        result &&
+        (result?.old_metadata.name != collection.name ||
+          result?.old_metadata.metadata?.imageUrl != (collection.metadata as any)?.imageUrl)
       ) {
+        logger.info(
+          "updateCollectionCache",
+          JSON.stringify({
+            topic: "debugActivitiesErrors",
+            message: `refreshActivitiesCollectionMetadataJob. collectionId=${collection.id}, contract=${contract}, tokenId=${tokenId}, community=${community}`,
+            collectionId: collection.id,
+            collection,
+            result,
+          })
+        );
+
         await refreshActivitiesCollectionMetadataJob.addToQueue({
           collectionId: collection.id,
           context: "updateCollectionCache",
@@ -285,7 +297,7 @@ export class Collections {
     await marketplaceBlacklist.checkMarketplaceIsFiltered(collection.contract, [], true);
 
     // Refresh ERC721C config
-    await erc721c.refreshERC721CConfig(collection.contract);
+    await erc721c.refreshConfig(collection.contract);
   }
 
   public static async update(collectionId: string, fields: CollectionsEntityUpdateParams) {

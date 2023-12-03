@@ -3,6 +3,7 @@ import { ArtBlocks } from "@reservoir0x/sdk";
 
 import { config } from "@/config/index";
 import { EventData } from "@/events-sync/data";
+
 // Project is created on CollectionContract
 // event is ProjectUpdated(projectId, FIELD_PROJECT_CREATED);
 
@@ -31,9 +32,9 @@ import { EventData } from "@/events-sync/data";
 // emit PricePerTokenInWeiUpdated(projectId, _pricePerTokenInWei);
 // @TODO: ask artblocks where to get the merkletree?
 
-let abi = new Interface([
-  `event ProjectUpdated(uint256 indexed projectId, bytes32 indexed update)`,
-]);
+let abi: Interface;
+
+abi = new Interface([`event ProjectUpdated(uint256 indexed projectId, bytes32 indexed update)`]);
 export const projectUpdated: EventData = {
   kind: "artblocks",
   subKind: "artblocks-project-updated",
@@ -44,7 +45,7 @@ export const projectUpdated: EventData = {
 };
 
 abi = new Interface([
-  `event ProjectMinterRegistered( uint256 indexed projectId, address indexed minterAddress, string minterType)`,
+  `event ProjectMinterRegistered(uint256 indexed projectId, address indexed minterAddress, string minterType)`,
 ]);
 export const projectMinterRegistered: EventData = {
   kind: "artblocks",

@@ -10,6 +10,7 @@ import { mintsRefreshJob } from "@/jobs/mints/mints-refresh-job";
 import { Sources } from "@/models/sources";
 import { getCollectionMints } from "@/orderbook/mints";
 
+import * as artblocks from "@/orderbook/mints/calldata/detector/artblocks";
 import * as createdotfun from "@/orderbook/mints/calldata/detector/createdotfun";
 import * as decent from "@/orderbook/mints/calldata/detector/decent";
 import * as foundation from "@/orderbook/mints/calldata/detector/foundation";
@@ -21,9 +22,9 @@ import * as soundxyz from "@/orderbook/mints/calldata/detector/soundxyz";
 import * as thirdweb from "@/orderbook/mints/calldata/detector/thirdweb";
 import * as zora from "@/orderbook/mints/calldata/detector/zora";
 import * as titlesxyz from "@/orderbook/mints/calldata/detector/titlesxyz";
-import * as artblocks from "@/orderbook/mints/calldata/detector/artblocks";
 
 export {
+  artblocks,
   decent,
   foundation,
   generic,
@@ -35,7 +36,6 @@ export {
   zora,
   createdotfun,
   titlesxyz,
-  artblocks,
 };
 
 export const extractByTx = async (txHash: string, skipCache = false) => {
@@ -157,6 +157,12 @@ export const extractByTx = async (txHash: string, skipCache = false) => {
     if (source) {
       tx.data = tx.data.slice(0, -8);
     }
+  }
+
+  // Artblocks
+  const artblocksResults = await artblocks.extractByTx(collection, tx);
+  if (artblocksResults.length) {
+    return artblocksResults;
   }
 
   // Decent

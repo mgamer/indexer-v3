@@ -49,6 +49,7 @@ import * as joepeg from "@/events-sync/data/joepeg";
 import * as metadataUpdate from "@/events-sync/data/metadata-update";
 import * as soundxyz from "@/events-sync/data/soundxyz";
 import * as createdotfun from "@/events-sync/data/createdotfun";
+import * as erc721cV2 from "@/events-sync/data/erc721c-v2";
 import * as titlesxyz from "@/events-sync/data/titlesxyz";
 import * as artblocks from "@/events-sync/data/artblocks";
 
@@ -104,7 +105,9 @@ export type EventKind =
   | "createdotfun"
   | "payment-processor-v2"
   | "titlesxyz"
-  | "artblocks";
+  | "artblocks"
+  | "erc721c-v2"
+  | "titlesxyz";
 
 // Event sub-kind in each of the above protocol/standard
 export type EventSubKind =
@@ -342,7 +345,12 @@ export type EventSubKind =
   | "artblocks-minter-removed"
   | "artblocks-project-price-update"
   | "artblocks-project-currency-update"
-  | "artblocks-project-set-auction-details";
+  | "artblocks-project-set-auction-details"
+  | "erc721c-v2-added-account-to-list"
+  | "erc721c-v2-added-code-hash-to-list"
+  | "erc721c-v2-removed-account-from-list"
+  | "erc721c-v2-removed-code-hash-from-list"
+  | "erc721c-v2-applied-list-to-collection";
 
 export type EventData = {
   kind: EventKind;
@@ -587,6 +595,11 @@ const allEventData = [
   artblocks.projectPriceUpdate,
   artblocks.projectCurrentcyUpdate,
   artblocks.projectSetAuctionDetails,
+  erc721cV2.addedAccountToList,
+  erc721cV2.addedCodeHashToList,
+  erc721cV2.removedAccountFromList,
+  erc721cV2.removedCodeHashFromList,
+  erc721cV2.appliedListToCollection,
 ];
 
 export const getEventData = (events?: string[]) => {

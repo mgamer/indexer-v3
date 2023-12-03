@@ -2,16 +2,15 @@ import { Interface } from "@ethersproject/abi";
 import { Contract } from "@ethersproject/contracts";
 import { BigNumber } from "@ethersproject/bignumber";
 
+import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
+import { Transaction } from "@/models/transactions";
 import {
   CollectionMint,
-  CollectionMintStatusReason,
   getCollectionMints,
   simulateAndUpsertCollectionMint,
 } from "@/orderbook/mints";
-import { now } from "@/common/utils";
-import { Transaction } from "@/models/transactions";
-import { logger } from "@/common/logger";
+import { getStatus, toSafeNumber } from "@/orderbook/mints/calldata/helpers";
 
 const STANDARD = "artblocks";
 
@@ -40,6 +39,7 @@ interface ProjectInfo {
   completedTimestamp: BigNumber;
   locked: boolean;
 }
+
 interface MinterTypePriceInfo {
   isConfigured: boolean;
   tokenPriceInWei: BigNumber;
@@ -56,187 +56,171 @@ export const extractByCollectionERC721 = async (
   const { projectId, daConfig } = info;
   const collectionId = `${collection}:${projectId}000000:${projectId}999999`;
 
-  // we will need info from collection about the projectId
+  // We will need information from the collection about the project id
   const projectHolder = new Contract(
     collection,
     new Interface([
-      `function minterContract() external view returns (address)`,
-      `function projectStateData(uint256 _projectId) external view
-        returns (
-            uint256 invocations,
-            uint256 maxInvocations,
-            bool active,
-            bool paused,
-            uint256 completedTimestamp,
-            bool locked
-        )
+      `function minterContract() view returns (address)`,
+      `function projectStateData(uint256 _projectId) view returns (
+          uint256 invocations,
+          uint256 maxInvocations,
+          bool active,
+          bool paused,
+          uint256 completedTimestamp,
+          bool locked
+      )
       `,
     ]),
     baseProvider
   );
 
-  let projectInfo: ProjectInfo;
-
   try {
-    projectInfo = await projectHolder.projectStateData(projectId);
-  } catch (error) {
-    logger.error("mint-detector", JSON.stringify({ kind: STANDARD, error }));
-    return [];
-  }
+    const projectInfo: ProjectInfo = await projectHolder.projectStateData(projectId);
 
-  // we will also need info from MinterFilter, about the projectId
-  const minterFilterAddress = await projectHolder.minterContract();
-  const minterFilter = new Contract(
-    minterFilterAddress,
-    new Interface([
-      `function getMinterForProject(uint256 _projectId) external view returns (address)`,
-    ]),
-    baseProvider
-  );
-
-  let minterAddressForProject: string | null = null;
-
-  try {
-    // getMinterForProject will revert if project minter not set!
-    minterAddressForProject = await minterFilter.getMinterForProject(projectId);
-  } catch (e) {}
-
-  // we go further only if there is a minter associated with project
-  if (minterAddressForProject !== null) {
-    // let's get the minter itself
-    const minterTypeContract = new Contract(
-      minterAddressForProject,
-      new Interface([
-        `function minterType() external view returns (string memory)`,
-        `function getPriceInfo(uint256 _projectId) external view returns (
-        bool isConfigured,
-        uint256 tokenPriceInWei,
-        string memory currencySymbol,
-        address currencyAddress
-       )`,
-      ]),
+    // We will also need information from `MinterFilter` about the project id
+    const minterFilterAddress = await projectHolder.minterContract();
+    const minterFilter = new Contract(
+      minterFilterAddress,
+      new Interface(["function getMinterForProject(uint256 _projectId) view returns (address)"]),
       baseProvider
     );
 
-    const minterType = await minterTypeContract.minterType();
-
-    const isOpen =
-      projectInfo.active &&
-      !projectInfo.paused &&
-      !projectInfo.locked &&
-      projectInfo.maxInvocations.gt(projectInfo.invocations);
-
-    let statusReason: CollectionMintStatusReason | undefined = undefined;
-    if (!isOpen) {
-      if (projectInfo.maxInvocations.lte(projectInfo.invocations)) {
-        statusReason = "max-supply-exceeded";
-      }
+    let minterAddressForProject: string | undefined;
+    try {
+      // The call will revert if a project minter is not set
+      minterAddressForProject = await minterFilter.getMinterForProject(projectId);
+    } catch {
+      // Skip errors
     }
 
-    if (
-      minterType === MINTER_TYPES.SET_PRICE_V4 ||
-      minterType === MINTER_TYPES.DA_EXP_SETTLEMENT_V1
-    ) {
-      const priceInfo: MinterTypePriceInfo = await minterTypeContract.getPriceInfo(projectId);
-      if (priceInfo.isConfigured) {
-        const result: CollectionMint = {
-          collection: collectionId,
-          contract: collection,
-          stage: `public-sale-artblocks-${collection}-${projectId}`,
-          kind: "public",
-          status: isOpen ? "open" : "closed",
-          statusReason,
-          standard: STANDARD,
-          details: {
-            tx: {
-              to: minterAddressForProject,
-              data: {
-                // "purchaseTo_do6"
-                signature: "0x00009987",
-                params: [
-                  {
-                    kind: "recipient",
-                    abiType: "address",
-                  },
-                  {
-                    kind: "unknown",
-                    abiType: "uint256",
-                    abiValue: projectId,
-                  },
-                ],
+    // We only proceed if there is a minter associated with project
+    if (minterAddressForProject) {
+      // Get information from the minter itself
+      const minterTypeContract = new Contract(
+        minterAddressForProject,
+        new Interface([
+          "function minterType() view returns (string memory)",
+          `function getPriceInfo(uint256 _projectId) view returns (
+            bool isConfigured,
+            uint256 tokenPriceInWei,
+            string currencySymbol,
+            address currencyAddress
+          )`,
+        ]),
+        baseProvider
+      );
+
+      const isOpen = projectInfo.active && !projectInfo.paused && !projectInfo.locked;
+
+      const minterType = await minterTypeContract.minterType();
+      if ([MINTER_TYPES.SET_PRICE_V4, MINTER_TYPES.DA_EXP_SETTLEMENT_V1].includes(minterType)) {
+        const priceInfo: MinterTypePriceInfo = await minterTypeContract.getPriceInfo(projectId);
+        if (priceInfo.isConfigured) {
+          const result: CollectionMint = {
+            collection: collectionId,
+            contract: collection,
+            stage: `public-sale-artblocks-${collection}-${projectId}`,
+            kind: "public",
+            status: isOpen ? "open" : "closed",
+            standard: STANDARD,
+            details: {
+              tx: {
+                to: minterAddressForProject,
+                data: {
+                  // "purchaseTo_do6"
+                  signature: "0x00009987",
+                  params: [
+                    {
+                      kind: "recipient",
+                      abiType: "address",
+                    },
+                    {
+                      kind: "unknown",
+                      abiType: "uint256",
+                      abiValue: projectId,
+                    },
+                  ],
+                },
+              },
+              info: {
+                hasDynamicPrice: minterType === MINTER_TYPES.DA_EXP_SETTLEMENT_V1,
+                projectId,
               },
             },
-            info: {
-              hasDynamicPrice: minterType === MINTER_TYPES.DA_EXP_SETTLEMENT_V1,
-              projectId,
-            },
-          },
-          currency: priceInfo.currencyAddress,
-          price: priceInfo.tokenPriceInWei.toString(),
-          maxSupply: projectInfo.maxInvocations.toString(),
-        };
+            currency: priceInfo.currencyAddress,
+            price: priceInfo.tokenPriceInWei.toString(),
+            maxSupply: toSafeNumber(projectInfo.maxInvocations),
+          };
 
-        // if da with settlement, get timestampStart
-        if (minterType === MINTER_TYPES.DA_EXP_SETTLEMENT_V1) {
-          if (daConfig !== undefined) {
-            // if it's a DA with settlement, and the config wasn't provided, we get the config
-            (result.details.info! as Info).daConfig = daConfig;
-          } else {
-            const minterContract = new Contract(
-              minterAddressForProject,
-              new Interface([
-                `function projectAuctionParameters(uint256 _projectId)
-                external
-                view
-                returns (
+          // Get additional information for DA mints
+          if (minterType === MINTER_TYPES.DA_EXP_SETTLEMENT_V1) {
+            if (daConfig) {
+              (result.details.info! as Info).daConfig = daConfig;
+            } else {
+              const minterContract = new Contract(
+                minterAddressForProject,
+                new Interface([
+                  `function projectAuctionParameters(uint256 _projectId) view returns (
                     uint256 timestampStart,
                     uint256 priceDecayHalfLifeSeconds,
                     uint256 startPrice,
                     uint256 basePrice
-                )`,
-              ]),
-              baseProvider
-            );
+                  )`,
+                ]),
+                baseProvider
+              );
 
-            const daInfo = await minterContract.projectAuctionParameters(projectId);
+              const daInfo = await minterContract.projectAuctionParameters(projectId);
 
-            const startTime = daInfo.timestampStart.toNumber();
-            result.startTime = startTime;
-            if (startTime > now()) {
-              result.status = "closed";
-              result.statusReason = "not-yet-started";
+              const startTime = daInfo.timestampStart.toNumber();
+              result.startTime = startTime;
+
+              (result.details.info! as Info).daConfig = {
+                timestampStart: startTime,
+                priceDecayHalfLifeSeconds: daInfo.priceDecayHalfLifeSeconds.toNumber(),
+                startPrice: daInfo.startPrice.toString(),
+                basePrice: daInfo.basePrice.toString(),
+              };
             }
-
-            (result.details.info! as Info).daConfig = {
-              timestampStart: startTime,
-              priceDecayHalfLifeSeconds: daInfo.priceDecayHalfLifeSeconds.toNumber(),
-              startPrice: daInfo.startPrice.toString(),
-              basePrice: daInfo.basePrice.toString(),
-            };
           }
+
+          results.push(result);
         }
-        results.push(result);
       }
     }
+  } catch (error) {
+    logger.error("mint-detector", JSON.stringify({ kind: STANDARD, error }));
   }
+
+  // Update the status of each collection mint
+  await Promise.all(
+    results.map(async (cm) => {
+      await getStatus(cm).then(({ status, reason }) => {
+        cm.status = status;
+        cm.statusReason = reason;
+      });
+    })
+  );
 
   return results;
 };
 
 export const refreshByCollection = async (collection: string) => {
   const existingCollectionMints = await getCollectionMints(collection, { standard: STANDARD });
-  // we dedupe by projectId
+
+  // Dedupe by collection and project id
   const dedupedExistingMints = existingCollectionMints.filter((existing, index) => {
     return (
-      index ==
+      index ===
       latestCollectionMints.findIndex((found) => {
         return (
-          existing.collection == found.collection &&
-          (existing.details.info! as Info).projectId == (found.details.info! as Info).projectId
+          existing.collection === found.collection &&
+          (existing.details.info! as Info).projectId === (found.details.info! as Info).projectId
         );
       })
     );
   });
+
   let latestCollectionMints: CollectionMint[] = [];
   for (const { details } of dedupedExistingMints) {
     // Fetch the currently available mints
@@ -244,11 +228,14 @@ export const refreshByCollection = async (collection: string) => {
       await extractByCollectionERC721(collection, details.info! as Info)
     );
   }
-  // simulate the one still available
+
+  // Simulate the ones still available
   for (const collectionMint of latestCollectionMints) {
     await simulateAndUpsertCollectionMint(collectionMint);
   }
-  // remove the existing ones not here anymore
+
+  // Assume anything that exists in our system but was not returned
+  // in the above call is not available anymore so we can close
   for (const existing of existingCollectionMints) {
     const stillExists = latestCollectionMints.find((latest) => {
       return (
@@ -271,10 +258,10 @@ export const extractByTx = async (
   tx: Transaction
 ): Promise<CollectionMint[]> => {
   const iface = new Interface([
-    "function purchase(uint256 projectId) external payable returns (uint256 tokenId)",
-    "function purchase_H4M(uint256 projectId) external payable returns (uint256 tokenId)",
-    "function purchaseTo(address _to, uint256 projectId) external payable returns (uint256 tokenId)",
-    "function purchaseTo_do6(address _to, uint256 projectId) external payable returns (uint256 tokenId)",
+    "function purchase(uint256 projectId) returns (uint256 tokenId)",
+    "function purchase_H4M(uint256 projectId) returns (uint256 tokenId)",
+    "function purchaseTo(address _to, uint256 projectId) returns (uint256 tokenId)",
+    "function purchaseTo_do6(address _to, uint256 projectId) returns (uint256 tokenId)",
   ]);
 
   const found = iface.fragments.find((fragment) => {
