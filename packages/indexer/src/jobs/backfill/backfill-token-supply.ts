@@ -17,7 +17,7 @@ export class BackfillTokenSupplyJob extends AbstractRabbitMqJobHandler {
 
   protected async process() {
     const values = {
-      limit: 100,
+      limit: 250,
     };
 
     const tokensToSync = [];
@@ -58,7 +58,7 @@ export class BackfillTokenSupplyJob extends AbstractRabbitMqJobHandler {
     }
   ) {
     if (processResult.addToQueue) {
-      await this.addToQueue(30 * 1000);
+      await this.addToQueue(10 * 1000);
     }
   }
 
