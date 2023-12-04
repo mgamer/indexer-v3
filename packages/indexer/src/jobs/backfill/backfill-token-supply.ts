@@ -24,7 +24,7 @@ export class BackfillTokenSupplyJob extends AbstractRabbitMqJobHandler {
 
     const tokens = await idb.manyOrNone(
       `
-        SELECT contract, token_id, updated_at::text
+        SELECT contract, token_id
         FROM tokens
         WHERE supply IS NULL
         ORDER BY updated_at ASC
@@ -58,7 +58,7 @@ export class BackfillTokenSupplyJob extends AbstractRabbitMqJobHandler {
     }
   ) {
     if (processResult.addToQueue) {
-      await this.addToQueue();
+      await this.addToQueue(30 * 1000);
     }
   }
 
