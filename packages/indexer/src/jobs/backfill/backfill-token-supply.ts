@@ -3,8 +3,8 @@ import { idb } from "@/common/db";
 import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handler";
 import { RabbitMQMessage } from "@/common/rabbit-mq";
 import { fromBuffer } from "@/common/utils";
-// import { redis, redlock } from "@/common/redis";
-// import { config } from "@/config/index";
+import { redlock } from "@/common/redis";
+import { config } from "@/config/index";
 import { tokenReclacSupplyJob } from "@/jobs/token-updates/token-reclac-supply-job";
 
 export type BackfillUserCollectionsJobCursorInfo = {
@@ -74,13 +74,13 @@ export class BackfillTokenSupplyJob extends AbstractRabbitMqJobHandler {
 
 export const backfillTokenSupplyJob = new BackfillTokenSupplyJob();
 
-// if (config.chainId !== 1) {
-//   redlock
-//     .acquire(["backfill-user-collections-lock-4"], 60 * 60 * 24 * 30 * 1000)
-//     .then(async () => {
-//       await redis.expire("sync-user-collections", 10);
-//     })
-//     .catch(() => {
-//       // Skip on any errors
-//     });
-// }
+if (config.chainId !== 1) {
+  redlock
+    .acquire(["backfill-token-supply-lock"], 60 * 60 * 24 * 30 * 1000)
+    .then(async () => {
+      await backfillTokenSupplyJob.addToQueue();
+    })
+    .catch(() => {
+      // Skip on any errors
+    });
+}
