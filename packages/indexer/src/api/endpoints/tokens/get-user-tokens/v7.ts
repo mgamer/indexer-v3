@@ -595,23 +595,28 @@ export const getUserTokensV7Options: RouteOptions = {
           JOIN collections c ON c.id = t.collection_id ${
             query.excludeSpam ? `AND (c.is_spam IS NULL OR c.is_spam <= 0)` : ""
           }
-          LEFT JOIN LATERAL (
-            SELECT
-              *
-            FROM orders o
-            JOIN token_sets_tokens tst
-              ON o.token_set_id = tst.token_set_id
-            WHERE tst.contract = b.contract
-              AND tst.token_id = b.token_id
-              AND o.side = 'sell'
-              AND o.fillability_status = 'fillable'
-              AND o.approval_status = 'approved'
-              AND o.maker = $/user/
-            ORDER BY o.value ASC
-            LIMIT 1
-          ) AS ot ON TRUE
           LEFT JOIN orders o ON o.id = c.floor_sell_id
           JOIN contracts con ON b.contract = con.address
+          LEFT JOIN orders ot ON ot.id = CASE WHEN con.kind = 'erc1155' THEN (
+            SELECT 
+              id 
+            FROM 
+              orders 
+              JOIN token_sets_tokens ON orders.token_set_id = token_sets_tokens.token_set_id 
+            WHERE 
+              con.kind = 'erc1155' 
+              AND token_sets_tokens.contract = b.contract 
+              AND token_sets_tokens.token_id = b.token_id 
+              AND orders.side = 'sell' 
+              AND orders.fillability_status = 'fillable' 
+              AND orders.approval_status = 'approved' 
+              AND orders.maker = $/user/ 
+            ORDER BY 
+              orders.value ASC 
+            LIMIT 
+              1
+          ) ELSE c.floor_sell_id END
+
       `;
 
       const conditions: string[] = [];
