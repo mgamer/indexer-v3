@@ -615,7 +615,7 @@ export const getUserTokensV7Options: RouteOptions = {
               orders.value ASC 
             LIMIT 
               1
-          ) ELSE c.floor_sell_id END
+          ) ELSE t.floor_sell_id END
 
       `;
 
