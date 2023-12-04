@@ -28,7 +28,7 @@ const version = "v1";
 export const getTrendingMintsV1Options: RouteOptions = {
   description: "Top Trending Mints",
   notes: "Get top trending mints",
-  tags: ["api", "mints"],
+  tags: ["api", "Collections"],
   plugins: {
     "hapi-swagger": {
       order: 3,
