@@ -241,7 +241,7 @@ async function getMintingCollections(type: "paid" | "free" | "any"): Promise<Min
 SELECT 
     collection_id, start_time, end_time, created_at, updated_at, max_supply, max_mints_per_wallet, price
 FROM 
-    collection_mints 
+    collection_mints LIMIT by 50000;
 ${whereClause}
   `;
 
