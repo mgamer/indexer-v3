@@ -525,8 +525,28 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         const parsedLog = eventData.abi.parseLog(log);
         const tokenAddress = parsedLog.args["tokenAddress"].toLowerCase();
 
+        const royaltyBackfillReceiver = parsedLog.args["royaltyBackfillReceiver"].toLowerCase();
+        const exclusiveBountyReceiver = parsedLog.args["exclusiveBountyReceiver"].toLowerCase();
+
+        const royaltyBackfillNumerator = parsedLog.args["royaltyBackfillNumerator"];
+        const royaltyBountyNumerator = parsedLog.args["royaltyBountyNumerator"];
+
         // Refresh
         await paymentProcessorV2Utils.getCollectionPaymentSettings(tokenAddress, true);
+
+        await paymentProcessorV2Utils.saveRoyalties(
+          tokenAddress,
+          [
+            {
+              recipient: royaltyBackfillReceiver,
+              bps: royaltyBackfillNumerator,
+            },
+            {
+              recipient: exclusiveBountyReceiver,
+              bps: royaltyBountyNumerator,
+            },
+          ].filter((c) => c.bps > 0)
+        );
 
         break;
       }

@@ -8,6 +8,7 @@ import { baseProvider } from "@/common/provider";
 import { redis } from "@/common/redis";
 import { fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
+import { Royalty, updateRoyaltySpec } from "@/utils/royalties";
 
 export enum PaymentSettings {
   DefaultPaymentMethodWhitelist = 0,
@@ -146,4 +147,10 @@ export const getAllTrustedChannels = async (tokenAddress: string) => {
     channel: fromBuffer(c.channel),
     signer: fromBuffer(c.signer),
   }));
+};
+
+export const saveRoyalties = async (tokenAddress: string, royalties: Royalty[]) => {
+  if (royalties.length) {
+    await updateRoyaltySpec(tokenAddress, "pp-v2-backfill", royalties);
+  }
 };

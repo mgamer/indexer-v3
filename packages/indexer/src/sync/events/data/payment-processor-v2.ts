@@ -184,7 +184,8 @@ export const updatedCollectionPaymentSettings: EventData = {
       uint16 royaltyBackfillNumerator,
       address royaltyBackfillReceiver,
       uint16 royaltyBountyNumerator,
-      address exclusiveBountyReceiver
+      address exclusiveBountyReceiver,
+      bool blockTradesFromUntrustedChannels
     )`,
   ]),
 };
