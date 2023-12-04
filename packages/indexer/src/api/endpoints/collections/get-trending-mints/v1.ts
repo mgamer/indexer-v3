@@ -241,8 +241,8 @@ async function getMintingCollections(type: "paid" | "free" | "any"): Promise<Min
 SELECT 
     collection_id, start_time, end_time, created_at, updated_at, max_supply, max_mints_per_wallet, price
 FROM 
-    collection_mints LIMIT 50000;
-${whereClause}
+    collection_mints LIMIT 50000
+${whereClause};
   `;
 
   const result = await redb.manyOrNone<Mint>(baseQuery);
