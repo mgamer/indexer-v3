@@ -160,6 +160,11 @@ export const getExecuteBidV5Options: RouteOptions = {
               }),
               "payment-processor-v2": Joi.object({
                 useOffChainCancellation: Joi.boolean().required(),
+                replaceOrderId: Joi.string().when("useOffChainCancellation", {
+                  is: true,
+                  then: Joi.optional(),
+                  otherwise: Joi.forbidden(),
+                }),
               }),
             }).description("Additional options."),
             orderbook: Joi.string()
@@ -475,14 +480,17 @@ export const getExecuteBidV5Options: RouteOptions = {
             if (p.token || p.collection) {
               const contract = p.token ? p.token.split(":")[0] : p.collection!;
 
-              const config = await erc721c.getERC721CConfigFromDB(contract);
-              if (config && [4, 6].includes(config.transferSecurityLevel)) {
-                const isVerified = await erc721c.isVerifiedEOA(
-                  config.transferValidator,
-                  payload.maker
-                );
+              const configV1 = await erc721c.v1.getConfig(contract);
+              const configV2 = await erc721c.v2.getConfig(contract);
+              if (
+                (configV1 && [4, 6].includes(configV1.transferSecurityLevel)) ||
+                (configV2 && [6, 8].includes(configV2.transferSecurityLevel))
+              ) {
+                const transferValidator = (configV1 ?? configV2)!.transferValidator;
+
+                const isVerified = await erc721c.isVerifiedEOA(transferValidator, payload.maker);
                 if (!isVerified) {
-                  unverifiedERC721CTransferValidators.push(config.transferValidator);
+                  unverifiedERC721CTransferValidators.push(transferValidator);
                 }
               }
             }
@@ -1445,6 +1453,7 @@ export const getExecuteBidV5Options: RouteOptions = {
                 const options = params.options?.[params.orderKind] as
                   | {
                       useOffChainCancellation?: boolean;
+                      replaceOrderId?: string;
                     }
                   | undefined;
 
