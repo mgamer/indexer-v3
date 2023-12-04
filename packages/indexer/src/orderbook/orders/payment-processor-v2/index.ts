@@ -66,6 +66,8 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         });
       }
 
+      // Check: various collection restrictions
+
       const paymentSettings = await paymentProcessorV2.getCollectionPaymentSettings(
         order.params.tokenAddress
       );
@@ -120,6 +122,20 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         }
       }
 
+      // Check: trusted channels
+      if (paymentSettings?.blockTradesFromUntrustedChannels) {
+        const trustedChannels = await paymentProcessorV2.getAllTrustedChannels(
+          order.params.tokenAddress
+        );
+        if (trustedChannels.every((c) => c.signer !== AddressZero)) {
+          return results.push({
+            id,
+            status: "signed-trusted-channels-not-yet-supported",
+          });
+        }
+      }
+
+      // Check: operator filtering
       const isFiltered = await checkMarketplaceIsFiltered(order.params.tokenAddress, [
         Sdk.PaymentProcessorV2.Addresses.Exchange[config.chainId],
       ]);
@@ -265,10 +281,16 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
       // Handle: security level 4 and 6 EOA verification
       if (side === "buy") {
-        const config = await erc721c.getERC721CConfigFromDB(order.params.tokenAddress);
-        if (config && [4, 6].includes(config.transferSecurityLevel)) {
+        const configV1 = await erc721c.v1.getConfig(order.params.tokenAddress);
+        const configV2 = await erc721c.v2.getConfig(order.params.tokenAddress);
+        if (
+          (configV1 && [4, 6].includes(configV1.transferSecurityLevel)) ||
+          (configV2 && [6, 8].includes(configV2.transferSecurityLevel))
+        ) {
+          const transferValidator = (configV1 ?? configV2)!.transferValidator;
+
           const isVerified = await erc721c.isVerifiedEOA(
-            config.transferValidator,
+            transferValidator,
             order.params.sellerOrBuyer
           );
           if (!isVerified) {
