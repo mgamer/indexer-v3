@@ -149,8 +149,8 @@ export const getRoyaltiesByTokenSet = async (
 export const updateRoyaltySpec = async (
   collection: string,
   spec: string,
-  // `[]` -> zero royalties (set to zero by creator)
-  // `undefined` -> no royalties (not set at all by creator)
+  // `[]` -> royalties explicitly set to zero / empty
+  // `undefined` -> royalties not set at all
   royalties?: Royalty[]
 ) => {
   // For safety, skip any zero bps or recipients
