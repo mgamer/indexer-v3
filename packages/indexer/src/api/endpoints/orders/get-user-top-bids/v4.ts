@@ -152,7 +152,7 @@ export const getUserTopBidsV4Options: RouteOptions = {
           token: Joi.object({
             contract: Joi.string(),
             tokenId: Joi.string(),
-            standard: Joi.string(),
+            kind: Joi.string(),
             name: Joi.string().allow("", null),
             image: Joi.string().allow("", null),
             floorAskPrice: JoiPrice.allow(null),
@@ -397,7 +397,7 @@ export const getUserTopBidsV4Options: RouteOptions = {
               contract: contract,
               tokenId: tokenId,
               name: r.name,
-              standard: r.contract_kind,
+              kind: r.contract_kind,
               image: Assets.getResizedImageUrl(r.image, undefined, r.image_version),
               floorAskPrice: r.token_floor_sell_value
                 ? await getJoiPriceObject(
