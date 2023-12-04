@@ -1,5 +1,6 @@
 import { Interface } from "@ethersproject/abi";
 import { BigNumber } from "@ethersproject/bignumber";
+import { AddressZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import * as Sdk from "@reservoir0x/sdk";
 
@@ -149,8 +150,9 @@ export const getAllTrustedChannels = async (tokenAddress: string) => {
   }));
 };
 
-export const saveRoyalties = async (tokenAddress: string, royalties: Royalty[]) => {
-  if (royalties.length) {
-    await updateRoyaltySpec(tokenAddress, "pp-v2-backfill", royalties);
-  }
-};
+export const saveBackfilledRoyalties = async (tokenAddress: string, royalties: Royalty[]) =>
+  updateRoyaltySpec(
+    tokenAddress,
+    "pp-v2-backfill",
+    royalties.some((r) => r.recipient !== AddressZero) ? royalties : undefined
+  );
