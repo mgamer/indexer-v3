@@ -113,7 +113,12 @@ export class Assets {
 
     const ciphertext = crypto.AES.encrypt(
       imageUrl + v,
-      config.privateImageResizingSigningKey
+      crypto.enc.Hex.parse(config.privateImageResizingSigningKey),
+      {
+        iv: crypto.enc.Utf8.parse(config.privateImageResizingSigningKey),
+        mode: crypto.mode.CBC,
+        padding: crypto.pad.Pkcs7,
+      }
     ).toString();
 
     return `${config.imageResizingBaseUrl}/${encodeURIComponent(ciphertext)}${
