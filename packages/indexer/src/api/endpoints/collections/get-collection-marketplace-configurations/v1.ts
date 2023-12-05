@@ -7,6 +7,7 @@ import Joi from "joi";
 
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
+import { redis } from "@/common/redis";
 import { fromBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { getNetworkSettings, getSubDomain } from "@/config/network";
@@ -318,7 +319,12 @@ export const getCollectionMarketplaceConfigurationsV1Options: RouteOptions = {
           },
           royalties: maxOpenseaRoyaltiesBps
             ? {
-                minBps: Math.min(maxOpenseaRoyaltiesBps, 50),
+                minBps: Math.min(
+                  maxOpenseaRoyaltiesBps,
+                  (await redis.get(`enforce-opensea-royalties:${params.collection}`))
+                    ? maxOpenseaRoyaltiesBps
+                    : 50
+                ),
                 maxBps: maxOpenseaRoyaltiesBps,
               }
             : undefined,
