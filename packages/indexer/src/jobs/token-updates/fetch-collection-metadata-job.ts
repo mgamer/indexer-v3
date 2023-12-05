@@ -2,7 +2,6 @@ import _ from "lodash";
 
 import { idb, pgp, PgPromiseQuery } from "@/common/db";
 import { logger } from "@/common/logger";
-import { redis } from "@/common/redis";
 import { toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { getNetworkSettings } from "@/config/network";
@@ -152,18 +151,11 @@ export default class FetchCollectionMetadataJob extends AbstractRabbitMqJobHandl
         );
       }
 
-      const openseaRoyalties = collection.openseaRoyalties as royalties.Royalty[] | undefined;
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      if (openseaRoyalties?.some((r) => (r as any).required)) {
-        await redis.set(`enforce-opensea-royalties:${collection.id}`, "true", "EX", 24 * 3600);
-      }
-
       // Refresh all royalty specs and the default royalties
       await royalties.refreshAllRoyaltySpecs(
         collection.id,
         collection.royalties as royalties.Royalty[] | undefined,
-        openseaRoyalties
+        collection.openseaRoyalties as royalties.Royalty[] | undefined
       );
 
       await royalties.refreshDefaultRoyalties(collection.id);
