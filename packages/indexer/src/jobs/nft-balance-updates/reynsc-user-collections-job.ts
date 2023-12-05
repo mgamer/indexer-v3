@@ -3,6 +3,8 @@ import { AbstractRabbitMqJobHandler, BackoffStrategy } from "@/jobs/abstract-rab
 import { regex, toBuffer } from "@/common/utils";
 import { Collections } from "@/models/collections";
 import _ from "lodash";
+import { config } from "@/config/index";
+import { getNetworkSettings } from "@/config/network";
 
 export type ResyncUserCollectionsJobPayload = {
   user: string;
@@ -24,6 +26,10 @@ export default class ResyncUserCollectionsJob extends AbstractRabbitMqJobHandler
     let contract = "";
     let newBalanceResults;
     let isSpam;
+
+    if (config.chainId === 137 && collectionId === "0xcf2576238640a3a232fa6046d549dfb753a805f4") {
+      return;
+    }
 
     if (collectionId.match(regex.address)) {
       // If a non shared contract
@@ -115,12 +121,16 @@ export default class ResyncUserCollectionsJob extends AbstractRabbitMqJobHandler
     }
   }
 
-  public async addToQueue(payload: ResyncUserCollectionsJobPayload, delay = 0) {
-    if (!payload.collectionId) {
-      return;
-    }
+  public async addToQueue(payload: ResyncUserCollectionsJobPayload[], delay = 0) {
+    const filteredPayload = payload.filter(
+      (p) => p.collectionId && !_.includes(getNetworkSettings().burnAddresses, p.user)
+    );
 
-    await this.send({ payload, jobId: `${payload.user}:${payload.collectionId}` }, delay);
+    if (!_.isEmpty(filteredPayload)) {
+      await this.sendBatch(
+        filteredPayload.map((p) => ({ payload: p, jobId: `${p.user}:${p.collectionId}`, delay }))
+      );
+    }
   }
 }
 

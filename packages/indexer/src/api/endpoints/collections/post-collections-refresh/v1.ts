@@ -20,6 +20,7 @@ import {
   metadataIndexFetchJob,
   MetadataIndexFetchJobPayload,
 } from "@/jobs/metadata-index/metadata-fetch-job";
+import { mintsRefreshJob } from "@/jobs/mints/mints-refresh-job";
 import { orderFixesJob } from "@/jobs/order-fixes/order-fixes-job";
 import { blurBidsRefreshJob } from "@/jobs/order-updates/misc/blur-bids-refresh-job";
 import { blurListingsRefreshJob } from "@/jobs/order-updates/misc/blur-listings-refresh-job";
@@ -102,6 +103,9 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
       }
 
       const currentUtcTime = new Date().toISOString();
+
+      // Refresh collection mints
+      await mintsRefreshJob.addToQueue({ collection: collection.id });
 
       if (payload.metadataOnly) {
         // Refresh the collection metadata
@@ -220,7 +224,7 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
         // Do these refresh operation only for small collections
         if (!isLargeCollection) {
           const method = metadataIndexFetchJob.getIndexingMethod(collection.community);
-          let metadataIndexInfo: MetadataIndexFetchJobPayload = {
+          const metadataIndexInfo: MetadataIndexFetchJobPayload = {
             kind: "full-collection",
             data: {
               method,
@@ -228,18 +232,6 @@ export const postCollectionsRefreshV1Options: RouteOptions = {
             },
             context: "post-refresh-collection-v1",
           };
-          if (method === "opensea" && collection.slug) {
-            metadataIndexInfo = {
-              kind: "full-collection-by-slug",
-              data: {
-                method,
-                contract: collection.contract,
-                slug: collection.slug,
-                collection: collection.id,
-              },
-              context: "post-refresh-collection-v1",
-            };
-          }
 
           // Refresh the collection tokens metadata
           await metadataIndexFetchJob.addToQueue([metadataIndexInfo], true);
