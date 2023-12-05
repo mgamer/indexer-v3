@@ -34,7 +34,7 @@ type DbEvent = {
   to: Buffer;
   token_id: string;
   amount: string;
-  isAirdrop: boolean | null;
+  is_airdrop: boolean | null;
 };
 
 type erc721Token = {
@@ -91,7 +91,7 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
       to: toBuffer(event.to),
       token_id: event.tokenId,
       amount: event.amount,
-      isAirdrop: isAirdrop,
+      is_airdrop: isAirdrop,
     });
 
     if (!uniqueContracts.has(contractId)) {
