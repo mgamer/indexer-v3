@@ -5,7 +5,6 @@ import pLimit from "p-limit";
 
 import { idb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
-import { baseProvider } from "@/common/provider";
 import { bn, now, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
@@ -71,22 +70,29 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       const paymentSettings = await paymentProcessorV2.getCollectionPaymentSettings(
         order.params.tokenAddress
       );
-      const exchange = new Sdk.PaymentProcessorV2.Exchange(config.chainId).contract.connect(
-        baseProvider
-      );
 
       if (
-        paymentSettings?.paymentSettings &&
-        [
-          paymentProcessorV2.PaymentSettings.CustomPaymentMethodWhitelist,
-          paymentProcessorV2.PaymentSettings.DefaultPaymentMethodWhitelist,
-        ].includes(paymentSettings.paymentSettings)
+        paymentSettings?.paymentSettings ===
+        paymentProcessorV2.PaymentSettings.DefaultPaymentMethodWhitelist
       ) {
         if (order.params.paymentMethod !== Sdk.Common.Addresses.Native[config.chainId]) {
-          const isCustomPaymentMethodWhitelist = await exchange.isPaymentMethodWhitelisted(
-            paymentSettings.paymentMethodWhitelistId,
+          const isDefaultPaymentMethod = paymentSettings?.defaultPaymentMethods.includes(
             order.params.paymentMethod
           );
+          if (!isDefaultPaymentMethod) {
+            return results.push({
+              id,
+              status: "payment-token-not-approved",
+            });
+          }
+        }
+      } else if (
+        paymentSettings?.paymentSettings ===
+        paymentProcessorV2.PaymentSettings.CustomPaymentMethodWhitelist
+      ) {
+        if (order.params.paymentMethod !== Sdk.Common.Addresses.Native[config.chainId]) {
+          const isCustomPaymentMethodWhitelist =
+            paymentSettings?.whitelistedPaymentMethods.includes(order.params.paymentMethod);
           if (!isCustomPaymentMethodWhitelist) {
             return results.push({
               id,

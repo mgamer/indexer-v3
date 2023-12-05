@@ -16,6 +16,7 @@ import { checkMarketplaceIsFiltered } from "@/utils/marketplace-blacklists";
 import * as marketplaceFees from "@/utils/marketplace-fees";
 import * as registry from "@/utils/royalties/registry";
 import * as paymentProcessor from "@/utils/payment-processor";
+import * as paymentProcessorV2 from "@/utils/payment-processor-v2";
 import { getCurrency } from "@/utils/currencies";
 
 type PaymentToken = {
@@ -474,11 +475,7 @@ export const getCollectionMarketplaceConfigurationsV1Options: RouteOptions = {
 
               exchange.enabled = !exchangeBlocked;
 
-              if (
-                exchange.enabled &&
-                (exchange.orderKind === "payment-processor" ||
-                  exchange.orderKind === "payment-processor-v2")
-              ) {
+              if (exchange.enabled && exchange.orderKind === "payment-processor") {
                 const ppConfig = await paymentProcessor.getConfigByContract(params.collection);
                 if (ppConfig && ppConfig.securityPolicy.enforcePricingConstraints) {
                   exchange.maxPriceRaw = ppConfig?.pricingBounds?.ceilingPrice;
@@ -495,6 +492,40 @@ export const getCollectionMarketplaceConfigurationsV1Options: RouteOptions = {
                     ];
                   }
                 }
+              } else if (exchange.enabled && exchange.orderKind === "payment-processor-v2") {
+                const paymentSettings = await paymentProcessorV2.getCollectionPaymentSettings(
+                  params.collection
+                );
+                let paymentTokens: string[] = [];
+
+                if (
+                  paymentSettings?.paymentSettings ===
+                  paymentProcessorV2.PaymentSettings.DefaultPaymentMethodWhitelist
+                ) {
+                  paymentTokens = paymentSettings?.defaultPaymentMethods;
+                } else if (
+                  paymentSettings?.paymentSettings ===
+                  paymentProcessorV2.PaymentSettings.CustomPaymentMethodWhitelist
+                ) {
+                  paymentTokens = paymentSettings?.whitelistedPaymentMethods;
+                } else if (
+                  paymentSettings?.paymentSettings ===
+                  paymentProcessorV2.PaymentSettings.PricingConstraints
+                ) {
+                  paymentTokens = [paymentSettings.constrainedPricingPaymentMethod];
+                }
+
+                exchange.paymentTokens = await Promise.all(
+                  paymentTokens.map(async (token) => {
+                    const paymentToken = await getCurrency(token);
+                    return {
+                      address: token,
+                      symbol: paymentToken.symbol,
+                      name: paymentToken.name,
+                      decimals: paymentToken.decimals,
+                    };
+                  })
+                );
               }
             }
           })
