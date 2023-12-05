@@ -338,7 +338,10 @@ export const getUSDAndCurrencyPrices = async (
   if (
     getNetworkSettings().coingecko?.networkId ||
     (isTestnetCurrency(fromCurrencyAddress) && isTestnetCurrency(toCurrencyAddress)) ||
-    (isWhitelistedCurrency(fromCurrencyAddress) && isWhitelistedCurrency(toCurrencyAddress))
+    (isWhitelistedCurrency(fromCurrencyAddress) && isWhitelistedCurrency(toCurrencyAddress)) ||
+    (config.chainId === 7777777 &&
+      fromCurrencyAddress === AddressZero &&
+      toCurrencyAddress === AddressZero)
   ) {
     // Get the FROM currency price
     const fromCurrencyUSDPrice = await getAvailableUSDPrice(
