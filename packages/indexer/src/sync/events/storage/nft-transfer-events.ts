@@ -8,6 +8,7 @@ import { eventsSyncNftTransfersWriteBufferJob } from "@/jobs/events-sync/write-b
 import { AddressZero } from "@ethersproject/constants";
 import { tokenReclacSupplyJob } from "@/jobs/token-updates/token-reclac-supply-job";
 import { ZeroAddressBalance } from "@/models/zero-address-balance";
+import { getNetworkSettings } from "@/config/network";
 
 export type Event = {
   kind: ContractKind;
@@ -56,6 +57,7 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
   // Keep track of all unique contracts and tokens
   const uniqueContracts = new Map<string, string>();
   const uniqueTokens = new Set<string>();
+  const ns = getNetworkSettings();
 
   const transferValues: DbEvent[] = [];
 
@@ -71,10 +73,11 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
   for (const event of events) {
     const contractId = event.baseEventParams.address.toString();
     let isAirdrop = false;
-    // If the initiator of the transfer is not the recipient, it's an airdrop
-    if (event.baseEventParams.from !== event.to) {
+    // If its a mint, and the recipient did NOT initiate the transaction, then its an airdrop
+    if (ns.mintAddresses.includes(event.from) && event.baseEventParams.from !== event.to) {
       isAirdrop = true;
     }
+
     transferValues.push({
       address: toBuffer(event.baseEventParams.address),
       block: event.baseEventParams.block,
