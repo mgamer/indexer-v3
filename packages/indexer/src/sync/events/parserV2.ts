@@ -9,15 +9,24 @@ export type BaseEventParams = {
   logIndex: number;
   timestamp: number;
   batchIndex: number;
+  from: string;
 };
 
-export const parseEvent = (log: Log, timestamp: number, batchIndex = 1): BaseEventParams => {
+export const parseEvent = (
+  log: Log,
+  timestamp: number,
+  batchIndex = 1,
+  txData: {
+    from: string;
+  }
+): BaseEventParams => {
   const address = log.address.toLowerCase();
   const block = log.blockNumber;
   const blockHash = log.blockHash.toLowerCase();
   const txHash = log.transactionHash.toLowerCase();
   const txIndex = log.transactionIndex;
   const logIndex = log.logIndex;
+  const from = txData?.from?.toLowerCase();
 
   return {
     address,
@@ -28,5 +37,6 @@ export const parseEvent = (log: Log, timestamp: number, batchIndex = 1): BaseEve
     logIndex,
     timestamp,
     batchIndex,
+    from,
   };
 };

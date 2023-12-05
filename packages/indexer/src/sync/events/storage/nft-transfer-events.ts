@@ -33,6 +33,7 @@ type DbEvent = {
   to: Buffer;
   token_id: string;
   amount: string;
+  isAirdrop: boolean | null;
 };
 
 type erc721Token = {
@@ -69,7 +70,11 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
 
   for (const event of events) {
     const contractId = event.baseEventParams.address.toString();
-
+    let isAirdrop = false;
+    // If the initiator of the transfer is not the recipient, it's an airdrop
+    if (event.baseEventParams.from !== event.to) {
+      isAirdrop = true;
+    }
     transferValues.push({
       address: toBuffer(event.baseEventParams.address),
       block: event.baseEventParams.block,
@@ -83,6 +88,7 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
       to: toBuffer(event.to),
       token_id: event.tokenId,
       amount: event.amount,
+      isAirdrop: isAirdrop,
     });
 
     if (!uniqueContracts.has(contractId)) {
@@ -136,6 +142,7 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
           "to",
           "token_id",
           "amount",
+          "is_airdrop",
         ],
         { table: "nft_transfer_events" }
       );
@@ -159,7 +166,8 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
             "from",
             "to",
             "token_id",
-            "amount"
+            "amount",
+            "is_airdrop"
           ) VALUES ${pgp.helpers.values(event, columns)}
           ON CONFLICT DO NOTHING
           RETURNING

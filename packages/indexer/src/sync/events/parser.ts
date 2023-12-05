@@ -12,12 +12,16 @@ export type BaseEventParams = {
   logIndex: number;
   timestamp: number;
   batchIndex: number;
+  from: string;
 };
 
 export const parseEvent = async (
   log: Log,
   blocksCache: Map<number, blocksModel.Block>,
-  batchIndex = 1
+  batchIndex = 1,
+  txData: {
+    from: string;
+  }
 ): Promise<BaseEventParams> => {
   const address = log.address.toLowerCase();
   const block = log.blockNumber;
@@ -25,6 +29,7 @@ export const parseEvent = async (
   const txHash = log.transactionHash.toLowerCase();
   const txIndex = log.transactionIndex;
   const logIndex = log.logIndex;
+  const from = txData?.from?.toLowerCase();
 
   let blockResult = blocksCache.get(block);
   if (!blockResult) {
@@ -41,5 +46,6 @@ export const parseEvent = async (
     logIndex,
     timestamp: blockResult.timestamp,
     batchIndex,
+    from,
   };
 };

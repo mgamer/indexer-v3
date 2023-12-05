@@ -394,7 +394,12 @@ export const syncEvents = async (block: number, skipLogsCheck = false) => {
   let enhancedEvents = logs
     .map((log) => {
       try {
-        const baseEventParams = parseEvent(log, blockData.timestamp);
+        const txData = blockData.transactions.find((tx) => tx.hash === log.transactionHash);
+        if (!txData) {
+          throw new Error(`Transaction ${log.transactionHash} not found in block ${block}`);
+        }
+
+        const baseEventParams = parseEvent(log, blockData.timestamp, 1, txData);
         return availableEventData
           .filter(
             ({ addresses, numTopics, topic }) =>
