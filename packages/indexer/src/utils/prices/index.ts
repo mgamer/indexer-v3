@@ -339,6 +339,7 @@ export const getUSDAndCurrencyPrices = async (
     getNetworkSettings().coingecko?.networkId ||
     (isTestnetCurrency(fromCurrencyAddress) && isTestnetCurrency(toCurrencyAddress)) ||
     (isWhitelistedCurrency(fromCurrencyAddress) && isWhitelistedCurrency(toCurrencyAddress)) ||
+    // Allow price conversion on Zora which is not supported by Coingecko
     (config.chainId === 7777777 &&
       fromCurrencyAddress === AddressZero &&
       toCurrencyAddress === AddressZero)
