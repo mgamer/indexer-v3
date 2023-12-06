@@ -6,7 +6,6 @@ import Joi from "joi";
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, fromBuffer } from "@/common/utils";
-import { Assets } from "@/utils/assets";
 
 const version = "v1";
 
@@ -158,7 +157,6 @@ export const getCollectionDeprecatedV1Options: RouteOptions = {
             "t"."token_id" AS "floor_sell_token_id",
             "t"."name" AS "floor_sell_token_name",
             "t"."image" AS "floor_sell_token_image",
-            "t"."image_version" AS "floor_sell_token_image_version",
             "t"."floor_sell_id",
             "t"."floor_sell_value",
             "t"."floor_sell_maker",
@@ -230,11 +228,7 @@ export const getCollectionDeprecatedV1Options: RouteOptions = {
                     : null,
                   tokenId: r.floor_sell_token_id,
                   name: r.floor_sell_token_name,
-                  image: Assets.getResizedImageUrl(
-                    r.floor_sell_token_image,
-                    undefined,
-                    r.floor_sell_token_image_version
-                  ),
+                  image: r.floor_sell_token_image,
                 },
               },
               topBid: {
