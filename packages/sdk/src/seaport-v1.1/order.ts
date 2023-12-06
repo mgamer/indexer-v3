@@ -14,6 +14,7 @@ import { IOrder, ORDER_EIP712_TYPES } from "../seaport-base/order";
 import * as Types from "../seaport-base/types";
 import { bn, lc, n, s } from "../utils";
 import {
+  isCosignedOrder,
   isPrivateOrder,
   constructPrivateListingCounterOrder,
   getPrivateListingFulfillments,
@@ -228,6 +229,10 @@ export class Order implements IOrder {
 
   public isPrivateOrder() {
     return isPrivateOrder(this.params);
+  }
+
+  public isCosignedOrder() {
+    return isCosignedOrder(this.params, this.chainId);
   }
 
   public constructPrivateListingCounterOrder(privateSaleRecipient: string): Types.OrderWithCounter {

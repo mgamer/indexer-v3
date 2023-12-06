@@ -20,6 +20,8 @@ export interface IOrder {
   getSignatureData(): any;
 
   isPrivateOrder(): boolean;
+  isCosignedOrder(): boolean;
+
   constructPrivateListingCounterOrder(privateSaleRecipient: string): Types.OrderWithCounter;
   getPrivateListingFulfillments(): Types.MatchOrdersFulfillment[];
 }

@@ -5,14 +5,12 @@ import { AddressZero, HashZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import { _TypedDataEncoder } from "@ethersproject/hash";
 import { keccak256 } from "@ethersproject/keccak256";
-import axios from "axios";
 import { MerkleTree } from "merkletreejs";
 
 import * as Addresses from "./addresses";
 import * as BaseAddresses from "../seaport-base/addresses";
 import { ORDER_EIP712_TYPES, IOrder } from "../seaport-base/order";
 import * as Types from "../seaport-base/types";
-import { bn } from "../utils";
 
 import ExchangeAbi from "./abis/Exchange.json";
 import { SeaportBaseExchange } from "../seaport-base/exchange";
@@ -162,47 +160,7 @@ export class Exchange extends SeaportBaseExchange {
     switch (order.params.zone) {
       // TODO: Move this logic to the indexer, outside of the router
       case BaseAddresses.ReservoirCancellationZone[this.chainId]: {
-        return axios
-          .post(
-            `https://seaport-oracle-${
-              this.chainId === 1
-                ? "mainnet"
-                : this.chainId === 5
-                ? "goerli"
-                : this.chainId === 137
-                ? "polygon"
-                : "mumbai"
-            }.up.railway.app/api/signatures`,
-            {
-              orders: [
-                {
-                  chainId: this.chainId,
-                  orderParameters: order.params,
-                  fulfiller: AddressZero,
-                  marketplaceContract: this.contract.address,
-                  substandardRequests: [
-                    {
-                      requestedReceivedItems: order.params.consideration.map((c) => ({
-                        ...c,
-                        // All criteria items should have been resolved
-                        itemType: c.itemType > 3 ? c.itemType - 2 : c.itemType,
-                        // Adjust the amount to the quantity filled (won't work for dutch auctions)
-                        amount: bn(matchParams!.amount ?? 1)
-                          .mul(c.endAmount)
-                          .div(order.getInfo()!.amount)
-                          .toString(),
-                        identifier:
-                          c.itemType > 3
-                            ? matchParams!.criteriaResolvers![0].identifier
-                            : c.identifierOrCriteria,
-                      })),
-                    },
-                  ],
-                },
-              ],
-            }
-          )
-          .then((response) => response.data.orders[0].extraDataComponent);
+        return order.params.extraDataComponent ?? "0x";
       }
 
       default:

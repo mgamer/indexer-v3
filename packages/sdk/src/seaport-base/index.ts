@@ -5,6 +5,7 @@ import { ConduitController } from "./conduit-controller";
 import { SeaportBaseExchange } from "./exchange";
 import { IOrder } from "./order";
 import * as Types from "./types";
+import * as Helpers from "./helpers";
 
 export {
   Addresses,
@@ -16,4 +17,5 @@ export {
   SeaportBaseExchange,
   BaseOrderInfo,
   Types,
+  Helpers,
 };

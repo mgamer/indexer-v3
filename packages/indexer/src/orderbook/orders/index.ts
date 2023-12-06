@@ -42,6 +42,8 @@ import { cosigner } from "@/utils/cosign";
 import { checkMarketplaceIsFiltered } from "@/utils/marketplace-blacklists";
 import * as paymentProcessorV2Utils from "@/utils/payment-processor-v2";
 import * as registry from "@/utils/royalties/registry";
+import * as offchainCancel from "@/utils/offchain-cancel";
+import { AddressZero } from "@ethersproject/constants";
 
 // Whenever a new order kind is added, make sure to also include an
 // entry/implementation in the below types/methods in order to have
@@ -312,10 +314,36 @@ export const generateListingDetailsV6 = async (
     }
 
     case "seaport-v1.4": {
+      const sdkOrder = new Sdk.SeaportV14.Order(config.chainId, order.rawData);
+      if (sdkOrder.isCosignedOrder()) {
+        const matchParams = sdkOrder.buildMatching({
+          tokenId: common.tokenId,
+          amount: common.amount ?? 1,
+        });
+        const { orders: signedOrders } = await offchainCancel.seaport.doSignOrders({
+          orders: [
+            {
+              orderParameters: sdkOrder.params,
+              fulfiller: AddressZero,
+              marketplaceContract: Sdk.SeaportV14.Addresses.Exchange[config.chainId],
+              substandardRequests: [
+                {
+                  requestedReceivedItems: Sdk.SeaportBase.Helpers.computeReceivedItems(
+                    sdkOrder,
+                    matchParams
+                  ),
+                },
+              ],
+            },
+          ],
+        });
+        sdkOrder.params.extraDataComponent = signedOrders[0].extraDataComponent!.toString();
+      }
+
       return {
         kind: "seaport-v1.4",
         ...common,
-        order: new Sdk.SeaportV14.Order(config.chainId, order.rawData),
+        order: sdkOrder,
       };
     }
 
@@ -324,10 +352,36 @@ export const generateListingDetailsV6 = async (
         // Make sure on-chain orders have a "defined" signature
         order.rawData.signature = order.rawData.signature ?? "0x";
 
+        const sdkOrder = new Sdk.SeaportV15.Order(config.chainId, order.rawData);
+        if (sdkOrder.isCosignedOrder()) {
+          const matchParams = sdkOrder.buildMatching({
+            tokenId: common.tokenId,
+            amount: common.amount ?? 1,
+          });
+          const { orders: signedOrders } = await offchainCancel.seaport.doSignOrders({
+            orders: [
+              {
+                orderParameters: sdkOrder.params,
+                fulfiller: AddressZero,
+                marketplaceContract: Sdk.SeaportV15.Addresses.Exchange[config.chainId],
+                substandardRequests: [
+                  {
+                    requestedReceivedItems: Sdk.SeaportBase.Helpers.computeReceivedItems(
+                      sdkOrder,
+                      matchParams
+                    ),
+                  },
+                ],
+              },
+            ],
+          });
+          sdkOrder.params.extraDataComponent = signedOrders[0].extraDataComponent!.toString();
+        }
+
         return {
           kind: "seaport-v1.5",
           ...common,
-          order: new Sdk.SeaportV15.Order(config.chainId, order.rawData),
+          order: sdkOrder,
         };
       } else {
         if (order.rawData.okxOrderId) {
@@ -354,10 +408,36 @@ export const generateListingDetailsV6 = async (
     }
 
     case "alienswap": {
+      const sdkOrder = new Sdk.Alienswap.Order(config.chainId, order.rawData);
+      if (sdkOrder.isCosignedOrder()) {
+        const matchParams = sdkOrder.buildMatching({
+          tokenId: common.tokenId,
+          amount: common.amount ?? 1,
+        });
+        const { orders: signedOrders } = await offchainCancel.seaport.doSignOrders({
+          orders: [
+            {
+              orderParameters: sdkOrder.params,
+              fulfiller: AddressZero,
+              marketplaceContract: Sdk.Alienswap.Addresses.Exchange[config.chainId],
+              substandardRequests: [
+                {
+                  requestedReceivedItems: Sdk.SeaportBase.Helpers.computeReceivedItems(
+                    sdkOrder,
+                    matchParams
+                  ),
+                },
+              ],
+            },
+          ],
+        });
+        sdkOrder.params.extraDataComponent = signedOrders[0].extraDataComponent!.toString();
+      }
+
       return {
         kind: "alienswap",
         ...common,
-        order: new Sdk.Alienswap.Order(config.chainId, order.rawData),
+        order: sdkOrder,
       };
     }
 
@@ -588,6 +668,31 @@ export const generateBidDetailsV6 = async (
         extraArgs.tokenIds = tokens.map(({ token_id }) => token_id);
       }
 
+      if (sdkOrder.isCosignedOrder()) {
+        const matchParams = sdkOrder.buildMatching({
+          tokenId: common.tokenId,
+          amount: common.amount ?? 1,
+        });
+        const { orders: signedOrders } = await offchainCancel.seaport.doSignOrders({
+          orders: [
+            {
+              orderParameters: sdkOrder.params,
+              fulfiller: AddressZero,
+              marketplaceContract: Sdk.SeaportV14.Addresses.Exchange[config.chainId],
+              substandardRequests: [
+                {
+                  requestedReceivedItems: Sdk.SeaportBase.Helpers.computeReceivedItems(
+                    sdkOrder,
+                    matchParams
+                  ),
+                },
+              ],
+            },
+          ],
+        });
+        sdkOrder.params.extraDataComponent = signedOrders[0].extraDataComponent!.toString();
+      }
+
       return {
         kind: "seaport-v1.4",
         ...common,
@@ -624,6 +729,31 @@ export const generateBidDetailsV6 = async (
             { id: sdkOrder.hash() }
           );
           extraArgs.tokenIds = tokens.map(({ token_id }) => token_id);
+        }
+
+        if (sdkOrder.isCosignedOrder()) {
+          const matchParams = sdkOrder.buildMatching({
+            tokenId: common.tokenId,
+            amount: common.amount ?? 1,
+          });
+          const { orders: signedOrders } = await offchainCancel.seaport.doSignOrders({
+            orders: [
+              {
+                orderParameters: sdkOrder.params,
+                fulfiller: AddressZero,
+                marketplaceContract: Sdk.SeaportV15.Addresses.Exchange[config.chainId],
+                substandardRequests: [
+                  {
+                    requestedReceivedItems: Sdk.SeaportBase.Helpers.computeReceivedItems(
+                      sdkOrder,
+                      matchParams
+                    ),
+                  },
+                ],
+              },
+            ],
+          });
+          sdkOrder.params.extraDataComponent = signedOrders[0].extraDataComponent!.toString();
         }
 
         return {
@@ -670,6 +800,32 @@ export const generateBidDetailsV6 = async (
         );
         extraArgs.tokenIds = tokens.map(({ token_id }) => token_id);
       }
+
+      if (sdkOrder.isCosignedOrder()) {
+        const matchParams = sdkOrder.buildMatching({
+          tokenId: common.tokenId,
+          amount: common.amount ?? 1,
+        });
+        const { orders: signedOrders } = await offchainCancel.seaport.doSignOrders({
+          orders: [
+            {
+              orderParameters: sdkOrder.params,
+              fulfiller: AddressZero,
+              marketplaceContract: Sdk.Alienswap.Addresses.Exchange[config.chainId],
+              substandardRequests: [
+                {
+                  requestedReceivedItems: Sdk.SeaportBase.Helpers.computeReceivedItems(
+                    sdkOrder,
+                    matchParams
+                  ),
+                },
+              ],
+            },
+          ],
+        });
+        sdkOrder.params.extraDataComponent = signedOrders[0].extraDataComponent!.toString();
+      }
+
       return {
         kind: "alienswap",
         ...common,

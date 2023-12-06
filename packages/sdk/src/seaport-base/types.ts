@@ -83,6 +83,8 @@ export type OrderComponents = {
   counter: string;
   signature?: string;
   totalOriginalConsiderationItems?: number;
+  // cosignature
+  extraDataComponent?: string;
 };
 
 export type AdvancedOrder = {
