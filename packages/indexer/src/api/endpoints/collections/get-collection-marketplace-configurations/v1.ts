@@ -500,7 +500,7 @@ export const getCollectionMarketplaceConfigurationsV1Options: RouteOptions = {
                   params.collection
                 );
 
-                let paymentTokens: string[] = [];
+                let paymentTokens = [Sdk.Common.Addresses.Native[config.chainId]];
                 if (
                   settings &&
                   [
@@ -516,7 +516,9 @@ export const getCollectionMarketplaceConfigurationsV1Options: RouteOptions = {
                   paymentTokens = [settings.constrainedPricingPaymentMethod];
                 }
 
-                exchange.supportedBidCurrencies = paymentTokens;
+                exchange.supportedBidCurrencies = paymentTokens.filter(
+                  (p) => p !== Sdk.Common.Addresses.Native[config.chainId]
+                );
                 exchange.paymentTokens = await Promise.all(
                   paymentTokens.map(async (token) => {
                     const paymentToken = await getCurrency(token);
