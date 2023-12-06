@@ -24,10 +24,10 @@ export class Assets {
       if (config.enableImageResizing) {
         if (_.isArray(assets)) {
           return assets.map((asset) => {
-            return this.signImage(asset, size, image_version);
+            return this.getResizedImageUrl(asset, size, image_version);
           });
         }
-        return this.signImage(assets, size, image_version);
+        return this.getResizedImageUrl(assets, size, image_version);
       }
     } catch (error) {
       logger.error("getLocalAssetsLink", `Error: ${error}`);
