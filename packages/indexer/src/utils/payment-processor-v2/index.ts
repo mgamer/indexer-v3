@@ -20,7 +20,6 @@ export enum PaymentSettings {
 
 export type CollectionPaymentSettings = {
   paymentSettings: PaymentSettings;
-  paymentMethodWhitelistId: number;
   constrainedPricingPaymentMethod: string;
   royaltyBackfillNumerator: number;
   royaltyBountyNumerator: number;
@@ -28,12 +27,29 @@ export type CollectionPaymentSettings = {
   blockTradesFromUntrustedChannels: boolean;
   pricingBounds?: PricingBounds;
   whitelistedPaymentMethods: string[];
-  defaultPaymentMethods: string[];
 };
 
 export type PricingBounds = {
   floorPrice: string;
   ceilingPrice: string;
+};
+
+export const getDefaultPaymentMethods = async (): Promise<string[]> => {
+  const cacheKey = "pp-v2-default-payment-methods";
+
+  let result = await redis.get(cacheKey).then((r) => (r ? (JSON.parse(r) as string[]) : undefined));
+  if (!result) {
+    const exchange = new Contract(
+      Sdk.PaymentProcessorV2.Addresses.Exchange[config.chainId],
+      new Interface(["function getDefaultPaymentMethods() view returns (address[])"]),
+      baseProvider
+    );
+
+    result = exchange.getDefaultPaymentMethods().then((c: Result) => c.map((d) => d.toLowerCase()));
+    await redis.set(cacheKey, JSON.stringify(result), "EX", 7 * 24 * 3600);
+  }
+
+  return result!;
 };
 
 export const getCollectionPaymentSettings = async (
@@ -61,31 +77,24 @@ export const getCollectionPaymentSettings = async (
               bool blockTradesFromUntrustedChannels
             )
           )`,
-          `function getDefaultPaymentMethods() external view returns (address[] memory)`,
         ]),
         baseProvider
       );
 
       const paymentSettings = await exchange.collectionPaymentSettings(contract);
-      const defaultPaymentMethods: string[] = await exchange
-        .getDefaultPaymentMethods()
-        .then((c: Result) => {
-          return c.map((d) => d.toLowerCase());
-        });
 
       result = {
         paymentSettings: paymentSettings.paymentSettings,
-        paymentMethodWhitelistId: paymentSettings.paymentMethodWhitelistId,
         constrainedPricingPaymentMethod:
           paymentSettings.constrainedPricingPaymentMethod.toLowerCase(),
         royaltyBackfillNumerator: paymentSettings.royaltyBackfillNumerator,
         royaltyBountyNumerator: paymentSettings.royaltyBountyNumerator,
         isRoyaltyBountyExclusive: paymentSettings.isRoyaltyBountyExclusive,
         blockTradesFromUntrustedChannels: paymentSettings.blockTradesFromUntrustedChannels,
-        whitelistedPaymentMethods: await getWhitelistedPaymentMethods(
-          paymentSettings.paymentMethodWhitelistId
-        ),
-        defaultPaymentMethods,
+        whitelistedPaymentMethods:
+          paymentSettings.paymentMethodWhitelistId === 0
+            ? await getDefaultPaymentMethods()
+            : await getWhitelistedPaymentMethods(paymentSettings.paymentMethodWhitelistId),
       };
 
       if (result?.paymentSettings === PaymentSettings.PricingConstraints) {
@@ -171,52 +180,46 @@ export const saveBackfilledRoyalties = async (tokenAddress: string, royalties: R
     royalties.some((r) => r.recipient !== AddressZero) ? royalties : undefined
   );
 
-export const addPaymentMethodToWhitelist = async (
-  paymentMethodWhitelistId: number,
-  paymentMethod: string
-) =>
+export const addPaymentMethodToWhitelist = async (id: number, paymentMethod: string) =>
   idb.none(
     `
-      INSERT INTO payment_processor_v2_whitelist_payment_methods (
+      INSERT INTO payment_processor_v2_payment_methods (
         id,
         payment_method
       ) VALUES (
-        $/paymentMethodWhitelistId/,
+        $/id/,
         $/paymentMethod/
       ) ON CONFLICT DO NOTHING
     `,
     {
-      paymentMethodWhitelistId,
+      id,
       paymentMethod: toBuffer(paymentMethod),
     }
   );
 
-export const removePaymentMethodFromWhitelist = async (
-  paymentMethodWhitelistId: number,
-  paymentMethod: string
-) =>
+export const removePaymentMethodFromWhitelist = async (id: number, paymentMethod: string) =>
   idb.none(
     `
-      DELETE FROM payment_processor_v2_whitelist_payment_methods
-      WHERE payment_processor_v2_whitelist_payment_methods.id = $/paymentMethodWhitelistId/
-        AND payment_processor_v2_whitelist_payment_methods.payment_method = $/paymentMethod/
+      DELETE FROM payment_processor_v2_payment_methods
+      WHERE payment_processor_v2_payment_methods.id = $/id/
+        AND payment_processor_v2_payment_methods.payment_method = $/paymentMethod/
     `,
     {
-      paymentMethodWhitelistId,
+      id,
       paymentMethod: toBuffer(paymentMethod),
     }
   );
 
-export const getWhitelistedPaymentMethods = async (paymentMethodWhitelistId: number) => {
+export const getWhitelistedPaymentMethods = async (id: number) => {
   const results = await ridb.manyOrNone(
     `
       SELECT
-        payment_processor_v2_whitelist_payment_methods.payment_method
-      FROM payment_processor_v2_whitelist_payment_methods
-      WHERE payment_processor_v2_whitelist_payment_methods.id = $/paymentMethodWhitelistId/
+        payment_processor_v2_payment_methods.payment_method
+      FROM payment_processor_v2_payment_methods
+      WHERE payment_processor_v2_payment_methods.id = $/paymentMethodWhitelistId/
     `,
     {
-      paymentMethodWhitelistId,
+      id,
     }
   );
 

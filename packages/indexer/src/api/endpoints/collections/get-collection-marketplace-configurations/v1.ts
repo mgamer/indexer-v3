@@ -496,28 +496,27 @@ export const getCollectionMarketplaceConfigurationsV1Options: RouteOptions = {
                   }
                 }
               } else if (exchange.enabled && exchange.orderKind === "payment-processor-v2") {
-                const paymentSettings = await paymentProcessorV2.getCollectionPaymentSettings(
+                const settings = await paymentProcessorV2.getCollectionPaymentSettings(
                   params.collection
                 );
-                let paymentTokens: string[] = [];
 
+                let paymentTokens: string[] = [];
                 if (
-                  paymentSettings?.paymentSettings ===
-                  paymentProcessorV2.PaymentSettings.DefaultPaymentMethodWhitelist
+                  settings &&
+                  [
+                    paymentProcessorV2.PaymentSettings.DefaultPaymentMethodWhitelist,
+                    paymentProcessorV2.PaymentSettings.CustomPaymentMethodWhitelist,
+                  ].includes(settings.paymentSettings)
                 ) {
-                  paymentTokens = paymentSettings?.defaultPaymentMethods;
+                  paymentTokens = settings.whitelistedPaymentMethods;
                 } else if (
-                  paymentSettings?.paymentSettings ===
-                  paymentProcessorV2.PaymentSettings.CustomPaymentMethodWhitelist
-                ) {
-                  paymentTokens = paymentSettings?.whitelistedPaymentMethods;
-                } else if (
-                  paymentSettings?.paymentSettings ===
+                  settings?.paymentSettings ===
                   paymentProcessorV2.PaymentSettings.PricingConstraints
                 ) {
-                  paymentTokens = [paymentSettings.constrainedPricingPaymentMethod];
+                  paymentTokens = [settings.constrainedPricingPaymentMethod];
                 }
 
+                exchange.supportedBidCurrencies = paymentTokens;
                 exchange.paymentTokens = await Promise.all(
                   paymentTokens.map(async (token) => {
                     const paymentToken = await getCurrency(token);
