@@ -1089,7 +1089,9 @@ export const getTokensV6Options: RouteOptions = {
           case "rarity": {
             return ` ORDER BY ${union ? "" : "t."}rarity_rank ${sortDirection} NULLS ${
               sortDirection === "asc" ? "FIRST" : "LAST"
-            }, t_contract ${sortDirection}, t_token_id ${sortDirection}`;
+            }, t_contract ${sortDirection === "asc" ? "desc" : "asc"}, t_token_id ${
+              sortDirection === "asc" ? "desc" : "asc"
+            }`;
           }
           case "tokenId": {
             return ` ORDER BY t_contract ${sortDirection}, t_token_id ${sortDirection}`;
