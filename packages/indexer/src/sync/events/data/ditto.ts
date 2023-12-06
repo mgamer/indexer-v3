@@ -1,4 +1,5 @@
 import { Interface } from "@ethersproject/abi";
+
 import { EventData } from "@/events-sync/data";
 
 export const dittoPoolInitialized: EventData = {

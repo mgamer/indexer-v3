@@ -8,8 +8,8 @@ export type DittoPool = {
   permitter: string;
 };
 
-export const saveDittoPool = async (dittoPool: DittoPool) => {
-  await idb.none(
+export const saveDittoPool = async (dittoPool: DittoPool) =>
+  idb.none(
     `
       INSERT INTO ditto_pools (
         address,
@@ -31,10 +31,8 @@ export const saveDittoPool = async (dittoPool: DittoPool) => {
       permitter: toBuffer(dittoPool.permitter),
     }
   );
-  return dittoPool;
-};
 
-export const getDittoPool = async (address: string): Promise<DittoPool | null> => {
+export const getDittoPool = async (address: string): Promise<DittoPool | undefined> => {
   const result = await idb.oneOrNone(
     `
       SELECT
@@ -48,7 +46,9 @@ export const getDittoPool = async (address: string): Promise<DittoPool | null> =
     { address: toBuffer(address) }
   );
 
-  if (!result) return null;
+  if (!result) {
+    return undefined;
+  }
 
   return {
     address,

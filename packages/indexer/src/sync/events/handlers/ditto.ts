@@ -3,7 +3,6 @@ import { EnhancedEvent } from "@/events-sync/handlers/utils";
 import { DittoPool, saveDittoPool } from "@/models/ditto-pools";
 
 export const handleEvents = async (events: EnhancedEvent[]) => {
-  // Handle the events
   for (const { subKind, baseEventParams, log } of events) {
     const eventData = getEventData([subKind])[0];
     switch (subKind) {
@@ -13,6 +12,7 @@ export const handleEvents = async (events: EnhancedEvent[]) => {
         const templateAddress = parsedLog.args["template"].toLowerCase();
         const lpNftAddress = parsedLog.args["lpNft"].toLowerCase();
         const permitterAddress = parsedLog.args["permitter"].toLowerCase();
+
         const dittoPool: DittoPool = {
           address: poolAddress,
           template: templateAddress,
