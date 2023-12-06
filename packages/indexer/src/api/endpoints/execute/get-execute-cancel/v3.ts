@@ -420,20 +420,6 @@ export const getExecuteCancelV3Options: RouteOptions = {
                     sign: offchainCancel.seaport.generateOffChainCancellationSignatureData(
                       orderResults.map((o) => o.id)
                     ),
-                    // sign: {
-                    //   signatureKind: "eip712",
-                    //   domain: {
-                    //     name: "SignedZone",
-                    //     version: "1.0.0",
-                    //     chainId: config.chainId,
-                    //     verifyingContract: cancellationZone,
-                    //   },
-                    //   types: { OrderHashes: [{ name: "orderHashes", type: "bytes32[]" }] },
-                    //   value: {
-                    //     orderHashes: orderResults.map((o) => o.id),
-                    //   },
-                    //   primaryType: "OrderHashes",
-                    // },
                     post: {
                       endpoint: "/execute/cancel-signature/v1",
                       method: "POST",
