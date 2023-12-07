@@ -176,7 +176,7 @@ export class TokenWebsocketEventsTriggerJob extends AbstractRabbitMqJobHandler {
               : [],
           },
           Boolean(data.after.metadata_disabled),
-          r.collection_metadata_disabled
+          r?.collection_metadata_disabled
         ),
         market: {
           floorAsk: data.after.floor_sell_value && {
