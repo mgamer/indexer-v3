@@ -6,9 +6,9 @@ import {
   WebsocketEventKind,
   WebsocketEventRouter,
 } from "@/jobs/websocket-events/websocket-event-router";
-import { refreshAsksTokenJob } from "@/jobs/asks/refresh-asks-token-job";
+import { refreshAsksTokenJob } from "@/jobs/elasticsearch/asks/refresh-asks-token-job";
 import { logger } from "@/common/logger";
-import { refreshActivitiesTokenJob } from "@/jobs/activities/refresh-activities-token-job";
+import { refreshActivitiesTokenJob } from "@/jobs/elasticsearch/activities/refresh-activities-token-job";
 import _ from "lodash";
 
 export class IndexerTokensHandler extends KafkaEventHandler {
@@ -45,24 +45,49 @@ export class IndexerTokensHandler extends KafkaEventHandler {
       eventKind: WebsocketEventKind.TokenEvent,
     });
 
-    if (payload.after.name || payload.after.image) {
-      await redis.set(
-        `token-cache:${payload.after.contract}:${payload.after.token_id}`,
-        JSON.stringify({
-          contract: payload.after.contract,
-          token_id: payload.after.token_id,
-          name: payload.after.name,
-          image: payload.after.image,
-          image_version: payload.after?.image_version,
-          metadata_disabled: payload.after.metadata_disabled,
-        }),
-        "EX",
-        60 * 60 * 24,
-        "XX"
-      );
-    }
-
     try {
+      // Update the elasticsearch activities token cache
+      const changed = [];
+
+      for (const key in payload.after) {
+        const beforeValue = payload.before[key];
+        const afterValue = payload.after[key];
+
+        if (beforeValue !== afterValue) {
+          changed.push(key);
+        }
+      }
+
+      if (
+        changed.some((value) =>
+          [
+            "name",
+            "image",
+            "metadata_disabled",
+            "image_version",
+            "rarity_rank",
+            "rarity_score",
+          ].includes(value)
+        )
+      ) {
+        await redis.set(
+          `token-cache:${payload.after.contract}:${payload.after.token_id}`,
+          JSON.stringify({
+            contract: payload.after.contract,
+            token_id: payload.after.token_id,
+            name: payload.after.name,
+            image: payload.after.image,
+            image_version: payload.after.image_version,
+            metadata_disabled: payload.after.metadata_disabled,
+            rarity_rank: payload.after.rarity_rank,
+            rarity_score: payload.after.rarity_score,
+          }),
+          "EX",
+          60 * 60 * 24,
+          "XX"
+        );
+      }
+
       const spamStatusChanged = payload.before.is_spam !== payload.after.is_spam;
 
       // Update the elasticsearch activities index

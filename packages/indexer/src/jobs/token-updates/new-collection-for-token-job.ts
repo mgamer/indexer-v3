@@ -12,12 +12,13 @@ import { collectionFloorJob } from "@/jobs/collection-updates/collection-floor-q
 import { metadataIndexFetchJob } from "@/jobs/metadata-index/metadata-fetch-job";
 import { Collections } from "@/models/collections";
 import { updateCollectionDailyVolumeJob } from "@/jobs/collection-updates/update-collection-daily-volume-job";
-import { replaceActivitiesCollectionJob } from "@/jobs/activities/replace-activities-collection-job";
+import { replaceActivitiesCollectionJob } from "@/jobs/elasticsearch/activities/replace-activities-collection-job";
 import _ from "lodash";
 import * as royalties from "@/utils/royalties";
 import * as marketplaceFees from "@/utils/marketplace-fees";
 import MetadataProviderRouter from "@/metadata/metadata-provider-router";
 import PgPromise from "pg-promise";
+import { tokenReassignedUserCollectionsJob } from "@/jobs/nft-balance-updates/token-reassigned-user-collections-job";
 
 export type NewCollectionForTokenJobPayload = {
   contract: string;
@@ -40,6 +41,19 @@ export class NewCollectionForTokenJob extends AbstractRabbitMqJobHandler {
   protected async process(payload: NewCollectionForTokenJobPayload) {
     const { contract, tokenId, mintedTimestamp, newCollectionId, oldCollectionId } = payload;
     const queries: PgPromiseQuery[] = [];
+
+    if (
+      config.chainId === 137 &&
+      _.includes(
+        [
+          "0x2953399124f0cbb46d2cbacd8a89cf0599974963:opensea-undefined",
+          "0x2953399124f0cbb46d2cbacd8a89cf0599974963:opensea-null",
+        ],
+        newCollectionId
+      )
+    ) {
+      return;
+    }
 
     try {
       // Fetch collection from local DB
@@ -217,6 +231,8 @@ export class NewCollectionForTokenJob extends AbstractRabbitMqJobHandler {
       await recalcTokenCountQueueJob.addToQueue({
         collection: oldCollectionId,
       });
+
+      await tokenReassignedUserCollectionsJob.addToQueue({ oldCollectionId, tokenId, contract });
 
       // If this is a new collection, recalculate floor price
       const floorAskInfo = {

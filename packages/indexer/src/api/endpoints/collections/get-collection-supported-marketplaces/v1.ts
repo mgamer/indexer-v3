@@ -12,7 +12,7 @@ import { config } from "@/config/index";
 import { getNetworkSettings, getSubDomain } from "@/config/network";
 import { OrderKind } from "@/orderbook/orders";
 import { getOrUpdateBlurRoyalties } from "@/utils/blur";
-import { checkMarketplaceIsFiltered } from "@/utils/erc721c";
+import { checkMarketplaceIsFiltered } from "@/utils/marketplace-blacklists";
 import * as marketplaceFees from "@/utils/marketplace-fees";
 import * as registry from "@/utils/royalties/registry";
 
@@ -231,10 +231,7 @@ export const getCollectionSupportedMarketplacesV1Options: RouteOptions = {
       {
         let openseaMarketplaceFees: Royalty[] = collectionResult.marketplace_fees?.opensea;
         if (collectionResult.marketplace_fees?.opensea == null) {
-          openseaMarketplaceFees = await marketplaceFees.getCollectionOpenseaFees(
-            params.collection,
-            collectionResult.contract
-          );
+          openseaMarketplaceFees = marketplaceFees.getCollectionOpenseaFees();
         }
 
         const openseaRoyalties: Royalty[] = collectionResult.new_royalties?.opensea;

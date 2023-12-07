@@ -36,7 +36,7 @@ export const postExecuteMintV1Options: RouteOptions = {
   description: "Mint tokens",
   notes:
     "Use this API to mint tokens. We recommend using the SDK over this API as the SDK will iterate through the steps and return callbacks.",
-  tags: ["api", "Mint tokens"],
+  tags: ["api", "Fill Orders (buy & sell)"],
   timeout: {
     server: 40 * 1000,
   },
@@ -509,9 +509,9 @@ export const postExecuteMintV1Options: RouteOptions = {
                   // Mostly coming from allowlist mints for which the user is not authorized
                   // TODO: Have an allowlist check instead of handling it via `try` / `catch`
                 }
-
-                hasActiveMints = true;
               }
+
+              hasActiveMints = true;
             }
           }
 
@@ -681,9 +681,9 @@ export const postExecuteMintV1Options: RouteOptions = {
         );
         const rawAmount = bn(adjustedFeeAmount).toString();
 
-        // To avoid numeric overflow
-        const maxBps = 10000;
-        const bps = bn(feeAmount).mul(10000).div(item.rawQuote);
+        // To avoid numeric overflow and division by zero
+        const maxBps = bn(10000);
+        const bps = bn(item.rawQuote).gt(0) ? bn(feeAmount).mul(10000).div(item.rawQuote) : maxBps;
 
         item.feesOnTop.push({
           recipient: fee.recipient,
@@ -720,16 +720,6 @@ export const postExecuteMintV1Options: RouteOptions = {
         } else {
           item.totalPrice = item.quote;
           item.totalRawPrice = item.rawQuote;
-        }
-      }
-
-      // Add fees on top
-      for (const md of mintDetails) {
-        for (const fee of globalFees) {
-          md.fees.push({
-            recipient: fee.recipient,
-            amount: bn(fee.amount).div(mintDetails.length).toString(),
-          });
         }
       }
 
@@ -832,26 +822,27 @@ export const postExecuteMintV1Options: RouteOptions = {
 
           await Promise.all(
             payload.alternativeCurrencies.map(async (c: string) => {
-              const [currency, chainId] = c.split(":");
-              if (currency !== Sdk.Common.Addresses.Native[Number(chainId)]) {
-                throw Boom.badRequest("Unsupported alternative currency");
-              }
+              try {
+                const [currency, chainId] = c.split(":");
 
-              const { quote } = await getCrossChainQuote(Number(chainId), item);
-              item.buyIn!.push(
-                await getJoiPriceObject(
-                  {
-                    gross: { amount: quote },
-                  },
-                  currency
-                ).then((p) => ({
-                  ...p,
-                  currency: {
-                    ...p.currency,
-                    chainId: Number(chainId),
-                  },
-                }))
-              );
+                const { quote } = await getCrossChainQuote(Number(chainId), item);
+                item.buyIn!.push(
+                  await getJoiPriceObject(
+                    {
+                      gross: { amount: quote },
+                    },
+                    currency
+                  ).then((p) => ({
+                    ...p,
+                    currency: {
+                      ...p.currency,
+                      chainId: Number(chainId),
+                    },
+                  }))
+                );
+              } catch {
+                // Skip errors
+              }
             })
           );
         }

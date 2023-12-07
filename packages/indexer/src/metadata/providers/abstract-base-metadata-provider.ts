@@ -4,7 +4,7 @@ import {
   hasCustomCollectionHandler,
   hasCustomHandler,
 } from "../custom";
-import { CollectionMetadata, TokenMetadata, TokenMetadataBySlugResult } from "../types";
+import { CollectionMetadata, TokenMetadata } from "../types";
 import {
   extendCollectionMetadata,
   extendMetadata,
@@ -36,7 +36,7 @@ export abstract class AbstractBaseMetadataProvider {
   }
 
   async getTokensMetadata(
-    tokens: { contract: string; tokenId: string }[]
+    tokens: { contract: string; tokenId: string; uri?: string }[]
   ): Promise<TokenMetadata[]> {
     const customMetadata = await Promise.all(
       tokens.map(async (token) => {
@@ -85,13 +85,6 @@ export abstract class AbstractBaseMetadataProvider {
     return extendedMetadata;
   }
 
-  async getTokensMetadataBySlug(
-    slug: string,
-    continuation: string
-  ): Promise<TokenMetadataBySlugResult> {
-    return this._getTokensMetadataBySlug(slug, continuation);
-  }
-
   // Internal methods for subclasses
   protected abstract _getCollectionMetadata(
     contract: string,
@@ -101,11 +94,6 @@ export abstract class AbstractBaseMetadataProvider {
   protected abstract _getTokensMetadata(
     tokens: { contract: string; tokenId: string }[]
   ): Promise<TokenMetadata[]>;
-
-  protected abstract _getTokensMetadataBySlug(
-    slug: string,
-    continuation?: string
-  ): Promise<TokenMetadataBySlugResult>;
 
   // Parsers
 
