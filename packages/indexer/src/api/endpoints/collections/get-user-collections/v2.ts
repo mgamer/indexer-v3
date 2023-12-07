@@ -325,7 +325,7 @@ export const getUserCollectionsV2Options: RouteOptions = {
               twitterUsername: r.twitter_username,
               openseaVerificationStatus: r.opensea_verification_status,
               description: r.description,
-              sampleImages: Assets.getLocalAssetsLink(r.sample_images) || [],
+              sampleImages: Assets.getResizedImageURLs(r.sample_images) || [],
               tokenCount: String(r.token_count),
               primaryContract: fromBuffer(r.contract),
               tokenSetId: r.token_set_id,

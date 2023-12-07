@@ -348,7 +348,7 @@ export const getUserCollectionsV3Options: RouteOptions = {
               openseaVerificationStatus: r.opensea_verification_status,
               description: r.description,
               metadataDisabled: Boolean(Number(r.metadata_disabled)),
-              sampleImages: Assets.getLocalAssetsLink(r.sample_images) || [],
+              sampleImages: Assets.getResizedImageURLs(r.sample_images) || [],
               tokenCount: String(r.token_count),
               primaryContract: fromBuffer(r.contract),
               tokenSetId: r.token_set_id,

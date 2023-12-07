@@ -821,7 +821,7 @@ export const getCollectionsV7Options: RouteOptions = {
               description: r.description,
               metadataDisabled: Boolean(Number(r.metadata_disabled)),
               isSpam: Number(r.is_spam) > 0,
-              sampleImages: Assets.getLocalAssetsLink(sampleImages) ?? [],
+              sampleImages: Assets.getResizedImageURLs(sampleImages) ?? [],
               tokenCount: String(r.token_count),
               onSaleCount: String(r.on_sale_count),
               primaryContract: fromBuffer(r.contract),

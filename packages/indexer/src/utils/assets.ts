@@ -11,7 +11,7 @@ export enum ImageSize {
 }
 
 export class Assets {
-  public static getLocalAssetsLink(
+  public static getResizedImageURLs(
     assets: string | string[],
     size?: number,
     image_version?: number
@@ -30,7 +30,7 @@ export class Assets {
         return this.getResizedImageUrl(assets, size, image_version);
       }
     } catch (error) {
-      logger.error("getLocalAssetsLink", `Error: ${error}`);
+      logger.error("getResizedImageURLs", `Error: ${error}`);
     }
 
     return assets;

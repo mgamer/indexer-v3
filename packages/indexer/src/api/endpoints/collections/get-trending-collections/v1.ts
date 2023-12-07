@@ -362,7 +362,7 @@ async function formatCollections(
         ),
         sampleImages:
           metadata?.sample_images && metadata?.sample_images?.length > 0
-            ? Assets.getLocalAssetsLink(metadata?.sample_images, undefined, metadata.image_version)
+            ? Assets.getResizedImageURLs(metadata?.sample_images, undefined, metadata.image_version)
             : [],
         isSpam: Number(metadata.is_spam) > 0,
         openseaVerificationStatus: metadata?.metadata?.openseaVerificationStatus || null,

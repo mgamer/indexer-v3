@@ -674,7 +674,7 @@ export const getCollectionsV6Options: RouteOptions = {
               twitterUsername: r.twitter_username,
               openseaVerificationStatus: r.opensea_verification_status,
               description: r.description,
-              sampleImages: Assets.getLocalAssetsLink(sampleImages) ?? [],
+              sampleImages: Assets.getResizedImageURLs(sampleImages) ?? [],
               tokenCount: String(r.token_count),
               onSaleCount: String(r.on_sale_count),
               primaryContract: fromBuffer(r.contract),
