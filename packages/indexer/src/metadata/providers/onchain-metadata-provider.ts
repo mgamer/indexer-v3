@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { config } from "@/config/index";
-import { CollectionMetadata, TokenMetadata, TokenMetadataBySlugResult } from "../types";
+import { CollectionMetadata, TokenMetadata } from "../types";
 
 import { baseProvider } from "@/common/provider";
 import { defaultAbiCoder } from "ethers/lib/utils";
@@ -116,7 +116,10 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
     const [batch, error] = await this.sendBatch(encodedTokens);
 
     if (error) {
-      logger.error("onchain-fetcher", `fetchTokens sendBatch error. error:${error}`);
+      logger.error(
+        "onchain-fetcher",
+        `fetchTokens sendBatch error. error: ${JSON.stringify(error)}`
+      );
 
       if (error.status === 429) {
         throw new RequestWasThrottledError(error.message, 10);
@@ -127,8 +130,36 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
 
     const resolvedURIs = await Promise.all(
       batch.map(async (token: any) => {
-        const uri = defaultAbiCoder.decode(["string"], token.result)[0];
-        if (!uri || uri === "") {
+        try {
+          const uri = defaultAbiCoder.decode(["string"], token.result)[0];
+          if (!uri || uri === "") {
+            return {
+              contract: idToToken[token.id].contract,
+              tokenId: idToToken[token.id].tokenId,
+              uri: null,
+              error: "Unable to decode tokenURI from contract",
+            };
+          }
+
+          return {
+            contract: idToToken[token.id].contract,
+            tokenId: idToToken[token.id].tokenId,
+            uri,
+          };
+        } catch (error) {
+          logger.error(
+            "onchain-fetcher",
+            JSON.stringify({
+              topic: "fetchTokensError",
+              message: `Could not fetch tokenURI.  contract=${
+                idToToken[token.id].contract
+              }, tokenId=${idToToken[token.id].tokenId}, error=${error}`,
+              contract: idToToken[token.id].contract,
+              tokenId: idToToken[token.id].tokenId,
+              error,
+            })
+          );
+
           return {
             contract: idToToken[token.id].contract,
             tokenId: idToToken[token.id].tokenId,
@@ -136,12 +167,6 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
             error: "Unable to decode tokenURI from contract",
           };
         }
-
-        return {
-          contract: idToToken[token.id].contract,
-          tokenId: idToToken[token.id].tokenId,
-          uri,
-        };
       })
     );
 
@@ -188,10 +213,6 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
     }
   }
 
-  async _getTokensMetadataBySlug(): Promise<TokenMetadataBySlugResult> {
-    throw new Error("Method not implemented.");
-  }
-
   // parsers
 
   parseToken(metadata: any): TokenMetadata {
@@ -224,6 +245,7 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
     return {
       contract: metadata.contract,
       slug: null,
+      tokenURI: metadata.uri,
       tokenId: metadata.tokenId,
       collection: _.toLower(metadata.contract),
       name: metadata?.name || null,
@@ -261,13 +283,13 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
   // helpers
 
   async detectTokenStandard(contractAddress: string) {
-    const contract = new ethers.Contract(
-      contractAddress,
-      [...erc721Interface.fragments, ...erc1155Interface.fragments],
-      baseProvider
-    );
-
     try {
+      const contract = new ethers.Contract(
+        contractAddress,
+        [...erc721Interface.fragments, ...erc1155Interface.fragments],
+        baseProvider
+      );
+
       const erc721Supported = await contract.supportsInterface("0x80ac58cd");
       const erc1155Supported = await contract.supportsInterface("0xd9b67a26");
 
@@ -436,7 +458,7 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
       const json = JSON.parse(body);
       return [json, null];
     } catch (e: any) {
-      logger.error("onchain-fetcher", `sendBatch error. error:${e}`);
+      logger.error("onchain-fetcher", `sendBatch error. error:${JSON.stringify(e)}`);
 
       return [
         null,
