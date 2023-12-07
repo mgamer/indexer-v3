@@ -17,14 +17,13 @@ export class ResumeRabbitConsumerAllChainsEvent {
 
     const job = _.find(RabbitMqJobsConsumer.getQueues(), (queue) => queue.getQueue() === queueName);
     if (job) {
-      if (await PausedRabbitMqQueues.delete(queueName)) {
-        await RabbitMqJobsConsumer.subscribe(job);
+      await PausedRabbitMqQueues.delete(queueName);
+      await RabbitMqJobsConsumer.subscribe(job);
 
-        logger.info(
-          AllChainsChannel.ResumeRabbitConsumerQueue,
-          `Resumed rabbit consumer queue message=${message}`
-        );
-      }
+      logger.info(
+        AllChainsChannel.ResumeRabbitConsumerQueue,
+        `Resumed rabbit consumer queue message=${message}`
+      );
     }
   }
 }
