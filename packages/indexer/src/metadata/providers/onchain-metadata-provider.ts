@@ -116,7 +116,10 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
     const [batch, error] = await this.sendBatch(encodedTokens);
 
     if (error) {
-      logger.error("onchain-fetcher", `fetchTokens sendBatch error. error:${error}`);
+      logger.error(
+        "onchain-fetcher",
+        `fetchTokens sendBatch error. error: ${JSON.stringify(error)}`
+      );
 
       if (error.status === 429) {
         throw new RequestWasThrottledError(error.message, 10);
@@ -433,7 +436,7 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
       const json = JSON.parse(body);
       return [json, null];
     } catch (e: any) {
-      logger.error("onchain-fetcher", `sendBatch error. error:${e}`);
+      logger.error("onchain-fetcher", `sendBatch error. error:${JSON.stringify(e)}`);
 
       return [
         null,
