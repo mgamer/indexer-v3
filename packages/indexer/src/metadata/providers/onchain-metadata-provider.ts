@@ -130,8 +130,36 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
 
     const resolvedURIs = await Promise.all(
       batch.map(async (token: any) => {
-        const uri = defaultAbiCoder.decode(["string"], token.result)[0];
-        if (!uri || uri === "") {
+        try {
+          const uri = defaultAbiCoder.decode(["string"], token.result)[0];
+          if (!uri || uri === "") {
+            return {
+              contract: idToToken[token.id].contract,
+              tokenId: idToToken[token.id].tokenId,
+              uri: null,
+              error: "Unable to decode tokenURI from contract",
+            };
+          }
+
+          return {
+            contract: idToToken[token.id].contract,
+            tokenId: idToToken[token.id].tokenId,
+            uri,
+          };
+        } catch (error) {
+          logger.error(
+            "onchain-fetcher",
+            JSON.stringify({
+              topic: "fetchTokensError",
+              message: `Could not fetch tokenURI.  contract=${
+                idToToken[token.id].contract
+              }, tokenId=${idToToken[token.id].tokenId}, error=${error}`,
+              contract: idToToken[token.id].contract,
+              tokenId: idToToken[token.id].tokenId,
+              error,
+            })
+          );
+
           return {
             contract: idToToken[token.id].contract,
             tokenId: idToToken[token.id].tokenId,
@@ -139,12 +167,6 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
             error: "Unable to decode tokenURI from contract",
           };
         }
-
-        return {
-          contract: idToToken[token.id].contract,
-          tokenId: idToToken[token.id].tokenId,
-          uri,
-        };
       })
     );
 
@@ -261,13 +283,13 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
   // helpers
 
   async detectTokenStandard(contractAddress: string) {
-    const contract = new ethers.Contract(
-      contractAddress,
-      [...erc721Interface.fragments, ...erc1155Interface.fragments],
-      baseProvider
-    );
-
     try {
+      const contract = new ethers.Contract(
+        contractAddress,
+        [...erc721Interface.fragments, ...erc1155Interface.fragments],
+        baseProvider
+      );
+
       const erc721Supported = await contract.supportsInterface("0x80ac58cd");
       const erc1155Supported = await contract.supportsInterface("0xd9b67a26");
 
