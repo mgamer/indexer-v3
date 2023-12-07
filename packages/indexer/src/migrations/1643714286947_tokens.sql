@@ -67,6 +67,9 @@ CREATE INDEX "tokens_contract_floor_sell_value_token_id_index"
 CREATE INDEX "tokens_contract_updated_at_token_id_index"
   ON "tokens" ("contract", "updated_at", "token_id");
 
+CREATE INDEX "tokens_contract_rarity_rank_token_id_index"
+  ON "tokens" ("contract", "rarity_rank" DESC NULLS LAST, "token_id");
+
 CREATE EXTENSION IF NOT EXISTS btree_gin;
 
 CREATE INDEX "tokens_contract_name_token_id_index"

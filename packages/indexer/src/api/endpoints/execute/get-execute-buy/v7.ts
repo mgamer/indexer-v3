@@ -1771,6 +1771,8 @@ export const getExecuteBuyV7Options: RouteOptions = {
           })
           .then((response) => ({ quote: response.data.price, gasCost: response.data.gasCost }));
 
+        item.quote = formatPrice(quote);
+        item.rawQuote = quote;
         item.totalPrice = formatPrice(quote);
         item.totalRawPrice = quote;
         item.gasCost = gasCost;
@@ -1958,6 +1960,8 @@ export const getExecuteBuyV7Options: RouteOptions = {
 
         item.totalPrice = formatPrice(quote);
         item.totalRawPrice = quote;
+        item.quote = formatPrice(quote);
+        item.rawQuote = quote;
         item.fromChainId = actualFromChainId;
         item.gasCost = gasCost;
 
@@ -2548,7 +2552,9 @@ export const getExecuteBuyV7Options: RouteOptions = {
 
           const balance = await baseProvider.getBalance(txSender);
           if (!payload.skipBalanceCheck && bn(balance).lt(totalBuyInCurrencyPrice)) {
-            throw getExecuteError("Balance too low to proceed with transaction");
+            throw getExecuteError(
+              "Balance too low to proceed with transaction (use skipBalanceCheck=true to skip balance checking)"
+            );
           }
         } else {
           // Get the price in the buy-in currency via the approval amounts
@@ -2559,7 +2565,9 @@ export const getExecuteBuyV7Options: RouteOptions = {
           const erc20 = new Sdk.Common.Helpers.Erc20(baseProvider, buyInCurrency);
           const balance = await erc20.getBalance(txSender);
           if (!payload.skipBalanceCheck && bn(balance).lt(totalBuyInCurrencyPrice)) {
-            throw getExecuteError("Balance too low to proceed with transaction");
+            throw getExecuteError(
+              "Balance too low to proceed with transaction (use skipBalanceCheck=true to skip balance checking)"
+            );
           }
         }
       }
