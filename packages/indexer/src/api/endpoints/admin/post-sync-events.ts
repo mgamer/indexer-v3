@@ -7,6 +7,7 @@ import Joi from "joi";
 import { logger } from "@/common/logger";
 import { config } from "@/config/index";
 import { eventsSyncBackfillJob } from "@/jobs/events-sync/events-sync-backfill-job";
+import { regex } from "@/common/utils";
 
 export const postSyncEventsOptions: RouteOptions = {
   description: "Trigger syncing of events.",
@@ -19,6 +20,17 @@ export const postSyncEventsOptions: RouteOptions = {
       "x-admin-api-key": Joi.string().required(),
     }).options({ allowUnknown: true }),
     payload: Joi.object({
+      // WARNING: Some events should always be fetched together!
+      syncDetails: Joi.alternatives(
+        Joi.object({
+          method: Joi.string().valid("events"),
+          events: Joi.array().items(Joi.string()),
+        }),
+        Joi.object({
+          method: Joi.string().valid("address"),
+          address: Joi.string().pattern(regex.address),
+        })
+      ),
       fromBlock: Joi.number().integer().positive().required(),
       toBlock: Joi.number().integer().positive().required(),
     }),
@@ -31,11 +43,13 @@ export const postSyncEventsOptions: RouteOptions = {
     const payload = request.payload as any;
 
     try {
+      const syncDetails = payload.syncDetails;
       const fromBlock = payload.fromBlock;
       const toBlock = payload.toBlock;
 
       await eventsSyncBackfillJob.addToQueueBulk(
         Array.from({ length: toBlock - fromBlock + 1 }, (_, i) => fromBlock + i),
+        syncDetails,
         {
           prioritized: 1,
         }

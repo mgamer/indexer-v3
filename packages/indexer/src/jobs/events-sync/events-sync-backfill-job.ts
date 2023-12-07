@@ -1,9 +1,10 @@
 import { AbstractRabbitMqJobHandler, BackoffStrategy } from "@/jobs/abstract-rabbit-mq-job-handler";
 import { logger } from "@/common/logger";
-import { syncEvents } from "@/events-sync/index";
+import { SyncBlockOptions, syncEvents } from "@/events-sync/index";
 
 export type EventSyncBackfillJobPayload = {
   block: number;
+  syncOptions: SyncBlockOptions;
 };
 
 export default class EventsSyncBackfillJob extends AbstractRabbitMqJobHandler {
@@ -17,10 +18,10 @@ export default class EventsSyncBackfillJob extends AbstractRabbitMqJobHandler {
   } as BackoffStrategy;
 
   protected async process(payload: EventSyncBackfillJobPayload) {
-    const { block } = payload;
+    const { block, syncOptions } = payload;
 
     try {
-      await syncEvents(block);
+      await syncEvents(block, false, syncOptions);
     } catch (error) {
       logger.error(this.queueName, `Events for [${block}] backfill syncing failed: ${error}`);
       throw error;
@@ -47,6 +48,7 @@ export default class EventsSyncBackfillJob extends AbstractRabbitMqJobHandler {
 
   public async addToQueueBulk(
     blocks: number[],
+    syncOptions: SyncBlockOptions,
     options?: {
       prioritized?: number;
       delay?: number;
@@ -57,6 +59,7 @@ export default class EventsSyncBackfillJob extends AbstractRabbitMqJobHandler {
       blocks.map((block) => ({
         payload: {
           block,
+          syncOptions,
         },
         delay: options?.delay || 0,
         priority: options?.prioritized || 1,

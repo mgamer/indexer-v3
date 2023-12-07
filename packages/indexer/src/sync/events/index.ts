@@ -19,6 +19,20 @@ import _ from "lodash";
 import { eventsSyncRealtimeJob } from "@/jobs/events-sync/events-sync-realtime-job";
 import { redis } from "@/common/redis";
 
+export interface SyncBlockOptions {
+  skipLogsCheck?: boolean;
+  backfill?: boolean;
+  syncDetails?:
+    | {
+        method: "events";
+        events: string[];
+      }
+    | {
+        method: "address";
+        address: string;
+      };
+}
+
 export const extractEventsBatches = (enhancedEvents: EnhancedEvent[]): EventsBatch[] => {
   const txHashToEvents = new Map<string, EnhancedEvent[]>();
 
@@ -361,7 +375,11 @@ export const syncTraces = async (block: number) => {
   );
 };
 
-export const syncEvents = async (block: number, skipLogsCheck = false) => {
+export const syncEvents = async (
+  block: number,
+  skipLogsCheck = false,
+  syncOptions?: SyncBlockOptions
+) => {
   const startSyncTime = Date.now();
 
   const startGetBlockTime = Date.now();
@@ -377,6 +395,16 @@ export const syncEvents = async (block: number, skipLogsCheck = false) => {
     fromBlock: block,
     toBlock: block,
   };
+
+  if (syncOptions?.syncDetails?.method === "events") {
+    // Filter to a subset of events, remove any duplicates
+    eventFilter.topics = [
+      [...new Set(getEventData(syncOptions.syncDetails.events).map(({ topic }) => topic))],
+    ];
+  } else if (syncOptions?.syncDetails?.method === "address") {
+    // Filter to all events of a particular address
+    eventFilter.address = syncOptions.syncDetails.address;
+  }
 
   const availableEventData = getEventData();
 
