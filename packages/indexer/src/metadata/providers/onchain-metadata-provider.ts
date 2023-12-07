@@ -104,7 +104,7 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
       token.requestId = randomInt;
     });
 
-    const encodedTokens = tokenData.map((token) => {
+    let encodedTokens = tokenData.map((token) => {
       if (token.standard === "ERC721") {
         return this.encodeTokenERC721(token);
       } else if (token.standard === "ERC1155") {
@@ -113,6 +113,8 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
         return null;
       }
     });
+
+    encodedTokens = encodedTokens.filter((token) => token !== null);
     const [batch, error] = await this.sendBatch(encodedTokens);
 
     if (error) {
