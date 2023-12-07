@@ -1,5 +1,5 @@
 import { logger } from "@/common/logger";
-import { Channel } from "@/pubsub/channels";
+import { AllChainsChannel } from "@/pubsub/channels";
 import _ from "lodash";
 import { RabbitMqJobsConsumer } from "@/jobs/index";
 import { PausedRabbitMqQueues } from "@/models/paused-rabbit-mq-queues";
@@ -19,12 +19,12 @@ export class ResumeRabbitConsumerAllChainsEvent {
     if (job) {
       if (await PausedRabbitMqQueues.delete(queueName)) {
         await RabbitMqJobsConsumer.subscribe(job);
+
+        logger.info(
+          AllChainsChannel.ResumeRabbitConsumerQueue,
+          `Resumed rabbit consumer queue message=${message}`
+        );
       }
     }
-
-    logger.info(
-      Channel.ResumeRabbitConsumerQueue,
-      `Resumed rabbit consumer queue message=${message}`
-    );
   }
 }
