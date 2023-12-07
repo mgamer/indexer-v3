@@ -167,11 +167,13 @@ export class TokenWebsocketEventsTriggerJob extends AbstractRabbitMqJobHandler {
               },
               r?.collection_metadata_disabled
             ),
-            attributes: _.map(r.attributes, (attribute) => ({
-              key: attribute.key,
-              kind: attribute.kind,
-              value: attribute.value,
-            })),
+            attributes: r?.attributes
+              ? _.map(r.attributes, (attribute) => ({
+                  key: attribute.key,
+                  kind: attribute.kind,
+                  value: attribute.value,
+                }))
+              : [],
           },
           Boolean(data.after.metadata_disabled),
           r.collection_metadata_disabled
