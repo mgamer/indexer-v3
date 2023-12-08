@@ -60,7 +60,7 @@ export const postExecuteMintV1Options: RouteOptions = {
                   to: Joi.string()
                     .pattern(regex.address)
                     .required()
-                    .description("Contract to mint from"),
+                    .description("Contract where to send the mint transaction"),
                   data: Joi.object({
                     signature: Joi.string()
                       .pattern(regex.bytes)
