@@ -909,12 +909,16 @@ export const getTokensV6Options: RouteOptions = {
         (query as any).tokenNameAsId = query.tokenName;
         query.tokenName = `%${query.tokenName}%`;
 
-        conditions.push(`
-          CASE
-            WHEN t.name IS NULL THEN t.token_id::text = $/tokenNameAsId/
-            ELSE t.name ILIKE $/tokenName/
-          END
-        `);
+        if (isNaN(query.tokenName)) {
+          conditions.push(`t.name ILIKE $/tokenName/`);
+        } else {
+          conditions.push(`
+            CASE
+              WHEN t.name IS NULL THEN t.token_id::text = $/tokenNameAsId/
+              ELSE t.name ILIKE $/tokenName/
+            END
+          `);
+        }
       }
 
       if (query.tokenSetId) {
@@ -1084,25 +1088,22 @@ export const getTokensV6Options: RouteOptions = {
       // Sorting
 
       const getSort = function (sortBy: string, union: boolean) {
+        const sortDirection = query.sortDirection || "asc";
         switch (sortBy) {
           case "rarity": {
-            return ` ORDER BY ${union ? "" : "t."}rarity_rank ${
-              query.sortDirection || "ASC"
-            } NULLS LAST, t_contract ${query.sortDirection || "ASC"}, t_token_id ${
-              query.sortDirection || "ASC"
+            return ` ORDER BY ${union ? "" : "t."}rarity_rank ${sortDirection} NULLS ${
+              sortDirection === "asc" ? "FIRST" : "LAST"
+            }, t_contract ${sortDirection === "asc" ? "desc" : "asc"}, t_token_id ${
+              sortDirection === "asc" ? "desc" : "asc"
             }`;
           }
           case "tokenId": {
-            return ` ORDER BY t_contract ${query.sortDirection || "ASC"}, t_token_id ${
-              query.sortDirection || "ASC"
-            }`;
+            return ` ORDER BY t_contract ${sortDirection}, t_token_id ${sortDirection}`;
           }
           case "updatedAt": {
-            return ` ORDER BY ${union ? "t_" : "t."}updated_at ${
-              query.sortDirection || "ASC"
-            }, t_contract ${query.sortDirection || "ASC"}, t_token_id ${
-              query.sortDirection || "ASC"
-            }`;
+            return ` ORDER BY ${
+              union ? "t_" : "t."
+            }updated_at ${sortDirection}, t_contract ${sortDirection}, t_token_id ${sortDirection}`;
           }
           case "floorAskPrice":
           default: {
@@ -1113,9 +1114,9 @@ export const getTokensV6Options: RouteOptions = {
                 ? `${union ? "" : "t."}normalized_floor_sell_value`
                 : `${union ? "" : "t."}floor_sell_value`;
 
-            return ` ORDER BY ${sortColumn} ${query.sortDirection || "ASC"} NULLS LAST, ${
-              contractSort ? `t_contract ${query.sortDirection || "ASC"}, ` : ""
-            }t_token_id ${query.sortDirection || "ASC"}`;
+            return ` ORDER BY ${sortColumn} ${sortDirection} NULLS ${
+              sortDirection === "asc" ? "LAST" : "FIRST"
+            }, ${contractSort ? `t_contract ${sortDirection}, ` : ""}t_token_id ${sortDirection}`;
           }
         }
       };
