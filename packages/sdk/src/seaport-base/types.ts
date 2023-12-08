@@ -84,7 +84,7 @@ export type OrderComponents = {
   signature?: string;
   totalOriginalConsiderationItems?: number;
   // cosignature
-  extraDataComponent?: string;
+  extraData?: string;
 };
 
 export type AdvancedOrder = {

@@ -6,7 +6,7 @@ import { BigNumberish, BigNumber } from "@ethersproject/bignumber";
 import { Contract } from "@ethersproject/contracts";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import * as Sdk from "@reservoir0x/sdk/src";
-import { Network } from "@reservoir0x/sdk/src/utils";
+import { Network, getRandomBytes } from "@reservoir0x/sdk/src/utils";
 import { ethers, network } from "hardhat";
 import fs from "fs";
 
@@ -355,6 +355,39 @@ export const setupConduit = async (
   }
 
   return conduitKey;
+};
+
+export const setupZones = async (
+  chainId: number,
+  deployer: SignerWithAddress
+) => {
+
+  const signedZoneController: any = await ethers
+    .getContractFactory("SignedZoneController", deployer)
+    .then((factory) => factory.deploy());
+
+  const zoneName = "test";
+  const apiEndpoint = "test";
+  const documentationURI = "test";
+  const salt = `${deployer.address}`+ (getRandomBytes(12).toHexString()).replace("0x", "");
+  const initialOwner = deployer.address;
+  const zoneAddress = await signedZoneController.callStatic.createZone(
+    zoneName,
+    apiEndpoint,
+    documentationURI,
+    initialOwner,
+    salt
+  );
+  await signedZoneController.createZone(
+    zoneName,
+    apiEndpoint,
+    documentationURI,
+    initialOwner,
+    salt
+  );
+  await signedZoneController.updateSigner(zoneAddress, deployer.address, true);
+  Sdk.SeaportBase.Addresses.ReservoirCancellationZone[chainId] = zoneAddress;
+  return { zone: zoneAddress.toLowerCase(), signedZoneController, signer: deployer };
 };
 
 // Deploy router with modules and override any SDK addresses

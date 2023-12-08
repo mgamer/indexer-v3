@@ -16,6 +16,8 @@ import { IOrder, ORDER_EIP712_TYPES } from "../seaport-base/order";
 import * as Types from "../seaport-base/types";
 import { bn, lc, n, s } from "../utils";
 import {
+  computeReceivedItems,
+  cosignOrder,
   isCosignedOrder,
   isPrivateOrder,
   constructPrivateListingCounterOrder,
@@ -228,6 +230,15 @@ export class Order implements IOrder {
     return isCosignedOrder(this.params, this.chainId);
   }
 
+  public getReceivedItems(matchParams: Types.MatchParams): Types.ReceivedItem[] {
+    return computeReceivedItems(this, matchParams);
+  }
+
+  public async cosign(signer: TypedDataSigner, matchParams: Types.MatchParams) {
+    const { extraDataComponent } = await cosignOrder(this, signer, matchParams);
+    this.params.extraData = extraDataComponent.toString();
+  }
+
   public constructPrivateListingCounterOrder(privateSaleRecipient: string): Types.OrderWithCounter {
     return constructPrivateListingCounterOrder(privateSaleRecipient, this.params);
   }
@@ -432,5 +443,6 @@ const normalize = (order: Types.OrderComponents): Types.OrderComponents => {
     conduitKey: lc(order.conduitKey),
     counter: s(order.counter),
     signature: order.signature ? lc(order.signature) : undefined,
+    extraData: order.extraData ?? undefined,
   };
 };

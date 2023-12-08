@@ -24,6 +24,8 @@ export interface IOrder {
 
   constructPrivateListingCounterOrder(privateSaleRecipient: string): Types.OrderWithCounter;
   getPrivateListingFulfillments(): Types.MatchOrdersFulfillment[];
+
+  getReceivedItems(matchParams: Types.MatchParams): Types.ReceivedItem[];
 }
 
 export const ORDER_EIP712_TYPES = {

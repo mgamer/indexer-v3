@@ -144,6 +144,7 @@ export class Exchange extends SeaportBaseExchange {
   // --- Get extra data ---
 
   public requiresExtraData(order: IOrder): boolean {
+    if (order.params.extraData) return true;
     if (
       [
         BaseAddresses.ReservoirCancellationZone[this.chainId],
@@ -157,10 +158,11 @@ export class Exchange extends SeaportBaseExchange {
 
   // matchParams should always pass for seaport-v1.4
   public async getExtraData(order: IOrder, matchParams?: Types.MatchParams): Promise<string> {
+    if (order.params.extraData) return order.params.extraData;
     switch (order.params.zone) {
       // TODO: Move this logic to the indexer, outside of the router
       case BaseAddresses.ReservoirCancellationZone[this.chainId]: {
-        return order.params.extraDataComponent ?? "0x";
+        return order.params.extraData ?? "0x";
       }
 
       default:

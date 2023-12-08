@@ -4,6 +4,19 @@ import { ReceivedItem } from "@reservoir0x/sdk/dist/seaport-base/types";
 import { idb } from "@/common/db";
 import _ from "lodash";
 import { fromBuffer } from "@/common/utils";
+import { arrayify } from "ethers/lib/utils";
+
+export class Features {
+  zoneHashBytes: Uint8Array;
+
+  constructor(zoneHash: string) {
+    this.zoneHashBytes = arrayify(zoneHash);
+  }
+
+  checkFlagged(): boolean {
+    return ((this.zoneHashBytes[0] >> 7) & 1) === 1;
+  }
+}
 
 async function fetchFlagged(considerations: ReceivedItem[]) {
   const query: any = {};
@@ -34,9 +47,9 @@ async function fetchFlagged(considerations: ReceivedItem[]) {
 }
 
 export class FlaggingChecker {
-  private considerations: ReceivedItem[][];
+  private considerations: ReceivedItem[];
   private flaggedTokensIds?: Set<string>;
-  constructor(considerations: ReceivedItem[][]) {
+  constructor(considerations: ReceivedItem[]) {
     this.considerations = considerations;
   }
 

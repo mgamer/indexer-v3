@@ -4,7 +4,7 @@ import { AddressZero } from "@ethersproject/constants";
 import * as Types from "../seaport-base/types";
 import { bn, getCurrentTimestamp, generateRandomSalt, lc } from "../utils";
 import * as BaseAddresses from "../seaport-base/addresses";
-import { IOrder } from "./order";
+export { cosignOrder, computeReceivedItems } from "./cosign";
 
 export const isCurrencyItem = ({ itemType }: { itemType: Types.ItemType }) =>
   [Types.ItemType.NATIVE, Types.ItemType.ERC20].includes(itemType);
@@ -308,19 +308,4 @@ export const computeDynamicPrice = (
   }
 
   return price;
-};
-
-export const computeReceivedItems = (order: IOrder, matchParams: Types.MatchParams) => {
-  return order.params.consideration.map((c) => ({
-    ...c,
-    // All criteria items should have been resolved
-    itemType: c.itemType > 3 ? c.itemType - 2 : c.itemType,
-    // Adjust the amount to the quantity filled (won't work for dutch auctions)
-    amount: bn(matchParams!.amount ?? 1)
-      .mul(c.endAmount)
-      .div(order.getInfo()!.amount)
-      .toString(),
-    identifier:
-      c.itemType > 3 ? matchParams!.criteriaResolvers![0].identifier : c.identifierOrCriteria,
-  }));
 };
