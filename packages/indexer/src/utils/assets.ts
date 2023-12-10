@@ -16,7 +16,7 @@ export enum ImageSize {
 export class Assets {
   public static getLocalAssetsLink(assets: string | string[]) {
     if (_.isEmpty(assets) || assets == "") {
-      return undefined;
+      return null;
     }
 
     try {
