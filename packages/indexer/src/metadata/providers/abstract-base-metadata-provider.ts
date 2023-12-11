@@ -107,9 +107,11 @@ export abstract class AbstractBaseMetadataProvider {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   parseToken(...args: any[]): TokenMetadata {
     const parsedMetadata = this._parseToken(...args);
-    Object.keys(parsedMetadata).forEach((key) =>
-      limitFieldSize(parsedMetadata[key as keyof TokenMetadata])
-    );
+    Object.keys(parsedMetadata).forEach((key) => {
+      parsedMetadata[key as keyof TokenMetadata] = limitFieldSize(
+        parsedMetadata[key as keyof TokenMetadata]
+      );
+    });
     return parsedMetadata;
   }
 }
