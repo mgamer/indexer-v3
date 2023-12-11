@@ -22,6 +22,7 @@ export const config = {
   liquidityOnly: Boolean(Number(process.env.LIQUIDITY_ONLY)),
   metadataIndexingMethod: String(process.env.METADATA_INDEXING_METHOD || "opensea"),
   fallbackMetadataIndexingMethod: String(process.env.FALLBACK_METADATA_INDEXING_METHOD),
+  metadataMaxFieldSize: Number(process.env.METADATA_MAX_FIELD_SIZE || 0.25),
   metadataIndexingMethodCollection: String(
     process.env.METADATA_INDEXING_METHOD_COLLECTION ||
       process.env.METADATA_INDEXING_METHOD ||
