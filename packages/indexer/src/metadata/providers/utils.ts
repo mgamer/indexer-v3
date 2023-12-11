@@ -182,3 +182,12 @@ export class CollectionNotFoundError extends Error {
     Object.setPrototypeOf(this, CollectionNotFoundError.prototype);
   }
 }
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function limitFieldSize(value: any) {
+  const LIMIT_IN_MB = 0.25;
+  if (typeof value === "string") {
+    return new TextEncoder().encode(value).length > LIMIT_IN_MB * 1024 * 1024 ? null : value;
+  }
+  return value;
+}

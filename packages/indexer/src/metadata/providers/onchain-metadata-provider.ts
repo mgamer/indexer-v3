@@ -7,7 +7,12 @@ import { baseProvider } from "@/common/provider";
 import { defaultAbiCoder } from "ethers/lib/utils";
 import { logger } from "@/common/logger";
 import { ethers } from "ethers";
-import { RequestWasThrottledError, normalizeLink, normalizeMetadata } from "./utils";
+import {
+  RequestWasThrottledError,
+  limitFieldSize,
+  normalizeLink,
+  normalizeMetadata,
+} from "./utils";
 import _ from "lodash";
 import { AbstractBaseMetadataProvider } from "./abstract-base-metadata-provider";
 
@@ -273,7 +278,7 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
         ? JSON.parse(metadata.attributes)
         : metadata?.attributes || [];
 
-    return {
+    const parsedMetadata = {
       contract: metadata.contract,
       slug: null,
       tokenURI: metadata.uri,
@@ -296,6 +301,12 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
         rank: 1,
       })),
     };
+
+    Object.keys(metadata).forEach((key) => {
+      metadata[key] = limitFieldSize(metadata[key]);
+    });
+
+    return parsedMetadata;
   }
 
   parseCollection(metadata: any): CollectionMetadata {
