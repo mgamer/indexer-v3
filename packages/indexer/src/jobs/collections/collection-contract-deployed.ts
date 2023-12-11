@@ -130,7 +130,7 @@ export class CollectionNewContractDeployedJob extends AbstractRabbitMqJobHandler
               contract: toBuffer(contract),
               creator: deployer ? toBuffer(deployer) : null,
               tokenSetId: `contract:${contract}`,
-              metadata: contractMetadata ? contractMetadata : null,
+              metadata: contractMetadata ? contractMetadata?.metadata : null,
             }
           )
         : null,
