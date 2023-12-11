@@ -5,10 +5,9 @@ import { RabbitMQMessage } from "@/common/rabbit-mq";
 import _ from "lodash";
 import { fromBuffer, toBuffer } from "@/common/utils";
 import { AddressZero } from "@ethersproject/constants";
-import { redis, redlock } from "@/common/redis";
-import { format } from "date-fns";
+import { acquireLock } from "@/common/redis";
 import { resyncUserCollectionsJob } from "@/jobs/nft-balance-updates/reynsc-user-collections-job";
-import { config } from "@/config/index";
+// import { config } from "@/config/index";
 
 export type BackfillUserCollectionsJobCursorInfo = {
   owner: string;
@@ -25,7 +24,6 @@ export class BackfillUserCollectionsJob extends AbstractRabbitMqJobHandler {
 
   protected async process(payload: BackfillUserCollectionsJobCursorInfo) {
     const { owner, acquiredAt } = payload;
-    const redisKey = "sync-user-collections";
     const values: {
       limit: number;
       AddressZero: Buffer;
@@ -72,17 +70,16 @@ export class BackfillUserCollectionsJob extends AbstractRabbitMqJobHandler {
         }
 
         // Check if the user was already synced for this collection
-        const memberKey = `${fromBuffer(result.owner)}:${result.collection_id}`;
+        const lock = `${this.queueName}:${fromBuffer(result.owner)}:${result.collection_id}`;
 
-        if ((await redis.hexists(redisKey, memberKey)) === 0) {
-          const date = format(new Date(_.now()), "yyyy-MM-dd HH:mm:ss");
-          await redis.hset(redisKey, memberKey, date);
-
+        if (await acquireLock(lock, 60 * 60 * 6)) {
           // Trigger resync for the user in the collection
-          await resyncUserCollectionsJob.addToQueue({
-            user: fromBuffer(result.owner),
-            collectionId: result.collection_id,
-          });
+          await resyncUserCollectionsJob.addToQueue([
+            {
+              user: fromBuffer(result.owner),
+              collectionId: result.collection_id,
+            },
+          ]);
         }
       }
     }
@@ -119,13 +116,13 @@ export class BackfillUserCollectionsJob extends AbstractRabbitMqJobHandler {
 
 export const backfillUserCollectionsJob = new BackfillUserCollectionsJob();
 
-if (config.chainId !== 1) {
-  redlock
-    .acquire(["backfill-user-collections-lock-2"], 60 * 60 * 24 * 30 * 1000)
-    .then(async () => {
-      await backfillUserCollectionsJob.addToQueue();
-    })
-    .catch(() => {
-      // Skip on any errors
-    });
-}
+// if (config.chainId !== 1) {
+//   redlock
+//     .acquire(["backfill-user-collections-lock-4"], 60 * 60 * 24 * 30 * 1000)
+//     .then(async () => {
+//       await backfillUserCollectionsJob.addToQueue().
+//     })
+//     .catch(() => {
+//       // Skip on any errors
+//     });
+// }

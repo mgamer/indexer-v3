@@ -3,7 +3,6 @@
 import { redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { formatEth, regex } from "@/common/utils";
-import { getStartTime } from "@/models/top-selling-collections/top-selling-collections";
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
@@ -29,7 +28,7 @@ const version = "v1";
 export const getTrendingMintsV1Options: RouteOptions = {
   description: "Top Trending Mints",
   notes: "Get top trending mints",
-  tags: ["api", "mints"],
+  tags: ["api", "Collections"],
   plugins: {
     "hapi-swagger": {
       order: 3,
@@ -151,7 +150,6 @@ export const getTrendingMintsV1Options: RouteOptions = {
   },
   handler: async ({ query }: Request, h) => {
     const { normalizeRoyalties, useNonFlaggedFloorAsk, type, period, limit } = query;
-
     try {
       const mintingCollections = await getMintingCollections(type);
 
@@ -160,25 +158,25 @@ export const getTrendingMintsV1Options: RouteOptions = {
         return response;
       }
 
-      const elasticMintData = await getTrendingMints({
+      const trendingMints = await getTrendingMints({
         contracts: mintingCollections.map(({ collection_id }) => collection_id),
-        startTime: getStartTime(period),
+        period,
         limit,
       });
 
-      if (elasticMintData.length < 1) {
+      if (trendingMints.length < 0) {
         const response = h.response({ mints: [] });
         return response;
       }
 
-      const collectionsMetadata = await getCollectionsMetadata(elasticMintData);
+      const collectionsMetadata = await getCollectionsMetadata(trendingMints);
 
       const mintStages = await getMintStages(Object.keys(collectionsMetadata));
 
       const mints = await formatCollections(
         mintStages,
         mintingCollections,
-        elasticMintData,
+        trendingMints,
         collectionsMetadata,
         normalizeRoyalties,
         useNonFlaggedFloorAsk
@@ -243,8 +241,8 @@ async function getMintingCollections(type: "paid" | "free" | "any"): Promise<Min
 SELECT 
     collection_id, start_time, end_time, created_at, updated_at, max_supply, max_mints_per_wallet, price
 FROM 
-    collection_mints 
-${whereClause}
+    collection_mints
+${whereClause} LIMIT 50000;
   `;
 
   const result = await redb.manyOrNone<Mint>(baseQuery);
@@ -307,7 +305,11 @@ async function formatCollections(
 
       return {
         id: metadata?.id,
-        image: metadata?.metadata ? metadata.metadata?.imageUrl : null,
+        image:
+          metadata?.metadata?.imageUrl ??
+          (metadata?.sample_images?.length
+            ? Assets.getLocalAssetsLink(metadata.sample_images[0])
+            : null),
         banner: metadata?.metadata ? metadata.metadata?.bannerImageUrl : null,
         name: metadata ? metadata?.name : "",
         description: metadata?.metadata ? metadata.metadata?.description : null,
@@ -342,8 +344,8 @@ async function formatCollections(
         startDate: mintData?.start_time && new Date(mintData?.start_time).toISOString(),
         endDate: mintData?.end_time && new Date(mintData?.end_time).toISOString(),
         mintCount: r?.mintCount || 0,
-        sixHourCount: r?.countLast6Hours || 0,
-        oneHourCount: r?.countLast1Hours || 0,
+        sixHourCount: r.sixHourResult?.mintCount || 0,
+        oneHourCount: r.oneHourResult?.mintCount || 0,
         mintVolume: r.volume,
         openseaVerificationStatus: metadata?.metadata?.openseaVerificationStatus || null,
         mintStages:

@@ -167,14 +167,16 @@ export class TokenWebsocketEventsTriggerJob extends AbstractRabbitMqJobHandler {
               },
               r?.collection_metadata_disabled
             ),
-            attributes: _.map(r.attributes, (attribute) => ({
-              key: attribute.key,
-              kind: attribute.kind,
-              value: attribute.value,
-            })),
+            attributes: r?.attributes
+              ? _.map(r.attributes, (attribute) => ({
+                  key: attribute.key,
+                  kind: attribute.kind,
+                  value: attribute.value,
+                }))
+              : [],
           },
           Boolean(data.after.metadata_disabled),
-          r.collection_metadata_disabled
+          r?.collection_metadata_disabled
         ),
         market: {
           floorAsk: data.after.floor_sell_value && {
@@ -279,20 +281,6 @@ export class TokenWebsocketEventsTriggerJob extends AbstractRabbitMqJobHandler {
             return;
           }
         }
-      }
-
-      if (eventType === "token.created" && config.chainId === 1) {
-        logger.info(
-          this.queueName,
-          JSON.stringify({
-            topic: "processCDCEvent",
-            message: `Processing cdc event. contract=${contract}, tokenId=${tokenId}, eventType=${eventType}`,
-            data,
-            changed,
-            changedJson: JSON.stringify(changed),
-            token: `${contract}:${tokenId}`,
-          })
-        );
       }
 
       await publishWebsocketEvent({
@@ -451,11 +439,13 @@ export class TokenWebsocketEventsTriggerJob extends AbstractRabbitMqJobHandler {
               },
               r.collection_metadata_disabled
             ),
-            attributes: _.map(r.attributes, (attribute) => ({
-              key: attribute.key,
-              kind: attribute.kind,
-              value: attribute.value,
-            })),
+            attributes: r?.attributes
+              ? _.map(r.attributes, (attribute) => ({
+                  key: attribute.key,
+                  kind: attribute.kind,
+                  value: attribute.value,
+                }))
+              : [],
           },
           r.token_metadata_disabled,
           r.collection_metadata_disabled
