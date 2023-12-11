@@ -88,7 +88,7 @@ export class BackfillTransactionTracesDatesJob extends AbstractRabbitMqJobHandle
 export const backfillTransactionTracesDatesJob = new BackfillTransactionTracesDatesJob();
 
 redlock
-  .acquire(["backfill-transaction-traces-dates-lock"], 60 * 60 * 24 * 30 * 1000)
+  .acquire(["backfill-transaction-traces-dates-lock-1"], 60 * 60 * 24 * 30 * 1000)
   .then(async () => {
     await backfillTransactionTracesDatesJob.addToQueue();
   })
