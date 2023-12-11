@@ -7,12 +7,7 @@ import { baseProvider } from "@/common/provider";
 import { defaultAbiCoder } from "ethers/lib/utils";
 import { logger } from "@/common/logger";
 import { ethers } from "ethers";
-import {
-  RequestWasThrottledError,
-  limitFieldSize,
-  normalizeLink,
-  normalizeMetadata,
-} from "./utils";
+import { RequestWasThrottledError, normalizeLink, normalizeMetadata } from "./utils";
 import _ from "lodash";
 import { AbstractBaseMetadataProvider } from "./abstract-base-metadata-provider";
 
@@ -250,8 +245,7 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
   }
 
   // parsers
-
-  parseToken(metadata: any): TokenMetadata {
+  _parseToken(metadata: any): TokenMetadata {
     // add handling for metadata.properties, convert to attributes
     if (metadata?.properties) {
       metadata.attributes = Object.keys(metadata.properties).map((key) => {
@@ -301,8 +295,6 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
         rank: 1,
       })),
     };
-
-    Object.keys(metadata).forEach((key) => limitFieldSize(metadata[key]));
 
     return parsedMetadata;
   }
