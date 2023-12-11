@@ -302,9 +302,7 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
       })),
     };
 
-    Object.keys(metadata).forEach((key) => {
-      metadata[key] = limitFieldSize(metadata[key]);
-    });
+    Object.keys(metadata).forEach((key) => limitFieldSize(metadata[key]));
 
     return parsedMetadata;
   }

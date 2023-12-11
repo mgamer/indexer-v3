@@ -1,3 +1,4 @@
+import { logger } from "@/common/logger";
 import { Collection, MapEntry, Metadata } from "../types";
 
 export const normalizeLink = (link: string) => {
@@ -185,9 +186,14 @@ export class CollectionNotFoundError extends Error {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function limitFieldSize(value: any) {
-  const LIMIT_IN_MB = 0.25;
+  // const LIMIT_IN_MB = 0.25;
   if (typeof value === "string") {
-    return new TextEncoder().encode(value).length > LIMIT_IN_MB * 1024 * 1024 ? null : value;
+    // return new TextEncoder().encode(value).length > LIMIT_IN_MB * 1024 * 1024 ? null : value;
+    logger.info("limitFieldSize", `Size=${new TextEncoder().encode(value).length}`);
+  } else {
+    // return new TextEncoder().encode(JSON.stringify(value)).length > LIMIT_IN_MB * 1024 * 1024;
+    logger.info("limitFieldSize", `Size=${new TextEncoder().encode(value).length}`);
   }
+
   return value;
 }
