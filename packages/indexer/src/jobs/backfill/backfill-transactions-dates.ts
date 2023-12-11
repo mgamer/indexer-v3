@@ -5,6 +5,7 @@ import { RabbitMQMessage } from "@/common/rabbit-mq";
 import _ from "lodash";
 import { fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
+import { redlock } from "@/common/redis";
 
 export type BackfillTransactionsDatesJobCursorInfo = {
   hash: string;
@@ -90,13 +91,11 @@ export class BackfillTransactionsDatesJob extends AbstractRabbitMqJobHandler {
 
 export const backfillTransactionsDatesJob = new BackfillTransactionsDatesJob();
 
-// if (config.chainId !== 1) {
-//   redlock
-//     .acquire([`${backfillTransactionsDatesJob.getQueue()}-lock`], 60 * 60 * 24 * 30 * 1000)
-//     .then(async () => {
-//       await backfillUserCollectionsJob.addToQueue().
-//     })
-//     .catch(() => {
-//       // Skip on any errors
-//     });
-// }
+redlock
+  .acquire([`${backfillTransactionsDatesJob.getQueue()}-lock`], 60 * 60 * 24 * 30 * 1000)
+  .then(async () => {
+    await backfillTransactionsDatesJob.addToQueue();
+  })
+  .catch(() => {
+    // Skip on any errors
+  });
