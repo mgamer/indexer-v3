@@ -186,7 +186,7 @@ export class CollectionNotFoundError extends Error {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function limitFieldSize(value: any) {
-  const LIMIT_IN_MB = 5;
+  const LIMIT_IN_MB = 0.25;
   if (typeof value === "string") {
     logger.info(
       "limitFieldSize",
