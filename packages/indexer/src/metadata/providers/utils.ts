@@ -192,7 +192,7 @@ export function limitFieldSize(value: any) {
     logger.info("limitFieldSize", `Size=${new TextEncoder().encode(value).length}`);
   } else {
     // return new TextEncoder().encode(JSON.stringify(value)).length > LIMIT_IN_MB * 1024 * 1024;
-    logger.info("limitFieldSize", `Size=${new TextEncoder().encode(value).length}`);
+    logger.info("limitFieldSize", `Size=${new TextEncoder().encode(JSON.stringify(value)).length}`);
   }
 
   return value;
