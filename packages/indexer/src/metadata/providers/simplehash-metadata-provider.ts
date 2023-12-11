@@ -6,7 +6,7 @@ import { logger } from "@/common/logger";
 import { Contract } from "ethers";
 import { Interface } from "ethers/lib/utils";
 import axios from "axios";
-import { RequestWasThrottledError, limitFieldSize, normalizeMetadata } from "./utils";
+import { RequestWasThrottledError, normalizeMetadata } from "./utils";
 import _ from "lodash";
 import { getNetworkName } from "@/config/network";
 import { baseProvider } from "@/common/provider";
@@ -102,7 +102,7 @@ export class SimplehashMetadataProvider extends AbstractBaseMetadataProvider {
       ...original_metadata
     } = metadata.extra_metadata;
 
-    const parsedMetadata = {
+    return {
       contract: _.toLower(metadata.contract_address),
       tokenId: metadata.token_id,
       name: metadata.name,
@@ -129,10 +129,6 @@ export class SimplehashMetadataProvider extends AbstractBaseMetadataProvider {
         rank: 1,
       })),
     };
-
-    Object.keys(metadata).forEach((key) => limitFieldSize(metadata[key]));
-
-    return parsedMetadata;
   }
 
   protected parseCollection(metadata: any, contract: string): CollectionMetadata {

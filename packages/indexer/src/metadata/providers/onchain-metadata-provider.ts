@@ -272,7 +272,7 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
         ? JSON.parse(metadata.attributes)
         : metadata?.attributes || [];
 
-    const parsedMetadata = {
+    return {
       contract: metadata.contract,
       slug: null,
       tokenURI: metadata.uri,
@@ -295,8 +295,6 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
         rank: 1,
       })),
     };
-
-    return parsedMetadata;
   }
 
   parseCollection(metadata: any): CollectionMetadata {
