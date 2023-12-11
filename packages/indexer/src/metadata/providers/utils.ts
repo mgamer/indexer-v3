@@ -194,7 +194,7 @@ export function limitFieldSize(value: any) {
         size: new TextEncoder().encode(value).length,
       })
     );
-    return new TextEncoder().encode(value).length > config.metadataMaxFieldSize * 1024 * 1024
+    return new TextEncoder().encode(value).length > config.metadataMaxFieldSizeMB * 1024 * 1024
       ? null
       : value;
   } else {
@@ -204,7 +204,7 @@ export function limitFieldSize(value: any) {
     );
     return (
       new TextEncoder().encode(JSON.stringify(value)).length >
-      config.metadataMaxFieldSize * 1024 * 1024
+      config.metadataMaxFieldSizeMB * 1024 * 1024
     );
   }
 }
