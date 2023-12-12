@@ -35,6 +35,7 @@ import { CollectionSets } from "@/models/collection-sets";
 import { Collections } from "@/models/collections";
 import * as AsksIndex from "@/elasticsearch/indexes/asks";
 import { OrderComponents } from "@reservoir0x/sdk/dist/seaport-base/types";
+import { onchainMetadataProvider } from "@/metadata/providers/onchain-metadata-provider";
 
 const version = "v6";
 
@@ -1423,7 +1424,7 @@ export const getTokensV6Options: RouteOptions = {
         }
 
         if (!r.image && r.metadata?.image_original_url) {
-          r.image = r.metadata.image_original_url;
+          r.image = onchainMetadataProvider.parseIPFSURI(r.metadata.image_original_url);
         }
 
         return {
