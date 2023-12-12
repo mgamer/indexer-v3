@@ -34,6 +34,7 @@ import { Assets, ImageSize } from "@/utils/assets";
 import { CollectionSets } from "@/models/collection-sets";
 import { Collections } from "@/models/collections";
 import { getListedTokensFromES } from "@/api/endpoints/tokens";
+import { onchainMetadataProvider } from "@/metadata/providers/onchain-metadata-provider";
 
 const version = "v7";
 
@@ -1420,7 +1421,7 @@ export const getTokensV7Options: RouteOptions = {
         }
 
         if (!r.image && r.metadata?.image_original_url) {
-          r.image = r.metadata.image_original_url;
+          r.image = onchainMetadataProvider.parseIPFSURI(r.metadata.image_original_url);
         }
 
         return {
