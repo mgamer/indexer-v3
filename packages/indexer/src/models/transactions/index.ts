@@ -136,11 +136,10 @@ export const saveTransactions = async (transactions: Transaction[]) => {
  * @param transactions
  */
 export const saveTransactionsV2 = async (transactions: Transaction[]) => {
-  // filtter out transactions with same from and to
-  if (config.chainId === 137) {
-    transactions = transactions.filter((t) => t.from !== t.to);
-  }
   const CHUNK_SIZE = 10;
+
+  // filter out transactions with same from and to
+  transactions = transactions.filter((t) => t.from !== t.to);
 
   if (_.isEmpty(transactions)) {
     return;
