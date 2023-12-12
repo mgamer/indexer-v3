@@ -1406,17 +1406,28 @@ export const getTokensV7Options: RouteOptions = {
           }
         }
 
-        const metadata = {
+        const metadata: {
+          imageOriginal?: string;
+          mediaOriginal?: string;
+        } = {
           imageOriginal: undefined,
           mediaOriginal: undefined,
         };
 
         if (r.metadata?.image_original_url) {
-          metadata.imageOriginal = r.metadata.image_original_url;
+          metadata.imageOriginal = Assets.getResizedImageUrl(
+            r.metadata.image_original_url,
+            undefined,
+            r.image_version
+          );
         }
 
         if (r.metadata?.animation_original_url) {
-          metadata.mediaOriginal = r.metadata.animation_original_url;
+          metadata.mediaOriginal = Assets.getResizedImageUrl(
+            r.metadata.animation_original_url,
+            undefined,
+            r.image_version
+          );
         }
 
         return {
