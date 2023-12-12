@@ -9,6 +9,7 @@ import { Network, TxData, getRandomBytes } from "@reservoir0x/sdk/dist/utils";
 import axios from "axios";
 import { randomUUID } from "crypto";
 import Joi from "joi";
+import _ from "lodash";
 
 import { idb } from "@/common/db";
 import { logger } from "@/common/logger";
@@ -202,6 +203,9 @@ export const postExecuteMintV1Options: RouteOptions = {
   handler: async (request: Request) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const payload = request.payload as any;
+
+    // Needed for cross-chain solving which works off the original request
+    const originalPayload = _.cloneDeep(payload);
 
     try {
       type ExecuteFee = {
@@ -824,9 +828,9 @@ export const postExecuteMintV1Options: RouteOptions = {
         } = await axios
           .get(
             `${config.crossChainSolverBaseUrl}/config?fromChainId=${
-              payload.currencyChainId
-            }&toChainId=${config.chainId}&user=${payload.taker}&currency=${
-              Sdk.Common.Addresses.Native[payload.currencyChainId]
+              originalPayload.currencyChainId
+            }&toChainId=${config.chainId}&user=${originalPayload.taker}&currency=${
+              Sdk.Common.Addresses.Native[originalPayload.currencyChainId]
             }`
           )
           .then((response) => response.data);
@@ -837,9 +841,9 @@ export const postExecuteMintV1Options: RouteOptions = {
 
         const data = {
           request: {
-            originChainId: payload.currencyChainId,
+            originChainId: originalPayload.currencyChainId,
             destinationChainId: config.chainId,
-            data: request.payload,
+            data: originalPayload,
             endpoint: "/execute/mint/v1",
             salt: Math.floor(Math.random() * 1000000),
           },

@@ -289,6 +289,9 @@ export const getExecuteBuyV7Options: RouteOptions = {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const payload = request.payload as any;
 
+    // Needed for cross-chain solving which works off the original request
+    const originalPayload = _.cloneDeep(payload);
+
     const perfTime1 = performance.now();
 
     try {
@@ -1555,9 +1558,9 @@ export const getExecuteBuyV7Options: RouteOptions = {
         } = await axios
           .get(
             `${config.crossChainSolverBaseUrl}/config?fromChainId=${
-              payload.currencyChainId
-            }&toChainId=${config.chainId}&user=${payload.taker}&currency=${
-              Sdk.Common.Addresses.Native[payload.currencyChainId]
+              originalPayload.currencyChainId
+            }&toChainId=${config.chainId}&user=${originalPayload.taker}&currency=${
+              Sdk.Common.Addresses.Native[originalPayload.currencyChainId]
             }`
           )
           .then((response) => response.data);
@@ -1568,9 +1571,9 @@ export const getExecuteBuyV7Options: RouteOptions = {
 
         const data = {
           request: {
-            originChainId: payload.currencyChainId,
+            originChainId: originalPayload.currencyChainId,
             destinationChainId: config.chainId,
-            data: request.payload,
+            data: originalPayload,
             endpoint: "/execute/buy/v7",
             salt: Math.floor(Math.random() * 1000000),
           },
