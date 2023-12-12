@@ -49,6 +49,12 @@ export type CollectionMint = {
   startTime?: number;
   endTime?: number;
   allowlistId?: string;
+  pricePerQuantity?: PricePerQuantity[];
+};
+
+export type PricePerQuantity = {
+  quantity: number;
+  unitPrice: string;
 };
 
 export const getCollectionMints = async (
@@ -111,6 +117,7 @@ export const getCollectionMints = async (
         startTime: r.start_time ? Math.floor(new Date(r.start_time).getTime() / 1000) : undefined,
         endTime: r.end_time ? Math.floor(new Date(r.end_time).getTime() / 1000) : undefined,
         allowlistId: r.allowlist_id ?? undefined,
+        pricePerQuantity: r.price_per_quantity ?? undefined,
       } as CollectionMint)
   );
 };
@@ -193,6 +200,27 @@ export const simulateAndUpsertCollectionMint = async (collectionMint: Collection
     if (collectionMint.allowlistId !== existingCollectionMint.allowlistId) {
       updatedFields.push(" allowlist_id = $/allowlistId/");
       updatedParams.allowlistId = collectionMint.allowlistId;
+    }
+
+    if (collectionMint.pricePerQuantity) {
+      if (!existingCollectionMint.pricePerQuantity) {
+        updatedFields.push(" price_per_quantity = $/pricePerQuantity/");
+        updatedParams.pricePerQuantity = collectionMint.pricePerQuantity;
+      } else {
+        const unknownPricePerquantity = collectionMint.pricePerQuantity.filter(
+          (el) =>
+            !existingCollectionMint.pricePerQuantity?.find((old) => old.quantity == el.quantity)
+        );
+
+        // if we have any pricePerQuantity that was unknown to this collectionMint
+        if (unknownPricePerquantity.length) {
+          updatedFields.push(" price_per_quantity = $/pricePerQuantity/");
+          updatedParams.pricePerQuantity = [
+            ...existingCollectionMint.pricePerQuantity,
+            ...unknownPricePerquantity,
+          ];
+        }
+      }
     }
 
     if (updatedFields.length) {

@@ -6,7 +6,7 @@ import { idb } from "@/common/db";
 import { baseProvider } from "@/common/provider";
 import { bn, fromBuffer } from "@/common/utils";
 import { config } from "@/config/index";
-import { CollectionMint } from "@/orderbook/mints";
+import { CollectionMint, PricePerQuantity } from "@/orderbook/mints";
 import { generateCollectionMintTxData } from "@/orderbook/mints/calldata";
 
 import { EventData } from "@/events-sync/data";
@@ -57,6 +57,42 @@ export const simulateCollectionMint = async (
       simulateMintTxData(contract, contractKind, quantity, txData)
     );
 
+  // allows to simulate using the same parameters as one/more transactions that worked
+  const simulateWithKnownAmount = async (collectionMint: CollectionMint) => {
+    //
+    const list: PricePerQuantity[] = collectionMint.pricePerQuantity ?? [];
+    const newPricePerQuantity = [];
+
+    for (const pricePerQuantity of list) {
+      // create a temp collectionMint with the price for this "pricePerQuantity"
+      const tempCollectionMint = {
+        ...collectionMint,
+        price: pricePerQuantity.unitPrice,
+      };
+
+      // generate and simulate with price & amount
+      const result = await generateCollectionMintTxData(
+        tempCollectionMint,
+        minter,
+        pricePerQuantity.quantity
+      ).then(({ txData }) =>
+        simulateMintTxData(contract, contractKind, pricePerQuantity.quantity, txData)
+      );
+
+      if (result) {
+        newPricePerQuantity.push(pricePerQuantity);
+      }
+    }
+
+    if (newPricePerQuantity.length) {
+      collectionMint.pricePerQuantity = newPricePerQuantity;
+      return true;
+    } else {
+      collectionMint.pricePerQuantity = undefined;
+      return false;
+    }
+  };
+
   if (detectMaxMintsPerWallet && collectionMint.maxMintsPerWallet === undefined) {
     const quantitiesToTry = [1, 2, 5, 10, 11];
     const results = await Promise.all(quantitiesToTry.map((q) => simulate(q)));
@@ -68,7 +104,17 @@ export const simulateCollectionMint = async (
       // Find first quantity that failed, and take the one before it as the maximum
       const firstFailedIndex = results.findIndex((r) => !r);
       if (firstFailedIndex === 0) {
-        return false;
+        // if we have a pricePerQuantity, we can check if we could mint the same amounts with price
+        if (collectionMint.pricePerQuantity !== undefined) {
+          const result = await simulateWithKnownAmount(collectionMint);
+
+          if (!result) {
+            collectionMint.pricePerQuantity = undefined;
+            return false;
+          }
+        } else {
+          return false;
+        }
       } else {
         collectionMint.maxMintsPerWallet = quantitiesToTry[firstFailedIndex - 1].toString();
       }
