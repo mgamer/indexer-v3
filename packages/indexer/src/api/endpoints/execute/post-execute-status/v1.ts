@@ -70,7 +70,7 @@ export const postExecuteStatusV1Options: RouteOptions = {
             status: string;
           } = await axios
             .get(
-              `${config.crossChainSolverBaseUrl}/transactions/status?chainId=${payload.chainId}&hash=${payload.id}`
+              `${config.crossChainSolverBaseUrl}/transactions/status?chainId=${payload.chainId}&hash=${payload.id}&requestId=${payload.id}`
             )
             .then((response) => response.data);
 
