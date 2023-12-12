@@ -155,7 +155,7 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
           "to",
           "token_id",
           "amount",
-          "is_airdrop",
+          "kind",
         ],
         { table: "nft_transfer_events" }
       );
@@ -180,7 +180,7 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
             "to",
             "token_id",
             "amount",
-            "is_airdrop"
+            "kind"
           ) VALUES ${pgp.helpers.values(event, columns)}
           ON CONFLICT DO NOTHING
           RETURNING
