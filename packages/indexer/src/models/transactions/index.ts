@@ -143,7 +143,11 @@ export const saveTransactionsV2 = async (transactions: Transaction[]) => {
     // filter out tx data that starts with 0x64617461
     transactions = transactions.filter((t) => !t.data.startsWith("0x64617461"));
   }
+
   const CHUNK_SIZE = 10;
+
+  // filter out transactions with same from and to
+  transactions = transactions.filter((t) => t.from !== t.to);
 
   if (_.isEmpty(transactions)) {
     return;
