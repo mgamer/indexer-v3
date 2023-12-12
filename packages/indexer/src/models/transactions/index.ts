@@ -1,6 +1,7 @@
 import _ from "lodash";
 import { idb, pgp } from "@/common/db";
 import { fromBuffer, toBuffer } from "@/common/utils";
+import { config } from "@/config/index";
 
 export type Transaction = {
   hash: string;
@@ -21,6 +22,10 @@ export type Transaction = {
  * @return Transaction
  */
 export const saveTransaction = async (transaction: Transaction) => {
+  if (config.chainId === 137 && transaction.from === transaction.to) {
+    return transaction;
+  }
+
   await idb.none(
     `
       INSERT INTO transactions (
@@ -70,6 +75,10 @@ export const saveTransaction = async (transaction: Transaction) => {
  * @param transactions
  */
 export const saveTransactions = async (transactions: Transaction[]) => {
+  if (config.chainId === 137) {
+    transactions = transactions.filter((t) => t.from !== t.to);
+  }
+
   if (_.isEmpty(transactions)) {
     return;
   }
