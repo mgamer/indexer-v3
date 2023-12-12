@@ -1427,6 +1427,10 @@ export const getTokensV6Options: RouteOptions = {
           r.image = onchainMetadataProvider.parseIPFSURI(r.metadata.image_original_url);
         }
 
+        if (!r.media && r.metadata?.animation_original_url) {
+          r.media = onchainMetadataProvider.parseIPFSURI(r.metadata.animation_original_url);
+        }
+
         return {
           token: getJoiTokenObject(
             {
