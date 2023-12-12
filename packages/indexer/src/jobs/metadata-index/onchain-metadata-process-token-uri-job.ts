@@ -32,9 +32,7 @@ export default class OnchainMetadataProcessTokenUriJob extends AbstractRabbitMqJ
       ]);
 
       if (metadata[0] && metadata[0].imageUrl?.startsWith("data:")) {
-        // fallback to simplehash
         if (config.fallbackMetadataIndexingMethod) {
-          // for whatever reason, we didn't find the metadata, we fallback to simplehash
           const pendingRefreshTokens = new PendingRefreshTokens(
             config.fallbackMetadataIndexingMethod
           );
