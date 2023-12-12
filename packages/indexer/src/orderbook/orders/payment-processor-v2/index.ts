@@ -438,6 +438,13 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
       // Handle: conduit
       const conduit = Sdk.PaymentProcessorV2.Addresses.Exchange[config.chainId];
 
+      // Handle: OffChain Nonce
+      await paymentProcessorV2.increaseUserNonce(
+        order.params.marketplace,
+        order.params.sellerOrBuyer,
+        order.params.nonce
+      );
+
       // Handle: off-chain cancellation via replacement
       if (order.isCosignedOrder()) {
         const replacedOrderResult = await idb.oneOrNone(
