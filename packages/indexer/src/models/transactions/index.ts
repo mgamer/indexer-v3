@@ -158,6 +158,11 @@ export const saveTransactionsV2 = async (transactions: Transaction[]) => {
     { table: "transactions" }
   );
 
+  // filtter out transactions with same from and to
+  if (config.chainId === 137) {
+    transactions = transactions.filter((t) => t.from !== t.to);
+  }
+
   const transactionsValues = _.map(transactions, (transaction) => ({
     hash: toBuffer(transaction.hash),
     from: toBuffer(transaction.from),
