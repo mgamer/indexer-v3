@@ -31,6 +31,30 @@ export default class OnchainMetadataProcessTokenUriJob extends AbstractRabbitMqJ
         { contract, tokenId, uri },
       ]);
 
+      if (metadata[0] && metadata[0].imageUrl?.startsWith("data:")) {
+        // fallback to simplehash
+        if (config.fallbackMetadataIndexingMethod) {
+          // for whatever reason, we didn't find the metadata, we fallback to simplehash
+          const pendingRefreshTokens = new PendingRefreshTokens(
+            config.fallbackMetadataIndexingMethod
+          );
+          await pendingRefreshTokens.add([
+            {
+              collection: contract,
+              contract,
+              tokenId,
+            },
+          ]);
+
+          await metadataIndexProcessJob.addToQueue({
+            method: config.fallbackMetadataIndexingMethod,
+          });
+          return;
+        } else {
+          metadata[0].imageUrl = null;
+        }
+      }
+
       if (metadata) {
         await metadataIndexWriteJob.addToQueue(metadata);
         return;
