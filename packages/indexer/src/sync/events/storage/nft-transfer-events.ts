@@ -9,6 +9,7 @@ import { AddressZero } from "@ethersproject/constants";
 import { tokenReclacSupplyJob } from "@/jobs/token-updates/token-reclac-supply-job";
 import { ZeroAddressBalance } from "@/models/zero-address-balance";
 import { getNetworkSettings } from "@/config/network";
+import { getRouters } from "@/utils/routers";
 
 export type Event = {
   kind: ContractKind;
@@ -34,7 +35,7 @@ type DbEvent = {
   to: Buffer;
   token_id: string;
   amount: string;
-  is_airdrop: boolean | null;
+  kind: "transfer" | "airdrop" | "mint" | "burn" | "sale";
 };
 
 type erc721Token = {
@@ -72,10 +73,19 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
 
   for (const event of events) {
     const contractId = event.baseEventParams.address.toString();
-    let isAirdrop = false;
     // If its a mint, and the recipient did NOT initiate the transaction, then its an airdrop
-    if (ns.mintAddresses.includes(event.from) && event.baseEventParams.from !== event.to) {
-      isAirdrop = true;
+    const routers = await getRouters();
+    let kind: DbEvent["kind"] = "transfer";
+    if (
+      ns.mintAddresses.includes(event.from) &&
+      event.baseEventParams.from !== event.to &&
+      !routers.has(event.baseEventParams.to)
+    ) {
+      kind = "airdrop";
+    } else if (ns.mintAddresses.includes(event.from)) {
+      kind = "mint";
+    } else if (ns.burnAddresses.includes(event.to)) {
+      kind = "burn";
     }
 
     transferValues.push({
@@ -91,7 +101,7 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
       to: toBuffer(event.to),
       token_id: event.tokenId,
       amount: event.amount,
-      is_airdrop: isAirdrop,
+      kind: kind,
     });
 
     if (!uniqueContracts.has(contractId)) {
