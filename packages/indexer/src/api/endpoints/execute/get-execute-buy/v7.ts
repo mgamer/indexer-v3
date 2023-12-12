@@ -2064,8 +2064,8 @@ export const getExecuteBuyV7Options: RouteOptions = {
                 endpoint: "/execute/status/v1",
                 method: "POST",
                 body: {
-                  kind: "cross-chain-transaction",
-                  chainId: payload.currencyChainId,
+                  kind: "cross-chain-intent",
+                  id: data.requestId,
                 },
               },
             });
@@ -2089,6 +2089,14 @@ export const getExecuteBuyV7Options: RouteOptions = {
                     kind: "cross-chain-intent",
                     request: data.request,
                   },
+                },
+              },
+              check: {
+                endpoint: "/execute/status/v1",
+                method: "POST",
+                body: {
+                  kind: "cross-chain-intent",
+                  id: data.requestId,
                 },
               },
             });
