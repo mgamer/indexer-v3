@@ -86,7 +86,9 @@ export const postExecuteStatusV1Options: RouteOptions = {
             txHashes?: string[];
             time?: number;
           } = await axios
-            .get(`${config.crossChainSolverBaseUrl}/intents/status?hash=${payload.id}`)
+            .get(
+              `${config.crossChainSolverBaseUrl}/intents/status?hash=${payload.id}&requestId=${payload.id}`
+            )
             .then((response) => response.data);
 
           return {
