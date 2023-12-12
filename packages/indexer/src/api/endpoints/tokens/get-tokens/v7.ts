@@ -1419,6 +1419,10 @@ export const getTokensV7Options: RouteOptions = {
           metadata.mediaOriginal = r.metadata.animation_original_url;
         }
 
+        if (!r.image && r.metadata?.image_original_url) {
+          r.image = r.metadata.image_original_url;
+        }
+
         return {
           token: getJoiTokenObject(
             {
