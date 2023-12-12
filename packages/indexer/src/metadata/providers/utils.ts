@@ -197,9 +197,10 @@ export function limitFieldSize(value: any, key: string) {
 
     if (size > 0.001 * 1024 * 1024) {
       logger.info(
-        "limitFieldSize",
+        "limitFieldSize-2",
         JSON.stringify({
           size: new TextEncoder().encode(value).length,
+          key: key,
           value: value,
         })
       );
