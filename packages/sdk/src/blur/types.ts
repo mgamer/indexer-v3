@@ -42,8 +42,21 @@ export type BlurBidPricePoint = {
   bidderCount: number;
 };
 
+export type BlurBidPriceTraitPoint = {
+  price: string;
+  executableSize: number;
+  bidderCount: number;
+  singleBidder: string;
+  criteriaType: string;
+  criteriaValue: {
+    [key: string]: string;
+  };
+};
+
 // Blur bids require special handling since we can't get the order data for all of them
 export type BlurBidPool = {
   collection: string;
   pricePoints: BlurBidPricePoint[];
+  attributeKey?: string;
+  attributeValue?: string;
 };

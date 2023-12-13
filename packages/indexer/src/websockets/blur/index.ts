@@ -1,6 +1,7 @@
 import * as Sdk from "@reservoir0x/sdk";
 import { io } from "socket.io-client";
 
+import _ from "lodash";
 import { logger } from "@/common/logger";
 import { config } from "@/config/index";
 import { blurBidsBufferJob } from "@/jobs/order-updates/misc/blur-bids-buffer-job";
@@ -76,7 +77,54 @@ if (config.chainId === 1 && config.doWebsocketWork && config.blurWsUrl && config
 
       const collection = parsedMessage.contractAddress.toLowerCase();
       const pricePoints = parsedMessage.updates;
-      await blurBidsBufferJob.addToQueue(collection, pricePoints);
+      await blurBidsBufferJob.addToQueue(
+        {
+          collection,
+        },
+        pricePoints
+      );
+    } catch (error) {
+      logger.error(COMPONENT, `Error handling bid: ${error} (message = ${message})`);
+    }
+  });
+
+  // Collection Trait bids
+  client.on("trait_bidLevels", async (message: string) => {
+    try {
+      const parsedMessage: {
+        contractAddress: string;
+        updates: Sdk.Blur.Types.BlurBidPriceTraitPoint[];
+      } = JSON.parse(message);
+
+      const collection = parsedMessage.contractAddress.toLowerCase();
+
+      const traitUpdates = parsedMessage.updates.filter((d) => d.criteriaType === "TRAIT");
+      const updatesGroupByAttribute: {
+        [key: string]: Sdk.Blur.Types.BlurBidPriceTraitPoint[];
+      } = {};
+
+      // Flatten by single attribute
+      _.each(traitUpdates, (update) => {
+        const { criteriaValue } = update;
+        Object.keys(criteriaValue).forEach((attributeKey) => {
+          const attributeId = `${attributeKey}:${criteriaValue[attributeKey]}`;
+          if (!updatesGroupByAttribute[attributeId]) updatesGroupByAttribute[attributeId] = [];
+          updatesGroupByAttribute[attributeId].push(update);
+        });
+      });
+
+      for (const attributeId of Object.keys(updatesGroupByAttribute)) {
+        const [attributeKey, attributeValue] = attributeId.split(":");
+        const pricePoints = updatesGroupByAttribute[attributeId];
+        await blurBidsBufferJob.addToQueue(
+          {
+            collection,
+            attributeKey,
+            attributeValue,
+          },
+          pricePoints
+        );
+      }
     } catch (error) {
       logger.error(COMPONENT, `Error handling bid: ${error} (message = ${message})`);
     }
