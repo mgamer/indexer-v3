@@ -71,7 +71,7 @@ export class SimplehashMetadataProvider extends AbstractBaseMetadataProvider {
       .then((response) => response.data)
       .catch((error) => this.handleError(error));
 
-    return data.nfts.map(this.parseToken).filter(Boolean);
+    return data.nfts.map((nft: any) => this.parseToken(nft)).filter(Boolean);
   }
 
   handleError(error: any) {
@@ -92,7 +92,7 @@ export class SimplehashMetadataProvider extends AbstractBaseMetadataProvider {
     throw error;
   }
 
-  parseToken(metadata: any): TokenMetadata {
+  _parseToken(metadata: any): TokenMetadata {
     const {
       image_original_url,
       animation_original_url,

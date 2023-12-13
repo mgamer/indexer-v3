@@ -826,6 +826,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
+    path: "/execute/call/v1",
+    options: executeEndpoints.postExecuteCallV1Options,
+  });
+
+  server.route({
+    method: "POST",
     path: "/execute/mint/v1",
     options: executeEndpoints.postExecuteMintV1Options,
   });
@@ -1129,6 +1135,12 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/cross-posting-orders/v1",
     options: ordersEndpoints.getCrossPostingOrdersV1Options,
+  });
+
+  server.route({
+    method: "POST",
+    path: "/orders/invalidate/v1",
+    options: ordersEndpoints.postInvalidateOrdersOptions,
   });
 
   // Owners

@@ -3,7 +3,6 @@ import { idb } from "@/common/db";
 import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handler";
 import { RabbitMQMessage } from "@/common/rabbit-mq";
 import { fromBuffer } from "@/common/utils";
-import { redlock } from "@/common/redis";
 import { config } from "@/config/index";
 import { tokenReclacSupplyJob } from "@/jobs/token-updates/token-reclac-supply-job";
 
@@ -27,7 +26,7 @@ export class BackfillTokenSupplyJob extends AbstractRabbitMqJobHandler {
         SELECT contract, token_id
         FROM tokens
         WHERE supply IS NULL
-        ${config.chainId === 56 ? "AND updated_at > '2023-05-25 23:17:36'" : ""}
+        ${config.chainId === 56 ? "AND updated_at > '2023-07-18 01:42:31'" : ""}
         ORDER BY updated_at ASC
         LIMIT $/limit/
         `,
@@ -70,13 +69,13 @@ export class BackfillTokenSupplyJob extends AbstractRabbitMqJobHandler {
 
 export const backfillTokenSupplyJob = new BackfillTokenSupplyJob();
 
-if (config.chainId !== 1) {
-  redlock
-    .acquire(["backfill-token-supply-lock"], 60 * 60 * 24 * 30 * 1000)
-    .then(async () => {
-      await backfillTokenSupplyJob.addToQueue();
-    })
-    .catch(() => {
-      // Skip on any errors
-    });
-}
+// if (config.chainId !== 1) {
+//   redlock
+//     .acquire(["backfill-token-supply-lock"], 60 * 60 * 24 * 30 * 1000)
+//     .then(async () => {
+//       await backfillTokenSupplyJob.addToQueue();
+//     })
+//     .catch(() => {
+//       // Skip on any errors
+//     });
+// }

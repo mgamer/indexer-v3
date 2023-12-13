@@ -30,8 +30,8 @@ export const getTrendingCollectionsV1Options: RouteOptions = {
     expiresIn: 60 * 1000,
     privacy: "public",
   },
-  description: "Top Selling Collections",
-  notes: "Get top selling and minting collections",
+  description: "Top Trending Collections",
+  notes: "Get trending selling/minting collections",
   tags: ["api", "Collections"],
   plugins: {
     "hapi-swagger": {
@@ -173,7 +173,7 @@ export async function getCollectionsMetadata(
   floorAskPercentChange?: string
 ) {
   const collectionIds = collectionsResult.map((collection: any) => collection.id);
-  const collectionsToFetch = collectionIds.map((id: string) => `collection-cache:v3:${id}`);
+  const collectionsToFetch = collectionIds.map((id: string) => `collection-cache:v4:${id}`);
   const batches = chunk(collectionsToFetch, REDIS_BATCH_SIZE);
   const tasks = batches.map(async (batch) => redis.mget(batch));
   const results = await Promise.all(tasks);
@@ -298,8 +298,8 @@ export async function getCollectionsMetadata(
 
     const commands = flatMap(collectionMetadataResponse, (metadata: any) => {
       return [
-        ["set", `collection-cache:v3:${metadata.id}`, JSON.stringify(metadata)],
-        ["expire", `collection-cache:v3:${metadata.id}`, REDIS_EXPIRATION],
+        ["set", `collection-cache:v4:${metadata.id}`, JSON.stringify(metadata)],
+        ["expire", `collection-cache:v4:${metadata.id}`, REDIS_EXPIRATION],
       ];
     });
 

@@ -81,6 +81,7 @@ type SetupOptions = {
   x2y2ApiKey?: string;
   openseaApiKey?: string;
   cbApiKey?: string;
+  zeroExApiKey?: string;
   orderFetcherBaseUrl?: string;
   orderFetcherMetadata?: object;
 };
@@ -793,7 +794,8 @@ export class Router {
                 await options.onError("order-fetcher-blur-listings", new Error(reason), {
                   isUnrecoverable:
                     listing.kind === "blur" &&
-                    (reason === "ListingNotFound" || isUnrecoverable) &&
+                    (["RestrictedContract", "ListingNotFound"].includes(reason) ||
+                      isUnrecoverable) &&
                     listing.tokenId === tokenId,
                   orderId: listing.orderId,
                   additionalInfo: { detail: listing, taker },
@@ -2535,7 +2537,12 @@ export class Router {
 
           // Attach the ZeroEx calldata
           const index = perPoolOrders[order.params.pool].length;
-          const { swapCallData, price } = await order.getQuote(index + 1, 500, this.provider);
+          const { swapCallData, price } = await order.getQuote(
+            index + 1,
+            500,
+            this.provider,
+            this.options?.zeroExApiKey
+          );
           order.params.swapCallData = swapCallData;
           order.params.price = price.toString();
 
@@ -4020,11 +4027,6 @@ export class Router {
           break;
         }
 
-        case "payment-processor": {
-          module = this.contracts.paymentProcessorModule;
-          break;
-        }
-
         default: {
           continue;
         }
@@ -4822,41 +4824,6 @@ export class Router {
                   fees,
                 ]
               ),
-              value: 0,
-            },
-          });
-
-          success[detail.orderId] = true;
-
-          break;
-        }
-
-        case "payment-processor": {
-          const order = detail.order as Sdk.PaymentProcessor.Order;
-          const module = this.contracts.paymentProcessorModule;
-
-          const takerOrder = order.buildMatching({
-            taker: module.address,
-            takerMasterNonce: "0",
-            tokenId: order.params.collectionLevelOffer ? detail.tokenId : undefined,
-            maxRoyaltyFeeNumerator: detail.extraArgs?.maxRoyaltyFeeNumerator ?? "0",
-          });
-          const matchedOrder = order.getMatchedOrder(takerOrder);
-
-          executionsWithDetails.push({
-            detail,
-            execution: {
-              module: module.address,
-              data: module.interface.encodeFunctionData("acceptOffers", [
-                [matchedOrder],
-                [order.params],
-                {
-                  fillTo: taker,
-                  refundTo: taker,
-                  revertIfIncomplete: Boolean(!options?.partial),
-                },
-                fees,
-              ]),
               value: 0,
             },
           });
