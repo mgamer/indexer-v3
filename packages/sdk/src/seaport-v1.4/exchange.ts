@@ -9,11 +9,11 @@ import { MerkleTree } from "merkletreejs";
 
 import * as Addresses from "./addresses";
 import * as BaseAddresses from "../seaport-base/addresses";
+import { SeaportBaseExchange } from "../seaport-base/exchange";
 import { ORDER_EIP712_TYPES, IOrder } from "../seaport-base/order";
 import * as Types from "../seaport-base/types";
 
 import ExchangeAbi from "./abis/Exchange.json";
-import { SeaportBaseExchange } from "../seaport-base/exchange";
 
 export class Exchange extends SeaportBaseExchange {
   protected exchangeAddress: string;
@@ -146,23 +146,23 @@ export class Exchange extends SeaportBaseExchange {
   // --- Get extra data ---
 
   public requiresExtraData(order: IOrder): boolean {
-    if (order.params.extraData) return true;
+    if (order.params.extraData) {
+      return true;
+    }
+
     if (order.params.zone === this.cancellationZoneAddress) {
       return true;
     }
+
     return false;
   }
 
-  // matchParams should always pass for seaport-v1.4
+  // `matchParams` should always be passes for seaport-v1.4
   public async getExtraData(order: IOrder, matchParams?: Types.MatchParams): Promise<string> {
-    if (order.params.extraData) return order.params.extraData;
-    switch (order.params.zone) {
-      case this.cancellationZoneAddress: {
-        return order.params.extraData ?? "0x";
-      }
-
-      default:
-        return matchParams?.extraData ?? "0x";
+    if (order.params.extraData || order.params.zone === this.cancellationZoneAddress) {
+      return order.params.extraData ?? "0x";
     }
+
+    return matchParams?.extraData ?? "0x";
   }
 }

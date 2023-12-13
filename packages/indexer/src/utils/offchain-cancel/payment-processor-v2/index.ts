@@ -1,9 +1,8 @@
-import { Wallet } from "@ethersproject/wallet";
 import { verifyTypedData } from "@ethersproject/wallet";
-import { config } from "@/config/index";
-import { saveOffChainCancellations } from "@/utils/offchain-cancel";
+import * as Sdk from "@reservoir0x/sdk";
 
-export const cosigner = () => new Wallet(config.cosignerPrivateKey);
+import { config } from "@/config/index";
+import { cosigner, saveOffChainCancellations } from "@/utils/offchain-cancel";
 
 // Reuse the cancellation format of `seaport` orders
 export const generateOffChainCancellationSignatureData = (orderIds: string[]) => {
@@ -48,4 +47,10 @@ export const doCancel = async ({
 
   // Save cancellations
   await saveOffChainCancellations(orderIds);
+};
+
+export const doSignOrder = async (order: Sdk.PaymentProcessorV2.Order, taker: string) => {
+  if (order.isCosignedOrder()) {
+    await order.cosign(cosigner(), taker);
+  }
 };

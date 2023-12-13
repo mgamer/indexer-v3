@@ -1,3 +1,4 @@
+import { HashZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import { parseEther } from "@ethersproject/units";
 import * as Common from "@reservoir0x/sdk/src/common";
@@ -6,9 +7,8 @@ import { Builders } from "@reservoir0x/sdk/src/seaport-base";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import { constants } from "ethers";
 
-import { getChainId, getCurrentTimestamp, reset, setupZones, setupNFTs, setupTokens } from "../../utils";
+import { getChainId, getCurrentTimestamp, reset, setupZones, setupNFTs } from "../../utils";
 
 describe("SeaportV15 - SingleToken Erc721 - Cosign", () => {
   const chainId = getChainId();
@@ -16,24 +16,17 @@ describe("SeaportV15 - SingleToken Erc721 - Cosign", () => {
   let deployer: SignerWithAddress;
   let alice: SignerWithAddress;
   let bob: SignerWithAddress;
-  let ted: SignerWithAddress;
-  let carol: SignerWithAddress;
 
-  let erc20: Contract;
   let erc721: Contract;
   let zone: string;
-  let signedZoneController: string;
   let signer: SignerWithAddress;
 
   beforeEach(async () => {
-    [deployer, alice, bob, ted, carol] = await ethers.getSigners();
-    ({ erc20 } = await setupTokens(deployer));
+    [deployer, alice, bob] = await ethers.getSigners();
+
     ({ erc721 } = await setupNFTs(deployer));
-    ({
-        zone,
-        signedZoneController,
-        signer
-    } = await setupZones(chainId, deployer));
+
+    ({ zone, signer } = await setupZones(chainId, deployer));
   });
 
   afterEach(reset);
@@ -45,14 +38,12 @@ describe("SeaportV15 - SingleToken Erc721 - Cosign", () => {
     const soldTokenId = 1;
 
     // Mint erc721 to seller
-
     await erc721.connect(seller).mint(soldTokenId);
 
     const nft = new Common.Helpers.Erc721(ethers.provider, erc721.address);
 
     // Approve the exchange
     await nft.approve(seller, SeaportV15.Addresses.Exchange[chainId]);
-    // SeaportBase.Addresses.ReservoirCancellationZone[chainId] = zone;
 
     const exchange = new SeaportV15.Exchange(chainId);
 
@@ -69,25 +60,21 @@ describe("SeaportV15 - SingleToken Erc721 - Cosign", () => {
         paymentToken: Common.Addresses.Native[chainId],
         price,
         counter: 0,
-        zone: zone,
-        zoneHash: constants.HashZero,
+        zone,
+        zoneHash: HashZero,
         startTime: await getCurrentTimestamp(ethers.provider),
         endTime: (await getCurrentTimestamp(ethers.provider)) + 60,
-        extraData: "0x"
       },
       SeaportV15.Order
     );
 
-    // Passing extraData
-    expect(sellOrder.params.extraData).to.eq("0x");
-    
     // Sign the order
     await sellOrder.sign(seller);
     await sellOrder.checkFillability(ethers.provider);
 
     // Cosign
-    await sellOrder.cosign(signer, {
-        amount: 1
+    await sellOrder.cosign(signer, buyer.address, {
+      amount: 1,
     });
 
     // Create matching params

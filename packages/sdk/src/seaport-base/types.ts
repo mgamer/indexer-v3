@@ -83,7 +83,7 @@ export type OrderComponents = {
   counter: string;
   signature?: string;
   totalOriginalConsiderationItems?: number;
-  // cosignature
+  // Optional extra data to be used when filling (eg. cosignature)
   extraData?: string;
 };
 

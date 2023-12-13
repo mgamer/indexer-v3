@@ -144,29 +144,25 @@ export class Exchange extends SeaportBaseExchange {
   // --- Get extra data ---
 
   public requiresExtraData(order: IOrder): boolean {
-    if (order.params.extraData) return true;
-    if (
-      [
-        BaseAddresses.ReservoirCancellationZone[this.chainId],
-        BaseAddresses.OkxCancellationZone[this.chainId],
-      ].includes(order.params.zone)
-    ) {
+    if (order.params.extraData) {
       return true;
     }
+
+    if (order.params.zone === BaseAddresses.ReservoirCancellationZone[this.chainId]) {
+      return true;
+    }
+
     return false;
   }
 
-  // matchParams should always pass for seaport-v1.4
   public async getExtraData(order: IOrder, matchParams?: Types.MatchParams): Promise<string> {
-    if (order.params.extraData) return order.params.extraData;
-    switch (order.params.zone) {
-      // TODO: Move this logic to the indexer, outside of the router
-      case BaseAddresses.ReservoirCancellationZone[this.chainId]: {
-        return order.params.extraData ?? "0x";
-      }
-
-      default:
-        return matchParams?.extraData ?? "0x";
+    if (
+      order.params.extraData ||
+      order.params.zone === BaseAddresses.ReservoirCancellationZone[this.chainId]
+    ) {
+      return order.params.extraData ?? "0x";
     }
+
+    return matchParams?.extraData ?? "0x";
   }
 }

@@ -1,9 +1,11 @@
 import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
 
+import * as BaseAddresses from "../seaport-base/addresses";
 import * as Types from "../seaport-base/types";
 import { bn, getCurrentTimestamp, generateRandomSalt, lc } from "../utils";
-import * as BaseAddresses from "../seaport-base/addresses";
+
+// Export utility methods that handle cosigning
 export { cosignOrder, computeReceivedItems } from "./cosign";
 
 export const isCurrencyItem = ({ itemType }: { itemType: Types.ItemType }) =>
@@ -98,12 +100,11 @@ export const isPrivateOrder = (params: Types.OrderComponents) => {
   return isPrivate;
 };
 
-export const isCosignedOrder = (params: Types.OrderComponents, chainId: number) => {
-  return [
-    BaseAddresses.ReservoirCancellationZone[chainId],
-    BaseAddresses.OkxCancellationZone[chainId],
-  ].includes(params.zone);
-};
+export const isCosignedOrder = (params: Types.OrderComponents, chainId: number) =>
+  // Only includes orders for which we can generate the signature locally.
+  // Other types of cosigned orders (eg. OpenSea, Okx) should have special
+  // handling at the router level for generating the cosignature.
+  [BaseAddresses.ReservoirCancellationZone[chainId]].includes(params.zone);
 
 export const constructPrivateListingCounterOrder = (
   privateSaleRecipient: string,

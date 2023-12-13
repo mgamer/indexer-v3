@@ -1,53 +1,31 @@
-import {
-  MatchParams,
-  OrderComponents,
-  ReceivedItem,
-} from "@reservoir0x/sdk/dist/seaport-base/types";
-import * as Sdk from "@reservoir0x/sdk";
-import { config } from "@/config/index";
-import { saveOffChainCancellations } from "@/utils/offchain-cancel";
 import { verifyTypedData } from "@ethersproject/wallet";
-import { BigNumber } from "ethers";
-import { Features, FlaggingChecker } from "./flagged";
-import { cosigner } from "../index";
+import * as Sdk from "@reservoir0x/sdk";
+import { MatchParams, OrderComponents } from "@reservoir0x/sdk/dist/seaport-base/types";
+
+import { bn } from "@/common/utils";
+import { config } from "@/config/index";
+import { cosigner, saveOffChainCancellations } from "@/utils/offchain-cancel";
+import { Features, FlaggedTokensChecker } from "@/utils/offchain-cancel/seaport/flagged-tokens";
 
 type OrderKind = "seaport-v1.4" | "seaport-v1.5" | "alienswap";
-export const EXPIRATION_IN_S = 120;
 
-export type CancelCall = {
+type CancelCall = {
   orderKind: OrderKind;
   signature: string;
   orders: OrderComponents[];
 };
 
-export type ReplacementCall = {
+type ReplacementCall = {
   orderKind: OrderKind;
   newOrders: OrderComponents[];
   replacedOrders: OrderComponents[];
 };
 
-export type OrderSignatureRequestItem = {
-  fulfiller: string;
-  marketplaceContract: string;
-  orderParameters: OrderComponents;
-  substandardRequests: {
-    requestedReceivedItems: ReceivedItem[];
-  }[];
-};
-
-export type SignatureCall = {
-  orders: OrderSignatureRequestItem[];
-};
-export type SignatureRequestContext = {
-  expiration: number;
-  flaggingChecker: FlaggingChecker;
-};
-
-export function createOrder(
+export const createOrder = (
   chainId: number,
   orderData: OrderComponents,
   orderKind: "seaport-v1.4" | "seaport-v1.5" | "alienswap"
-): Sdk.SeaportV14.Order | Sdk.SeaportV15.Order | Sdk.Alienswap.Order {
+): Sdk.SeaportV14.Order | Sdk.SeaportV15.Order | Sdk.Alienswap.Order => {
   if (orderKind === "alienswap") {
     return new Sdk.Alienswap.Order(chainId, orderData);
   } else if (orderKind === "seaport-v1.4") {
@@ -55,33 +33,36 @@ export function createOrder(
   } else {
     return new Sdk.SeaportV15.Order(chainId, orderData);
   }
-}
+};
 
-export async function hashOrders(
+export const hashOrders = async (
   orders: OrderComponents[],
   orderKind: "seaport-v1.4" | "seaport-v1.5" | "alienswap"
-) {
-  let orderSigner = "";
+) => {
+  let orderSigner: string | undefined;
+
   const orderHashes = [];
-  for (let i = 0; i < orders.length; i++) {
-    const orderData = orders[i];
+  for (const orderData of orders) {
     const order = createOrder(config.chainId, orderData, orderKind);
     const orderHash = order.hash();
+
     try {
       await order.checkSignature();
-    } catch (e) {
-      throw new Error("WRONG_ORDER_SIGNATURE");
+    } catch {
+      throw new Error("Wrong order signature");
     }
 
     if (!orderSigner) {
       orderSigner = order.params.offerer;
-    } else if (order.params.offerer != orderSigner) {
-      throw new Error("SIGNER_MISMATCH");
+    } else if (order.params.offerer.toLowerCase() !== orderSigner.toLowerCase()) {
+      throw new Error("Signer mismatch");
     }
+
     orderHashes.push(orderHash);
   }
+
   return { orderHashes, orderSigner };
-}
+};
 
 export const verifyOffChainCancellationSignature = (
   orderIds: string[],
@@ -125,7 +106,6 @@ export const doCancel = async (data: CancelCall) => {
   }
 
   const success = verifyOffChainCancellationSignature(orderHashes, data.signature, orderSigner!);
-
   if (!success) {
     throw Error("Unauthorized");
   }
@@ -133,35 +113,35 @@ export const doCancel = async (data: CancelCall) => {
   await saveOffChainCancellations(orderHashes!);
 };
 
-export const doReplacement = async (data: ReplacementCall) => {
-  const { replacedOrders, newOrders, orderKind } = data;
+export const doReplacement = async ({ replacedOrders, newOrders, orderKind }: ReplacementCall) => {
   const result = await hashOrders(replacedOrders, orderKind);
   const { orderHashes, orderSigner } = result;
-  const replacedOrdersByHash = new Map(orderHashes!.map((hash, i) => [hash, replacedOrders[i]]));
-  const salts = [];
 
-  for (let i = 0; i < newOrders.length; i++) {
-    const orderData = newOrders[i];
+  const replacedOrdersByHash = new Map(orderHashes!.map((hash, i) => [hash, replacedOrders[i]]));
+
+  const salts = [];
+  for (const orderData of newOrders) {
     const order = createOrder(config.chainId, orderData, orderKind);
+
     try {
       await order.checkSignature();
-    } catch (e) {
-      throw new Error("WRONG_ORDER_SIGNATURE");
+    } catch {
+      throw new Error("Wrong order signature");
     }
 
-    if (order.params.offerer != orderSigner) {
-      throw new Error("SIGNER_MISMATCH");
+    if (order.params.offerer.toLowerCase() !== orderSigner?.toLowerCase()) {
+      throw new Error("Signer mismatch");
     }
 
-    if (BigNumber.from(order.params.salt).isZero()) {
-      throw new Error("SALT_MISSING");
+    if (bn(order.params.salt).isZero()) {
+      throw new Error("Salt is missing");
     }
 
     const replacedOrder = replacedOrdersByHash.get(order.params.salt);
-
     if (!replacedOrder || replacedOrder.offerer != orderSigner) {
-      throw new Error("SIGNER_MISMATCH");
+      throw new Error("Signer mismatch");
     }
+
     salts.push(order.params.salt);
   }
 
@@ -170,18 +150,21 @@ export const doReplacement = async (data: ReplacementCall) => {
 
 export const doSignOrder = async (
   order: Sdk.SeaportV14.Order | Sdk.SeaportV15.Order | Sdk.Alienswap.Order,
+  taker: string,
   matchParams: MatchParams
 ) => {
-  if (!order.isCosignedOrder()) return;
-  const features = new Features(order.params.zoneHash);
-  if (features.checkFlagged()) {
-    const requestedReceivedItems = order.getReceivedItems(matchParams);
-    const flaggingChecker = new FlaggingChecker(requestedReceivedItems);
-    const flagged = await flaggingChecker.containsFlagged(requestedReceivedItems);
-    if (flagged) {
-      throw new Error("FLAGGING_ERROR");
-    }
-  }
+  if (order.isCosignedOrder()) {
+    const features = new Features(order.params.zoneHash);
+    if (features.checkFlagged()) {
+      const requestedReceivedItems = order.getReceivedItems(matchParams);
 
-  await order.cosign(cosigner(), matchParams);
+      const flaggedTokensChecker = new FlaggedTokensChecker(requestedReceivedItems);
+      const hasFlaggedTokens = await flaggedTokensChecker.containsFlagged(requestedReceivedItems);
+      if (hasFlaggedTokens) {
+        throw new Error("Order references flagged tokens");
+      }
+    }
+
+    await order.cosign(cosigner(), taker, matchParams);
+  }
 };

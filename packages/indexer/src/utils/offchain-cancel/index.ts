@@ -1,15 +1,11 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
-// Exports
-
-export * as paymentProcessorV2 from "@/utils/offchain-cancel/payment-processor-v2";
-export * as seaport from "@/utils/offchain-cancel/seaport";
-
-// Imports
 import { Wallet } from "@ethersproject/wallet";
+
 import { idb, pgp } from "@/common/db";
 import { config } from "@/config/index";
 import { orderUpdatesByIdJob } from "@/jobs/order-updates/order-updates-by-id-job";
+
+export * as paymentProcessorV2 from "@/utils/offchain-cancel/payment-processor-v2";
+export * as seaport from "@/utils/offchain-cancel/seaport";
 
 export const cosigner = () => new Wallet(config.cosignerPrivateKey);
 

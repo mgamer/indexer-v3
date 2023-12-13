@@ -399,8 +399,8 @@ export class Order implements IOrder {
     return computeReceivedItems(this, matchParams);
   }
 
-  public async cosign(signer: TypedDataSigner, matchParams: Types.MatchParams) {
-    const { extraDataComponent } = await cosignOrder(this, signer, matchParams);
+  public async cosign(signer: TypedDataSigner, taker: string, matchParams: Types.MatchParams) {
+    const { extraDataComponent } = await cosignOrder(this, signer, taker, matchParams);
     this.params.extraData = extraDataComponent.toString();
   }
 
@@ -442,6 +442,6 @@ const normalize = (order: Types.OrderComponents): Types.OrderComponents => {
     conduitKey: lc(order.conduitKey),
     counter: s(order.counter),
     signature: order.signature ? lc(order.signature) : undefined,
-    extraData: order.extraData ?? undefined,
+    extraData: order.extraData ? lc(order.extraData) : undefined,
   };
 };

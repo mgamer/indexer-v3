@@ -1,12 +1,12 @@
-import { IOrder } from "./order";
-import { getCurrentTimestamp, bn } from "../utils";
-import { MatchParams, ReceivedItem } from "./types";
-import { AddressZero } from "@ethersproject/constants";
-import { utils } from "ethers";
-import { _TypedDataEncoder } from "ethers/lib/utils";
-import { BytesLike } from "ethers";
 import { TypedDataSigner } from "@ethersproject/abstract-signer";
+import { BytesLike, splitSignature } from "@ethersproject/bytes";
+import { _TypedDataEncoder } from "@ethersproject/hash";
+import { pack } from "@ethersproject/solidity";
+
 import * as Addresses from "./addresses";
+import { IOrder } from "./order";
+import { MatchParams, ReceivedItem } from "./types";
+import { bn, getCurrentTimestamp } from "../utils";
 
 export const SIP6_VERSION = 0;
 
@@ -37,9 +37,8 @@ export const EIP712_DOMAIN = (chainId: number) => ({
   verifyingContract: Addresses.ReservoirCancellationZone[chainId],
 });
 
-function encodeContext(contextVersion: number, contextPayload: BytesLike) {
-  return utils.solidityPack(["bytes1", "bytes"], [contextVersion, contextPayload]);
-}
+const encodeContext = (contextVersion: number, contextPayload: BytesLike) =>
+  pack(["bytes1", "bytes"], [contextVersion, contextPayload]);
 
 export const computeReceivedItems = (order: IOrder, matchParams: MatchParams): ReceivedItem[] => {
   return order.params.consideration.map((c) => ({
@@ -56,21 +55,20 @@ export const computeReceivedItems = (order: IOrder, matchParams: MatchParams): R
   }));
 };
 
-export async function signOrder(
+export const signOrder = async (
   chainId: number,
   cosigner: TypedDataSigner,
   fulfiller: string,
   expiration: number,
   orderHash: string,
   context: BytesLike
-) {
-  return await cosigner._signTypedData(EIP712_DOMAIN(chainId), SIGNED_ORDER_EIP712_TYPE, {
+) =>
+  cosigner._signTypedData(EIP712_DOMAIN(chainId), SIGNED_ORDER_EIP712_TYPE, {
     fulfiller,
     expiration,
     orderHash,
     context,
   });
-}
 
 export const convertSignatureToEIP2098 = (signature: string) => {
   if (signature.length === 130) {
@@ -81,50 +79,53 @@ export const convertSignatureToEIP2098 = (signature: string) => {
     throw Error("invalid signature length (must be 64 or 65 bytes)");
   }
 
-  return utils.splitSignature(signature).compact;
+  return splitSignature(signature).compact;
 };
 
-export function hashConsideration(consideration: ReceivedItem[]): BytesLike {
-  return _TypedDataEncoder.hashStruct("Consideration", CONSIDERATION_EIP712_TYPE, {
+export const hashConsideration = (consideration: ReceivedItem[]) =>
+  _TypedDataEncoder.hashStruct("Consideration", CONSIDERATION_EIP712_TYPE, {
     consideration,
   });
-}
 
-async function encodeExtraData(
+const encodeExtraData = async (
   chainId: number,
   cosigner: TypedDataSigner,
   fulfiller: string,
   expiration: number,
   orderHash: string,
   consideration: ReceivedItem[]
-) {
+) => {
   const contextPayload = hashConsideration(consideration);
-  const context: BytesLike = encodeContext(SIP6_VERSION, contextPayload);
+  const context = encodeContext(SIP6_VERSION, contextPayload);
+
   const signature = await signOrder(chainId, cosigner, fulfiller, expiration, orderHash, context);
-  const extraData = utils.solidityPack(
+  const extraData = pack(
     ["bytes1", "address", "uint64", "bytes", "bytes"],
     [SIP6_VERSION, fulfiller, expiration, convertSignatureToEIP2098(signature), context]
   );
+
   return [extraData, contextPayload];
-}
+};
 
 export const cosignOrder = async (
   order: IOrder,
   cosigner: TypedDataSigner,
+  taker: string,
   matchParams: MatchParams
 ) => {
   const orderHash = order.hash();
   const consideration = computeReceivedItems(order, matchParams);
-  const fulfiller = AddressZero;
   const expiration = getCurrentTimestamp(300);
+
   const [extraDataComponent, requiredReceivedItemsHash] = await encodeExtraData(
     order.chainId,
     cosigner,
-    fulfiller,
+    taker,
     expiration,
     orderHash,
     consideration
   );
+
   return {
     extraDataComponent,
     substandardResponses: [{ requiredReceivedItems: consideration, requiredReceivedItemsHash }],
