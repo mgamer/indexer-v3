@@ -34,6 +34,7 @@ import { Assets, ImageSize } from "@/utils/assets";
 import { CollectionSets } from "@/models/collection-sets";
 import { Collections } from "@/models/collections";
 import { getListedTokensFromES } from "@/api/endpoints/tokens";
+import { onchainMetadataProvider } from "@/metadata/providers/onchain-metadata-provider";
 
 const version = "v7";
 
@@ -907,12 +908,16 @@ export const getTokensV7Options: RouteOptions = {
         (query as any).tokenNameAsId = query.tokenName;
         query.tokenName = `%${query.tokenName}%`;
 
-        conditions.push(`
-          CASE
-            WHEN t.name IS NULL THEN t.token_id::text = $/tokenNameAsId/
-            ELSE t.name ILIKE $/tokenName/
-          END
-        `);
+        if (isNaN(query.tokenName)) {
+          conditions.push(`t.name ILIKE $/tokenName/`);
+        } else {
+          conditions.push(`
+            CASE
+              WHEN t.name IS NULL THEN t.token_id::text = $/tokenNameAsId/
+              ELSE t.name ILIKE $/tokenName/
+            END
+          `);
+        }
       }
 
       if (query.tokenSetId) {
@@ -1414,6 +1419,14 @@ export const getTokensV7Options: RouteOptions = {
 
         if (r.metadata?.animation_original_url) {
           metadata.mediaOriginal = r.metadata.animation_original_url;
+        }
+
+        if (!r.image && r.metadata?.image_original_url) {
+          r.image = onchainMetadataProvider.parseIPFSURI(r.metadata.image_original_url);
+        }
+
+        if (!r.media && r.metadata?.animation_original_url) {
+          r.media = onchainMetadataProvider.parseIPFSURI(r.metadata.animation_original_url);
         }
 
         return {

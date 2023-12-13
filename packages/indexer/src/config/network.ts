@@ -711,7 +711,7 @@ export const getNetworkSettings = (): NetworkSettings => {
             {
               contract: "0x456f931298065b1852647de005dd27227146d8b9",
               name: "WVAL",
-              symbol: "$VAL",
+              symbol: "WVAL",
               decimals: 18,
               metadata: {
                 image: "https://i.ibb.co/YRFynrp/wvallogo.png",
@@ -756,7 +756,7 @@ export const getNetworkSettings = (): NetworkSettings => {
           indexes: {
             activities: {
               ...defaultNetworkSettings.elasticsearch?.indexes?.activities,
-              numberOfShards: 50,
+              numberOfShards: 40,
             },
           },
         },
@@ -832,7 +832,6 @@ export const getNetworkSettings = (): NetworkSettings => {
         realtimeSyncFrequencySeconds: 5,
         lastBlockLatency: 5,
         headBlockDelay: 10,
-        metadataMintDelay: 0,
         washTradingExcludedContracts: [
           // Prohibition Contracts - ArtBlocks Engine
           "0x47a91457a3a1f700097199fd63c039c4784384ab",
@@ -1327,7 +1326,6 @@ export const getNetworkSettings = (): NetworkSettings => {
         realtimeSyncMaxBlockLag: 32,
         realtimeSyncFrequencySeconds: 5,
         lastBlockLatency: 5,
-        metadataMintDelay: 0,
         coingecko: {
           networkId: "linea",
         },

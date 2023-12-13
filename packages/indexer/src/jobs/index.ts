@@ -124,7 +124,6 @@ import { orderUpdatesByIdJob } from "@/jobs/order-updates/order-updates-by-id-jo
 import { orderUpdatesDynamicOrderJob } from "@/jobs/order-updates/cron/dynamic-orders-job";
 import { orderUpdatesErc20OrderJob } from "@/jobs/order-updates/cron/erc20-orders-job";
 import { orderUpdatesExpiredOrderJob } from "@/jobs/order-updates/cron/expired-orders-job";
-import { orderUpdatesOracleOrderJob } from "@/jobs/order-updates/cron/oracle-orders-job";
 import { blurBidsBufferJob } from "@/jobs/order-updates/misc/blur-bids-buffer-job";
 import { blurBidsRefreshJob } from "@/jobs/order-updates/misc/blur-bids-refresh-job";
 import { blurListingsRefreshJob } from "@/jobs/order-updates/misc/blur-listings-refresh-job";
@@ -179,6 +178,11 @@ import { resyncUserCollectionsJob } from "@/jobs/nft-balance-updates/reynsc-user
 import { backfillUserCollectionsJob } from "@/jobs/backfill/backfill-user-collections";
 import { tokenReassignedUserCollectionsJob } from "@/jobs/nft-balance-updates/token-reassigned-user-collections-job";
 import { backfillTokenSupplyJob } from "@/jobs/backfill/backfill-token-supply";
+import { backfillFtBalancesDatesJob } from "@/jobs/backfill/backfill-ft-balances-dates";
+import { backfillFtTransferEventsDatesJob } from "@/jobs/backfill/backfill-ft-transfer-events-dates";
+import { backfillExecutionsDatesJob } from "@/jobs/backfill/backfill-executions-dates";
+import { backfillOrderEventsDatesJob } from "@/jobs/backfill/backfill-order-events-dates";
+import { backfillTransactionsDatesJob } from "@/jobs/backfill/backfill-transactions-dates";
 
 export const allJobQueues = [
   backfillWrongNftBalances.queue,
@@ -285,7 +289,6 @@ export class RabbitMqJobsConsumer {
       orderUpdatesDynamicOrderJob,
       orderUpdatesErc20OrderJob,
       orderUpdatesExpiredOrderJob,
-      orderUpdatesOracleOrderJob,
       blurBidsBufferJob,
       blurBidsRefreshJob,
       blurListingsRefreshJob,
@@ -340,6 +343,11 @@ export class RabbitMqJobsConsumer {
       backfillUserCollectionsJob,
       tokenReassignedUserCollectionsJob,
       backfillTokenSupplyJob,
+      backfillFtBalancesDatesJob,
+      backfillFtTransferEventsDatesJob,
+      backfillExecutionsDatesJob,
+      backfillOrderEventsDatesJob,
+      backfillTransactionsDatesJob,
     ];
   }
 

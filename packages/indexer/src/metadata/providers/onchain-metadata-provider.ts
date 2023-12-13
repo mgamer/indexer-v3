@@ -245,8 +245,7 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
   }
 
   // parsers
-
-  parseToken(metadata: any): TokenMetadata {
+  _parseToken(metadata: any): TokenMetadata {
     // add handling for metadata.properties, convert to attributes
     if (metadata?.properties) {
       metadata.attributes = Object.keys(metadata.properties).map((key) => {
@@ -344,47 +343,65 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
   }
 
   encodeTokenERC721(token: any) {
-    const iface = new ethers.utils.Interface([
-      {
-        name: "tokenURI",
-        type: "function",
-        stateMutability: "view",
-        inputs: [
-          {
-            type: "uint256",
-            name: "tokenId",
-          },
-        ],
-      },
-    ]);
+    try {
+      const iface = new ethers.utils.Interface([
+        {
+          name: "tokenURI",
+          type: "function",
+          stateMutability: "view",
+          inputs: [
+            {
+              type: "uint256",
+              name: "tokenId",
+            },
+          ],
+        },
+      ]);
 
-    return {
-      id: token.requestId,
-      encodedTokenID: iface.encodeFunctionData("tokenURI", [token.tokenId]),
-      contract: token.contract,
-    };
+      return {
+        id: token.requestId,
+        encodedTokenID: iface.encodeFunctionData("tokenURI", [token.tokenId]),
+        contract: token.contract,
+      };
+    } catch (error) {
+      logger.error(
+        "onchain-fetcher",
+        `encodeTokenERC721 error. contractAddress:${token.contract}, tokenId:${token.tokenId}, error:${error}`
+      );
+
+      return null;
+    }
   }
 
   encodeTokenERC1155(token: any) {
-    const iface = new ethers.utils.Interface([
-      {
-        name: "uri",
-        type: "function",
-        stateMutability: "view",
-        inputs: [
-          {
-            type: "uint256",
-            name: "tokenId",
-          },
-        ],
-      },
-    ]);
+    try {
+      const iface = new ethers.utils.Interface([
+        {
+          name: "uri",
+          type: "function",
+          stateMutability: "view",
+          inputs: [
+            {
+              type: "uint256",
+              name: "tokenId",
+            },
+          ],
+        },
+      ]);
 
-    return {
-      id: token.requestId,
-      encodedTokenID: iface.encodeFunctionData("uri", [token.tokenId]),
-      contract: token.contract,
-    };
+      return {
+        id: token.requestId,
+        encodedTokenID: iface.encodeFunctionData("uri", [token.tokenId]),
+        contract: token.contract,
+      };
+    } catch (error) {
+      logger.error(
+        "onchain-fetcher",
+        `encodeTokenERC1155 error. contractAddress:${token.contract}, tokenId:${token.tokenId}, error:${error}`
+      );
+
+      return null;
+    }
   }
 
   getRPC() {
@@ -511,6 +528,10 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
 
   async getTokenMetadataFromURI(uri: string, contract: string, tokenId: string) {
     try {
+      if (uri.startsWith("json:")) {
+        uri = uri.replace("json:\n", "");
+      }
+
       uri = this.parseIPFSURI(uri);
 
       if (uri.startsWith("data:application/json;base64,")) {
@@ -521,6 +542,7 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
         uri = uri.substring(uri.indexOf(",") + 1);
         return [JSON.parse(uri), null];
       }
+      uri = uri.trim();
       if (!uri.startsWith("http")) {
         // if the uri is not a valid url, return null
         return [null, `Invalid URI: ${uri}`];
