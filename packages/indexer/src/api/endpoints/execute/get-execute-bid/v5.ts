@@ -65,11 +65,11 @@ import * as paymentProcessorV2BuyAttribute from "@/orderbook/orders/payment-proc
 const version = "v5";
 
 export const getExecuteBidV5Options: RouteOptions = {
-  description: "Create bids (offers)",
+  description: "Create Bids",
   notes:
     "Generate bids and submit them to multiple marketplaces.\n\n Notes:\n\n- Please use the `/cross-posting-orders/v1` to check the status on cross posted bids.\n\n- We recommend using Reservoir SDK as it abstracts the process of iterating through steps, and returning callbacks that can be used to update your UI.",
   timeout: { server: 60000 },
-  tags: ["api", "Create Orders (list & bid)"],
+  tags: ["api", "Trading"],
   plugins: {
     "hapi-swagger": {
       order: 11,
@@ -327,8 +327,9 @@ export const getExecuteBidV5Options: RouteOptions = {
         },
         {
           id: "currency-wrapping",
-          action: `Wrapping currency`,
-          description: `We'll ask your approval to wrap the currency for bidding. Gas fee required.`,
+          action: "Wrapping currency",
+          description:
+            "We'll ask your approval to wrap the currency for bidding. Gas fee required.",
           kind: "transaction",
           items: [],
         },

@@ -31,6 +31,28 @@ export default class OnchainMetadataProcessTokenUriJob extends AbstractRabbitMqJ
         { contract, tokenId, uri },
       ]);
 
+      if (metadata[0] && metadata[0].imageUrl?.startsWith("data:")) {
+        if (config.fallbackMetadataIndexingMethod) {
+          const pendingRefreshTokens = new PendingRefreshTokens(
+            config.fallbackMetadataIndexingMethod
+          );
+          await pendingRefreshTokens.add([
+            {
+              collection: contract,
+              contract,
+              tokenId,
+            },
+          ]);
+
+          await metadataIndexProcessJob.addToQueue({
+            method: config.fallbackMetadataIndexingMethod,
+          });
+          return;
+        } else {
+          metadata[0].imageUrl = null;
+        }
+      }
+
       if (metadata) {
         await metadataIndexWriteJob.addToQueue(metadata);
         return;
@@ -47,9 +69,10 @@ export default class OnchainMetadataProcessTokenUriJob extends AbstractRabbitMqJ
           `Request was throttled. contract=${contract}, tokenId=${tokenId}, uri=${uri}`
         );
 
-        // Add to queue again with a delay from the error if its a rate limit
-        await this.addToQueue(payload, e.delay);
-        return;
+        // if this is the last retry, we don't throw to retry and instead we fallback to simplehash
+        if (Number(this.rabbitMqMessage?.retryCount) < this.maxRetries) {
+          throw e; // throw to retry
+        }
       }
       logger.error(
         this.queueName,

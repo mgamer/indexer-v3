@@ -667,7 +667,7 @@ export const getCollectionsV5Options: RouteOptions = {
               name: r.name,
               image:
                 r.image ??
-                (sampleImages.length ? Assets.getLocalAssetsLink(sampleImages[0]) : null),
+                (sampleImages.length ? Assets.getResizedImageUrl(sampleImages[0]) : null),
               banner: r.banner,
               discordUrl: r.discord_url,
               externalUrl: r.external_url,
@@ -683,7 +683,9 @@ export const getCollectionsV5Options: RouteOptions = {
                 ? {
                     // Main recipient, kept for backwards-compatibility only
                     recipient: r.royalties.length ? r.royalties[0].recipient : null,
-                    breakdown: r.royalties.filter((r: any) => r.bps && r.recipient),
+                    breakdown: r.royalties
+                      .filter((r: any) => r.bps && r.recipient)
+                      .map((r: any) => ({ bps: r.bps, recipient: r.recipient })),
                     bps: r.royalties
                       .map((r: any) => r.bps)
                       .reduce((a: number, b: number) => a + b, 0),

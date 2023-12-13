@@ -654,7 +654,7 @@ export const getUserTokensV7Options: RouteOptions = {
       if (query.sortBy === "acquiredAt") {
         baseQuery += `
         ORDER BY
-          acquired_at ${query.sortDirection}, b.token_id ${query.sortDirection}
+          b.acquired_at ${query.sortDirection}, b.token_id ${query.sortDirection}
         LIMIT $/limit/
       `;
       } else {
@@ -719,7 +719,7 @@ export const getUserTokensV7Options: RouteOptions = {
               tokenId: tokenId,
               kind: r.kind,
               name: r.name,
-              image: Assets.getResizedImageUrl(r.image, undefined, r.image_version),
+              image: Assets.getResizedImageUrl(r.image, ImageSize.medium, r.image_version),
               imageSmall: Assets.getResizedImageUrl(r.image, ImageSize.small, r.image_version),
               imageLarge: Assets.getResizedImageUrl(r.image, ImageSize.large, r.image_version),
               metadata: r.token_metadata?.image_original_url
@@ -768,7 +768,9 @@ export const getUserTokensV7Options: RouteOptions = {
                     )
                   : null,
                 royaltiesBps: r.royalties_bps ?? 0,
-                royalties: r.royalties,
+                royalties: r.royalties
+                  ? r.royalties.map((r: any) => ({ bps: r.bps, recipient: r.recipient }))
+                  : null,
               },
               lastSale:
                 query.includeLastSale && r.last_sale_currency

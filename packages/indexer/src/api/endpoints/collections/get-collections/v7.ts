@@ -21,7 +21,7 @@ import {
 import { config } from "@/config/index";
 import { CollectionSets } from "@/models/collection-sets";
 import { Sources } from "@/models/sources";
-import { Assets } from "@/utils/assets";
+import { Assets, ImageSize } from "@/utils/assets";
 import * as erc721c from "@/utils/erc721c";
 import * as marketplaceBlacklist from "@/utils/marketplace-blacklists";
 
@@ -311,6 +311,7 @@ export const getCollectionsV7Options: RouteOptions = {
               price: JoiPrice.allow(null),
               startTime: Joi.number().allow(null),
               endTime: Joi.number().allow(null),
+              maxMints: Joi.number().unsafe().allow(null),
               maxMintsPerWallet: Joi.number().unsafe().allow(null),
             })
           ),
@@ -379,6 +380,7 @@ export const getCollectionsV7Options: RouteOptions = {
                   'price', collection_mints.price::TEXT,
                   'startTime', floor(extract(epoch from collection_mints.start_time)),
                   'endTime', floor(extract(epoch from collection_mints.end_time)),
+                  'maxMints', collection_mints.max_supply,
                   'maxMintsPerWallet', collection_mints.max_mints_per_wallet
                 )
               ) AS mint_stages
@@ -694,6 +696,7 @@ export const getCollectionsV7Options: RouteOptions = {
              tokens.token_id AS floor_sell_token_id,
              tokens.name AS floor_sell_token_name,
              tokens.image AS floor_sell_token_image,
+             tokens.image_version AS floor_sell_token_image_version,
              orders.currency AS floor_sell_currency,
              ${
                query.normalizeRoyalties
@@ -824,7 +827,9 @@ export const getCollectionsV7Options: RouteOptions = {
                 ? {
                     // Main recipient, kept for backwards-compatibility only
                     recipient: r.royalties.length ? r.royalties[0].recipient : null,
-                    breakdown: r.royalties.filter((r: any) => r.bps && r.recipient),
+                    breakdown: r.royalties
+                      .filter((r: any) => r.bps && r.recipient)
+                      .map((r: any) => ({ bps: r.bps, recipient: r.recipient })),
                     bps: r.royalties
                       .map((r: any) => r.bps)
                       .reduce((a: number, b: number) => a + b, 0),
@@ -855,7 +860,11 @@ export const getCollectionsV7Options: RouteOptions = {
                     : null,
                   tokenId: r.floor_sell_token_id,
                   name: r.floor_sell_token_name,
-                  image: Assets.getLocalAssetsLink(r.floor_sell_token_image),
+                  image: Assets.getResizedImageUrl(
+                    r.floor_sell_token_image,
+                    ImageSize.medium,
+                    r.floor_sell_token_image_version
+                  ),
                 },
               },
               topBid: {
@@ -949,6 +958,7 @@ export const getCollectionsV7Options: RouteOptions = {
                         : m.price,
                       startTime: m.startTime,
                       endTime: m.endTime,
+                      maxMints: m.maxMints,
                       maxMintsPerWallet: m.maxMintsPerWallet,
                     }))
                   )
