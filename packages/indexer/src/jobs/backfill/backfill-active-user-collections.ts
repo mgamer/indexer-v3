@@ -40,14 +40,8 @@ export class BackfillActiveUserCollectionsJob extends AbstractRabbitMqJobHandler
     }
 
     const query = `
-      SELECT nte.to as "owner", t.collection_id, updated_at
+      SELECT nte.to as "owner", updated_at
       FROM nft_transfer_events nte
-      JOIN LATERAL (
-         SELECT collection_id
-         FROM tokens
-         WHERE nte.address = tokens.contract
-         AND nte.token_id = tokens.token_id
-      ) t ON TRUE
       WHERE updated_at > now() - INTERVAL '6 months'
       AND nte.to NOT IN ($/AddressZero/, $/deadAddress/)
       ${updatedAtFilter}
@@ -59,19 +53,14 @@ export class BackfillActiveUserCollectionsJob extends AbstractRabbitMqJobHandler
 
     if (results) {
       for (const result of results) {
-        if (_.isNull(result.collection_id)) {
-          continue;
-        }
+        // Check if the user was already synced
+        const lock = `backfill-active-users-supply:${fromBuffer(result.owner)}`;
 
-        // Check if the user was already synced for this collection
-        const lock = `backfill-token-supply:${fromBuffer(result.owner)}:${result.collection_id}`;
-
-        if (await acquireLock(lock, 60 * 60 * 6)) {
-          // Trigger resync for the user in the collection
+        if (await acquireLock(lock, 60 * 60 * 24)) {
+          // Trigger resync for the user
           await resyncUserCollectionsJob.addToQueue([
             {
               user: fromBuffer(result.owner),
-              collectionId: result.collection_id,
             },
           ]);
         }
