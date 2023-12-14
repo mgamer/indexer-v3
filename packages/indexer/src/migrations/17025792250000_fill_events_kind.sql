@@ -1,10 +1,8 @@
 -- Up Migration
 CREATE TYPE "fill_event_kind" AS ENUM (
   'mint',
-  'transfer',
   'burn',
-  'airdrop',
-  'sale',
+  'airdrop'
 );
 
 ALTER TYPE "fill_events_2" ADD COLUMN "kind" "fill_event_kind";
