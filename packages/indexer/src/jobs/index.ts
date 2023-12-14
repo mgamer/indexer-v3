@@ -178,6 +178,7 @@ import { backfillOrderEventsDatesJob } from "@/jobs/backfill/backfill-order-even
 import { backfillTransactionsDatesJob } from "@/jobs/backfill/backfill-transactions-dates";
 import { backfillTokenSupplyJob } from "@/jobs/backfill/backfill-token-supply";
 import { backfillActiveUserCollectionsJob } from "@/jobs/backfill/backfill-active-user-collections";
+import { backfillAttributesFloorAskJob } from "@/jobs/backfill/backfill-attributes-floor-ask";
 
 export const allJobQueues = [
   backfillWrongNftBalances.queue,
@@ -338,6 +339,7 @@ export class RabbitMqJobsConsumer {
       backfillTransactionsDatesJob,
       backfillTokenSupplyJob,
       backfillActiveUserCollectionsJob,
+      backfillAttributesFloorAskJob,
     ];
   }
 
