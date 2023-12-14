@@ -21,6 +21,27 @@ export default class EventsSyncBackfillJob extends AbstractRabbitMqJobHandler {
   protected async process(payload: EventSyncBackfillJobPayload) {
     const { fromBlock, toBlock, syncOptions } = payload;
 
+    // to stop the job from running into issues or taking too long, we dont want to sync a large amount of blocks in one job
+    // if the fromBlock & toBlock have a large difference, split the job into smaller jobs
+    // if the syncDetails are null, split the job into smaller jobs of 5 blocks
+    // otherwise, split the job into smaller jobs of 50 blocks
+    const diff = toBlock - fromBlock;
+    const splitSize = syncOptions?.syncDetails ? 50 : 5;
+    if (diff > splitSize) {
+      const splitJobs = [];
+      for (let i = fromBlock; i < toBlock; i += splitSize) {
+        splitJobs.push({
+          fromBlock: i,
+          toBlock: Math.min(i + splitSize, toBlock),
+          syncOptions,
+        });
+      }
+      await Promise.all(
+        splitJobs.map((job) => this.addToQueue(job.fromBlock, job.toBlock, job.syncOptions))
+      );
+      return;
+    }
+
     try {
       await syncEvents(
         {
