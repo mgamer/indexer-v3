@@ -1,4 +1,5 @@
 import { Log } from "@ethersproject/abstract-provider";
+import { TransactionResponse } from "@ethersproject/providers";
 
 export type BaseEventParams = {
   address: string;
@@ -10,15 +11,14 @@ export type BaseEventParams = {
   timestamp: number;
   batchIndex: number;
   from: string;
+  to: string | undefined;
 };
 
 export const parseEvent = (
   log: Log,
   timestamp: number,
   batchIndex = 1,
-  txData: {
-    from: string;
-  }
+  txData: TransactionResponse
 ): BaseEventParams => {
   const address = log.address.toLowerCase();
   const block = log.blockNumber;
@@ -27,6 +27,7 @@ export const parseEvent = (
   const txIndex = log.transactionIndex;
   const logIndex = log.logIndex;
   const from = txData?.from?.toLowerCase();
+  const to = txData?.to?.toLowerCase();
 
   return {
     address,
@@ -38,5 +39,6 @@ export const parseEvent = (
     timestamp,
     batchIndex,
     from,
+    to,
   };
 };

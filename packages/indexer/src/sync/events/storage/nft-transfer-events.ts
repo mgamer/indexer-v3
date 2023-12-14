@@ -3,13 +3,13 @@ import _ from "lodash";
 import { idb, pgp } from "@/common/db";
 import { fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
-import { BaseEventParams } from "@/events-sync/parser";
 import { eventsSyncNftTransfersWriteBufferJob } from "@/jobs/events-sync/write-buffers/nft-transfers-job";
 import { AddressZero } from "@ethersproject/constants";
 import { tokenReclacSupplyJob } from "@/jobs/token-updates/token-reclac-supply-job";
 import { ZeroAddressBalance } from "@/models/zero-address-balance";
 import { getNetworkSettings } from "@/config/network";
 import { getRouters } from "@/utils/routers";
+import { BaseEventParams } from "../parserV2";
 
 export type Event = {
   kind: ContractKind;
@@ -79,7 +79,8 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
     if (
       ns.mintAddresses.includes(event.from) &&
       event.baseEventParams.from !== event.to &&
-      !routers.has(event.baseEventParams.to)
+      event.baseEventParams?.to &&
+      !routers.has(event.baseEventParams?.to)
     ) {
       kind = "airdrop";
     } else if (ns.mintAddresses.includes(event.from)) {
@@ -87,7 +88,6 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
     } else if (ns.burnAddresses.includes(event.to)) {
       kind = "burn";
     }
-
     transferValues.push({
       address: toBuffer(event.baseEventParams.address),
       block: event.baseEventParams.block,

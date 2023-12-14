@@ -2,19 +2,7 @@ import { Log } from "@ethersproject/abstract-provider";
 
 import * as syncEventsUtils from "@/events-sync/utils";
 import * as blocksModel from "@/models/blocks";
-
-export type BaseEventParams = {
-  address: string;
-  block: number;
-  blockHash: string;
-  txHash: string;
-  txIndex: number;
-  logIndex: number;
-  timestamp: number;
-  batchIndex: number;
-  from: string;
-  to: string;
-};
+import { BaseEventParams } from "./parserV2";
 
 export const parseEvent = async (
   log: Log,
