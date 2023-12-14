@@ -3,7 +3,8 @@ import { logger } from "@/common/logger";
 import { SyncBlockOptions, syncEvents } from "@/events-sync/index";
 
 export type EventSyncBackfillJobPayload = {
-  block: number;
+  fromBlock: number;
+  toBlock: number;
   syncOptions: SyncBlockOptions;
 };
 
@@ -18,18 +19,30 @@ export default class EventsSyncBackfillJob extends AbstractRabbitMqJobHandler {
   } as BackoffStrategy;
 
   protected async process(payload: EventSyncBackfillJobPayload) {
-    const { block, syncOptions } = payload;
+    const { fromBlock, toBlock, syncOptions } = payload;
 
     try {
-      await syncEvents(block, false, syncOptions);
+      await syncEvents(
+        {
+          fromBlock,
+          toBlock,
+        },
+        false,
+        syncOptions
+      );
     } catch (error) {
-      logger.error(this.queueName, `Events for [${block}] backfill syncing failed: ${error}`);
+      logger.error(
+        this.queueName,
+        `Events for [${fromBlock} - ${toBlock}] failed to sync: ${error}`
+      );
       throw error;
     }
   }
 
   public async addToQueue(
-    block: number,
+    fromBlock: number,
+    toBlock: number,
+    syncOptions: SyncBlockOptions,
     options?: {
       prioritized?: number;
       delay?: number;
@@ -38,32 +51,13 @@ export default class EventsSyncBackfillJob extends AbstractRabbitMqJobHandler {
     await this.send(
       {
         payload: {
-          block,
+          fromBlock,
+          toBlock,
+          syncOptions,
         },
       },
       options?.delay || 0,
       options?.prioritized || 1
-    );
-  }
-
-  public async addToQueueBulk(
-    blocks: number[],
-    syncOptions: SyncBlockOptions,
-    options?: {
-      prioritized?: number;
-      delay?: number;
-    }
-  ) {
-    // Sync in reverse to handle more recent events first
-    await this.sendBatch(
-      blocks.map((block) => ({
-        payload: {
-          block,
-          syncOptions,
-        },
-        delay: options?.delay || 0,
-        priority: options?.prioritized || 1,
-      }))
     );
   }
 }

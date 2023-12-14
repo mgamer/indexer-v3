@@ -375,25 +375,43 @@ export const syncTraces = async (block: number) => {
   );
 };
 
+export const getBlocks = async (fromBlock: number, toBlock: number) => {
+  const blocks = await Promise.all(
+    _.range(fromBlock, toBlock + 1).map(async (block) => {
+      const blockData = await syncEventsUtils.fetchBlock(block);
+      if (!blockData) {
+        throw new Error(`Block ${block} not found with RPC provider`);
+      }
+      return blockData;
+    })
+  );
+
+  return blocks;
+};
+
 export const syncEvents = async (
-  block: number,
+  blocks: {
+    fromBlock: number;
+    toBlock: number;
+  },
   skipLogsCheck = false,
   syncOptions?: SyncBlockOptions
 ) => {
   const startSyncTime = Date.now();
 
   const startGetBlockTime = Date.now();
-  const blockData = await syncEventsUtils.fetchBlock(block);
+  const blockData = await getBlocks(blocks.fromBlock, blocks.toBlock);
+
   if (!blockData) {
-    throw new Error(`Block ${block} not found with RPC provider`);
+    throw new Error(`Blocks ${blocks.fromBlock} to ${blocks.toBlock} not found with RPC provider`);
   }
 
   const endGetBlockTime = Date.now();
 
   const eventFilter: Filter = {
     topics: [[...new Set(getEventData().map(({ topic }) => topic))]],
-    fromBlock: block,
-    toBlock: block,
+    fromBlock: blocks?.fromBlock,
+    toBlock: blocks?.toBlock,
   };
 
   if (syncOptions?.syncDetails?.method === "events") {
@@ -415,25 +433,35 @@ export const syncEvents = async (
   if (
     config.chainId === 137 &&
     !skipLogsCheck &&
-    !_.isEmpty(blockData.transactions) &&
+    // check if there are transactions but no logs
+    !_.isEmpty(blockData.every((block) => block.transactions.length > 0)) &&
     _.isEmpty(logs)
   ) {
-    throw new Error(`No logs found for block ${block}`);
+    throw new Error(`No logs found for blocks ${blocks.fromBlock} to ${blocks.toBlock}`);
   }
 
-  const [{ saveBlocksTime, endSaveBlocksTime }, saveBlockTransactionsTime] = await Promise.all([
-    _saveBlock({
-      number: block,
-      hash: blockData.hash,
-      timestamp: blockData.timestamp,
+  const saveDataTimes = await Promise.all([
+    ...blockData.map(async (block) => {
+      return await Promise.all([
+        _saveBlock({
+          number: block.number,
+          hash: block.hash,
+          timestamp: block.timestamp,
+        }),
+        _saveBlockTransactions(block),
+      ]);
     }),
-    _saveBlockTransactions(blockData),
   ]);
 
   let enhancedEvents = logs
     .map((log) => {
       try {
-        const baseEventParams = parseEvent(log, blockData.timestamp);
+        // const baseEventParams = parseEvent(log, blockData.timestamp);
+        const block = blockData.find((b) => b.hash === log.blockHash);
+        if (!block) {
+          throw new Error(`Block ${log.blockHash} not found with RPC provider`);
+        }
+        const baseEventParams = parseEvent(log, block.timestamp);
         return availableEventData
           .filter(
             ({ addresses, numTopics, topic }) =>
@@ -470,10 +498,11 @@ export const syncEvents = async (
   logger.info(
     "sync-events-timing-v2",
     JSON.stringify({
-      message: `Events realtime syncing block ${block}`,
-      block,
+      message: `Events realtime syncing blocks ${blocks.fromBlock} to ${blocks.toBlock}`,
+      blockRange: [blocks.fromBlock, blocks.toBlock],
       syncTime: endSyncTime - startSyncTime,
-      blockSyncTime: endSaveBlocksTime - startSyncTime,
+      // find the longest block sync time - the start sync time
+      blockSyncTime: Math.max(...saveDataTimes.map((t) => t[0]?.endSaveBlocksTime)) - startSyncTime,
 
       logs: {
         count: logs.length,
@@ -485,22 +514,32 @@ export const syncEvents = async (
       blocks: {
         count: 1,
         getBlockTime: endGetBlockTime - startGetBlockTime,
-        saveBlocksTime,
-        saveBlockTransactionsTime,
-        blockMinedTimestamp: blockData.timestamp,
+        saveBlocksTime: saveDataTimes.reduce((acc, t) => acc + t[0]?.saveBlocksTime, 0),
+        saveBlockTransactionsTime: saveDataTimes.reduce((acc, t) => acc + t[1], 0),
+        blockMinedTimestamp:
+          blockData.length > 0
+            ? blockData[0].timestamp
+            : blockData.map((b) => {
+                return {
+                  number: b.number,
+                  timestamp: b.timestamp,
+                };
+              }),
         startJobTimestamp: startSyncTime,
         getBlockTimestamp: endGetBlockTime,
       },
       transactions: {
-        count: blockData.transactions.length,
-        saveBlockTransactionsTime,
+        count: blockData.reduce((acc, b) => acc + b.transactions.length, 0),
+        saveBlockTransactionsTime: saveDataTimes.reduce((acc, t) => acc + t[1], 0),
       },
       processEventsLatencies: processEventsLatencies,
     })
   );
 
-  await blockCheckJob.addToQueue({ block: block, blockHash: blockData.hash, delay: 60 });
-  await blockCheckJob.addToQueue({ block: block, blockHash: blockData.hash, delay: 60 * 5 });
+  blockData.forEach(async (block) => {
+    await blockCheckJob.addToQueue({ block: block.number, blockHash: block.hash, delay: 60 });
+    await blockCheckJob.addToQueue({ block: block.number, blockHash: block.hash, delay: 60 * 5 });
+  });
 };
 
 export const unsyncEvents = async (block: number, blockHash: string) => {

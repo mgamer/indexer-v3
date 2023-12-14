@@ -48,8 +48,10 @@ if (config.doBackgroundWork) {
         );
 
         for (const { block } of results) {
-          await eventsSyncBackfillJob.addToQueueBulk(
-            Array.from({ length: 10 }, (_, i) => block + i),
+          await eventsSyncBackfillJob.addToQueue(
+            block,
+            block + 10,
+            {},
             {
               prioritized: 1,
             }

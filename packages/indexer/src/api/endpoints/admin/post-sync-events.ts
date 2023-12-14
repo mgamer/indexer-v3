@@ -47,13 +47,7 @@ export const postSyncEventsOptions: RouteOptions = {
       const fromBlock = payload.fromBlock;
       const toBlock = payload.toBlock;
 
-      await eventsSyncBackfillJob.addToQueueBulk(
-        Array.from({ length: toBlock - fromBlock + 1 }, (_, i) => fromBlock + i),
-        syncDetails,
-        {
-          prioritized: 1,
-        }
-      );
+      await eventsSyncBackfillJob.addToQueue(fromBlock, toBlock, syncDetails);
 
       return { message: "Request accepted" };
     } catch (error) {
