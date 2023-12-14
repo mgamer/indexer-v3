@@ -35,8 +35,8 @@ export const postResyncUserCollectionBalance: RouteOptions = {
       ]);
 
       return {
-        message: `Triggered balance resync for user ${payload.user} ${
-          payload.collection ? `in collection ${payload.collection}` : ""
+        message: `Triggered balance resync for user ${payload.user}${
+          payload.collection ? ` in collection ${payload.collection}` : ""
         }`,
       };
     } catch (error) {

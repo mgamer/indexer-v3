@@ -196,7 +196,7 @@ export default class ResyncUserCollectionsJob extends AbstractRabbitMqJobHandler
 
   public async addToQueue(payload: ResyncUserCollectionsJobPayload[], delay = 0) {
     const filteredPayload = payload.filter(
-      (p) => p.collectionId && !_.includes(getNetworkSettings().burnAddresses, p.user)
+      (p) => !_.includes(getNetworkSettings().burnAddresses, p.user)
     );
 
     if (!_.isEmpty(filteredPayload)) {
