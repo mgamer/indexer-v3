@@ -1,4 +1,5 @@
 import { Log } from "@ethersproject/abstract-provider";
+import { TransactionResponse } from "@ethersproject/providers";
 
 import * as syncEventsUtils from "@/events-sync/utils";
 import * as blocksModel from "@/models/blocks";
@@ -8,10 +9,7 @@ export const parseEvent = async (
   log: Log,
   blocksCache: Map<number, blocksModel.Block>,
   batchIndex = 1,
-  txData: {
-    from: string;
-    to: string;
-  }
+  txData: TransactionResponse
 ): Promise<BaseEventParams> => {
   const address = log.address.toLowerCase();
   const block = log.blockNumber;
