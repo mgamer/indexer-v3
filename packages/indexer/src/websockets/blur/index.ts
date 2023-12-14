@@ -115,14 +115,23 @@ if (config.chainId === 1 && config.doWebsocketWork && config.blurWsUrl && config
 
       for (const attributeId of Object.keys(updatesGroupByAttribute)) {
         const [attributeKey, attributeValue] = attributeId.split(":");
-        const pricePoints = updatesGroupByAttribute[attributeId];
+        const pricePointsRaw = updatesGroupByAttribute[attributeId];
+        const highestPricePoint = pricePointsRaw
+          .filter((c) => c.executableSize > 0)
+          .sort((a, b) => Number(b.price) - Number(a.price))[0];
         await blurBidsBufferJob.addToQueue(
           {
             collection,
             attributeKey,
             attributeValue,
           },
-          pricePoints
+          [
+            {
+              price: highestPricePoint.price,
+              executableSize: highestPricePoint.executableSize,
+              bidderCount: highestPricePoint.bidderCount,
+            },
+          ]
         );
       }
     } catch (error) {

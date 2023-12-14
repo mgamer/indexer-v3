@@ -427,6 +427,8 @@ export const savePartialBids = async (
       return;
     }
 
+    const isAttributeBid = orderParams.attributeKey ? true : false;
+
     const id = orderParams.attributeKey
       ? getBlurTraitBidId(
           orderParams.collection,
@@ -629,7 +631,7 @@ export const savePartialBids = async (
           }
 
           currentBid.pricePoints = bidUpdates.pricePoints;
-        } else {
+        } else if (!isAttributeBid) {
           // Update the current bid in place
           for (const newPricePoint of bidUpdates.pricePoints) {
             const existingPricePointIndex = currentBid.pricePoints.findIndex(
@@ -640,6 +642,14 @@ export const savePartialBids = async (
             } else {
               currentBid.pricePoints.push(newPricePoint);
             }
+          }
+        } else if (isAttributeBid) {
+          // Store the price point if it's higher than the existing one,
+          // `pricePoints` were sorted in WebSocket already.
+          const highestPricePoint = bidUpdates.pricePoints[0];
+          const currentPricePoint = currentBid.pricePoints[0];
+          if (Number(highestPricePoint.price) > Number(currentPricePoint.price)) {
+            currentBid.pricePoints[0] = highestPricePoint;
           }
         }
 

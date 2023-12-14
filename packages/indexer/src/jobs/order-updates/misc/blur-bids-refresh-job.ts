@@ -54,6 +54,44 @@ export default class BlurBidsRefreshJob extends AbstractRabbitMqJobHandler {
           // Skip any errors
         });
 
+      // Refresh Traits Bids
+      await axios
+        .get(
+          `${config.orderFetcherBaseUrl}/api/blur-collection-trait-bids?collection=${collection}`
+        )
+        .then(async (response) => {
+          const allTraitBids = response.data.bids as {
+            attributeKey: string;
+            attributeValue: string;
+            bids: {
+              price: string;
+              bidderCount: number;
+              executableSize: number;
+            }[];
+          }[];
+
+          for (const traitBid of allTraitBids) {
+            await orderbookOrdersJob.addToQueue([
+              {
+                kind: "blur-bid",
+                info: {
+                  orderParams: {
+                    collection,
+                    attributeKey: traitBid.attributeKey,
+                    attributeValue: traitBid.attributeValue,
+                    pricePoints: traitBid.bids,
+                  },
+                  metadata: {},
+                  fullUpdate: true,
+                },
+              },
+            ]);
+          }
+        })
+        .catch(() => {
+          // Skip any errors
+        });
+
       // Also refresh the royalties
       const lockKey = `blur-royalties-refresh-lock:${collection}`;
       const lock = await redis.get(lockKey);
