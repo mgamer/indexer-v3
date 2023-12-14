@@ -35,7 +35,7 @@ type DbEvent = {
   to: Buffer;
   token_id: string;
   amount: string;
-  kind: "transfer" | "airdrop" | "mint" | "burn" | "sale";
+  kind: "transfer" | "airdrop" | "mint" | "burn" | "sale" | null;
 };
 
 type erc721Token = {
@@ -75,7 +75,7 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
     const contractId = event.baseEventParams.address.toString();
     // If its a mint, and the recipient did NOT initiate the transaction, then its an airdrop
     const routers = await getRouters();
-    let kind: DbEvent["kind"] = "transfer";
+    let kind: DbEvent["kind"] = null;
     if (
       ns.mintAddresses.includes(event.from) &&
       event.baseEventParams.from !== event.to &&
