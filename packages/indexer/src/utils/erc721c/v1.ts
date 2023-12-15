@@ -182,6 +182,7 @@ export const refreshOperatorWhitelist = async (transferValidator: string, id: st
     relevantContracts.map((c) => ({
       by: "operator",
       data: {
+        origin: "erc721c",
         contract: fromBuffer(c.contract),
         whitelistedOperators: whitelist,
         status: "inactive",
