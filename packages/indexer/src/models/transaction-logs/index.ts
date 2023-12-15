@@ -9,22 +9,22 @@ export type TransactionLogs = {
 };
 
 export const saveTransactionLogs = async (transactionLogs: TransactionLogs) => {
-  // await idb.none(
-  //   `
-  //     INSERT INTO transaction_logs (
-  //       hash,
-  //       logs
-  //     ) VALUES (
-  //       $/hash/,
-  //       $/logs:json/
-  //     )
-  //     ON CONFLICT DO NOTHING
-  //   `,
-  //   {
-  //     hash: toBuffer(transactionLogs.hash),
-  //     logs: transactionLogs.logs,
-  //   }
-  // );
+  await idb.none(
+    `
+      INSERT INTO transaction_logs (
+        hash,
+        logs
+      ) VALUES (
+        $/hash/,
+        $/logs:json/
+      )
+      ON CONFLICT DO NOTHING
+    `,
+    {
+      hash: toBuffer(transactionLogs.hash),
+      logs: transactionLogs.logs,
+    }
+  );
 
   return transactionLogs;
 };
