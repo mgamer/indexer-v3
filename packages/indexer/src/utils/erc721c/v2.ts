@@ -197,6 +197,7 @@ export const refreshWhitelist = async (transferValidator: string, id: string) =>
     relevantContracts.map((c) => ({
       by: "operator",
       data: {
+        origin: "erc721c-v2",
         contract: fromBuffer(c.contract),
         whitelistedOperators: whitelist.accounts,
         status: "inactive",
@@ -273,6 +274,7 @@ export const refreshBlacklist = async (transferValidator: string, id: string) =>
     relevantContracts.map((c) => ({
       by: "operator",
       data: {
+        origin: "erc721c-v2",
         contract: fromBuffer(c.contract),
         blacklistedOperators: blacklist.accounts,
         status: "inactive",
