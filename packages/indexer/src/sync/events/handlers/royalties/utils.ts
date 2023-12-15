@@ -8,6 +8,13 @@ import { PartialFillEvent } from "@/events-sync/handlers/royalties";
 import { extractEventsBatches } from "@/events-sync/index";
 import * as utils from "@/events-sync/utils";
 import * as es from "@/events-sync/storage";
+import * as syncEventsV2 from "@/events-sync/syncEventsV2";
+
+import { Filter } from "@ethersproject/abstract-provider";
+import { baseProvider } from "@/common/provider";
+import { parseEvent } from "@/events-sync/parserV2";
+import * as syncEventsUtils from "@/events-sync/utilsV2";
+import { EventsBatch } from "@/events-sync/handlers";
 
 export const getEventParams = (log: Log, timestamp: number) => {
   const address = log.address.toLowerCase() as string;
@@ -116,4 +123,55 @@ export async function parseTranscation(txHash: string) {
     events,
     allOnChainData,
   };
+}
+
+export async function parseBlock(block: number) {
+  const blockData = await syncEventsUtils.fetchBlock(block);
+  const eventFilter: Filter = {
+    topics: [[...new Set(getEventData().map(({ topic }) => topic))]],
+    fromBlock: block,
+    toBlock: block,
+  };
+
+  const availableEventData = getEventData();
+
+  // Get the logs from the RPC
+  const logs = await baseProvider.getLogs(eventFilter);
+
+  let enhancedEvents = logs
+    .map((log) => {
+      const baseEventParams = parseEvent(log, blockData.timestamp);
+      return availableEventData
+        .filter(
+          ({ addresses, numTopics, topic }) =>
+            log.topics[0] === topic &&
+            log.topics.length === numTopics &&
+            (addresses ? addresses[log.address.toLowerCase()] : true)
+        )
+        .map((eventData) => ({
+          kind: eventData.kind,
+          subKind: eventData.subKind,
+          baseEventParams,
+          log,
+        }));
+    })
+    .flat();
+
+  enhancedEvents = enhancedEvents.filter((e) => e) as EnhancedEvent[];
+
+  const eventsBatches = syncEventsV2.extractEventsBatches(enhancedEvents as EnhancedEvent[]);
+
+  const allOnChainData: {
+    batch: EventsBatch;
+    onChainData: OnChainData;
+  }[] = [];
+  for (const batch of eventsBatches) {
+    const onChainData = await processEventsBatch(batch, true);
+    allOnChainData.push({
+      batch,
+      onChainData,
+    });
+  }
+
+  return allOnChainData;
 }
