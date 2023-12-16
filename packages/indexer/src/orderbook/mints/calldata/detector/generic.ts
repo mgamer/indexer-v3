@@ -273,11 +273,14 @@ export const extractByTx = async (
     },
     currency: Sdk.Common.Addresses.Native[config.chainId],
     price: pricePerAmountMinted.toString(),
-    maxSupply,
-    // add the pricePerQuantity data so it can be tested if needed
+    // Add the `pricePerQuantity` data so it can be tested if needed
     pricePerQuantity: [
-      { quantity: amountMinted.toNumber(), unitPrice: pricePerAmountMinted.toString() },
+      {
+        price: pricePerAmountMinted.toString(),
+        quantity: amountMinted.toNumber(),
+      },
     ],
+    maxSupply,
   };
 
   const results = [collectionMint];

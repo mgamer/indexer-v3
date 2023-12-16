@@ -19,6 +19,13 @@ export const simulateCollectionMint = async (
   // then we'll try to detect `maxMintsPerWallet` by simulating with various quantites
   detectMaxMintsPerWallet = true
 ) => {
+  // Cache and unset `pricePerQuantity` since having it set on the
+  // collection mint is just a hacky way to pass it through all of
+  // the mint related methods. If this field is actually needed it
+  // it will be set via the `simulateViaPricePerQuantity` method.
+  const pricePerQuantity = collectionMint.pricePerQuantity;
+  collectionMint.pricePerQuantity = undefined;
+
   // TODO: Add support for simulating non-public mints
   if (collectionMint.kind !== "public") {
     return collectionMint.status === "open";
@@ -57,40 +64,38 @@ export const simulateCollectionMint = async (
       simulateMintTxData(contract, contractKind, quantity, txData)
     );
 
-  // allows to simulate using the same parameters as one/more transactions that worked
-  const simulateWithKnownAmount = async (collectionMint: CollectionMint) => {
-    //
-    const list: PricePerQuantity[] = collectionMint.pricePerQuantity ?? [];
-    const newPricePerQuantity = [];
-
-    for (const pricePerQuantity of list) {
-      // create a temp collectionMint with the price for this "pricePerQuantity"
-      const tempCollectionMint = {
+  const simulateViaPricePerQuantity = async (
+    collectionMint: CollectionMint,
+    pricePerQuantity: PricePerQuantity[]
+  ) => {
+    const validPricePerQuantityEntries = [];
+    for (const { price, quantity } of pricePerQuantity) {
+      // Create a temporary collection mint with the current price per quantity
+      const tmpCollectionMint = {
         ...collectionMint,
-        price: pricePerQuantity.unitPrice,
+        price,
       };
 
-      // generate and simulate with price & amount
-      const result = await generateCollectionMintTxData(
-        tempCollectionMint,
-        minter,
-        pricePerQuantity.quantity
-      ).then(({ txData }) =>
-        simulateMintTxData(contract, contractKind, pricePerQuantity.quantity, txData)
+      // Simulate
+      const result = await generateCollectionMintTxData(tmpCollectionMint, minter, quantity).then(
+        ({ txData }) => simulateMintTxData(contract, contractKind, quantity, txData)
       );
 
+      // If the simulation was successful then the current price per quantity is valid
       if (result) {
-        newPricePerQuantity.push(pricePerQuantity);
+        validPricePerQuantityEntries.push({ price, quantity });
       }
     }
 
-    if (newPricePerQuantity.length) {
-      collectionMint.pricePerQuantity = newPricePerQuantity;
+    // Need at least one valid price per quantity entry
+    if (validPricePerQuantityEntries.length) {
+      // Unset `price` and set `pricePerQuantity`
+      collectionMint.price = undefined;
+      collectionMint.pricePerQuantity = validPricePerQuantityEntries;
       return true;
-    } else {
-      collectionMint.pricePerQuantity = undefined;
-      return false;
     }
+
+    return false;
   };
 
   if (detectMaxMintsPerWallet && collectionMint.maxMintsPerWallet === undefined) {
@@ -104,17 +109,12 @@ export const simulateCollectionMint = async (
       // Find first quantity that failed, and take the one before it as the maximum
       const firstFailedIndex = results.findIndex((r) => !r);
       if (firstFailedIndex === 0) {
-        // if we have a pricePerQuantity, we can check if we could mint the same amounts with price
-        if (collectionMint.pricePerQuantity !== undefined) {
-          const result = await simulateWithKnownAmount(collectionMint);
-
-          if (!result) {
-            collectionMint.pricePerQuantity = undefined;
-            return false;
-          }
-        } else {
-          return false;
+        // Try any price per quantity entries
+        if (pricePerQuantity?.length) {
+          return simulateViaPricePerQuantity(collectionMint, pricePerQuantity);
         }
+
+        return false;
       } else {
         collectionMint.maxMintsPerWallet = quantitiesToTry[firstFailedIndex - 1].toString();
       }
