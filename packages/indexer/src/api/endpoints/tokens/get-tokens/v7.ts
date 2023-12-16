@@ -34,6 +34,8 @@ import { Assets, ImageSize } from "@/utils/assets";
 import { CollectionSets } from "@/models/collection-sets";
 import { Collections } from "@/models/collections";
 import { getListedTokensFromES } from "@/api/endpoints/tokens";
+import { onchainMetadataProvider } from "@/metadata/providers/onchain-metadata-provider";
+import { hasExtendCollectionHandler } from "@/metadata/extend";
 
 const version = "v7";
 
@@ -812,7 +814,7 @@ export const getTokensV7Options: RouteOptions = {
         (query as any).collectionContract = toBuffer(query.collection.split(":")[0]);
         conditions.push(`t.contract = $/collectionContract/`);
 
-        if (query.collection.includes(":")) {
+        if (query.collection.includes(":") || hasExtendCollectionHandler(query.collection)) {
           conditions.push(`t.collection_id = $/collection/`);
         }
       }
@@ -1417,6 +1419,14 @@ export const getTokensV7Options: RouteOptions = {
 
         if (r.metadata?.animation_original_url) {
           metadata.mediaOriginal = r.metadata.animation_original_url;
+        }
+
+        if (!r.image && r.metadata?.image_original_url) {
+          r.image = onchainMetadataProvider.parseIPFSURI(r.metadata.image_original_url);
+        }
+
+        if (!r.media && r.metadata?.animation_original_url) {
+          r.media = onchainMetadataProvider.parseIPFSURI(r.metadata.animation_original_url);
         }
 
         return {

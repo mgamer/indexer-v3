@@ -282,6 +282,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
+    path: "/admin/revalidate-mint",
+    options: adminEndpoints.postRevalidateMintOptions,
+  });
+
+  server.route({
+    method: "POST",
     path: "/admin/revalidate-order",
     options: adminEndpoints.postRevalidateOrderOptions,
   });
@@ -820,6 +826,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
+    path: "/execute/call/v1",
+    options: executeEndpoints.postExecuteCallV1Options,
+  });
+
+  server.route({
+    method: "POST",
     path: "/execute/mint/v1",
     options: executeEndpoints.postExecuteMintV1Options,
   });
@@ -886,6 +898,12 @@ export const setupRoutes = (server: Server) => {
   });
 
   // Management
+
+  server.route({
+    method: "POST",
+    path: "/management/mints/simulate/v1",
+    options: managementEndpoints.postSimulateMintV1Options,
+  });
 
   server.route({
     method: "POST",

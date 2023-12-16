@@ -71,7 +71,7 @@ export class SimplehashMetadataProvider extends AbstractBaseMetadataProvider {
       .then((response) => response.data)
       .catch((error) => this.handleError(error));
 
-    return data.nfts.map(this.parseToken).filter(Boolean);
+    return data.nfts.map((nft: any) => this.parseToken(nft)).filter(Boolean);
   }
 
   handleError(error: any) {
@@ -116,7 +116,7 @@ export class SimplehashMetadataProvider extends AbstractBaseMetadataProvider {
       // so by default we ignore them (this behaviour can be overridden if needed).
       description: metadata.description,
       originalMetadata: original_metadata,
-      imageUrl: metadata.previews?.image_medium_url ?? metadata.image_url,
+      imageUrl: metadata.image_url,
       imageOriginalUrl: image_original_url,
       animationOriginalUrl: animation_original_url,
       metadataOriginalUrl: metadata_original_url,
