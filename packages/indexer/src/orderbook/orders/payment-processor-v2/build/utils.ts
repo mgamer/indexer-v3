@@ -6,7 +6,7 @@ import { redb } from "@/common/db";
 import { fromBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
-import { cosigner } from "@/utils/cosign";
+import { cosigner } from "@/utils/offchain-cancel";
 import { getRoyalties } from "@/utils/royalties";
 import * as paymentProcessorV2 from "@/utils/payment-processor-v2";
 

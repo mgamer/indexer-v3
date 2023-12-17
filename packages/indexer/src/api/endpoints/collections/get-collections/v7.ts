@@ -21,7 +21,7 @@ import {
 import { config } from "@/config/index";
 import { CollectionSets } from "@/models/collection-sets";
 import { Sources } from "@/models/sources";
-import { Assets } from "@/utils/assets";
+import { Assets, ImageSize } from "@/utils/assets";
 import * as erc721c from "@/utils/erc721c";
 import * as marketplaceBlacklist from "@/utils/marketplace-blacklists";
 
@@ -45,10 +45,10 @@ export const getCollectionsV7Options: RouteOptions = {
       id: Joi.string()
         .lowercase()
         .description(
-          "Filter to a particular collection with collection id. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
+          "Filter to a particular collection with collection id. The id is immutable.\n For single contract collections, the id is the contract address e.g. `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`\n Artblocks will follow this format with a token range: `{artblocksContractAddress}:{startTokenId}:{endTokenId}`\n Shared contracts will generally follow the format `{contract}:{namespace}-{id}`; The following shared contracts will follow this format:\n OpenSea, Sound, SuperRare, Foundation, Ordinals, & Courtyard"
         ),
       slug: Joi.string().description(
-        "Filter to a particular collection slug. Example: `boredapeyachtclub`"
+        "Filter to a particular collection slug. We recommend to rely on collection id; slugs are dynamic and can change without warning. Example: `boredapeyachtclub`"
       ),
       collectionsSetId: Joi.string()
         .lowercase()
@@ -696,6 +696,7 @@ export const getCollectionsV7Options: RouteOptions = {
              tokens.token_id AS floor_sell_token_id,
              tokens.name AS floor_sell_token_name,
              tokens.image AS floor_sell_token_image,
+             tokens.image_version AS floor_sell_token_image_version,
              orders.currency AS floor_sell_currency,
              ${
                query.normalizeRoyalties
@@ -859,7 +860,11 @@ export const getCollectionsV7Options: RouteOptions = {
                     : null,
                   tokenId: r.floor_sell_token_id,
                   name: r.floor_sell_token_name,
-                  image: Assets.getLocalAssetsLink(r.floor_sell_token_image),
+                  image: Assets.getResizedImageUrl(
+                    r.floor_sell_token_image,
+                    ImageSize.medium,
+                    r.floor_sell_token_image_version
+                  ),
                 },
               },
               topBid: {

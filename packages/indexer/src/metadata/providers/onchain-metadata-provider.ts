@@ -245,8 +245,7 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
   }
 
   // parsers
-
-  parseToken(metadata: any): TokenMetadata {
+  _parseToken(metadata: any): TokenMetadata {
     // add handling for metadata.properties, convert to attributes
     if (metadata?.properties) {
       metadata.attributes = Object.keys(metadata.properties).map((key) => {
@@ -529,6 +528,10 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
 
   async getTokenMetadataFromURI(uri: string, contract: string, tokenId: string) {
     try {
+      if (uri.startsWith("json:")) {
+        uri = uri.replace("json:\n", "");
+      }
+
       uri = this.parseIPFSURI(uri);
 
       if (uri.startsWith("data:application/json;base64,")) {
@@ -539,6 +542,7 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
         uri = uri.substring(uri.indexOf(",") + 1);
         return [JSON.parse(uri), null];
       }
+      uri = uri.trim();
       if (!uri.startsWith("http")) {
         // if the uri is not a valid url, return null
         return [null, `Invalid URI: ${uri}`];

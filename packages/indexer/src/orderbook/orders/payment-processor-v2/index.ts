@@ -20,7 +20,7 @@ import { checkMarketplaceIsFiltered } from "@/utils/marketplace-blacklists";
 import * as paymentProcessorV2 from "@/utils/payment-processor-v2";
 import { getUSDAndNativePrices } from "@/utils/prices";
 import * as royalties from "@/utils/royalties";
-import { cosigner, saveOffChainCancellations } from "@/utils/cosign";
+import { cosigner, saveOffChainCancellations } from "@/utils/offchain-cancel";
 
 export type OrderInfo = {
   orderParams: Sdk.PaymentProcessorV2.Types.BaseOrder;
@@ -78,14 +78,16 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         ].includes(settings.paymentSettings) &&
         order.params.paymentMethod !== Sdk.Common.Addresses.Native[config.chainId]
       ) {
-        const paymentMethodWhitelist = settings.whitelistedPaymentMethods.includes(
-          order.params.paymentMethod
-        );
-        if (!paymentMethodWhitelist) {
-          return results.push({
-            id,
-            status: "payment-token-not-approved",
-          });
+        if (settings.whitelistedPaymentMethods) {
+          const paymentMethodWhitelist = settings.whitelistedPaymentMethods.includes(
+            order.params.paymentMethod
+          );
+          if (!paymentMethodWhitelist) {
+            return results.push({
+              id,
+              status: "payment-token-not-approved",
+            });
+          }
         }
       } else if (
         settings?.paymentSettings === paymentProcessorV2.PaymentSettings.PricingConstraints
