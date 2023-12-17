@@ -7,8 +7,8 @@ import { fromBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import { cosigner } from "@/utils/offchain-cancel";
-import { getRoyalties } from "@/utils/royalties";
 import * as paymentProcessorV2 from "@/utils/payment-processor-v2";
+import { getRoyalties } from "@/utils/royalties";
 
 export interface BaseOrderBuildOptions {
   maker: string;
@@ -59,7 +59,7 @@ export const getBuildInfo = async (
   }
 
   const contract = fromBuffer(collectionResult.address);
-  const { nonce } = await paymentProcessorV2.getNextUserNonce(marketplace, options.maker);
+  const nonce = await paymentProcessorV2.getAndIncrementUserNonce(options.maker, marketplace);
 
   const buildParams: BaseBuildParams = {
     protocol:

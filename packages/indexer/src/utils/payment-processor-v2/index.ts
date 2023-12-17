@@ -1,5 +1,5 @@
 import { Interface, Result } from "@ethersproject/abi";
-import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
+import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import * as Sdk from "@reservoir0x/sdk";
@@ -9,6 +9,7 @@ import { baseProvider } from "@/common/provider";
 import { redis } from "@/common/redis";
 import { fromBuffer, toBuffer, bn } from "@/common/utils";
 import { config } from "@/config/index";
+import { isNonceCancelled } from "@/orderbook/orders/common/helpers";
 import { Royalty, updateRoyaltySpec } from "@/utils/royalties";
 
 export enum PaymentSettings {
@@ -226,110 +227,65 @@ export const getWhitelistedPaymentMethods = async (id: number) => {
   return results.map((c) => fromBuffer(c.payment_method));
 };
 
-export const getMarketplaceIdFromDb = async (marketplace: string) =>
-  idb.oneOrNone(
-    `
-    SELECT
-        payment_processor_v2_marketplaces.id
-      FROM payment_processor_v2_marketplaces
-      WHERE payment_processor_v2_marketplaces.marketplace = $/marketplace/ 
-    `,
-    {
-      marketplace: toBuffer(marketplace),
-    }
-  );
-
-export const getMarketplaceId = async (marketplace: string) => {
-  const result = await getMarketplaceIdFromDb(marketplace);
-  if (!result) {
-    await idb.none(
+export const getAndIncrementUserNonce = async (
+  user: string,
+  marketplace: string
+): Promise<string | undefined> => {
+  let nextNonce = await idb
+    .oneOrNone(
       `
-        INSERT INTO payment_processor_v2_marketplaces (
-          marketplace
-        ) VALUES (
-          $/marketplace/
-        ) ON CONFLICT DO NOTHING
+        SELECT
+          payment_processor_v2_user_nonces.nonce
+        FROM payment_processor_v2_user_nonces
+        WHERE payment_processor_v2_user_nonces.user = $/user/
+          AND payment_processor_v2_user_nonces.marketplace = $/marketplace/
       `,
       {
+        user: toBuffer(user),
         marketplace: toBuffer(marketplace),
       }
-    );
-  }
-  return (await getMarketplaceIdFromDb(marketplace)).id;
-};
+    )
+    .then((r) => r?.nonce ?? "0");
 
-export const getUserNonce = async (marketplace: string, user: string) => {
-  const result = await idb.oneOrNone(
-    `
-      SELECT payment_processor_v2_nonces.nonce 
-      FROM payment_processor_v2_nonces
-      WHERE payment_processor_v2_nonces.marketplace = $/marketplace/
-      AND payment_processor_v2_nonces.maker = $/user/
-    `,
-    {
-      marketplace: toBuffer(marketplace),
-      user: toBuffer(user),
+  const shiftedMarketplaceId = bn(marketplace.padEnd(66, "0")).shl(224);
+  nextNonce = shiftedMarketplaceId.add(nextNonce).toString();
+
+  // At most 20 attempts
+  let foundValidNonce = false;
+  for (let i = 0; i < 20; i++) {
+    const isCancelled = await isNonceCancelled("payment-processor-v2", user, nextNonce);
+    if (isCancelled) {
+      nextNonce++;
+    } else {
+      foundValidNonce = true;
+      break;
     }
-  );
-
-  return result ? result.nonce : 0;
-};
-
-export const increaseUserNonce = async (marketplace: string, user: string, nonce: string) => {
-  const userNonce = await redis.get(`payment-processor-v2-nonce:${nonce}`);
-  if (!userNonce) {
-    // not exists
-    return;
   }
+
+  if (!foundValidNonce) {
+    return undefined;
+  }
+
   await idb.none(
     `
-      INSERT INTO payment_processor_v2_nonces (
+      INSERT INTO payment_processor_v2_user_nonces (
+        "user",
         marketplace,
-        maker,
         nonce
       ) VALUES (
+        $/user/,
         $/marketplace/,
-        $/maker/,
         $/nonce/
-      )
-      ON CONFLICT (marketplace, maker)
-      DO UPDATE SET nonce = $/nonce/;
+      ) ON CONFLICT ("user", marketplace) DO UPDATE SET
+        nonce = $/nonce/,
+        updated_at = now()
     `,
     {
+      user: toBuffer(user),
       marketplace: toBuffer(marketplace),
-      maker: toBuffer(user),
-      nonce: bn(userNonce).add(1).toString(),
+      nonce: bn(nextNonce).add(1).toString(),
     }
   );
-};
 
-export function generateNextUserNonce(marketplaceId: BigNumberish, userNonce: BigNumberish) {
-  // Shift the marketplaceId left by 224 bits
-  const shiftedMarketplaceId = bn(marketplaceId).shl(224);
-
-  // Increment the user nonce by 1
-  const incrementedNonce = bn(userNonce).add(1);
-
-  // Ensure the nonce only occupies the lower 224 bits
-  const upperBound = BigNumber.from(2).pow(224).sub(1);
-  if (incrementedNonce.gt(upperBound)) {
-    throw new Error("Congratulations - you are the trading king!");
-  }
-
-  // Combine the shifted marketplace ID and the masked nonce
-  return shiftedMarketplaceId.add(incrementedNonce).toString();
-}
-
-export const getNextUserNonce = async (marketplace: string, user: string) => {
-  const [userNonce, marketplaceId] = await Promise.all([
-    getUserNonce(marketplace, user),
-    getMarketplaceId(marketplace),
-  ]);
-  const nonce = await generateNextUserNonce(marketplaceId, userNonce);
-  await redis.set(`payment-processor-v2-nonce:${nonce}`, userNonce, "EX", 7 * 24 * 3600);
-  return {
-    nonce,
-    userNonce,
-    marketplaceId,
-  };
+  return nextNonce;
 };
