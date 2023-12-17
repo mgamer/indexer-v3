@@ -1,20 +1,17 @@
-import { Log } from "@ethersproject/abstract-provider";
+import { Filter, Log } from "@ethersproject/abstract-provider";
 
+import { baseProvider } from "@/common/provider";
 import { concat } from "@/common/utils";
 import { getEventData } from "@/events-sync/data";
-import { processEventsBatch } from "@/events-sync/handlers";
+import { EventsBatch, processEventsBatch } from "@/events-sync/handlers";
 import { EnhancedEvent, OnChainData } from "@/events-sync/handlers/utils";
 import { PartialFillEvent } from "@/events-sync/handlers/royalties";
 import { extractEventsBatches } from "@/events-sync/index";
+import { parseEvent } from "@/events-sync/parserV2";
 import * as utils from "@/events-sync/utils";
 import * as es from "@/events-sync/storage";
 import * as syncEventsV2 from "@/events-sync/syncEventsV2";
-
-import { Filter } from "@ethersproject/abstract-provider";
-import { baseProvider } from "@/common/provider";
-import { parseEvent } from "@/events-sync/parserV2";
 import * as syncEventsUtils from "@/events-sync/utilsV2";
-import { EventsBatch } from "@/events-sync/handlers";
 
 export const getEventParams = (log: Log, timestamp: number) => {
   const address = log.address.toLowerCase() as string;
@@ -116,16 +113,16 @@ export async function getFillEventsFromTxOnChain(txHash: string) {
   };
 }
 
-export async function parseTranscation(txHash: string) {
+export const parseTransaction = async (txHash: string) => {
   const events = await getEnhancedEventsFromTx(txHash);
   const allOnChainData = await extractOnChainData(events);
   return {
     events,
     allOnChainData,
   };
-}
+};
 
-export async function parseBlock(block: number) {
+export const parseBlock = async (block: number) => {
   const blockData = await syncEventsUtils.fetchBlock(block);
   const eventFilter: Filter = {
     topics: [[...new Set(getEventData().map(({ topic }) => topic))]],
@@ -174,4 +171,4 @@ export async function parseBlock(block: number) {
   }
 
   return allOnChainData;
-}
+};
