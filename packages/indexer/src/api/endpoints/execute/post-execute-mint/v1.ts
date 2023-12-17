@@ -11,7 +11,7 @@ import _ from "lodash";
 import { idb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { JoiExecuteFee, JoiPrice, getJoiPriceObject } from "@/common/joi";
-import { baseProvider } from "@/common/provider";
+import { baseProvider, getGasFee } from "@/common/provider";
 import { bn, formatPrice, regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { ApiKeyManager } from "@/models/api-keys";
@@ -100,9 +100,6 @@ export const postExecuteMintV1Options: RouteOptions = {
       onlyPath: Joi.boolean()
         .default(false)
         .description("If true, only the path will be returned."),
-      alternativeCurrencies: Joi.array()
-        .items(Joi.string().lowercase())
-        .description("Alternative currencies to return the quote in."),
       currencyChainId: Joi.number().description("The chain id of the purchase currency."),
       source: Joi.string()
         .lowercase()
@@ -176,11 +173,17 @@ export const postExecuteMintV1Options: RouteOptions = {
           currencyDecimals: Joi.number().optional().allow(null),
           quote: Joi.number().unsafe(),
           rawQuote: Joi.string().pattern(regex.number),
+          buyInCurrency: Joi.string().lowercase().pattern(regex.address),
+          // buyInCurrencyChainId: Joi.number().optional().allow(null),
+          buyInCurrencySymbol: Joi.string().optional().allow(null),
+          buyInCurrencyDecimals: Joi.number().optional().allow(null),
+          buyInQuote: Joi.number().unsafe(),
+          buyInRawQuote: Joi.string().pattern(regex.number),
           totalPrice: Joi.number().unsafe(),
           totalRawPrice: Joi.string().pattern(regex.number),
-          buyIn: Joi.array().items(JoiPrice),
-          gasCost: Joi.string().pattern(regex.number),
           feesOnTop: Joi.array().items(JoiExecuteFee).description("Can be referral fees."),
+          // TODO: To remove, only kept for backwards-compatibility reasons
+          gasCost: Joi.string().pattern(regex.number),
           fromChainId: Joi.number().description("Chain id buying from"),
         })
       ),
@@ -190,6 +193,11 @@ export const postExecuteMintV1Options: RouteOptions = {
           maxQuantity: Joi.string().pattern(regex.number).allow(null),
         })
       ),
+      fees: Joi.object({
+        gas: JoiPrice,
+        relayer: JoiPrice,
+      }),
+      // TODO: To remove, only kept for backwards-compatibility reasons
       gasEstimate: Joi.number(),
     }).label(`postExecuteMint${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
@@ -231,8 +239,6 @@ export const postExecuteMintV1Options: RouteOptions = {
         // Total price (with fees on top) = price + feesOnTop
         totalPrice?: number;
         totalRawPrice?: string;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        buyIn?: any[];
         feesOnTop: ExecuteFee[];
         gasCost?: string;
         fromChainId?: number;
@@ -346,7 +352,7 @@ export const postExecuteMintV1Options: RouteOptions = {
 
         if (!item.quantity) {
           if (preview) {
-            item.quantity = useCrossChainIntent ? 1 : 30;
+            item.quantity = 30;
           } else {
             item.quantity = 1;
           }
@@ -514,6 +520,11 @@ export const postExecuteMintV1Options: RouteOptions = {
                         ? amountMintable.toString()
                         : null,
                     });
+
+                    // Solver filling is restricted to a single path item for now
+                    if (useCrossChainIntent && path.length >= 1) {
+                      break;
+                    }
                   }
 
                   item.quantity -= quantityToMint;
@@ -630,6 +641,11 @@ export const postExecuteMintV1Options: RouteOptions = {
                       itemIndex,
                       maxQuantity: amountMintable ? amountMintable.toString() : null,
                     });
+
+                    // Solver filling is restricted to a single path item for now
+                    if (useCrossChainIntent && path.length >= 1) {
+                      break;
+                    }
                   }
 
                   item.quantity -= quantityToMint;
@@ -710,9 +726,6 @@ export const postExecuteMintV1Options: RouteOptions = {
           .add(rawAmount)
           .toString();
 
-        // item.quote += amount;
-        // item.rawQuote = bn(item.rawQuote).add(rawAmount).toString();
-
         if (!detail.fees) {
           detail.fees = [];
         }
@@ -739,21 +752,25 @@ export const postExecuteMintV1Options: RouteOptions = {
       const getCrossChainQuote = async () => {
         const ccConfig: {
           enabled: boolean;
-          solver?: string;
-          balance?: string;
-          maxPrice?: string;
+          user?: {
+            balance: string;
+          };
+          solver?: {
+            address: string;
+            maxCost: string;
+          };
         } = await axios
           .get(
-            `${config.crossChainSolverBaseUrl}/config?fromChainId=${
+            `${config.crossChainSolverBaseUrl}/config?originChainId=${
               originalPayload.currencyChainId
-            }&toChainId=${config.chainId}&user=${originalPayload.taker}&currency=${
+            }&destinationChainId=${config.chainId}&user=${originalPayload.taker}&currency=${
               Sdk.Common.Addresses.Native[originalPayload.currencyChainId]
             }`
           )
           .then((response) => response.data);
 
         if (!ccConfig.enabled) {
-          throw Boom.badRequest("Cross-chain swap not supported between requested chains");
+          throw Boom.badRequest("Cross-chain request not supported between requested chains");
         }
 
         const data = {
@@ -766,11 +783,11 @@ export const postExecuteMintV1Options: RouteOptions = {
           },
         };
 
-        const { requestId, fee, quote } = await axios
+        const { requestId, price, fee } = await axios
           .post(`${config.crossChainSolverBaseUrl}/intents/quote`, data)
           .then((response) => ({
             requestId: response.data.requestId,
-            quote: response.data.price,
+            price: response.data.price,
             fee: response.data.fee,
           }))
           .catch((error) => {
@@ -779,64 +796,23 @@ export const postExecuteMintV1Options: RouteOptions = {
             );
           });
 
-        if (ccConfig.maxPrice && bn(quote).gt(ccConfig.maxPrice) && !preview) {
-          throw Boom.badRequest("Price too high to purchase cross-chain");
+        if (
+          ccConfig.solver?.maxCost &&
+          bn(price).add(fee).gt(ccConfig.solver.maxCost) &&
+          !preview
+        ) {
+          throw Boom.badRequest("Cost too high");
         }
 
         return {
-          quote,
-          fee,
-          solver: ccConfig.solver!,
-          balance: ccConfig.balance!,
-          request: data.request,
           requestId,
+          request: data.request,
+          price,
+          fee,
+          user: ccConfig.user!,
+          solver: ccConfig.solver!,
         };
       };
-
-      // Add the quotes in the "buy-in" currency to the path items
-      for (const item of path) {
-        if (payload.alternativeCurrencies) {
-          if (preview) {
-            throw Boom.badRequest("Cannot use alternative currencies with preview");
-          }
-
-          if (!item.buyIn) {
-            item.buyIn = [];
-          }
-
-          // Add the first path item's currency in the `alternativeCurrencies` list
-          const firstPathItemCurrency = `${path[0].currency}:${config.chainId}`;
-          if (!payload.alternativeCurrencies.includes(firstPathItemCurrency)) {
-            payload.alternativeCurrencies.push(firstPathItemCurrency);
-          }
-
-          await Promise.all(
-            payload.alternativeCurrencies.map(async (c: string) => {
-              try {
-                const [currency, chainId] = c.split(":");
-
-                const { quote } = await getCrossChainQuote();
-                item.buyIn!.push(
-                  await getJoiPriceObject(
-                    {
-                      gross: { amount: quote },
-                    },
-                    currency
-                  ).then((p) => ({
-                    ...p,
-                    currency: {
-                      ...p.currency,
-                      chainId: Number(chainId),
-                    },
-                  }))
-                );
-              } catch {
-                // Skip errors
-              }
-            })
-          );
-        }
-      }
 
       type StepType = {
         id: string;
@@ -872,6 +848,18 @@ export const postExecuteMintV1Options: RouteOptions = {
         return {
           path,
           maxQuantities: preview ? maxQuantities : undefined,
+          fees: {
+            gas: await getJoiPriceObject(
+              {
+                gross: {
+                  amount: (await getGasFee()).mul(estimateGasFromTxTags(txTags)).toString(),
+                },
+              },
+              // Gas fees are always paid in the native currency of the chain
+              Sdk.Common.Addresses.Native[config.chainId]
+            ),
+          },
+          // TODO: To remove, only kept for backwards-compatibility
           gasEstimate: estimateGasFromTxTags(txTags),
         };
       }
@@ -889,18 +877,40 @@ export const postExecuteMintV1Options: RouteOptions = {
         const item = path[0];
 
         const data = await getCrossChainQuote();
+        const cost = bn(data.price).add(data.fee);
 
-        item.totalPrice = formatPrice(data.quote);
-        item.totalRawPrice = data.quote;
-        item.quote = formatPrice(data.quote);
-        item.rawQuote = data.quote;
-        item.gasCost = data.fee;
+        // TODO: To remove, only kept for backwards-compatibility
+        item.totalPrice = formatPrice(cost);
+        item.totalRawPrice = cost.toString();
+        item.quote = formatPrice(cost);
+        item.rawQuote = cost.toString();
+        item.fromChainId = payload.currencyChainId;
+        item.gasCost = data.fee.toString();
 
-        const needsDeposit = bn(data.balance).lt(data.quote);
+        // Better approach
+        // const c = await getCurrency(Sdk.Common.Addresses.Native[config.chainId]);
+        // item.buyInCurrency = c.contract;
+        // item.buyInCurrencyChainId = payload.currencyChainId;
+        // item.buyInCurrencyDecimals = c.decimals;
+        // item.buyInCurrencySymbol = c.symbol;
+        // item.buyInQuote = formatPrice(quote);
+        // item.buyInRawQuote = quote;
+
+        const needsDeposit = bn(data.user.balance).lt(cost);
         if (payload.onlyPath) {
           return {
             path,
             maxQuantities: preview ? maxQuantities : undefined,
+            fees: {
+              relayer: await getJoiPriceObject(
+                { gross: { amount: data.fee } },
+                Sdk.Common.Addresses.Native[config.chainId],
+                undefined,
+                undefined,
+                payload.currencyChainId
+              ),
+            },
+            // TODO: To remove, only kept for backwards-compatibility
             gasEstimate: needsDeposit ? 21000 : 0,
           };
         }
@@ -927,9 +937,10 @@ export const postExecuteMintV1Options: RouteOptions = {
             status: "incomplete",
             data: {
               from: payload.taker,
-              to: data.solver,
+              to: data.solver.address,
               data: data.requestId,
-              value: bn(data.quote).sub(data.balance).toString(),
+              value: bn(cost).sub(data.user.balance).toString(),
+              gasLimit: 22000,
               chainId: payload.currencyChainId,
             },
             check: {

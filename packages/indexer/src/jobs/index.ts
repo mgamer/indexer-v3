@@ -4,12 +4,10 @@
 
 import "@/jobs/arweave-relay";
 import "@/jobs/backfill";
-import "@/jobs/cache-check";
 import "@/jobs/collections-refresh";
 import "@/jobs/daily-volumes";
 import "@/jobs/data-archive";
 import "@/jobs/events-sync";
-import "@/jobs/oracle";
 import "@/jobs/metrics";
 import "@/jobs/opensea-orders";
 import "@/jobs/monitoring";
@@ -177,6 +175,8 @@ import { backfillFtTransferEventsDatesJob } from "@/jobs/backfill/backfill-ft-tr
 import { backfillOrderEventsDatesJob } from "@/jobs/backfill/backfill-order-events-dates";
 import { backfillTransactionsDatesJob } from "@/jobs/backfill/backfill-transactions-dates";
 import { backfillTokenSupplyJob } from "@/jobs/backfill/backfill-token-supply";
+import { backfillActiveUserCollectionsJob } from "@/jobs/backfill/backfill-active-user-collections";
+import { backfillAttributesFloorAskJob } from "@/jobs/backfill/backfill-attributes-floor-ask";
 
 export const allJobQueues = [
   backfillWrongNftBalances.queue,
@@ -336,6 +336,8 @@ export class RabbitMqJobsConsumer {
       backfillOrderEventsDatesJob,
       backfillTransactionsDatesJob,
       backfillTokenSupplyJob,
+      backfillActiveUserCollectionsJob,
+      backfillAttributesFloorAskJob,
     ];
   }
 

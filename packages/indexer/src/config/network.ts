@@ -191,7 +191,7 @@ export const getNetworkSettings = (): NetworkSettings => {
     lastBlockLatency: 5,
     headBlockDelay: 0,
     backfillBlockBatchSize: 16,
-    metadataMintDelay: 120,
+    metadataMintDelay: 5,
     enableMetadataAutoRefresh: false,
     washTradingExcludedContracts: [],
     washTradingWhitelistedAddresses: [],
@@ -223,7 +223,7 @@ export const getNetworkSettings = (): NetworkSettings => {
           numberOfShards: 2,
         },
         asks: {
-          numberOfShards: 1,
+          numberOfShards: 2,
         },
         collections: {
           numberOfShards: 2,
@@ -238,7 +238,6 @@ export const getNetworkSettings = (): NetworkSettings => {
     case 1:
       return {
         ...defaultNetworkSettings,
-        metadataMintDelay: 900,
         realtimeSyncFrequencySeconds: 5,
         enableMetadataAutoRefresh: true,
         washTradingExcludedContracts: [
@@ -438,6 +437,15 @@ export const getNetworkSettings = (): NetworkSettings => {
                 image:
                   "https://bafybeic2ukraukxbvs7mn5f5xqnqkr42r5exxjpij4fmw4otiows2zjzbi.ipfs-public.thirdwebcdn.com/Screenshot_2023-06-15_003656.png",
               },
+            },
+          ],
+          [
+            "0xffd822149fa6749176c7a1424e71a417f26189c8",
+            {
+              contract: "0xffd822149fa6749176c7a1424e71a417f26189c8",
+              name: "Nothing Token",
+              symbol: "THING",
+              decimals: 18,
             },
           ],
           [
@@ -654,7 +662,6 @@ export const getNetworkSettings = (): NetworkSettings => {
     case 137: {
       return {
         ...defaultNetworkSettings,
-        metadataMintDelay: 180,
         enableWebSocket: true,
         realtimeSyncMaxBlockLag: 32,
         realtimeSyncFrequencySeconds: 30,
@@ -725,6 +732,9 @@ export const getNetworkSettings = (): NetworkSettings => {
               name: "p_TAVA",
               symbol: "TAVA",
               decimals: 18,
+              metadata: {
+                image: "https://i.ibb.co/r6s8vym/altava1644570315501.png",
+              },
             },
           ],
           [
