@@ -507,7 +507,9 @@ export const getExecuteBuyV7Options: RouteOptions = {
                 isFlagged: Boolean(flaggedResult.is_flagged),
               },
               payload.taker,
-              payload.forceTrustedForwarder
+              {
+                ppV2TrustedChannel: payload.forceTrustedForwarder,
+              }
             )
           );
         }
