@@ -13,16 +13,26 @@ import {
 
 export class AskCreatedEventHandler extends BaseAskEventHandler {
   async generateAsk(): Promise<AskDocumentInfo> {
-    const data = await idb.oneOrNone(
-      `
+    const query = `
           ${AskCreatedEventHandler.buildBaseQuery()}
           AND id = $/orderId/
           LIMIT 1;
-        `,
-      {
-        orderId: this.orderId,
-      }
-    );
+        `;
+
+    const data = await idb.oneOrNone(query, {
+      orderId: this.orderId,
+    });
+
+    if (data == null) {
+      logger.error(
+        "AskCreatedEventHandler",
+        JSON.stringify({
+          topic: "debugAskIndex",
+          message: `No order. id=${this.orderId}`,
+          query,
+        })
+      );
+    }
 
     const id = this.getAskId();
     const document = this.buildDocument(data);
