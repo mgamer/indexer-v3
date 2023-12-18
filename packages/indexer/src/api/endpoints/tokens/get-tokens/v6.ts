@@ -1083,6 +1083,10 @@ export const getTokensV6Options: RouteOptions = {
         conditions.push(`${sortColumn} is null`);
       }
 
+      if (query.sortBy === "floorAskPrice" && query.sortDirection === "desc") {
+        conditions.push(`t.floor_sell_value is not null`);
+      }
+
       if (conditions.length) {
         baseQuery += " WHERE " + conditions.map((c) => `(${c})`).join(" AND ");
       }
@@ -1377,14 +1381,7 @@ export const getTokensV6Options: RouteOptions = {
                 },
               };
             } else if (
-              [
-                "sudoswap",
-                "sudoswap-v2",
-                "nftx",
-                "collectionxyz",
-                "caviar-v1",
-                "midaswap",
-              ].includes(r.floor_sell_order_kind)
+              ["sudoswap", "sudoswap-v2", "nftx", "caviar-v1"].includes(r.floor_sell_order_kind)
             ) {
               // Pool orders
               dynamicPricing = {
@@ -2084,11 +2081,7 @@ export const getListedTokensFromES = async (query: any) => {
               },
             },
           };
-        } else if (
-          ["sudoswap", "sudoswap-v2", "nftx", "collectionxyz", "caviar-v1", "midaswap"].includes(
-            ask.order.kind
-          )
-        ) {
+        } else if (["sudoswap", "sudoswap-v2", "nftx", "caviar-v1"].includes(ask.order.kind)) {
           // Pool orders
           dynamicPricing = {
             kind: "pool",
