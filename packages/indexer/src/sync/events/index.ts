@@ -7,7 +7,7 @@ import { EventsBatch, EventsByKind, processEventsBatchV2 } from "@/events-sync/h
 import { EnhancedEvent } from "@/events-sync/handlers/utils";
 import { parseEvent } from "@/events-sync/parserV2";
 import * as es from "@/events-sync/storage";
-import * as syncEventsUtils from "@/events-sync/utilsV2";
+import * as syncEventsUtils from "@/events-sync/utils";
 import * as blocksModel from "@/models/blocks";
 import getUuidByString from "uuid-by-string";
 import { BlockWithTransactions } from "@ethersproject/abstract-provider";
