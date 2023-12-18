@@ -53,7 +53,7 @@ export const postExecuteSolveCapacityV1Options: RouteOptions = {
           const response: { enabled: boolean; maxPricePerItem: string; maxItems: number } =
             await axios
               .get(
-                `${config.crossChainSolverBaseUrl}/config?originChainId=${config.chainId}&toChainId=${config.chainId}`
+                `${config.crossChainSolverBaseUrl}/config?originChainId=${config.chainId}&destinationChainId=${config.chainId}`
               )
               .then((response) => response.data);
 
