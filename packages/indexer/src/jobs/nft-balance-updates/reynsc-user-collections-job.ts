@@ -72,6 +72,7 @@ export default class ResyncUserCollectionsJob extends AbstractRabbitMqJobHandler
       `;
 
       const results = await redb.manyOrNone(query, values);
+      const jobs = [];
 
       for (const result of results) {
         if (_.isNull(result.collection_id)) {
@@ -82,14 +83,15 @@ export default class ResyncUserCollectionsJob extends AbstractRabbitMqJobHandler
         const lock = `resync-collections:${user}:${result.collection_id}`;
 
         if (await acquireLock(lock, 60 * 20)) {
-          // Trigger resync for the user in the collection
-          await this.addToQueue([
-            {
-              user,
-              collectionId: result.collection_id,
-            },
-          ]);
+          jobs.push({
+            user,
+            collectionId: result.collection_id,
+          });
         }
+      }
+
+      if (!_.isEmpty(jobs)) {
+        await this.addToQueue(jobs);
       }
 
       // If there are potentially more collections for this user
