@@ -25,7 +25,8 @@ export type CollectionMintStandard =
   | "soundxyz"
   | "createdotfun"
   | "titlesxyz"
-  | "artblocks";
+  | "artblocks"
+  | "highlightxyz";
 
 export type CollectionMintDetails = {
   tx: MintTxSchema;
@@ -49,6 +50,7 @@ export type CollectionMint = {
   startTime?: number;
   endTime?: number;
   allowlistId?: string;
+  maxPerTransaction?: string;
 };
 
 export const getCollectionMints = async (
@@ -111,6 +113,7 @@ export const getCollectionMints = async (
         startTime: r.start_time ? Math.floor(new Date(r.start_time).getTime() / 1000) : undefined,
         endTime: r.end_time ? Math.floor(new Date(r.end_time).getTime() / 1000) : undefined,
         allowlistId: r.allowlist_id ?? undefined,
+        maxPerTransaction: r.max_per_transaction ?? undefined,
       } as CollectionMint)
   );
 };

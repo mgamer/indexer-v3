@@ -294,6 +294,10 @@ export const extractEventsBatches = async (
             kind: "ditto",
             data: kindToEvents.get("ditto") ?? [],
           },
+          {
+            kind: "highlightxyz",
+            data: kindToEvents.get("highlightxyz") ?? [],
+          },
         ];
 
         txHashToEventsBatch.set(txHash, {

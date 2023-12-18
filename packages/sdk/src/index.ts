@@ -52,6 +52,7 @@ import * as Seadrop from "./seadrop";
 import * as BlurV2 from "./blur-v2";
 import * as Joepeg from "./joepeg";
 import * as ArtBlocks from "./artblocks";
+import * as HighlightXYZ from "./highlightxyz";
 
 export {
   // Common
@@ -110,4 +111,5 @@ export {
   BlurV2,
   Joepeg,
   ArtBlocks,
+  HighlightXYZ,
 };
