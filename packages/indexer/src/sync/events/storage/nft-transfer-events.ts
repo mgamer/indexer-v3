@@ -140,9 +140,12 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
         { table: "nft_transfer_events" }
       );
 
-      const isFromZeroAddress = fromBuffer(event.from) === AddressZero;
+      const deferAddresses = [AddressZero, "0x2791bca1f2de4661ed88a30c99a7a9449aa84174"];
       const isErc1155 = _.includes(erc1155Contracts, fromBuffer(event.address));
-      const deferUpdate = [137, 80001].includes(config.chainId) && isFromZeroAddress && isErc1155;
+      const deferUpdate =
+        [137, 80001].includes(config.chainId) &&
+        _.includes(deferAddresses, fromBuffer(event.from)) &&
+        isErc1155;
 
       // Atomically insert the transfer events and update balances
       nftTransferQueries.push(`
@@ -193,7 +196,7 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
             FROM "x"
             ORDER BY "address" ASC, "token_id" ASC, "owner" ASC
           ) "y"
-          ${deferUpdate ? `WHERE y.owner != ${pgp.as.buffer(() => toBuffer(AddressZero))}` : ""}
+          ${deferUpdate ? `WHERE y.owner != ${pgp.as.buffer(() => event.from)}` : ""}
           GROUP BY "y"."address", "y"."token_id", "y"."owner"
         )
         ON CONFLICT ("contract", "token_id", "owner") DO
