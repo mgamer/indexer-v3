@@ -142,6 +142,13 @@ export const getExecuteBuyV7Options: RouteOptions = {
       forceRouter: Joi.boolean().description(
         "If true, all fills will be executed through the router (where possible)"
       ),
+      forceTrustedForwarder: Joi.string()
+        .lowercase()
+        .pattern(regex.address)
+        .description(
+          "If passed, all fills will be executed through the trusted trusted forwarder (where possible)"
+        )
+        .optional(),
       currency: Joi.string().lowercase().description("Currency to be used for purchases."),
       currencyChainId: Joi.number().description("The chain id of the purchase currency"),
       normalizeRoyalties: Joi.boolean().default(false).description("Charge any missing royalties."),
@@ -376,9 +383,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
         }
       ) => {
         // Handle dynamically-priced orders
-        if (
-          ["sudoswap", "sudoswap-v2", "collectionxyz", "nftx", "caviar-v1"].includes(order.kind)
-        ) {
+        if (["sudoswap", "sudoswap-v2", "nftx", "caviar-v1"].includes(order.kind)) {
           let poolId: string;
           let priceList: string[];
 
@@ -501,7 +506,8 @@ export const getExecuteBuyV7Options: RouteOptions = {
                 amount: token.quantity,
                 isFlagged: Boolean(flaggedResult.is_flagged),
               },
-              payload.taker
+              payload.taker,
+              payload.forceTrustedForwarder
             )
           );
         }
@@ -1936,6 +1942,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
               to: data.solver.address,
               data: data.requestId,
               value: bn(cost).sub(data.user.balance).toString(),
+              gasLimit: 22000,
               chainId: payload.currencyChainId,
             },
             check: {
