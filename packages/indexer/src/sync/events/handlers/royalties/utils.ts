@@ -7,11 +7,11 @@ import { EventsBatch, processEventsBatch } from "@/events-sync/handlers";
 import { EnhancedEvent, OnChainData } from "@/events-sync/handlers/utils";
 import { PartialFillEvent } from "@/events-sync/handlers/royalties";
 import { extractEventsBatches } from "@/events-sync/index";
-import { parseEvent } from "@/events-sync/parserV2";
+import { parseEvent } from "@/events-sync/parser";
 import * as utils from "@/events-sync/utils";
 import * as es from "@/events-sync/storage";
-import * as syncEventsV2 from "@/events-sync/syncEventsV2";
-import * as syncEventsUtils from "@/events-sync/utilsV2";
+import * as syncEvents from "@/events-sync/index";
+import * as syncEventsUtils from "@/events-sync/utils";
 
 export const getEventParams = (log: Log, timestamp: number) => {
   const address = log.address.toLowerCase() as string;
@@ -156,7 +156,7 @@ export const parseBlock = async (block: number) => {
 
   enhancedEvents = enhancedEvents.filter((e) => e) as EnhancedEvent[];
 
-  const eventsBatches = syncEventsV2.extractEventsBatches(enhancedEvents as EnhancedEvent[]);
+  const eventsBatches = syncEvents.extractEventsBatches(enhancedEvents as EnhancedEvent[]);
 
   const allOnChainData: {
     batch: EventsBatch;
