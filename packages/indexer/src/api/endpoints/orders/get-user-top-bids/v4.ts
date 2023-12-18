@@ -7,7 +7,7 @@ import * as Sdk from "@reservoir0x/sdk";
 import _ from "lodash";
 import Joi from "joi";
 
-import { redbAlt } from "@/common/db";
+import { edb, redbAlt } from "@/common/db";
 import { logger } from "@/common/logger";
 import {
   getJoiPriceObject,
@@ -152,6 +152,7 @@ export const getUserTopBidsV4Options: RouteOptions = {
           token: Joi.object({
             contract: Joi.string(),
             tokenId: Joi.string(),
+            kind: Joi.string(),
             name: Joi.string().allow("", null),
             image: Joi.string().allow("", null),
             floorAskPrice: JoiPrice.allow(null),
@@ -259,7 +260,7 @@ export const getUserTopBidsV4Options: RouteOptions = {
          ORDER BY last_token_appraisal_value DESC NULLS LAST
          LIMIT ${query.sampleSize}
         )
-        SELECT nb.contract, y.*, t.*, c.*, count(*) OVER() AS "total_tokens_with_bids", SUM(y.top_bid_price) OVER() as total_amount,
+        SELECT nb.contract, y.*, t.*, z.*, c.*, count(*) OVER() AS "total_tokens_with_bids", SUM(y.top_bid_price) OVER() as total_amount,
                (${criteriaBuildQuery}) AS bid_criteria,
                (CASE net_listing
                  WHEN 0 THEN NULL
@@ -297,6 +298,12 @@ export const getUserTopBidsV4Options: RouteOptions = {
             WHERE t.contract = nb.contract
             AND t.token_id = nb.token_id
         ) t ON TRUE
+        LEFT JOIN LATERAL (
+          SELECT 
+              kind AS contract_kind
+          FROM contracts 
+          WHERE contracts.address = nb.contract
+        ) z ON TRUE
         ${
           query.collection || query.community || query.collectionsSetId ? "" : "LEFT"
         } JOIN LATERAL (
@@ -320,7 +327,10 @@ export const getUserTopBidsV4Options: RouteOptions = {
 
       const sources = await Sources.getInstance();
 
-      const bids = await redbAlt.manyOrNone(baseQuery, query);
+      const bids =
+        config.chainId === 137
+          ? await edb.manyOrNone(baseQuery, query)
+          : await redbAlt.manyOrNone(baseQuery, query);
       let totalTokensWithBids = 0;
       let totalAmount = BigNumber.from(0);
 
@@ -390,6 +400,7 @@ export const getUserTopBidsV4Options: RouteOptions = {
               contract: contract,
               tokenId: tokenId,
               name: r.name,
+              kind: r.contract_kind,
               image: Assets.getResizedImageUrl(r.image, undefined, r.image_version),
               floorAskPrice: r.token_floor_sell_value
                 ? await getJoiPriceObject(

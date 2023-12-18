@@ -138,6 +138,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
+    path: "/admin/resync-api-key",
+    options: adminEndpoints.postResyncApiKey,
+  });
+
+  server.route({
+    method: "POST",
     path: "/admin/resync-user-balance",
     options: adminEndpoints.postResyncUserCollectionBalance,
   });
@@ -278,6 +284,12 @@ export const setupRoutes = (server: Server) => {
     method: "POST",
     path: "/admin/update-image-version",
     options: adminEndpoints.postUpdateImageVersionOptions,
+  });
+
+  server.route({
+    method: "POST",
+    path: "/admin/revalidate-mint",
+    options: adminEndpoints.postRevalidateMintOptions,
   });
 
   server.route({
@@ -820,6 +832,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
+    path: "/execute/call/v1",
+    options: executeEndpoints.postExecuteCallV1Options,
+  });
+
+  server.route({
+    method: "POST",
     path: "/execute/mint/v1",
     options: executeEndpoints.postExecuteMintV1Options,
   });
@@ -886,6 +904,12 @@ export const setupRoutes = (server: Server) => {
   });
 
   // Management
+
+  server.route({
+    method: "POST",
+    path: "/management/mints/simulate/v1",
+    options: managementEndpoints.postSimulateMintV1Options,
+  });
 
   server.route({
     method: "POST",
@@ -1123,6 +1147,12 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/cross-posting-orders/v1",
     options: ordersEndpoints.getCrossPostingOrdersV1Options,
+  });
+
+  server.route({
+    method: "POST",
+    path: "/orders/invalidate/v1",
+    options: ordersEndpoints.postInvalidateOrdersOptions,
   });
 
   // Owners
