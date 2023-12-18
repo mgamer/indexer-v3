@@ -395,8 +395,7 @@ export const getNetworkSettings = (): NetworkSettings => {
               symbol: "RLBZ",
               decimals: 18,
               metadata: {
-                image:
-                  "https://i.ibb.co/XYVTLZf/Untitled.png",
+                image: "https://i.ibb.co/XYVTLZf/Untitled.png",
               },
             },
           ],
@@ -408,8 +407,7 @@ export const getNetworkSettings = (): NetworkSettings => {
               symbol: "RUGZ",
               decimals: 18,
               metadata: {
-                image:
-                  "https://i.ibb.co/QrGfv1z/Untitled-1.png",
+                image: "https://i.ibb.co/QrGfv1z/Untitled-1.png",
               },
             },
           ],
