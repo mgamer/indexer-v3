@@ -29,7 +29,6 @@ import {
 import { Sources } from "@/models/sources";
 import _ from "lodash";
 import { Assets, ImageSize } from "@/utils/assets";
-import { isOrderNativeOffChainCancellable } from "@/orderbook/orders";
 
 const version = "v7";
 
@@ -865,7 +864,8 @@ export const getUserTokensV7Options: RouteOptions = {
               source: getJoiSourceObject(floorSellSource),
               rawData: query.includeRawData ? r.floor_sell_raw_data : undefined,
               isNativeOffChainCancellable: query.includeRawData
-                ? isOrderNativeOffChainCancellable(r.floor_sell_raw_data)
+                ? r.floor_sell_raw_data?.zone ===
+                  Sdk.SeaportBase.Addresses.ReservoirCancellationZone[config.chainId]
                 : undefined,
             },
             acquiredAt: acquiredTime,
