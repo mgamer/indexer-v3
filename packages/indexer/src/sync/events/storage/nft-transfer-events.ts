@@ -196,21 +196,24 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
           "token_id",
           "owner",
           "amount",
-          "acquired_at"
+          "acquired_at",
+          "is_airdropped"
         ) (
           SELECT
             "y"."address",
             "y"."token_id",
             "y"."owner",
             SUM("y"."amount_delta"),
-            MIN("y"."timestamp")
+            MIN("y"."timestamp"),
+            "y"."is_airdropped"
           FROM (
             SELECT
               "address",
               "token_id",
               unnest("owners") AS "owner",
               unnest("amount_deltas") AS "amount_delta",
-              unnest("timestamps") AS "timestamp"
+              unnest("timestamps") AS "timestamp",
+              "kind" = 'airdrop' AS "is_airdropped"
             FROM "x"
             ORDER BY "address" ASC, "token_id" ASC, "owner" ASC
           ) "y"
