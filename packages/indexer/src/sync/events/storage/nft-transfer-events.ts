@@ -189,6 +189,7 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
           RETURNING
             "address",
             "token_id",
+            "kind",
             true AS "new_transfer",
             ARRAY["from", "to"] AS "owners",
             ARRAY[-"amount", "amount"] AS "amount_deltas",
