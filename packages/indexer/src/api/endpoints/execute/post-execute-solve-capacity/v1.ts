@@ -27,6 +27,9 @@ export const postExecuteSolveCapacityV1Options: RouteOptions = {
     schema: Joi.object({
       capacityPerRequest: Joi.string().pattern(regex.number).required(),
       totalCapacity: Joi.string().pattern(regex.number).required(),
+      // Deprecated
+      maxItems: Joi.number().required(),
+      maxPricePerItem: Joi.string().pattern(regex.number).required(),
     }).label(`postExecuteSolveCapacity${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(
@@ -67,6 +70,8 @@ export const postExecuteSolveCapacityV1Options: RouteOptions = {
           return {
             capacityPerRequest: response.solver!.capacityPerRequest,
             totalCapacity: response.solver!.balance,
+            maxItems: 1,
+            maxPricePerItem: response.solver!.capacityPerRequest,
           };
         }
 
@@ -93,6 +98,8 @@ export const postExecuteSolveCapacityV1Options: RouteOptions = {
           return {
             capacityPerRequest: response.solver!.capacityPerRequest,
             totalCapacity: response.solver!.balance,
+            maxItems: 1,
+            maxPricePerItem: response.solver!.capacityPerRequest,
           };
         }
 
