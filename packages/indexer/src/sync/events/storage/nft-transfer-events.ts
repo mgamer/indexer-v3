@@ -35,7 +35,7 @@ type DbEvent = {
   to: Buffer;
   token_id: string;
   amount: string;
-  kind: "transfer" | "airdrop" | "mint" | "burn" | "sale" | null;
+  kind: "airdrop" | "mint" | "burn" | null;
 };
 
 type erc721Token = {
