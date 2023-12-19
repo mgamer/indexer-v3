@@ -75,32 +75,34 @@ export default class ResyncUserCollectionsJob extends AbstractRabbitMqJobHandler
       const results = await redb.manyOrNone(query, values);
       const jobs = [];
 
-      for (const result of results) {
-        if (_.isNull(result.collection_id)) {
-          continue;
+      if (results) {
+        for (const result of results) {
+          if (_.isNull(result.collection_id)) {
+            continue;
+          }
+
+          jobs.push({
+            user,
+            collectionId: result.collection_id,
+          });
         }
 
-        jobs.push({
-          user,
-          collectionId: result.collection_id,
-        });
-      }
+        if (!_.isEmpty(jobs)) {
+          await this.addToQueue(jobs);
+        }
 
-      if (!_.isEmpty(jobs)) {
-        await this.addToQueue(jobs);
-      }
-
-      // If there are potentially more collections for this user
-      if (results.length === values.limit) {
-        await this.addToQueue([
-          {
-            user,
-            cursor: {
-              contract: fromBuffer(_.last(results).contract),
-              tokenId: _.last(results).token_id,
+        // If there are potentially more collections for this user
+        if (results.length === values.limit) {
+          await this.addToQueue([
+            {
+              user,
+              cursor: {
+                contract: fromBuffer(_.last(results).contract),
+                tokenId: _.last(results).token_id,
+              },
             },
-          },
-        ]);
+          ]);
+        }
       }
     } else if (collectionId.match(regex.address)) {
       // If a non shared contract
