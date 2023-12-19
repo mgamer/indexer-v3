@@ -5,7 +5,6 @@ import { Collections } from "@/models/collections";
 import _ from "lodash";
 import { config } from "@/config/index";
 import { getNetworkSettings } from "@/config/network";
-import { acquireLock } from "@/common/redis";
 
 export type ResyncUserCollectionsJobPayload = {
   user: string;
@@ -79,15 +78,10 @@ export default class ResyncUserCollectionsJob extends AbstractRabbitMqJobHandler
           continue;
         }
 
-        // Check if the user was already synced for this collection
-        const lock = `resync-collections:${user}:${result.collection_id}`;
-
-        if (await acquireLock(lock, 60 * 15)) {
-          jobs.push({
-            user,
-            collectionId: result.collection_id,
-          });
-        }
+        jobs.push({
+          user,
+          collectionId: result.collection_id,
+        });
       }
 
       if (!_.isEmpty(jobs)) {
