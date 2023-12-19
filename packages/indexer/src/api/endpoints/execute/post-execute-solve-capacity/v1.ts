@@ -1,3 +1,4 @@
+import { AddressZero } from "@ethersproject/constants";
 import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import axios from "axios";
@@ -24,8 +25,8 @@ export const postExecuteSolveCapacityV1Options: RouteOptions = {
   },
   response: {
     schema: Joi.object({
-      maxPricePerItem: Joi.string().pattern(regex.number).required(),
-      maxItems: Joi.number().required(),
+      capacityPerRequest: Joi.string().pattern(regex.number).required(),
+      totalCapacity: Joi.string().pattern(regex.number).required(),
     }).label(`postExecuteSolveCapacity${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(
@@ -50,20 +51,22 @@ export const postExecuteSolveCapacityV1Options: RouteOptions = {
             notImplemented();
           }
 
-          const response: { enabled: boolean; maxPricePerItem: string; maxItems: number } =
-            await axios
-              .get(
-                `${config.crossChainSolverBaseUrl}/config?originChainId=${config.chainId}&destinationChainId=${config.chainId}`
-              )
-              .then((response) => response.data);
+          const response: {
+            enabled: boolean;
+            solver?: { balance: string; capacityPerRequest: string };
+          } = await axios
+            .get(
+              `${config.crossChainSolverBaseUrl}/config?originChainId=${config.chainId}&destinationChainId=${config.chainId}&user=${AddressZero}&currency=${AddressZero}`
+            )
+            .then((response) => response.data);
 
           if (!response.enabled) {
             notImplemented();
           }
 
           return {
-            maxPricePerItem: response.maxPricePerItem,
-            maxItems: response.maxItems,
+            capacityPerRequest: response.solver!.capacityPerRequest,
+            totalCapacity: response.solver!.balance,
           };
         }
 
@@ -76,18 +79,20 @@ export const postExecuteSolveCapacityV1Options: RouteOptions = {
             notImplemented();
           }
 
-          const response: { enabled: boolean; maxPricePerItem: string; maxItems: number } =
-            await axios
-              .get(`${config.seaportSolverBaseUrl}/config?chainId=${config.chainId}`)
-              .then((response) => response.data);
+          const response: {
+            enabled: boolean;
+            solver?: { balance: string; capacityPerRequest: string };
+          } = await axios
+            .get(`${config.seaportSolverBaseUrl}/config?chainId=${config.chainId}`)
+            .then((response) => response.data);
 
           if (!response.enabled) {
             notImplemented();
           }
 
           return {
-            maxPricePerItem: response.maxPricePerItem,
-            maxItems: response.maxItems,
+            capacityPerRequest: response.solver!.capacityPerRequest,
+            totalCapacity: response.solver!.balance,
           };
         }
 
