@@ -74,7 +74,7 @@ export const mechanicVectorRegistered: EventData = {
   topic: abi.getEventTopic(abi.getEvent("MechanicVectorRegistered")),
 };
 
-export const mechanicVectorRegistered: EventData = {
+export const mechanicVectorUpdated: EventData = {
   kind: "highlightxyz",
   subKind: "highlightxyz-discrete-da-updated",
   addresses: {

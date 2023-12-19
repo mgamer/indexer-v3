@@ -621,7 +621,7 @@ const allEventData = [
   highlightxyz.vectorDeleted,
   highlightxyz.discreteDACreated,
   highlightxyz.mechanicVectorRegistered,
-  highlightxyz.mechanicVectorRegistered,
+  highlightxyz.mechanicVectorUpdated,
 ];
 
 export const getEventData = (events?: string[]) => {
