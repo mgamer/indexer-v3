@@ -322,8 +322,6 @@ const _saveBlockTransactionsToRedis = async (blockData: BlockWithTransactions) =
   const timerStart = Date.now();
   await syncEventsUtils.saveBlockTransactionsRedis(blockData);
   const timerEnd = Date.now();
-
-  // add a job to later save the transactions to the database
   return timerEnd - timerStart;
 };
 
