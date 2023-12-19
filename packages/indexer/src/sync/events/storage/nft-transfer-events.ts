@@ -80,7 +80,8 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
       ns.mintAddresses.includes(event.from) &&
       event.baseEventParams.from !== event.to &&
       event.baseEventParams?.to &&
-      !routers.has(event.baseEventParams?.to)
+      !routers.has(event.baseEventParams?.to) &&
+      event.baseEventParams?.from !== event.baseEventParams?.to
     ) {
       kind = "airdrop";
     } else if (ns.mintAddresses.includes(event.from)) {
