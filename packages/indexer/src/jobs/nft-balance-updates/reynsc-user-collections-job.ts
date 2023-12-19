@@ -62,6 +62,8 @@ export default class ResyncUserCollectionsJob extends AbstractRabbitMqJobHandler
              FROM tokens
              WHERE nft_balances.contract = tokens.contract
              AND nft_balances.token_id = tokens.token_id
+             AND tokens.collection_id IS NOT NULL
+             AND NOT EXISTS (SELECT FROM user_collections uc WHERE owner = $/owner/ AND uc.collection_id = tokens.collection_id)
           ) t ON TRUE
         WHERE owner = $/owner/
         ${cursorFilter}
