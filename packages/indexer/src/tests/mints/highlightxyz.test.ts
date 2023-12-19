@@ -10,6 +10,8 @@ import {
   extractByTx,
 } from "../../orderbook/mints/calldata/detector/highlightxyz";
 import * as utils from "@/events-sync/utils";
+import { getEnhancedEventsFromTx, processEventsBatch } from "@/events-sync/handlers";
+import { extractEventsBatches } from "@/events-sync/index";
 
 jest.setTimeout(60 * 1000);
 
@@ -56,7 +58,7 @@ if (config.chainId === Network.Ethereum) {
       expect(results.length).not.toBe(0);
     });
 
-    it("extract by tx", async () => {
+    it("extracts by tx", async () => {
       const data = [
         {
           collection: "0xc1739be27821fa207ba62a52d31b851013e2cb7f",
@@ -72,6 +74,24 @@ if (config.chainId === Network.Ethereum) {
         const transaction = await utils.fetchTransaction(d.txHash);
         const results = await extractByTx(d.collection, transaction);
         expect(results.length).not.toBe(0);
+      }
+    });
+
+    it("detects events and create mints data", async () => {
+      // could not test fully
+      const data = [
+        "0xee0352ef266b73de46ce69c23d070110da13d3609e0ae61a24ea8ae37eca8137",
+        "0x67f981ad1b172544aff3dd4a0217f6acb1d31d34801f0d2c352b790989c670ab",
+        "0x141ae314b893c942b1ec4130d308d775dd8eb58547a0a84c3fda2909a226c407",
+      ];
+
+      for (const txHash of data) {
+        const enhancedEvents = await getEnhancedEventsFromTx(txHash);
+        const eventBatches = await extractEventsBatches(enhancedEvents, true);
+        for (const batch of eventBatches) {
+          const onChainData = await processEventsBatch(batch, true);
+          expect(onChainData.mints[0]).not.toBe(null);
+        }
       }
     });
   });
