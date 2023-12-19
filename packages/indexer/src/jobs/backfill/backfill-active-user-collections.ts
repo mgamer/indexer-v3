@@ -36,7 +36,7 @@ export class BackfillActiveUserCollectionsJob extends AbstractRabbitMqJobHandler
 
     let updatedAtFilter = "";
     if (lastUpdatedAt) {
-      updatedAtFilter = `AND updated_at >= '${lastUpdatedAt}'`;
+      updatedAtFilter = `AND updated_at > '${lastUpdatedAt}'`;
     }
 
     const query = `
