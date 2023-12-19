@@ -1,16 +1,25 @@
 import { Log } from "@ethersproject/abstract-provider";
 import { TransactionResponse } from "@ethersproject/providers";
 
-import * as syncEventsUtils from "@/events-sync/utils";
-import * as blocksModel from "@/models/blocks";
-import { BaseEventParams } from "./parserV2";
+export type BaseEventParams = {
+  address: string;
+  block: number;
+  blockHash: string;
+  txHash: string;
+  txIndex: number;
+  logIndex: number;
+  timestamp: number;
+  batchIndex: number;
+  from: string;
+  to: string | undefined;
+};
 
-export const parseEvent = async (
+export const parseEvent = (
   log: Log,
-  blocksCache: Map<number, blocksModel.Block>,
+  timestamp: number,
   batchIndex = 1,
   txData: TransactionResponse
-): Promise<BaseEventParams> => {
+): BaseEventParams => {
   const address = log.address.toLowerCase();
   const block = log.blockNumber;
   const blockHash = log.blockHash.toLowerCase();
@@ -20,12 +29,6 @@ export const parseEvent = async (
   const from = txData?.from?.toLowerCase();
   const to = txData?.to?.toLowerCase();
 
-  let blockResult = blocksCache.get(block);
-  if (!blockResult) {
-    blocksCache.set(block, await syncEventsUtils.fetchBlock(block));
-    blockResult = blocksCache.get(block)!;
-  }
-
   return {
     address,
     txHash,
@@ -33,7 +36,7 @@ export const parseEvent = async (
     block,
     blockHash,
     logIndex,
-    timestamp: blockResult.timestamp,
+    timestamp,
     batchIndex,
     from,
     to,

@@ -305,7 +305,11 @@ async function formatCollections(
 
       return {
         id: metadata?.id,
-        image: metadata?.metadata ? metadata.metadata?.imageUrl : null,
+        image:
+          metadata?.metadata?.imageUrl ??
+          (metadata?.sample_images?.length
+            ? Assets.getResizedImageURLs(metadata.sample_images[0])
+            : null),
         banner: metadata?.metadata ? metadata.metadata?.bannerImageUrl : null,
         name: metadata ? metadata?.name : "",
         description: metadata?.metadata ? metadata.metadata?.description : null,
@@ -329,7 +333,7 @@ async function formatCollections(
         ownerCount: Number(metadata.owner_count || 0),
         sampleImages:
           metadata?.sample_images && metadata?.sample_images?.length > 0
-            ? Assets.getLocalAssetsLink(metadata?.sample_images)
+            ? Assets.getResizedImageURLs(metadata?.sample_images)
             : [],
         mintType: Number(mintData?.price) > 0 ? "paid" : "free",
         mintPrice: mintData?.price,

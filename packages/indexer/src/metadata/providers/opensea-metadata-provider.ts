@@ -113,7 +113,7 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
       tokensMetadata.push(data.nft);
     }
 
-    return tokensMetadata.map(this.parseToken).filter(Boolean);
+    return tokensMetadata.map(super.parseToken).filter(Boolean);
   }
 
   async _getTokenFlagStatus(
@@ -157,7 +157,7 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
       data: {
         contract: data.nft.contract,
         tokenId: data.nft.identifier,
-        isFlagged: data.nft.is_disabled,
+        isFlagged: data.nft.is_suspicious,
       },
     };
   }
@@ -209,7 +209,7 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
       data: data.nfts.map((asset: any) => ({
         contract: asset.contract,
         tokenId: asset.identifier,
-        isFlagged: asset.is_disabled,
+        isFlagged: asset.is_suspicious,
       })),
       continuation: data.next ?? undefined,
     };
@@ -262,7 +262,7 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
       data: data.nfts.map((asset: any) => ({
         contract: asset.contract,
         tokenId: asset.identifier,
-        isFlagged: asset.is_disabled,
+        isFlagged: asset.is_suspicious,
       })),
       continuation: data.next ?? undefined,
     };
@@ -290,14 +290,14 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
     throw error;
   }
 
-  parseToken(metadata: any): TokenMetadata {
+  _parseToken(metadata: any): TokenMetadata {
     return {
       contract: metadata.contract,
       tokenId: metadata.identifier,
       collection: _.toLower(metadata.contract),
       slug: metadata.collection,
       name: metadata.name,
-      flagged: metadata.is_disabled,
+      flagged: metadata.is_suspicious,
       // Token descriptions are a waste of space for most collections we deal with
       // so by default we ignore them (this behaviour can be overridden if needed).
       description: metadata.description,
@@ -336,6 +336,7 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
         royalties.push({
           recipient: fee.recipient,
           bps: Math.trunc(fee.fee * 100),
+          required: fee.required,
         });
       }
     }
@@ -351,7 +352,16 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
       contract,
       tokenIdRange: null,
       tokenSetId: `contract:${contract}`,
-      paymentTokens: undefined,
+      paymentTokens: metadata.payment_tokens
+        ? metadata.payment_tokens.map((token: any) => {
+            return {
+              address: token.address,
+              decimals: token.decimals,
+              name: token.name,
+              symbol: token.symbol,
+            };
+          })
+        : undefined,
       creator: creator ? _.toLower(creator) : null,
     };
   }
