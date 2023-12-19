@@ -18,6 +18,7 @@ import { config } from "@/config/index";
 import _ from "lodash";
 import { eventsSyncRealtimeJob } from "@/jobs/events-sync/events-sync-realtime-job";
 import { redis } from "@/common/redis";
+import { saveRedisTransactionsJob } from "@/jobs/events-sync/save-redis-transactions-job";
 
 export interface SyncBlockOptions {
   skipLogsCheck?: boolean;
@@ -544,6 +545,10 @@ export const syncEvents = async (
       processEventsLatencies: processEventsLatencies,
     })
   );
+
+  if (blocks.fromBlock - blocks.toBlock === 0) {
+    await saveRedisTransactionsJob.addToQueue({ block: blocks.fromBlock }, 60 * 5);
+  }
 
   blockData.forEach(async (block) => {
     await blockCheckJob.addToQueue({ block: block.number, blockHash: block.hash, delay: 60 });
