@@ -446,7 +446,11 @@ export const syncEvents = async (
         if (!block) {
           throw new Error(`Block ${log.blockHash} not found with RPC provider`);
         }
-        const baseEventParams = parseEvent(log, block.timestamp);
+        const txData = block.transactions.find((tx) => tx.hash === log.transactionHash);
+        if (!txData) {
+          throw new Error(`Transaction ${log.transactionHash} not found in block ${block}`);
+        }
+        const baseEventParams = parseEvent(log, block.timestamp, 1, txData);
         return availableEventData
           .filter(
             ({ addresses, numTopics, topic }) =>
