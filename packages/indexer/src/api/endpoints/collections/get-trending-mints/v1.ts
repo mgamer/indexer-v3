@@ -8,7 +8,7 @@ import Joi from "joi";
 
 import { redis } from "@/common/redis";
 
-const REDIS_EXPIRATION_MINTS = 120; // Assuming an hour, adjust as needed.
+const REDIS_EXPIRATION_MINTS = 60 * 60 * 1000; // Assuming an hour, adjust as needed.
 
 import { getTrendingMints } from "@/elasticsearch/indexes/activities";
 
@@ -251,7 +251,7 @@ ${whereClause} LIMIT 50000;
 
   const result = await redb.manyOrNone<Mint>(baseQuery);
 
-  await redis.set(cacheKey, JSON.stringify(result), "EX", REDIS_EXPIRATION_MINTS);
+  await redis.set(cacheKey, JSON.stringify(result), "XX", REDIS_EXPIRATION_MINTS);
 
   return result;
 }
