@@ -26,6 +26,7 @@ export type CollectionPaymentSettings = {
   royaltyBountyNumerator: number;
   isRoyaltyBountyExclusive: boolean;
   blockTradesFromUntrustedChannels: boolean;
+  blockBannedAccounts: boolean;
   pricingBounds?: PricingBounds;
   whitelistedPaymentMethods: string[];
 };
@@ -59,7 +60,7 @@ export const getCollectionPaymentSettings = async (
   contract: string,
   refresh?: boolean
 ): Promise<CollectionPaymentSettings | undefined> => {
-  const cacheKey = `payment-processor-v2-payment-settings-by-contract:${contract}`;
+  const cacheKey = `payment-processor-v2-payment-settings-by-contract:v3:${contract}`;
 
   let result = await redis
     .get(cacheKey)
@@ -77,7 +78,8 @@ export const getCollectionPaymentSettings = async (
               uint16 royaltyBackfillNumerator,
               uint16 royaltyBountyNumerator,
               bool isRoyaltyBountyExclusive,
-              bool blockTradesFromUntrustedChannels
+              bool blockTradesFromUntrustedChannels,
+              bool blockBannedAccounts
             )
           )`,
         ]),
@@ -94,6 +96,7 @@ export const getCollectionPaymentSettings = async (
         royaltyBountyNumerator: paymentSettings.royaltyBountyNumerator,
         isRoyaltyBountyExclusive: paymentSettings.isRoyaltyBountyExclusive,
         blockTradesFromUntrustedChannels: paymentSettings.blockTradesFromUntrustedChannels,
+        blockBannedAccounts: paymentSettings.blockBannedAccounts,
         whitelistedPaymentMethods:
           paymentSettings.paymentMethodWhitelistId === 0
             ? await getDefaultPaymentMethods()
@@ -290,4 +293,67 @@ export const getAndIncrementUserNonce = async (
   );
 
   return nextNonce;
+};
+
+export const addBannedAccount = async (tokenAddress: string, account: string) =>
+  idb.none(
+    `
+      INSERT INTO payment_processor_v2_banned_accounts (
+        contract,
+        account
+      ) VALUES (
+        $/tokenAddress/,
+        $/account/
+      ) ON CONFLICT DO NOTHING
+    `,
+    {
+      tokenAddress: toBuffer(tokenAddress),
+      account: toBuffer(account),
+    }
+  );
+
+export const removeBannedAccount = async (tokenAddress: string, account: string) =>
+  idb.none(
+    `
+      DELETE FROM payment_processor_v2_banned_accounts
+      WHERE payment_processor_v2_banned_accounts.contract = $/tokenAddress/
+        AND payment_processor_v2_banned_accounts.account = $/account/
+    `,
+    {
+      tokenAddress: toBuffer(tokenAddress),
+      account: toBuffer(account),
+    }
+  );
+
+export const getAllBannedAccounts = async (tokenAddress: string) => {
+  const results = await ridb.manyOrNone(
+    `
+      SELECT
+        payment_processor_v2_banned_accounts.account
+      FROM payment_processor_v2_banned_accounts
+      WHERE payment_processor_v2_banned_accounts.contract = $/tokenAddress/
+    `,
+    {
+      tokenAddress: toBuffer(tokenAddress),
+    }
+  );
+
+  return results.map((c) => fromBuffer(c.account));
+};
+
+export const checkAccountIsBanned = async (tokenAddress: string, account: string) => {
+  const isBanned = await ridb.manyOrNone(
+    `
+      SELECT 1
+      FROM payment_processor_v2_banned_accounts
+      WHERE payment_processor_v2_banned_accounts.contract = $/tokenAddress/
+      AND payment_processor_v2_banned_accounts.account = $/account/
+    `,
+    {
+      tokenAddress: toBuffer(tokenAddress),
+      account: toBuffer(account),
+    }
+  );
+
+  return isBanned ? true : false;
 };

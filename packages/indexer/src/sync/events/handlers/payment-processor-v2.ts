@@ -568,6 +568,22 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         break;
       }
 
+      case "payment-processor-v2-banned-account-added-for-collection":
+      case "payment-processor-v2-banned-account-removed-for-collection": {
+        const parsedLog = eventData.abi.parseLog(log);
+        const tokenAddress = parsedLog.args["tokenAddress"].toLowerCase();
+        const account = parsedLog.args["account"].toLowerCase();
+
+        const removed = subKind.includes("removed");
+        if (removed) {
+          await paymentProcessorV2Utils.removeBannedAccount(tokenAddress, account);
+        } else {
+          await paymentProcessorV2Utils.addBannedAccount(tokenAddress, account);
+        }
+
+        break;
+      }
+
       case "payment-processor-v2-payment-method-added-to-whitelist":
       case "payment-processor-v2-payment-method-removed-from-whitelist": {
         const parsedLog = eventData.abi.parseLog(log);

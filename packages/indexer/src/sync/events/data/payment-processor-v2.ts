@@ -173,7 +173,7 @@ export const updatedCollectionPaymentSettings: EventData = {
   kind: "payment-processor-v2",
   subKind: "payment-processor-v2-updated-collection-payment-settings",
   addresses: { [PaymentProcessorV2.Addresses.Exchange[config.chainId]?.toLowerCase()]: true },
-  topic: "0x6d5dde4446d5ea78fc1298a77b69b20187e9b8057bf46d48fce390fe05a989ed",
+  topic: "0xe6a4f8022c953d2d77979a9c33363936fafc1dcadec52ae9af45b6d3f17973d3",
   numTopics: 2,
   abi: new Interface([
     `event UpdatedCollectionPaymentSettings(
@@ -185,7 +185,8 @@ export const updatedCollectionPaymentSettings: EventData = {
       address royaltyBackfillReceiver,
       uint16 royaltyBountyNumerator,
       address exclusiveBountyReceiver,
-      bool blockTradesFromUntrustedChannels
+      bool blockTradesFromUntrustedChannels,
+      bool blockBannedAccounts
     )`,
   ]),
 };
@@ -230,6 +231,34 @@ export const trustedChannelAddedForCollection: EventData = {
     `event TrustedChannelAddedForCollection(
       address indexed tokenAddress, 
       address indexed channel
+    )`,
+  ]),
+};
+
+export const bannedAccountAddedForCollection: EventData = {
+  kind: "payment-processor-v2",
+  subKind: "payment-processor-v2-banned-account-added-for-collection",
+  addresses: { [PaymentProcessorV2.Addresses.Exchange[config.chainId]?.toLowerCase()]: true },
+  topic: "0x5ad5afe7f91207e8a3eba0274c5fb0599a0cc2b72709ec47fa5e157ae8375ba5",
+  numTopics: 3,
+  abi: new Interface([
+    `event BannedAccountAddedForCollection(
+      address indexed tokenAddress, 
+      address indexed account
+    )`,
+  ]),
+};
+
+export const bannedAccountRemovedForCollection: EventData = {
+  kind: "payment-processor-v2",
+  subKind: "payment-processor-v2-banned-account-removed-for-collection",
+  addresses: { [PaymentProcessorV2.Addresses.Exchange[config.chainId]?.toLowerCase()]: true },
+  topic: "0x5ad5afe7f91207e8a3eba0274c5fb0599a0cc2b72709ec47fa5e157ae8375ba5",
+  numTopics: 3,
+  abi: new Interface([
+    `event BannedAccountRemovedForCollection(
+      address indexed tokenAddress, 
+      address indexed account
     )`,
   ]),
 };

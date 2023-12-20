@@ -127,6 +127,19 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         }
       }
 
+      if (settings?.blockBannedAccounts) {
+        const isBanned = await paymentProcessorV2.checkAccountIsBanned(
+          order.params.tokenAddress,
+          order.params.sellerOrBuyer
+        );
+        if (isBanned) {
+          return results.push({
+            id,
+            status: "maker-was-banned-by-collection",
+          });
+        }
+      }
+
       // Check: operator filtering
       const isFiltered = await checkMarketplaceIsFiltered(order.params.tokenAddress, [
         Sdk.PaymentProcessorV2.Addresses.Exchange[config.chainId],
