@@ -31,6 +31,11 @@ export type CollectionPaymentSettings = {
   whitelistedPaymentMethods: string[];
 };
 
+export type TrustedChannel = {
+  channel: string;
+  signer: string;
+};
+
 export type PricingBounds = {
   floorPrice: string;
   ceilingPrice: string;
@@ -82,6 +87,7 @@ export const getCollectionPaymentSettings = async (
               bool blockBannedAccounts
             )
           )`,
+          `functions getTrustedChannels(address token) view returns (address[])`,
         ]),
         baseProvider
       );
@@ -126,57 +132,58 @@ export const getCollectionPaymentSettings = async (
   return result;
 };
 
-export const addTrustedChannel = async (tokenAddress: string, channel: string, signer: string) =>
-  idb.none(
-    `
-      INSERT INTO payment_processor_v2_trusted_channels (
-        contract,
-        channel,
-        signer
-      ) VALUES (
-        $/tokenAddress/,
-        $/channel/,
-        $/signer/
-      ) ON CONFLICT DO NOTHING
-    `,
-    {
-      tokenAddress: toBuffer(tokenAddress),
-      channel: toBuffer(channel),
-      signer: toBuffer(signer),
-    }
-  );
+export const getTrustedChannels = async (contract: string, refresh?: boolean) => {
+  const cacheKey = `payment-processor-v2-payment-settings-by-contract:trusted-channel:${contract}`;
+  let result = await redis
+    .get(cacheKey)
+    .then((r) => (r ? (JSON.parse(r) as TrustedChannel[]) : undefined));
 
-export const removeTrustedChannel = async (tokenAddress: string, channel: string) =>
-  idb.none(
-    `
-      DELETE FROM payment_processor_v2_trusted_channels
-      WHERE payment_processor_v2_trusted_channels.contract = $/tokenAddress/
-        AND payment_processor_v2_trusted_channels.channel = $/channel/
-    `,
-    {
-      tokenAddress: toBuffer(tokenAddress),
-      channel: toBuffer(channel),
-    }
-  );
+  if (!result || refresh) {
+    try {
+      const exchange = new Contract(
+        Sdk.PaymentProcessorV2.Addresses.Exchange[config.chainId],
+        new Interface([`functions getTrustedChannels(address token) view returns (address[])`]),
+        baseProvider
+      );
 
-export const getAllTrustedChannels = async (tokenAddress: string) => {
-  const results = await ridb.manyOrNone(
-    `
-      SELECT
-        payment_processor_v2_trusted_channels.channel,
-        payment_processor_v2_trusted_channels.signer
-      FROM payment_processor_v2_trusted_channels
-      WHERE payment_processor_v2_trusted_channels.contract = $/tokenAddress/
-    `,
-    {
-      tokenAddress: toBuffer(tokenAddress),
-    }
-  );
+      const trustedChannels = await exchange.getTrustedChannels(contract);
+      const trustedChannelWithSigners: {
+        channel: string;
+        signer: string;
+      }[] = [];
 
-  return results.map((c) => ({
-    channel: fromBuffer(c.channel),
-    signer: fromBuffer(c.signer),
-  }));
+      await Promise.all(
+        trustedChannels
+          .map((c: Result) => c.toLowerCase())
+          .map(async (channel: string) => {
+            try {
+              const channelContract = new Contract(
+                channel,
+                new Interface(["function signer(address token) view returns (address)"]),
+                baseProvider
+              );
+              const signer = await channelContract.callStatic.signer();
+              trustedChannelWithSigners.push({
+                channel,
+                signer,
+              });
+            } catch {
+              // Skip errors
+            }
+          })
+      );
+
+      result = trustedChannelWithSigners;
+
+      if (result) {
+        await redis.set(cacheKey, JSON.stringify(result), "EX", 24 * 3600);
+      }
+    } catch {
+      // Skip errors
+    }
+  }
+
+  return result ?? [];
 };
 
 export const saveBackfilledRoyalties = async (tokenAddress: string, royalties: Royalty[]) =>

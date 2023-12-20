@@ -116,7 +116,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
       // Check: trusted channels
       if (settings?.blockTradesFromUntrustedChannels) {
-        const trustedChannels = await paymentProcessorV2.getAllTrustedChannels(
+        const trustedChannels = await paymentProcessorV2.getTrustedChannels(
           order.params.tokenAddress
         );
         if (trustedChannels.every((c) => c.signer !== AddressZero)) {

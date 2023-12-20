@@ -1,11 +1,9 @@
-import { Interface, Result, defaultAbiCoder } from "@ethersproject/abi";
+import { Result, defaultAbiCoder } from "@ethersproject/abi";
 import { Log } from "@ethersproject/abstract-provider";
 import { HashZero } from "@ethersproject/constants";
-import { Contract } from "@ethersproject/contracts";
 import { searchForCall } from "@georgeroman/evm-tx-simulator";
 import * as Sdk from "@reservoir0x/sdk";
 
-import { baseProvider } from "@/common/provider";
 import { config } from "@/config/index";
 import { getEventData } from "@/events-sync/data";
 import { EnhancedEvent, OnChainData } from "@/events-sync/handlers/utils";
@@ -545,25 +543,9 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
       case "payment-processor-v2-trusted-channel-added-for-collection": {
         const parsedLog = eventData.abi.parseLog(log);
         const tokenAddress = parsedLog.args["tokenAddress"].toLowerCase();
-        const channel = parsedLog.args["channel"].toLowerCase();
 
-        const removed = subKind.includes("removed");
-        if (removed) {
-          await paymentProcessorV2Utils.removeTrustedChannel(tokenAddress, channel);
-        } else {
-          try {
-            const channelContract = new Contract(
-              channel,
-              new Interface(["function signer(address token) view returns (address)"]),
-              baseProvider
-            );
-            const signer = await channelContract.callStatic.signer();
-
-            await paymentProcessorV2Utils.addTrustedChannel(tokenAddress, channel, signer);
-          } catch {
-            // Skip errors
-          }
-        }
+        // Refresh
+        await paymentProcessorV2Utils.getTrustedChannels(tokenAddress, true);
 
         break;
       }

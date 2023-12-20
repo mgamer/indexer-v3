@@ -475,7 +475,7 @@ export const generateListingDetailsV6 = async (
         sdkOrder.params.tokenAddress
       );
       if (settings?.blockTradesFromUntrustedChannels) {
-        const trustedChannels = await paymentProcessorV2Utils.getAllTrustedChannels(
+        const trustedChannels = await paymentProcessorV2Utils.getTrustedChannels(
           sdkOrder.params.tokenAddress
         );
         if (trustedChannels.length) {
@@ -875,7 +875,7 @@ export const generateBidDetailsV6 = async (
         sdkOrder.params.tokenAddress
       );
       if (settings?.blockTradesFromUntrustedChannels) {
-        const trustedChannels = await paymentProcessorV2Utils.getAllTrustedChannels(
+        const trustedChannels = await paymentProcessorV2Utils.getTrustedChannels(
           sdkOrder.params.tokenAddress
         );
         if (trustedChannels.length) {
