@@ -251,7 +251,7 @@ ${whereClause} LIMIT 50000;
 
   const result = await redb.manyOrNone<Mint>(baseQuery);
 
-  await redis.set(cacheKey, JSON.stringify(result), "XX", REDIS_EXPIRATION_MINTS);
+  await redis.set(cacheKey, JSON.stringify(result), "PX", REDIS_EXPIRATION_MINTS);
 
   return result;
 }
