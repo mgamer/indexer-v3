@@ -124,7 +124,7 @@ export const postExecuteDepositV1Options: RouteOptions = {
           to: ccConfig.solver!.address,
           data: "0xee",
           value: amount,
-          gasLimit: 22000,
+          gasLimit: 21016,
           chainId: config.chainId,
         },
         check: {
@@ -137,15 +137,15 @@ export const postExecuteDepositV1Options: RouteOptions = {
       });
 
       // // Trigger to force the solver to start listening to incoming transactions
-      // await axios.post(`${config.crossChainSolverBaseUrl}/intents/trigger`, {
-      //   request: data.request,
-      // });
+      await axios.post(`${config.crossChainSolverBaseUrl}/intents/trigger`, {
+        chainId: config.chainId,
+      });
 
       return {
         steps,
         fees: {
           gas: await getJoiPriceObject(
-            { gross: { amount: "22000" } },
+            { gross: { amount: "21016" } },
             Sdk.Common.Addresses.Native[config.chainId]
           ),
         },
