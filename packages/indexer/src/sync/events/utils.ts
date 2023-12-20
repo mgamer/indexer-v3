@@ -24,6 +24,7 @@ import { TransactionTrace } from "@/models/transaction-traces";
 import { CallTrace } from "@georgeroman/evm-tx-simulator/dist/types";
 import { collectionNewContractDeployedJob } from "@/jobs/collections/collection-contract-deployed";
 import { config } from "@/config/index";
+import * as Sdk from "@reservoir0x/sdk";
 
 const chainsWithoutCallTracer = [324];
 
@@ -186,6 +187,20 @@ export const extractAttributionData = async (
   }
   if (router) {
     taker = tx.from;
+    // The taker will be wrong if it's a relay transaction, in this case
+    // we have to parse the execution to check if it's a relay trancation
+    // and use the `fillTo` as the taker.
+    const sdkRouter = new Sdk.RouterV6.Router(config.chainId, baseProvider);
+    const parsedExections = sdkRouter.parseExecutions(tx.data);
+    if (parsedExections.length) {
+      // Since the realyer option is used in the top level, only need to check the
+      // first execution
+      const { exectionParams } = parsedExections[0];
+      const relayerUsed = exectionParams.fillTo != exectionParams.refundTo;
+      if (relayerUsed) {
+        taker = exectionParams.fillTo;
+      }
+    }
   }
 
   let source = getSourceV1(tx.data);
