@@ -7,6 +7,7 @@ import { getNetworkName } from "@/config/network";
 import { getUSDAndNativePrices } from "@/utils/prices";
 
 import { BuildDocumentData, BaseDocument } from "@/elasticsearch/indexes/base";
+import { logger } from "@/common/logger";
 
 export interface CollectionDocument extends BaseDocument {
   id: string;
@@ -54,14 +55,31 @@ export interface BuildCollectionDocumentData extends BuildDocumentData {
 
 export class CollectionDocumentBuilder {
   public async buildDocument(data: BuildCollectionDocumentData): Promise<CollectionDocument> {
-    const prices = await getUSDAndNativePrices(
-      Sdk.Common.Addresses.Native[config.chainId],
-      data.all_time_volume,
-      now(),
-      {
-        onlyUSD: true,
-      }
-    );
+    let allTimeVolumeUsd = 0;
+
+    try {
+      const prices = await getUSDAndNativePrices(
+        Sdk.Common.Addresses.Native[config.chainId],
+        data.all_time_volume,
+        now(),
+        {
+          onlyUSD: true,
+        }
+      );
+
+      allTimeVolumeUsd = formatUsd(prices.usdPrice!);
+    } catch (error) {
+      logger.error(
+        "cdc-indexer-collections",
+        JSON.stringify({
+          topic: "debugActivitiesErrors",
+          message: `No usd value. collectionId=${data.id}, allTimeVolume=${
+            data.all_time_volume
+          }, currencyAddress=${Sdk.Common.Addresses.Native[config.chainId]}`,
+          error,
+        })
+      );
+    }
 
     const document = {
       chain: {
@@ -82,7 +100,7 @@ export class CollectionDocumentBuilder {
       imageVersion: data.image_version,
       allTimeVolume: data.all_time_volume,
       allTimeVolumeDecimal: formatEth(data.all_time_volume),
-      allTimeVolumeUsd: formatUsd(prices.usdPrice!),
+      allTimeVolumeUsd: allTimeVolumeUsd,
       floorSell: data.floor_sell_id
         ? {
             id: data.floor_sell_id,
