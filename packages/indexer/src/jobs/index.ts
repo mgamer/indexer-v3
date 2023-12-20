@@ -92,7 +92,6 @@ import { eventsSyncFtTransfersWriteBufferJob } from "@/jobs/events-sync/write-bu
 import { eventsSyncNftTransfersWriteBufferJob } from "@/jobs/events-sync/write-buffers/nft-transfers-job";
 import { eventsSyncProcessBackfillJob } from "@/jobs/events-sync/process/events-sync-process-backfill";
 import { openseaBidsQueueJob } from "@/jobs/orderbook/opensea-bids-queue-job";
-import { processResyncRequestJob } from "@/jobs/events-sync/process-resync-request-queue-job";
 import { eventsSyncBackfillJob } from "@/jobs/events-sync/events-sync-backfill-job";
 import { blockCheckJob } from "@/jobs/events-sync/block-check-queue-job";
 import { collectionNormalizedJob } from "@/jobs/collection-updates/collection-normalized-floor-queue-job";
@@ -164,6 +163,7 @@ import { refreshAsksCollectionJob } from "@/jobs/elasticsearch/asks/refresh-asks
 import { refreshActivitiesTokenJob } from "@/jobs/elasticsearch/activities/refresh-activities-token-job";
 import { processCollectionEventJob } from "@/jobs/elasticsearch/collections/process-collection-event-job";
 import { processCollectionEventsJob } from "@/jobs/elasticsearch/collections/process-collection-events-job";
+import { backfillCollectionsElasticsearchJob } from "@/jobs/elasticsearch/collections/backfill-collections-elasticsearch-job";
 import { onchainMetadataFetchTokenUriJob } from "@/jobs/metadata-index/onchain-metadata-fetch-token-uri-job";
 import { onchainMetadataProcessTokenUriJob } from "@/jobs/metadata-index/onchain-metadata-process-token-uri-job";
 import { updateUserCollectionsJob } from "@/jobs/nft-balance-updates/update-user-collections-job";
@@ -253,7 +253,6 @@ export class RabbitMqJobsConsumer {
       eventsSyncNftTransfersWriteBufferJob,
       eventsSyncProcessBackfillJob,
       openseaBidsQueueJob,
-      processResyncRequestJob,
       eventsSyncBackfillJob,
       blockCheckJob,
       collectionNormalizedJob,
@@ -328,6 +327,7 @@ export class RabbitMqJobsConsumer {
       refreshActivitiesTokenJob,
       processCollectionEventJob,
       processCollectionEventsJob,
+      backfillCollectionsElasticsearchJob,
       updateUserCollectionsJob,
       resyncUserCollectionsJob,
       backfillUserCollectionsJob,
