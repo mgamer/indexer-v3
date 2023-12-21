@@ -13,6 +13,7 @@ import {
 } from "../extend";
 import { limitFieldSize } from "./utils";
 import fetch from "node-fetch";
+import { logger } from "ethers";
 
 export abstract class AbstractBaseMetadataProvider {
   abstract method: string;
@@ -89,9 +90,17 @@ export abstract class AbstractBaseMetadataProvider {
       extendedMetadata.map(async (metadata) => {
         if (metadata.imageUrl) {
           metadata.imageMimeType = await this._getImageMimeType(metadata.imageUrl);
+          logger.info(
+            this.method,
+            `Image MimeType. contract=${metadata.contract}, tokenId=${metadata.tokenId}, imageMimeType=${metadata.imageMimeType}`
+          );
         }
         if (metadata.mediaUrl) {
           metadata.mediaMimeType = await this._getImageMimeType(metadata.mediaUrl);
+          logger.info(
+            this.method,
+            `Media MimeType. contract=${metadata.contract}, tokenId=${metadata.tokenId}, mediaMimeType=${metadata.mediaMimeType}`
+          );
         }
       })
     );
