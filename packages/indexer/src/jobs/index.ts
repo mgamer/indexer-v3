@@ -180,6 +180,7 @@ import { backfillActiveUserCollectionsJob } from "@/jobs/backfill/backfill-activ
 import { backfillAttributesFloorAskJob } from "@/jobs/backfill/backfill-attributes-floor-ask";
 import { syncApiKeysJob } from "@/jobs/api-keys/sync-api-keys-job";
 import { collectionCheckSpamJob } from "@/jobs/collections-refresh/collections-check-spam-job";
+import { backfillCollectionsSpamJob } from "@/jobs/backfill/backfill-collections-spam";
 
 export const allJobQueues = [
   backfillWrongNftBalances.queue,
@@ -344,6 +345,7 @@ export class RabbitMqJobsConsumer {
       backfillAttributesFloorAskJob,
       syncApiKeysJob,
       collectionCheckSpamJob,
+      backfillCollectionsSpamJob,
     ];
   }
 

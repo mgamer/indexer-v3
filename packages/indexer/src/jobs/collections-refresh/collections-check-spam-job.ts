@@ -48,8 +48,12 @@ export default class CollectionCheckSpamJob extends AbstractRabbitMqJobHandler {
         return;
       }
 
-      // If collection already marked as spam or marked as verified
-      if (collection.metadata?.safelistRequestStatus === "verified" || collection.isSpam > 0) {
+      // If collection marked as verified or not spam by a user or already mark as spam
+      if (
+        collection.metadata?.safelistRequestStatus === "verified" ||
+        collection.isSpam < -1 ||
+        collection.isSpam > 0
+      ) {
         return;
       }
 
