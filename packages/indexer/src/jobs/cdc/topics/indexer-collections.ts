@@ -117,6 +117,8 @@ export class IndexerCollectionsHandler extends KafkaEventHandler {
         await redis.set(collectionKey, JSON.stringify(updatedPayload), "XX");
       }
 
+      const isSpam = Number(payload.after.is_spam) > 0;
+
       // If name changed
       const nameChanged = payload.before.name !== payload.after.name;
 
@@ -130,8 +132,8 @@ export class IndexerCollectionsHandler extends KafkaEventHandler {
           payload.after?.metadata?.safelistRequestStatus &&
         payload.after?.metadata?.safelistRequestStatus === "verified";
 
-      // If the name/url changed check for spam
-      if (nameChanged || urlChanged || verificationChanged) {
+      // If the name/url/verification changed check for spam
+      if (((nameChanged || urlChanged) && !isSpam) || (verificationChanged && isSpam)) {
         await collectionCheckSpamJob.addToQueue({ collectionId: payload.after.id });
       }
 

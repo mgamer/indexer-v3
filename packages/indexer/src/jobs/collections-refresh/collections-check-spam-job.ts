@@ -22,7 +22,7 @@ export default class CollectionCheckSpamJob extends AbstractRabbitMqJobHandler {
 
   protected async process(payload: CollectionCheckSpamJobPayload) {
     const { collectionId } = payload;
-    const collection = await Collections.getById(collectionId);
+    const collection = await Collections.getById(collectionId, true);
 
     if (collection) {
       // if the collection is verified and marked as spam -> unspam the collection
