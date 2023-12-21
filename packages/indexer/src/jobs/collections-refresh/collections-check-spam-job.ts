@@ -7,6 +7,8 @@ import {
   ActionsLogOrigin,
 } from "@/jobs/general-tracking/actions-log-job";
 import { CollectionsEntity } from "@/models/collections/collections-entity";
+import { config } from "@/config/index";
+import _ from "lodash";
 
 export type CollectionCheckSpamJobPayload = {
   collectionId: string;
@@ -49,10 +51,41 @@ export default class CollectionCheckSpamJob extends AbstractRabbitMqJobHandler {
       }
 
       // Check by name and if not spam check by url
-      if (!(await this.checkName(collection))) {
-        await this.checkUrl(collection);
+      await this.checkNameFromList(collection);
+
+      // if (!(await this.checkName(collection))) {
+      //   await this.checkUrl(collection);
+      // }
+    }
+  }
+  public async checkNameFromList(collection: CollectionsEntity) {
+    const newSpamState = 1;
+
+    for (const spamName of config.spamNames) {
+      if (_.includes(_.toLower(collection.name), spamName)) {
+        // The name includes a spam word Collection is spam update track and return
+        await this.updateSpamStatus(collection.id, newSpamState);
+
+        // Track the change
+        await actionsLogJob.addToQueue([
+          {
+            context: ActionsLogContext.SpamCollectionUpdate,
+            origin: ActionsLogOrigin.NameSpamCheck,
+            actionTakerIdentifier: this.queueName,
+            collection: collection.id,
+            data: {
+              newSpamState,
+              criteria: spamName,
+              collectionName: collection.name,
+            },
+          },
+        ]);
+
+        return true;
       }
     }
+
+    return false;
   }
 
   public async checkName(collection: CollectionsEntity) {
@@ -93,49 +126,49 @@ export default class CollectionCheckSpamJob extends AbstractRabbitMqJobHandler {
     return false;
   }
 
-  public async checkUrl(collection: CollectionsEntity) {
-    const newSpamState = 1;
-
-    // Check for spam by domain
-    if (collection.metadata.externalUrl) {
-      const domainQuery = `
-          SELECT *
-          FROM spam_domain_criteria
-          WHERE domain = $/domain/
-          LIMIT 1
-        `;
-
-      const url = new URL(collection.metadata.externalUrl);
-      const domainQueryResult = await idb.oneOrNone(domainQuery, {
-        domain: url.hostname,
-      });
-
-      if (domainQueryResult) {
-        // Collection is spam update track and return
-        await this.updateSpamStatus(collection.id, newSpamState);
-
-        // Track the change
-        await actionsLogJob.addToQueue([
-          {
-            context: ActionsLogContext.SpamCollectionUpdate,
-            origin: ActionsLogOrigin.UrlSpamCheck,
-            actionTakerIdentifier: this.queueName,
-            collection: collection.id,
-            data: {
-              newSpamState,
-              criteria: domainQueryResult.domain,
-              externalUrl: collection.metadata.externalUrl,
-              domain: url.hostname,
-            },
-          },
-        ]);
-
-        return true;
-      }
-
-      return false;
-    }
-  }
+  // public async checkUrl(collection: CollectionsEntity) {
+  //   const newSpamState = 1;
+  //
+  //   // Check for spam by domain
+  //   if (collection.metadata.externalUrl) {
+  //     const domainQuery = `
+  //         SELECT *
+  //         FROM spam_domain_criteria
+  //         WHERE domain = $/domain/
+  //         LIMIT 1
+  //       `;
+  //
+  //     const url = new URL(collection.metadata.externalUrl);
+  //     const domainQueryResult = await idb.oneOrNone(domainQuery, {
+  //       domain: url.hostname,
+  //     });
+  //
+  //     if (domainQueryResult) {
+  //       // Collection is spam update track and return
+  //       await this.updateSpamStatus(collection.id, newSpamState);
+  //
+  //       // Track the change
+  //       await actionsLogJob.addToQueue([
+  //         {
+  //           context: ActionsLogContext.SpamCollectionUpdate,
+  //           origin: ActionsLogOrigin.UrlSpamCheck,
+  //           actionTakerIdentifier: this.queueName,
+  //           collection: collection.id,
+  //           data: {
+  //             newSpamState,
+  //             criteria: domainQueryResult.domain,
+  //             externalUrl: collection.metadata.externalUrl,
+  //             domain: url.hostname,
+  //           },
+  //         },
+  //       ]);
+  //
+  //       return true;
+  //     }
+  //
+  //     return false;
+  //   }
+  // }
 
   public async updateSpamStatus(collectionId: string, newSpamStatus: number) {
     return idb.none(
