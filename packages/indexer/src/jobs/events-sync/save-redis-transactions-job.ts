@@ -25,8 +25,7 @@ export class SaveRedisTransactionsJob extends AbstractRabbitMqJobHandler {
 
     if (!block) {
       logger.info(this.queueName, `Block ${payload.block} not found in redis`);
-
-      return { addToQueue: true, delay: 1000 };
+      return;
     }
 
     // save block data
