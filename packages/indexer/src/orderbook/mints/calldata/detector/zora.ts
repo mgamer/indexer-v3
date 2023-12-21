@@ -393,9 +393,7 @@ export const extractByCollectionERC1155 = async (
                         ],
                       },
               },
-              info: {
-                minter,
-              },
+              info: minter ? { minter } : undefined,
             },
             tokenId,
             currency: Sdk.Common.Addresses.Native[config.chainId],
@@ -574,12 +572,12 @@ export const extractByTx = async (
   ) {
     const iface = new Interface([
       "function mint(address minter, uint256 tokenId, uint256 quantity, bytes data)",
-      "function mintWithRewards(address minter,uint256 tokenId,uint256 quantity,bytes minterArguments,address mintReferral)",
+      "function mintWithRewards(address minter, uint256 tokenId, uint256 quantity, bytes minterArguments, address mintReferral)",
       "function premint((address, string, string) contractConfig, ((string, uint256, uint64, uint96, uint64, uint64, uint32, uint32, address, address), uint32 tokenId, uint32, bool) premintConfig, bytes signature, uint256 quantityToMint, string mintComment)",
     ]);
 
     let tokenId: string;
-    let minter: string;
+    let minter: string | undefined;
     switch (tx.data.slice(0, 10)) {
       case "0x731133e9":
         tokenId = iface.decodeFunctionData("mint", tx.data).tokenId.toString();
@@ -597,7 +595,7 @@ export const extractByTx = async (
         break;
     }
 
-    return extractByCollectionERC1155(collection, tokenId!, minter!);
+    return extractByCollectionERC1155(collection, tokenId!, minter);
   }
 
   return [];
@@ -654,7 +652,7 @@ export const refreshByCollection = async (collection: string) => {
   } else {
     await Promise.all(
       existingCollectionMints.map(async ({ tokenId, details }) =>
-        refresh(tokenId, (details.info as Info).minter)
+        refresh(tokenId, (details.info as Info | undefined)?.minter)
       )
     );
   }

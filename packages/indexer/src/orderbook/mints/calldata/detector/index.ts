@@ -1,5 +1,3 @@
-import { AddressZero } from "@ethersproject/constants";
-
 import { idb } from "@/common/db";
 import { redis } from "@/common/redis";
 import { bn, fromBuffer, toBuffer } from "@/common/utils";
@@ -127,17 +125,13 @@ export const extractByTx = async (txHash: string, skipCache = false) => {
     await redis.set(mintDetailsLockKey, "locked", "EX", 5 * 60);
   }
 
-  // Make sure every mint in the transaction goes to the transaction sender
-  const tx = await fetchTransaction(txHash);
-  if (!transfers.every((t) => t.from === AddressZero && t.to === tx.from)) {
-    return [];
-  }
-
   // Make sure something was actually minted
   const amountMinted = transfers.map((t) => bn(t.amount)).reduce((a, b) => bn(a).add(b));
   if (amountMinted.eq(0)) {
     return [];
   }
+
+  const tx = await fetchTransaction(txHash);
 
   // Make sure the total price is evenly divisible by the amount
   const pricePerAmountMinted = bn(tx.value).div(amountMinted);
