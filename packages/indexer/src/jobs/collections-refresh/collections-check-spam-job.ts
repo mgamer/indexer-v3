@@ -30,12 +30,7 @@ export default class CollectionCheckSpamJob extends AbstractRabbitMqJobHandler {
       if (collection.metadata?.safelistRequestStatus === "verified" && collection.isSpam > 0) {
         await this.updateSpamStatus(collection.id, -1);
 
-        logger.info(
-          this.queueName,
-          `collection ${collection.id} newSpamState -1 ${JSON.stringify({
-            collectionName: collection.name,
-          })}`
-        );
+        logger.info(this.queueName, `collection ${collection.id} is spam but marked as verified`);
 
         // Track the change
         await actionsLogJob.addToQueue([
