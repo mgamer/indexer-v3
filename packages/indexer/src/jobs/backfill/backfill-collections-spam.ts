@@ -5,6 +5,7 @@ import { RabbitMQMessage } from "@/common/rabbit-mq";
 import _ from "lodash";
 import { config } from "@/config/index";
 import { collectionCheckSpamJob } from "@/jobs/collections-refresh/collections-check-spam-job";
+import { redlock } from "@/common/redis";
 
 export type BackfillCollectionsSpamJobCursorInfo = {
   collectionId: string;
@@ -28,7 +29,7 @@ export class BackfillCollectionsSpamJob extends AbstractRabbitMqJobHandler {
     };
 
     if (_.isEmpty(config.spamNames)) {
-      return;
+      return { addToQueue: false };
     }
 
     let cursor = "";
@@ -92,13 +93,13 @@ export class BackfillCollectionsSpamJob extends AbstractRabbitMqJobHandler {
 
 export const backfillCollectionsSpamJob = new BackfillCollectionsSpamJob();
 
-// if (config.chainId !== 1) {
-//   redlock
-//     .acquire(["backfill-user-collections-lock-4"], 60 * 60 * 24 * 30 * 1000)
-//     .then(async () => {
-//       await backfillUserCollectionsJob.addToQueue().
-//     })
-//     .catch(() => {
-//       // Skip on any errors
-//     });
-// }
+if (config.chainId !== 324) {
+  redlock
+    .acquire([`${backfillCollectionsSpamJob.getQueue()}-lock`], 60 * 60 * 24 * 30 * 1000)
+    .then(async () => {
+      await backfillCollectionsSpamJob.addToQueue();
+    })
+    .catch(() => {
+      // Skip on any errors
+    });
+}
