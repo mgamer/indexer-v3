@@ -116,7 +116,7 @@ export class IndexerCollectionsHandler extends KafkaEventHandler {
           floor_sell_currency_value: result.floor_sell_currency_value,
         };
 
-        await redis.set(collectionKey, JSON.stringify(updatedPayload), "KEEPTTL");
+        await redis.set(collectionKey, JSON.stringify(updatedPayload), "XX", "KEEPTTL");
       }
 
       const spamStatusChanged = payload.before.is_spam !== payload.after.is_spam;
