@@ -9,6 +9,7 @@ import {
 import { CollectionsEntity } from "@/models/collections/collections-entity";
 import { config } from "@/config/index";
 import _ from "lodash";
+import { logger } from "@/common/logger";
 
 export type CollectionCheckSpamJobPayload = {
   collectionId: string;
@@ -28,6 +29,13 @@ export default class CollectionCheckSpamJob extends AbstractRabbitMqJobHandler {
       // if the collection is verified and marked as spam -> unspam the collection
       if (collection.metadata?.safelistRequestStatus === "verified" && collection.isSpam > 0) {
         await this.updateSpamStatus(collection.id, -1);
+
+        logger.info(
+          this.queueName,
+          `collection ${collection.id} newSpamState -1 ${JSON.stringify({
+            collectionName: collection.name,
+          })}`
+        );
 
         // Track the change
         await actionsLogJob.addToQueue([
@@ -65,6 +73,15 @@ export default class CollectionCheckSpamJob extends AbstractRabbitMqJobHandler {
       if (_.includes(_.toLower(collection.name), spamName)) {
         // The name includes a spam word Collection is spam update track and return
         await this.updateSpamStatus(collection.id, newSpamState);
+
+        logger.info(
+          this.queueName,
+          `collection ${collection.id} newSpamState ${newSpamState} ${JSON.stringify({
+            newSpamState,
+            criteria: spamName,
+            collectionName: collection.name,
+          })}`
+        );
 
         // Track the change
         await actionsLogJob.addToQueue([
