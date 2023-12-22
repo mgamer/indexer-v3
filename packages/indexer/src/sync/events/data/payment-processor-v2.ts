@@ -239,7 +239,7 @@ export const bannedAccountAddedForCollection: EventData = {
   kind: "payment-processor-v2",
   subKind: "payment-processor-v2-banned-account-added-for-collection",
   addresses: { [PaymentProcessorV2.Addresses.Exchange[config.chainId]?.toLowerCase()]: true },
-  topic: "0x5ad5afe7f91207e8a3eba0274c5fb0599a0cc2b72709ec47fa5e157ae8375ba5",
+  topic: "0xf46e1c40f2a6333765b4c7487d9c4bf60e83908611b41b15903e6a506e4ee63b",
   numTopics: 3,
   abi: new Interface([
     `event BannedAccountAddedForCollection(
@@ -253,7 +253,7 @@ export const bannedAccountRemovedForCollection: EventData = {
   kind: "payment-processor-v2",
   subKind: "payment-processor-v2-banned-account-removed-for-collection",
   addresses: { [PaymentProcessorV2.Addresses.Exchange[config.chainId]?.toLowerCase()]: true },
-  topic: "0x5ad5afe7f91207e8a3eba0274c5fb0599a0cc2b72709ec47fa5e157ae8375ba5",
+  topic: "0xc9f167828587c3dee35aac91efcb05ed56a669e13fded989727888b812c24389",
   numTopics: 3,
   abi: new Interface([
     `event BannedAccountRemovedForCollection(
