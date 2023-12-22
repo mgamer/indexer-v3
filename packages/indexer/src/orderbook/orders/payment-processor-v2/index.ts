@@ -67,9 +67,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
       // Check: various collection restrictions
 
-      const settings = await paymentProcessorV2.getCollectionPaymentSettings(
-        order.params.tokenAddress
-      );
+      const settings = await paymentProcessorV2.getConfigByContract(order.params.tokenAddress);
       if (
         settings &&
         [

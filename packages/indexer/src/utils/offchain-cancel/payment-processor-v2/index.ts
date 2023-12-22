@@ -64,10 +64,8 @@ export const doSignOrder = async (order: Sdk.PaymentProcessorV2.Order, taker: st
     await order.cosign(cosigner(), taker);
   }
 
-  // Check taker
   const isBanned = await paymentProcessorV2.checkAccountIsBanned(order.params.tokenAddress, taker);
-
   if (isBanned) {
-    throw new Error("Maker was banned");
+    throw new Error("Taker is banned");
   }
 };

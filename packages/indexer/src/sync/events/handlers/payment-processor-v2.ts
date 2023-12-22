@@ -524,7 +524,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         const tokenAddress = parsedLog.args["tokenAddress"].toLowerCase();
 
         // Refresh
-        await paymentProcessorV2Utils.getCollectionPaymentSettings(tokenAddress, true);
+        await paymentProcessorV2Utils.getConfigByContract(tokenAddress, true);
 
         // Update backfilled royalties
         const royaltyBackfillReceiver = parsedLog.args["royaltyBackfillReceiver"].toLowerCase();
@@ -554,14 +554,9 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
       case "payment-processor-v2-banned-account-removed-for-collection": {
         const parsedLog = eventData.abi.parseLog(log);
         const tokenAddress = parsedLog.args["tokenAddress"].toLowerCase();
-        const account = parsedLog.args["account"].toLowerCase();
 
-        const removed = subKind.includes("removed");
-        if (removed) {
-          await paymentProcessorV2Utils.removeBannedAccount(tokenAddress, account);
-        } else {
-          await paymentProcessorV2Utils.addBannedAccount(tokenAddress, account);
-        }
+        // Refresh
+        await paymentProcessorV2Utils.getBannedAccounts(tokenAddress, true);
 
         break;
       }
@@ -570,21 +565,9 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
       case "payment-processor-v2-payment-method-removed-from-whitelist": {
         const parsedLog = eventData.abi.parseLog(log);
         const paymentMethodWhitelistId = parsedLog.args["paymentMethodWhitelistId"];
-        const paymentMethod = parsedLog.args["paymentMethod"].toLowerCase();
 
-        const removed = subKind.includes("removed");
-
-        if (removed) {
-          await paymentProcessorV2Utils.removePaymentMethodFromWhitelist(
-            paymentMethodWhitelistId,
-            paymentMethod
-          );
-        } else {
-          await paymentProcessorV2Utils.addPaymentMethodToWhitelist(
-            paymentMethodWhitelistId,
-            paymentMethod
-          );
-        }
+        // Refresh
+        await paymentProcessorV2Utils.getPaymentMethods(paymentMethodWhitelistId, true);
 
         break;
       }

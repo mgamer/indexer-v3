@@ -471,7 +471,7 @@ export const generateListingDetailsV6 = async (
       await offchainCancel.paymentProcessorV2.doSignOrder(sdkOrder, taker);
 
       const extraArgs: any = {};
-      const settings = await paymentProcessorV2Utils.getCollectionPaymentSettings(
+      const settings = await paymentProcessorV2Utils.getConfigByContract(
         sdkOrder.params.tokenAddress
       );
       if (settings?.blockTradesFromUntrustedChannels) {
@@ -871,7 +871,7 @@ export const generateBidDetailsV6 = async (
         extraArgs.tokenIds = tokens.map(({ token_id }) => token_id);
       }
 
-      const settings = await paymentProcessorV2Utils.getCollectionPaymentSettings(
+      const settings = await paymentProcessorV2Utils.getConfigByContract(
         sdkOrder.params.tokenAddress
       );
       if (settings?.blockTradesFromUntrustedChannels) {
