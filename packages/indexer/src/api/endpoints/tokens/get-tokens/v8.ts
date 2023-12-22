@@ -37,13 +37,13 @@ import { onchainMetadataProvider } from "@/metadata/providers/onchain-metadata-p
 import { hasExtendCollectionHandler } from "@/metadata/extend";
 import { getListedTokensFromES } from "@/api/endpoints/tokens/get-tokens/v6";
 
-const version = "v7";
+const version = "v8";
 
-export const getTokensV7Options: RouteOptions = {
+export const getTokensV8Options: RouteOptions = {
   description: "Tokens",
   notes:
     "Get a list of tokens with full metadata. This is useful for showing a single token page, or scenarios that require more metadata.",
-  tags: ["api", "Tokens"],
+  tags: ["api", "x-deprecated"],
   plugins: {
     "hapi-swagger": {
       order: 9,
@@ -388,7 +388,6 @@ export const getTokensV7Options: RouteOptions = {
     let esTokens: any[] = [];
 
     const enableElasticsearchAsks =
-      config.enableElasticsearchAsks &&
       query.sortBy === "floorAskPrice" &&
       !["tokenName", "tokenSetId"].some((filter) => query[filter]);
 

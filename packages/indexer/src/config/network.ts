@@ -393,7 +393,7 @@ export const getNetworkSettings = (): NetworkSettings => {
               contract: "0xaef06250d07cb6389d730d0eec7d90a1549be812",
               name: "RugLabz",
               symbol: "RLBZ",
-              decimals: 18,
+              decimals: 9,
               metadata: {
                 image: "https://i.ibb.co/XYVTLZf/Untitled.png",
               },
@@ -481,6 +481,19 @@ export const getNetworkSettings = (): NetworkSettings => {
               decimals: 0,
               metadata: {
                 image: "https://i.ibb.co/Mc5Pmjn/baptoken.png",
+              },
+            },
+          ],
+          [
+            "0x2bff8ddbc1f13f6f976a8f4d7fee677272fb6e0e",
+            {
+              contract: "0x2bff8ddbc1f13f6f976a8f4d7fee677272fb6e0e",
+              name: "$AURA",
+              symbol: "$AURA",
+              decimals: 18,
+              metadata: {
+                image:
+                  "https://ipfs.io/ipfs/QmQwUUJMBAPmr6ANAvJavC6bKCXFDZJkyd6zzgZxGJddeQ/AURA%20Coin%20Front.png",
               },
             },
           ],
@@ -693,7 +706,10 @@ export const getNetworkSettings = (): NetworkSettings => {
         headBlockDelay: 0,
         backfillBlockBatchSize: 32,
         reorgCheckFrequency: [30],
-
+        mintAddresses: [
+          ...defaultNetworkSettings.mintAddresses,
+          "0x2791bca1f2de4661ed88a30c99a7a9449aa84174",
+        ],
         trendingExcludedContracts: [
           "0x198d38c5f21eab36731d0576560440f70cbd9418", // Yieldnodes
         ],
