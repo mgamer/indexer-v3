@@ -4868,14 +4868,13 @@ export class Router {
   }
 
   public parseExecutions(calldata: string) {
-    const parsedExections: {
-      parseModule: string;
-      parseModuleName: string;
+    const executions: {
+      module: string;
+      moduleName: string;
       method: string;
       sighash: string;
-      executionModule: string;
       args: Result;
-      exectionParams: {
+      params: {
         fillTo: string;
         refundTo: string;
         revertIfIncomplete?: boolean;
@@ -4886,6 +4885,7 @@ export class Router {
 
     try {
       const isRouter = calldata.includes("0x760f2a0b");
+
       const routerContract = isRouter ? this.contracts.router : this.contracts.approvalProxy;
       const parsed = routerContract.interface.parseTransaction({
         data: calldata,
@@ -4894,23 +4894,26 @@ export class Router {
       const executionInfos = parsed.args.executionInfos;
       for (const executionInfo of executionInfos) {
         for (const contractName of Object.keys(this.contracts)) {
-          if (!contractName.includes("Module")) continue;
+          if (!contractName.includes("Module")) {
+            continue;
+          }
+
           const contract = this.contracts[contractName];
           try {
             const parsed = contract.interface.parseTransaction({
               data: executionInfo.data,
             });
-            const isParsed = parsedExections.find((c) => c.sighash);
+
+            const isParsed = executions.find((c) => c.sighash);
             if (!isParsed) {
               const executionParams = parsed.args.params;
-              parsedExections.push({
-                parseModule: contract.address,
-                parseModuleName: contractName,
+              executions.push({
+                module: contract.address,
+                moduleName: contractName,
                 method: parsed.name,
                 args: parsed.args,
                 sighash: parsed.sighash,
-                executionModule: executionInfo.module.toLowerCase(),
-                exectionParams: {
+                params: {
                   refundTo: executionParams.refundTo.toLowerCase(),
                   fillTo: executionParams.fillTo.toLowerCase(),
                   revertIfIncomplete: executionParams.revertIfIncomplete,
@@ -4920,14 +4923,14 @@ export class Router {
               });
             }
           } catch {
-            // Parse failed
+            // Parsing failed
           }
         }
       }
     } catch {
-      // Parse failed
+      // Parsing failed
     }
 
-    return parsedExections;
+    return executions;
   }
 }

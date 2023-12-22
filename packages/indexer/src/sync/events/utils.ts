@@ -190,20 +190,23 @@ export const extractAttributionData = async (
       router = routers.get(result.to.toLowerCase());
     }
   }
+
   if (router) {
     taker = tx.from;
-    // The taker will be wrong if it's a relay transaction, in this case
-    // we have to parse the execution to check if it's a relay trancation
-    // and use the `fillTo` as the taker.
+
+    // The taker will be wrong if this is a transaction where the recipient
+    // is different from `msg.sender`. In this case we parse the executions
+    // (under the assumption that this can only happen when filling via our
+    // router contract) and extract the actual taker from there.
+
     const sdkRouter = new Sdk.RouterV6.Router(config.chainId, baseProvider);
-    const parsedExections = sdkRouter.parseExecutions(tx.data);
-    if (parsedExections.length) {
-      // Since the realyer option is used in the top level, only need to check the
-      // first execution
-      const { exectionParams } = parsedExections[0];
-      const relayerUsed = exectionParams.fillTo != exectionParams.refundTo;
-      if (relayerUsed) {
-        taker = exectionParams.fillTo;
+    const executions = sdkRouter.parseExecutions(tx.data);
+    if (executions.length) {
+      // Only check the first execution
+      const { params } = executions[0];
+      const viaRelayer = params.fillTo.toLowerCase() !== params.refundTo.toLowerCase();
+      if (viaRelayer) {
+        taker = params.fillTo;
       }
     }
   }
