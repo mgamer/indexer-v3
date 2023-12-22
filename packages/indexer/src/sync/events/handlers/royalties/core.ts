@@ -207,14 +207,14 @@ export async function extractRoyalties(
   // Extract the payments from the (sub)call we just found
   const paymentsToAnalyze = getPayments(subcallToAnalyze);
 
-  // How many sales are in the current call
+  // Get the total number of sales in the current (sub)call
   const nftTransfers = paymentsToAnalyze.reduce((total, item) => {
     const isNFT = item.token.includes("erc1155") || item.token.includes("erc721");
     return total + (isNFT ? 1 : 0);
   }, 0);
 
-  // Called in the router, but only has 1 sale in the subcall
-  const inRouterWithSingleSale = routerCall && nftTransfers === 1;
+  // Sale was executed via the router, but it only has 1 sale in the (sub)call
+  const isSingleSaleViaRouter = routerCall && nftTransfers === 1;
 
   // Extract the orders from calldata when there have multiple fill events
   const parsedOrders =
@@ -488,9 +488,8 @@ export async function extractRoyalties(
           .div(sameContractTotalPrice)
           .toNumber();
 
-        // Since we pin-pointed to the subcall and there is only 1 sale
-        // we could reset that to the simplest way
-        if (inRouterWithSingleSale) {
+        // Simple case where there is a single sale via the router
+        if (isSingleSaleViaRouter) {
           bps = royalty.bps;
         }
 
