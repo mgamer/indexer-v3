@@ -1,15 +1,15 @@
 import { Interface } from "@ethersproject/abi";
-import { HighlightXYZ } from "@reservoir0x/sdk";
+import { HighlightXyz } from "@reservoir0x/sdk";
 
 import { config } from "@/config/index";
 import { EventData } from "@/events-sync/data";
 
-const abi: Interface = new Interface([
-  `event EditionVectorCreated(uint256 indexed vectorId, uint48 indexed editionId, address indexed contractAddress)`,
-  `event SeriesVectorCreated(uint256 indexed vectorId, address indexed contractAddress)`,
-  `event VectorUpdated(uint256 indexed vectorId)`,
-  `event VectorDeleted(uint256 indexed vectorId)`,
-  `event DiscreteDutchAuctionCreated(bytes32 indexed vectorId)`,
+const abi = new Interface([
+  "event EditionVectorCreated(uint256 indexed vectorId, uint48 indexed editionId, address indexed contractAddress)",
+  "event SeriesVectorCreated(uint256 indexed vectorId, address indexed contractAddress)",
+  "event VectorUpdated(uint256 indexed vectorId)",
+  "event VectorDeleted(uint256 indexed vectorId)",
+  "event DiscreteDutchAuctionCreated(bytes32 indexed vectorId)",
   `event MechanicVectorRegistered(
       bytes32 indexed vectorId,
       address indexed mechanic,
@@ -17,13 +17,13 @@ const abi: Interface = new Interface([
       uint256 editionId,
       bool isEditionBased
   )`,
-  `event DiscreteDutchAuctionUpdated(bytes32 indexed vectorId)`,
+  "event DiscreteDutchAuctionUpdated(bytes32 indexed vectorId)",
 ]);
 
 export const editonVectorCreated: EventData = {
   kind: "highlightxyz",
   subKind: "highlightxyz-edition-vector-created",
-  addresses: { [HighlightXYZ.Addresses.MintManager[config.chainId]?.toLowerCase()]: true },
+  addresses: { [HighlightXyz.Addresses.MintManager[config.chainId]?.toLowerCase()]: true },
   numTopics: 4,
   abi: abi,
   topic: abi.getEventTopic(abi.getEvent("EditionVectorCreated")),
@@ -32,7 +32,7 @@ export const editonVectorCreated: EventData = {
 export const seriesVectorCreated: EventData = {
   kind: "highlightxyz",
   subKind: "highlightxyz-series-vector-created",
-  addresses: { [HighlightXYZ.Addresses.MintManager[config.chainId]?.toLowerCase()]: true },
+  addresses: { [HighlightXyz.Addresses.MintManager[config.chainId]?.toLowerCase()]: true },
   numTopics: 3,
   abi: abi,
   topic: abi.getEventTopic(abi.getEvent("SeriesVectorCreated")),
@@ -41,7 +41,7 @@ export const seriesVectorCreated: EventData = {
 export const vectorUpdated: EventData = {
   kind: "highlightxyz",
   subKind: "highlightxyz-vector-updated",
-  addresses: { [HighlightXYZ.Addresses.MintManager[config.chainId]?.toLowerCase()]: true },
+  addresses: { [HighlightXyz.Addresses.MintManager[config.chainId]?.toLowerCase()]: true },
   numTopics: 2,
   abi: abi,
   topic: abi.getEventTopic(abi.getEvent("VectorUpdated")),
@@ -50,7 +50,7 @@ export const vectorUpdated: EventData = {
 export const vectorDeleted: EventData = {
   kind: "highlightxyz",
   subKind: "highlightxyz-vector-deleted",
-  addresses: { [HighlightXYZ.Addresses.MintManager[config.chainId]?.toLowerCase()]: true },
+  addresses: { [HighlightXyz.Addresses.MintManager[config.chainId]?.toLowerCase()]: true },
   numTopics: 2,
   abi: abi,
   topic: abi.getEventTopic(abi.getEvent("VectorDeleted")),
@@ -59,7 +59,7 @@ export const vectorDeleted: EventData = {
 export const discreteDACreated: EventData = {
   kind: "highlightxyz",
   subKind: "highlightxyz-discrete-da-created",
-  addresses: { [HighlightXYZ.Addresses.MintManager[config.chainId]?.toLowerCase()]: true },
+  addresses: { [HighlightXyz.Addresses.MintManager[config.chainId]?.toLowerCase()]: true },
   numTopics: 2,
   abi: abi,
   topic: abi.getEventTopic(abi.getEvent("DiscreteDutchAuctionCreated")),
@@ -68,7 +68,7 @@ export const discreteDACreated: EventData = {
 export const mechanicVectorRegistered: EventData = {
   kind: "highlightxyz",
   subKind: "highlightxyz-mechanic-vector-registered",
-  addresses: { [HighlightXYZ.Addresses.MintManager[config.chainId]?.toLowerCase()]: true },
+  addresses: { [HighlightXyz.Addresses.MintManager[config.chainId]?.toLowerCase()]: true },
   numTopics: 4,
   abi: abi,
   topic: abi.getEventTopic(abi.getEvent("MechanicVectorRegistered")),
@@ -78,7 +78,7 @@ export const mechanicVectorUpdated: EventData = {
   kind: "highlightxyz",
   subKind: "highlightxyz-discrete-da-updated",
   addresses: {
-    [HighlightXYZ.Addresses.DiscreteDutchAuctionMechanic[config.chainId]?.toLowerCase()]: true,
+    [HighlightXyz.Addresses.DiscreteDutchAuctionMechanic[config.chainId]?.toLowerCase()]: true,
   },
   numTopics: 2,
   abi: abi,

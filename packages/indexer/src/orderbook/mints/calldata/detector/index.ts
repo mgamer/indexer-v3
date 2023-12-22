@@ -240,9 +240,15 @@ export const extractByTx = async (txHash: string, skipCache = false) => {
   }
 
   // Titlesxyz
-  const titlesXYZResults = await titlesxyz.extractByTx(collection, tx);
-  if (titlesXYZResults.length) {
-    return titlesXYZResults;
+  const titlesXyzResults = await titlesxyz.extractByTx(collection, tx);
+  if (titlesXyzResults.length) {
+    return titlesXyzResults;
+  }
+
+  // Highlightxyz
+  const highlightXyzResults = await highlightxyz.extractByTx(collection, tx);
+  if (highlightXyzResults.length) {
+    return highlightXyzResults;
   }
 
   // Generic

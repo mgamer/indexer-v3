@@ -1,11 +1,11 @@
+import { Contract } from "@ethersproject/contracts";
 import * as Sdk from "@reservoir0x/sdk";
 
+import { baseProvider } from "@/common/provider";
 import { config } from "@/config/index";
 import { getEventData } from "@/events-sync/data";
 import { EnhancedEvent, OnChainData } from "@/events-sync/handlers/utils";
-import { Contract } from "ethers";
 import { mintManagerInterface } from "@/orderbook/mints/calldata/detector/highlightxyz";
-import { baseProvider } from "@/common/provider";
 
 export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChainData) => {
   // Handle the events
@@ -17,16 +17,16 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
       case "highlightxyz-vector-updated":
       case "highlightxyz-vector-deleted": {
         const parsedLog = eventData.abi.parseLog(log);
-        const vectorId = parsedLog.args["vectorId"];
+        const vectorId = parsedLog.args["vectorId"].toString();
 
         const mintManager = new Contract(
-          Sdk.HighlightXYZ.Addresses.MintManager[config.chainId],
+          Sdk.HighlightXyz.Addresses.MintManager[config.chainId],
           mintManagerInterface,
           baseProvider
         );
 
         const vector = await mintManager.getAbridgedVector(vectorId);
-        const collection = vector.contractAddress;
+        const collection = vector.contractAddress.toLowerCase();
 
         onChainData.mints.push({
           by: "collection",
@@ -41,20 +41,21 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
 
         break;
       }
+
       case "highlightxyz-discrete-da-created":
       case "highlightxyz-mechanic-vector-registered":
       case "highlightxyz-discrete-da-updated": {
         const parsedLog = eventData.abi.parseLog(log);
-        const vectorId = parsedLog.args["vectorId"];
+        const vectorId = parsedLog.args["vectorId"].toString();
 
         const mintManager = new Contract(
-          Sdk.HighlightXYZ.Addresses.MintManager[config.chainId],
+          Sdk.HighlightXyz.Addresses.MintManager[config.chainId],
           mintManagerInterface,
           baseProvider
         );
 
         const vector = await mintManager.mechanicVectorMetadata(vectorId);
-        const collection = vector.contractAddress;
+        const collection = vector.contractAddress.toLowerCase();
 
         onChainData.mints.push({
           by: "collection",

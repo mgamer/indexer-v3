@@ -1,24 +1,24 @@
 import { Interface } from "@ethersproject/abi";
-import { Contract } from "@ethersproject/contracts";
 import { BigNumber } from "@ethersproject/bignumber";
+import { Contract } from "@ethersproject/contracts";
+import * as Sdk from "@reservoir0x/sdk";
 
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
+import { bn } from "@/common/utils";
+import { config } from "@/config/index";
 import { Transaction } from "@/models/transactions";
 import {
   CollectionMint,
   getCollectionMints,
   simulateAndUpsertCollectionMint,
 } from "@/orderbook/mints";
-import { getStatus, toSafeTimestamp } from "@/orderbook/mints/calldata/helpers";
-
-import * as Sdk from "@reservoir0x/sdk";
-import { config } from "@/config/index";
+import { getStatus, toSafeNumber, toSafeTimestamp } from "@/orderbook/mints/calldata/helpers";
 
 const STANDARD = "highlightxyz";
 
 export interface Info {
-  vectorId: number | string;
+  vectorId: string;
 }
 
 export interface CustomInfo extends Info {
@@ -26,22 +26,6 @@ export interface CustomInfo extends Info {
   pricePeriodDuration?: number;
   lowestPriceIndex?: number;
 }
-
-// export interface DAConfigInfo {
-//   timestampStart: number;
-//   priceDecayHalfLifeSeconds: number;
-//   startPrice: string;
-//   basePrice: string;
-// }
-
-// interface ProjectInfo {
-//   invocations: BigNumber;
-//   maxInvocations: BigNumber;
-//   active: boolean;
-//   paused: boolean;
-//   completedTimestamp: BigNumber;
-//   locked: boolean;
-// }
 
 interface MechanicVectorMetadata {
   contractAddress: string;
@@ -99,7 +83,7 @@ interface DAMechanicState {
 }
 
 export const mintManagerInterface = new Interface([
-  `function getAbridgedVector(uint256 vectorId) external view returns (
+  `function getAbridgedVector(uint256) view returns (
     address contractAddress,
     uint48 startTimestamp,
     uint48 endTimestamp,
@@ -115,7 +99,7 @@ export const mintManagerInterface = new Interface([
     bool requireDirectEOA,
     bytes32 allowlistRoot
   )`,
-  `function mechanicVectorMetadata(bytes32) external view returns (
+  `function mechanicVectorMetadata(bytes32) view returns (
     address contractAddress,
     uint96 editionId,
     address mechanic,
@@ -127,9 +111,13 @@ export const mintManagerInterface = new Interface([
     bytes32 vectorId,
     address recipient,
     uint32 numToMint,
-    bytes calldata data
-  ) external payable`,
-  `function vectorMint721(uint256 vectorId, uint48 numTokensToMint, address mintRecipient) external payable`,
+    bytes data
+  )`,
+  `function vectorMint721(
+    uint256 vectorId,
+    uint48 numTokensToMint,
+    address mintRecipient
+  )`,
 ]);
 
 export const extractByCollectionERC721 = async (
@@ -140,36 +128,45 @@ export const extractByCollectionERC721 = async (
 
   const { vectorId } = info;
 
-  const mintManagerAddress = Sdk.HighlightXYZ.Addresses.MintManager[config.chainId];
-
-  // We will need information from the collection about the project id
+  const mintManagerAddress = Sdk.HighlightXyz.Addresses.MintManager[config.chainId];
   const mintManager = new Contract(mintManagerAddress, mintManagerInterface, baseProvider);
 
-  // first we need to find the Vector configuration. It can either be an "AbridgedVector" or a "MechanicVector"
-  // AbridgedVector means the minter will mint directly on the collection and all the configuration of the mint is in that
-  // vector
-  // MechanicVector means the minter will call another contract which will process the data, similar to the "Strategy" pattern
+  // First we need to find the vector configuration: "AbridgedVector" or "MechanicVector"
+  // - "AbridgedVector": the minter will mint directly on the collection and all the configuration of the mint is in that vector
+  // - "MechanicVector": the minter will call another contract which will process the data, similar to the "Strategy" pattern
   // that allows DA and other strategies to be added latter to the main minter contract
   try {
-    // AbridgedVector ids are integers, MechanicVector are bytes32, we can detect which one it is by checking if vectorId starts with 0x
+    // "AbridgedVector" ids are integers, "MechanicVector" ids are bytes32 - we can detect which one it is by checking if `vectorId` starts with 0x
     if (!String(vectorId).startsWith("0x")) {
       const vector: AbridgedVector = await mintManager.getAbridgedVector(vectorId);
 
-      // vector is not for that collection
-      if (vector.contractAddress.toLocaleLowerCase() != collection) {
+      // The vector is not for that collection
+      if (vector.contractAddress.toLowerCase() != collection) {
         return [];
       }
 
       const startTimestamp = toSafeTimestamp(vector.startTimestamp);
       const endTimestamp = toSafeTimestamp(vector.endTimestamp);
       const totalClaimedViaVector = vector.totalClaimedViaVector;
-      const maxTotalClaimableViaVector = vector.maxTotalClaimableViaVector;
-      const maxUserClaimableViaVector = vector.maxUserClaimableViaVector;
-      const currency = vector.currency;
-      const price = vector.pricePerToken.toString();
-      const tokenLimitPerTx = vector.tokenLimitPerTx;
+      const maxTotalClaimableViaVector = toSafeNumber(vector.maxTotalClaimableViaVector);
+      const maxUserClaimableViaVector = toSafeNumber(vector.maxUserClaimableViaVector);
+      const currency = vector.currency.toLowerCase();
+      let price = vector.pricePerToken.toString();
+      const tokenLimitPerTx = toSafeNumber(vector.tokenLimitPerTx);
 
-      const isOpen = maxTotalClaimableViaVector <= totalClaimedViaVector;
+      if (currency !== Sdk.Common.Addresses.Native[config.chainId]) {
+        return [];
+      }
+
+      // Include the platform fee into the price (not available via a public method se we have to read the storage slot directly)
+      const platformFee = await baseProvider
+        .getStorageAt(mintManager.address, 166)
+        .then((value) => bn(value));
+      price = bn(price).add(platformFee).toString();
+
+      const isOpen = maxTotalClaimableViaVector
+        ? bn(maxTotalClaimableViaVector).lte(totalClaimedViaVector)
+        : true;
 
       const item: CollectionMint = {
         collection,
@@ -187,7 +184,7 @@ export const extractByCollectionERC721 = async (
                 {
                   kind: "unknown",
                   abiType: "uint256",
-                  abiValue: vectorId,
+                  abiValue: vectorId.toString(),
                 },
                 {
                   kind: "quantity",
@@ -204,22 +201,21 @@ export const extractByCollectionERC721 = async (
             vectorId,
           },
         },
-        maxSupply: maxTotalClaimableViaVector != 0 ? String(maxTotalClaimableViaVector) : undefined,
-        maxMintsPerWallet:
-          maxUserClaimableViaVector != 0 ? String(maxUserClaimableViaVector) : undefined,
-        startTime: startTimestamp != 0 ? startTimestamp : undefined,
-        endTime: endTimestamp != 0 ? endTimestamp : undefined,
+        maxSupply: maxTotalClaimableViaVector,
+        maxMintsPerWallet: maxUserClaimableViaVector,
+        maxMintsPerTransaction: tokenLimitPerTx,
+        startTime: startTimestamp,
+        endTime: endTimestamp,
         currency,
         price,
-        maxPerTransaction: tokenLimitPerTx != 0 ? String(tokenLimitPerTx) : undefined,
       };
 
       results.push(item);
     } else {
-      // "Mechanics" are equivalent to the "Strategy" pattern
-      const vector: MechanicVectorMetadata = await mintManager.mechanicVectorMetadata(vectorId);
-
-      await tryDetectDutchAuction(results, mintManager, collection, String(vectorId), vector);
+      // Skipping this for now
+      // // "Mechanics" are equivalent to the "Strategy" pattern
+      // const vector: MechanicVectorMetadata = await mintManager.mechanicVectorMetadata(vectorId);
+      // await tryDetectDutchAuction(results, mintManager, collection, vectorId, vector);
     }
   } catch (error) {
     logger.error("mint-detector", JSON.stringify({ kind: STANDARD, error }));
@@ -238,38 +234,34 @@ export const extractByCollectionERC721 = async (
   return results;
 };
 
-async function tryDetectDutchAuction(
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const tryDetectDutchAuction = async (
   results: CollectionMint[],
   mintManager: Contract,
   collection: string,
   vectorId: string,
   vector: MechanicVectorMetadata
-): Promise<void> {
-  // for the moment we only know of one strategy: DiscreteDutchAuctionMechanic
-  const daAddress = Sdk.HighlightXYZ.Addresses.DiscreteDutchAuctionMechanic[config.chainId];
-
-  // it doesn't exist on some chains
+): Promise<void> => {
+  // For the moment we only support one strategy: "DiscreteDutchAuctionMechanic"
+  const daAddress = Sdk.HighlightXyz.Addresses.DiscreteDutchAuctionMechanic[config.chainId];
   if (!daAddress) {
     return;
   }
 
-  // if it's not the DA, we don't know about it, throw an error?
-  if (vector.mechanic.toLocaleLowerCase() != daAddress) {
-    // @todo is there any other method to tell reservoir there is a new strategy to add?
-    throw new Error(`Unknown mechanic for ${STANDARD} mechanic ${vector.mechanic}`);
+  // If it's not the DA we know of, skip processing
+  if (vector.mechanic.toLocaleLowerCase() !== daAddress) {
+    return;
   }
 
-  // else we get all data from DA and add the mint strategy to the results
   const daContract = new Contract(
     daAddress,
     new Interface([
       `function getVectorState(
         bytes32 mechanicVectorId
       )
-        external
         view
         returns (
-            tuple(
+            (
               uint48 startTimestamp,
               uint48 endTimestamp,
               uint32 periodDuration,
@@ -279,13 +271,13 @@ async function tryDetectDutchAuction(
               uint32 lowestPriceSoldAtIndex,
               uint32 tokenLimitPerTx,
               uint32 numPrices,
-              address payable paymentRecipient,
+              address paymentRecipient,
               uint240 totalSales,
               uint8 bytesPerPrice,
               bool auctionExhausted,
               bool payeeRevenueHasBeenWithdrawn
-            ) memory rawVector,
-            uint200[] memory prices,
+            ) rawVector,
+            uint200[] prices,
             uint200 currentPrice,
             uint256 payeePotentialEscrowedFunds,
             uint256 collectionSupply,
@@ -299,22 +291,20 @@ async function tryDetectDutchAuction(
   );
 
   const daState: DAMechanicState = await daContract.getVectorState(vectorId);
-
   const rawVector = daState.rawVector;
 
-  // rawVector
+  // "rawVector" data
   const startTimestamp = toSafeTimestamp(rawVector.startTimestamp);
   const endTimestamp = toSafeTimestamp(rawVector.endTimestamp);
   const currentSupply = rawVector.currentSupply;
-  const maxUserClaimableViaVector = rawVector.maxUserClaimableViaVector;
-  const tokenLimitPerTx = rawVector.tokenLimitPerTx;
+  const maxUserClaimableViaVector = toSafeNumber(rawVector.maxUserClaimableViaVector);
+  const tokenLimitPerTx = toSafeNumber(rawVector.tokenLimitPerTx);
 
-  // mechanicVector
+  // "mechanicVector" data
   const price = daState.currentPrice.toString();
-  const maxSupply = daState.collectionSize.toNumber();
+  const maxSupply = toSafeNumber(daState.collectionSize);
 
   const currency = Sdk.Common.Addresses.Native[config.chainId];
-
   const isOpen = currentSupply > 0;
 
   const item: CollectionMint = {
@@ -353,28 +343,28 @@ async function tryDetectDutchAuction(
       },
       info: {
         vectorId,
-        // should allow to calculate price without needing to make an on-chain call
+        // For calculating the price without the need to make an on-chain call
         prices: daState.prices.map((price) => price.toString()),
         pricePeriodDuration: rawVector.periodDuration,
         lowestPriceIndex: rawVector.lowestPriceSoldAtIndex,
       },
     },
-    maxSupply: maxSupply != 0 ? String(maxSupply) : undefined,
-    maxMintsPerWallet:
-      maxUserClaimableViaVector != 0 ? String(maxUserClaimableViaVector) : undefined,
-    startTime: startTimestamp != 0 ? startTimestamp : undefined,
-    endTime: endTimestamp != 0 ? endTimestamp : undefined,
+    maxSupply,
+    maxMintsPerWallet: maxUserClaimableViaVector,
+    startTime: startTimestamp,
+    endTime: endTimestamp,
     currency,
     price,
-    maxPerTransaction: tokenLimitPerTx != 0 ? String(tokenLimitPerTx) : undefined,
+    maxMintsPerTransaction: tokenLimitPerTx,
   };
 
   results.push(item);
-}
+};
 
 export const refreshByCollection = async (collection: string) => {
   const existingCollectionMints = await getCollectionMints(collection, { standard: STANDARD });
-  // Dedupe by collection and project id
+
+  // Dedupe by collection and vector id
   const dedupedExistingMints = existingCollectionMints.filter((existing, index) => {
     return (
       index ===
@@ -386,6 +376,7 @@ export const refreshByCollection = async (collection: string) => {
       })
     );
   });
+
   let latestCollectionMints: CollectionMint[] = [];
   for (const { details } of dedupedExistingMints) {
     // Fetch the currently available mints
@@ -393,10 +384,12 @@ export const refreshByCollection = async (collection: string) => {
       await extractByCollectionERC721(collection, details.info! as Info)
     );
   }
+
   // Simulate the ones still available
   for (const collectionMint of latestCollectionMints) {
     await simulateAndUpsertCollectionMint(collectionMint);
   }
+
   // Assume anything that exists in our system but was not returned
   // in the above call is not available anymore so we can close
   for (const existing of existingCollectionMints) {
@@ -428,7 +421,7 @@ export const extractByTx = async (
   if (signatures.includes(tx.data.substring(0, 10))) {
     const result = mintManagerInterface.parseTransaction({ data: tx.data });
     if (result) {
-      return extractByCollectionERC721(collection, { vectorId: result.args.vectorId });
+      return extractByCollectionERC721(collection, { vectorId: result.args.vectorId.toString() });
     }
   }
 
