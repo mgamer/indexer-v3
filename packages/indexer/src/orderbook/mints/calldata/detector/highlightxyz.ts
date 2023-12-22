@@ -19,9 +19,6 @@ const STANDARD = "highlightxyz";
 
 export interface Info {
   vectorId: string;
-}
-
-export interface CustomInfo extends Info {
   prices?: string[];
   pricePeriodDuration?: number;
   lowestPriceIndex?: number;
