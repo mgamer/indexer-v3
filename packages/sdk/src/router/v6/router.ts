@@ -1,11 +1,9 @@
-import { Interface } from "@ethersproject/abi";
+import { Interface, Result } from "@ethersproject/abi";
 import { Provider } from "@ethersproject/abstract-provider";
 import { AddressZero, HashZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import axios from "axios";
 
-// Needed for `collectionxyz`
-import { TokenIDs } from "fummpel";
 // Needed for `rarible`
 import { encodeForMatchOrders } from "../../rarible/utils";
 // Needed for `seaport`
@@ -47,7 +45,6 @@ import RouterAbi from "./abis/ReservoirV6_0_1.json";
 import ApprovalProxyAbi from "./abis/ApprovalProxy.json";
 import OpenseaTransferHelperAbi from "./abis/OpenseaTransferHelper.json";
 // Modules
-import CollectionXyzModuleAbi from "./abis/CollectionXyzModule.json";
 import DittoModuleAbi from "./abis/DittoModule.json";
 import ElementModuleAbi from "./abis/ElementModule.json";
 import FoundationModuleAbi from "./abis/FoundationModule.json";
@@ -68,7 +65,6 @@ import ZeroExV4ModuleAbi from "./abis/ZeroExV4Module.json";
 import ZoraModuleAbi from "./abis/ZoraModule.json";
 import PermitProxyAbi from "./abis/PermitProxy.json";
 import SudoswapV2ModuleAbi from "./abis/SudoswapV2Module.json";
-import MidaswapModuleAbi from "./abis/MidaswapModule.json";
 import CaviarV1ModuleAbi from "./abis/CaviarV1Module.json";
 import CryptoPunksModuleAbi from "./abis/CryptoPunksModule.json";
 import PaymentProcessorModuleAbi from "./abis/PaymentProcessorModule.json";
@@ -108,11 +104,6 @@ export class Router {
         provider
       ),
       // Initialize modules
-      collectionXyzModule: new Contract(
-        Addresses.CollectionXyzModule[chainId] ?? AddressZero,
-        CollectionXyzModuleAbi,
-        provider
-      ),
       dittoModule: new Contract(
         Addresses.DittoModule[chainId] ?? AddressZero,
         DittoModuleAbi,
@@ -157,10 +148,6 @@ export class Router {
         Addresses.SudoswapV2Module[chainId] ?? AddressZero,
         SudoswapV2ModuleAbi,
         provider
-      ),
-      midaswapModule: new Contract(
-        Addresses.MidaswapModule[chainId] ?? AddressZero,
-        MidaswapModuleAbi
       ),
       caviarV1Module: new Contract(
         Addresses.CaviarV1Module[chainId] ?? AddressZero,
@@ -251,6 +238,8 @@ export class Router {
       forceDirectFilling?: boolean;
       // Wallet used for relaying the fill transaction
       relayer?: string;
+      // Whether all mints have an explicit recipient
+      allMintsHaveExplicitRecipient?: boolean;
     }
   ): Promise<FillMintsResult> {
     const txs: FillMintsResult["txs"][0][] = [];
@@ -261,7 +250,11 @@ export class Router {
     if (
       !Addresses.MintModule[this.chainId] ||
       options?.forceDirectFilling ||
-      (details.length === 1 && !details[0].fees?.length && !details[0].comment && !options?.relayer)
+      // Single mints with no fees, no comment and no `relayer` field (only if the mint doesn't have an explicit recipient)
+      (details.length === 1 &&
+        !details[0].fees?.length &&
+        !details[0].comment &&
+        (options?.allMintsHaveExplicitRecipient ? true : !options?.relayer))
     ) {
       // Under some conditions, we simply return that transaction data back to the caller
 
@@ -1157,9 +1150,7 @@ export class Router {
     const looksRareV2Details: ListingDetails[] = [];
     const sudoswapDetails: ListingDetails[] = [];
     const sudoswapV2Details: ListingDetails[] = [];
-    const midaswapDetails: ListingDetails[] = [];
     const caviarV1Details: ListingDetails[] = [];
-    const collectionXyzDetails: ListingDetails[] = [];
     const x2y2Details: ListingDetails[] = [];
     const zoraDetails: ListingDetails[] = [];
     const nftxDetails: ListingDetails[] = [];
@@ -1194,10 +1185,6 @@ export class Router {
             : elementErc1155Details;
           break;
         }
-
-        case "collectionxyz":
-          detailsRef = collectionXyzDetails;
-          break;
 
         case "ditto":
           detailsRef = dittoDetails;
@@ -1245,10 +1232,6 @@ export class Router {
 
         case "sudoswap-v2":
           detailsRef = sudoswapV2Details;
-          break;
-
-        case "midaswap":
-          detailsRef = midaswapDetails;
           break;
 
         case "caviar-v1":
@@ -2131,90 +2114,6 @@ export class Router {
       }
     }
 
-    // Handle Collection listings
-    if (collectionXyzDetails.length) {
-      const ordersAndTokens = collectionXyzDetails.map(
-        (d) =>
-          ({ order: d.order, tokenId: d.tokenId } as {
-            order: Sdk.CollectionXyz.Order;
-            tokenId: string;
-          })
-      );
-      const module = this.contracts.collectionXyzModule;
-
-      const fees = getFees(collectionXyzDetails);
-      const price = ordersAndTokens
-        .map(({ order, tokenId }) =>
-          bn(
-            order.params.extra.prices[
-              // Handle multiple listings from the same pool
-              ordersAndTokens
-                .filter((ot) => ot.order.params.pool === order.params.pool)
-                .findIndex((ot) => ot.tokenId === tokenId)
-            ]
-          )
-        )
-        .reduce((a, b) => a.add(b), bn(0));
-      const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
-      const totalPrice = price.add(feeAmount);
-
-      const isERC20 = buyInCurrency !== Sdk.Common.Addresses.Native[this.chainId];
-      const functionName = `buyWith${isERC20 ? "ERC20" : "ETH"}`;
-      const listingParams = isERC20
-        ? {
-            fillTo: taker,
-            refundTo: relayer,
-            revertIfIncomplete: Boolean(!options?.partial),
-            token: buyInCurrency,
-            amount: price,
-          }
-        : {
-            fillTo: taker,
-            refundTo: relayer,
-            revertIfIncomplete: Boolean(!options?.partial),
-            amount: price,
-          };
-
-      executions.push({
-        info: {
-          module: module.address,
-          data: module.interface.encodeFunctionData(functionName, [
-            collectionXyzDetails.map((d) => (d.order as Sdk.CollectionXyz.Order).params.pool),
-            collectionXyzDetails.map((d) => ({
-              nftId: d.tokenId,
-              // Unused for buying from pools
-              proof: [],
-              proofFlags: [],
-              externalFilterContext: [],
-            })),
-            Math.floor(Date.now() / 1000) + 10 * 60,
-            listingParams,
-            fees,
-          ]),
-          value: isERC20 ? 0 : totalPrice,
-        },
-        orderIds: collectionXyzDetails.map((d) => d.orderId),
-      });
-
-      // Track any possibly required swap
-      swapDetails.push({
-        tokenIn: buyInCurrency,
-        tokenOut: Sdk.Common.Addresses.Native[this.chainId],
-        tokenOutAmount: totalPrice,
-        recipient: module.address,
-        refundTo: relayer,
-        details: collectionXyzDetails,
-        executionIndex: executions.length - 1,
-      });
-
-      addRouterTags("collectionxyz", ordersAndTokens.length, fees.length);
-
-      // Mark the listings as successfully handled
-      for (const { orderId } of collectionXyzDetails) {
-        success[orderId] = true;
-      }
-    }
-
     // Handle Ditto listings
     if (dittoDetails.length) {
       const orders = dittoDetails.map((d) => d.order as Sdk.Ditto.Order);
@@ -2385,75 +2284,6 @@ export class Router {
 
       // Mark the listings as successfully handled
       for (const { orderId } of sudoswapV2Details) {
-        success[orderId] = true;
-      }
-    }
-
-    // Handle Midaswap listings
-    if (midaswapDetails.length) {
-      const orders = midaswapDetails.map((d) => ({
-        order: d.order as Sdk.Midaswap.Order,
-        amount: d.amount,
-        contractKind: d.contractKind,
-      }));
-      const module = this.contracts.midaswapModule;
-
-      const fees = getFees(midaswapDetails);
-
-      // Group orders by LP token id
-      const lpTokenIdsMap: { [lpTokenId: string]: Sdk.Midaswap.Order[] } = {};
-      for (const { order } of orders) {
-        if (!lpTokenIdsMap[order.params.lpTokenId]) {
-          lpTokenIdsMap[order.params.lpTokenId] = [];
-        }
-        lpTokenIdsMap[order.params.lpTokenId].push(order);
-      }
-
-      // Accumulate
-      let price = bn(0);
-      Object.keys(lpTokenIdsMap).forEach((lpTokenId) => {
-        price = lpTokenIdsMap[lpTokenId][0].params.extra.prices
-          .slice(0, lpTokenIdsMap[lpTokenId].length)
-          .reduce((a, b) => bn(a).add(bn(b)), bn(0))
-          .add(price);
-      });
-      const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
-      const totalPrice = price.add(feeAmount);
-
-      executions.push({
-        info: {
-          module: module.address,
-          data: module.interface.encodeFunctionData("buyWithETH", [
-            midaswapDetails.map((d) => (d.order as Sdk.Midaswap.Order).params.tokenX),
-            midaswapDetails.map((d) => d.tokenId),
-            {
-              fillTo: taker,
-              refundTo: relayer,
-              revertIfIncomplete: Boolean(!options?.partial),
-              amount: price,
-            },
-            fees,
-          ]),
-          value: totalPrice,
-        },
-        orderIds: midaswapDetails.map((d) => d.orderId),
-      });
-
-      // Track any possibly required swap
-      swapDetails.push({
-        tokenIn: buyInCurrency,
-        tokenOut: Sdk.Common.Addresses.Native[this.chainId],
-        tokenOutAmount: totalPrice,
-        recipient: module.address,
-        refundTo: relayer,
-        details: midaswapDetails,
-        executionIndex: executions.length - 1,
-      });
-
-      addRouterTags("midaswap", orders.length, fees.length);
-
-      // Mark the listings as successfully handled
-      for (const { orderId } of midaswapDetails) {
         success[orderId] = true;
       }
     }
@@ -3982,18 +3812,8 @@ export class Router {
           break;
         }
 
-        case "midaswap": {
-          module = this.contracts.midaswapModule;
-          break;
-        }
-
         case "caviar-v1": {
           module = this.contracts.caviarV1Module;
-          break;
-        }
-
-        case "collectionxyz": {
-          module = this.contracts.collectionXyzModule;
           break;
         }
 
@@ -4454,34 +4274,6 @@ export class Router {
           break;
         }
 
-        case "midaswap": {
-          const order = detail.order as Sdk.Midaswap.Order;
-          const module = this.contracts.midaswapModule;
-
-          executionsWithDetails.push({
-            detail,
-            execution: {
-              module: module.address,
-              data: module.interface.encodeFunctionData("sell", [
-                order.params.tokenX,
-                Sdk.Common.Addresses.Native[this.chainId],
-                detail.tokenId,
-                {
-                  fillTo: taker,
-                  refundTo: taker,
-                  revertIfIncomplete: Boolean(!options?.partial),
-                },
-                fees,
-              ]),
-              value: 0,
-            },
-          });
-
-          success[detail.orderId] = true;
-
-          break;
-        }
-
         case "caviar-v1": {
           const order = detail.order as Sdk.CaviarV1.Order;
           const module = this.contracts.caviarV1Module;
@@ -4495,48 +4287,6 @@ export class Router {
                 detail.tokenId,
                 bn(order.params.extra.prices[0]),
                 detail.extraArgs.stolenProof,
-                {
-                  fillTo: taker,
-                  refundTo: taker,
-                  revertIfIncomplete: Boolean(!options?.partial),
-                },
-                fees,
-              ]),
-              value: 0,
-            },
-          });
-
-          success[detail.orderId] = true;
-
-          break;
-        }
-
-        case "collectionxyz": {
-          const order = detail.order as Sdk.CollectionXyz.Order;
-          const module = this.contracts.collectionXyzModule;
-
-          const acceptedSet = detail.extraArgs.tokenIds as string[];
-          const { proof, proofFlags } =
-            // acceptedSet === [] for unfiltered pools
-            acceptedSet.length === 0
-              ? { proof: [], proofFlags: [] }
-              : new TokenIDs(acceptedSet.map(BigInt)).proof([BigInt(detail.tokenId)]);
-
-          executionsWithDetails.push({
-            detail,
-            execution: {
-              module: module.address,
-              data: module.interface.encodeFunctionData("sell", [
-                order.params.pool,
-                // Single id, no need to sort
-                { nftId: detail.tokenId, proof, proofFlags, externalFilterContext: [] },
-                bn(order.params.extra.prices[0]).sub(
-                  // Take into account any fees
-                  bn(order.params.extra.prices[0])
-                    .mul(detail.extraArgs?.totalFeeBps ?? 0)
-                    .div(10000)
-                ),
-                Math.floor(Date.now() / 1000) + 10 * 60,
                 {
                   fillTo: taker,
                   refundTo: taker,
@@ -5115,5 +4865,72 @@ export class Router {
         ],
       };
     }
+  }
+
+  public parseExecutions(calldata: string) {
+    const executions: {
+      module: string;
+      moduleName: string;
+      method: string;
+      sighash: string;
+      args: Result;
+      params: {
+        fillTo: string;
+        refundTo: string;
+        revertIfIncomplete?: boolean;
+        token?: string;
+        amount?: string;
+      };
+    }[] = [];
+
+    try {
+      const isRouter = calldata.includes("0x760f2a0b");
+
+      const routerContract = isRouter ? this.contracts.router : this.contracts.approvalProxy;
+      const parsed = routerContract.interface.parseTransaction({
+        data: calldata,
+      });
+
+      const executionInfos = parsed.args.executionInfos;
+      for (const executionInfo of executionInfos) {
+        for (const contractName of Object.keys(this.contracts)) {
+          if (!contractName.includes("Module")) {
+            continue;
+          }
+
+          const contract = this.contracts[contractName];
+          try {
+            const parsed = contract.interface.parseTransaction({
+              data: executionInfo.data,
+            });
+
+            const isParsed = executions.find((c) => c.sighash);
+            if (!isParsed) {
+              const executionParams = parsed.args.params;
+              executions.push({
+                module: contract.address,
+                moduleName: contractName,
+                method: parsed.name,
+                args: parsed.args,
+                sighash: parsed.sighash,
+                params: {
+                  refundTo: executionParams.refundTo.toLowerCase(),
+                  fillTo: executionParams.fillTo.toLowerCase(),
+                  revertIfIncomplete: executionParams.revertIfIncomplete,
+                  token: executionParams.token,
+                  amount: executionParams.amount ? executionParams.amount.toString() : undefined,
+                },
+              });
+            }
+          } catch {
+            // Parsing failed
+          }
+        }
+      }
+    } catch {
+      // Parsing failed
+    }
+
+    return executions;
   }
 }

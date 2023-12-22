@@ -2,7 +2,6 @@ import { AddressZero } from "@ethersproject/constants";
 import * as Sdk from "@reservoir0x/sdk";
 import { generateMerkleTree } from "@reservoir0x/sdk/dist/common/helpers/merkle";
 import { OrderKind } from "@reservoir0x/sdk/dist/seaport-base/types";
-import axios from "axios";
 import _ from "lodash";
 import pLimit from "p-limit";
 
@@ -10,13 +9,13 @@ import { idb, pgp, redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { acquireLock, redis } from "@/common/redis";
-import tracer from "@/common/tracer";
 import { bn, now, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
-import { getNetworkName, getNetworkSettings } from "@/config/network";
+import { getNetworkSettings } from "@/config/network";
 import { FeeRecipients } from "@/models/fee-recipients";
 import { addPendingData } from "@/jobs/arweave-relay";
 import { Collections } from "@/models/collections";
+import { getDittoPools } from "@/models/ditto-pools";
 import { Sources } from "@/models/sources";
 import { SourcesEntity } from "@/models/sources/sources-entity";
 import { topBidsCache } from "@/models/top-bids-caching";
@@ -36,6 +35,7 @@ import {
   OrderUpdatesByIdJobPayload,
 } from "@/jobs/order-updates/order-updates-by-id-job";
 import { orderbookOrdersJob } from "@/jobs/orderbook/orderbook-orders-job";
+import * as offchainCancel from "@/utils/offchain-cancel";
 
 export type OrderInfo = {
   orderParams: Sdk.SeaportBase.Types.OrderComponents;
@@ -222,6 +222,8 @@ export const save = async (
         Sdk.SeaportBase.Addresses.OpenSeaProtectedOffersZone[config.chainId] ===
           order.params.zone && info.side === "buy";
 
+      let zoneIsDittoPool = false;
+
       // Check: order has a known zone
       if (order.params.orderType > 1) {
         if (
@@ -240,11 +242,24 @@ export const save = async (
           // Protected offers zone
           !isProtectedOffer
         ) {
-          return results.push({
-            id,
-            status: "unsupported-zone",
-          });
+          // Check if the zone is a ditto pool
+          const dittoPools = await getDittoPools();
+          if (!dittoPools.some((p) => p.address === order.params.zone)) {
+            return results.push({
+              id,
+              status: "unsupported-zone",
+            });
+          } else {
+            zoneIsDittoPool = true;
+          }
         }
+      }
+
+      if (order.params.extraData && !zoneIsDittoPool) {
+        return results.push({
+          id,
+          status: "unsupported-extra-data",
+        });
       }
 
       // Check: order is valid
@@ -786,14 +801,11 @@ export const save = async (
           replacedOrderResult.raw_data.zone ===
             Sdk.SeaportBase.Addresses.ReservoirCancellationZone[config.chainId]
         ) {
-          await axios.post(
-            `https://seaport-oracle-${getNetworkName()}.up.railway.app/api/replacements`,
-            {
-              newOrders: [order.params],
-              replacedOrders: [replacedOrderResult.raw_data],
-              orderKind: "seaport-v1.5",
-            }
-          );
+          await offchainCancel.seaport.doReplacement({
+            newOrders: [order.params],
+            replacedOrders: [replacedOrderResult.raw_data],
+            orderKind: "seaport-v1.5",
+          });
         }
       }
 
@@ -878,15 +890,13 @@ export const save = async (
   await Promise.all(
     orderInfos.map((orderInfo) =>
       limit(async () =>
-        tracer.trace("handleOrder", { resource: "seaportV15Save" }, () =>
-          handleOrder(
-            orderInfo.orderParams as Sdk.SeaportBase.Types.OrderComponents,
-            orderInfo.metadata,
-            orderInfo.isReservoir,
-            orderInfo.isOpenSea,
-            orderInfo.isOkx,
-            orderInfo.openSeaOrderParams
-          )
+        handleOrder(
+          orderInfo.orderParams as Sdk.SeaportBase.Types.OrderComponents,
+          orderInfo.metadata,
+          orderInfo.isReservoir,
+          orderInfo.isOpenSea,
+          orderInfo.isOkx,
+          orderInfo.openSeaOrderParams
         )
       )
     )

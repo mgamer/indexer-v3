@@ -20,7 +20,7 @@ export const config = {
 
   // When running in liquidity-only mode, all metadata processes are disabled
   liquidityOnly: Boolean(Number(process.env.LIQUIDITY_ONLY)),
-  metadataIndexingMethod: String(process.env.METADATA_INDEXING_METHOD || "opensea"),
+  metadataIndexingMethod: String(process.env.METADATA_INDEXING_METHOD || "onchain"),
   metadataMaxFieldSizeMB: Number(process.env.METADATA_MAX_FIELD_SIZE_MB || 1),
   fallbackMetadataIndexingMethod: process.env.FALLBACK_METADATA_INDEXING_METHOD || undefined,
   metadataIndexingMethodCollection: String(
@@ -85,6 +85,7 @@ export const config = {
   alchemyApiKey: String(process.env.ALCHEMY_API_KEY),
   looksRareApiKey: String(process.env.LOOKSRARE_API_KEY),
   openSeaApiKey: String(process.env.OPENSEA_API_KEY),
+  openSeaNftApiKey: String(process.env.OPENSEA_NFT_API_KEY),
   openSeaApiUrl: String(process.env.OPENSEA_API_URL || ""),
 
   // Cosigner
@@ -169,4 +170,10 @@ export const config = {
   assertRabbitVhost: Boolean(Number(process.env.ASSERT_RABBIT_VHOST)),
   rabbitDisableQueuesConsuming: Boolean(Number(process.env.RABBIT_DISABLE_QUEUES_CONSUMING)),
   forceEnableRabbitJobsConsumer: Boolean(Number(process.env.FORCE_ENABLE_RABBIT_JOBS_CONSUMER)),
+
+  debugApiKeys: process.env.DEBUG_API_KEYS ? String(process.env.DEBUG_API_KEYS).split(",") : [],
+
+  coinGeckoWsApiKey: process.env.COINGECKO_API_KEY,
+
+  spamNames: process.env.SPAM_NAMES ? String(process.env.SPAM_NAMES).split(",") : [],
 };

@@ -20,7 +20,7 @@ import { checkMarketplaceIsFiltered } from "@/utils/marketplace-blacklists";
 import * as paymentProcessorV2 from "@/utils/payment-processor-v2";
 import { getUSDAndNativePrices } from "@/utils/prices";
 import * as royalties from "@/utils/royalties";
-import { cosigner, saveOffChainCancellations } from "@/utils/cosign";
+import { cosigner, saveOffChainCancellations } from "@/utils/offchain-cancel";
 
 export type OrderInfo = {
   orderParams: Sdk.PaymentProcessorV2.Types.BaseOrder;
@@ -67,9 +67,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
       // Check: various collection restrictions
 
-      const settings = await paymentProcessorV2.getCollectionPaymentSettings(
-        order.params.tokenAddress
-      );
+      const settings = await paymentProcessorV2.getConfigByContract(order.params.tokenAddress);
       if (
         settings &&
         [
@@ -78,14 +76,16 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         ].includes(settings.paymentSettings) &&
         order.params.paymentMethod !== Sdk.Common.Addresses.Native[config.chainId]
       ) {
-        const paymentMethodWhitelist = settings.whitelistedPaymentMethods.includes(
-          order.params.paymentMethod
-        );
-        if (!paymentMethodWhitelist) {
-          return results.push({
-            id,
-            status: "payment-token-not-approved",
-          });
+        if (settings.whitelistedPaymentMethods) {
+          const paymentMethodWhitelist = settings.whitelistedPaymentMethods.includes(
+            order.params.paymentMethod
+          );
+          if (!paymentMethodWhitelist) {
+            return results.push({
+              id,
+              status: "payment-token-not-approved",
+            });
+          }
         }
       } else if (
         settings?.paymentSettings === paymentProcessorV2.PaymentSettings.PricingConstraints
@@ -114,13 +114,26 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
       // Check: trusted channels
       if (settings?.blockTradesFromUntrustedChannels) {
-        const trustedChannels = await paymentProcessorV2.getAllTrustedChannels(
+        const trustedChannels = await paymentProcessorV2.getTrustedChannels(
           order.params.tokenAddress
         );
         if (trustedChannels.every((c) => c.signer !== AddressZero)) {
           return results.push({
             id,
             status: "signed-trusted-channels-not-yet-supported",
+          });
+        }
+      }
+
+      if (settings?.blockBannedAccounts) {
+        const isBanned = await paymentProcessorV2.checkAccountIsBanned(
+          order.params.tokenAddress,
+          order.params.sellerOrBuyer
+        );
+        if (isBanned) {
+          return results.push({
+            id,
+            status: "maker-was-banned-by-collection",
           });
         }
       }

@@ -83,18 +83,23 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
       const url = `${
         !this.isOSTestnet() ? "https://api.opensea.io" : "https://testnets-api.opensea.io"
       }/api/v2/chain/${getOpenseaNetworkName()}/contract/${contract}/nfts/${tokenId}`;
+      const headers: any = !this.isOSTestnet()
+        ? {
+            url,
+            "X-API-KEY": config.openSeaTokenMetadataApiKey.trim(),
+            Accept: "application/json",
+          }
+        : {
+            Accept: "application/json",
+          };
+
+      if (!this.isOSTestnet() && config.openSeaApiUrl && config.openSeaNftApiKey) {
+        headers["x-nft-api-key"] = config.openSeaNftApiKey;
+      }
 
       const data = await axios
         .get(!this.isOSTestnet() ? config.openSeaApiUrl || url : url, {
-          headers: !this.isOSTestnet()
-            ? {
-                url,
-                "X-API-KEY": config.openSeaTokenMetadataApiKey.trim(),
-                Accept: "application/json",
-              }
-            : {
-                Accept: "application/json",
-              },
+          headers,
         })
         .then((response) => response.data)
         .catch((error) => {
@@ -113,7 +118,7 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
       tokensMetadata.push(data.nft);
     }
 
-    return tokensMetadata.map(this.parseToken).filter(Boolean);
+    return tokensMetadata.map(super.parseToken).filter(Boolean);
   }
 
   async _getTokenFlagStatus(
@@ -126,18 +131,23 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
       ? "https://api.opensea.io"
       : "https://testnets-api.opensea.io";
     const url = `${domain}/api/v2/chain/${getOpenseaNetworkName()}/contract/${contract}/nfts/${tokenId}`;
+    const headers: any = !this.isOSTestnet()
+      ? {
+          url,
+          "X-API-KEY": config.openSeaTokenFlagStatusApiKey.trim(),
+          Accept: "application/json",
+        }
+      : {
+          Accept: "application/json",
+        };
+
+    if (!this.isOSTestnet() && config.openSeaApiUrl && config.openSeaNftApiKey) {
+      headers["x-nft-api-key"] = config.openSeaNftApiKey;
+    }
 
     const data = await axios
       .get(!this.isOSTestnet() ? config.openSeaApiUrl || url : url, {
-        headers: !this.isOSTestnet()
-          ? {
-              url,
-              "X-API-KEY": config.openSeaTokenFlagStatusApiKey.trim(),
-              Accept: "application/json",
-            }
-          : {
-              Accept: "application/json",
-            },
+        headers,
       })
       .then((response) => response.data)
       .catch((error) => {
@@ -178,18 +188,23 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
       ? "https://api.opensea.io"
       : "https://testnets-api.opensea.io";
     const url = `${domain}/api/v2/collection/${slug}/nfts?${searchParams.toString()}`;
+    const headers: any = !this.isOSTestnet()
+      ? {
+          url,
+          "X-API-KEY": config.openSeaTokenFlagStatusApiKey.trim(),
+          Accept: "application/json",
+        }
+      : {
+          Accept: "application/json",
+        };
+
+    if (!this.isOSTestnet() && config.openSeaApiUrl && config.openSeaNftApiKey) {
+      headers["x-nft-api-key"] = config.openSeaNftApiKey;
+    }
 
     const data = await axios
       .get(!this.isOSTestnet() ? config.openSeaApiUrl || url : url, {
-        headers: !this.isOSTestnet()
-          ? {
-              url,
-              "X-API-KEY": config.openSeaTokenFlagStatusApiKey.trim(),
-              Accept: "application/json",
-            }
-          : {
-              Accept: "application/json",
-            },
+        headers,
       })
       .then((response) => response.data)
       .catch((error) => {
@@ -231,18 +246,23 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
       ? "https://api.opensea.io"
       : "https://testnets-api.opensea.io";
     const url = `${domain}/api/v2/chain/${getOpenseaNetworkName()}/contract/${contract}/nfts?${searchParams.toString()}`;
+    const headers: any = !this.isOSTestnet()
+      ? {
+          url,
+          "X-API-KEY": config.openSeaTokenFlagStatusApiKey.trim(),
+          Accept: "application/json",
+        }
+      : {
+          Accept: "application/json",
+        };
+
+    if (!this.isOSTestnet() && config.openSeaApiUrl && config.openSeaNftApiKey) {
+      headers["x-nft-api-key"] = config.openSeaNftApiKey;
+    }
 
     const data = await axios
       .get(!this.isOSTestnet() ? config.openSeaApiUrl || url : url, {
-        headers: !this.isOSTestnet()
-          ? {
-              url,
-              "X-API-KEY": config.openSeaTokenFlagStatusApiKey.trim(),
-              Accept: "application/json",
-            }
-          : {
-              Accept: "application/json",
-            },
+        headers,
       })
       .then((response) => response.data)
       .catch((error) => {
@@ -352,7 +372,16 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
       contract,
       tokenIdRange: null,
       tokenSetId: `contract:${contract}`,
-      paymentTokens: undefined,
+      paymentTokens: metadata.payment_tokens
+        ? metadata.payment_tokens.map((token: any) => {
+            return {
+              address: token.address,
+              decimals: token.decimals,
+              name: token.name,
+              symbol: token.symbol,
+            };
+          })
+        : undefined,
       creator: creator ? _.toLower(creator) : null,
     };
   }
@@ -486,7 +515,7 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
     const network = getOpenseaNetworkName();
     const url = this.getUrlForApi(api, contract, tokenId, network!, slug);
 
-    const headers = !this.isOSTestnet()
+    const headers: any = !this.isOSTestnet()
       ? {
           url,
           "X-API-KEY": config.openSeaCollectionMetadataApiKey.trim(),
@@ -495,6 +524,10 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
       : {
           Accept: "application/json",
         };
+
+    if (!this.isOSTestnet() && config.openSeaApiUrl && config.openSeaNftApiKey) {
+      headers["x-nft-api-key"] = config.openSeaNftApiKey;
+    }
 
     try {
       const osResponse = await axios.get(!this.isOSTestnet() ? config.openSeaApiUrl || url : url, {

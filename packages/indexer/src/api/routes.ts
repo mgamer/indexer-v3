@@ -138,6 +138,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
+    path: "/admin/resync-api-key",
+    options: adminEndpoints.postResyncApiKey,
+  });
+
+  server.route({
+    method: "POST",
     path: "/admin/resync-user-balance",
     options: adminEndpoints.postResyncUserCollectionBalance,
   });
@@ -278,6 +284,12 @@ export const setupRoutes = (server: Server) => {
     method: "POST",
     path: "/admin/update-image-version",
     options: adminEndpoints.postUpdateImageVersionOptions,
+  });
+
+  server.route({
+    method: "POST",
+    path: "/admin/revalidate-mint",
+    options: adminEndpoints.postRevalidateMintOptions,
   });
 
   server.route({
@@ -820,6 +832,18 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
+    path: "/execute/call/v1",
+    options: executeEndpoints.postExecuteCallV1Options,
+  });
+
+  server.route({
+    method: "POST",
+    path: "/execute/deposit/v1",
+    options: executeEndpoints.postExecuteDepositV1Options,
+  });
+
+  server.route({
+    method: "POST",
     path: "/execute/mint/v1",
     options: executeEndpoints.postExecuteMintV1Options,
   });
@@ -886,6 +910,12 @@ export const setupRoutes = (server: Server) => {
   });
 
   // Management
+
+  server.route({
+    method: "POST",
+    path: "/management/mints/simulate/v1",
+    options: managementEndpoints.postSimulateMintV1Options,
+  });
 
   server.route({
     method: "POST",
@@ -1307,6 +1337,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
+    path: "/tokens/v8",
+    options: tokensEndpoints.getTokensV8Options,
+  });
+
+  server.route({
+    method: "GET",
     path: "/tokens/bootstrap/v1",
     options: tokensEndpoints.getTokensBootstrapV1Options,
   });
@@ -1375,6 +1411,12 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/users/{user}/tokens/v7",
     options: tokensEndpoints.getUserTokensV7Options,
+  });
+
+  server.route({
+    method: "GET",
+    path: "/users/{user}/tokens/v8",
+    options: tokensEndpoints.getUserTokensV8Options,
   });
 
   server.route({
@@ -1551,6 +1593,12 @@ export const setupRoutes = (server: Server) => {
       method: "GET",
       path: "/debug/reset",
       options: debugEndpoints.resetOptions,
+    });
+
+    server.route({
+      method: "GET",
+      path: "/debug/parse-royalties",
+      options: debugEndpoints.parseRoyaltiesOptions,
     });
   }
 };

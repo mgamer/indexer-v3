@@ -6,7 +6,6 @@ import * as RouterV6 from "./router/v6";
 import * as Beeple from "./beeple";
 import * as BendDao from "./bend-dao";
 import * as Blur from "./blur";
-import * as CollectionXyz from "./collectionxyz";
 import * as CrossChain from "./cross-chain";
 import * as CrossChainV2 from "./cross-chain-v2";
 import * as CryptoArte from "./cryptoarte";
@@ -44,7 +43,6 @@ import * as Zora from "./zora";
 import * as LooksRareV2 from "./looks-rare-v2";
 import * as Blend from "./blend";
 import * as SudoswapV2 from "./sudoswap-v2";
-import * as Midaswap from "./midaswap";
 import * as CaviarV1 from "./caviar-v1";
 import * as PaymentProcessor from "./payment-processor";
 import * as PaymentProcessorV2 from "./payment-processor-v2";
@@ -65,7 +63,6 @@ export {
   Beeple,
   BendDao,
   Blur,
-  CollectionXyz,
   CrossChain,
   CrossChainV2,
   CryptoArte,
@@ -103,7 +100,6 @@ export {
   LooksRareV2,
   Blend,
   SudoswapV2,
-  Midaswap,
   CaviarV1,
   PaymentProcessor,
   PaymentProcessorV2,

@@ -37,9 +37,7 @@ import * as zeroExV3 from "@/events-sync/handlers/zeroex-v3";
 import * as treasure from "@/events-sync/handlers/treasure";
 import * as looksRareV2 from "@/events-sync/handlers/looks-rare-v2";
 import * as blend from "@/events-sync/handlers/blend";
-import * as collectionxyz from "@/events-sync/handlers/collectionxyz";
 import * as sudoswapV2 from "@/events-sync/handlers/sudoswap-v2";
-import * as midaswap from "@/events-sync/handlers/midaswap";
 import * as caviarV1 from "@/events-sync/handlers/caviar-v1";
 import * as paymentProcessor from "@/events-sync/handlers/payment-processor";
 import * as thirdweb from "@/events-sync/handlers/thirdweb";
@@ -55,6 +53,7 @@ import * as erc721cV2 from "@/events-sync/handlers/erc721c-v2";
 import * as titlesxyz from "@/events-sync/handlers/titlesxyz";
 import * as artblocks from "@/events-sync/handlers/artblocks";
 import * as highlightxyz from "@/events-sync/handlers/highlightxyz";
+import * as ditto from "@/events-sync/handlers/ditto";
 
 // A list of events having the same high-level kind
 export type EventsByKind = {
@@ -78,7 +77,6 @@ export const eventKindToHandler = new Map<
   ["erc721", (e, d) => erc721.handleEvents(e, d)],
   ["erc1155", (e, d) => erc1155.handleEvents(e, d)],
   ["blur", (e, d) => blur.handleEvents(e, d)],
-  ["collectionxyz", (e, d) => collectionxyz.handleEvents(e, d)],
   ["cryptopunks", (e, d) => cryptopunks.handleEvents(e, d)],
   ["decentraland", (e, d) => decentraland.handleEvents(e, d)],
   ["element", (e, d) => element.handleEvents(e, d)],
@@ -105,7 +103,7 @@ export const eventKindToHandler = new Map<
   ["treasure", (e, d) => treasure.handleEvents(e, d)],
   ["looks-rare-v2", (e, d) => looksRareV2.handleEvents(e, d)],
   ["sudoswap-v2", (e, d) => sudoswapV2.handleEvents(e, d)],
-  ["midaswap", (e, d) => midaswap.handleEvents(e, d)],
+  ["ditto", (e) => ditto.handleEvents(e)],
   ["blend", (e, d) => blend.handleEvents(e, d)],
   ["caviar-v1", (e, d) => caviarV1.handleEvents(e, d)],
   ["payment-processor", (e, d) => paymentProcessor.handleEvents(e, d)],
@@ -170,8 +168,10 @@ export const processEventsBatchV2 = async (batches: EventsBatch[]) => {
 
   const latencies: {
     eventKind: EventKind;
+    eventsCount: number;
     latency: number;
   }[] = [];
+
   await Promise.all(
     flattenedArray.map(async (events) => {
       const startTime = Date.now();
@@ -195,6 +195,7 @@ export const processEventsBatchV2 = async (batches: EventsBatch[]) => {
 
       latencies.push({
         eventKind: events.kind,
+        eventsCount: events.data.length,
         latency: endTime - startTime,
       });
     })

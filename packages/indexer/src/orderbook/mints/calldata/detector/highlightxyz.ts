@@ -3,7 +3,6 @@ import { Contract } from "@ethersproject/contracts";
 import { BigNumber } from "@ethersproject/bignumber";
 
 import { logger } from "@/common/logger";
-import { bn } from "@/common/utils";
 import { baseProvider } from "@/common/provider";
 import { Transaction } from "@/models/transactions";
 import {
@@ -11,7 +10,7 @@ import {
   getCollectionMints,
   simulateAndUpsertCollectionMint,
 } from "@/orderbook/mints";
-import { getStatus, toSafeNumber, toSafeTimestamp } from "@/orderbook/mints/calldata/helpers";
+import { getStatus, toSafeTimestamp } from "@/orderbook/mints/calldata/helpers";
 
 import * as Sdk from "@reservoir0x/sdk";
 import { config } from "@/config/index";

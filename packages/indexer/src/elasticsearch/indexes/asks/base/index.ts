@@ -7,6 +7,7 @@ import { config } from "@/config/index";
 import { BuildDocumentData, BaseDocument, DocumentBuilder } from "@/elasticsearch/indexes/base";
 import { formatEther } from "@ethersproject/units";
 import { AddressZero } from "@ethersproject/constants";
+import { getNetworkName } from "@/config/network";
 
 export interface AskDocument extends BaseDocument {
   contractAndTokenId: string;
@@ -128,11 +129,16 @@ export class AskDocumentBuilder extends DocumentBuilder {
 
     return {
       ...baseDocument,
+      chain: {
+        id: config.chainId,
+        name: getNetworkName(),
+      },
       createdAt: data.created_at,
       contractAndTokenId: `${fromBuffer(data.contract)}:${data.token_id}`,
       contract: fromBuffer(data.contract),
       token: {
         id: data.token_id,
+        idV2: Number(data.token_id),
         name: data.token_name,
         image: data.token_image,
         attributes: data.token_attributes,
