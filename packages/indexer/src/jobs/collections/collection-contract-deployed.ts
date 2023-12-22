@@ -1,6 +1,11 @@
 import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handler";
 
-import { detectTokenStandard, getContractDeployer, getContractNameAndSymbol } from "./utils";
+import {
+  detectTokenStandard,
+  getContractDeployer,
+  getContractNameAndSymbol,
+  getContractOwner,
+} from "./utils";
 import { logger } from "@/common/logger";
 import { idb } from "@/common/db";
 import { toBuffer } from "@/common/utils";
@@ -8,6 +13,7 @@ import { toBuffer } from "@/common/utils";
 import * as registry from "@/utils/royalties/registry";
 import * as royalties from "@/utils/royalties";
 import { onchainMetadataProvider } from "@/metadata/providers/onchain-metadata-provider";
+import { collectionCheckSpamJob } from "@/jobs/collections-refresh/collections-check-spam-job";
 
 export type CollectionContractDeployed = {
   contract: string;
@@ -71,6 +77,7 @@ export class CollectionNewContractDeployedJob extends AbstractRabbitMqJobHandler
 
     const rawMetadata = await onchainMetadataProvider.getContractURI(contract);
     const contractMetadata = await onchainMetadataProvider._getCollectionMetadata(contract);
+    const contractOwner = await getContractOwner(contract);
 
     await Promise.all([
       idb.none(
@@ -82,7 +89,8 @@ export class CollectionNewContractDeployedJob extends AbstractRabbitMqJobHandler
             name,
             deployed_at,
             metadata,
-            deployer
+            deployer,
+            owner
         ) VALUES (
           $/address/,
           $/kind/,
@@ -90,7 +98,8 @@ export class CollectionNewContractDeployedJob extends AbstractRabbitMqJobHandler
           $/name/,
           $/deployed_at/,
           $/metadata:json/,
-          $/deployer/
+          $/deployer/,
+          $/owner/
         )
         ON CONFLICT DO NOTHING
       `,
@@ -102,6 +111,7 @@ export class CollectionNewContractDeployedJob extends AbstractRabbitMqJobHandler
           deployed_at: payload.blockTimestamp ? new Date(payload.blockTimestamp * 1000) : null,
           metadata: rawMetadata ? rawMetadata : null,
           deployer: deployer ? toBuffer(deployer) : null,
+          owner: contractOwner ? toBuffer(contractOwner) : null,
         }
       ),
       name
@@ -129,7 +139,11 @@ export class CollectionNewContractDeployedJob extends AbstractRabbitMqJobHandler
               id: contract,
               name: name || null,
               contract: toBuffer(contract),
-              creator: deployer ? toBuffer(deployer) : null,
+              creator: contractOwner
+                ? toBuffer(contractOwner)
+                : deployer
+                ? toBuffer(deployer)
+                : null,
               tokenSetId: `contract:${contract}`,
               metadata: contractMetadata?.metadata ? contractMetadata?.metadata : null,
             }
@@ -142,6 +156,7 @@ export class CollectionNewContractDeployedJob extends AbstractRabbitMqJobHandler
         // Refresh the on-chain royalties
         await registry.refreshRegistryRoyalties(contract);
         await royalties.refreshDefaultRoyalties(contract);
+        await collectionCheckSpamJob.addToQueue({ collectionId: contract });
       } catch (error) {
         logger.error(
           this.queueName,

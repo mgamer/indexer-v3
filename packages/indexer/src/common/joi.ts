@@ -13,6 +13,7 @@ import { FeeRecipients } from "@/models/fee-recipients";
 import { Sources } from "@/models/sources";
 import { SourcesEntity } from "@/models/sources/sources-entity";
 import { OrderKind } from "@/orderbook/orders";
+import { isOrderNativeOffChainCancellable } from "@/utils/offchain-cancel";
 import { Currency, getCurrency } from "@/utils/currencies";
 import {
   getUSDAndCurrencyPrices,
@@ -685,8 +686,7 @@ export const getJoiOrderObject = async (order: {
     originatedAt: order.originatedAt ? new Date(order.originatedAt).toISOString() : null,
     rawData: order.includeRawData ? order.rawData : undefined,
     isNativeOffChainCancellable: order.includeRawData
-      ? (order.rawData as any)?.zone ===
-        Sdk.SeaportBase.Addresses.ReservoirCancellationZone[config.chainId]
+      ? isOrderNativeOffChainCancellable(order.rawData)
       : undefined,
     depth: order.includeDepth
       ? await getJoiOrderDepthObject(

@@ -56,6 +56,7 @@ export class BackfillCollectionsElasticsearchJob extends AbstractRabbitMqJobHand
               collections.id,
               collections.slug,
               collections.name,
+              collections.community,
               (collections.metadata ->> 'imageUrl')::TEXT AS "image",
               (collections.metadata ->> 'bannerImageUrl')::TEXT AS "banner",
               (collections.metadata ->> 'discordUrl')::TEXT AS "discord_url",
@@ -64,6 +65,7 @@ export class BackfillCollectionsElasticsearchJob extends AbstractRabbitMqJobHand
               (collections.metadata ->> 'twitterUsername')::TEXT AS "twitter_username",
               (collections.metadata ->> 'twitterUrl')::TEXT AS "twitter_url",
               (collections.metadata ->> 'safelistRequestStatus')::TEXT AS "opensea_verification_status",
+              collections.image_version,
               collections.contract,
               collections.creator,
               collections.all_time_volume,
@@ -92,10 +94,12 @@ export class BackfillCollectionsElasticsearchJob extends AbstractRabbitMqJobHand
       );
 
       if (rawResults.length) {
+        const builder = new CollectionDocumentBuilder();
+
         for (const rawResult of rawResults) {
           const documentId = `${config.chainId}:${rawResult.id}`;
 
-          const document = new CollectionDocumentBuilder().buildDocument({
+          const document = await builder.buildDocument({
             id: rawResult.id,
             created_at: new Date(rawResult.created_at),
             contract: rawResult.contract,
@@ -112,6 +116,7 @@ export class BackfillCollectionsElasticsearchJob extends AbstractRabbitMqJobHand
             floor_sell_currency: rawResult.floor_sell_currency,
             floor_sell_currency_price: rawResult.floor_sell_currency_price,
             opensea_verification_status: rawResult.opensea_verification_status,
+            image_version: rawResult.image_version,
           });
 
           collectionEvents.push({ kind: "index", _id: documentId, document });

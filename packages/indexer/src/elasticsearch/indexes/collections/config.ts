@@ -22,11 +22,13 @@ export const CONFIG_DEFAULT = {
       community: { type: "keyword" },
       tokenCount: { type: "long" },
       isSpam: { type: "boolean" },
+      imageVersion: { type: "date", format: "epoch_second" },
       metadataDisabled: { type: "boolean" },
       createdAt: { type: "date" },
       indexedAt: { type: "date" },
       allTimeVolume: { type: "double" },
       allTimeVolumeDecimal: { type: "double" },
+      allTimeVolumeUsd: { type: "double" },
       floorSell: {
         properties: {
           id: { type: "keyword" },

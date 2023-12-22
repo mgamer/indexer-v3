@@ -46,7 +46,9 @@ export const getDefaultPaymentMethods = async (): Promise<string[]> => {
       baseProvider
     );
 
-    result = exchange.getDefaultPaymentMethods().then((c: Result) => c.map((d) => d.toLowerCase()));
+    result = await exchange
+      .getDefaultPaymentMethods()
+      .then((c: Result) => c.map((d) => d.toLowerCase()));
     await redis.set(cacheKey, JSON.stringify(result), "EX", 7 * 24 * 3600);
   }
 
@@ -57,7 +59,7 @@ export const getCollectionPaymentSettings = async (
   contract: string,
   refresh?: boolean
 ): Promise<CollectionPaymentSettings | undefined> => {
-  const cacheKey = `payment-processor-v2-payment-settings-by-contract:v2:${contract}`;
+  const cacheKey = `payment-processor-v2-payment-settings-by-contract:${contract}`;
 
   let result = await redis
     .get(cacheKey)
@@ -247,7 +249,7 @@ export const getAndIncrementUserNonce = async (
     )
     .then((r) => r?.nonce ?? "0");
 
-  const shiftedMarketplaceId = bn(marketplace.padEnd(66, "0")).shl(224);
+  const shiftedMarketplaceId = bn("0x" + marketplace.slice(-8).padEnd(64, "0"));
   nextNonce = shiftedMarketplaceId.add(nextNonce).toString();
 
   // At most 20 attempts
@@ -255,7 +257,7 @@ export const getAndIncrementUserNonce = async (
   for (let i = 0; i < 20; i++) {
     const isCancelled = await isNonceCancelled("payment-processor-v2", user, nextNonce);
     if (isCancelled) {
-      nextNonce++;
+      nextNonce = bn(nextNonce).add(1).toString();
     } else {
       foundValidNonce = true;
       break;
@@ -283,7 +285,7 @@ export const getAndIncrementUserNonce = async (
     {
       user: toBuffer(user),
       marketplace: toBuffer(marketplace),
-      nonce: bn(nextNonce).add(1).toString(),
+      nonce: bn(nextNonce).add(1).sub(shiftedMarketplaceId).toString(),
     }
   );
 

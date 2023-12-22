@@ -10,6 +10,7 @@ import { resyncUserCollectionsJob } from "@/jobs/nft-balance-updates/reynsc-user
 
 export type BackfillActiveUserCollectionsJobCursorInfo = {
   lastUpdatedAt: string;
+  limit?: number;
 };
 
 export class BackfillActiveUserCollectionsJob extends AbstractRabbitMqJobHandler {
@@ -21,7 +22,7 @@ export class BackfillActiveUserCollectionsJob extends AbstractRabbitMqJobHandler
   singleActiveConsumer = true;
 
   protected async process(payload: BackfillActiveUserCollectionsJobCursorInfo) {
-    const { lastUpdatedAt } = payload;
+    const { lastUpdatedAt, limit } = payload;
     const values: {
       limit: number;
       AddressZero: Buffer;
@@ -29,14 +30,14 @@ export class BackfillActiveUserCollectionsJob extends AbstractRabbitMqJobHandler
       owner?: Buffer;
       acquiredAt?: string;
     } = {
-      limit: 400,
+      limit: limit ?? 1000,
       AddressZero: toBuffer(AddressZero),
       deadAddress: toBuffer("0x000000000000000000000000000000000000dead"),
     };
 
     let updatedAtFilter = "";
     if (lastUpdatedAt) {
-      updatedAtFilter = `AND updated_at >= '${lastUpdatedAt}'`;
+      updatedAtFilter = `AND updated_at > '${lastUpdatedAt}'`;
     }
 
     const query = `
@@ -52,18 +53,22 @@ export class BackfillActiveUserCollectionsJob extends AbstractRabbitMqJobHandler
     const results = await idb.manyOrNone(query, values);
 
     if (results) {
+      const jobs = [];
+
       for (const result of results) {
         // Check if the user was already synced
         const lock = `backfill-active-users-supply:${fromBuffer(result.owner)}`;
 
         if (await acquireLock(lock, 60 * 60 * 24)) {
-          // Trigger resync for the user
-          await resyncUserCollectionsJob.addToQueue([
-            {
-              user: fromBuffer(result.owner),
-            },
-          ]);
+          jobs.push({
+            user: fromBuffer(result.owner),
+          });
         }
+      }
+
+      if (!_.isEmpty(jobs)) {
+        // Trigger resync for the user
+        await resyncUserCollectionsJob.addToQueue(jobs);
       }
     }
 
@@ -73,7 +78,13 @@ export class BackfillActiveUserCollectionsJob extends AbstractRabbitMqJobHandler
 
       return {
         addToQueue: true,
-        cursor: { lastUpdatedAt: lastItem.updated_at.toISOString() },
+        cursor: {
+          lastUpdatedAt: lastItem.updated_at.toISOString(),
+          limit:
+            lastItem.updated_at.toISOString() === lastUpdatedAt
+              ? _.min([(values.limit += 1000), 10000])
+              : undefined,
+        },
       };
     }
 

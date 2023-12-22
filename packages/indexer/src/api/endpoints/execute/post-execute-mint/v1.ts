@@ -142,14 +142,15 @@ export const postExecuteMintV1Options: RouteOptions = {
                 tip: Joi.string(),
                 orderIds: Joi.array().items(Joi.string()),
                 data: Joi.object(),
-                gasEstimate: Joi.number().description(
-                  "Approximation of gas used (only applies to `transaction` items)"
-                ),
                 check: Joi.object({
                   endpoint: Joi.string().required(),
                   method: Joi.string().valid("POST").required(),
                   body: Joi.any(),
                 }).description("The details of the endpoint for checking the status of the step"),
+                // TODO: To remove, only kept for backwards-compatibility
+                gasEstimate: Joi.number().description(
+                  "Approximation of gas used (only applies to `transaction` items)"
+                ),
               })
             )
             .required(),
@@ -240,6 +241,7 @@ export const postExecuteMintV1Options: RouteOptions = {
         totalPrice?: number;
         totalRawPrice?: string;
         feesOnTop: ExecuteFee[];
+        // TODO: To remove, only kept for backwards-compatibility
         gasCost?: string;
         fromChainId?: number;
       }[] = [];
@@ -344,6 +346,8 @@ export const postExecuteMintV1Options: RouteOptions = {
       const useCrossChainIntent =
         payload.currencyChainId !== undefined && payload.currencyChainId !== config.chainId;
 
+      let allMintsHaveExplicitRecipient = true;
+
       let lastError: string | undefined;
       for (let i = 0; i < items.length; i++) {
         const item = items[i];
@@ -385,7 +389,7 @@ export const postExecuteMintV1Options: RouteOptions = {
           if (collectionData) {
             const collectionMint = normalizePartialCollectionMint(rawMint);
 
-            const { txData, price } = await generateCollectionMintTxData(
+            const { txData, price, hasExplicitRecipient } = await generateCollectionMintTxData(
               collectionMint,
               payload.taker,
               item.quantity,
@@ -394,6 +398,7 @@ export const postExecuteMintV1Options: RouteOptions = {
                 referrer: payload.referrer,
               }
             );
+            allMintsHaveExplicitRecipient = allMintsHaveExplicitRecipient && hasExplicitRecipient;
 
             const orderId = `mint:${collectionMint.collection}`;
             mintDetails.push({
@@ -473,15 +478,13 @@ export const postExecuteMintV1Options: RouteOptions = {
 
               if (quantityToMint > 0) {
                 try {
-                  const { txData, price } = await generateCollectionMintTxData(
-                    mint,
-                    payload.taker,
-                    quantityToMint,
-                    {
+                  const { txData, price, hasExplicitRecipient } =
+                    await generateCollectionMintTxData(mint, payload.taker, quantityToMint, {
                       comment: payload.comment,
                       referrer: payload.referrer,
-                    }
-                  );
+                    });
+                  allMintsHaveExplicitRecipient =
+                    allMintsHaveExplicitRecipient && hasExplicitRecipient;
 
                   const orderId = `mint:${item.collection}`;
                   mintDetails.push({
@@ -597,15 +600,13 @@ export const postExecuteMintV1Options: RouteOptions = {
 
               if (quantityToMint > 0) {
                 try {
-                  const { txData, price } = await generateCollectionMintTxData(
-                    mint,
-                    payload.taker,
-                    quantityToMint,
-                    {
+                  const { txData, price, hasExplicitRecipient } =
+                    await generateCollectionMintTxData(mint, payload.taker, quantityToMint, {
                       comment: payload.comment,
                       referrer: payload.referrer,
-                    }
-                  );
+                    });
+                  allMintsHaveExplicitRecipient =
+                    allMintsHaveExplicitRecipient && hasExplicitRecipient;
 
                   const orderId = `mint:${collectionData.id}`;
                   mintDetails.push({
@@ -757,7 +758,7 @@ export const postExecuteMintV1Options: RouteOptions = {
           };
           solver?: {
             address: string;
-            maxCost: string;
+            capacityPerRequest: string;
           };
         } = await axios
           .get(
@@ -783,12 +784,13 @@ export const postExecuteMintV1Options: RouteOptions = {
           },
         };
 
-        const { requestId, price, fee } = await axios
+        const { requestId, price, relayerFee, depositGasFee } = await axios
           .post(`${config.crossChainSolverBaseUrl}/intents/quote`, data)
           .then((response) => ({
             requestId: response.data.requestId,
             price: response.data.price,
-            fee: response.data.fee,
+            relayerFee: response.data.relayerFee,
+            depositGasFee: response.data.depositGasFee,
           }))
           .catch((error) => {
             throw Boom.badRequest(
@@ -797,18 +799,19 @@ export const postExecuteMintV1Options: RouteOptions = {
           });
 
         if (
-          ccConfig.solver?.maxCost &&
-          bn(price).add(fee).gt(ccConfig.solver.maxCost) &&
+          ccConfig.solver?.capacityPerRequest &&
+          bn(price).gt(ccConfig.solver.capacityPerRequest) &&
           !preview
         ) {
-          throw Boom.badRequest("Cost too high");
+          throw Boom.badRequest("Insufficient capacity");
         }
 
         return {
           requestId,
           request: data.request,
           price,
-          fee,
+          relayerFee,
+          depositGasFee,
           user: ccConfig.user!,
           solver: ccConfig.solver!,
         };
@@ -824,12 +827,13 @@ export const postExecuteMintV1Options: RouteOptions = {
           tip?: string;
           orderIds?: string[];
           data?: object;
-          gasEstimate?: number;
           check?: {
             endpoint: string;
             method: "POST";
             body: object;
           };
+          // TODO: To remove, only kept for backwards-compatibility reasons
+          gasEstimate?: number;
         }[];
       };
 
@@ -844,21 +848,22 @@ export const postExecuteMintV1Options: RouteOptions = {
         },
       ];
 
+      const fees = {
+        gas: await getJoiPriceObject(
+          {
+            gross: {
+              amount: (await getGasFee()).mul(estimateGasFromTxTags(txTags)).toString(),
+            },
+          },
+          // Gas fees are always paid in the native currency of the chain
+          Sdk.Common.Addresses.Native[config.chainId]
+        ),
+      };
       if (payload.onlyPath && !useCrossChainIntent) {
         return {
           path,
           maxQuantities: preview ? maxQuantities : undefined,
-          fees: {
-            gas: await getJoiPriceObject(
-              {
-                gross: {
-                  amount: (await getGasFee()).mul(estimateGasFromTxTags(txTags)).toString(),
-                },
-              },
-              // Gas fees are always paid in the native currency of the chain
-              Sdk.Common.Addresses.Native[config.chainId]
-            ),
-          },
+          fees,
           // TODO: To remove, only kept for backwards-compatibility
           gasEstimate: estimateGasFromTxTags(txTags),
         };
@@ -877,7 +882,7 @@ export const postExecuteMintV1Options: RouteOptions = {
         const item = path[0];
 
         const data = await getCrossChainQuote();
-        const cost = bn(data.price).add(data.fee);
+        const cost = bn(data.price).add(data.relayerFee);
 
         // TODO: To remove, only kept for backwards-compatibility
         item.totalPrice = formatPrice(cost);
@@ -885,7 +890,7 @@ export const postExecuteMintV1Options: RouteOptions = {
         item.quote = formatPrice(cost);
         item.rawQuote = cost.toString();
         item.fromChainId = payload.currencyChainId;
-        item.gasCost = data.fee.toString();
+        item.gasCost = data.relayerFee.toString();
 
         // Better approach
         // const c = await getCurrency(Sdk.Common.Addresses.Native[config.chainId]);
@@ -897,19 +902,27 @@ export const postExecuteMintV1Options: RouteOptions = {
         // item.buyInRawQuote = quote;
 
         const needsDeposit = bn(data.user.balance).lt(cost);
+        const fees = {
+          gas: needsDeposit
+            ? await getJoiPriceObject(
+                { gross: { amount: data.depositGasFee } },
+                Sdk.Common.Addresses.Native[config.chainId]
+              )
+            : undefined,
+          relayer: await getJoiPriceObject(
+            { gross: { amount: data.relayerFee } },
+            Sdk.Common.Addresses.Native[config.chainId],
+            undefined,
+            undefined,
+            payload.currencyChainId
+          ),
+        };
+
         if (payload.onlyPath) {
           return {
             path,
             maxQuantities: preview ? maxQuantities : undefined,
-            fees: {
-              relayer: await getJoiPriceObject(
-                { gross: { amount: data.fee } },
-                Sdk.Common.Addresses.Native[config.chainId],
-                undefined,
-                undefined,
-                payload.currencyChainId
-              ),
-            },
+            fees,
             // TODO: To remove, only kept for backwards-compatibility
             gasEstimate: needsDeposit ? 21000 : 0,
           };
@@ -941,7 +954,8 @@ export const postExecuteMintV1Options: RouteOptions = {
               data: data.requestId,
               value: bn(cost).sub(data.user.balance).toString(),
               gasLimit: 22000,
-              chainId: payload.currencyChainId,
+              // `0x1234` or `4660` denotes cross-chain balance spending
+              chainId: payload.currencyChainId === 4660 ? 1 : payload.currencyChainId,
             },
             check: {
               endpoint: "/execute/status/v1",
@@ -988,6 +1002,7 @@ export const postExecuteMintV1Options: RouteOptions = {
         return {
           steps: customSteps.filter((s) => s.items.length),
           path,
+          fees,
         };
       }
 
@@ -1010,6 +1025,7 @@ export const postExecuteMintV1Options: RouteOptions = {
         source: payload.source,
         partial: payload.partial,
         relayer: payload.relayer,
+        allMintsHaveExplicitRecipient,
       });
 
       // Minting via a smart contract proxy is complicated.
@@ -1089,6 +1105,7 @@ export const postExecuteMintV1Options: RouteOptions = {
               kind: "transaction",
             },
           },
+          // TODO: To remove, only kept for backwards-compatibility
           gasEstimate: txTags ? estimateGasFromTxTags(txTags) : undefined,
         });
       }
@@ -1121,6 +1138,7 @@ export const postExecuteMintV1Options: RouteOptions = {
         steps,
         errors,
         path,
+        fees,
       };
     } catch (error) {
       const key = request.headers["x-api-key"];

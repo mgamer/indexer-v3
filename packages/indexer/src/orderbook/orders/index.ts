@@ -221,7 +221,10 @@ export const generateListingDetailsV6 = async (
     amount?: number;
     isFlagged?: boolean;
   },
-  taker: string
+  taker: string,
+  options?: {
+    ppV2TrustedChannel?: string;
+  }
 ): Promise<ListingDetails> => {
   const common = {
     orderId: order.id,
@@ -480,6 +483,10 @@ export const generateListingDetailsV6 = async (
         }
       }
 
+      if (options?.ppV2TrustedChannel) {
+        extraArgs.trustedChannel = options.ppV2TrustedChannel;
+      }
+
       return {
         kind: "payment-processor-v2",
         ...common,
@@ -516,6 +523,7 @@ export const generateBidDetailsV6 = async (
   taker: string,
   options?: {
     permit?: Permit;
+    ppV2TrustedChannel?: string;
   }
 ): Promise<BidDetails> => {
   const common = {
@@ -873,6 +881,10 @@ export const generateBidDetailsV6 = async (
         if (trustedChannels.length) {
           extraArgs.trustedChannel = trustedChannels[0].channel;
         }
+      }
+
+      if (options?.ppV2TrustedChannel) {
+        extraArgs.trustedChannel = options?.ppV2TrustedChannel;
       }
 
       return {
