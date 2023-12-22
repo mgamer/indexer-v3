@@ -51,6 +51,7 @@ import * as erc721cV2 from "@/events-sync/data/erc721c-v2";
 import * as titlesxyz from "@/events-sync/data/titlesxyz";
 import * as artblocks from "@/events-sync/data/artblocks";
 import * as ditto from "@/events-sync/data/ditto";
+import * as mooar from "@/events-sync/data/mooar";
 
 // All events we're syncing should have an associated `EventData`
 // entry which dictates the way the event will be parsed and then
@@ -104,7 +105,8 @@ export type EventKind =
   | "titlesxyz"
   | "artblocks"
   | "erc721c-v2"
-  | "ditto";
+  | "ditto"
+  | "mooar";
 
 // Event sub-kind in each of the above protocol/standard
 export type EventSubKind =
@@ -324,7 +326,8 @@ export type EventSubKind =
   | "erc721c-v2-removed-account-from-list"
   | "erc721c-v2-removed-code-hash-from-list"
   | "erc721c-v2-applied-list-to-collection"
-  | "ditto-pool-initialized";
+  | "ditto-pool-initialized"
+  | "mooar-order-filled";
 
 export type EventData = {
   kind: EventKind;
@@ -551,6 +554,7 @@ const allEventData = [
   erc721cV2.removedCodeHashFromList,
   erc721cV2.appliedListToCollection,
   ditto.dittoPoolInitialized,
+  mooar.orderFulfilled,
 ];
 
 export const getEventData = (events?: string[]) => {

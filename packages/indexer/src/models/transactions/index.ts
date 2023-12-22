@@ -199,7 +199,7 @@ export const saveTransactionsV2 = async (transactions: Transaction[]) => {
   );
 };
 
-export const getTransaction = async (hash: string): Promise<Transaction> => {
+export const getTransaction = async (hash: string): Promise<Transaction | null> => {
   const result = await idb.oneOrNone(
     `
       SELECT
@@ -214,6 +214,8 @@ export const getTransaction = async (hash: string): Promise<Transaction> => {
     `,
     { hash: toBuffer(hash) }
   );
+
+  if (!result) return null;
 
   return {
     hash,
