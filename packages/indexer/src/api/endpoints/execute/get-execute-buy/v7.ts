@@ -55,7 +55,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
   description: "Buy Tokens",
   notes:
     "Use this API to fill listings. We recommend using the SDK over this API as the SDK will iterate through the steps and return callbacks. Please mark `excludeEOA` as `true` to exclude Blur orders.",
-  tags: ["api", "Trading"],
+  tags: ["api"],
   timeout: {
     server: 40 * 1000,
   },
@@ -142,7 +142,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
       forceRouter: Joi.boolean().description(
         "If true, all fills will be executed through the router (where possible)"
       ),
-      forceTrustedForwarder: Joi.string()
+      forwarderChannel: Joi.string()
         .lowercase()
         .pattern(regex.address)
         .description(
@@ -509,7 +509,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
               },
               payload.taker,
               {
-                ppV2TrustedChannel: payload.forceTrustedForwarder,
+                ppV2TrustedChannel: payload.forwarderChannel,
               }
             )
           );
