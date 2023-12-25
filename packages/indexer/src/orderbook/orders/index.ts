@@ -925,16 +925,35 @@ export const checkBlacklistAndFallback = async (
     }
   }
 
+  const seaportBlocked = await checkMarketplaceIsFiltered(collection, [
+    Sdk.SeaportV15.Addresses.Exchange[config.chainId],
+    new Sdk.SeaportV15.Exchange(config.chainId).deriveConduit(
+      Sdk.SeaportBase.Addresses.OpenseaConduitKey[config.chainId] ?? HashZero
+    ),
+  ]);
+
   // Fallback to PaymentProcessor when Seaport is blocked
   if (["seaport-v1.5"].includes(params.orderKind) && ["reservoir"].includes(params.orderbook)) {
+    if (seaportBlocked) {
+      params.orderKind = "payment-processor";
+    }
+  }
+
+  // Fallback to Seaport if when Payment Processor is blocked
+  if (
+    ["payment-processor"].includes(params.orderKind) &&
+    ["reservoir"].includes(params.orderbook)
+  ) {
     const blocked = await checkMarketplaceIsFiltered(collection, [
-      Sdk.SeaportV15.Addresses.Exchange[config.chainId],
-      new Sdk.SeaportV15.Exchange(config.chainId).deriveConduit(
-        Sdk.SeaportBase.Addresses.OpenseaConduitKey[config.chainId] ?? HashZero
-      ),
+      Sdk.PaymentProcessor.Addresses.Exchange[config.chainId],
+      Sdk.PaymentProcessorV2.Addresses.Exchange[config.chainId],
     ]);
     if (blocked) {
-      params.orderKind = "payment-processor";
+      if (!seaportBlocked) {
+        params.orderKind = "seaport-v1.5";
+      } else {
+        throw new Error("Collection is blocking by all supported exchanges");
+      }
     }
   }
 };
