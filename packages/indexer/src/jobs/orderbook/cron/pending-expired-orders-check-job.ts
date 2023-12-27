@@ -31,7 +31,7 @@ export class PendingExpiredOrdersCheckJob extends AbstractRabbitMqJobHandler {
     );
 
     if (result.expired_count > 0) {
-      const minAndMax = await ridb.oneOrNone(
+      const minResult = await ridb.oneOrNone(
         `
           SELECT
             floor(extract(epoch FROM min(upper(orders.valid_between)))) AS min_timestamp
@@ -40,11 +40,11 @@ export class PendingExpiredOrdersCheckJob extends AbstractRabbitMqJobHandler {
             AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
         `
       );
-      if (minAndMax) {
+      if (minResult) {
         await backfillExpiredOrders.addToQueue([
           {
-            from: minAndMax.min_timestamp,
-            to: minAndMax.min_timestamp + 10000,
+            from: Number(minResult.min_timestamp),
+            to: Number(minResult.min_timestamp) + 10000,
           },
         ]);
       }
