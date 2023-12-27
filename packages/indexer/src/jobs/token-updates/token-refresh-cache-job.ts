@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import { inject } from "@/api/index";
 import { idb } from "@/common/db";
 import { logger } from "@/common/logger";
@@ -47,22 +45,12 @@ export default class TokenRefreshCacheJob extends AbstractRabbitMqJobHandler {
         tokenId,
       }
     );
-    if (config.chainId === 137) {
-      logger.info(
-        "debug",
-        JSON.stringify({
-          contract,
-          tokenId,
-          floorAsk,
-        })
-      );
-    }
     if (floorAsk) {
       // Revalidate
       await orderFixesJob.addToQueue([{ by: "id", data: { id: floorAsk.id } }]);
 
       // Simulate
-      await inject({
+      const response = await inject({
         method: "POST",
         url: "/management/orders/simulate/v1",
         headers: {
@@ -72,6 +60,18 @@ export default class TokenRefreshCacheJob extends AbstractRabbitMqJobHandler {
           id: floorAsk.id,
         },
       });
+      if (config.chainId === 137) {
+        logger.info(
+          "debug",
+          JSON.stringify({
+            contract,
+            tokenId,
+            floorAsk,
+            response: response.payload,
+            status: response.statusCode,
+          })
+        );
+      }
     }
 
     // Top bid simulation is very costly so we only do it if explicitly requested
