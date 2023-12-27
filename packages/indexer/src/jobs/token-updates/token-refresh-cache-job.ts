@@ -29,16 +29,6 @@ export default class TokenRefreshCacheJob extends AbstractRabbitMqJobHandler {
       return;
     }
 
-    if (config.chainId === 137) {
-      logger.info(
-        "debug",
-        JSON.stringify({
-          contract,
-          tokenId,
-        })
-      );
-    }
-
     // Refresh the token floor ask and top bid
     await Tokens.recalculateTokenFloorSell(contract, tokenId);
     await Tokens.recalculateTokenTopBid(contract, tokenId);
@@ -61,6 +51,8 @@ export default class TokenRefreshCacheJob extends AbstractRabbitMqJobHandler {
       logger.info(
         "debug",
         JSON.stringify({
+          contract,
+          tokenId,
           floorAsk,
         })
       );
