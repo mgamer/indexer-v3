@@ -127,6 +127,32 @@ export const getCollectionMints = async (
   );
 };
 
+export const updateCollectionMintingStatus = async (collection: string) => {
+  const result = await idb.oneOrNone(
+    `
+      SELECT COUNT(*) as open_mints
+      FROM collection_mints
+      WHERE collection_mints.collection_id = $/collection/
+      AND collection_mints.status = 'open'
+    `,
+    {
+      collection,
+    }
+  );
+
+  const isMinting = result.open_mints > 0 ? 1 : 0;
+  await idb.none(
+    `
+      UPDATE collections SET is_minting = $/isMinting/
+      WHERE collections.id = $/collection/
+    `,
+    {
+      collection: collection,
+      isMinting,
+    }
+  );
+};
+
 export const upsertCollectionMint = async (collectionMint: CollectionMint) => {
   const isOpen = collectionMint.status === "open";
 
@@ -252,6 +278,8 @@ export const upsertCollectionMint = async (collectionMint: CollectionMint) => {
         collectionMint.startTime! - now()
       );
     }
+
+    await updateCollectionMintingStatus(collectionMint.collection);
 
     return isOpen;
   } else if (isOpen || collectionMint.statusReason === "not-yet-started") {
@@ -379,6 +407,8 @@ export const upsertCollectionMint = async (collectionMint: CollectionMint) => {
         collectionMint.startTime! - now()
       );
     }
+
+    await updateCollectionMintingStatus(collectionMint.collection);
 
     return true;
   }

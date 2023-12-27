@@ -154,6 +154,9 @@ export const getCollectionsV7Options: RouteOptions = {
       excludeSpam: Joi.boolean()
         .default(false)
         .description("If true, will filter any collections marked as spam."),
+      includeMinting: Joi.boolean()
+        .default(false)
+        .description("If true, will include any collections are minting."),
       startTimestamp: Joi.number()
         .when("sortBy", {
           is: "updatedAt",
@@ -206,6 +209,7 @@ export const getCollectionsV7Options: RouteOptions = {
           description: Joi.string().allow("", null),
           metadataDisabled: Joi.boolean().default(false),
           isSpam: Joi.boolean().default(false),
+          isMinting: Joi.boolean().default(false),
           sampleImages: Joi.array().items(Joi.string().allow("", null)),
           tokenCount: Joi.string().description("Total tokens within the collection."),
           onSaleCount: Joi.string().description("Total tokens currently on sale."),
@@ -491,6 +495,7 @@ export const getCollectionsV7Options: RouteOptions = {
           collections.day7_floor_sell_value,
           collections.day30_floor_sell_value,
           collections.is_spam,
+          collections.is_minting,
           collections.metadata_disabled,
           ${floorAskSelectQuery}
           collections.token_count,
@@ -583,6 +588,10 @@ export const getCollectionsV7Options: RouteOptions = {
 
       if (query.excludeSpam) {
         conditions.push("(collections.is_spam IS NULL OR collections.is_spam <= 0)");
+      }
+
+      if (query.includeMinting) {
+        conditions.push("(collections.is_minting IS NOT NULL OR collections.is_minting > 0)");
       }
 
       // Sorting and pagination
@@ -832,6 +841,7 @@ export const getCollectionsV7Options: RouteOptions = {
               description: r.description,
               metadataDisabled: Boolean(Number(r.metadata_disabled)),
               isSpam: Number(r.is_spam) > 0,
+              isMinting: Number(r.is_minting) > 0,
               sampleImages: Assets.getResizedImageURLs(sampleImages) ?? [],
               tokenCount: String(r.token_count),
               onSaleCount: String(r.on_sale_count),
