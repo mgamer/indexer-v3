@@ -60,10 +60,10 @@ export const pendingExpiredOrdersCheckJob = new PendingExpiredOrdersCheckJob();
 
 if (config.doBackgroundWork) {
   cron.schedule(
-    `0 */2 * * *`,
+    `0 */1 * * *`,
     async () =>
       await redlock
-        .acquire(["pending-expired-orders-check-lock"], (2 * 3600 - 5) * 1000)
+        .acquire(["pending-expired-orders-check-lock"], (1 * 3600 - 5) * 1000)
         .then(async () => {
           await pendingExpiredOrdersCheckJob.addToQueue();
         })
