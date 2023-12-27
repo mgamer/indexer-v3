@@ -1,6 +1,5 @@
 import { inject } from "@/api/index";
 import { idb } from "@/common/db";
-import { logger } from "@/common/logger";
 import { toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handler";
@@ -45,12 +44,12 @@ export default class TokenRefreshCacheJob extends AbstractRabbitMqJobHandler {
         tokenId,
       }
     );
-    if (floorAsk) {
+    if (floorAsk?.id) {
       // Revalidate
       await orderFixesJob.addToQueue([{ by: "id", data: { id: floorAsk.id } }]);
 
       // Simulate
-      const response = await inject({
+      await inject({
         method: "POST",
         url: "/management/orders/simulate/v1",
         headers: {
@@ -60,18 +59,6 @@ export default class TokenRefreshCacheJob extends AbstractRabbitMqJobHandler {
           id: floorAsk.id,
         },
       });
-      if (config.chainId === 137) {
-        logger.info(
-          "debug",
-          JSON.stringify({
-            contract,
-            tokenId,
-            floorAsk,
-            response: response.payload,
-            status: response.statusCode,
-          })
-        );
-      }
     }
 
     // Top bid simulation is very costly so we only do it if explicitly requested
@@ -104,7 +91,7 @@ export default class TokenRefreshCacheJob extends AbstractRabbitMqJobHandler {
           tokenId,
         }
       );
-      if (topBid) {
+      if (topBid?.id) {
         // Revalidate
         await orderFixesJob.addToQueue([{ by: "id", data: { id: topBid.id } }]);
 
