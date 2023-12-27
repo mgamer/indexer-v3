@@ -1,12 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { Tokens } from "@/models/tokens";
-import { idb } from "@/common/db";
-import { toBuffer } from "@/common/utils";
-import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handler";
 import { inject } from "@/api/index";
+import { idb } from "@/common/db";
+import { logger } from "@/common/logger";
+import { toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
+import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handler";
 import { orderFixesJob } from "@/jobs/order-fixes/order-fixes-job";
+import { Tokens } from "@/models/tokens";
 
 export type TokenRefreshCacheJobPayload = {
   contract: string;
@@ -28,6 +29,16 @@ export default class TokenRefreshCacheJob extends AbstractRabbitMqJobHandler {
       return;
     }
 
+    if (config.chainId === 137) {
+      logger.info(
+        "debug",
+        JSON.stringify({
+          contract,
+          tokenId,
+        })
+      );
+    }
+
     // Refresh the token floor ask and top bid
     await Tokens.recalculateTokenFloorSell(contract, tokenId);
     await Tokens.recalculateTokenTopBid(contract, tokenId);
@@ -46,6 +57,14 @@ export default class TokenRefreshCacheJob extends AbstractRabbitMqJobHandler {
         tokenId,
       }
     );
+    if (config.chainId === 137) {
+      logger.info(
+        "debug",
+        JSON.stringify({
+          floorAsk,
+        })
+      );
+    }
     if (floorAsk) {
       // Revalidate
       await orderFixesJob.addToQueue([{ by: "id", data: { id: floorAsk.id } }]);
