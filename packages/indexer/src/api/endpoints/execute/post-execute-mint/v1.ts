@@ -953,7 +953,7 @@ export const postExecuteMintV1Options: RouteOptions = {
             data: {
               from: payload.taker,
               to: data.solver.address,
-              data: data.shortRequestId,
+              data: data.requestId,
               value: bn(cost).sub(data.user.balance).toString(),
               gasLimit: 22000,
               // `0x1234` or `4660` denotes cross-chain balance spending
