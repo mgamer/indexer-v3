@@ -22,7 +22,7 @@ export type Event = {
 
 type ContractKind = "erc721" | "erc1155" | "cryptopunks" | "erc721-like";
 
-type DbEvent = {
+export type DbEvent = {
   address: Buffer;
   block: number;
   block_hash: Buffer;
