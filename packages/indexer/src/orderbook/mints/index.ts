@@ -128,26 +128,27 @@ export const getCollectionMints = async (
 };
 
 export const updateCollectionMintingStatus = async (collection: string) => {
-  const result = await idb.oneOrNone(
+  const isMinting = Boolean(
+    await idb.oneOrNone(
+      `
+        SELECT 1 FROM collection_mints
+        WHERE collection_mints.collection_id = $/collection/
+          AND collection_mints.status = 'open'
+      `,
+      { collection }
+    )
+  );
+
+  await idb.none(
     `
-      SELECT COUNT(*) as open_mints
-      FROM collection_mints
-      WHERE collection_mints.collection_id = $/collection/
-      AND collection_mints.status = 'open'
+      UPDATE collections SET
+        is_minting = $/isMinting/,
+        updated_at = now()
+      WHERE collections.id = $/collection/
+        AND collections.is_minting != $/isMinting/
     `,
     {
       collection,
-    }
-  );
-
-  const isMinting = result.open_mints > 0 ? 1 : 0;
-  await idb.none(
-    `
-      UPDATE collections SET is_minting = $/isMinting/
-      WHERE collections.id = $/collection/
-    `,
-    {
-      collection: collection,
       isMinting,
     }
   );
@@ -279,6 +280,7 @@ export const upsertCollectionMint = async (collectionMint: CollectionMint) => {
       );
     }
 
+    // Update minting status
     await updateCollectionMintingStatus(collectionMint.collection);
 
     return isOpen;
@@ -408,10 +410,14 @@ export const upsertCollectionMint = async (collectionMint: CollectionMint) => {
       );
     }
 
+    // Update minting status
     await updateCollectionMintingStatus(collectionMint.collection);
 
     return true;
   }
+
+  // Update minting status
+  await updateCollectionMintingStatus(collectionMint.collection);
 
   return false;
 };

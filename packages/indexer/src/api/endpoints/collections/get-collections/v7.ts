@@ -154,9 +154,6 @@ export const getCollectionsV7Options: RouteOptions = {
       excludeSpam: Joi.boolean()
         .default(false)
         .description("If true, will filter any collections marked as spam."),
-      includeMinting: Joi.boolean()
-        .default(false)
-        .description("If true, will include any collections are minting."),
       startTimestamp: Joi.number()
         .when("sortBy", {
           is: "updatedAt",
@@ -590,10 +587,6 @@ export const getCollectionsV7Options: RouteOptions = {
         conditions.push("(collections.is_spam IS NULL OR collections.is_spam <= 0)");
       }
 
-      if (query.includeMinting) {
-        conditions.push("(collections.is_minting IS NOT NULL OR collections.is_minting > 0)");
-      }
-
       // Sorting and pagination
 
       if (query.continuation) {
@@ -841,7 +834,7 @@ export const getCollectionsV7Options: RouteOptions = {
               description: r.description,
               metadataDisabled: Boolean(Number(r.metadata_disabled)),
               isSpam: Number(r.is_spam) > 0,
-              isMinting: Number(r.is_minting) > 0,
+              isMinting: Boolean(r.is_minting),
               sampleImages: Assets.getResizedImageURLs(sampleImages) ?? [],
               tokenCount: String(r.token_count),
               onSaleCount: String(r.on_sale_count),

@@ -1,6 +1,6 @@
 -- Up Migration
 
-ALTER TABLE "collections" ADD COLUMN "is_minting" INT;
+ALTER TABLE "collections" ADD COLUMN "is_minting" BOOLEAN;
 
 -- Down Migration
 
