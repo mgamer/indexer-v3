@@ -118,6 +118,7 @@ export const postExecuteCallV1Options: RouteOptions = {
         .post(`${config.crossChainSolverBaseUrl}/intents/quote`, data)
         .then((response) => ({
           requestId: response.data.requestId,
+          shortRequestId: response.data.shortRequestId,
           price: response.data.price,
           relayerFee: response.data.relayerFee,
           depositGasFee: response.data.depositGasFee,

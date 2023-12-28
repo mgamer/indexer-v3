@@ -784,10 +784,11 @@ export const postExecuteMintV1Options: RouteOptions = {
           },
         };
 
-        const { requestId, price, relayerFee, depositGasFee } = await axios
+        const { requestId, shortRequestId, price, relayerFee, depositGasFee } = await axios
           .post(`${config.crossChainSolverBaseUrl}/intents/quote`, data)
           .then((response) => ({
             requestId: response.data.requestId,
+            shortRequestId: response.data.shortRequestId,
             price: response.data.price,
             relayerFee: response.data.relayerFee,
             depositGasFee: response.data.depositGasFee,
@@ -808,6 +809,7 @@ export const postExecuteMintV1Options: RouteOptions = {
 
         return {
           requestId,
+          shortRequestId,
           request: data.request,
           price,
           relayerFee,
