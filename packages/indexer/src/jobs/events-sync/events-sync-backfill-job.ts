@@ -11,7 +11,7 @@ export type EventSyncBackfillJobPayload = {
 export default class EventsSyncBackfillJob extends AbstractRabbitMqJobHandler {
   queueName = "events-sync-backfill";
   maxRetries = 10;
-  concurrency = 10;
+  concurrency = 3;
   timeout = 60000;
   backoff = {
     type: "exponential",
