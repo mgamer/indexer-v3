@@ -1414,7 +1414,9 @@ export const getTokensV6Options: RouteOptions = {
 
         const metadata = {
           imageOriginal: undefined,
+          imageMimeType: undefined,
           mediaOriginal: undefined,
+          mediaMimeType: undefined,
         };
 
         if (r.metadata?.image_original_url) {
@@ -1431,6 +1433,14 @@ export const getTokensV6Options: RouteOptions = {
 
         if (!r.media && r.metadata?.animation_original_url) {
           r.media = onchainMetadataProvider.parseIPFSURI(r.metadata.animation_original_url);
+        }
+
+        if (r.metadata?.image_mime_type) {
+          metadata.imageMimeType = r.metadata.image_mime_type;
+        }
+
+        if (r.metadata?.animation_mime_type) {
+          metadata.mediaMimeType = r.metadata.animation_mime_type;
         }
 
         return {
