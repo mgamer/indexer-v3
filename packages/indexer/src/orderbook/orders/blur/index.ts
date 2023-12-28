@@ -107,7 +107,14 @@ export const savePartialListings = async (
       const isFiltered = await checkMarketplaceIsFiltered(orderParams.collection, [
         Sdk.BlurV2.Addresses.Delegate[config.chainId],
       ]);
-      if (isFiltered) {
+
+      const seaportFiltered = await checkMarketplaceIsFiltered(orderParams.collection, [
+        // OpenSea's Conduit
+        "0x1e0049783f008a0085193e00003d00cd54003c71",
+      ]);
+
+      // Blur also uses Seaport to fallback if it's blocked.
+      if (isFiltered && seaportFiltered) {
         // Force remove any orders
         orderParams.price = undefined;
       }
