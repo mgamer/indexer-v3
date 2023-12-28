@@ -126,7 +126,7 @@ export const getOrdersBidsV6Options: RouteOptions = {
         .description(
           "Filter to sources by domain. Only active listed will be returned. Must set `includeRawData=true` to reveal individual bids when `sources=blur.io`. Example: `opensea.io`"
         ),
-      type: Joi.string()
+      orderType: Joi.string()
         .when("maker", {
           is: Joi.exist(),
           then: Joi.allow(),
@@ -336,7 +336,7 @@ export const getOrdersBidsV6Options: RouteOptions = {
         "token_set_schema_hash"
       );
 
-      const typeJoin = query.type
+      const orderTypeJoin = query.orderType
         ? `JOIN token_sets ON token_sets.id = orders.token_set_id AND token_sets.schema_hash = orders.token_set_schema_hash`
         : "";
 
@@ -390,7 +390,7 @@ export const getOrdersBidsV6Options: RouteOptions = {
           (${criteriaBuildQuery}) AS criteria
           ${query.includeRawData || query.includeDepth ? ", orders.raw_data" : ""}
         FROM orders
-        ${typeJoin}
+        ${orderTypeJoin}
         JOIN LATERAL (
           SELECT kind
           FROM contracts
@@ -588,8 +588,8 @@ export const getOrdersBidsV6Options: RouteOptions = {
           conditions.push(`tokens.collection_id IN ($/collectionsIds:csv/)`);
         }
 
-        if (query.type) {
-          switch (query.type) {
+        if (query.orderType) {
+          switch (query.orderType) {
             case "token": {
               conditions.push(`orders.token_set_id LIKE 'token:%'`);
               break;
