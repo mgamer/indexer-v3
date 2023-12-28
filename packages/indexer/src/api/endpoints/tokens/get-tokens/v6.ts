@@ -35,8 +35,8 @@ import { CollectionSets } from "@/models/collection-sets";
 import { Collections } from "@/models/collections";
 import * as AsksIndex from "@/elasticsearch/indexes/asks";
 import { OrderComponents } from "@reservoir0x/sdk/dist/seaport-base/types";
-import { onchainMetadataProvider } from "@/metadata/providers/onchain-metadata-provider";
 import { hasExtendCollectionHandler } from "@/metadata/extend";
+import { parseMetadata } from "@/api/endpoints/tokens/get-user-tokens/v8";
 
 const version = "v6";
 
@@ -1412,36 +1412,7 @@ export const getTokensV6Options: RouteOptions = {
           }
         }
 
-        const metadata = {
-          imageOriginal: undefined,
-          imageMimeType: undefined,
-          mediaOriginal: undefined,
-          mediaMimeType: undefined,
-        };
-
-        if (r.metadata?.image_original_url) {
-          metadata.imageOriginal = r.metadata.image_original_url;
-        }
-
-        if (r.metadata?.animation_original_url) {
-          metadata.mediaOriginal = r.metadata.animation_original_url;
-        }
-
-        if (!r.image && r.metadata?.image_original_url) {
-          r.image = onchainMetadataProvider.parseIPFSURI(r.metadata.image_original_url);
-        }
-
-        if (!r.media && r.metadata?.animation_original_url) {
-          r.media = onchainMetadataProvider.parseIPFSURI(r.metadata.animation_original_url);
-        }
-
-        if (r.metadata?.image_mime_type) {
-          metadata.imageMimeType = r.metadata.image_mime_type;
-        }
-
-        if (r.metadata?.animation_mime_type) {
-          metadata.mediaMimeType = r.metadata.animation_mime_type;
-        }
+        const metadata = parseMetadata(r.metadata);
 
         return {
           token: getJoiTokenObject(
