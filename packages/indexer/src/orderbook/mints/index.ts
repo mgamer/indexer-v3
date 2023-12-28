@@ -128,7 +128,6 @@ export const getCollectionMints = async (
 };
 
 export const updateCollectionMintingStatus = async (collection: string) => {
-  logger.info("debug", JSON.stringify({ collection }));
   const isMinting = Boolean(
     await idb.oneOrNone(
       `
@@ -139,7 +138,6 @@ export const updateCollectionMintingStatus = async (collection: string) => {
       { collection }
     )
   );
-  logger.info("debug", JSON.stringify({ collection, isMinting }));
 
   await idb.none(
     `
@@ -147,7 +145,7 @@ export const updateCollectionMintingStatus = async (collection: string) => {
         is_minting = $/isMinting/,
         updated_at = now()
       WHERE collections.id = $/collection/
-        AND collections.is_minting != $/isMinting/
+        AND (collections.is_minting IS NULL OR collections.is_minting != $/isMinting/)
     `,
     {
       collection,
