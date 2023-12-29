@@ -527,7 +527,10 @@ export const savePartialBids = async (
         }
 
         if (!tokenSetId) {
-          throw new Error("No token set available");
+          return results.push({
+            id,
+            status: "no-token-set-available",
+          });
         }
 
         // Handle: source
