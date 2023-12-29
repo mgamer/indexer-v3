@@ -43,14 +43,14 @@ export default class TokenReclacSupplyJob extends AbstractRabbitMqJobHandler {
 
     await idb.none(
       `
-              UPDATE tokens SET
-                supply = $/totalSupply/,
-                remaining_supply = $/totalRemainingSupply/,
-                updated_at = now()
-              WHERE tokens.contract = $/contract/
-                AND tokens.token_id = $/tokenId/
-                AND (supply IS DISTINCT FROM $/totalSupply/ OR remaining_supply IS DISTINCT FROM $/totalRemainingSupply/)
-            `,
+        UPDATE tokens SET
+          supply = $/totalSupply/,
+          remaining_supply = $/totalRemainingSupply/,
+          updated_at = now()
+        WHERE tokens.contract = $/contract/
+          AND tokens.token_id = $/tokenId/
+          AND (supply IS DISTINCT FROM $/totalSupply/ OR remaining_supply IS DISTINCT FROM $/totalRemainingSupply/)
+      `,
       {
         contract: toBuffer(contract),
         tokenId,
