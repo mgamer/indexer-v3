@@ -9,8 +9,10 @@ import { orderbookOrdersJob } from "@/jobs/orderbook/orderbook-orders-job";
 
 export type BlurBidsBufferJobPayload = {
   collection: string;
-  attributeKey?: string;
-  attributeValue?: string;
+  attribute?: {
+    key: string;
+    value: string;
+  };
 };
 
 export default class BlurBidsBufferJob extends AbstractRabbitMqJobHandler {
@@ -31,8 +33,9 @@ export default class BlurBidsBufferJob extends AbstractRabbitMqJobHandler {
     }
 
     try {
-      // This is not 100% atomic or consistent but it covers most scenarios
       const cacheKey = this.getCacheKey(payload);
+
+      // This is not 100% atomic or consistent but it covers most scenarios
       const result = await redis.hvals(cacheKey);
       if (result.length) {
         await redis.del(cacheKey);
@@ -65,8 +68,10 @@ export default class BlurBidsBufferJob extends AbstractRabbitMqJobHandler {
   }
 
   public getCacheKey(payload: BlurBidsBufferJobPayload) {
-    const endfix = payload.attributeKey ? `:${payload.attributeKey}:${payload.attributeValue}` : "";
-    return `blur-bid-incoming-price-points:${payload.collection}${endfix}`;
+    const attributeId = payload.attribute
+      ? `:${payload.attribute.key}:${payload.attribute.value}`
+      : "";
+    return `blur-bid-incoming-price-points:${payload.collection}${attributeId}`;
   }
 
   public async addToQueue(

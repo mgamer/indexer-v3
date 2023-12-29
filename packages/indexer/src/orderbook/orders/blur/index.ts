@@ -2,9 +2,9 @@ import { AddressZero, HashZero } from "@ethersproject/constants";
 import { keccak256 } from "@ethersproject/solidity";
 import { parseEther } from "@ethersproject/units";
 import * as Sdk from "@reservoir0x/sdk";
+import { generateMerkleTree } from "@reservoir0x/sdk/dist/common/helpers/merkle";
 import pLimit from "p-limit";
 
-import { generateMerkleTree } from "@reservoir0x/sdk/dist/common/helpers/merkle";
 import { idb, pgp, redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { bn, fromBuffer, regex, toBuffer } from "@/common/utils";
@@ -13,7 +13,6 @@ import { Sources } from "@/models/sources";
 import { DbOrder, OrderMetadata, generateSchemaHash } from "@/orderbook/orders/utils";
 import * as tokenSet from "@/orderbook/token-sets";
 import { getBlurRoyalties } from "@/utils/blur";
-import { TokenSet } from "@/orderbook/token-sets/token-list";
 import { checkMarketplaceIsFiltered } from "@/utils/marketplace-blacklists";
 import {
   orderUpdatesByIdJob,
@@ -405,7 +404,7 @@ const getBlurBidId = (collection: string) =>
   keccak256(["string", "address"], ["blur", collection]);
 
 const getBlurTraitBidId = (collection: string, attributeKey: string, attributeValue: string) =>
-  // Buy orders have a single order id per collection
+  // Buy orders have a single order id per attribute
   keccak256(
     ["string", "address", "string", "string"],
     ["blur", collection, attributeKey, attributeValue]
@@ -427,13 +426,13 @@ export const savePartialBids = async (
       return;
     }
 
-    const isAttributeBid = orderParams.attributeKey ? true : false;
+    const isAttributeBid = Boolean(orderParams.attribute);
 
-    const id = orderParams.attributeKey
+    const id = isAttributeBid
       ? getBlurTraitBidId(
           orderParams.collection,
-          orderParams.attributeKey,
-          orderParams.attributeValue!
+          orderParams.attribute!.key,
+          orderParams.attribute!.value
         )
       : getBlurBidId(orderParams.collection);
     const isFiltered = await checkMarketplaceIsFiltered(orderParams.collection, [
@@ -465,15 +464,15 @@ export const savePartialBids = async (
         let tokenSetId: string | undefined;
         let schemaHash: string | undefined;
 
-        if (orderParams.attributeKey) {
+        if (isAttributeBid) {
           const schema = {
             kind: "attribute",
             data: {
               collection: orderParams.collection,
               attributes: [
                 {
-                  key: orderParams.attributeKey,
-                  value: orderParams.attributeValue,
+                  key: orderParams.attribute!.key,
+                  value: orderParams.attribute!.value,
                 },
               ],
             },
@@ -493,14 +492,15 @@ export const savePartialBids = async (
             `,
             {
               collection: orderParams.collection,
-              key: orderParams.attributeKey,
-              value: orderParams.attributeValue,
+              key: orderParams.attribute!.key,
+              value: orderParams.attribute!.value,
             }
           );
 
           if (tokens.length) {
             const tokensIds = tokens.map((r) => r.token_id);
             const merkleTree = generateMerkleTree(tokensIds);
+
             tokenSetId = `list:${orderParams.collection}:${merkleTree.getHexRoot()}`;
 
             await tokenSet.tokenList.save([
@@ -512,7 +512,7 @@ export const savePartialBids = async (
                   contract: orderParams.collection,
                   tokenIds: tokensIds,
                 },
-              } as TokenSet,
+              } as tokenSet.tokenList.TokenSet,
             ]);
           }
         } else {
@@ -585,7 +585,7 @@ export const savePartialBids = async (
           currency_price: price,
           currency_value: value,
           needs_conversion: null,
-          quantity_remaining: totalQuantity.toString(),
+          quantity_remaining: isAttributeBid ? "1" : totalQuantity.toString(),
           valid_between: `tstzrange(${validFrom}, ${validTo}, '[]')`,
           nonce: null,
           source_id_int: source?.id,
@@ -631,7 +631,7 @@ export const savePartialBids = async (
           }
 
           currentBid.pricePoints = bidUpdates.pricePoints;
-        } else if (!isAttributeBid) {
+        } else {
           // Update the current bid in place
           for (const newPricePoint of bidUpdates.pricePoints) {
             const existingPricePointIndex = currentBid.pricePoints.findIndex(
@@ -642,14 +642,6 @@ export const savePartialBids = async (
             } else {
               currentBid.pricePoints.push(newPricePoint);
             }
-          }
-        } else if (isAttributeBid) {
-          // Store the price point if it's higher than the existing one,
-          // `pricePoints` were sorted in WebSocket already.
-          const highestPricePoint = bidUpdates.pricePoints[0];
-          const currentPricePoint = currentBid.pricePoints[0];
-          if (Number(highestPricePoint.price) > Number(currentPricePoint.price)) {
-            currentBid.pricePoints[0] = highestPricePoint;
           }
         }
 
@@ -754,7 +746,7 @@ export const savePartialBids = async (
               id,
               price,
               value,
-              totalQuantity,
+              totalQuantity: isAttributeBid ? 1 : totalQuantity,
               rawData: currentBid,
             }
           );

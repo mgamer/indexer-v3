@@ -1,7 +1,6 @@
 import * as Sdk from "@reservoir0x/sdk";
 import { io } from "socket.io-client";
 
-import _ from "lodash";
 import { logger } from "@/common/logger";
 import { config } from "@/config/index";
 import { blurBidsBufferJob } from "@/jobs/order-updates/misc/blur-bids-buffer-job";
@@ -84,58 +83,67 @@ if (config.chainId === 1 && config.doWebsocketWork && config.blurWsUrl && config
         pricePoints
       );
     } catch (error) {
-      logger.error(COMPONENT, `Error handling bid: ${error} (message = ${message})`);
+      logger.error(COMPONENT, `Error handling collection bid: ${error} (message = ${message})`);
     }
   });
 
-  // Collection Trait bids
+  // Trait bids
   client.on("trait_bidLevels", async (message: string) => {
     try {
+      type PricePointWithAttribute = Sdk.Blur.Types.BlurBidPricePoint & {
+        criteriaType: string;
+        criteriaValue: { [key: string]: string };
+      };
+
       const parsedMessage: {
         contractAddress: string;
-        updates: Sdk.Blur.Types.BlurBidPriceTraitPoint[];
+        updates: PricePointWithAttribute[];
       } = JSON.parse(message);
 
       const collection = parsedMessage.contractAddress.toLowerCase();
 
-      const traitUpdates = parsedMessage.updates.filter((d) => d.criteriaType === "TRAIT");
-      const updatesGroupByAttribute: {
-        [key: string]: Sdk.Blur.Types.BlurBidPriceTraitPoint[];
-      } = {};
-
-      // Flatten by single attribute
-      _.each(traitUpdates, (update) => {
-        const { criteriaValue } = update;
-        Object.keys(criteriaValue).forEach((attributeKey) => {
-          const attributeId = `${attributeKey}:${criteriaValue[attributeKey]}`;
-          if (!updatesGroupByAttribute[attributeId]) updatesGroupByAttribute[attributeId] = [];
-          updatesGroupByAttribute[attributeId].push(update);
-        });
-      });
-
-      for (const attributeId of Object.keys(updatesGroupByAttribute)) {
-        const [attributeKey, attributeValue] = attributeId.split(":");
-        const pricePointsRaw = updatesGroupByAttribute[attributeId];
-        const highestPricePoint = pricePointsRaw
-          .filter((c) => c.executableSize > 0)
-          .sort((a, b) => Number(b.price) - Number(a.price))[0];
-        await blurBidsBufferJob.addToQueue(
-          {
-            collection,
-            attributeKey,
-            attributeValue,
-          },
-          [
-            {
-              price: highestPricePoint.price,
-              executableSize: highestPricePoint.executableSize,
-              bidderCount: highestPricePoint.bidderCount,
-            },
-          ]
-        );
+      // For debugging
+      if (collection !== "0x306b1ea3ecdf94ab739f1910bbda052ed4a9f949") {
+        return;
       }
+
+      const allTraitUpdates = parsedMessage.updates.filter((d) => d.criteriaType === "TRAIT");
+
+      // Group all updates by their corresponding trait
+      const groupedTraitUpdates: {
+        [attributeId: string]: PricePointWithAttribute[];
+      } = {};
+      for (const update of allTraitUpdates) {
+        const keys = Object.keys(update.criteriaValue);
+        if (keys.length === 1) {
+          const attributeKey = keys[0];
+          const attributeValue = update.criteriaValue[attributeKey];
+
+          const attributeId = `${attributeKey}:${attributeValue}`;
+          if (!groupedTraitUpdates[attributeId]) {
+            groupedTraitUpdates[attributeId] = [];
+          }
+          groupedTraitUpdates[attributeId].push(update);
+        }
+      }
+
+      await Promise.all(
+        Object.keys(groupedTraitUpdates).map(async (attributeId) => {
+          const [attributeKey, attributeValue] = attributeId.split(":");
+          await blurBidsBufferJob.addToQueue(
+            {
+              collection,
+              attribute: {
+                key: attributeKey,
+                value: attributeValue,
+              },
+            },
+            groupedTraitUpdates[attributeId]
+          );
+        })
+      );
     } catch (error) {
-      logger.error(COMPONENT, `Error handling bid: ${error} (message = ${message})`);
+      logger.error(COMPONENT, `Error handling trait bid: ${error} (message = ${message})`);
     }
   });
 }
