@@ -54,40 +54,43 @@ export default class BlurBidsRefreshJob extends AbstractRabbitMqJobHandler {
           // Skip any errors
         });
 
-      await axios
-        .get(
-          `${config.orderFetcherBaseUrl}/api/blur-collection-trait-bids?collection=${collection}`
-        )
-        .then(async (response) => {
-          const traitBids = response.data.bids as {
-            attributeKey: string;
-            attributeValue: string;
-            bids: Sdk.Blur.Types.BlurBidPricePoint[];
-          }[];
+      // For debugging
+      if (collection === "0x306b1ea3ecdf94ab739f1910bbda052ed4a9f949") {
+        await axios
+          .get(
+            `${config.orderFetcherBaseUrl}/api/blur-collection-trait-bids?collection=${collection}`
+          )
+          .then(async (response) => {
+            const traitBids = response.data.bids as {
+              attributeKey: string;
+              attributeValue: string;
+              bids: Sdk.Blur.Types.BlurBidPricePoint[];
+            }[];
 
-          for (const traitBid of traitBids) {
-            await orderbookOrdersJob.addToQueue([
-              {
-                kind: "blur-bid",
-                info: {
-                  orderParams: {
-                    collection,
-                    attribute: {
-                      key: traitBid.attributeKey,
-                      value: traitBid.attributeValue,
+            for (const traitBid of traitBids) {
+              await orderbookOrdersJob.addToQueue([
+                {
+                  kind: "blur-bid",
+                  info: {
+                    orderParams: {
+                      collection,
+                      attribute: {
+                        key: traitBid.attributeKey,
+                        value: traitBid.attributeValue,
+                      },
+                      pricePoints: traitBid.bids,
                     },
-                    pricePoints: traitBid.bids,
+                    metadata: {},
+                    fullUpdate: true,
                   },
-                  metadata: {},
-                  fullUpdate: true,
                 },
-              },
-            ]);
-          }
-        })
-        .catch(() => {
-          // Skip any errors
-        });
+              ]);
+            }
+          })
+          .catch(() => {
+            // Skip any errors
+          });
+      }
 
       // Also refresh the royalties
       const lockKey = `blur-royalties-refresh-lock:${collection}`;
