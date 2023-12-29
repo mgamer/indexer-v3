@@ -55,7 +55,10 @@ export default class BlurBidsRefreshJob extends AbstractRabbitMqJobHandler {
         });
 
       // For debugging
-      if (collection === "0x306b1ea3ecdf94ab739f1910bbda052ed4a9f949") {
+      if (
+        collection === "0x306b1ea3ecdf94ab739f1910bbda052ed4a9f949" ||
+        collection === "0x1193af965786fc46a63cb4d92c33a48219d1c8b6"
+      ) {
         await axios
           .get(
             `${config.orderFetcherBaseUrl}/api/blur-collection-trait-bids?collection=${collection}`
