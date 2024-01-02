@@ -89,7 +89,7 @@ export default class UpdateUserCollectionsJob extends AbstractRabbitMqJobHandler
         collection: collection.id,
         contract: toBuffer(contract),
         amount,
-        negativeAmount: bn(-amount).toString(),
+        negativeAmount: bn(0).sub(amount).toString(),
         isSpam: collection.isSpam,
       });
     }
