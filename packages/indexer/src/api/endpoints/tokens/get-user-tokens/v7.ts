@@ -413,6 +413,8 @@ export const getUserTokensV7Options: RouteOptions = {
           t.name,
           t.image,
           t.image_version,
+          (t.metadata ->> 'image_mime_type')::TEXT AS image_mime_type,
+          (t.metadata ->> 'media_mime_type')::TEXT AS media_mime_type,
           t.metadata,
           t.media,
           t.description,
@@ -458,6 +460,8 @@ export const getUserTokensV7Options: RouteOptions = {
             t.name,
             t.image,
             t.image_version,
+          (t.metadata ->> 'image_mime_type')::TEXT AS image_mime_type,
+          (t.metadata ->> 'media_mime_type')::TEXT AS media_mime_type,
             t.metadata,
             t.media,
             t.description,
@@ -724,9 +728,24 @@ export const getUserTokensV7Options: RouteOptions = {
               tokenId: tokenId,
               kind: r.kind,
               name: r.name,
-              image: Assets.getResizedImageUrl(r.image, ImageSize.medium, r.image_version),
-              imageSmall: Assets.getResizedImageUrl(r.image, ImageSize.small, r.image_version),
-              imageLarge: Assets.getResizedImageUrl(r.image, ImageSize.large, r.image_version),
+              image: Assets.getResizedImageUrl(
+                r.image,
+                ImageSize.medium,
+                r.image_version,
+                r.image_mime_type
+              ),
+              imageSmall: Assets.getResizedImageUrl(
+                r.image,
+                ImageSize.small,
+                r.image_version,
+                r.image_mime_type
+              ),
+              imageLarge: Assets.getResizedImageUrl(
+                r.image,
+                ImageSize.large,
+                r.image_version,
+                r.image_mime_type
+              ),
               metadata: Object.values(metadata).every((el) => el === undefined)
                 ? undefined
                 : metadata,
