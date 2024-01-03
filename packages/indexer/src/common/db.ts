@@ -8,7 +8,7 @@ export const pgp = PgPromise();
 export const edb = pgp({
   connectionString: config.databaseUrl,
   keepAlive: true,
-  max: 60,
+  max: 50,
   connectionTimeoutMillis: 10 * 1000,
   query_timeout: 10 * 1000,
   statement_timeout: config.disableDatabaseStatementTimeout ? undefined : 10 * 1000,
