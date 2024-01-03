@@ -19,7 +19,7 @@ export const edb = pgp({
 export const idb = pgp({
   connectionString: config.databaseUrl,
   keepAlive: true,
-  max: config.doBackgroundWork ? (config.chainId === 1 ? 200 : 160) : 80,
+  max: config.doBackgroundWork ? 150 : 80,
   connectionTimeoutMillis: 30 * 1000,
   query_timeout: 5 * 60 * 1000,
   statement_timeout: config.disableDatabaseStatementTimeout ? undefined : 5 * 60 * 1000,
@@ -62,7 +62,7 @@ export const redbAlt = pgp({
 export const ridb = pgp({
   connectionString: config.readReplicaDatabaseUrl,
   keepAlive: true,
-  max: config.chainId === 1 ? 250 : 60,
+  max: config.chainId === 1 ? 200 : 60,
   connectionTimeoutMillis: 30 * 1000,
   query_timeout: 5 * 60 * 1000,
   statement_timeout: config.disableDatabaseStatementTimeout ? undefined : 5 * 60 * 1000,
