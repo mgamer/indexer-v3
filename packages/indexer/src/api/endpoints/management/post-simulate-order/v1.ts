@@ -11,7 +11,7 @@ import { inject } from "@/api/index";
 import { idb, redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
-import { bn, fromBuffer, now } from "@/common/utils";
+import { bn, fromBuffer, now, regex, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { getNetworkSettings } from "@/config/network";
 import * as b from "@/utils/auth/blur";
@@ -39,14 +39,10 @@ export const postSimulateOrderV1Options: RouteOptions = {
   validate: {
     payload: Joi.object({
       id: Joi.string().lowercase(),
-      token: Joi.string().lowercase(),
+      token: Joi.string().pattern(regex.token).lowercase(),
       collection: Joi.string().lowercase(),
-      kind: Joi.string().lowercase().valid("floor-ask", "top-bid").default("floor-ask"),
       skipRevalidation: Joi.boolean().default(false),
-    })
-      .xor("collection", "token", "id")
-      .with("token", "kind")
-      .with("collection", "kind"),
+    }).xor("token", "collection", "id"),
   },
   response: {
     schema: Joi.object({
@@ -116,59 +112,52 @@ export const postSimulateOrderV1Options: RouteOptions = {
 
     try {
       let id = payload.id;
+
+      // Lookup the floor-ask order by token
       const token = payload.token;
-      const collection = payload.collection;
-
-      // Lookup Order id by token
-      if (!id && token) {
-        const response = await inject({
-          method: "GET",
-          url: `/tokens/v7?tokens[]=` + token,
-          headers: {
-            "Content-Type": "application/json",
-            "X-Api-Key": request.headers["x-api-key"],
-          },
-          payload: { token },
-        }).then((response) => JSON.parse(response.payload));
-
-        if (response.tokens.length) {
-          const tokenMarket = response.tokens[0].market;
-          if (tokenMarket) {
-            if (payload.kind === "floor-ask") {
-              id = tokenMarket.floorAsk?.id;
-            } else {
-              id = tokenMarket.topBid?.id;
-            }
+      if (token) {
+        const [contract, tokenId] = payload.token.split(":");
+        const result = await idb.oneOrNone(
+          `
+            SELECT
+              tokens.floor_sell_id
+            FROM tokens
+            WHERE tokens.contract = $/contract/
+              AND tokens.token_id = $/tokenId/
+            LIMIT 1
+          `,
+          {
+            contract: toBuffer(contract),
+            tokenId,
           }
+        );
+        if (result && result.floor_sell_id) {
+          id = result.floor_sell_id;
         }
       }
 
-      // Lookup Order id by collection
-      if (!id && collection) {
-        const response = await inject({
-          method: "GET",
-          url: `/collections/v7?id=` + collection,
-          headers: {
-            "Content-Type": "application/json",
-            "X-Api-Key": request.headers["x-api-key"],
-          },
-          payload: { token },
-        }).then((response) => JSON.parse(response.payload));
-
-        if (response.collections.length) {
-          const collectionMeta = response.collections[0];
-          if (collectionMeta) {
-            if (payload.kind === "floor-ask") {
-              id = collectionMeta.floorAsk?.id;
-            } else {
-              id = collectionMeta.topBid?.id;
-            }
+      // Lookup the floor-ask order by collection
+      const collection = payload.collection;
+      if (collection) {
+        const result = await idb.oneOrNone(
+          `
+            SELECT
+              collections.floor_sell_id
+            FROM collections
+            WHERE collections.id = $/collection/
+            LIMIT 1
+          `,
+          {
+            collection,
           }
+        );
+        if (result && result.floor_sell_id) {
+          id = result.floor_sell_id;
         }
       }
 
       if (!id) {
-        throw Boom.badRequest("Could not find order");
+        throw Boom.badRequest("No corresponding order was found");
       }
 
       const orderResult = await idb.oneOrNone(
