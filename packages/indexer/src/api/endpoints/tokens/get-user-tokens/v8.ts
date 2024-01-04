@@ -701,8 +701,6 @@ export const getUserTokensV8Options: RouteOptions = {
 
       const sources = await Sources.getInstance();
       const result = userTokens.map(async (r) => {
-        // eslint-disable-next-line
-        console.log(r.token_metadata);
         const metadata = parseMetadata(r.token_metadata);
 
         if (!r.image && r.token_metadata?.image_original_url) {
