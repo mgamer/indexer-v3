@@ -625,24 +625,16 @@ export const getOrdersAsksV4Options: RouteOptions = {
         );
       }
 
-      const results = await Promise.all(result);
-
-      if (process.env.LOAD_TEST_KEY && apiKey && apiKey.key === process.env.LOAD_TEST_KEY) {
-        await redis.set(
-          `orders-asks-result`,
-          JSON.stringify({
-            orders: results,
-            continuation,
-          }),
-          "EX",
-          3600
-        );
-      }
-
-      return {
-        orders: results,
+      const response = {
+        orders: await Promise.all(result),
         continuation,
       };
+
+      if (process.env.LOAD_TEST_KEY && apiKey && apiKey.key === process.env.LOAD_TEST_KEY) {
+        await redis.set(`orders-asks-result`, JSON.stringify({ response }), "EX", 3600);
+      }
+
+      return response;
     } catch (error) {
       logger.error(`get-orders-asks-${version}-handler`, `Handler failure: ${error}`);
       throw error;
