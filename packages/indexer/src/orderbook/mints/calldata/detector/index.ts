@@ -253,6 +253,16 @@ export const extractByTx = async (txHash: string, skipCache = false) => {
     return highlightXyzResults;
   }
 
+  const metadataResult = await idb.oneOrNone(
+    `SELECT metadata FROM contracts WHERE contracts.address = $/collection/ LIMIT 1`,
+    { collection: collection }
+  );
+
+  // we have a mintConfig in the metadata, the CollectionMints should be handled by the appropriate event
+  if (metadataResult?.metadata?.mintConfig) {
+    return [];
+  }
+
   // Generic
   const genericResults = await generic.extractByTx(
     collection,
@@ -279,7 +289,11 @@ export const extractByContractMetadata = async (collection: string, contractMeta
   const collectionMints: CollectionMint[] = [];
 
   for (const phase of parsed.phases) {
-    collectionMints.push(phase.format());
+    const formatted = phase.format();
+    // for the moment we only manage public mints
+    if (formatted.kind == "public") {
+      collectionMints.push(phase.format());
+    }
   }
 
   return collectionMints;

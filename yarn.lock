@@ -13170,7 +13170,7 @@ minizlib@^2.1.1, minizlib@^2.1.2:
 
 "mint-interface@https://github.com/dievardump/mint-interface.git":
   version "1.0.0"
-  resolved "https://github.com/dievardump/mint-interface.git#e5dd107f071fa4dabe0356d9e4c629f390e85d84"
+  resolved "https://github.com/dievardump/mint-interface.git#8029809b148d2068b9320b2bdaa1e0a12b9add6e"
   dependencies:
     dotenv "^16.3.1"
 
