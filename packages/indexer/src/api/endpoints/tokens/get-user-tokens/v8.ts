@@ -931,11 +931,11 @@ export const getUserTokensV8Options: RouteOptions = {
 
 export const parseMetadata = (r: any) => {
   const metadata: any = {};
-  if (r.metadata?.image_original_url) {
+  if (r?.metadata?.image_original_url) {
     metadata.imageOriginal = r.metadata.image_original_url;
   }
 
-  if (r.metadata?.animation_original_url) {
+  if (r?.metadata?.animation_original_url) {
     metadata.mediaOriginal = r.metadata.animation_original_url;
   }
 
@@ -947,11 +947,11 @@ export const parseMetadata = (r: any) => {
     r.media = onchainMetadataProvider.parseIPFSURI(r.metadata.animation_original_url);
   }
 
-  if (r.metadata?.image_mime_type) {
+  if (r?.metadata?.image_mime_type) {
     metadata.imageMimeType = r.metadata.image_mime_type;
   }
 
-  if (r.metadata?.animation_mime_type) {
+  if (r?.metadata?.animation_mime_type) {
     metadata.mediaMimeType = r.metadata.animation_mime_type;
   }
 
