@@ -21,6 +21,8 @@ import { Sources } from "@/models/sources";
 import { TokenSets } from "@/models/token-sets";
 import { Orders } from "@/utils/orders";
 import { config } from "@/config/index";
+import { ApiKeyManager } from "@/models/api-keys";
+import { redis } from "@/common/redis";
 
 const version = "v4";
 
@@ -520,10 +522,24 @@ export const getOrdersAsksV4Options: RouteOptions = {
         debugTimings.push({ beforeQuery: Date.now() - debugStart });
       }
 
-      const rawResult =
-        config.chainId === 137
-          ? await edb.manyOrNone(baseQuery, query)
-          : await redb.manyOrNone(baseQuery, query);
+      let redisResult;
+      let apiKey: any;
+      if (process.env.LOAD_TEST_KEY) {
+        apiKey = await ApiKeyManager.getApiKey(request.headers["x-api-key"]);
+        if (apiKey && apiKey.key === process.env.LOAD_TEST_KEY) {
+          redisResult = await redis.get(`orders-asks-result`);
+        }
+      }
+
+      let rawResult: any;
+      if (!redisResult) {
+        rawResult =
+          config.chainId === 137
+            ? await edb.manyOrNone(baseQuery, query)
+            : await redb.manyOrNone(baseQuery, query);
+      } else {
+        return JSON.parse(redisResult);
+      }
 
       if (debugLog) {
         debugTimings.push({ afterQuery: Date.now() - debugStart });
@@ -553,7 +569,7 @@ export const getOrdersAsksV4Options: RouteOptions = {
         }
       }
 
-      const result = rawResult.map(async (r) => {
+      const result = rawResult.map(async (r: any) => {
         return await getJoiOrderObject({
           id: r.id,
           kind: r.kind,
@@ -609,8 +625,22 @@ export const getOrdersAsksV4Options: RouteOptions = {
         );
       }
 
+      const results = await Promise.all(result);
+
+      if (process.env.LOAD_TEST_KEY && apiKey && apiKey.key === process.env.LOAD_TEST_KEY) {
+        await redis.set(
+          `orders-asks-result`,
+          JSON.stringify({
+            orders: results,
+            continuation,
+          }),
+          "EX",
+          3600
+        );
+      }
+
       return {
-        orders: await Promise.all(result),
+        orders: results,
         continuation,
       };
     } catch (error) {
