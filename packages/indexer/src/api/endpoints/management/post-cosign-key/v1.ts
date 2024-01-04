@@ -7,6 +7,7 @@ import { logger } from "@/common/logger";
 import * as externalCosign from "@/utils/offchain-cancel/external-cosign";
 import { ApiKeyManager } from "@/models/api-keys";
 import _ from "lodash";
+import * as Boom from "@hapi/boom";
 
 const version = "v1";
 
@@ -39,7 +40,7 @@ export const postCosignKeyV1Options: RouteOptions = {
     const payload = request.payload as any;
     const apiKey = await ApiKeyManager.getApiKey(request.headers["x-api-key"]);
     if (_.isNull(apiKey)) {
-      // throw Boom.unauthorized("Invalid API key");
+      throw Boom.unauthorized("Invalid API key");
     }
 
     try {
