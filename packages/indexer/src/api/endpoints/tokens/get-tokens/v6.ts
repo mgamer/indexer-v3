@@ -1414,7 +1414,7 @@ export const getTokensV6Options: RouteOptions = {
           }
         }
 
-        const metadata = parseMetadata(r?.metadata);
+        const metadata = parseMetadata(r);
 
         return {
           token: getJoiTokenObject(
