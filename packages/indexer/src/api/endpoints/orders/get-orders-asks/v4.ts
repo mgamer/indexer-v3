@@ -538,6 +538,13 @@ export const getOrdersAsksV4Options: RouteOptions = {
             ? await edb.manyOrNone(baseQuery, query)
             : await redb.manyOrNone(baseQuery, query);
       } else {
+        if (debugLog) {
+          debugTimings.push({ afterQuery: Date.now() - debugStart });
+          logger.info(
+            `get-orders-asks-${version}-timing`,
+            JSON.stringify({ debugStart, debugTimings })
+          );
+        }
         return JSON.parse(redisResult);
       }
 
