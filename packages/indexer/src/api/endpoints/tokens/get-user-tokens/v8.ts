@@ -949,12 +949,12 @@ export const parseMetadata = (r: any, token_metadata: any) => {
     metadata.tokenURI = token_metadata.metadata_original_url;
   }
 
-  if (!r.image && r.token_metadata?.image_original_url) {
-    r.image = onchainMetadataProvider.parseIPFSURI(r.token_metadata.image_original_url);
+  if (!r.image && token_metadata?.image_original_url) {
+    r.image = onchainMetadataProvider.parseIPFSURI(token_metadata.image_original_url);
   }
 
-  if (!r.media && r.token_metadata?.animation_original_url) {
-    r.media = onchainMetadataProvider.parseIPFSURI(r.token_metadata.animation_original_url);
+  if (!r.media && token_metadata?.animation_original_url) {
+    r.media = onchainMetadataProvider.parseIPFSURI(token_metadata.animation_original_url);
   }
 
   return metadata;
