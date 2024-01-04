@@ -21,6 +21,7 @@ export interface BaseOrderBuildOptions {
   fee?: number[];
   feeRecipient?: string[];
   useOffChainCancellation?: boolean;
+  cosigner?: string;
   replaceOrderId?: string;
 }
 
@@ -86,7 +87,8 @@ export const getBuildInfo = async (
   };
 
   if (options.useOffChainCancellation) {
-    buildParams.cosigner = cosigner().address.toLowerCase();
+    const cosignAddress = options.cosigner ?? cosigner().address.toLowerCase();
+    buildParams.cosigner = cosignAddress;
     if (options.replaceOrderId) {
       buildParams.nonce = options.replaceOrderId;
     }
