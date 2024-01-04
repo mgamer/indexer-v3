@@ -1,4 +1,5 @@
 import { AddressZero } from "@ethersproject/constants";
+import { parseConfig } from "mint-interface";
 
 import { idb } from "@/common/db";
 import { redis } from "@/common/redis";
@@ -8,7 +9,8 @@ import { fetchTransaction } from "@/events-sync/utils";
 import { mintsCheckJob } from "@/jobs/mints/mints-check-job";
 import { mintsRefreshJob } from "@/jobs/mints/mints-refresh-job";
 import { Sources } from "@/models/sources";
-import { getCollectionMints } from "@/orderbook/mints";
+import { CollectionMint, getCollectionMints } from "@/orderbook/mints";
+import { baseProvider } from "@/common/provider";
 
 import * as artblocks from "@/orderbook/mints/calldata/detector/artblocks";
 import * as createdotfun from "@/orderbook/mints/calldata/detector/createdotfun";
@@ -263,4 +265,22 @@ export const extractByTx = async (txHash: string, skipCache = false) => {
   }
 
   return [];
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const extractByContractMetadata = async (collection: string, contractMetadata: any) => {
+  const mintConfig = contractMetadata.mintConfig;
+
+  const parsed = await parseConfig(mintConfig, {
+    collection,
+    provider: baseProvider,
+  });
+
+  const collectionMints: CollectionMint[] = [];
+
+  for (const phase of parsed.phases) {
+    collectionMints.push(phase.format());
+  }
+
+  return collectionMints;
 };

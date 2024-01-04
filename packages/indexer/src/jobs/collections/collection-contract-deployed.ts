@@ -14,6 +14,8 @@ import * as registry from "@/utils/royalties/registry";
 import * as royalties from "@/utils/royalties";
 import { onchainMetadataProvider } from "@/metadata/providers/onchain-metadata-provider";
 
+import { initOnChainData, processOnChainData } from "@/events-sync/handlers/utils";
+
 export type CollectionContractDeployed = {
   contract: string;
   deployer?: string;
@@ -161,6 +163,20 @@ export class CollectionNewContractDeployedJob extends AbstractRabbitMqJobHandler
           `Refreshing deployed collection on chain royalties error. collectionId=${contract}, error=${error}`
         );
       }
+    }
+
+    // if there is a mintConfiguration available in the metadata, we can extract the mint phases
+    if (rawMetadata?.mintConfig) {
+      const onChainData = initOnChainData();
+      onChainData.mints.push({
+        by: "contractMetadata",
+        data: {
+          collection: contract,
+          metadata: rawMetadata,
+        },
+      });
+
+      await processOnChainData(onChainData, false);
     }
   }
 
