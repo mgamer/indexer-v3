@@ -721,7 +721,7 @@ export const checkForOrphanedBlock = async (block: number) => {
   const newBlock = await blocksModel.getBlockWithNumber(block, orphanedBlock.hash);
 
   if (!newBlock) {
-    // resync the orphaned block
+    // resync the block
     await eventsSyncRealtimeJob.addToQueue({ block: block });
   }
 };
