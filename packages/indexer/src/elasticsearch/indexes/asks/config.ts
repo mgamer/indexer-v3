@@ -18,7 +18,7 @@ export const CONFIG_DEFAULT = {
       contractAndTokenId: { type: "keyword" },
       token: {
         properties: {
-          id: { type: "keyword" },
+          id: { type: "double" },
           name: { type: "keyword" },
           image: { type: "keyword" },
           attributes: { type: "flattened" },

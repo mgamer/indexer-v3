@@ -3,7 +3,7 @@
 import { config } from "@/config/index";
 import { CollectionMetadata, TokenMetadata } from "../types";
 
-import { baseProvider } from "@/common/provider";
+import { metadataIndexingBaseProvider } from "@/common/provider";
 import { defaultAbiCoder } from "ethers/lib/utils";
 import { logger } from "@/common/logger";
 import { ethers } from "ethers";
@@ -247,7 +247,7 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
   // parsers
   _parseToken(metadata: any): TokenMetadata {
     // add handling for metadata.properties, convert to attributes
-    if (metadata?.properties) {
+    if (metadata?.properties && !metadata?.attributes) {
       metadata.attributes = Object.keys(metadata.properties).map((key) => {
         if (typeof metadata.properties[key] === "object") {
           return {
@@ -279,8 +279,8 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
       // Token descriptions are a waste of space for most collections we deal with
       // so by default we ignore them (this behaviour can be overridden if needed).
       description: metadata.description || null,
-      imageUrl: normalizeLink(metadata?.image) || null,
-      imageOriginalUrl: metadata?.image || null,
+      imageUrl: normalizeLink(metadata?.image) || normalizeLink(metadata?.image_url) || null,
+      imageOriginalUrl: metadata?.image || metadata?.image_url || null,
       animationOriginalUrl: metadata?.animation_url || null,
       mediaUrl: normalizeLink(metadata?.animation_url) || null,
       metadataOriginalUrl: this.parseIPFSURI(metadata.uri),
@@ -313,7 +313,7 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
       const contract = new ethers.Contract(
         contractAddress,
         [...erc721Interface.fragments, ...erc1155Interface.fragments],
-        baseProvider
+        metadataIndexingBaseProvider
       );
 
       const erc721Supported = await contract.supportsInterface("0x80ac58cd");
@@ -401,7 +401,7 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
   }
 
   getRPC() {
-    return config.baseNetworkHttpUrl;
+    return config.baseNetworkMetadataIndexingUrl;
   }
 
   async getContractName(contractAddress: string) {
@@ -409,7 +409,7 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
       const contract = new ethers.Contract(
         contractAddress,
         ["function name() view returns (string)"],
-        baseProvider
+        metadataIndexingBaseProvider
       );
       const name = await contract.name();
       return name;
@@ -427,7 +427,7 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
       const contract = new ethers.Contract(
         contractAddress,
         ["function contractURI() view returns (string)"],
-        baseProvider
+        metadataIndexingBaseProvider
       );
       let uri = await contract.contractURI();
       uri = normalizeLink(uri);
@@ -517,6 +517,10 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
   parseIPFSURI(uri: string) {
     if (uri && uri?.includes("ipfs://")) {
       uri = uri.replace("ipfs://", "https://ipfs.io/ipfs/");
+    }
+
+    if (uri && uri?.includes("gateway.pinata.cloud")) {
+      uri = uri.replace("gateway.pinata.cloud", "ipfs.io");
     }
 
     return uri;

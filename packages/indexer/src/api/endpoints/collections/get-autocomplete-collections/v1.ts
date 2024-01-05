@@ -9,7 +9,6 @@ import { formatEth } from "@/common/utils";
 import { Assets } from "@/utils/assets";
 
 import * as collectionsIndex from "@/elasticsearch/indexes/collections";
-// import { JoiPrice } from "@/common/joi";
 
 const version = "v1";
 
@@ -18,11 +17,11 @@ export const getAutocompleteCollectionsV1Options: RouteOptions = {
     privacy: "public",
     expiresIn: 10000,
   },
-  description: "Search collections",
-  tags: ["api", "x-deprecated"],
+  description: "Collections Autocomplete",
+  tags: ["api", "Collections"],
   plugins: {
     "hapi-swagger": {
-      deprecated: true,
+      order: 3,
     },
   },
   validate: {
@@ -41,10 +40,13 @@ export const getAutocompleteCollectionsV1Options: RouteOptions = {
       community: Joi.string()
         .lowercase()
         .description("Filter to a particular community. Example: `artblocks`"),
+      excludeSpam: Joi.boolean()
+        .default(false)
+        .description("If true, will filter any collections marked as spam."),
       limit: Joi.number()
         .integer()
         .min(1)
-        .max(1000)
+        .max(100)
         .default(20)
         .description("Amount of items returned in response."),
     }),
@@ -86,6 +88,8 @@ export const getAutocompleteCollectionsV1Options: RouteOptions = {
       chains: query.chains,
       prefix: query.prefix,
       communities: query.community ? [query.community] : undefined,
+      excludeSpam: query.excludeSpam,
+      limit: query.limit,
     });
 
     const result = _.map(collections, async (collection) => {
