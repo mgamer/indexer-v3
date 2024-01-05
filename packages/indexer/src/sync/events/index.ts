@@ -721,6 +721,10 @@ export const checkForOrphanedBlock = async (block: number) => {
   const newBlock = await blocksModel.getBlockWithNumber(block, orphanedBlock.hash);
 
   if (!newBlock) {
+    logger.info(
+      "events-sync-catchup",
+      `New block ${block} with hash ${upstreamBlockHash} not found in database, syncing block`
+    );
     // resync the block
     await eventsSyncRealtimeJob.addToQueue({ block: block });
   }
