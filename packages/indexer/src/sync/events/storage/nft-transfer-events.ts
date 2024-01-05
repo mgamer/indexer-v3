@@ -77,7 +77,6 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
     const routers = await getRouters();
     let kind: DbEvent["kind"] = null;
     if (
-      ns.mintAddresses.includes(event.from) &&
       event.baseEventParams.from !== event.to &&
       event.baseEventParams?.to &&
       !routers.has(event.baseEventParams?.to) &&
