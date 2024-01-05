@@ -9,7 +9,7 @@ import * as externalCosign from "@/utils/offchain-cancel/external-cosign";
 
 const version = "v1";
 
-export const postCosignerV1Options: RouteOptions = {
+export const postCosignersV1Options: RouteOptions = {
   description: "Create or update an external cosigner",
   tags: ["api", "Management"],
   plugins: {
@@ -26,9 +26,9 @@ export const postCosignerV1Options: RouteOptions = {
   response: {
     schema: Joi.object({
       message: Joi.string(),
-    }).label(`postCosigner${version.toUpperCase()}Response`),
+    }).label(`postCosigners${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
-      logger.error(`post-cosigner-${version}-handler`, `Wrong response schema: ${error}`);
+      logger.error(`post-cosigners-${version}-handler`, `Wrong response schema: ${error}`);
       throw error;
     },
   },
@@ -45,7 +45,7 @@ export const postCosignerV1Options: RouteOptions = {
       await externalCosign.upsertExternalCosigner(payload, apiKey.key);
       return { message: "Success" };
     } catch (error) {
-      logger.error(`post-cosigner-${version}-handler`, `Handler failure: ${error}`);
+      logger.error(`post-cosigners-${version}-handler`, `Handler failure: ${error}`);
       return { message: "Failure" };
     }
   },

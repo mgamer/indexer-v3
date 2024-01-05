@@ -925,8 +925,8 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
-    path: "/management/cosigner/v1",
-    options: managementEndpoints.postCosignerV1Options,
+    path: "/management/cosigners/v1",
+    options: managementEndpoints.postCosignersV1Options,
   });
 
   // Oracle
