@@ -1,134 +1,138 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+import { TypedDataDomain, TypedDataField } from "@ethersproject/abstract-signer";
+import axios from "axios";
 
 import { idb } from "@/common/db";
 import { toBuffer } from "@/common/utils";
-import axios from "axios";
-import { TypedDataDomain, TypedDataField } from "@ethersproject/abstract-signer";
 
-export type ExternalCosigKey = {
+export type ExternalCosigner = {
   signer: string;
   endpoint: string;
   apiKey: string;
 };
 
-export type CoSignRequest = {
+export type CosignRequest = {
   signer: string;
-  authKey: string;
-  method: "eth_signTypedData_v4"; // eth_sign or more
+  method: "eth_signTypedData_v4";
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   params: any[];
 };
 
-export type CoSignResponse = {
+export type CosignResponse = {
   signature: string;
 };
 
-export async function upsertExternalCosignKey(key: ExternalCosigKey, internalAPIKey: string) {
-  const existKey = await idb.oneOrNone(
+export const upsertExternalCosigner = async (key: ExternalCosigner, apiKey: string) => {
+  const existingResult = await idb.oneOrNone(
     `
-            SELECT
-                cosign_keys.signer,
-                cosign_keys.endpoint,
-                cosign_keys.api_key,
-                cosign_keys.creator
-            FROM cosign_keys
-            WHERE cosign_keys.signer = $/signer/
-        `,
+      SELECT
+        cosigners.signer,
+        cosigners.endpoint,
+        cosigners.api_key
+      FROM cosigners
+      WHERE cosigners.signer = $/signer/
+    `,
     {
       signer: toBuffer(key.signer),
     }
   );
 
-  if (existKey) {
-    if (existKey.creator != internalAPIKey) {
-      throw Error("No permission to edit");
-    }
+  if (existingResult && existingResult.api_key !== apiKey) {
+    throw Error("Unauthorized");
   }
 
   await idb.none(
     `
-        INSERT INTO cosign_keys (
-            signer,
-            endpoint,
-            api_key,
-            creator
-        ) VALUES (
-            $/signer/,
-            $/endpoint/,
-            $/api_key/,
-            $/creator/
-        ) ON CONFLICT (signer) DO UPDATE SET
-            endpoint = $/endpoint/,
-            api_key = $/api_key/,
-            creator = $/creator/
-        `,
+      INSERT INTO cosigners (
+        signer,
+        endpoint,
+        api_key
+      ) VALUES (
+        $/signer/,
+        $/endpoint/,
+        $/apiKey/
+      ) ON CONFLICT (signer) DO UPDATE SET
+        endpoint = $/endpoint/,
+        api_key = $/apiKey/,
+        updated_at = now()
+    `,
     {
       signer: toBuffer(key.signer),
       endpoint: key.endpoint,
       api_key: key.apiKey,
-      creator: internalAPIKey,
     }
   );
-}
+};
 
-export async function getExternalCosignKey(cosigner: string): Promise<ExternalCosigKey | null> {
+export const getExternalCosigner = async (
+  signer: string
+): Promise<ExternalCosigner | undefined> => {
   const result = await idb.oneOrNone(
     `
-            SELECT
-                cosign_keys.signer,
-                cosign_keys.endpoint,
-                cosign_keys.api_key,
-                cosign_keys.creator
-            FROM cosign_keys
-            WHERE cosign_keys.signer = $/signer/
-        `,
+      SELECT
+        cosign_keys.signer,
+        cosign_keys.endpoint,
+        cosign_keys.api_key
+      FROM cosign_keys
+      WHERE cosign_keys.signer = $/signer/
+    `,
     {
-      signer: toBuffer(cosigner),
+      signer: toBuffer(signer),
     }
   );
-  if (!result) return null;
+  if (!result) {
+    return undefined;
+  }
+
   return {
-    signer: cosigner,
+    signer,
     endpoint: result.endpoint,
     apiKey: result.api_key,
   };
-}
+};
 
-export async function signTypedDataWithCosign(cosigner: string, typedData: any) {
-  const externalCosigKey = await getExternalCosignKey(cosigner);
-  if (!externalCosigKey) throw new Error("external cosign key not exists");
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const signTypedData = async (signer: string, typedData: any) => {
+  const externalCosigner = await getExternalCosigner(signer);
+  if (!externalCosigner) {
+    throw new Error("External cosigner doesn't exist");
+  }
+
   const response = await axios
     .post(
-      `${externalCosigKey.endpoint}/eth/cosign`,
+      `${externalCosigner.endpoint}/eth/cosign`,
       {
-        cosigner,
+        cosigner: signer,
         method: "eth_signTypedData_v4",
         params: [typedData],
       },
       {
         headers: {
-          "x-api-key": externalCosigKey.apiKey,
+          "x-api-key": externalCosigner.apiKey,
         },
       }
     )
-    .then(({ data }) => data as CoSignResponse);
+    .then(({ data }) => data as CosignResponse);
+
   return response.signature;
-}
+};
 
 export class ExternalTypedDataSigner {
-  public externalCosignKey: ExternalCosigKey;
-  constructor(_externalCosignKey: ExternalCosigKey) {
-    this.externalCosignKey = _externalCosignKey;
+  public externalCosigner: ExternalCosigner;
+
+  constructor(_externalCosigner: ExternalCosigner) {
+    this.externalCosigner = _externalCosigner;
   }
+
   async _signTypedData(
     domain: TypedDataDomain,
     types: Record<string, Array<TypedDataField>>,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     value: Record<string, any>
   ): Promise<string> {
-    const signature = await signTypedDataWithCosign(this.externalCosignKey.signer, {
+    return signTypedData(this.externalCosigner.signer, {
       domain,
       types,
       message: value,
     });
-    return signature;
   }
 }

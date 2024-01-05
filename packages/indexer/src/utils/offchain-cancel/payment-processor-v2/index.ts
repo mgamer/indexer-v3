@@ -5,8 +5,8 @@ import { idb } from "@/common/db";
 import { config } from "@/config/index";
 import { cosigner, saveOffChainCancellations } from "@/utils/offchain-cancel";
 import {
-  getExternalCosignKey,
   ExternalTypedDataSigner,
+  getExternalCosigner,
 } from "@/utils/offchain-cancel/external-cosign";
 import * as paymentProcessorV2 from "@/utils/payment-processor-v2";
 
@@ -66,10 +66,9 @@ export const doSignOrder = async (order: Sdk.PaymentProcessorV2.Order, taker: st
     }
 
     const consiger = order.params.cosigner!;
-    const externalCosigKey = await getExternalCosignKey(consiger);
-    if (externalCosigKey) {
-      const externalSigner = new ExternalTypedDataSigner(externalCosigKey);
-      await order.cosign(externalSigner, taker);
+    const externalCosigner = await getExternalCosigner(consiger);
+    if (externalCosigner) {
+      await order.cosign(new ExternalTypedDataSigner(externalCosigner), taker);
     } else {
       await order.cosign(cosigner(), taker);
     }

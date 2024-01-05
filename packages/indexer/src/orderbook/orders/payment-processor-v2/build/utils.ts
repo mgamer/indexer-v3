@@ -87,8 +87,9 @@ export const getBuildInfo = async (
   };
 
   if (options.useOffChainCancellation) {
-    const cosignAddress = options.cosigner ?? cosigner().address.toLowerCase();
-    buildParams.cosigner = cosignAddress;
+    const cosignerAddress = options.cosigner ?? cosigner().address;
+    buildParams.cosigner = cosignerAddress.toLowerCase();
+
     if (options.replaceOrderId) {
       buildParams.nonce = options.replaceOrderId;
     }

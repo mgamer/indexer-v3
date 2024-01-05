@@ -77,7 +77,7 @@ describe("PaymentProcessorV2 - SingleToken Erc721", () => {
     await exchange.fillOrder(buyer, sellOrder, {
       taker: buyer.address,
     });
-    
+
     const sellerBalanceAfter = await ethers.provider.getBalance(seller.address);
     const ownerAfter = await nft.getOwner(soldTokenId);
     const receiveAmount = sellerBalanceAfter.sub(sellerBalanceBefore);

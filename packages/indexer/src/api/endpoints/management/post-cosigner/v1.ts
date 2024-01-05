@@ -1,18 +1,16 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
+import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
+import _ from "lodash";
 
 import { logger } from "@/common/logger";
-import * as externalCosign from "@/utils/offchain-cancel/external-cosign";
 import { ApiKeyManager } from "@/models/api-keys";
-import _ from "lodash";
-import * as Boom from "@hapi/boom";
+import * as externalCosign from "@/utils/offchain-cancel/external-cosign";
 
 const version = "v1";
 
-export const postCosignKeyV1Options: RouteOptions = {
-  description: "Create/Update an External Cosign Key",
+export const postCosignerV1Options: RouteOptions = {
+  description: "Create or update an external cosigner",
   tags: ["api", "Management"],
   plugins: {
     "hapi-swagger": {
@@ -23,32 +21,32 @@ export const postCosignKeyV1Options: RouteOptions = {
     payload: Joi.object({
       signer: Joi.string().lowercase().required(),
       endpoint: Joi.string().required(),
-      apiKey: Joi.string().required(),
     }),
   },
   response: {
     schema: Joi.object({
       message: Joi.string(),
-    }).label(`postCosignKey${version.toUpperCase()}Response`),
+    }).label(`postCosigner${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
-      logger.error(`post-cosign-key-${version}-handler`, `Wrong response schema: ${error}`);
+      logger.error(`post-cosigner-${version}-handler`, `Wrong response schema: ${error}`);
       throw error;
     },
   },
   handler: async (request: Request) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const payload = request.payload as any;
+
     const apiKey = await ApiKeyManager.getApiKey(request.headers["x-api-key"]);
     if (_.isNull(apiKey)) {
       throw Boom.unauthorized("Invalid API key");
     }
 
     try {
-      await externalCosign.upsertExternalCosignKey(payload, request.headers["x-api-key"]);
-      return { message: `Success` };
+      await externalCosign.upsertExternalCosigner(payload, apiKey.key);
+      return { message: "Success" };
     } catch (error) {
-      logger.error(`post-cosign-key-${version}-handler`, `Handler failure: ${error}`);
-      return { message: (error as any).toString() };
+      logger.error(`post-cosigner-${version}-handler`, `Handler failure: ${error}`);
+      return { message: "Failure" };
     }
   },
 };

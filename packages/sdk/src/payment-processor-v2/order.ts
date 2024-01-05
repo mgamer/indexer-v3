@@ -102,7 +102,6 @@ export class Order {
 
   public async sign(signer: TypedDataSigner) {
     const [types, value] = this.getEip712TypesAndValue();
-
     const signature = await signer._signTypedData(EIP712_DOMAIN(this.chainId), types, value);
     const { r, s, v } = splitSignature(signature);
     this.params = {
