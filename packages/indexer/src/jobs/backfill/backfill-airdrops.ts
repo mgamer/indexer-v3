@@ -58,6 +58,7 @@ export class BackfillAirdropsJob extends AbstractRabbitMqJobHandler {
     LEFT JOIN transactions ON transactions.hash = nft_transfer_events.tx_hash
     WHERE block_number >= $/startBlock/
       AND block_number <= $/endBlock/
+      AND nft_transfer_events.kind IS NULL
     ORDER BY block_number ASC
     `,
       blockValues
@@ -77,7 +78,6 @@ export class BackfillAirdropsJob extends AbstractRabbitMqJobHandler {
       }) => {
         let kind: DbEvent["kind"] = null;
         if (
-          ns.mintAddresses.includes(transferEvent.transaction_from) &&
           transferEvent.from !== transferEvent.transaction_to &&
           transferEvent?.to &&
           !routers.has(transferEvent?.to) &&
@@ -100,7 +100,7 @@ export class BackfillAirdropsJob extends AbstractRabbitMqJobHandler {
            SET is_airdropped = true
            WHERE contract = ${pgp.as.buffer(() => transferEvent.address)}
            AND token_id = ${pgp.as.value(transferEvent.token_id)}
-           AND owner = ${pgp.as.buffer(() => transferEvent.from)}
+           AND owner = ${pgp.as.buffer(() => transferEvent.to)}
            `
         );
       }
