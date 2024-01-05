@@ -1,8 +1,7 @@
 import { idb, pgp } from "@/common/db";
 import { redis } from "@/common/redis";
-import { DbEvent } from "@/events-sync/storage/nft-transfer-events";
+import { DbEvent, getEventKind } from "@/events-sync/storage/nft-transfer-events";
 import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handler";
-import { getNetworkSettings } from "@/config/network";
 import { getRouters } from "@/utils/routers";
 
 export class BackfillAirdropsJob extends AbstractRabbitMqJobHandler {
@@ -14,7 +13,6 @@ export class BackfillAirdropsJob extends AbstractRabbitMqJobHandler {
   singleActiveConsumer = true;
 
   protected async process() {
-    const ns = getNetworkSettings();
     const routers = await getRouters();
 
     const blocksPerBatch = await redis.get(`${this.queueName}:blocksPerBatch`);
@@ -76,25 +74,23 @@ export class BackfillAirdropsJob extends AbstractRabbitMqJobHandler {
         transaction_to: string;
         transaction_from: string;
       }) => {
-        let kind: DbEvent["kind"] = null;
-        if (
-          transferEvent.from !== transferEvent.transaction_to &&
-          transferEvent?.to &&
-          !routers.has(transferEvent?.to) &&
-          transferEvent?.from !== transferEvent?.to
-        ) {
-          kind = "airdrop";
-        } else if (ns.mintAddresses.includes(transferEvent.transaction_from)) {
-          kind = "mint";
-        } else if (ns.burnAddresses.includes(transferEvent.transaction_to)) {
-          kind = "burn";
-        }
+        const kind: DbEvent["kind"] = getEventKind(
+          {
+            from: transferEvent.from,
+            to: transferEvent.to,
+            baseEventParams: {
+              from: transferEvent.transaction_from,
+              to: transferEvent.transaction_to,
+            },
+          },
+          routers
+        );
 
         queries.push(
           `UPDATE nft_transfer_events 
            SET kind = ${pgp.as.value(kind)}
            WHERE tx_hash = ${pgp.as.buffer(() => transferEvent.tx_hash)}
-           AND log_index = ${pgp.as.value(transferEvent.log_index)};
+           AND log_index = ${pgp.as.value(transferEvent.log_index)};  
            
            UPDATE nft_balances
            SET is_airdropped = true

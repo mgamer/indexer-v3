@@ -10,6 +10,8 @@ import { getRouters } from "@/utils/routers";
 import { DeferUpdateAddressBalance } from "@/models/defer-update-address-balance";
 import { getNetworkSettings } from "@/config/network";
 import { BaseEventParams } from "../parser";
+import { allEventsAddresses } from "../data";
+import { SourcesEntity } from "@/models/sources/sources-entity";
 
 export type Event = {
   kind: ContractKind;
@@ -58,7 +60,6 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
   // Keep track of all unique contracts and tokens
   const uniqueContracts = new Map<string, string>();
   const uniqueTokens = new Set<string>();
-  const ns = getNetworkSettings();
 
   const transferValues: DbEvent[] = [];
 
@@ -75,19 +76,18 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
     const contractId = event.baseEventParams.address.toString();
     // If its a mint, and the recipient did NOT initiate the transaction, then its an airdrop
     const routers = await getRouters();
-    let kind: DbEvent["kind"] = null;
-    if (
-      event.baseEventParams.from !== event.to &&
-      event.baseEventParams?.to &&
-      !routers.has(event.baseEventParams?.to) &&
-      event.baseEventParams?.from !== event.baseEventParams?.to
-    ) {
-      kind = "airdrop";
-    } else if (ns.mintAddresses.includes(event.from)) {
-      kind = "mint";
-    } else if (ns.burnAddresses.includes(event.to)) {
-      kind = "burn";
-    }
+    const kind: DbEvent["kind"] = getEventKind(
+      {
+        from: event.from,
+        to: event.to,
+        baseEventParams: {
+          from: event.baseEventParams.from,
+          // Because to can be null (contract creation, but we should never encounter it as null here its just for types to be happy)
+          to: event.baseEventParams.to || AddressZero,
+        },
+      },
+      routers
+    );
     transferValues.push({
       address: toBuffer(event.baseEventParams.address),
       block: event.baseEventParams.block,
@@ -376,4 +376,34 @@ export const removeEvents = async (block: number, blockHash: string) => {
       blockHash: toBuffer(blockHash),
     }
   );
+};
+
+export const getEventKind = (
+  event: {
+    from: string;
+    to: string;
+    baseEventParams: {
+      from: string;
+      to: string;
+    };
+  },
+  routers: Map<string, SourcesEntity>
+): DbEvent["kind"] => {
+  const ns = getNetworkSettings();
+  let kind: DbEvent["kind"] = null;
+  if (
+    event.baseEventParams.from !== event.to &&
+    event.baseEventParams?.to &&
+    !routers.has(event.baseEventParams?.to) &&
+    !allEventsAddresses.includes(event.baseEventParams?.to) &&
+    event.baseEventParams?.from !== event.baseEventParams?.to
+  ) {
+    kind = "airdrop";
+  } else if (ns.mintAddresses.includes(event.from)) {
+    kind = "mint";
+  } else if (ns.burnAddresses.includes(event.to)) {
+    kind = "burn";
+  }
+
+  return kind;
 };
