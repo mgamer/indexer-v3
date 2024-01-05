@@ -710,6 +710,9 @@ export const checkForOrphanedBlock = async (block: number) => {
 
   // delete the block data
   await blocksModel.deleteBlock(block, orphanedBlock.hash);
+
+  // resync the orphaned block
+  await eventsSyncRealtimeJob.addToQueue({ block: block });
 };
 
 export const checkForMissingBlocks = async (block: number) => {
