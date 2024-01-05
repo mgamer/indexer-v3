@@ -106,6 +106,21 @@ mintsSources.set("0xc143bbfcdbdbed6d454803804752a064a622c1f3", "async.art");
 mintsSources.set("0xfbeef911dc5821886e1dda71586d90ed28174b7d", "knownorigin.io");
 mintsSources.set("0xb932a70a57673d89f4acffbe830e8ed7f75fb9e0", "superrare.com");
 
+const standardMintsources = new Map<string, string>();
+standardMintsources.set("manifold", "manifold.xyz");
+standardMintsources.set("seadrop-v1.0", "opensea.io");
+standardMintsources.set("thirdweb", "thirdweb.com");
+standardMintsources.set("zora", "zora.co");
+standardMintsources.set("decent", "decent.xyz");
+standardMintsources.set("foundation", "foundation.app");
+standardMintsources.set("lanyard", "lanyard.org");
+standardMintsources.set("mintdotfun", "mint.fun");
+standardMintsources.set("soundxyz", "sound.xyz");
+standardMintsources.set("createdotfun", "mint.fun");
+standardMintsources.set("titlesxyz", "titles.xyz");
+standardMintsources.set("artblocks", "artblocks.io");
+standardMintsources.set("highlightxyz", "highlight.xyz");
+
 export const getOrderSourceByOrderId = async (
   orderId: string
 ): Promise<SourcesEntity | undefined> => {
@@ -196,6 +211,8 @@ export const getOrderSourceByOrderKind = async (
       case "mint": {
         if (address && mintsSources.has(address)) {
           return sources.getOrInsert(mintsSources.get(address)!);
+        } else if (address) {
+          return getMintSourceFromAddress(address);
         }
       }
     }
@@ -204,6 +221,22 @@ export const getOrderSourceByOrderKind = async (
   }
 
   // In case nothing matched, return `undefined` by default
+};
+
+export const getMintSourceFromAddress = async (
+  address: string
+): Promise<SourcesEntity | undefined> => {
+  const result = await idb.oneOrNone(
+    `SELECT standard from collection_mint_standards WHERE collection_id = $/collection/`,
+    { collection: address }
+  );
+
+  const standard = result?.standard;
+
+  if (standard && standardMintsources.has(standard)) {
+    const sources = await Sources.getInstance();
+    return sources.getOrInsert(standardMintsources.get(standard)!);
+  }
 };
 
 // Support for filling listings
