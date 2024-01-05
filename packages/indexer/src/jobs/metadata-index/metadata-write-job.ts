@@ -48,6 +48,7 @@ export type MetadataIndexWriteJobPayload = {
   metadataMethod?: string;
   imageMimeType?: string;
   mediaMimeType?: string;
+  decimals?: number;
 };
 
 export default class MetadataIndexWriteJob extends AbstractRabbitMqJobHandler {
@@ -86,6 +87,7 @@ export default class MetadataIndexWriteJob extends AbstractRabbitMqJobHandler {
       metadataMethod,
       imageMimeType,
       mediaMimeType,
+      decimals,
     } = payload;
 
     // Update the token's metadata
@@ -112,24 +114,25 @@ export default class MetadataIndexWriteJob extends AbstractRabbitMqJobHandler {
           image = $/image/,
           metadata = $/metadata:json/,
           media = $/media/,
-          updated_at = CASE 
+          decimals = $/decimals/,
+          updated_at = CASE
                 WHEN (SELECT is_updated FROM updated_check) THEN now()
                 ELSE updated_at
           END,
-          image_version = CASE 
+          image_version = CASE
                 WHEN (SELECT is_updated FROM updated_check) THEN now()
                 ELSE image_version
           END,
           collection_id = collection_id,
           created_at = created_at,
-          metadata_indexed_at = CASE 
-                                    WHEN metadata_indexed_at IS NULL AND image IS NOT NULL THEN metadata_indexed_at 
-                                    WHEN metadata_indexed_at IS NULL THEN now() 
+          metadata_indexed_at = CASE
+                                    WHEN metadata_indexed_at IS NULL AND image IS NOT NULL THEN metadata_indexed_at
+                                    WHEN metadata_indexed_at IS NULL THEN now()
                                     ELSE metadata_indexed_at
                                 END,
           metadata_initialized_at = CASE
-                                        WHEN metadata_initialized_at IS NULL AND image IS NOT NULL THEN metadata_initialized_at 
-                                        WHEN metadata_initialized_at IS NULL AND COALESCE(image, $/image/) IS NOT NULL THEN now() 
+                                        WHEN metadata_initialized_at IS NULL AND image IS NOT NULL THEN metadata_initialized_at
+                                        WHEN metadata_initialized_at IS NULL AND COALESCE(image, $/image/) IS NOT NULL THEN now()
                                         ELSE metadata_initialized_at
                                     END,
           metadata_changed_at = CASE WHEN metadata_initialized_at IS NOT NULL AND NULLIF(image, $/image/) IS NOT NULL THEN now() ELSE metadata_changed_at END,
@@ -161,6 +164,7 @@ export default class MetadataIndexWriteJob extends AbstractRabbitMqJobHandler {
         description: description || null,
         image: imageUrl || null,
         tokenURI: tokenURI || null,
+        decimals: decimals || null,
         metadata:
           {
             original_metadata: originalMetadata || null,
@@ -276,7 +280,7 @@ export default class MetadataIndexWriteJob extends AbstractRabbitMqJobHandler {
       ) {
         // If number type try to update range as well and return the ID
         const infoUpdate = `
-          CASE WHEN info IS NULL THEN 
+          CASE WHEN info IS NULL THEN
             jsonb_object(array['min_range', 'max_range'], array[$/value/, $/value/]::text[])
             ELSE
               info || jsonb_object(array['min_range', 'max_range'], array[
@@ -390,7 +394,7 @@ export default class MetadataIndexWriteJob extends AbstractRabbitMqJobHandler {
               ON CONFLICT DO NOTHING
               RETURNING "id"
             )
-            
+
             UPDATE attribute_keys
             SET attribute_count = "attribute_count" + (SELECT COUNT(*) FROM "x")
             WHERE id = $/attributeKeyId/

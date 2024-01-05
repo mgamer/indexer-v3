@@ -127,6 +127,7 @@ export const getTokensDetailsV4Options: RouteOptions = {
                 topBidValue: Joi.number().allow(null),
               })
             ),
+            decimals: Joi.number().unsafe().allow(null).description("Can be not null if erc1155"),
           }),
           market: Joi.object({
             floorAsk: {
@@ -241,6 +242,7 @@ export const getTokensDetailsV4Options: RouteOptions = {
             NULLIF(DATE_PART('epoch', UPPER("ob"."valid_between")), 'Infinity'),
             0
           ) AS "top_buy_valid_until"
+          "t"."decimals"
         FROM "tokens" "t"
         ${topBidQuery}
         LEFT JOIN "orders" "ob" ON "t"."top_buy_id" = "ob"."id"
@@ -497,6 +499,7 @@ export const getTokensDetailsV4Options: RouteOptions = {
                       : attribute.topBidValue,
                   }))
                 : [],
+              decimals: !_.isNull(r.decimals) ? r.decimals : null,
             },
             r.t_metadata_disabled,
             r.c_metadata_disabled

@@ -31,6 +31,7 @@ export interface TokenMetadata {
   metadataMethod?: string;
   imageMimeType?: string;
   mediaMimeType?: string;
+  decimals?: number;
 }
 
 export interface CollectionMetadata {

@@ -338,6 +338,7 @@ export const getTokensV8Options: RouteOptions = {
                 maxMintsPerWallet: Joi.number().unsafe().allow(null),
               })
             ),
+            decimals: Joi.number().unsafe().allow(null).description("Can be not null if erc1155"),
           }),
           market: Joi.object({
             floorAsk: {
@@ -745,6 +746,7 @@ export const getTokensV8Options: RouteOptions = {
           t.last_flag_update,
           t.last_flag_change,
           t.supply,
+          t.decimals,
           t.remaining_supply,
           extract(epoch from t.updated_at) AS t_updated_at,
           t.metadata_disabled AS t_metadata_disabled,
@@ -1185,8 +1187,8 @@ export const getTokensV8Options: RouteOptions = {
           WITH x AS (
             ${baseQuery}
           )
-          SELECT 
-            x.*, 
+          SELECT
+            x.*,
             y.*
           FROM x
           LEFT JOIN LATERAL (
@@ -1466,6 +1468,7 @@ export const getTokensV8Options: RouteOptions = {
                 ? new Date(r.last_flag_change).toISOString()
                 : null,
               supply: !_.isNull(r.supply) ? r.supply : null,
+              decimals: !_.isNull(r.decimals) ? r.decimals : null,
               remainingSupply: !_.isNull(r.remaining_supply) ? r.remaining_supply : null,
               rarity: r.rarity_score,
               rarityRank: r.rarity_rank,
