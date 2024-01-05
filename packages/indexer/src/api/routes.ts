@@ -636,6 +636,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "POST",
+    path: "/collections/nsfw-status/v1",
+    options: collectionsEndpoints.postNsfwStatusCollectionV1Options,
+  });
+
+  server.route({
+    method: "POST",
     path: "/collections/spam-status/v1",
     options: collectionsEndpoints.postSpamStatusCollectionV1Options,
   });
@@ -1280,6 +1286,12 @@ export const setupRoutes = (server: Server) => {
   });
 
   // Tokens
+
+  server.route({
+    method: "POST",
+    path: "/tokens/nsfw-status/v1",
+    options: tokensEndpoints.postNsfwStatusTokenV1Options,
+  });
 
   server.route({
     method: "POST",
