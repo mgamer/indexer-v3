@@ -411,14 +411,28 @@ export const getEventKind = (
 ): DbEvent["kind"] => {
   const ns = getNetworkSettings();
   let kind: DbEvent["kind"] = null;
-  logger.info("debug-getEventKind", JSON.stringify(event));
+  // event.baseEventParams.from is the sender of the transaction
+  // event.baseEventParams.to is the receiver of the transaction
+  // event.from is the sender of the transfer event
+  // event.to is the receiver of the transfer event
+
+  // requirements to be considered an airdrop:
+  // if the recipient of the nft did not initiate the transaction
+  // AND
+  // if the sender of the nft is not the recipient of the nft
+  // AND
+  // if the recipient of the nft is not a burn address
+  // AND
+  // if the contract being interacted with is not a router
+  // AND
+  // if the contract being interacted with is not a known mint address
   if (
     event.baseEventParams.from !== event.to &&
     event.baseEventParams?.to &&
-    !routers.has(event.baseEventParams?.to) &&
-    !allEventsAddresses.includes(event.baseEventParams?.to) &&
     event.baseEventParams?.from !== event.baseEventParams?.to &&
-    !ns.burnAddresses.includes(event.baseEventParams?.to)
+    !ns.burnAddresses.includes(event.to) &&
+    !routers.has(event.baseEventParams?.to) &&
+    !allEventsAddresses.includes(event.baseEventParams?.to)
   ) {
     kind = "airdrop";
   } else if (ns.mintAddresses.includes(event.from)) {
