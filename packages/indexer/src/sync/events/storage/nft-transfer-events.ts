@@ -233,7 +233,7 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
       if (erc1155TransfersPerTx[txHash].length > 100) {
         logger.info(
           "airdrop-bulk-detection",
-          `txHash ${txHash} has ${erc1155TransfersPerTx[txHash].length} erc1155 transfers, marking as spam`
+          `txHash ${txHash} has ${erc1155TransfersPerTx[txHash].length} erc1155 transfer`
         );
       }
     });
