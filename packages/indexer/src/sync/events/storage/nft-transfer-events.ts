@@ -9,7 +9,7 @@ import { AddressZero } from "@ethersproject/constants";
 import { tokenReclacSupplyJob } from "@/jobs/token-updates/token-reclac-supply-job";
 import { DeferUpdateAddressBalance } from "@/models/defer-update-address-balance";
 import { getNetworkSettings } from "@/config/network";
-import { logger } from "ethers";
+import { logger } from "@/common/logger";
 
 export type Event = {
   kind: ContractKind;
