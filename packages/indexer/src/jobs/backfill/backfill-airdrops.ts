@@ -51,7 +51,7 @@ export class BackfillAirdropsJob extends AbstractRabbitMqJobHandler {
       nft_transfer_events.address,
       nft_transfer_events.token_id,
       transactions.to as transaction_to,
-      transactions.from as transaction_from,
+      transactions.from as transaction_from
     FROM nft_transfer_events
     LEFT JOIN transactions ON transactions.hash = nft_transfer_events.tx_hash
     WHERE block_number >= $/startBlock/
