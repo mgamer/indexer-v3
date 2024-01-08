@@ -122,7 +122,7 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
   }
 
   if (transferValues.length) {
-    const erc1155TransfersPerTx: Record<string, DbEvent[]> = {};
+    const erc1155TransfersPerTx: Record<string, number[]> = {};
     for (const event of transferValues) {
       const nftTransferQueries: string[] = [];
       const columns = new pgp.helpers.ColumnSet(
@@ -154,7 +154,7 @@ export const addEvents = async (events: Event[], backfill: boolean) => {
           erc1155TransfersPerTx[fromBuffer(event.tx_hash)] = [];
         }
 
-        erc1155TransfersPerTx[fromBuffer(event.tx_hash)].push(event);
+        erc1155TransfersPerTx[fromBuffer(event.tx_hash)].push(event.log_index);
       }
 
       // Atomically insert the transfer events and update balances
