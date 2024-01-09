@@ -44,6 +44,13 @@ export class BackfillNftBalancesDatesJob extends AbstractRabbitMqJobHandler {
       values.amount = amount;
     }
 
+    let createdAtValue = "";
+    switch (config.chainId) {
+      case 137:
+        createdAtValue = "WHERE created_at = '2024-01-09 19:39:22.136198+00'";
+        break;
+    }
+
     const results = await idb.manyOrNone(
       `
         UPDATE nft_balances
@@ -51,7 +58,7 @@ export class BackfillNftBalancesDatesJob extends AbstractRabbitMqJobHandler {
         WHERE (contract, token_id, owner, amount) IN (
           SELECT contract, token_id, owner, amount
           FROM nft_balances
-          WHERE created_at IS NULL
+          ${createdAtValue}
           ${cursor}
           ORDER BY contract, token_id, owner, amount
           LIMIT $/limit/
