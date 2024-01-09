@@ -1,12 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { MaxUint256 } from "@ethersproject/constants";
+import * as Boom from "@hapi/boom";
 import { Request, RouteOptions } from "@hapi/hapi";
 import * as Sdk from "@reservoir0x/sdk";
 import Joi from "joi";
 import _ from "lodash";
-import * as Boom from "@hapi/boom";
 
+import { getListedTokensFromES } from "@/api/endpoints/tokens/get-tokens/v6";
+import { parseMetadata } from "@/api/endpoints/tokens/get-user-tokens/v8";
 import { edb, redb } from "@/common/db";
 import { logger } from "@/common/logger";
 import {
@@ -29,13 +31,11 @@ import {
   toBuffer,
 } from "@/common/utils";
 import { config } from "@/config/index";
+import { hasExtendCollectionHandler } from "@/metadata/extend";
+import { Collections } from "@/models/collections";
+import { CollectionSets } from "@/models/collection-sets";
 import { Sources } from "@/models/sources";
 import { Assets, ImageSize } from "@/utils/assets";
-import { CollectionSets } from "@/models/collection-sets";
-import { Collections } from "@/models/collections";
-import { hasExtendCollectionHandler } from "@/metadata/extend";
-import { getListedTokensFromES } from "@/api/endpoints/tokens/get-tokens/v6";
-import { parseMetadata } from "@/api/endpoints/tokens/get-user-tokens/v8";
 
 const version = "v8";
 
@@ -326,6 +326,9 @@ export const getTokensV8Options: RouteOptions = {
                 })
               )
               .optional(),
+            decimals: Joi.number()
+              .allow(null)
+              .description("Can be set for ERC1155 tokens according to the standard"),
             mintStages: Joi.array().items(
               Joi.object({
                 stage: Joi.string().required(),
@@ -337,7 +340,6 @@ export const getTokensV8Options: RouteOptions = {
                 maxMintsPerWallet: Joi.number().unsafe().allow(null),
               })
             ),
-            decimals: Joi.number().unsafe().allow(null).description("Can be not null if erc1155"),
           }),
           market: Joi.object({
             floorAsk: {

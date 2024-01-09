@@ -28,10 +28,10 @@ export interface TokenMetadata {
     kind: "string" | "number" | "date" | "range";
     rank?: number;
   }[];
+  decimals?: number;
   metadataMethod?: string;
   imageMimeType?: string;
   mediaMimeType?: string;
-  decimals?: number;
 }
 
 export interface CollectionMetadata {

@@ -1,6 +1,6 @@
 -- Up Migration
 
-ALTER TABLE "tokens" ADD COLUMN "decimals" INT;
+ALTER TABLE "tokens" ADD COLUMN "decimals" SMALLINT;
 
 -- Down Migration
 
