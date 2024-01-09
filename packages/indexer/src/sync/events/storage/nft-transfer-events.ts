@@ -419,8 +419,6 @@ export const getEventKind = (
   // requirements to be considered an airdrop:
   // if the recipient of the nft did not initiate the transaction
   // AND
-  // if the sender of the nft is not the recipient of the nft
-  // AND
   // if the recipient of the nft is not a burn address
   // AND
   // if the contract being interacted with is not a router
@@ -429,7 +427,6 @@ export const getEventKind = (
   if (
     event.baseEventParams.from !== event.to &&
     event.baseEventParams?.to &&
-    event.baseEventParams?.from !== event.baseEventParams?.to &&
     !ns.burnAddresses.includes(event.to) &&
     !routers.has(event.baseEventParams?.to) &&
     !allEventsAddresses.includes(event.baseEventParams?.to)
