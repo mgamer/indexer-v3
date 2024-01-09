@@ -272,6 +272,8 @@ export const start = async (): Promise<void> => {
                 appName: apiKey?.appName || "",
                 key: rateLimitKey,
                 referrer: request.info.referrer,
+                origin,
+                remoteAddress,
               };
 
               logger.warn("rate-limiter", JSON.stringify(log));
