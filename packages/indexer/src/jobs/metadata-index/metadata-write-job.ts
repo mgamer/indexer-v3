@@ -101,7 +101,8 @@ export default class MetadataIndexWriteJob extends AbstractRabbitMqJobHandler {
               OR media IS DISTINCT FROM $/media/
               OR token_uri IS DISTINCT FROM $/tokenURI/
               OR description IS DISTINCT FROM $/description/
-              OR metadata IS DISTINCT FROM $/metadata:json/) THEN true
+              OR metadata IS DISTINCT FROM $/metadata:json/
+              OR decimals IS DISTINCT FROM $/decimals/) THEN true
             ELSE false
             END AS is_updated
           FROM tokens
@@ -145,7 +146,8 @@ export default class MetadataIndexWriteJob extends AbstractRabbitMqJobHandler {
               OR image IS DISTINCT FROM $/image/
               OR media IS DISTINCT FROM $/media/
               OR description IS DISTINCT FROM $/description/
-              OR metadata IS DISTINCT FROM $/metadata:json/) THEN now()
+              OR metadata IS DISTINCT FROM $/metadata:json/
+              OR decimals IS DISTINCT FROM $/decimals/) THEN now()
             ELSE metadata_updated_at
           END
         WHERE tokens.contract = $/contract/
