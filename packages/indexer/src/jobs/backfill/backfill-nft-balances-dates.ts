@@ -47,7 +47,7 @@ export class BackfillNftBalancesDatesJob extends AbstractRabbitMqJobHandler {
     const results = await idb.manyOrNone(
       `
         UPDATE nft_balances
-        SET created_at = acquired_at, updated_at = acquired_at
+        SET created_at = COALESCE(acquired_at, now()), updated_at = COALESCE(acquired_at, now())
         WHERE (contract, token_id, owner, amount) IN (
           SELECT contract, token_id, owner, amount
           FROM nft_balances
