@@ -93,7 +93,7 @@ export class BackfillAirdropsJob extends AbstractRabbitMqJobHandler {
            AND log_index = ${pgp.as.value(transferEvent.log_index)};  
            
            UPDATE nft_balances
-           SET is_airdropped = true
+           SET is_airdropped = true, updated_at = now()
            WHERE contract = ${pgp.as.buffer(() => transferEvent.address)}
            AND token_id = ${pgp.as.value(transferEvent.token_id)}
            AND owner = ${pgp.as.buffer(() => transferEvent.to)}
