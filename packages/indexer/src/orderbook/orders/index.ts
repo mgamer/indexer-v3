@@ -689,6 +689,7 @@ export const generateBidDetailsV6 = async (
           sdkOrder.buildMatching({
             tokenId: common.tokenId,
             amount: common.amount ?? 1,
+            ...extraArgs,
           })
         );
 
