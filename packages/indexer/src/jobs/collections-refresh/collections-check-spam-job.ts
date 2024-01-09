@@ -26,6 +26,11 @@ export default class CollectionCheckSpamJob extends AbstractRabbitMqJobHandler {
     const collection = await Collections.getById(collectionId, true);
 
     if (collection) {
+      // if the spam was manually set by a trusted partner, don't change it
+      if (collection.isSpam === 100 || collection.isSpam === -100) {
+        return;
+      }
+
       // if the collection is verified and marked as spam -> unspam the collection
       if (collection.metadata?.safelistRequestStatus === "verified" && collection.isSpam > 0) {
         await this.updateSpamStatus(collection.id, -1);
