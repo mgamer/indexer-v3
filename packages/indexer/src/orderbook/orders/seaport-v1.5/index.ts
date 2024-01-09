@@ -772,11 +772,11 @@ export const save = async (
         // Mark the order as being partial in order to force filling through the order-fetcher service
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (order.params as any).partial = true;
+      }
 
-        if (isOkx) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (order.params as any).okxOrderId = (orderParams as any).okxOrderId;
-        }
+      if (isOkx) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (order.params as any).okxOrderId = (orderParams as any).okxOrderId;
       }
 
       // Handle: off-chain cancellation via replacement
