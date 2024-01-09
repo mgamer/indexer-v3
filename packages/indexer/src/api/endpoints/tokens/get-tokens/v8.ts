@@ -761,7 +761,7 @@ export const getTokensV8Options: RouteOptions = {
           c.creator,
           c.token_count,
           c.is_spam AS c_is_spam,
-          c.is_spam AS c_nsfw_status,
+          c.nsfw_status AS c_nsfw_status,
           (c.metadata ->> 'imageUrl')::TEXT AS collection_image,
           (
             SELECT
