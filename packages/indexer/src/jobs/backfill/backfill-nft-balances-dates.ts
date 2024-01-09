@@ -46,8 +46,80 @@ export class BackfillNftBalancesDatesJob extends AbstractRabbitMqJobHandler {
 
     let createdAtValue = "";
     switch (config.chainId) {
+      case 1:
+        createdAtValue = "WHERE created_at = '2024-01-09 19:39:22.163333+00'";
+        break;
+
+      case 10:
+        createdAtValue = "WHERE created_at = '2024-01-09 19:39:23.497636+00'";
+        break;
+
+      case 56:
+        createdAtValue = "WHERE created_at = '2024-01-09 19:39:22.589759+00'";
+        break;
+
       case 137:
         createdAtValue = "WHERE created_at = '2024-01-09 19:39:22.136198+00'";
+        break;
+
+      case 324:
+        createdAtValue = "WHERE created_at = '2024-01-09 19:39:38.945429+00'";
+        break;
+
+      case 42161:
+        createdAtValue = "WHERE created_at = '2024-01-09 19:39:22.132056+00'";
+        break;
+
+      case 534353:
+        createdAtValue = "WHERE created_at = '2024-01-09 19:39:38.475734+00'";
+        break;
+
+      case 11155111:
+        createdAtValue = "WHERE created_at = '2024-01-09 19:39:37.536578+00'";
+        break;
+
+      case 80001:
+        createdAtValue = "WHERE created_at = '2024-01-09 19:39:37.56473+00'";
+        break;
+
+      case 84531:
+        createdAtValue = "WHERE created_at = '2024-01-09 19:39:23.973227+00'";
+        break;
+
+      case 42170:
+        createdAtValue = "WHERE created_at = '2024-01-09 19:39:22.234949+00'";
+        break;
+
+      case 999:
+        createdAtValue = "WHERE created_at = '2024-01-09 19:39:23.972381+00'";
+        break;
+
+      case 7777777:
+        createdAtValue = "WHERE created_at = '2024-01-09 19:39:23.468775+00'";
+        break;
+
+      case 43114:
+        createdAtValue = "WHERE created_at = '2024-01-09 19:39:33.97113+00'";
+        break;
+
+      case 8453:
+        createdAtValue = "WHERE created_at = '2024-01-09 19:39:22.311034+00'";
+        break;
+
+      case 59144:
+        createdAtValue = "WHERE created_at = '2024-01-09 19:39:42.42207+00'";
+        break;
+
+      case 1101:
+        createdAtValue = "WHERE created_at = '2024-01-09 19:39:42.721505+00'";
+        break;
+
+      case 2863311531:
+        createdAtValue = "WHERE created_at = '2024-01-09 19:39:44.313503+00'";
+        break;
+
+      case 534352:
+        createdAtValue = "WHERE created_at = '2024-01-09 19:39:44.401014+00'";
         break;
     }
 
