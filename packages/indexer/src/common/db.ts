@@ -52,7 +52,7 @@ export const redbAlt = pgp({
   connectionString: config.readReplicaDatabaseUrl,
   keepAlive: true,
   max: 60,
-  connectionTimeoutMillis: 20 * 1000,
+  connectionTimeoutMillis: 30 * 1000,
   query_timeout: 20 * 1000,
   statement_timeout: config.disableDatabaseStatementTimeout ? undefined : 20 * 1000,
   allowExitOnIdle: true,
