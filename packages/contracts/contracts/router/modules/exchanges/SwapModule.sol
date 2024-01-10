@@ -23,6 +23,11 @@ contract SwapModule is BaseExchangeModule {
     TransferDetail[] transfers;
   }
 
+  struct Sell {
+    IUniswapV3Router.ExactInputSingleParams params;
+    TransferDetail[] transfers;
+  }
+
   // --- Fields ---
 
   IWETH public immutable WETH;
@@ -137,6 +142,51 @@ contract SwapModule is BaseExchangeModule {
 
       // Execute the swap
       try SWAP_ROUTER.exactOutputSingle(swap.params) {
+        uint256 transfersLength = swap.transfers.length;
+        for (uint256 j = 0; j < transfersLength; ) {
+          TransferDetail calldata transferDetail = swap.transfers[j];
+          if (transferDetail.toETH) {
+            WETH.withdraw(transferDetail.amount);
+            _sendETH(transferDetail.recipient, transferDetail.amount);
+          } else {
+            _sendERC20(
+              transferDetail.recipient,
+              transferDetail.amount,
+              IERC20(swap.params.tokenOut)
+            );
+          }
+
+          unchecked {
+            ++j;
+          }
+        }
+      } catch {
+        if (revertIfIncomplete) {
+          revert UnsuccessfulFill();
+        }
+      }
+
+      unchecked {
+        ++i;
+      }
+    }
+  }
+
+  function erc20ToExactInput(
+    // Assumes all swaps have the same token in
+    Sell[] calldata swaps,
+    address refundTo,
+    bool revertIfIncomplete
+  ) external nonReentrant refundERC20Leftover(refundTo, swaps[0].params.tokenIn) {
+    uint256 swapsLength = swaps.length;
+    for (uint256 i; i < swapsLength; ) {
+      Sell calldata swap = swaps[i];
+
+      // Approve the router if needed
+      _approveERC20IfNeeded(swap.params.tokenIn, address(SWAP_ROUTER), swap.params.amountIn);
+
+      // Execute the swap
+      try SWAP_ROUTER.exactInputSingle(swap.params) {
         uint256 transfersLength = swap.transfers.length;
         for (uint256 j = 0; j < transfersLength; ) {
           TransferDetail calldata transferDetail = swap.transfers[j];

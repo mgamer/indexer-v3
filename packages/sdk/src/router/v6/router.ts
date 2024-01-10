@@ -28,13 +28,21 @@ import {
   NFTApproval,
   PerCurrencyListingDetails,
   PerPoolSwapDetails,
+  PerPoolSellSwapDetails,
   PreSignature,
   SwapDetail,
+  SellSwapDetail,
   TransfersResult,
   TxTags,
 } from "./types";
 import { SwapInfo, generateSwapInfo, mergeSwapInfos } from "./swap/index";
-import { generateFTApprovalTxData, generateNFTApprovalTxData, isETH, isWETH } from "./utils";
+import {
+  generateFTApprovalTxData,
+  generateNFTApprovalTxData,
+  isETH,
+  isWETH,
+  isBETH,
+} from "./utils";
 
 // Tokens
 import ERC721Abi from "../../common/abis/Erc721.json";
@@ -3243,6 +3251,7 @@ export class Router {
               tokenOut,
               totalAmountOut,
               {
+                direction: "buy",
                 module: swapModule,
                 transfers,
                 refundTo: relayer,
@@ -3343,7 +3352,7 @@ export class Router {
     if (executions.length || successfulSwapInfos.length) {
       // Prepend any swap executions
       executions = [
-        ...mergeSwapInfos(this.chainId, successfulSwapInfos).map((info) => ({
+        ...mergeSwapInfos(this.chainId, successfulSwapInfos, "buy").map((info) => ({
           info: info.execution,
           orderIds: [],
         })),
@@ -3463,6 +3472,8 @@ export class Router {
       partial?: boolean;
       // Force filling via the approval proxy
       forceApprovalProxy?: boolean;
+      swapProvider?: "uniswap";
+      sellOutCurrency?: string;
       // Needed for filling Blur orders
       blurAuth?: {
         accessToken: string;
@@ -4614,6 +4625,182 @@ export class Router {
       });
     }
 
+    // Convert to another currency
+    const ftApprovals: FTApproval[] = [];
+    const ftTransferItems: ApprovalProxy.TransferItem[] = [];
+    const successfulSwapInfos: SwapInfo[] = [];
+    let totalBethWithdraw = bn(0);
+    let executions: {
+      info: ExecutionInfo;
+      orderIds: string[];
+    }[] = [];
+
+    if (options?.sellOutCurrency) {
+      const sellSwapDetails: SellSwapDetail[] = [];
+      const needSwapDetails = details.filter(
+        (d) => success[d.orderId] && d.currency != options?.sellOutCurrency
+      );
+      for (const detail of needSwapDetails) {
+        const fees = getFees(detail);
+        const additionalFee = fees
+          .map(({ amount }) => bn(amount))
+          .reduce((a, b) => a.add(b), bn(0));
+        const price = bn(detail.price).mul(detail.amount ?? 1);
+        const builtInFee = detail.builtInFeeBps
+          ? price.mul(detail.builtInFeeBps).div(10000)
+          : bn(0);
+        // soldPrice = pirce - builtInFee - additionalFee
+        const totalPrice = price.sub(additionalFee).sub(builtInFee);
+        sellSwapDetails.push({
+          tokenIn: detail.currency,
+          tokenOut: options?.sellOutCurrency,
+          tokenInputAmount: totalPrice,
+          recipient: taker,
+          refundTo: taker,
+          details: [detail],
+        });
+      }
+
+      if (sellSwapDetails.length) {
+        // Aggregate any swap details for the same token pair
+        const aggregatedSwapDetails = sellSwapDetails.reduce((perPoolDetails, current) => {
+          const { tokenOut, tokenIn } = current;
+
+          let pool: string;
+          if (isETH(this.chainId, tokenIn) && isWETH(this.chainId, tokenOut)) {
+            pool = `${tokenIn}:${tokenOut}`;
+          } else if (isWETH(this.chainId, tokenIn) && isETH(this.chainId, tokenOut)) {
+            pool = `${tokenIn}:${tokenOut}`;
+          } else {
+            const normalizedTokenIn = isETH(this.chainId, tokenIn)
+              ? Sdk.Common.Addresses.WNative[this.chainId]
+              : tokenIn;
+            const normalizedTokenOut = isETH(this.chainId, tokenOut)
+              ? Sdk.Common.Addresses.WNative[this.chainId]
+              : tokenOut;
+            pool = `${normalizedTokenIn}:${normalizedTokenOut}`;
+          }
+
+          if (!perPoolDetails[pool]) {
+            perPoolDetails[pool] = [];
+          }
+          perPoolDetails[pool].push(current);
+
+          return perPoolDetails;
+        }, {} as PerPoolSellSwapDetails);
+
+        // For each token pair, generate a swap info
+        for (const swapDetails of Object.values(aggregatedSwapDetails)) {
+          // All swap details for this pool will have the same out and in tokens
+          const { tokenIn, tokenOut } = swapDetails[0];
+          const transfers = swapDetails.map((s) => {
+            return {
+              recipient: s.recipient,
+              amount: s.tokenInputAmount,
+              // Unwrap if the out token is ETH
+              toETH: isETH(this.chainId, s.tokenOut),
+            };
+          });
+
+          const totalAmountInput = swapDetails
+            .map((order) => bn(order.tokenInputAmount))
+            .reduce((a, b) => a.add(b), bn(0));
+
+          const swapProvider = "uniswap";
+          const swapModule = this.contracts.swapModule;
+
+          if (isBETH(this.chainId, tokenIn)) {
+            if (isETH(this.chainId, tokenOut)) {
+              totalBethWithdraw = totalBethWithdraw.add(totalAmountInput);
+            } else {
+              throw new Error(`can't sell BETH to ${tokenOut}`);
+            }
+            continue;
+          }
+
+          try {
+            // Only generate a swap if the in token is different from the out token
+            const inAmount = totalAmountInput.toString();
+            if (tokenIn !== tokenOut) {
+              const sellInfo = await generateSwapInfo(
+                this.chainId,
+                this.provider,
+                swapProvider,
+                tokenIn,
+                tokenOut,
+                totalAmountInput,
+                {
+                  direction: "sell",
+                  module: swapModule,
+                  transfers: [
+                    {
+                      recipient: taker,
+                      // Will be overide after quote
+                      amount: totalAmountInput,
+                      // Unwrap if the out token is ETH
+                      toETH: isETH(this.chainId, tokenOut),
+                    },
+                  ],
+                  refundTo: taker,
+                  revertIfIncomplete: Boolean(!options?.partial),
+                }
+              );
+              successfulSwapInfos.push(sellInfo);
+            }
+
+            if (!isETH(this.chainId, tokenIn)) {
+              const conduitController = new Sdk.SeaportBase.ConduitController(this.chainId);
+              const conduit = conduitController.deriveConduit(
+                Sdk.SeaportBase.Addresses.ReservoirConduitKey[this.chainId]
+              );
+
+              ftApprovals.push({
+                currency: tokenIn,
+                amount: inAmount,
+                owner: taker,
+                operator: conduit,
+                txData: generateFTApprovalTxData(tokenIn, taker, conduit),
+              });
+
+              if (tokenIn !== tokenOut) {
+                // The swap module will take care of handling additional transfers
+                ftTransferItems.push({
+                  items: [
+                    {
+                      itemType: ApprovalProxy.ItemType.ERC20,
+                      token: tokenIn,
+                      identifier: 0,
+                      amount: inAmount,
+                    },
+                  ],
+                  recipient: swapModule.address,
+                });
+              } else {
+                // Split based on the individual transfers
+                ftTransferItems.push(
+                  ...transfers.map((t) => ({
+                    items: [
+                      {
+                        itemType: ApprovalProxy.ItemType.ERC20,
+                        token: tokenIn,
+                        identifier: 0,
+                        amount: t.amount,
+                      },
+                    ],
+                    recipient: t.recipient,
+                  }))
+                );
+              }
+            }
+          } catch (error) {
+            if (!options?.partial) {
+              throw new Error(getErrorMessage(error));
+            }
+          }
+        }
+      }
+    }
+
     // Batch fill all protected offers in a single transaction
     if (protectedSeaportV15Offers.length) {
       const approvals: NFTApproval[] = [];
@@ -4789,6 +4976,73 @@ export class Router {
         preSignatures: [],
         orderIds: [...new Set(executionsWithDetails.map(({ detail }) => detail.orderId))],
       });
+    }
+
+    if (successfulSwapInfos.length) {
+      executions = [
+        ...mergeSwapInfos(this.chainId, successfulSwapInfos, "sell").map((info) => ({
+          info: info.execution,
+          orderIds: [],
+        })),
+        ...executions,
+      ];
+
+      const sellTx = {
+        approvals: [],
+        ftApprovals: uniqBy(
+          ftApprovals,
+          ({ txData: { from, to, data } }) => `${from}-${to}-${data}`
+        ),
+        permits: [],
+        preSignatures: [],
+        txTags: routerTxTags,
+        txData: {
+          from: taker,
+          ...(ftTransferItems.length
+            ? {
+                to: this.contracts.approvalProxy.address,
+                data:
+                  this.contracts.approvalProxy.interface.encodeFunctionData(
+                    "bulkTransferWithExecute",
+                    [
+                      ftTransferItems,
+                      executions.map((e) => e.info),
+                      Sdk.SeaportBase.Addresses.ReservoirConduitKey[this.chainId],
+                    ]
+                  ) + generateSourceBytes(options?.source),
+              }
+            : {
+                to: this.contracts.router.address,
+                data:
+                  this.contracts.router.interface.encodeFunctionData("execute", [
+                    executions.map((e) => e.info),
+                  ]) + generateSourceBytes(options?.source),
+                value: executions
+                  .map((e) => bn(e.info.value))
+                  .reduce((a, b) => a.add(b))
+                  .toHexString(),
+              }),
+        },
+        orderIds: [...new Set(executions.map((e) => e.orderIds).flat())],
+      };
+      txs.push(sellTx);
+
+      if (totalBethWithdraw.gt(0)) {
+        // Withdraw BETH
+        txs.push({
+          approvals: [],
+          preSignatures: [],
+          orderIds: [],
+          txData: {
+            from: taker,
+            to: Sdk.Blur.Addresses.Beth[this.chainId],
+            data: new Interface([`function withdraw(uint256 amount) external`]).encodeFunctionData(
+              "withdraw",
+              [totalBethWithdraw]
+            ),
+          },
+        });
+      }
     }
 
     if (!txs.length) {
