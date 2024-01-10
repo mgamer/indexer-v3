@@ -27,12 +27,12 @@ const getToken = async (
     : new Token(chainId, address, await contract.decimals());
 };
 
-export const generateSwapExecutions = async (
+export const generateBuyExecutions = async (
   chainId: number,
   provider: Provider,
   fromTokenAddress: string,
   toTokenAddress: string,
-  inputAmount: BigNumberish,
+  amount: BigNumberish,
   options: {
     module: Contract;
     transfers: TransferDetail[];
@@ -40,8 +40,27 @@ export const generateSwapExecutions = async (
     revertIfIncomplete: boolean;
   }
 ): Promise<SwapInfo> => {
-  return _generateSwapExecutions(chainId, provider, fromTokenAddress, toTokenAddress, inputAmount, {
+  return _generateSwapExecutions(chainId, provider, fromTokenAddress, toTokenAddress, amount, {
     direction: "buy",
+    ...options,
+  });
+};
+
+export const generateSellExecutions = async (
+  chainId: number,
+  provider: Provider,
+  fromTokenAddress: string,
+  toTokenAddress: string,
+  amount: BigNumberish,
+  options: {
+    module: Contract;
+    transfers: TransferDetail[];
+    refundTo: string;
+    revertIfIncomplete: boolean;
+  }
+): Promise<SwapInfo> => {
+  return _generateSwapExecutions(chainId, provider, fromTokenAddress, toTokenAddress, amount, {
+    direction: "sell",
     ...options,
   });
 };
@@ -51,7 +70,7 @@ const _generateSwapExecutions = async (
   provider: Provider,
   fromTokenAddress: string,
   toTokenAddress: string,
-  inputAmount: BigNumberish,
+  amount: BigNumberish,
   options: {
     direction: "sell" | "buy";
     module: Contract;
@@ -86,7 +105,7 @@ const _generateSwapExecutions = async (
   let route: SwapRoute | null = null;
   try {
     route = await router.route(
-      CurrencyAmount.fromRawAmount(!isBuy ? fromToken : toToken, inputAmount.toString()),
+      CurrencyAmount.fromRawAmount(!isBuy ? fromToken : toToken, amount.toString()),
       !isBuy ? toToken : fromToken,
       !isBuy ? TradeType.EXACT_INPUT : TradeType.EXACT_OUTPUT,
       {
@@ -142,8 +161,9 @@ const _generateSwapExecutions = async (
 
   let params: Result;
   try {
-    // Properly handle multicall-wrapping
     const callMethod = isBuy ? "exactOutputSingle" : "exactInputSingle";
+
+    // Properly handle multicall-wrapping
     let calldata = route.methodParameters!.calldata;
     if (calldata.startsWith(iface.getSighash("multicall"))) {
       const decodedMulticall = iface.decodeFunctionData("multicall", calldata);
@@ -156,14 +176,11 @@ const _generateSwapExecutions = async (
     }
 
     params = iface.decodeFunctionData(callMethod, calldata);
-  } catch (err) {
+  } catch {
     throw new Error("Could not generate compatible route");
   }
 
   const fromETH = isETH(chainId, fromTokenAddress);
-  if (options.transfers.length) {
-    options.transfers[0].amount = params.params.amountOutMinimum;
-  }
   const execution = {
     module: options.module.address,
     data: options.module.interface.encodeFunctionData(
@@ -202,29 +219,10 @@ const _generateSwapExecutions = async (
 
   return {
     tokenIn: fromTokenAddress,
-    amountIn: isBuy ? params.params.amountInMaximum.toString() : inputAmount,
-    amountOut: isBuy ? inputAmount : params.params.amountOutMinimum.toString(),
+    amountIn: isBuy ? params.params.amountInMaximum.toString() : amount,
+    amountOut: isBuy ? amount : params.params.amountOutMinimum.toString(),
     module: options.module,
     execution,
     kind: "swap",
   };
-};
-
-export const generateSellExecutions = async (
-  chainId: number,
-  provider: Provider,
-  fromTokenAddress: string,
-  toTokenAddress: string,
-  inputAmount: BigNumberish,
-  options: {
-    module: Contract;
-    transfers: TransferDetail[];
-    refundTo: string;
-    revertIfIncomplete: boolean;
-  }
-): Promise<SwapInfo> => {
-  return _generateSwapExecutions(chainId, provider, fromTokenAddress, toTokenAddress, inputAmount, {
-    direction: "sell",
-    ...options,
-  });
 };

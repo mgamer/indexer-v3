@@ -375,7 +375,7 @@ export const getExecuteSellV6Options: RouteOptions = {
           unitPrice: orderResult.price,
           rawData: orderResult.raw_data,
           source: source || undefined,
-          currency: orderResult.currency,
+          currency: fromBuffer(orderResult.currency),
           fees,
           builtInFeeBps: orderResult.fee_bps,
           isProtected:

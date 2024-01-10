@@ -31,10 +31,10 @@ import * as sudoswap from "@/orderbook/orders/sudoswap";
 import * as b from "@/utils/auth/blur";
 import { getCurrency } from "@/utils/currencies";
 import { ExecutionsBuffer } from "@/utils/executions";
+import * as onChainData from "@/utils/on-chain-data";
 import { getPersistentPermit } from "@/utils/permits";
 import { getPreSignatureId, getPreSignature, savePreSignature } from "@/utils/pre-signatures";
 import { getUSDAndCurrencyPrices } from "@/utils/prices";
-import * as onChainData from "@/utils/on-chain-data";
 
 const version = "v7";
 
@@ -985,8 +985,8 @@ export const getExecuteSellV7Options: RouteOptions = {
           items: [],
         },
         {
-          id: "approval",
-          action: "Pre Approve Currency",
+          id: "currency-approval",
+          action: "Approve currency",
           description: "Each currency you want to swap requires a one-time approval transaction",
           kind: "transaction",
           items: [],
@@ -1276,13 +1276,6 @@ export const getExecuteSellV7Options: RouteOptions = {
             status: "incomplete",
             data: {
               ...approval.txData,
-              check: {
-                endpoint: "/execute/status/v1",
-                method: "POST",
-                body: {
-                  kind: "transaction",
-                },
-              },
               maxFeePerGas,
               maxPriorityFeePerGas,
             },

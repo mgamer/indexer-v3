@@ -201,7 +201,7 @@
             "type": "tuple[]"
           }
         ],
-        "internalType": "struct SwapModule.Sell[]",
+        "internalType": "struct SwapModule.SellSwap[]",
         "name": "swaps",
         "type": "tuple[]"
       },
@@ -290,7 +290,7 @@
             "type": "tuple[]"
           }
         ],
-        "internalType": "struct SwapModule.Swap[]",
+        "internalType": "struct SwapModule.BuySwap[]",
         "name": "swaps",
         "type": "tuple[]"
       },
@@ -379,7 +379,7 @@
             "type": "tuple[]"
           }
         ],
-        "internalType": "struct SwapModule.Swap[]",
+        "internalType": "struct SwapModule.BuySwap[]",
         "name": "swaps",
         "type": "tuple[]"
       },

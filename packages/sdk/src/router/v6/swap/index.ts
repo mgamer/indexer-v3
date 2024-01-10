@@ -67,7 +67,7 @@ export const generateSwapInfo = async (
   } else {
     if (options.direction === "buy") {
       return swapProvider === "uniswap"
-        ? await uniswap.generateSwapExecutions(
+        ? uniswap.generateBuyExecutions(
             chainId,
             provider,
             fromTokenAddress,
@@ -80,20 +80,14 @@ export const generateSwapInfo = async (
               revertIfIncomplete: options.revertIfIncomplete,
             }
           )
-        : await oneInch.generateSwapExecutions(
-            chainId,
-            fromTokenAddress,
-            toTokenAddress,
-            toTokenAmount,
-            {
-              module: options.module,
-              transfers: options.transfers,
-              refundTo: options.refundTo,
-              revertIfIncomplete: options.revertIfIncomplete,
-            }
-          );
+        : oneInch.generateBuyExecutions(chainId, fromTokenAddress, toTokenAddress, toTokenAmount, {
+            module: options.module,
+            transfers: options.transfers,
+            refundTo: options.refundTo,
+            revertIfIncomplete: options.revertIfIncomplete,
+          });
     } else {
-      return await uniswap.generateSellExecutions(
+      return uniswap.generateSellExecutions(
         chainId,
         provider,
         fromTokenAddress,

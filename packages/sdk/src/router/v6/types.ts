@@ -245,18 +245,13 @@ export type FillBidsResult = {
   }[];
   txs: {
     approvals: NFTApproval[];
-    // Sell
-    ftApprovals?: FTApproval[];
+    ftApprovals: FTApproval[];
     txData: TxData;
     txTags?: TxTags;
     orderIds: string[];
     preSignatures: PreSignature[];
   }[];
   success: { [orderId: string]: boolean };
-};
-
-export type PerCurrencyBidDetails = {
-  [currency: string]: BidDetails[];
 };
 
 // Mints
@@ -291,15 +286,7 @@ export type TransfersResult = {
 
 // Swaps
 
-export type PerPoolSwapDetails = {
-  [pool: string]: SwapDetail[];
-};
-
-export type PerPoolSellSwapDetails = {
-  [pool: string]: SellSwapDetail[];
-};
-
-export type SwapDetail = {
+export type BuySwapDetail = {
   tokenIn: string;
   tokenOut: string;
   tokenOutAmount: BigNumberish;
@@ -310,13 +297,21 @@ export type SwapDetail = {
   executionIndex?: number;
 };
 
+export type PerPoolBuySwapDetails = {
+  [pool: string]: BuySwapDetail[];
+};
+
 export type SellSwapDetail = {
   tokenIn: string;
   tokenOut: string;
-  tokenInputAmount: BigNumberish;
+  tokenInAmount: BigNumberish;
   recipient: string;
   refundTo: string;
   details: BidDetails[];
   txIndex?: number;
   executionIndex?: number;
+};
+
+export type PerPoolSellSwapDetails = {
+  [pool: string]: SellSwapDetail[];
 };
