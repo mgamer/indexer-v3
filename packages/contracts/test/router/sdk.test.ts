@@ -15,7 +15,6 @@ import {
   reset,
   setupNFTs,
   setupRouterWithModules,
-  setupConduit,
 } from "../utils";
 
 describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
@@ -31,7 +30,6 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
   let erc721: Contract;
   let erc1155: Contract;
   let erc721cWithWhitelist: Contract;
-  let conduitKey: string;
 
   beforeEach(async () => {
     [deployer, alice, bob, carol, dan, emily] = await ethers.getSigners();
@@ -40,7 +38,6 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
       Sdk.PaymentProcessor.Addresses.Exchange[chainId],
     ]));
     await setupRouterWithModules(chainId, deployer);
-    // conduitKey = await setupConduit(chainId, deployer, [Sdk.RouterV6.Addresses.ApprovalProxy[chainId]]);
   });
 
   afterEach(reset);
