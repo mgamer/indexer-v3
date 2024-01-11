@@ -70,15 +70,6 @@ export class BackfillAirdropsJob extends AbstractRabbitMqJobHandler {
     );
 
     const queries: string[] = [];
-    logger.info(
-      this.queueName,
-      JSON.stringify({
-        transferEvents: transferEvents?.length,
-        blockValues,
-        startBlock,
-        endBlock,
-      })
-    );
     if (transferEvents?.length) {
       transferEvents?.forEach(
         (transferEvent: {
@@ -147,7 +138,7 @@ export class BackfillAirdropsJob extends AbstractRabbitMqJobHandler {
     }
   ) {
     if (processResult.addToQueue) {
-      await this.addToQueue();
+      await this.addToQueue(1000);
     }
   }
 
