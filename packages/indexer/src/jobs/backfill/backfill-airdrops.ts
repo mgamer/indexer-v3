@@ -17,7 +17,7 @@ export class BackfillAirdropsJob extends AbstractRabbitMqJobHandler {
   protected async process() {
     const routers = await getRouters();
 
-    const blocksPerBatch = 3;
+    const blocksPerBatch = 1;
     let blockRangeRedis = await redis.get(`${this.queueName}:blockRange`);
     if (!blockRangeRedis) {
       // query nft_transfer_events to find the first and last block number
