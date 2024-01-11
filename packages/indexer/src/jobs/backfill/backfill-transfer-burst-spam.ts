@@ -45,7 +45,7 @@ export class BackfillTransferSpamJob extends AbstractRabbitMqJobHandler {
     // find:
     // - transactions where there are more than 100 transfers in the same tx to distinct addresses
     // - where the contract is an erc1155 contract
-    const transferEvents = await idb.oneOrNone(
+    const transferEvents = await idb.manyOrNone(
       `
       SELECT tx_hash, count(*), c.kind, c.address
       FROM nft_transfer_events
