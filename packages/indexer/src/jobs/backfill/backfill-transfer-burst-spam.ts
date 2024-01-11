@@ -52,7 +52,7 @@ export class BackfillTransferSpamJob extends AbstractRabbitMqJobHandler {
       SELECT tx_hash, count(*), c.kind, c.address
       FROM nft_transfer_events
       JOIN contracts c on nft_transfer_events.address = c.address
-      wHERE block >= $/startBlock/ AND block <= $/endBlock/
+      wHERE block <= $/startBlock/ AND block >= $/endBlock/
       AND c.kind = 'erc1155'
       GROUP BY tx_hash, c.kind, c.address
       HAVING COUNT(distinct (nft_transfer_events."to")) > 100
