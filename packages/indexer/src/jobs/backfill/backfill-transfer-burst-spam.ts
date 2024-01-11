@@ -1,4 +1,5 @@
 import { idb } from "@/common/db";
+import { logger } from "@/common/logger";
 import { RabbitMQMessage } from "@/common/rabbit-mq";
 import { redis } from "@/common/redis";
 import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handler";
@@ -70,6 +71,7 @@ export class BackfillTransferSpamJob extends AbstractRabbitMqJobHandler {
     // add each contract to be checked for spam evaluation
     await Promise.all(
       Array.from(contractSet).map(async (contract) => {
+        logger.info(this.queueName, `contract is burst spam: ${contract}`);
         await collectionCheckSpamJob.addToQueue({
           collectionId: contract,
           trigger: "transfer-burst",
