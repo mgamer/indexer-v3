@@ -2,6 +2,7 @@ import { idb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { RabbitMQMessage } from "@/common/rabbit-mq";
 import { redis } from "@/common/redis";
+import { fromBuffer } from "@/common/utils";
 import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handler";
 import { collectionCheckSpamJob } from "@/jobs/collections-refresh/collections-check-spam-job";
 
@@ -64,7 +65,7 @@ export class BackfillTransferSpamJob extends AbstractRabbitMqJobHandler {
 
     if (transferEvents) {
       for (const transferEvent of transferEvents) {
-        contractSet.add(transferEvent.address);
+        contractSet.add(fromBuffer(transferEvent.address));
       }
     }
 
