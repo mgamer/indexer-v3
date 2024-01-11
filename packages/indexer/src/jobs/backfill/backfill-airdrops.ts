@@ -135,7 +135,7 @@ export class BackfillAirdropsJob extends AbstractRabbitMqJobHandler {
     if (blockValues.endBlock > endBlock) {
       return {
         addToQueue: true,
-        offset: offset + 500,
+        offset: transferEvents?.length === 500 ? offset + 500 : 0,
       };
     }
   }
