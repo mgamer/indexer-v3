@@ -122,7 +122,15 @@ export class BackfillAirdropsJob extends AbstractRabbitMqJobHandler {
     }
 
     if (queries.length) {
-      await idb.manyOrNone(pgp.helpers.concat(queries));
+      // split into batches of 50
+      const batches = [];
+      for (let i = 0; i < queries.length; i += 50) {
+        batches.push(queries.slice(i, i + 50));
+      }
+
+      for (const batch of batches) {
+        await idb.manyOrNone(pgp.helpers.concat(batch));
+      }
     }
 
     if (transferEvents?.length < 500) {
