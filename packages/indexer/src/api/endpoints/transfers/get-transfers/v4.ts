@@ -98,7 +98,7 @@ export const getTransfersV4Options: RouteOptions = {
           batchIndex: Joi.number(),
           timestamp: Joi.number(),
           isDeleted: Joi.boolean().optional(),
-          isAirdrop: Joi.boolean().optional(),
+          isAirdrop: Joi.boolean().optional().allow(null),
           updatedAt: Joi.string().optional().description("Time when last updated in indexer"),
           price: JoiPrice.allow(null),
         })
@@ -359,7 +359,8 @@ export const getTransfersV4Options: RouteOptions = {
         batchIndex: r.batch_index,
         timestamp: r.timestamp,
         isDeleted: Boolean(r.is_deleted),
-        isAirdrop: Boolean(r.kind === "airdrop"),
+        isAirdrop: r.kind ? (r.kind === "airdrop" ? true : false) : null,
+
         updatedAt: new Date(r.updated_ts * 1000).toISOString(),
         price: r.price
           ? await getJoiPriceObject(
