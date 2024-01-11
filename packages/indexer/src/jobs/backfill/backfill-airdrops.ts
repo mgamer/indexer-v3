@@ -6,6 +6,9 @@ import { DbEvent, getEventKind } from "@/events-sync/storage/nft-transfer-events
 import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handler";
 import { getRouters } from "@/utils/routers";
 
+interface BackfillAirdropsJobPayload {
+  offset?: number;
+}
 export class BackfillAirdropsJob extends AbstractRabbitMqJobHandler {
   queueName = "backfill-airdrops";
   maxRetries = 10;
@@ -14,7 +17,8 @@ export class BackfillAirdropsJob extends AbstractRabbitMqJobHandler {
   lazyMode = false;
   singleActiveConsumer = true;
 
-  protected async process() {
+  protected async process(payload: BackfillAirdropsJobPayload) {
+    const { offset = 0 } = payload;
     const routers = await getRouters();
 
     const blocksPerBatch = 1;
@@ -65,6 +69,8 @@ export class BackfillAirdropsJob extends AbstractRabbitMqJobHandler {
       AND block >= $/endBlock/
       AND nft_transfer_events.kind IS NULL
     ORDER BY block ASC
+    LIMIT 500
+    ${offset ? `OFFSET ${offset}` : ""}
     `,
       blockValues
     );
@@ -119,14 +125,17 @@ export class BackfillAirdropsJob extends AbstractRabbitMqJobHandler {
       await idb.manyOrNone(pgp.helpers.concat(queries));
     }
 
-    await redis.set(
-      `${this.queueName}:blockRange`,
-      JSON.stringify([blockValues.endBlock, endBlock])
-    );
+    if (transferEvents?.length < 500) {
+      await redis.set(
+        `${this.queueName}:blockRange`,
+        JSON.stringify([blockValues.endBlock, endBlock])
+      );
+    }
 
     if (blockValues.endBlock > endBlock) {
       return {
         addToQueue: true,
+        offset: offset + 500,
       };
     }
   }
@@ -135,15 +144,16 @@ export class BackfillAirdropsJob extends AbstractRabbitMqJobHandler {
     rabbitMqMessage: RabbitMQMessage,
     processResult: {
       addToQueue: boolean;
+      offset: number;
     }
   ) {
     if (processResult.addToQueue) {
-      await this.addToQueue(1000);
+      await this.addToQueue({ offset: processResult.offset }, 1000);
     }
   }
 
-  public async addToQueue(delay = 0) {
-    await this.send({ payload: {} }, delay);
+  public async addToQueue(payload: BackfillAirdropsJobPayload, delay = 0) {
+    await this.send({ payload }, delay);
   }
 }
 
