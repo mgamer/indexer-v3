@@ -60,7 +60,6 @@ export class BackfillTransferSpamJob extends AbstractRabbitMqJobHandler {
 
     const contractSet = new Set<string>();
 
-    // populate contractSet with contracts that have more than 100 transfers in the same tx
     if (transferEvents) {
       for (const transferEvent of transferEvents) {
         contractSet.add(transferEvent.address);
