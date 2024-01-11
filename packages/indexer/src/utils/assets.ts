@@ -126,6 +126,9 @@ export class Assets {
     if (image_version) {
       try {
         v = image_version ? `?v=${Math.floor(new Date(image_version).getTime() / 1000)}` : "";
+        if (imageUrl.includes("?")) {
+          v = v.replace("?", "&");
+        }
       } catch (error) {
         logger.error("signImage", `Error: ${error}`);
       }
