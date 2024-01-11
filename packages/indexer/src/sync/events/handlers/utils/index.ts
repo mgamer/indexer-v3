@@ -39,6 +39,7 @@ import {
   PermitUpdatesJobPayload,
 } from "@/jobs/permit-updates/permit-updates-job";
 import { BaseEventParams } from "@/events-sync/parser";
+import * as pendingTranscation from "@/utils/pending-transcation";
 
 // Semi-parsed and classified event
 export type EnhancedEvent = {
@@ -151,7 +152,10 @@ export const processOnChainData = async (data: OnChainData, backfill?: boolean) 
 
   const startAssignSourceToFillEvents = Date.now();
   if (!backfill) {
-    await Promise.all([assignSourceToFillEvents(allFillEvents)]);
+    await Promise.all([
+      assignSourceToFillEvents(allFillEvents),
+      pendingTranscation.handleFillEvents(allFillEvents),
+    ]);
   }
   const endAssignSourceToFillEvents = Date.now();
 

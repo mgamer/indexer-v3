@@ -3,6 +3,7 @@ import "@/jobs/cdc/index";
 import "@/config/polyfills";
 import "@/pubsub/index";
 import "@/websockets/index";
+import "@/utils/pending-transcation/listenner";
 
 import * as Sdk from "@reservoir0x/sdk";
 import _ from "lodash";

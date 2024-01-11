@@ -28,6 +28,7 @@ import * as sourcesEndpoints from "@/api/endpoints/sources";
 import * as chainEndpoints from "@/api/endpoints/chain";
 import * as debugEndpoints from "@/api/endpoints/debug";
 import * as currenciesEndpoints from "@/api/endpoints/currencies";
+import * as pendingTranscationEndpoints from "@/api/endpoints/pending-transcation";
 
 export const setupRoutes = (server: Server) => {
   // Activity
@@ -1573,6 +1574,13 @@ export const setupRoutes = (server: Server) => {
     method: "GET",
     path: "/currencies/conversion/v1",
     options: currenciesEndpoints.getCurrencyConversionV1Options,
+  });
+
+  // Pending transcation
+  server.route({
+    method: "GET",
+    path: "/pending-transcation/tokens/v1",
+    options: pendingTranscationEndpoints.getPendingTokensV1Options,
   });
 
   // Debug APIs
