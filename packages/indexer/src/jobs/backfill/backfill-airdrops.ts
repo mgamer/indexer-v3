@@ -104,7 +104,7 @@ export class BackfillAirdropsJob extends AbstractRabbitMqJobHandler {
 
           queries.push(
             `UPDATE nft_transfer_events 
-           SET kind = ${pgp.as.value(kind)}
+           SET kind = '${pgp.as.value(kind)}'
            WHERE tx_hash = ${pgp.as.buffer(() => transferEvent.tx_hash)}
            AND log_index = ${pgp.as.value(transferEvent.log_index)};`
           );
