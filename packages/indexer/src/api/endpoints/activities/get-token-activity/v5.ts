@@ -71,6 +71,9 @@ export const getTokenActivityV5Options: RouteOptions = {
       excludeSpam: Joi.boolean()
         .default(false)
         .description("If true, will filter any activities marked as spam."),
+      excludeNsfw: Joi.boolean()
+        .default(false)
+        .description("If true, will filter any activities marked as nsfw."),
       types: Joi.alternatives()
         .try(
           Joi.array().items(
@@ -158,6 +161,7 @@ export const getTokenActivityV5Options: RouteOptions = {
         limit: query.limit,
         continuation: query.continuation,
         excludeSpam: query.excludeSpam,
+        excludeNsfw: query.excludeNsfw,
       });
 
       if (activities.length === 0) {

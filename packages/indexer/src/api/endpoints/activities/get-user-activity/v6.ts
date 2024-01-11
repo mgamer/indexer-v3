@@ -70,6 +70,9 @@ export const getUserActivityV6Options: RouteOptions = {
       excludeSpam: Joi.boolean()
         .default(false)
         .description("If true, will filter any activities marked as spam."),
+      excludeNsfw: Joi.boolean()
+        .default(false)
+        .description("If true, will filter any activities marked as nsfw."),
       collectionsSetId: Joi.string()
         .lowercase()
         .description("Filter to a particular collection set."),
@@ -226,6 +229,7 @@ export const getUserActivityV6Options: RouteOptions = {
         users: query.users,
         collections: query.collection,
         excludeSpam: query.excludeSpam,
+        excludeNsfw: query.excludeNsfw,
         contracts: query.contracts,
         sortBy: query.sortBy === "eventTimestamp" ? "timestamp" : query.sortBy,
         limit: query.limit,

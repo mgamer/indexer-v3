@@ -67,6 +67,9 @@ export const getCollectionActivityV6Options: RouteOptions = {
       excludeSpam: Joi.boolean()
         .default(false)
         .description("If true, will filter any activities marked as spam."),
+      excludeNsfw: Joi.boolean()
+        .default(false)
+        .description("If true, will filter any activities marked as nsfw."),
       limit: Joi.number()
         .integer()
         .min(1)
@@ -239,6 +242,7 @@ export const getCollectionActivityV6Options: RouteOptions = {
           contracts,
           tokens,
           excludeSpam: query.excludeSpam,
+          excludeNsfw: query.excludeNsfw,
           collections: query.collection,
           sortBy: query.sortBy === "eventTimestamp" ? "timestamp" : query.sortBy,
           limit: query.limit,

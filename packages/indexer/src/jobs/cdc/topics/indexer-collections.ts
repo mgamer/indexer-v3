@@ -174,9 +174,11 @@ export class IndexerCollectionsHandler extends KafkaEventHandler {
       }
 
       const spamStatusChanged = Boolean(payload.before.is_spam) !== Boolean(payload.after.is_spam);
+      const nsfwStatusChanged =
+        Boolean(payload.before.nsfw_status) !== Boolean(payload.after.nsfw_status);
 
       // Update the elasticsearch activities index
-      if (spamStatusChanged) {
+      if (spamStatusChanged || nsfwStatusChanged) {
         logger.info(
           "cdc-indexer-collections",
           JSON.stringify({

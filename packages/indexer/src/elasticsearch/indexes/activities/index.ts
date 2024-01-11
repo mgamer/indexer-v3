@@ -860,6 +860,7 @@ export const search = async (
     continuation?: string | null;
     continuationAsInt?: boolean;
     excludeSpam?: boolean;
+    excludeNsfw?: boolean;
   },
   debug = false
 ): Promise<{ activities: ActivityDocument[]; continuation: string | null }> => {
@@ -979,6 +980,14 @@ export const search = async (
     (esQuery as any).bool.filter.push({
       bool: {
         must_not: [{ term: { "collection.isSpam": true } }, { term: { "token.isSpam": true } }],
+      },
+    });
+  }
+
+  if (params.excludeNsfw) {
+    (esQuery as any).bool.filter.push({
+      bool: {
+        must_not: [{ term: { "collection.isNsfw": true } }, { term: { "token.isNsfw": true } }],
       },
     });
   }
@@ -1299,12 +1308,13 @@ export const updateActivitiesMissingCollection = async (
           {
             script: {
               source:
-                "ctx._source.collection = [:]; ctx._source.collection.id = params.collection_id; ctx._source.collection.name = params.collection_name; ctx._source.collection.image = params.collection_image; ctx._source.collection.isSpam = params.collection_is_spam; ctx._source.collection.imageVersion = params.collection_image_version;",
+                "ctx._source.collection = [:]; ctx._source.collection.id = params.collection_id; ctx._source.collection.name = params.collection_name; ctx._source.collection.image = params.collection_image; ctx._source.collection.isSpam = params.collection_is_spam; ctx._source.collection.isNsfw = params.collection_is_nsfw; ctx._source.collection.imageVersion = params.collection_image_version;",
               params: {
                 collection_id: collection.id,
                 collection_name: collection.name,
                 collection_image: collection.metadata?.imageUrl,
                 collection_is_spam: Number(collection.isSpam) > 0,
+                collection_is_nsfw: Number(collection.nsfwStatus) > 0,
                 collection_image_version: collection.imageVersion,
               },
             },
@@ -1453,12 +1463,13 @@ export const updateActivitiesCollection = async (
           {
             script: {
               source:
-                "ctx._source.collection = [:]; ctx._source.collection.id = params.collection_id; ctx._source.collection.name = params.collection_name; ctx._source.collection.image = params.collection_image; ctx._source.collection.isSpam = params.collection_is_spam; ctx._source.collection.imageVersion = params.collection_image_version;",
+                "ctx._source.collection = [:]; ctx._source.collection.id = params.collection_id; ctx._source.collection.name = params.collection_name; ctx._source.collection.image = params.collection_image; ctx._source.collection.isSpam = params.collection_is_spam; ctx._source.collection.isNsfw = params.collection_is_nsfw; ctx._source.collection.imageVersion = params.collection_image_version;",
               params: {
                 collection_id: newCollection.id,
                 collection_name: newCollection.name,
                 collection_image: newCollection.metadata?.imageUrl,
                 collection_is_spam: Number(newCollection.isSpam) > 0,
+                collection_is_nsfw: Number(newCollection.nsfwStatus) > 0,
                 collection_image_version: newCollection.imageVersion,
               },
             },
@@ -1762,7 +1773,8 @@ export const updateActivitiesTokenMetadata = async (
 export const updateActivitiesToken = async (
   contract: string,
   tokenId: string,
-  isSpam: number
+  isSpam: number,
+  nsfwStatus: number
 ): Promise<boolean> => {
   let keepGoing = false;
 
@@ -1789,6 +1801,33 @@ export const updateActivitiesToken = async (
                 {
                   term: {
                     "token.isSpam": true,
+                  },
+                },
+              ],
+            },
+    },
+    {
+      bool:
+        nsfwStatus > 0
+          ? {
+              must_not: [
+                {
+                  term: {
+                    "token.isNsfw": nsfwStatus > 0,
+                  },
+                },
+              ],
+            }
+          : {
+              must: [
+                {
+                  exists: {
+                    field: "token.isNsfw",
+                  },
+                },
+                {
+                  term: {
+                    "token.isNsfw": true,
                   },
                 },
               ],
@@ -1841,9 +1880,11 @@ export const updateActivitiesToken = async (
           { update: { _index: document.index, _id: document.id, retry_on_conflict: 3 } },
           {
             script: {
-              source: "ctx._source.token.isSpam = params.is_spam",
+              source:
+                "ctx._source.token.isSpam = params.is_spam; ctx._source.token.isNsfw = params.is_nsfw",
               params: {
                 is_spam: isSpam > 0,
+                is_nsfw: nsfwStatus > 0,
               },
             },
           },
@@ -1865,6 +1906,7 @@ export const updateActivitiesToken = async (
               contract,
               tokenId,
               isSpam,
+              nsfwStatus,
             },
             bulkParams,
             response,
@@ -1889,6 +1931,7 @@ export const updateActivitiesToken = async (
             contract,
             tokenId,
             isSpam,
+            nsfwStatus,
           },
           error,
         })
@@ -1905,6 +1948,7 @@ export const updateActivitiesToken = async (
             contract,
             tokenId,
             isSpam,
+            nsfwStatus,
           },
           error,
         })
@@ -1921,6 +1965,7 @@ export type ActivitiesCollectionUpdateData = {
   name: string | null;
   image: string | null;
   isSpam: number;
+  nsfwStatus: number;
   imageVersion: number | null;
 };
 
@@ -1954,6 +1999,33 @@ export const updateActivitiesCollectionData = async (
                 {
                   term: {
                     "collection.isSpam": true,
+                  },
+                },
+              ],
+            },
+    },
+    {
+      bool:
+        collectionData.nsfwStatus > 0
+          ? {
+              must_not: [
+                {
+                  term: {
+                    "collection.isNsfw": collectionData.nsfwStatus > 0,
+                  },
+                },
+              ],
+            }
+          : {
+              must: [
+                {
+                  exists: {
+                    field: "collection.isNsfw",
+                  },
+                },
+                {
+                  term: {
+                    "collection.isNsfw": true,
                   },
                 },
               ],
@@ -2066,11 +2138,12 @@ export const updateActivitiesCollectionData = async (
           {
             script: {
               source:
-                "if (params.collection_name == null) { ctx._source.collection.remove('name') } else { ctx._source.collection.name = params.collection_name } if (params.collection_image == null) { ctx._source.collection.remove('image') } else { ctx._source.collection.image = params.collection_image } ctx._source.collection.isSpam = params.is_spam; if (params.image_version != null) { ctx._source.collection.imageVersion = params.image_version }",
+                "if (params.collection_name == null) { ctx._source.collection.remove('name') } else { ctx._source.collection.name = params.collection_name } if (params.collection_image == null) { ctx._source.collection.remove('image') } else { ctx._source.collection.image = params.collection_image } ctx._source.collection.isSpam = params.is_spam; ctx._source.collection.isNsfw = params.is_nsfw; if (params.image_version != null) { ctx._source.collection.imageVersion = params.image_version }",
               params: {
                 collection_name: collectionData.name ?? null,
                 collection_image: collectionData.image ?? null,
                 is_spam: collectionData.isSpam > 0,
+                is_nsfw: collectionData.nsfwStatus > 0,
                 image_version: collectionData.imageVersion ?? null,
               },
             },
