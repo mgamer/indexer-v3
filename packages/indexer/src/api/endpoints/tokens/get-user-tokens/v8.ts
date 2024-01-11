@@ -132,6 +132,9 @@ export const getUserTokensV8Options: RouteOptions = {
       excludeSpam: Joi.boolean()
         .default(false)
         .description("If true, will filter any tokens marked as spam."),
+      excludeNsfw: Joi.boolean()
+        .default(false)
+        .description("If true, will filter any tokens marked as nsfw."),
       useNonFlaggedFloorAsk: Joi.boolean()
         .default(false)
         .description("If true, will return the collection non flagged floor ask."),
@@ -172,6 +175,7 @@ export const getUserTokensV8Options: RouteOptions = {
             media: Joi.string().allow(null),
             isFlagged: Joi.boolean().default(false),
             isSpam: Joi.boolean().default(false),
+            isNsfw: Joi.boolean().default(false),
             metadataDisabled: Joi.boolean().default(false),
             lastFlagUpdate: Joi.string().allow("", null),
             lastFlagChange: Joi.string().allow("", null),
@@ -182,6 +186,7 @@ export const getUserTokensV8Options: RouteOptions = {
               symbol: Joi.string().allow("", null),
               imageUrl: Joi.string().allow("", null),
               isSpam: Joi.boolean().default(false),
+              isNsfw: Joi.boolean().default(false),
               metadataDisabled: Joi.boolean().default(false),
               openseaVerificationStatus: Joi.string().allow("", null),
               floorAskPrice: JoiPrice.allow(null).description("Can be null if no active asks."),
@@ -429,6 +434,7 @@ export const getUserTokensV8Options: RouteOptions = {
           t.last_buy_timestamp,
           t.is_flagged,
           t.is_spam AS t_is_spam,
+          t.nsfw_status AS t_nsfw_status,
           t.metadata_disabled AS t_metadata_disabled,
           t.last_flag_update,
           t.last_flag_change,
@@ -446,6 +452,7 @@ export const getUserTokensV8Options: RouteOptions = {
         WHERE b.token_id = t.token_id
         AND b.contract = t.contract
         ${query.excludeSpam ? `AND (t.is_spam IS NULL OR t.is_spam <= 0)` : ""}
+        ${query.excludeNsfw ? `AND (t.nsfw_status IS NULL OR t.nsfw_status <= 0)` : ""}
         AND ${
           tokensCollectionFilters.length ? "(" + tokensCollectionFilters.join(" OR ") + ")" : "TRUE"
         }
@@ -476,6 +483,7 @@ export const getUserTokensV8Options: RouteOptions = {
             t.last_buy_timestamp,
             t.is_flagged,
             t.is_spam AS t_is_spam,
+            t.nsfw_status AS t_nsfw_status,
             t.metadata_disabled AS t_metadata_disabled,
             t.last_flag_update,
             t.last_flag_change,
@@ -562,12 +570,12 @@ export const getUserTokensV8Options: RouteOptions = {
         SELECT b.contract, b.token_id, b.token_count, extract(epoch from b.acquired_at) AS acquired_at, b.last_token_appraisal_value,
                t.name, t.image, t.metadata AS token_metadata, t.media, t.rarity_rank, t.collection_id,
                t.supply, t.remaining_supply, t.description,
-               t.rarity_score, t.t_is_spam, t.image_version, t.image_mime_type, t.media_mime_type,
+               t.rarity_score, t.t_is_spam, t.t_nsfw_status, t.image_version, t.image_mime_type, t.media_mime_type,
                ${selectLastSale}
                top_bid_id, top_bid_price, top_bid_value, top_bid_currency, top_bid_currency_price, top_bid_currency_value, top_bid_source_id_int,
                o.currency AS collection_floor_sell_currency, o.currency_price AS collection_floor_sell_currency_price,
                c.name as collection_name, con.kind, con.symbol, c.metadata, c.royalties, (c.metadata ->> 'safelistRequestStatus')::TEXT AS "opensea_verification_status",
-               c.royalties_bps, ot.kind AS floor_sell_kind, c.slug, c.is_spam AS c_is_spam, c.metadata_disabled AS c_metadata_disabled, t_metadata_disabled,
+               c.royalties_bps, ot.kind AS floor_sell_kind, c.slug, c.is_spam AS c_is_spam, c.nsfw_status AS c_nsfw_status, c.metadata_disabled AS c_metadata_disabled, t_metadata_disabled,
                c.image_version AS "collection_image_version",
                ot.value as floor_sell_value, ot.currency_value as floor_sell_currency_value, ot.currency_price, ot.currency as floor_sell_currency, ot.maker as floor_sell_maker,
                 date_part('epoch', lower(ot.valid_between)) AS "floor_sell_valid_from",
@@ -605,7 +613,7 @@ export const getUserTokensV8Options: RouteOptions = {
           ${tokensJoin}
           JOIN collections c ON c.id = t.collection_id ${
             query.excludeSpam ? `AND (c.is_spam IS NULL OR c.is_spam <= 0)` : ""
-          }
+          }${query.excludeNsfw ? ` AND (c.nsfw_status IS NULL OR c.nsfw_status <= 0)` : ""}
           LEFT JOIN orders o ON o.id = c.floor_sell_id
           JOIN contracts con ON b.contract = con.address
           LEFT JOIN orders ot ON ot.id = CASE WHEN con.kind = 'erc1155' THEN (
@@ -761,6 +769,7 @@ export const getUserTokensV8Options: RouteOptions = {
               media: r.media,
               isFlagged: Boolean(Number(r.is_flagged)),
               isSpam: Number(r.t_is_spam) > 0 || Number(r.c_is_spam) > 0,
+              isNsfw: Number(r.t_nsfw_status) > 0 || Number(r.c_nsfw_status) > 0,
               metadataDisabled:
                 Boolean(Number(r.c_metadata_disabled)) || Boolean(Number(r.t_metadata_disabled)),
               lastFlagUpdate: r.last_flag_update
@@ -780,6 +789,7 @@ export const getUserTokensV8Options: RouteOptions = {
                   r.collection_image_version
                 ),
                 isSpam: Number(r.c_is_spam) > 0,
+                isNsfw: Number(r.c_nsfw_status) > 0,
                 metadataDisabled: Boolean(Number(r.c_metadata_disabled)),
                 openseaVerificationStatus: r.opensea_verification_status,
                 floorAskPrice: r.collection_floor_sell_value
