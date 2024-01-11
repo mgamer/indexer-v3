@@ -388,10 +388,16 @@ export const getTokensV6Options: RouteOptions = {
 
     let esTokens: any[] = [];
 
-    const enableElasticsearchAsks =
+    let enableElasticsearchAsks =
       config.enableElasticsearchAsks &&
       query.sortBy === "floorAskPrice" &&
       !["tokenName", "tokenSetId"].some((filter) => query[filter]);
+
+    if (enableElasticsearchAsks && query.continuation) {
+      const contArr = splitContinuation(query.continuation);
+
+      enableElasticsearchAsks = !isNaN(Number(contArr));
+    }
 
     if (enableElasticsearchAsks) {
       logger.info(
@@ -1943,6 +1949,7 @@ export const getListedTokensFromES = async (query: any, attributeFloorAskPriceAs
             t.rarity_rank,
             t.is_flagged,
             t.is_spam AS t_is_spam,
+            t.nsfw_status AS t_nsfw_status,
             t.last_flag_update,
             t.last_flag_change,
             t.supply,
@@ -1953,6 +1960,7 @@ export const getListedTokensFromES = async (query: any, attributeFloorAskPriceAs
             c.creator,
             c.token_count,
             c.is_spam AS c_is_spam,
+            c.nsfw_status AS c_nsfw_status,
             c.metadata_disabled AS c_metadata_disabled,
             (c.metadata ->> 'imageUrl')::TEXT AS collection_image,
             (
@@ -2136,14 +2144,30 @@ export const getListedTokensFromES = async (query: any, attributeFloorAskPriceAs
           tokenId,
           name: r.name,
           description: r.description,
-          image: Assets.getResizedImageUrl(r.image, ImageSize.medium, r.image_version),
-          imageSmall: Assets.getResizedImageUrl(r.image, ImageSize.small, r.image_version),
-          imageLarge: Assets.getResizedImageUrl(r.image, ImageSize.large, r.image_version),
+          image: Assets.getResizedImageUrl(
+            r.image,
+            ImageSize.medium,
+            r.image_version,
+            r.image_mime_type
+          ),
+          imageSmall: Assets.getResizedImageUrl(
+            r.image,
+            ImageSize.small,
+            r.image_version,
+            r.image_mime_type
+          ),
+          imageLarge: Assets.getResizedImageUrl(
+            r.image,
+            ImageSize.large,
+            r.image_version,
+            r.image_mime_type
+          ),
           metadata: Object.values(metadata).every((el) => el === undefined) ? undefined : metadata,
           media: r.media,
           kind: r.kind,
           isFlagged: Boolean(Number(r.is_flagged)),
           isSpam: Number(r.t_is_spam) > 0 || Number(r.c_is_spam) > 0,
+          isNsfw: Number(r.t_nsfw_status) > 0 || Number(r.c_nsfw_status) > 0,
           metadataDisabled:
             Boolean(Number(r.t_metadata_disabled)) || Boolean(Number(r.c_metadata_disabled)),
           lastFlagUpdate: r.last_flag_update ? new Date(r.last_flag_update).toISOString() : null,
