@@ -5,9 +5,9 @@ import { Request, RouteOptions } from "@hapi/hapi";
 import Joi from "joi";
 
 import { logger } from "@/common/logger";
-import { regex } from "@/common/utils";
 import { config } from "@/config/index";
-import { processResyncRequestJob } from "@/jobs/events-sync/process-resync-request-queue-job";
+import { eventsSyncBackfillJob } from "@/jobs/events-sync/events-sync-backfill-job";
+import { regex } from "@/common/utils";
 
 export const postSyncEventsOptions: RouteOptions = {
   description: "Trigger syncing of events.",
@@ -20,6 +20,8 @@ export const postSyncEventsOptions: RouteOptions = {
       "x-admin-api-key": Joi.string().required(),
     }).options({ allowUnknown: true }),
     payload: Joi.object({
+      fromBlock: Joi.number().integer().positive().required(),
+      toBlock: Joi.number().integer().positive().required(),
       // WARNING: Some events should always be fetched together!
       syncDetails: Joi.alternatives(
         Joi.object({
@@ -31,11 +33,9 @@ export const postSyncEventsOptions: RouteOptions = {
           address: Joi.string().pattern(regex.address),
         })
       ),
-      fromBlock: Joi.number().integer().positive().required(),
-      toBlock: Joi.number().integer().positive().required(),
       blocksPerBatch: Joi.number().integer().positive(),
-      skipNonFillWrites: Joi.boolean().default(false),
       backfill: Joi.boolean().default(true),
+      syncEventsOnly: Joi.boolean().default(false),
     }),
   },
   handler: async (request: Request) => {
@@ -46,16 +46,18 @@ export const postSyncEventsOptions: RouteOptions = {
     const payload = request.payload as any;
 
     try {
-      const syncDetails = payload.syncDetails;
       const fromBlock = payload.fromBlock;
       const toBlock = payload.toBlock;
-      const blocksPerBatch = payload.blocksPerBatch;
+      const syncDetails = payload.syncDetails;
       const backfill = payload.backfill;
+      const blocksPerBatch = payload.blocksPerBatch;
+      const syncEventsOnly = payload.syncEventsOnly;
 
-      await processResyncRequestJob.addToQueue(fromBlock, toBlock, {
-        backfill,
+      await eventsSyncBackfillJob.addToQueue(fromBlock, toBlock, {
         syncDetails,
+        backfill,
         blocksPerBatch,
+        syncEventsOnly,
       });
 
       return { message: "Request accepted" };

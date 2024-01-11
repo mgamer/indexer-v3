@@ -81,6 +81,12 @@ export const getNetworkName = () => {
     case 13472:
       return "immutable-zkevm-testnet";
 
+    case 68840142:
+      return "frame-testnet";
+
+    case 204:
+      return "opbnb";
+
     default:
       return "unknown";
   }
@@ -388,6 +394,30 @@ export const getNetworkSettings = (): NetworkSettings => {
             },
           ],
           [
+            "0xaef06250d07cb6389d730d0eec7d90a1549be812",
+            {
+              contract: "0xaef06250d07cb6389d730d0eec7d90a1549be812",
+              name: "RugLabz",
+              symbol: "RLBZ",
+              decimals: 9,
+              metadata: {
+                image: "https://i.ibb.co/XYVTLZf/Untitled.png",
+              },
+            },
+          ],
+          [
+            "0x8962f7352eb3326c15d4820f9fad214b9327714a",
+            {
+              contract: "0x8962f7352eb3326c15d4820f9fad214b9327714a",
+              name: "RugLabsR",
+              symbol: "RUGZ",
+              decimals: 18,
+              metadata: {
+                image: "https://i.ibb.co/QrGfv1z/Untitled-1.png",
+              },
+            },
+          ],
+          [
             "0x4c7c1ec97279a6f3323eab9ab317202dee7ad922",
             {
               contract: "0x4c7c1ec97279a6f3323eab9ab317202dee7ad922",
@@ -457,6 +487,19 @@ export const getNetworkSettings = (): NetworkSettings => {
               decimals: 0,
               metadata: {
                 image: "https://i.ibb.co/Mc5Pmjn/baptoken.png",
+              },
+            },
+          ],
+          [
+            "0x2bff8ddbc1f13f6f976a8f4d7fee677272fb6e0e",
+            {
+              contract: "0x2bff8ddbc1f13f6f976a8f4d7fee677272fb6e0e",
+              name: "$AURA",
+              symbol: "$AURA",
+              decimals: 18,
+              metadata: {
+                image:
+                  "https://ipfs.io/ipfs/QmQwUUJMBAPmr6ANAvJavC6bKCXFDZJkyd6zzgZxGJddeQ/AURA%20Coin%20Front.png",
               },
             },
           ],
@@ -669,7 +712,10 @@ export const getNetworkSettings = (): NetworkSettings => {
         headBlockDelay: 0,
         backfillBlockBatchSize: 32,
         reorgCheckFrequency: [30],
-
+        mintAddresses: [
+          ...defaultNetworkSettings.mintAddresses,
+          "0x2791bca1f2de4661ed88a30c99a7a9449aa84174",
+        ],
         trendingExcludedContracts: [
           "0x198d38c5f21eab36731d0576560440f70cbd9418", // Yieldnodes
         ],
@@ -693,6 +739,57 @@ export const getNetworkSettings = (): NetworkSettings => {
               name: "RCAX",
               symbol: "RCAX",
               decimals: 18,
+              metadata: {
+                image: "https://rcax.io/images/coins/rcax/icon.png",
+              },
+            },
+          ],
+          [
+            "0xc6268a296c810024aa3aa2f5cc2c255bf995aa44",
+            {
+              contract: "0xc6268a296c810024aa3aa2f5cc2c255bf995aa44",
+              name: "r/Poopheadavatars Poops",
+              symbol: "POOP",
+              decimals: 18,
+              metadata: {
+                image: "https://rcax.io/images/coins/poop/icon.png",
+              },
+            },
+          ],
+          [
+            "0xf297c728ce19e9f61f76c4cf958c32e03e024c4b",
+            {
+              contract: "0xf297c728ce19e9f61f76c4cf958c32e03e024c4b",
+              name: "r/FiestaDog Bones",
+              symbol: "BONE",
+              decimals: 18,
+              metadata: {
+                image: "https://rcax.io/images/coins/bone/icon.png",
+              },
+            },
+          ],
+          [
+            "0x43ff18fa32e10873fd9519261004a85ae2c7a65d",
+            {
+              contract: "0x43ff18fa32e10873fd9519261004a85ae2c7a65d",
+              name: "r/PlungerPlanet Plunger Token",
+              symbol: "PLUNGER",
+              decimals: 18,
+              metadata: {
+                image: "https://rcax.io/images/coins/plunger/icon.png",
+              },
+            },
+          ],
+          [
+            "0x7ea837454e3c425e01a8432234140755fc2add1c",
+            {
+              contract: "0x7ea837454e3c425e01a8432234140755fc2add1c",
+              name: "r/PlungerPlanet Tacon Token",
+              symbol: "TACO",
+              decimals: 18,
+              metadata: {
+                image: "https://rcax.io/images/coins/taco/icon.png",
+              },
             },
           ],
           [
@@ -1018,6 +1115,24 @@ export const getNetworkSettings = (): NetworkSettings => {
               name: "Angel community Token",
               symbol: "ACT",
               decimals: 18,
+            },
+          ],
+          [
+            "0xb501ff1d6303158479c8f7bdf5eee8ef1e3cf63e",
+            {
+              contract: "0xb501FF1d6303158479c8f7BDf5Eee8EF1e3Cf63E",
+              name: "fake USD Coin",
+              symbol: "USDC",
+              decimals: 6,
+            },
+          ],
+          [
+            "0xa6de6c90f2ffd30b54b830359a9f17ed44dd63ac",
+            {
+              contract: "0xA6de6C90f2FFd30B54b830359a9f17Ed44dd63Ac",
+              name: "TetherToken",
+              symbol: "USDT",
+              decimals: 6,
             },
           ],
         ]),
@@ -1493,6 +1608,74 @@ export const getNetworkSettings = (): NetworkSettings => {
                   'tIMX',
                   18,
                   '{"coingeckoCurrencyId": "ethereum", "image": "https://assets.coingecko.com/coins/images/17233/standard/immutableX-symbol-BLK-RGB.png"}'
+                ) ON CONFLICT DO NOTHING
+              `
+            ),
+          ]);
+        },
+      };
+    }
+    // Frame Testnet
+    case 68840142: {
+      return {
+        ...defaultNetworkSettings,
+        enableWebSocket: true,
+        realtimeSyncMaxBlockLag: 32,
+        realtimeSyncFrequencySeconds: 5,
+        lastBlockLatency: 5,
+        isTestnet: true,
+        onStartup: async () => {
+          // Insert the native currency
+          await Promise.all([
+            idb.none(
+              `
+                INSERT INTO currencies (
+                  contract,
+                  name,
+                  symbol,
+                  decimals,
+                  metadata
+                ) VALUES (
+                  '\\x0000000000000000000000000000000000000000',
+                  'Ether',
+                  'ETH',
+                  18,
+                  '{"coingeckoCurrencyId": "ethereum", "image": "https://assets.coingecko.com/coins/images/279/large/ethereum.png"}'
+                ) ON CONFLICT DO NOTHING
+              `
+            ),
+          ]);
+        },
+      };
+    }
+    // opBNB
+    case 204: {
+      return {
+        ...defaultNetworkSettings,
+        enableWebSocket: true,
+        realtimeSyncMaxBlockLag: 32,
+        realtimeSyncFrequencySeconds: 5,
+        lastBlockLatency: 5,
+        coingecko: {
+          networkId: "opbnb",
+        },
+        onStartup: async () => {
+          // Insert the native currency
+          await Promise.all([
+            idb.none(
+              `
+                INSERT INTO currencies (
+                  contract,
+                  name,
+                  symbol,
+                  decimals,
+                  metadata
+                ) VALUES (
+                  '\\x0000000000000000000000000000000000000000',
+                  'Binance Coin',
+                  'BNB',
+                  18,
+                  '{"coingeckoCurrencyId": "binancecoin", "image": "https://assets.coingecko.com/coins/images/12591/large/binance-coin-logo.png"}'
                 ) ON CONFLICT DO NOTHING
               `
             ),

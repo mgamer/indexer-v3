@@ -7,6 +7,7 @@ import { fromBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import { cosigner } from "@/utils/offchain-cancel";
+import * as paymentProcessorV2 from "@/utils/payment-processor-v2";
 import { getRoyalties } from "@/utils/royalties";
 
 export interface BaseOrderBuildOptions {
@@ -20,6 +21,7 @@ export interface BaseOrderBuildOptions {
   fee?: number[];
   feeRecipient?: string[];
   useOffChainCancellation?: boolean;
+  cosigner?: string;
   replaceOrderId?: string;
 }
 
@@ -58,6 +60,8 @@ export const getBuildInfo = async (
   }
 
   const contract = fromBuffer(collectionResult.address);
+  const nonce = await paymentProcessorV2.getAndIncrementUserNonce(options.maker, marketplace);
+
   const buildParams: BaseBuildParams = {
     protocol:
       collectionResult.kind === "erc721"
@@ -72,6 +76,7 @@ export const getBuildInfo = async (
     maker: options.maker,
     tokenAddress: contract,
     itemPrice: options.weiPrice,
+    nonce,
     expiration: options.expirationTime!,
     paymentMethod:
       options.currency ??
@@ -82,7 +87,9 @@ export const getBuildInfo = async (
   };
 
   if (options.useOffChainCancellation) {
-    buildParams.cosigner = cosigner().address.toLowerCase();
+    const cosignerAddress = options.cosigner ?? cosigner().address;
+    buildParams.cosigner = cosignerAddress.toLowerCase();
+
     if (options.replaceOrderId) {
       buildParams.nonce = options.replaceOrderId;
     }

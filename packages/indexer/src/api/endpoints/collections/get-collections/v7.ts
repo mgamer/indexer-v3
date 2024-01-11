@@ -154,6 +154,9 @@ export const getCollectionsV7Options: RouteOptions = {
       excludeSpam: Joi.boolean()
         .default(false)
         .description("If true, will filter any collections marked as spam."),
+      excludeNsfw: Joi.boolean()
+        .default(false)
+        .description("If true, will filter any collections marked as nsfw."),
       startTimestamp: Joi.number()
         .when("sortBy", {
           is: "updatedAt",
@@ -206,6 +209,8 @@ export const getCollectionsV7Options: RouteOptions = {
           description: Joi.string().allow("", null),
           metadataDisabled: Joi.boolean().default(false),
           isSpam: Joi.boolean().default(false),
+          isNsfw: Joi.boolean().default(false),
+          isMinting: Joi.boolean().default(false),
           sampleImages: Joi.array().items(Joi.string().allow("", null)),
           tokenCount: Joi.string().description("Total tokens within the collection."),
           onSaleCount: Joi.string().description("Total tokens currently on sale."),
@@ -309,6 +314,14 @@ export const getCollectionsV7Options: RouteOptions = {
               tokenId: Joi.string().pattern(regex.number).allow(null),
               kind: Joi.string().required(),
               price: JoiPrice.allow(null),
+              pricePerQuantity: Joi.array()
+                .items(
+                  Joi.object({
+                    price: JoiPrice.required(),
+                    quantity: Joi.number(),
+                  })
+                )
+                .allow(null),
               startTime: Joi.number().allow(null),
               endTime: Joi.number().allow(null),
               maxMints: Joi.number().unsafe().allow(null),
@@ -378,6 +391,7 @@ export const getCollectionsV7Options: RouteOptions = {
                   'kind', collection_mints.kind,
                   'currency', concat('0x', encode(collection_mints.currency, 'hex')),
                   'price', collection_mints.price::TEXT,
+                  'pricePerQuantity', collection_mints.price_per_quantity,
                   'startTime', floor(extract(epoch from collection_mints.start_time)),
                   'endTime', floor(extract(epoch from collection_mints.end_time)),
                   'maxMints', collection_mints.max_supply,
@@ -452,6 +466,7 @@ export const getCollectionsV7Options: RouteOptions = {
           collections.slug,
           collections.name,
           (collections.metadata ->> 'imageUrl')::TEXT AS "image",
+          collections.image_version AS "image_version",
           (collections.metadata ->> 'bannerImageUrl')::TEXT AS "banner",
           (collections.metadata ->> 'discordUrl')::TEXT AS "discord_url",
           (collections.metadata ->> 'description')::TEXT AS "description",
@@ -481,6 +496,8 @@ export const getCollectionsV7Options: RouteOptions = {
           collections.day7_floor_sell_value,
           collections.day30_floor_sell_value,
           collections.is_spam,
+          collections.nsfw_status,
+          collections.is_minting,
           collections.metadata_disabled,
           ${floorAskSelectQuery}
           collections.token_count,
@@ -573,6 +590,10 @@ export const getCollectionsV7Options: RouteOptions = {
 
       if (query.excludeSpam) {
         conditions.push("(collections.is_spam IS NULL OR collections.is_spam <= 0)");
+      }
+
+      if (query.excludeNsfw) {
+        conditions.push("(collections.nsfw_status IS NULL OR collections.nsfw_status <= 0)");
       }
 
       // Sorting and pagination
@@ -762,6 +783,13 @@ export const getCollectionsV7Options: RouteOptions = {
             (image) => !_.isNull(image) && _.startsWith(image, "http")
           );
 
+          let imageUrl = r.image;
+          if (imageUrl) {
+            imageUrl = Assets.getResizedImageUrl(imageUrl, ImageSize.small, r.image_version);
+          } else if (sampleImages.length) {
+            imageUrl = Assets.getResizedImageUrl(sampleImages[0], ImageSize.small, r.image_version);
+          }
+
           let securityConfig = undefined;
           if (query.includeSecurityConfigs) {
             const contract = fromBuffer(r.contract);
@@ -805,10 +833,8 @@ export const getCollectionsV7Options: RouteOptions = {
               contractDeployedAt: r.contract_deployed_at
                 ? new Date(r.contract_deployed_at * 1000).toISOString()
                 : null,
-              image:
-                r.image ??
-                (sampleImages.length ? Assets.getLocalAssetsLink(sampleImages[0]) : null),
-              banner: r.banner,
+              image: imageUrl ?? null,
+              banner: Assets.getResizedImageUrl(r.banner),
               twitterUrl: r.twitter_url,
               discordUrl: r.discord_url,
               externalUrl: r.external_url,
@@ -817,7 +843,9 @@ export const getCollectionsV7Options: RouteOptions = {
               description: r.description,
               metadataDisabled: Boolean(Number(r.metadata_disabled)),
               isSpam: Number(r.is_spam) > 0,
-              sampleImages: Assets.getLocalAssetsLink(sampleImages) ?? [],
+              isNsfw: Number(r.nsfw_status) > 0,
+              isMinting: Boolean(r.is_minting),
+              sampleImages: Assets.getResizedImageURLs(sampleImages) ?? [],
               tokenCount: String(r.token_count),
               onSaleCount: String(r.on_sale_count),
               primaryContract: fromBuffer(r.contract),
@@ -956,6 +984,19 @@ export const getCollectionsV7Options: RouteOptions = {
                       price: m.price
                         ? await getJoiPriceObject({ gross: { amount: m.price } }, m.currency)
                         : m.price,
+                      pricePerQuantity: m.pricePerQuantity
+                        ? await Promise.all(
+                            m.pricePerQuantity.map(
+                              async ({ price, quantity }: { price: string; quantity: number }) => ({
+                                price: await getJoiPriceObject(
+                                  { gross: { amount: price } },
+                                  m.currency
+                                ),
+                                quantity,
+                              })
+                            )
+                          )
+                        : m.pricePerQuantity,
                       startTime: m.startTime,
                       endTime: m.endTime,
                       maxMints: m.maxMints,

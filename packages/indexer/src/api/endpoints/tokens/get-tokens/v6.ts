@@ -35,8 +35,8 @@ import { CollectionSets } from "@/models/collection-sets";
 import { Collections } from "@/models/collections";
 import * as AsksIndex from "@/elasticsearch/indexes/asks";
 import { OrderComponents } from "@reservoir0x/sdk/dist/seaport-base/types";
-import { onchainMetadataProvider } from "@/metadata/providers/onchain-metadata-provider";
 import { hasExtendCollectionHandler } from "@/metadata/extend";
+import { parseMetadata } from "@/api/endpoints/tokens/get-user-tokens/v8";
 
 const version = "v6";
 
@@ -44,7 +44,7 @@ export const getTokensV6Options: RouteOptions = {
   description: "Tokens",
   notes:
     "Get a list of tokens with full metadata. This is useful for showing a single token page, or scenarios that require more metadata.",
-  tags: ["api", "Tokens"],
+  tags: ["api", "x-deprecated"],
   plugins: {
     "hapi-swagger": {
       order: 9,
@@ -388,10 +388,16 @@ export const getTokensV6Options: RouteOptions = {
 
     let esTokens: any[] = [];
 
-    const enableElasticsearchAsks =
+    let enableElasticsearchAsks =
       config.enableElasticsearchAsks &&
       query.sortBy === "floorAskPrice" &&
       !["tokenName", "tokenSetId"].some((filter) => query[filter]);
+
+    if (enableElasticsearchAsks && query.continuation) {
+      const contArr = splitContinuation(query.continuation);
+
+      enableElasticsearchAsks = !isNaN(Number(contArr));
+    }
 
     if (enableElasticsearchAsks) {
       logger.info(
@@ -403,7 +409,7 @@ export const getTokensV6Options: RouteOptions = {
         })
       );
 
-      const listedTokens = await getListedTokensFromES(query);
+      const listedTokens = await getListedTokensFromES(query, false);
 
       if (listedTokens.continuation || query.source || query.nativeSource) {
         return { tokens: listedTokens.tokens, continuation: listedTokens.continuation };
@@ -730,6 +736,9 @@ export const getTokensV6Options: RouteOptions = {
           t.media,
           t.collection_id,
           t.image_version,
+          (t.metadata ->> 'image_mime_type')::TEXT AS image_mime_type,
+          (t.metadata ->> 'media_mime_type')::TEXT AS media_mime_type,
+          c.image_version AS collection_image_version,
           c.name AS collection_name,
           con.kind,
           con.symbol,
@@ -1083,6 +1092,10 @@ export const getTokensV6Options: RouteOptions = {
         conditions.push(`${sortColumn} is null`);
       }
 
+      if (query.sortBy === "floorAskPrice" && query.sortDirection === "desc") {
+        conditions.push(`t.floor_sell_value is not null`);
+      }
+
       if (conditions.length) {
         baseQuery += " WHERE " + conditions.map((c) => `(${c})`).join(" AND ");
       }
@@ -1113,7 +1126,7 @@ export const getTokensV6Options: RouteOptions = {
               query.nativeSource || query.excludeEOA
                 ? `${union ? "" : "s."}floor_sell_value`
                 : query.normalizeRoyalties
-                ? `${union ? "" : "t."}normalized_floor_sell_value`
+                ? `${union ? "floor_sell_value" : "t.normalized_floor_sell_value"}`
                 : `${union ? "" : "t."}floor_sell_value`;
 
             return ` ORDER BY ${sortColumn} ${sortDirection} NULLS ${
@@ -1150,7 +1163,7 @@ export const getTokensV6Options: RouteOptions = {
 
           // For shared contracts, filter by both contract and collection
           if (sharedContract) {
-            (query as any)[`collectionContract${i}`] = unionValues[i].split(":")[0];
+            (query as any)[`collectionContract${i}`] = toBuffer(unionValues[i].split(":")[0]);
           }
 
           unionQueries.push(
@@ -1377,14 +1390,7 @@ export const getTokensV6Options: RouteOptions = {
                 },
               };
             } else if (
-              [
-                "sudoswap",
-                "sudoswap-v2",
-                "nftx",
-                "collectionxyz",
-                "caviar-v1",
-                "midaswap",
-              ].includes(r.floor_sell_order_kind)
+              ["sudoswap", "sudoswap-v2", "nftx", "caviar-v1"].includes(r.floor_sell_order_kind)
             ) {
               // Pool orders
               dynamicPricing = {
@@ -1414,26 +1420,7 @@ export const getTokensV6Options: RouteOptions = {
           }
         }
 
-        const metadata = {
-          imageOriginal: undefined,
-          mediaOriginal: undefined,
-        };
-
-        if (r.metadata?.image_original_url) {
-          metadata.imageOriginal = r.metadata.image_original_url;
-        }
-
-        if (r.metadata?.animation_original_url) {
-          metadata.mediaOriginal = r.metadata.animation_original_url;
-        }
-
-        if (!r.image && r.metadata?.image_original_url) {
-          r.image = onchainMetadataProvider.parseIPFSURI(r.metadata.image_original_url);
-        }
-
-        if (!r.media && r.metadata?.animation_original_url) {
-          r.media = onchainMetadataProvider.parseIPFSURI(r.metadata.animation_original_url);
-        }
+        const metadata = parseMetadata(r, r.metadata);
 
         return {
           token: getJoiTokenObject(
@@ -1443,9 +1430,24 @@ export const getTokensV6Options: RouteOptions = {
               tokenId,
               name: r.name,
               description: r.description,
-              image: Assets.getResizedImageUrl(r.image, ImageSize.medium, r.image_version),
-              imageSmall: Assets.getResizedImageUrl(r.image, ImageSize.small, r.image_version),
-              imageLarge: Assets.getResizedImageUrl(r.image, ImageSize.large, r.image_version),
+              image: Assets.getResizedImageUrl(
+                r.image,
+                ImageSize.medium,
+                r.image_version,
+                r.image_mime_type
+              ),
+              imageSmall: Assets.getResizedImageUrl(
+                r.image,
+                ImageSize.small,
+                r.image_version,
+                r.image_mime_type
+              ),
+              imageLarge: Assets.getResizedImageUrl(
+                r.image,
+                ImageSize.large,
+                r.image_version,
+                r.image_mime_type
+              ),
               metadata: Object.values(metadata).every((el) => el === undefined)
                 ? undefined
                 : metadata,
@@ -1468,7 +1470,11 @@ export const getTokensV6Options: RouteOptions = {
               collection: {
                 id: r.collection_id,
                 name: r.collection_name,
-                image: Assets.getLocalAssetsLink(r.collection_image),
+                image: Assets.getResizedImageUrl(
+                  r.collection_image,
+                  ImageSize.small,
+                  r.collection_image_version
+                ),
                 slug: r.slug,
                 symbol: r.symbol,
                 creator: r.creator ? fromBuffer(r.creator) : null,
@@ -1625,7 +1631,7 @@ export const getTokensV6Options: RouteOptions = {
   },
 };
 
-export const getListedTokensFromES = async (query: any) => {
+export const getListedTokensFromES = async (query: any, attributeFloorAskPriceAsObj = false) => {
   let collections: any[] = [];
 
   if (query.collection && !_.isArray(query.collection)) {
@@ -1805,7 +1811,9 @@ export const getListedTokensFromES = async (query: any) => {
                 'createdAt', ta.created_at,
                 'tokenCount', attributes.token_count,
                 'onSaleCount', attributes.on_sale_count,
-                'floorAskPrice', attributes.floor_sell_value::TEXT,
+                'floorAskValue', attributes.floor_sell_value::TEXT,
+                'floorAskCurrency', attributes.floor_sell_currency,
+                'floorAskCurrencyValue', attributes.floor_sell_currency_value::TEXT,
                 'topBidValue', attributes.top_buy_value::TEXT
               )
             )
@@ -1941,6 +1949,7 @@ export const getListedTokensFromES = async (query: any) => {
             t.rarity_rank,
             t.is_flagged,
             t.is_spam AS t_is_spam,
+            t.nsfw_status AS t_nsfw_status,
             t.last_flag_update,
             t.last_flag_change,
             t.supply,
@@ -1951,6 +1960,7 @@ export const getListedTokensFromES = async (query: any) => {
             c.creator,
             c.token_count,
             c.is_spam AS c_is_spam,
+            c.nsfw_status AS c_nsfw_status,
             c.metadata_disabled AS c_metadata_disabled,
             (c.metadata ->> 'imageUrl')::TEXT AS collection_image,
             (
@@ -2010,7 +2020,7 @@ export const getListedTokensFromES = async (query: any) => {
     }
 
     const contract = ask.contract;
-    const tokenId = ask.token.id;
+    const tokenId = ask.token.id.toString();
 
     const floorSellSource = ask.order.pricing.price
       ? sources.get(Number(ask.order.sourceId), contract, tokenId)
@@ -2084,11 +2094,7 @@ export const getListedTokensFromES = async (query: any) => {
               },
             },
           };
-        } else if (
-          ["sudoswap", "sudoswap-v2", "nftx", "collectionxyz", "caviar-v1", "midaswap"].includes(
-            ask.order.kind
-          )
-        ) {
+        } else if (["sudoswap", "sudoswap-v2", "nftx", "caviar-v1"].includes(ask.order.kind)) {
           // Pool orders
           dynamicPricing = {
             kind: "pool",
@@ -2138,14 +2144,30 @@ export const getListedTokensFromES = async (query: any) => {
           tokenId,
           name: r.name,
           description: r.description,
-          image: Assets.getResizedImageUrl(r.image, ImageSize.medium, r.image_version),
-          imageSmall: Assets.getResizedImageUrl(r.image, ImageSize.small, r.image_version),
-          imageLarge: Assets.getResizedImageUrl(r.image, ImageSize.large, r.image_version),
+          image: Assets.getResizedImageUrl(
+            r.image,
+            ImageSize.medium,
+            r.image_version,
+            r.image_mime_type
+          ),
+          imageSmall: Assets.getResizedImageUrl(
+            r.image,
+            ImageSize.small,
+            r.image_version,
+            r.image_mime_type
+          ),
+          imageLarge: Assets.getResizedImageUrl(
+            r.image,
+            ImageSize.large,
+            r.image_version,
+            r.image_mime_type
+          ),
           metadata: Object.values(metadata).every((el) => el === undefined) ? undefined : metadata,
           media: r.media,
           kind: r.kind,
           isFlagged: Boolean(Number(r.is_flagged)),
           isSpam: Number(r.t_is_spam) > 0 || Number(r.c_is_spam) > 0,
+          isNsfw: Number(r.t_nsfw_status) > 0 || Number(r.c_nsfw_status) > 0,
           metadataDisabled:
             Boolean(Number(r.t_metadata_disabled)) || Boolean(Number(r.c_metadata_disabled)),
           lastFlagUpdate: r.last_flag_update ? new Date(r.last_flag_update).toISOString() : null,
@@ -2157,7 +2179,7 @@ export const getListedTokensFromES = async (query: any) => {
           collection: {
             id: r.collection_id,
             name: r.collection_name,
-            image: Assets.getLocalAssetsLink(r.collection_image),
+            image: Assets.getResizedImageUrl(r.collection_image, ImageSize.small),
             slug: r.slug,
             symbol: r.symbol,
             creator: r.creator ? fromBuffer(r.creator) : null,
@@ -2202,22 +2224,67 @@ export const getListedTokensFromES = async (query: any) => {
           owner: ask.order.maker,
           attributes: query.includeAttributes
             ? r.attributes
-              ? _.map(r.attributes, (attribute) => ({
-                  key: attribute.key,
-                  kind: attribute.kind,
-                  value: attribute.value,
-                  tokenCount: attribute.tokenCount,
-                  onSaleCount: attribute.onSaleCount,
-                  floorAskPrice: attribute.floorAskPrice
-                    ? formatEth(attribute.floorAskPrice)
-                    : attribute.floorAskPrice,
-                  topBidValue: attribute.topBidValue
-                    ? formatEth(attribute.topBidValue)
-                    : attribute.topBidValue,
-                  createdAt: new Date(attribute.createdAt).toISOString(),
-                }))
+              ? attributeFloorAskPriceAsObj
+                ? await Promise.all(
+                    _.map(r.attributes, async (attribute) => ({
+                      key: attribute.key,
+                      kind: attribute.kind,
+                      value: attribute.value,
+                      tokenCount: attribute.tokenCount,
+                      onSaleCount: attribute.onSaleCount,
+                      floorAskPrice: attribute.floorAskValue
+                        ? await getJoiPriceObject(
+                            {
+                              gross: {
+                                amount: String(
+                                  attribute.floorAskCurrencyValue ?? attribute.floorAskValue
+                                ),
+                                nativeAmount: String(attribute.floorAskValue),
+                              },
+                            },
+                            attribute.floorAskCurrency
+                              ? _.replace(attribute.floorAskCurrency, "\\x", "0x")
+                              : Sdk.Common.Addresses.Native[config.chainId],
+                            query.displayCurrency
+                          )
+                        : null,
+                      topBidValue: attribute.topBidValue
+                        ? formatEth(attribute.topBidValue)
+                        : attribute.topBidValue,
+                      createdAt: new Date(attribute.createdAt).toISOString(),
+                    }))
+                  )
+                : _.map(r.attributes, (attribute) => ({
+                    key: attribute.key,
+                    kind: attribute.kind,
+                    value: attribute.value,
+                    tokenCount: attribute.tokenCount,
+                    onSaleCount: attribute.onSaleCount,
+                    floorAskPrice: attribute.floorAskValue
+                      ? formatEth(attribute.floorAskValue)
+                      : attribute.floorAskValue,
+                    topBidValue: attribute.topBidValue
+                      ? formatEth(attribute.topBidValue)
+                      : attribute.topBidValue,
+                    createdAt: new Date(attribute.createdAt).toISOString(),
+                  }))
               : []
             : undefined,
+          mintStages: r.mint_stages
+            ? await Promise.all(
+                r.mint_stages.map(async (m: any) => ({
+                  stage: m.stage,
+                  kind: m.kind,
+                  tokenId: m.tokenId,
+                  price: m.price
+                    ? await getJoiPriceObject({ gross: { amount: m.price } }, m.currency)
+                    : m.price,
+                  startTime: m.startTime,
+                  endTime: m.endTime,
+                  maxMintsPerWallet: m.maxMintsPerWallet,
+                }))
+              )
+            : [],
         },
         r.t_metadata_disabled,
         r.c_metadata_disabled
@@ -2236,8 +2303,8 @@ export const getListedTokensFromES = async (query: any) => {
             query.displayCurrency
           ),
           maker: ask.order.maker,
-          validFrom: ask.order.validFrom,
-          validUntil: ask.order.validUntil,
+          validFrom: Math.trunc(ask.order.validFrom),
+          validUntil: Math.trunc(ask.order.validUntil),
           quantityFilled: query.includeQuantity ? ask.order.quantityFilled : undefined,
           quantityRemaining: query.includeQuantity ? ask.order.quantityRemaining : undefined,
           dynamicPricing,

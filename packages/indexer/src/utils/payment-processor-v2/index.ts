@@ -4,11 +4,12 @@ import { AddressZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import * as Sdk from "@reservoir0x/sdk";
 
-import { idb, ridb } from "@/common/db";
+import { idb } from "@/common/db";
 import { baseProvider } from "@/common/provider";
 import { redis } from "@/common/redis";
-import { fromBuffer, toBuffer } from "@/common/utils";
+import { toBuffer, bn } from "@/common/utils";
 import { config } from "@/config/index";
+import { isNonceCancelled } from "@/orderbook/orders/common/helpers";
 import { Royalty, updateRoyaltySpec } from "@/utils/royalties";
 
 export enum PaymentSettings {
@@ -25,8 +26,14 @@ export type CollectionPaymentSettings = {
   royaltyBountyNumerator: number;
   isRoyaltyBountyExclusive: boolean;
   blockTradesFromUntrustedChannels: boolean;
+  blockBannedAccounts: boolean;
   pricingBounds?: PricingBounds;
   whitelistedPaymentMethods: string[];
+};
+
+export type TrustedChannel = {
+  channel: string;
+  signer: string;
 };
 
 export type PricingBounds = {
@@ -34,29 +41,13 @@ export type PricingBounds = {
   ceilingPrice: string;
 };
 
-export const getDefaultPaymentMethods = async (): Promise<string[]> => {
-  const cacheKey = "pp-v2-default-payment-methods";
+// Collection configuration
 
-  let result = await redis.get(cacheKey).then((r) => (r ? (JSON.parse(r) as string[]) : undefined));
-  if (!result) {
-    const exchange = new Contract(
-      Sdk.PaymentProcessorV2.Addresses.Exchange[config.chainId],
-      new Interface(["function getDefaultPaymentMethods() view returns (address[])"]),
-      baseProvider
-    );
-
-    result = exchange.getDefaultPaymentMethods().then((c: Result) => c.map((d) => d.toLowerCase()));
-    await redis.set(cacheKey, JSON.stringify(result), "EX", 7 * 24 * 3600);
-  }
-
-  return result!;
-};
-
-export const getCollectionPaymentSettings = async (
+export const getConfigByContract = async (
   contract: string,
   refresh?: boolean
 ): Promise<CollectionPaymentSettings | undefined> => {
-  const cacheKey = `payment-processor-v2-payment-settings-by-contract:${contract}`;
+  const cacheKey = `pp-v2-config-by-contract:${contract}`;
 
   let result = await redis
     .get(cacheKey)
@@ -74,9 +65,12 @@ export const getCollectionPaymentSettings = async (
               uint16 royaltyBackfillNumerator,
               uint16 royaltyBountyNumerator,
               bool isRoyaltyBountyExclusive,
-              bool blockTradesFromUntrustedChannels
+              bool blockTradesFromUntrustedChannels,
+              bool blockBannedAccounts
             )
           )`,
+          "function getFloorPrice(address token, uint256 tokenId) view returns (uint256)",
+          "function getCeilingPrice(address token, uint256 tokenId) view returns (uint256)",
         ]),
         baseProvider
       );
@@ -91,10 +85,11 @@ export const getCollectionPaymentSettings = async (
         royaltyBountyNumerator: paymentSettings.royaltyBountyNumerator,
         isRoyaltyBountyExclusive: paymentSettings.isRoyaltyBountyExclusive,
         blockTradesFromUntrustedChannels: paymentSettings.blockTradesFromUntrustedChannels,
+        blockBannedAccounts: paymentSettings.blockBannedAccounts,
         whitelistedPaymentMethods:
           paymentSettings.paymentMethodWhitelistId === 0
             ? await getDefaultPaymentMethods()
-            : await getWhitelistedPaymentMethods(paymentSettings.paymentMethodWhitelistId),
+            : await getPaymentMethods(paymentSettings.paymentMethodWhitelistId, refresh),
       };
 
       if (result?.paymentSettings === PaymentSettings.PricingConstraints) {
@@ -110,7 +105,7 @@ export const getCollectionPaymentSettings = async (
       }
 
       if (result) {
-        await redis.set(cacheKey, JSON.stringify(result), "EX", 24 * 3600);
+        await redis.set(cacheKey, JSON.stringify(result), "EX", 3 * 3600);
       }
     } catch {
       // Skip errors
@@ -120,58 +115,140 @@ export const getCollectionPaymentSettings = async (
   return result;
 };
 
-export const addTrustedChannel = async (tokenAddress: string, channel: string, signer: string) =>
-  idb.none(
-    `
-      INSERT INTO payment_processor_v2_trusted_channels (
-        contract,
-        channel,
-        signer
-      ) VALUES (
-        $/tokenAddress/,
-        $/channel/,
-        $/signer/
-      ) ON CONFLICT DO NOTHING
-    `,
-    {
-      tokenAddress: toBuffer(tokenAddress),
-      channel: toBuffer(channel),
-      signer: toBuffer(signer),
-    }
-  );
+// Trusted channels
 
-export const removeTrustedChannel = async (tokenAddress: string, channel: string) =>
-  idb.none(
-    `
-      DELETE FROM payment_processor_v2_trusted_channels
-      WHERE payment_processor_v2_trusted_channels.contract = $/tokenAddress/
-        AND payment_processor_v2_trusted_channels.channel = $/channel/
-    `,
-    {
-      tokenAddress: toBuffer(tokenAddress),
-      channel: toBuffer(channel),
-    }
-  );
+export const getTrustedChannels = async (contract: string, refresh?: boolean) => {
+  const cacheKey = `pp-v2-trusted-channels:${contract}`;
 
-export const getAllTrustedChannels = async (tokenAddress: string) => {
-  const results = await ridb.manyOrNone(
-    `
-      SELECT
-        payment_processor_v2_trusted_channels.channel,
-        payment_processor_v2_trusted_channels.signer
-      FROM payment_processor_v2_trusted_channels
-      WHERE payment_processor_v2_trusted_channels.contract = $/tokenAddress/
-    `,
-    {
-      tokenAddress: toBuffer(tokenAddress),
-    }
-  );
+  let result = await redis
+    .get(cacheKey)
+    .then((r) => (r ? (JSON.parse(r) as TrustedChannel[]) : undefined));
+  if (!result || refresh) {
+    try {
+      const exchange = new Contract(
+        Sdk.PaymentProcessorV2.Addresses.Exchange[config.chainId],
+        new Interface(["function getTrustedChannels(address token) view returns (address[])"]),
+        baseProvider
+      );
 
-  return results.map((c) => ({
-    channel: fromBuffer(c.channel),
-    signer: fromBuffer(c.signer),
-  }));
+      const trustedChannels = await exchange.getTrustedChannels(contract);
+      const trustedChannelsWithSigners: {
+        channel: string;
+        signer: string;
+      }[] = [];
+
+      await Promise.all(
+        trustedChannels
+          .map((c: Result) => c.toLowerCase())
+          .map(async (channel: string) => {
+            try {
+              const channelContract = new Contract(
+                channel,
+                new Interface(["function signer() view returns (address)"]),
+                baseProvider
+              );
+
+              const signer = await channelContract.callStatic.signer();
+              trustedChannelsWithSigners.push({
+                channel: channel.toLowerCase(),
+                signer: signer.toLowerCase(),
+              });
+            } catch {
+              // Skip errors
+            }
+          })
+      );
+
+      result = trustedChannelsWithSigners;
+      await redis.set(cacheKey, JSON.stringify(result), "EX", 3 * 3600);
+    } catch {
+      // Skip errors
+    }
+  }
+
+  return result ?? [];
 };
+
+// Payment methods
+
+export const getDefaultPaymentMethods = async (): Promise<string[]> => {
+  const cacheKey = "pp-v2-default-payment-methods";
+
+  let result = await redis.get(cacheKey).then((r) => (r ? (JSON.parse(r) as string[]) : undefined));
+  if (!result) {
+    const exchange = new Contract(
+      Sdk.PaymentProcessorV2.Addresses.Exchange[config.chainId],
+      new Interface(["function getDefaultPaymentMethods() view returns (address[])"]),
+      baseProvider
+    );
+
+    result = await exchange
+      .getDefaultPaymentMethods()
+      .then((c: Result) => c.map((d) => d.toLowerCase()));
+    await redis.set(cacheKey, JSON.stringify(result), "EX", 7 * 24 * 3600);
+  }
+
+  return result!;
+};
+
+export const getPaymentMethods = async (paymentMethodWhitelistId: number, refresh?: boolean) => {
+  const cacheKey = `pp-v2-payment-methods:${paymentMethodWhitelistId}`;
+
+  let result = await redis.get(cacheKey).then((r) => (r ? (JSON.parse(r) as string[]) : undefined));
+  if (!result || refresh) {
+    try {
+      const exchange = new Contract(
+        Sdk.PaymentProcessorV2.Addresses.Exchange[config.chainId],
+        new Interface([
+          "function getWhitelistedPaymentMethods(uint32 paymentMethodWhitelistId) view returns (address[])",
+        ]),
+        baseProvider
+      );
+
+      result = await exchange
+        .getWhitelistedPaymentMethods(paymentMethodWhitelistId)
+        .then((c: Result) => c.map((d) => d.toLowerCase()));
+      await redis.set(cacheKey, JSON.stringify(result), "EX", 3 * 3600);
+    } catch {
+      // Skip errors
+    }
+  }
+
+  return result ?? [];
+};
+
+// Banned accounts
+
+export const getBannedAccounts = async (contract: string, refresh?: boolean) => {
+  const cacheKey = `pp-v2-banned-accounts:${contract}`;
+
+  let result = await redis.get(cacheKey).then((r) => (r ? (JSON.parse(r) as string[]) : undefined));
+  if (!result || refresh) {
+    try {
+      const exchange = new Contract(
+        Sdk.PaymentProcessorV2.Addresses.Exchange[config.chainId],
+        new Interface(["function getBannedAccounts(address token) view returns (address[])"]),
+        baseProvider
+      );
+
+      result = await exchange
+        .getBannedAccounts(contract)
+        .then((c: Result) => c.map((d) => d.toLowerCase()));
+      await redis.set(cacheKey, JSON.stringify(result), "EX", 3 * 3600);
+    } catch {
+      // Skip errors
+    }
+  }
+
+  return result ?? [];
+};
+
+export const checkAccountIsBanned = async (token: string, account: string) => {
+  const bannedAccounts = await getBannedAccounts(token);
+  return bannedAccounts.includes(account);
+};
+
+// Backfilled royalties
 
 export const saveBackfilledRoyalties = async (tokenAddress: string, royalties: Royalty[]) =>
   updateRoyaltySpec(
@@ -180,48 +257,67 @@ export const saveBackfilledRoyalties = async (tokenAddress: string, royalties: R
     royalties.some((r) => r.recipient !== AddressZero) ? royalties : undefined
   );
 
-export const addPaymentMethodToWhitelist = async (id: number, paymentMethod: string) =>
-  idb.none(
+// Nonce tracking
+
+export const getAndIncrementUserNonce = async (
+  user: string,
+  marketplace: string
+): Promise<string | undefined> => {
+  let nextNonce = await idb
+    .oneOrNone(
+      `
+        SELECT
+          payment_processor_v2_user_nonces.nonce
+        FROM payment_processor_v2_user_nonces
+        WHERE payment_processor_v2_user_nonces.user = $/user/
+          AND payment_processor_v2_user_nonces.marketplace = $/marketplace/
+      `,
+      {
+        user: toBuffer(user),
+        marketplace: toBuffer(marketplace),
+      }
+    )
+    .then((r) => r?.nonce ?? "0");
+
+  const shiftedMarketplaceId = bn("0x" + marketplace.slice(-8).padEnd(64, "0"));
+  nextNonce = shiftedMarketplaceId.add(nextNonce).toString();
+
+  // At most 20 attempts
+  let foundValidNonce = false;
+  for (let i = 0; i < 20; i++) {
+    const isCancelled = await isNonceCancelled("payment-processor-v2", user, nextNonce);
+    if (isCancelled) {
+      nextNonce = bn(nextNonce).add(1).toString();
+    } else {
+      foundValidNonce = true;
+      break;
+    }
+  }
+
+  if (!foundValidNonce) {
+    return undefined;
+  }
+
+  await idb.none(
     `
-      INSERT INTO payment_processor_v2_payment_methods (
-        id,
-        payment_method
+      INSERT INTO payment_processor_v2_user_nonces (
+        "user",
+        marketplace,
+        nonce
       ) VALUES (
-        $/id/,
-        $/paymentMethod/
-      ) ON CONFLICT DO NOTHING
+        $/user/,
+        $/marketplace/,
+        $/nonce/
+      ) ON CONFLICT ("user", marketplace) DO UPDATE SET
+        nonce = $/nonce/,
+        updated_at = now()
     `,
     {
-      id,
-      paymentMethod: toBuffer(paymentMethod),
+      user: toBuffer(user),
+      marketplace: toBuffer(marketplace),
+      nonce: bn(nextNonce).add(1).sub(shiftedMarketplaceId).toString(),
     }
   );
 
-export const removePaymentMethodFromWhitelist = async (id: number, paymentMethod: string) =>
-  idb.none(
-    `
-      DELETE FROM payment_processor_v2_payment_methods
-      WHERE payment_processor_v2_payment_methods.id = $/id/
-        AND payment_processor_v2_payment_methods.payment_method = $/paymentMethod/
-    `,
-    {
-      id,
-      paymentMethod: toBuffer(paymentMethod),
-    }
-  );
-
-export const getWhitelistedPaymentMethods = async (id: number) => {
-  const results = await ridb.manyOrNone(
-    `
-      SELECT
-        payment_processor_v2_payment_methods.payment_method
-      FROM payment_processor_v2_payment_methods
-      WHERE payment_processor_v2_payment_methods.id = $/paymentMethodWhitelistId/
-    `,
-    {
-      id,
-    }
-  );
-
-  return results.map((c) => fromBuffer(c.payment_method));
+  return nextNonce;
 };

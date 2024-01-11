@@ -1,11 +1,11 @@
 import { logger } from "@/common/logger";
+import { config } from "@/config/index";
+
 import { AbstractRabbitMqJobHandler, BackoffStrategy } from "@/jobs/abstract-rabbit-mq-job-handler";
 import { metadataIndexWriteJob } from "@/jobs/metadata-index/metadata-write-job";
 import { onchainMetadataProvider } from "@/metadata/providers/onchain-metadata-provider";
 import { RequestWasThrottledError } from "@/metadata/providers/utils";
-import { PendingRefreshTokens } from "@/models/pending-refresh-tokens";
-import { metadataIndexProcessJob } from "@/jobs/metadata-index/metadata-process-job";
-import { config } from "@/config/index";
+import { metadataIndexFetchJob } from "@/jobs/metadata-index/metadata-fetch-job";
 
 export type OnchainMetadataProcessTokenUriJobPayload = {
   contract: string;
@@ -25,35 +25,98 @@ export default class OnchainMetadataProcessTokenUriJob extends AbstractRabbitMqJ
 
   protected async process(payload: OnchainMetadataProcessTokenUriJobPayload) {
     const { contract, tokenId, uri } = payload;
+    let fallbackAllowed = true;
+    let fallbackError;
+
+    if (contract === "0x23581767a106ae21c074b2276d25e5c3e136a68b") {
+      logger.info(
+        this.queueName,
+        JSON.stringify({
+          message: `Start. contract=${payload.contract}, tokenId=${payload.tokenId}`,
+          payload,
+        })
+      );
+    }
 
     try {
       const metadata = await onchainMetadataProvider.getTokensMetadata([
         { contract, tokenId, uri },
       ]);
 
-      if (metadata[0] && metadata[0].imageUrl?.startsWith("data:")) {
-        if (config.fallbackMetadataIndexingMethod) {
-          const pendingRefreshTokens = new PendingRefreshTokens(
-            config.fallbackMetadataIndexingMethod
-          );
-          await pendingRefreshTokens.add([
-            {
-              collection: contract,
-              contract,
-              tokenId,
-            },
-          ]);
-
-          await metadataIndexProcessJob.addToQueue({
-            method: config.fallbackMetadataIndexingMethod,
-          });
-          return;
-        } else {
-          metadata[0].imageUrl = null;
-        }
+      if (contract === "0x23581767a106ae21c074b2276d25e5c3e136a68b") {
+        logger.info(
+          this.queueName,
+          JSON.stringify({
+            message: `getTokensMetadata. contract=${payload.contract}, tokenId=${payload.tokenId}`,
+            metadata,
+          })
+        );
       }
 
-      if (metadata) {
+      if (metadata.length) {
+        if (metadata[0].imageUrl?.startsWith("data:")) {
+          if (config.fallbackMetadataIndexingMethod) {
+            logger.info(
+              this.queueName,
+              `Fallback - Image Encoding. contract=${contract}, tokenId=${tokenId}, fallbackMetadataIndexingMethod=${config.fallbackMetadataIndexingMethod}`
+            );
+
+            await metadataIndexFetchJob.addToQueue(
+              [
+                {
+                  kind: "single-token",
+                  data: {
+                    method: config.fallbackMetadataIndexingMethod,
+                    contract,
+                    tokenId,
+                    collection: contract,
+                  },
+                },
+              ],
+              true,
+              5
+            );
+            return;
+          } else {
+            metadata[0].imageUrl = null;
+          }
+        }
+
+        // if the imageMimeType/mediaMimeType is gif, we fallback to simplehash
+        if (
+          metadata[0].imageMimeType === "image/gif" ||
+          metadata[0].mediaMimeType === "image/gif"
+        ) {
+          if (config.fallbackMetadataIndexingMethod) {
+            logger.info(
+              this.queueName,
+              JSON.stringify({
+                topic: "simpleHashFallbackDebug",
+                message: `Fallback - GIF. contract=${contract}, tokenId=${tokenId}, fallbackMetadataIndexingMethod=${config.fallbackMetadataIndexingMethod}`,
+                contract,
+                reason: "GIF",
+              })
+            );
+
+            await metadataIndexFetchJob.addToQueue(
+              [
+                {
+                  kind: "single-token",
+                  data: {
+                    method: config.fallbackMetadataIndexingMethod,
+                    contract,
+                    tokenId,
+                    collection: contract,
+                  },
+                },
+              ],
+              true,
+              5
+            );
+            return;
+          }
+        }
+
         await metadataIndexWriteJob.addToQueue(metadata);
         return;
       } else {
@@ -69,38 +132,58 @@ export default class OnchainMetadataProcessTokenUriJob extends AbstractRabbitMqJ
           `Request was throttled. contract=${contract}, tokenId=${tokenId}, uri=${uri}`
         );
 
-        // if this is the last retry, we don't throw to retry and instead we fallback to simplehash
+        // if this is the last retry, we don't throw to retry, and instead we fall back to simplehash
         if (Number(this.rabbitMqMessage?.retryCount) < this.maxRetries) {
           throw e; // throw to retry
         }
       }
 
-      logger.error(
+      fallbackAllowed = !["404"].includes(`${e}`);
+      fallbackError = `${e}`;
+
+      logger.warn(
         this.queueName,
         JSON.stringify({
           message: `Error. contract=${contract}, tokenId=${tokenId}, uri=${uri}, error=${e}, fallbackMetadataIndexingMethod=${config.fallbackMetadataIndexingMethod}`,
           contract,
           tokenId,
+          fallbackAllowed,
           error: `${e}`,
         })
       );
     }
 
-    if (!config.fallbackMetadataIndexingMethod) {
+    if (!fallbackAllowed || !config.fallbackMetadataIndexingMethod) {
       return;
     }
 
-    // for whatever reason, we didn't find the metadata, we fallback to simplehash
-    const pendingRefreshTokens = new PendingRefreshTokens(config.fallbackMetadataIndexingMethod);
-    await pendingRefreshTokens.add([
-      {
-        collection: contract,
+    logger.info(
+      this.queueName,
+      JSON.stringify({
+        topic: "simpleHashFallbackDebug",
+        message: `Fallback - Get Metadata Error. contract=${contract}, tokenId=${tokenId}, fallbackMetadataIndexingMethod=${config.fallbackMetadataIndexingMethod}`,
         contract,
-        tokenId,
-      },
-    ]);
+        reason: "Get Metadata Error",
+        error: fallbackError,
+      })
+    );
 
-    await metadataIndexProcessJob.addToQueue({ method: config.fallbackMetadataIndexingMethod });
+    // for whatever reason, we didn't find the metadata, we fall back to simplehash
+    await metadataIndexFetchJob.addToQueue(
+      [
+        {
+          kind: "single-token",
+          data: {
+            method: config.fallbackMetadataIndexingMethod,
+            contract,
+            tokenId,
+            collection: contract,
+          },
+        },
+      ],
+      true,
+      5
+    );
   }
 
   public async addToQueue(params: OnchainMetadataProcessTokenUriJobPayload, delay = 0) {

@@ -35,6 +35,7 @@ export const CONFIG_DEFAULT = {
           name: { type: "keyword" },
           image: { type: "keyword" },
           isSpam: { type: "boolean" },
+          imageVersion: { type: "date", format: "epoch_second" },
         },
       },
       order: {
@@ -78,6 +79,7 @@ export const CONFIG_DEFAULT = {
           blockHash: { type: "keyword" },
           fillSourceId: { type: "integer" },
           washTradingScore: { type: "double" },
+          collectionIsMinting: { type: "boolean" },
         },
       },
       pricing: {

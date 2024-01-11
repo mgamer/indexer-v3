@@ -1,7 +1,5 @@
 import { Log } from "@ethersproject/abstract-provider";
-
-import * as syncEventsUtils from "@/events-sync/utils";
-import * as blocksModel from "@/models/blocks";
+import { TransactionResponse } from "@ethersproject/providers";
 
 export type BaseEventParams = {
   address: string;
@@ -12,25 +10,24 @@ export type BaseEventParams = {
   logIndex: number;
   timestamp: number;
   batchIndex: number;
+  from: string;
+  to: string | undefined;
 };
 
-export const parseEvent = async (
+export const parseEvent = (
   log: Log,
-  blocksCache: Map<number, blocksModel.Block>,
-  batchIndex = 1
-): Promise<BaseEventParams> => {
+  timestamp: number,
+  batchIndex = 1,
+  txData: TransactionResponse
+): BaseEventParams => {
   const address = log.address.toLowerCase();
   const block = log.blockNumber;
   const blockHash = log.blockHash.toLowerCase();
   const txHash = log.transactionHash.toLowerCase();
   const txIndex = log.transactionIndex;
   const logIndex = log.logIndex;
-
-  let blockResult = blocksCache.get(block);
-  if (!blockResult) {
-    blocksCache.set(block, await syncEventsUtils.fetchBlock(block));
-    blockResult = blocksCache.get(block)!;
-  }
+  const from = txData?.from?.toLowerCase();
+  const to = txData?.to?.toLowerCase();
 
   return {
     address,
@@ -39,7 +36,9 @@ export const parseEvent = async (
     block,
     blockHash,
     logIndex,
-    timestamp: blockResult.timestamp,
+    timestamp,
     batchIndex,
+    from,
+    to,
   };
 };

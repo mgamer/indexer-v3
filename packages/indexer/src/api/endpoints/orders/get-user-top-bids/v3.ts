@@ -14,7 +14,7 @@ import {
   toBuffer,
 } from "@/common/utils";
 import { Sources } from "@/models/sources";
-import { Assets } from "@/utils/assets";
+import { Assets, ImageSize } from "@/utils/assets";
 import _ from "lodash";
 import {
   getJoiPriceObject,
@@ -139,7 +139,7 @@ export const getUserTopBidsV3Options: RouteOptions = {
             collection: Joi.object({
               id: Joi.string().allow(null),
               name: Joi.string().allow("", null),
-              imageUrl: Joi.string().allow(null),
+              imageUrl: Joi.string().allow("", null),
               floorAskPrice: Joi.number().unsafe().allow(null),
             }),
           }),
@@ -268,7 +268,8 @@ export const getUserTopBidsV3Options: RouteOptions = {
             LIMIT 1
         ) y ON TRUE
         LEFT JOIN LATERAL (
-            SELECT t.token_id, t.image_version, t.name, t.image, t.collection_id, floor_sell_value AS "token_floor_sell_value", last_sell_value AS "token_last_sell_value"
+            SELECT t.token_id, t.image_version, (t.metadata->>'image_mime_type') AS "image_mime_type", (t.metadata->>'media_mime_type') AS "media_mime_type",
+            t.name, t.image, t.collection_id, floor_sell_value AS "token_floor_sell_value", last_sell_value AS "token_last_sell_value"
             FROM tokens t
             WHERE t.contract = nb.contract
             AND t.token_id = nb.token_id
@@ -280,6 +281,7 @@ export const getUserTopBidsV3Options: RouteOptions = {
                 id AS "collection_id",
                 name AS "collection_name",
                 metadata AS "collection_metadata",
+                image_version AS "collection_image_version",
                 ${collectionFloorSellValueColumnName} AS "collection_floor_sell_value",
                 (${collectionFloorSellValueColumnName} * (1-((COALESCE(royalties_bps, 0)::float + 250) / 10000)))::numeric(78, 0) AS "net_listing"
             FROM collections c
@@ -363,13 +365,22 @@ export const getUserTopBidsV3Options: RouteOptions = {
               contract: contract,
               tokenId: tokenId,
               name: r.name,
-              image: Assets.getResizedImageUrl(r.image, undefined, r.image_version),
+              image: Assets.getResizedImageUrl(
+                r.image,
+                undefined,
+                r.image_version,
+                r.image_mime_type
+              ),
               floorAskPrice: r.token_floor_sell_value ? formatEth(r.token_floor_sell_value) : null,
               lastSalePrice: r.token_last_sell_value ? formatEth(r.token_last_sell_value) : null,
               collection: {
                 id: r.collection_id,
                 name: r.collection_name,
-                imageUrl: Assets.getLocalAssetsLink(r.collection_metadata?.imageUrl),
+                imageUrl: Assets.getResizedImageUrl(
+                  r.collection_metadata?.imageUrl,
+                  ImageSize.small,
+                  r.collection_image_version
+                ),
                 floorAskPrice: r.collection_floor_sell_value
                   ? formatEth(r.collection_floor_sell_value)
                   : null,

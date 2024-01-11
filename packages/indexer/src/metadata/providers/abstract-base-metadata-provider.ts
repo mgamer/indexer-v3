@@ -12,6 +12,8 @@ import {
   overrideCollectionMetadata,
 } from "../extend";
 import { limitFieldSize } from "./utils";
+import fetch from "node-fetch";
+import { logger } from "@/common/logger";
 
 export abstract class AbstractBaseMetadataProvider {
   abstract method: string;
@@ -75,6 +77,17 @@ export abstract class AbstractBaseMetadataProvider {
     // extend metadata
     const extendedMetadata = await Promise.all(
       allMetadata.map(async (metadata) => {
+        if (metadata.contract === "0x23581767a106ae21c074b2276d25e5c3e136a68b") {
+          logger.info(
+            "getTokensMetadata",
+            JSON.stringify({
+              message: `Start. contract=${metadata.contract}, tokenId=${metadata.tokenId}`,
+              metadata: JSON.stringify(metadata),
+              method: this.method,
+            })
+          );
+        }
+
         if (hasExtendHandler(metadata.contract)) {
           const result = await extendMetadata(metadata);
           return result;
@@ -83,7 +96,44 @@ export abstract class AbstractBaseMetadataProvider {
       })
     );
 
+    // get mimetype for each image/media/metadata url
+    await Promise.all(
+      extendedMetadata.map(async (metadata) => {
+        if (metadata.imageUrl) {
+          metadata.imageMimeType = await this._getImageMimeType(metadata.imageUrl);
+        }
+        if (metadata.mediaUrl) {
+          metadata.mediaMimeType = await this._getImageMimeType(metadata.mediaUrl);
+        }
+
+        // if the imageMimeType is not "image/", we want to set imageUrl to null and mediaUrl to imageUrl
+        if (
+          metadata.imageMimeType &&
+          !metadata.imageMimeType.startsWith("image/") &&
+          metadata.imageUrl
+        ) {
+          metadata.mediaUrl = metadata.imageUrl;
+          metadata.imageUrl = null;
+          metadata.imageMimeType = undefined;
+          metadata.mediaMimeType = metadata.imageMimeType;
+        }
+      })
+    );
+
     return extendedMetadata;
+  }
+
+  async _getImageMimeType(url: string): Promise<string> {
+    // use fetch
+    return fetch(url, {
+      method: "HEAD",
+    })
+      .then((res) => {
+        return res.headers.get("content-type") || "";
+      })
+      .catch(() => {
+        return "";
+      });
   }
 
   // Internal methods for subclasses
@@ -116,6 +166,7 @@ export abstract class AbstractBaseMetadataProvider {
         this.method
       );
     });
+
     return parsedMetadata;
   }
 }

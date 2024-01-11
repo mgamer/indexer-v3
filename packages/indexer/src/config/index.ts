@@ -15,6 +15,9 @@ export const config = {
 
   baseNetworkHttpUrl: String(process.env.BASE_NETWORK_HTTP_URL),
   baseNetworkWsUrl: String(process.env.BASE_NETWORK_WS_URL),
+  baseNetworkMetadataIndexingUrl: String(
+    process.env.BASE_NETWORK_METADATA_INDEXING_URL || process.env.BASE_NETWORK_HTTP_URL
+  ),
 
   openseaIndexerApiBaseUrl: String(process.env.OPENSEA_INDEXER_API_BASE_URL),
 
@@ -85,6 +88,7 @@ export const config = {
   alchemyApiKey: String(process.env.ALCHEMY_API_KEY),
   looksRareApiKey: String(process.env.LOOKSRARE_API_KEY),
   openSeaApiKey: String(process.env.OPENSEA_API_KEY),
+  openSeaNftApiKey: String(process.env.OPENSEA_NFT_API_KEY),
   openSeaApiUrl: String(process.env.OPENSEA_API_URL || ""),
 
   // Cosigner
@@ -171,4 +175,8 @@ export const config = {
   forceEnableRabbitJobsConsumer: Boolean(Number(process.env.FORCE_ENABLE_RABBIT_JOBS_CONSUMER)),
 
   debugApiKeys: process.env.DEBUG_API_KEYS ? String(process.env.DEBUG_API_KEYS).split(",") : [],
+
+  coinGeckoWsApiKey: process.env.COINGECKO_API_KEY,
+
+  spamNames: process.env.SPAM_NAMES ? String(process.env.SPAM_NAMES).split(",") : [],
 };

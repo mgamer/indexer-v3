@@ -22,7 +22,7 @@ export class HealthCheck {
       return false;
     }
 
-    if (config.master && getNetworkSettings().enableWebSocket) {
+    if (config.master && getNetworkSettings().enableWebSocket && !getNetworkSettings().isTestnet) {
       const timestamp = await redis.get("latest-block-websocket-received");
       const currentTime = now();
       if (timestamp && Number(timestamp) < currentTime - 60) {
@@ -46,12 +46,13 @@ export class HealthCheck {
       const currentTime = now();
 
       if (timestamp && Number(timestamp) < currentTime - 60) {
-        if (Number(timestamp) < currentTime - 300) {
+        if (Number(timestamp) < currentTime - 180) {
           logger.error(
             "healthcheck",
             `last opensea websocket received ${timestamp} ${currentTime - Number(timestamp)}s ago`
           );
-          // return false;
+
+          return false;
         }
 
         logger.info(

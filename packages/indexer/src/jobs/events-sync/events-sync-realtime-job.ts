@@ -1,10 +1,11 @@
 import { AbstractRabbitMqJobHandler, BackoffStrategy } from "@/jobs/abstract-rabbit-mq-job-handler";
 import { config } from "@/config/index";
 import { logger } from "@/common/logger";
-import { checkForOrphanedBlock, syncEvents } from "@/events-sync/syncEventsV2";
+import { checkForOrphanedBlock, syncEvents } from "@/events-sync/index";
 import { RabbitMQMessage } from "@/common/rabbit-mq";
 import { traceSyncJob } from "./trace-sync-job";
 import { redis } from "@/common/redis";
+import { getNetworkSettings } from "@/config/network";
 
 export type EventsSyncRealtimeJobPayload = {
   block: number;
@@ -22,7 +23,6 @@ export class EventsSyncRealtimeJob extends AbstractRabbitMqJobHandler {
 
   protected async process(payload: EventsSyncRealtimeJobPayload) {
     const { block } = payload;
-
     try {
       // Update the latest block synced
       const latestBlock = await redis.get("latest-block-realtime");
@@ -31,12 +31,21 @@ export class EventsSyncRealtimeJob extends AbstractRabbitMqJobHandler {
       }
 
       const skipLogsCheck = Number(this.rabbitMqMessage?.retryCount) === this.maxRetries;
-      await syncEvents(block, skipLogsCheck);
+      await syncEvents(
+        {
+          fromBlock: block,
+          toBlock: block,
+        },
+        skipLogsCheck
+      );
       await traceSyncJob.addToQueue({ block: block });
       //eslint-disable-next-line
     } catch (error: any) {
       // if the error is block not found, add back to queue
-      if (error?.message.includes("not found with RPC provider")) {
+      if (
+        error?.message.includes("not found with RPC provider") &&
+        !getNetworkSettings().isTestnet
+      ) {
         logger.info(this.queueName, error?.message);
 
         return { addToQueue: true, delay: 1000 };

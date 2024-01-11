@@ -6,7 +6,6 @@ import * as erc1155 from "@/events-sync/data/erc1155";
 
 import * as bendDao from "@/events-sync/data/bend-dao";
 import * as blur from "@/events-sync/data/blur";
-import * as collectionxyz from "@/events-sync/data/collectionxyz";
 import * as cryptoPunks from "@/events-sync/data/cryptopunks";
 import * as decentraland from "@/events-sync/data/decentraland";
 import * as element from "@/events-sync/data/element";
@@ -37,7 +36,6 @@ import * as zora from "@/events-sync/data/zora";
 import * as looksRareV2 from "@/events-sync/data/looks-rare-v2";
 import * as blend from "@/events-sync/data/blend";
 import * as sudoswapV2 from "@/events-sync/data/sudoswap-v2";
-import * as midaswap from "@/events-sync/data/midaswap";
 import * as caviarV1 from "@/events-sync/data/caviar-v1";
 import * as paymentProcessor from "@/events-sync/data/payment-processor";
 import * as paymentProcessorV2 from "@/events-sync/data/payment-processor-v2";
@@ -52,6 +50,9 @@ import * as createdotfun from "@/events-sync/data/createdotfun";
 import * as erc721cV2 from "@/events-sync/data/erc721c-v2";
 import * as titlesxyz from "@/events-sync/data/titlesxyz";
 import * as artblocks from "@/events-sync/data/artblocks";
+import * as highlightxyz from "@/events-sync/data/highlightxyz";
+import * as ditto from "@/events-sync/data/ditto";
+import * as mooar from "@/events-sync/data/mooar";
 
 // All events we're syncing should have an associated `EventData`
 // entry which dictates the way the event will be parsed and then
@@ -65,7 +66,6 @@ export type EventKind =
   | "erc1155"
   | "bend-dao"
   | "blur"
-  | "collectionxyz"
   | "cryptopunks"
   | "decentraland"
   | "element"
@@ -92,7 +92,6 @@ export type EventKind =
   | "looks-rare-v2"
   | "blend"
   | "sudoswap-v2"
-  | "midaswap"
   | "caviar-v1"
   | "payment-processor"
   | "thirdweb"
@@ -107,7 +106,11 @@ export type EventKind =
   | "titlesxyz"
   | "artblocks"
   | "erc721c-v2"
-  | "ditto";
+  | "ditto"
+  | "mooar"
+  | "titlesxyz"
+  | "ditto"
+  | "highlightxyz";
 
 // Event sub-kind in each of the above protocol/standard
 export type EventSubKind =
@@ -248,26 +251,6 @@ export type EventSubKind =
   | "blend-refinance"
   | "blend-buy-locked"
   | "blend-nonce-incremented"
-  | "collectionxyz-new-pool"
-  | "collectionxyz-token-deposit"
-  | "collectionxyz-token-withdrawal"
-  | "collectionxyz-nft-deposit"
-  | "collectionxyz-nft-withdrawal"
-  | "collectionxyz-accrued-trade-fee-withdrawal"
-  | "collectionxyz-accepts-token-ids"
-  | "collectionxyz-swap-nft-in-pool"
-  | "collectionxyz-swap-nft-out-pool"
-  | "collectionxyz-spot-price-update"
-  | "collectionxyz-delta-update"
-  | "collectionxyz-props-update"
-  | "collectionxyz-state-update"
-  | "collectionxyz-royalty-numerator-update"
-  | "collectionxyz-royalty-recipient-fallback-update"
-  | "collectionxyz-external-filter-set"
-  | "collectionxyz-fee-update"
-  | "collectionxyz-protocol-fee-multiplier-update"
-  | "collectionxyz-carry-fee-multiplier-update"
-  | "collectionxyz-asset-recipient-change"
   | "sudoswap-v2-sell-erc721"
   | "sudoswap-v2-sell-erc1155"
   | "sudoswap-v2-buy-erc721"
@@ -283,12 +266,6 @@ export type EventSubKind =
   | "sudoswap-v2-delta-update"
   | "sudoswap-v2-new-erc721-pair"
   | "sudoswap-v2-new-erc1155-pair"
-  | "midaswap-new-erc721-pair"
-  | "midaswap-erc20-deposit"
-  | "midaswap-erc721-deposit"
-  | "midaswap-sell-erc721"
-  | "midaswap-buy-erc721"
-  | "midaswap-position-burned"
   | "caviar-v1-create"
   | "caviar-v1-add"
   | "caviar-v1-remove"
@@ -342,6 +319,8 @@ export type EventSubKind =
   | "payment-processor-v2-updated-token-level-pricing-boundaries"
   | "payment-processor-v2-trusted-channel-removed-for-collection"
   | "payment-processor-v2-trusted-channel-added-for-collection"
+  | "payment-processor-v2-banned-account-removed-for-collection"
+  | "payment-processor-v2-banned-account-added-for-collection"
   | "artblocks-project-updated"
   | "artblocks-minter-registered"
   | "artblocks-minter-removed"
@@ -353,7 +332,15 @@ export type EventSubKind =
   | "erc721c-v2-removed-account-from-list"
   | "erc721c-v2-removed-code-hash-from-list"
   | "erc721c-v2-applied-list-to-collection"
-  | "ditto-pool-initialized";
+  | "ditto-pool-initialized"
+  | "mooar-order-filled"
+  | "highlightxyz-edition-vector-created"
+  | "highlightxyz-series-vector-created"
+  | "highlightxyz-vector-updated"
+  | "highlightxyz-vector-deleted"
+  | "highlightxyz-discrete-da-created"
+  | "highlightxyz-mechanic-vector-registered"
+  | "highlightxyz-discrete-da-updated";
 
 export type EventData = {
   kind: EventKind;
@@ -499,26 +486,6 @@ const allEventData = [
   blend.refinance,
   blend.repay,
   blend.nonceIncremented,
-  collectionxyz.acceptsTokenIds,
-  collectionxyz.accruedTradeFeeWithdrawal,
-  collectionxyz.assetRecipientChange,
-  collectionxyz.carryFeeMultiplierUpdate,
-  collectionxyz.deltaUpdate,
-  collectionxyz.externalFilterSet,
-  collectionxyz.feeUpdate,
-  collectionxyz.newPool,
-  collectionxyz.nftDeposit,
-  collectionxyz.nftWithdrawal,
-  collectionxyz.propsUpdate,
-  collectionxyz.protocolFeeMultiplierUpdate,
-  collectionxyz.royaltyNumeratorUpdate,
-  collectionxyz.royaltyRecipientFallbackUpdate,
-  collectionxyz.spotPriceUpdate,
-  collectionxyz.stateUpdate,
-  collectionxyz.swapNftInPool,
-  collectionxyz.swapNftOutPool,
-  collectionxyz.tokenDeposit,
-  collectionxyz.tokenWithdrawal,
   sudoswapV2.buyERC1155,
   sudoswapV2.buyERC721,
   sudoswapV2.sellERC721,
@@ -534,12 +501,6 @@ const allEventData = [
   sudoswapV2.deltaUpdate,
   sudoswapV2.newERC721Pair,
   sudoswapV2.newERC1155Pair,
-  midaswap.newERC721Pair,
-  midaswap.erc20Deposit,
-  midaswap.erc721Deposit,
-  midaswap.buyERC721,
-  midaswap.sellERC721,
-  midaswap.positionBurned,
   treasure.bidAccepted,
   caviarV1.create,
   caviarV1.add,
@@ -594,6 +555,8 @@ const allEventData = [
   paymentProcessorV2.updatedCollectionPaymentSettings,
   paymentProcessorV2.trustedChannelAddedForCollection,
   paymentProcessorV2.trustedChannelRemovedForCollection,
+  paymentProcessorV2.bannedAccountAddedForCollection,
+  paymentProcessorV2.bannedAccountRemovedForCollection,
   artblocks.projectUpdated,
   artblocks.projectMinterRegistered,
   artblocks.projectMinterRemoved,
@@ -605,7 +568,22 @@ const allEventData = [
   erc721cV2.removedAccountFromList,
   erc721cV2.removedCodeHashFromList,
   erc721cV2.appliedListToCollection,
+  highlightxyz.editonVectorCreated,
+  highlightxyz.seriesVectorCreated,
+  highlightxyz.vectorUpdated,
+  highlightxyz.vectorDeleted,
+  highlightxyz.discreteDACreated,
+  highlightxyz.mechanicVectorRegistered,
+  highlightxyz.mechanicVectorUpdated,
+  ditto.dittoPoolInitialized,
+  mooar.orderFulfilled,
 ];
+
+// array of all addresses we're syncing events for
+export const allEventsAddresses = allEventData
+  .filter(({ addresses }) => !!addresses)
+  .map(({ addresses }) => addresses && Object.keys(addresses))
+  .flat();
 
 export const getEventData = (events?: string[]) => {
   if (!events) {

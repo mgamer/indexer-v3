@@ -28,7 +28,10 @@ export interface TokenMetadata {
     kind: "string" | "number" | "date" | "range";
     rank?: number;
   }[];
+  decimals?: number;
   metadataMethod?: string;
+  imageMimeType?: string;
+  mediaMimeType?: string;
 }
 
 export interface CollectionMetadata {
@@ -48,6 +51,7 @@ export interface CollectionMetadata {
   contract: string;
   tokenIdRange: [number, number] | [string, string] | null;
   tokenSetId: string | null;
+  hasPerTokenRoyalties?: boolean;
   isFallback?: boolean;
   paymentTokens?: object | null;
   creator?: string | null;
@@ -78,6 +82,7 @@ export interface Metadata {
   safelistRequestStatus?: string;
   name?: string;
   description?: string;
+  mintConfig?: any;
 }
 
 export type MapEntry = {

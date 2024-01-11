@@ -12,22 +12,25 @@ import {
 } from "@/elasticsearch/indexes/asks/event-handlers/base";
 
 export class AskCreatedEventHandler extends BaseAskEventHandler {
-  async generateAsk(): Promise<AskDocumentInfo> {
-    const data = await idb.oneOrNone(
-      `
+  async generateAsk(): Promise<AskDocumentInfo | null> {
+    const query = `
           ${AskCreatedEventHandler.buildBaseQuery()}
           AND id = $/orderId/
           LIMIT 1;
-        `,
-      {
-        orderId: this.orderId,
-      }
-    );
+        `;
 
-    const id = this.getAskId();
-    const document = this.buildDocument(data);
+    const data = await idb.oneOrNone(query, {
+      orderId: this.orderId,
+    });
 
-    return { id, document };
+    if (data) {
+      const id = this.getAskId();
+      const document = this.buildDocument(data);
+
+      return { id, document };
+    }
+
+    return null;
   }
 
   public static buildBaseQuery(onlyActive = true) {
@@ -74,15 +77,12 @@ export class AskCreatedEventHandler extends BaseAskEventHandler {
                         tokens.token_id,
                         tokens.contract,
                         tokens.name AS "token_name",
-                        tokens.image AS "token_image",
-                        tokens.media AS "token_media",
                         tokens.is_flagged AS "token_is_flagged",
                         tokens.is_spam AS "token_is_spam",
                         tokens.rarity_rank AS "token_rarity_rank",
                         collections.id AS "collection_id", 
                         collections.name AS "collection_name", 
                         collections.is_spam AS "collection_is_spam",
-                        (collections.metadata ->> 'imageUrl')::TEXT AS "collection_image",
                         (
                         SELECT 
                           array_agg(

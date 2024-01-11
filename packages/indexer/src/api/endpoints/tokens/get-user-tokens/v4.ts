@@ -10,7 +10,7 @@ import { CollectionSets } from "@/models/collection-sets";
 import * as Sdk from "@reservoir0x/sdk";
 import { config } from "@/config/index";
 import { getJoiPriceObject, getJoiTokenObject, JoiPrice } from "@/common/joi";
-import { Assets } from "@/utils/assets";
+import { Assets, ImageSize } from "@/utils/assets";
 
 const version = "v4";
 
@@ -196,6 +196,8 @@ export const getUserTokensV4Options: RouteOptions = {
           t.name,
           t.image,
           t.image_version,
+          (t.metadata ->> 'image_mime_type')::TEXT AS image_mime_type,
+          (t.metadata ->> 'media_mime_type')::TEXT AS media_mime_type,
           t.collection_id,
           t.metadata_disabled AS "t_metadata_disabled",
           t.floor_sell_id,
@@ -222,6 +224,8 @@ export const getUserTokensV4Options: RouteOptions = {
             t.name,
             t.image,
             t.image_version,
+          (t.metadata ->> 'image_mime_type')::TEXT AS image_mime_type,
+          (t.metadata ->> 'media_mime_type')::TEXT AS media_mime_type,
             t.collection_id,
             t.metadata_disabled AS "t_metadata_disabled",
             t.floor_sell_id,
@@ -263,10 +267,11 @@ export const getUserTokensV4Options: RouteOptions = {
     try {
       const baseQuery = `
         SELECT b.contract, b.token_id, b.token_count, b.acquired_at,
-               t.name, t.image,t.image_version, t.collection_id, t.floor_sell_id, t.floor_sell_value, t.floor_sell_currency, t.floor_sell_currency_value, 
+               t.name, t.image,t.image_version, t.image_mime_type, t.media_mime_type, t.collection_id, t.floor_sell_id, t.floor_sell_value, t.floor_sell_currency, t.floor_sell_currency_value, 
                top_bid_id, top_bid_price, top_bid_value, top_bid_currency, top_bid_currency_price, top_bid_currency_value,
                c.name as collection_name, c.metadata, c.floor_sell_value AS "collection_floor_sell_value",
                c.metadata_disabled AS "c_metadata_disabled", t_metadata_disabled,
+               c.image_version AS "collection_image_version",
                (
                     CASE WHEN t.floor_sell_value IS NOT NULL
                     THEN 1
@@ -308,7 +313,11 @@ export const getUserTokensV4Options: RouteOptions = {
               collection: {
                 id: r.collection_id,
                 name: r.collection_name,
-                imageUrl: r.metadata?.imageUrl,
+                imageUrl: Assets.getResizedImageUrl(
+                  r.image,
+                  ImageSize.small,
+                  r.collection_image_version
+                ),
                 floorAskPrice: r.collection_floor_sell_value
                   ? formatEth(r.collection_floor_sell_value)
                   : null,

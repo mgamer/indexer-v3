@@ -9,10 +9,24 @@ import { config } from "@/config/index";
 export const baseProvider = new StaticJsonRpcProvider(
   {
     url: config.baseNetworkHttpUrl,
+    headers: [1].includes(config.chainId)
+      ? {
+          "x-session-hash": getUuidByString(`${config.baseNetworkHttpUrl}${config.chainId}`),
+        }
+      : {},
+  },
+  config.chainId
+);
+
+export const metadataIndexingBaseProvider = new StaticJsonRpcProvider(
+  {
+    url: config.baseNetworkMetadataIndexingUrl,
     headers: [1, 324].includes(config.chainId)
       ? {}
       : {
-          "x-session-hash": getUuidByString(`${config.baseNetworkHttpUrl}${config.chainId}`),
+          "x-session-hash": getUuidByString(
+            `${config.baseNetworkMetadataIndexingUrl}${config.chainId}`
+          ),
         },
   },
   config.chainId

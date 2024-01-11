@@ -27,7 +27,7 @@ import {
 } from "@/common/joi";
 import { Sources } from "@/models/sources";
 import _ from "lodash";
-import { Assets } from "@/utils/assets";
+import { Assets, ImageSize } from "@/utils/assets";
 
 const version = "v6";
 
@@ -324,6 +324,8 @@ export const getUserTokensV6Options: RouteOptions = {
           t.name,
           t.image,
           t.image_version,
+          (t.metadata ->> 'image_mime_type')::TEXT AS image_mime_type,
+          (t.metadata ->> 'media_mime_type')::TEXT AS media_mime_type,
           t.media,
           t.rarity_rank,
           t.collection_id,
@@ -357,6 +359,8 @@ export const getUserTokensV6Options: RouteOptions = {
             t.name,
             t.image,
             t.image_version,
+          (t.metadata ->> 'image_mime_type')::TEXT AS image_mime_type,
+          (t.metadata ->> 'media_mime_type')::TEXT AS media_mime_type,
             t.media,
             t.rarity_rank,
             t.collection_id,
@@ -408,11 +412,12 @@ export const getUserTokensV6Options: RouteOptions = {
     try {
       let baseQuery = `
         SELECT b.contract, b.token_id, b.token_count, extract(epoch from b.acquired_at) AS acquired_at, b.last_token_appraisal_value,
-               t.name, t.image, t.image_version, t.media, t.rarity_rank, t.collection_id, t.floor_sell_id, t.floor_sell_value, t.floor_sell_currency, t.floor_sell_currency_value,
+               t.name, t.image, t.image_version, t.image_mime_type, t.media_mime_type, t.media, t.rarity_rank, t.collection_id, t.floor_sell_id, t.floor_sell_value, t.floor_sell_currency, t.floor_sell_currency_value,
                t.floor_sell_maker, t.floor_sell_valid_from, t.floor_sell_valid_to, t.floor_sell_source_id_int,
                t.rarity_score, t.last_sell_value, t.last_buy_value, t.last_sell_timestamp, t.last_buy_timestamp,
                top_bid_id, top_bid_price, top_bid_value, top_bid_currency, top_bid_currency_price, top_bid_currency_value,
-               c.metadata_disabled AS "c_metadata_disabled", t_metadata_disabled, c.name as collection_name, con.kind, c.metadata, ${
+               c.metadata_disabled AS "c_metadata_disabled", t_metadata_disabled, c.name as collection_name, con.kind, c.metadata,
+               c.image_version AS "collection_image_version", ${
                  query.useNonFlaggedFloorAsk
                    ? "c.floor_sell_value"
                    : "c.non_flagged_floor_sell_value"
@@ -557,7 +562,11 @@ export const getUserTokensV6Options: RouteOptions = {
               collection: {
                 id: r.collection_id,
                 name: r.collection_name,
-                imageUrl: r.metadata?.imageUrl,
+                imageUrl: Assets.getResizedImageUrl(
+                  r.image,
+                  ImageSize.small,
+                  r.collection_image_version
+                ),
                 floorAskPrice: r.collection_floor_sell_value
                   ? formatEth(r.collection_floor_sell_value)
                   : null,

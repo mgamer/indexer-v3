@@ -28,7 +28,7 @@ import { config } from "@/config/index";
 import { CollectionSets } from "@/models/collection-sets";
 import { ContractSets } from "@/models/contract-sets";
 import { Sources } from "@/models/sources";
-import { Assets } from "@/utils/assets";
+import { Assets, ImageSize } from "@/utils/assets";
 import { Orders } from "@/utils/orders";
 
 const version = "v4";
@@ -160,7 +160,7 @@ export const getUserTopBidsV4Options: RouteOptions = {
             collection: Joi.object({
               id: Joi.string().allow(null),
               name: Joi.string().allow("", null),
-              imageUrl: Joi.string().allow(null),
+              imageUrl: Joi.string().allow("", null),
               floorAskPrice: JoiPrice.allow(null).description(
                 "Native currency to chain unless displayCurrency is passed."
               ),
@@ -292,7 +292,8 @@ export const getUserTopBidsV4Options: RouteOptions = {
             LIMIT 1
         ) y ON TRUE
         LEFT JOIN LATERAL (
-            SELECT t.token_id, t.image_version, t.name, t.image, t.collection_id, t.floor_sell_value AS "token_floor_sell_value", t.last_sell_value AS "token_last_sell_value", o.currency AS "token_floor_sell_currency", o.currency_price AS "token_floor_sell_currency_price"
+            SELECT t.token_id, t.image_version, (t.metadata->>'image_mime_type') AS "image_mime_type", (t.metadata->>'media_mime_type') AS "media_mime_type",
+            t.name, t.image, t.collection_id, t.floor_sell_value AS "token_floor_sell_value", t.last_sell_value AS "token_last_sell_value", o.currency AS "token_floor_sell_currency", o.currency_price AS "token_floor_sell_currency_price"
             FROM tokens t
             LEFT JOIN orders o ON o.id = t.floor_sell_id
             WHERE t.contract = nb.contract
@@ -311,6 +312,7 @@ export const getUserTopBidsV4Options: RouteOptions = {
                 c.id AS "collection_id",
                 c.name AS "collection_name",
                 c.metadata AS "collection_metadata",
+                c.image_version AS "collection_image_version",
                 ${collectionFloorSellValueColumnName} AS "collection_floor_sell_value",
                 (${collectionFloorSellValueColumnName} * (1-((COALESCE(c.royalties_bps, 0)::float + 250) / 10000)))::numeric(78, 0) AS "net_listing",
                 o.currency AS "collection_floor_sell_currency",
@@ -401,7 +403,12 @@ export const getUserTopBidsV4Options: RouteOptions = {
               tokenId: tokenId,
               name: r.name,
               kind: r.contract_kind,
-              image: Assets.getResizedImageUrl(r.image, undefined, r.image_version),
+              image: Assets.getResizedImageUrl(
+                r.image,
+                undefined,
+                r.image_version,
+                r.image_mime_type
+              ),
               floorAskPrice: r.token_floor_sell_value
                 ? await getJoiPriceObject(
                     {
@@ -431,7 +438,11 @@ export const getUserTopBidsV4Options: RouteOptions = {
               collection: {
                 id: r.collection_id,
                 name: r.collection_name,
-                imageUrl: Assets.getLocalAssetsLink(r.collection_metadata?.imageUrl),
+                imageUrl: Assets.getResizedImageUrl(
+                  r.collection_metadata?.imageUrl,
+                  ImageSize.small,
+                  r.collection_image_version
+                ),
                 floorAskPrice: r.collection_floor_sell_value
                   ? await getJoiPriceObject(
                       {
