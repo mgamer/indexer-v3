@@ -12,7 +12,7 @@ import { logger } from "@/common/logger";
 
 export type CollectionCheckSpamJobPayload = {
   collectionId: string;
-  trigger: "default" | "metadata-changed" | "transfer-burst";
+  trigger: "metadata-changed" | "transfer-burst";
 };
 
 export default class CollectionCheckSpamJob extends AbstractRabbitMqJobHandler {
@@ -32,7 +32,7 @@ export default class CollectionCheckSpamJob extends AbstractRabbitMqJobHandler {
       }
 
       // if the collection is verified and marked as not spam -> do nothing
-      if (collection.metadata?.safelistRequestStatus === "verified" && collection.isSpam < 0) {
+      if (collection.metadata?.safelistRequestStatus === "verified" && collection.isSpam <= 0) {
         return;
       }
 
