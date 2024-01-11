@@ -51,7 +51,7 @@ export class BackfillAirdropsJob extends AbstractRabbitMqJobHandler {
       endBlock: Math.max(endBlock, startBlock - blocksPerBatch), // max block number in db - blocksPerBatch
     };
 
-    logger.info(this.queueName, `blockValues: ${JSON.stringify(blockValues)}`);
+    logger.info(this.queueName, `blockValues: ${JSON.stringify(blockValues)}, offset: ${offset}`);
     const transferEvents = await idb.manyOrNone(
       `
     SELECT 
