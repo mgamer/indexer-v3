@@ -200,6 +200,7 @@ export const getUserCollectionsV3Options: RouteOptions = {
           collections.id,
           collections.slug,
           collections.name,
+          collections.image_version AS "image_version",
           (collections.metadata ->> 'imageUrl')::TEXT AS "image",
           (collections.metadata ->> 'bannerImageUrl')::TEXT AS "banner",
           (collections.metadata ->> 'discordUrl')::TEXT AS "discord_url",
