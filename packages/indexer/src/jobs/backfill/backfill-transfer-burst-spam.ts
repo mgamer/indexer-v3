@@ -1,4 +1,5 @@
 import { idb } from "@/common/db";
+import { RabbitMQMessage } from "@/common/rabbit-mq";
 import { redis } from "@/common/redis";
 import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handler";
 import { collectionCheckSpamJob } from "@/jobs/collections-refresh/collections-check-spam-job";
@@ -81,10 +82,21 @@ export class BackfillTransferSpamJob extends AbstractRabbitMqJobHandler {
     );
 
     // if from/end block is not the last block, add to queue
-    if (blockValues.endBlock < endBlock) {
+    if (blockValues.endBlock > endBlock) {
       return {
         addToQueue: true,
       };
+    }
+  }
+
+  public async onCompleted(
+    rabbitMqMessage: RabbitMQMessage,
+    processResult: {
+      addToQueue: boolean;
+    }
+  ) {
+    if (processResult.addToQueue) {
+      await this.addToQueue(1000);
     }
   }
 
