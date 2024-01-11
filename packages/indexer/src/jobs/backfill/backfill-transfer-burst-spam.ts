@@ -19,7 +19,7 @@ export class BackfillTransferSpamJob extends AbstractRabbitMqJobHandler {
       // query nft_transfer_events to find the first and last block number
       const blockRange = await idb.oneOrNone(
         `
-        SELECT MIN(block_number) as min_block_number, MAX(block_number) as max_block_number
+        SELECT MIN(block) as min_block_number, MAX(block) as max_block_number
         FROM nft_transfer_events
         `
       );
