@@ -18,7 +18,7 @@ export default class PendingTranscationJob extends AbstractRabbitMqJobHandler {
     } catch (error) {
       logger.error(
         this.queueName,
-        `Failed to handle order revalidation info ${JSON.stringify(payload)}: ${error}`
+        `Failed to handle pending transcation info ${JSON.stringify(payload)}: ${error}`
       );
       throw error;
     }
