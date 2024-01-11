@@ -13,7 +13,7 @@ export class BackfillTransferSpamJob extends AbstractRabbitMqJobHandler {
 
   protected async process() {
     const blocksPerBatch = 50;
-    let blockRangeRedis = await redis.get(`${this.queueName}:blockRange:${this.queueName}`);
+    let blockRangeRedis = await redis.get(`${this.queueName}:blockRange`);
     if (!blockRangeRedis) {
       // query nft_transfer_events to find the first and last block number
       const blockRange = await idb.oneOrNone(
@@ -25,7 +25,7 @@ export class BackfillTransferSpamJob extends AbstractRabbitMqJobHandler {
 
       if (blockRange) {
         await redis.set(
-          `${this.queueName}:blockRange:${this.queueName}`,
+          `${this.queueName}:blockRange`,
           JSON.stringify([blockRange.max_block_number, blockRange.min_block_number])
         );
         blockRangeRedis = JSON.stringify([

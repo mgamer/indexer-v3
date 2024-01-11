@@ -1,4 +1,5 @@
 import { idb, pgp } from "@/common/db";
+import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
 import { DbEvent, getEventKind } from "@/events-sync/storage/nft-transfer-events";
 import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handler";
@@ -16,7 +17,7 @@ export class BackfillAirdropsJob extends AbstractRabbitMqJobHandler {
     const routers = await getRouters();
 
     const blocksPerBatch = 3;
-    let blockRangeRedis = await redis.get(`${this.queueName}:blockRange:${this.queueName}`);
+    let blockRangeRedis = await redis.get(`${this.queueName}:blockRange`);
     if (!blockRangeRedis) {
       // query nft_transfer_events to find the first and last block number
       const blockRange = await idb.oneOrNone(
@@ -26,9 +27,11 @@ export class BackfillAirdropsJob extends AbstractRabbitMqJobHandler {
         `
       );
 
+      logger.info(this.queueName, `blockRange: ${JSON.stringify(blockRange)}`);
+
       if (blockRange) {
         await redis.set(
-          `${this.queueName}:blockRange:${this.queueName}`,
+          `${this.queueName}:blockRange`,
           JSON.stringify([blockRange.max_block_number, blockRange.min_block_number])
         );
         blockRangeRedis = JSON.stringify([
@@ -45,6 +48,7 @@ export class BackfillAirdropsJob extends AbstractRabbitMqJobHandler {
       endBlock: Math.max(endBlock, startBlock - blocksPerBatch), // max block number in db - blocksPerBatch
     };
 
+    logger.info(this.queueName, `blockValues: ${JSON.stringify(blockValues)}`);
     const transferEvents = await idb.oneOrNone(
       `
     SELECT 
