@@ -1,5 +1,5 @@
 import { AddressZero } from "@ethersproject/constants";
-import { parseConfig } from "mint-interface";
+import { parseConfig } from "@reservoir0x/mint-interface";
 
 import { idb } from "@/common/db";
 import { redis } from "@/common/redis";
