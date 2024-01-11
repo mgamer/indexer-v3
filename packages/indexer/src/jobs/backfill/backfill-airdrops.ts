@@ -134,9 +134,7 @@ export class BackfillAirdropsJob extends AbstractRabbitMqJobHandler {
 
     // if from/end block is not the last block, add to queue
     if (blockValues.endBlock > endBlock) {
-      return {
-        addToQueue: true,
-      };
+      await this.addToQueue();
     }
   }
 
