@@ -72,6 +72,7 @@ export class BackfillTransferSpamJob extends AbstractRabbitMqJobHandler {
       Array.from(contractSet).map(async (contract) => {
         await collectionCheckSpamJob.addToQueue({
           collectionId: contract,
+          trigger: "transfer-burst",
         });
       })
     );
