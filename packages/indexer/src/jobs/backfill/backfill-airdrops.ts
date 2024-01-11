@@ -1,5 +1,6 @@
 import { idb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
+import { RabbitMQMessage } from "@/common/rabbit-mq";
 import { redis } from "@/common/redis";
 import { DbEvent, getEventKind } from "@/events-sync/storage/nft-transfer-events";
 import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handler";
@@ -132,8 +133,20 @@ export class BackfillAirdropsJob extends AbstractRabbitMqJobHandler {
       JSON.stringify([blockValues.endBlock, endBlock])
     );
 
-    // if from/end block is not the last block, add to queue
     if (blockValues.endBlock > endBlock) {
+      return {
+        addToQueue: true,
+      };
+    }
+  }
+
+  public async onCompleted(
+    rabbitMqMessage: RabbitMQMessage,
+    processResult: {
+      addToQueue: boolean;
+    }
+  ) {
+    if (processResult.addToQueue) {
       await this.addToQueue();
     }
   }
