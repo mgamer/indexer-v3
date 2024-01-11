@@ -27,8 +27,6 @@ export class BackfillAirdropsJob extends AbstractRabbitMqJobHandler {
         `
       );
 
-      logger.info(this.queueName, `blockRange: ${JSON.stringify(blockRange)}`);
-
       if (blockRange) {
         await redis.set(
           `${this.queueName}:blockRange`,
@@ -49,7 +47,7 @@ export class BackfillAirdropsJob extends AbstractRabbitMqJobHandler {
     };
 
     logger.info(this.queueName, `blockValues: ${JSON.stringify(blockValues)}`);
-    const transferEvents = await idb.oneOrNone(
+    const transferEvents = await idb.manyOrNone(
       `
     SELECT 
       nft_transfer_events.from, 
@@ -71,7 +69,7 @@ export class BackfillAirdropsJob extends AbstractRabbitMqJobHandler {
     );
 
     const queries: string[] = [];
-    transferEvents.forEach(
+    transferEvents?.forEach(
       (transferEvent: {
         from: string;
         to: string;
