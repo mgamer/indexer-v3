@@ -69,50 +69,63 @@ export class BackfillAirdropsJob extends AbstractRabbitMqJobHandler {
     );
 
     const queries: string[] = [];
-    transferEvents?.forEach(
-      (transferEvent: {
-        from: string;
-        to: string;
-        tx_hash: string;
-        log_index: number;
-        address: string;
-        token_id: string;
-        transaction_to: string;
-        transaction_from: string;
-      }) => {
-        const kind: DbEvent["kind"] = getEventKind(
-          {
-            from: transferEvent.from,
-            to: transferEvent.to,
-            baseEventParams: {
-              from: transferEvent.transaction_from,
-              to: transferEvent.transaction_to,
+    logger.info(
+      this.queueName,
+      JSON.stringify({
+        transferEvents: transferEvents?.length,
+        blockValues,
+        startBlock,
+        endBlock,
+      })
+    );
+    if (transferEvents?.length) {
+      transferEvents?.forEach(
+        (transferEvent: {
+          from: string;
+          to: string;
+          tx_hash: string;
+          log_index: number;
+          address: string;
+          token_id: string;
+          transaction_to: string;
+          transaction_from: string;
+        }) => {
+          const kind: DbEvent["kind"] = getEventKind(
+            {
+              from: transferEvent.from,
+              to: transferEvent.to,
+              baseEventParams: {
+                from: transferEvent.transaction_from,
+                to: transferEvent.transaction_to,
+              },
             },
-          },
-          routers
-        );
+            routers
+          );
 
-        queries.push(
-          `UPDATE nft_transfer_events 
+          queries.push(
+            `UPDATE nft_transfer_events 
            SET kind = ${pgp.as.value(kind)}
            WHERE tx_hash = ${pgp.as.buffer(() => transferEvent.tx_hash)}
            AND log_index = ${pgp.as.value(transferEvent.log_index)};`
-        );
+          );
 
-        if (kind === "airdrop") {
-          queries.push(
-            `UPDATE nft_balances
+          if (kind === "airdrop") {
+            queries.push(
+              `UPDATE nft_balances
             SET is_airdropped = true, updated_at = now()
             WHERE contract = ${pgp.as.buffer(() => transferEvent.address)}
             AND token_id = ${pgp.as.value(transferEvent.token_id)}
             AND owner = ${pgp.as.buffer(() => transferEvent.to)}
             AND amount > 0`
-          );
+            );
+          }
         }
-      }
-    );
+      );
+    }
 
-    await idb.manyOrNone(pgp.helpers.concat(queries));
+    if (queries.length) {
+      await idb.manyOrNone(pgp.helpers.concat(queries));
+    }
 
     await redis.set(
       `${this.queueName}:blockRange`,
