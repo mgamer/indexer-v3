@@ -1,5 +1,4 @@
 import { idb, pgp } from "@/common/db";
-import { logger } from "@/common/logger";
 import { RabbitMQMessage } from "@/common/rabbit-mq";
 import { redis } from "@/common/redis";
 import { DbEvent, getEventKind } from "@/events-sync/storage/nft-transfer-events";
@@ -51,7 +50,6 @@ export class BackfillAirdropsJob extends AbstractRabbitMqJobHandler {
       endBlock: Math.max(endBlock, startBlock - blocksPerBatch), // max block number in db - blocksPerBatch
     };
 
-    logger.info(this.queueName, `blockValues: ${JSON.stringify(blockValues)}, offset: ${offset}`);
     const transferEvents = await idb.manyOrNone(
       `
     SELECT 
