@@ -167,16 +167,19 @@ export const getExecuteCancelV3Options: RouteOptions = {
           },
         ],
       });
+
+      return { steps };
     }
 
     // Cancel by token or order ids
     try {
       // Handle Blur bids
-      if (
-        payload.orderIds &&
-        payload.orderIds.find((orderId: string) => orderId.startsWith("blur-collection-bid"))
-      ) {
-        const maker = payload.orderIds[0].split(":")[1];
+      const blurBidsOrderIds =
+        payload.orderIds?.filter((orderId: string) => orderId.startsWith("blur-collection-bid")) ??
+        [];
+
+      if (blurBidsOrderIds.length) {
+        const maker = blurBidsOrderIds[0].split(":")[1];
 
         const authStep: Step = {
           id: "auth",
@@ -249,7 +252,7 @@ export const getExecuteCancelV3Options: RouteOptions = {
             status: "complete",
           });
 
-          const orderIds = payload.orderIds.sort();
+          const orderIds = blurBidsOrderIds.sort();
           cancellationStep.items.push({
             status: "incomplete",
             data: {
@@ -320,292 +323,292 @@ export const getExecuteCancelV3Options: RouteOptions = {
         throw Boom.badRequest("No matching order(s)");
       }
 
-      const isBulkCancel = orderResults.length > 1;
-      const orderResult = orderResults[0];
+      // group all orderResults by kind
+      const ordersByKind: Record<string, any[]> = {};
 
-      // When bulk-cancelling, make sure all orders have the same kind
-      const supportedKinds = [
-        "seaport",
-        "seaport-v1.4",
-        "seaport-v1.5",
-        "alienswap",
-        "payment-processor-v2",
-      ];
-
-      // Handle off-chain cancellations
-
-      const cancellationZone = Sdk.SeaportBase.Addresses.ReservoirCancellationZone[config.chainId];
-      const areAllSeaportV14OffChainCancellable = orderResults.every(
-        (o) => o.kind === "seaport-v1.4" && o.raw_data.zone === cancellationZone
-      );
-      const areAllSeaportV15OffChainCancellable = orderResults.every(
-        (o) => o.kind === "seaport-v1.5" && o.raw_data.zone === cancellationZone
-      );
-      const areAllAlienswapOffChainCancellable = orderResults.every(
-        (o) => o.kind === "alienswap" && o.raw_data.zone === cancellationZone
-      );
-      const allArePPV2OffChainCancellable = orderResults.every(
-        (o) =>
-          o.kind === "payment-processor-v2" &&
-          o.raw_data.cosigner === offchainCancel.cosigner().address.toLowerCase()
-      );
-
-      let offChainCancellableKind: OrderKind | undefined;
-      if (areAllSeaportV14OffChainCancellable) {
-        offChainCancellableKind = "seaport-v1.4";
-      } else if (areAllSeaportV15OffChainCancellable) {
-        offChainCancellableKind = "seaport-v1.5";
-      } else if (areAllAlienswapOffChainCancellable) {
-        offChainCancellableKind = "alienswap";
-      } else if (allArePPV2OffChainCancellable) {
-        offChainCancellableKind = "payment-processor-v2";
+      for (const orderResult of orderResults) {
+        if (!ordersByKind[orderResult.kind]) {
+          ordersByKind[orderResult.kind] = [];
+        }
+        ordersByKind[orderResult.kind].push(orderResult);
       }
 
-      if (offChainCancellableKind === "payment-processor-v2") {
-        const orderIds = orderResults.map((o) => o.id).sort();
-        steps.push({
-          id: "cancellation-signature",
-          action: "Cancel order",
-          description: "Authorize the cancellation of the order(s)",
-          kind: "signature",
-          items: [
-            {
-              status: "incomplete",
-              data: {
-                sign: offchainCancel.paymentProcessorV2.generateOffChainCancellationSignatureData(
-                  orderIds
-                ),
-                post: {
-                  endpoint: "/execute/cancel-signature/v1",
-                  method: "POST",
-                  body: {
-                    orderIds,
-                    orderKind: offChainCancellableKind,
+      // Handle off-chain cancellations
+      const cancellationZone = Sdk.SeaportBase.Addresses.ReservoirCancellationZone[config.chainId];
+
+      // for each kind, we will grab the off-chain cancellable orders, and generate the step for it
+      for (const [kind, ordersResults] of Object.entries(ordersByKind)) {
+        let cancellable = [];
+        if (kind == "seaport-v1.4" || kind == "seaport-v1.5" || kind == "alienswap") {
+          cancellable = orderResults.filter((el) => el.raw_data.zone === cancellationZone);
+        } else if (kind == "payment-processor-v2") {
+          cancellable = orderResults.filter(
+            (el) => el.raw_data.cosigner === offchainCancel.cosigner().address.toLowerCase()
+          );
+        } else {
+          // only those ^ kind are managed for off-chain orders
+          continue;
+        }
+
+        const orderIds = cancellable.map((el) => el.id);
+        if (orderIds.length) {
+          if (kind == "payment-processor-v2") {
+            steps.push({
+              id: "cancellation-signature",
+              action: "Cancel order",
+              description: "Authorize the cancellation of the order(s)",
+              kind: "signature",
+              items: [
+                {
+                  status: "incomplete",
+                  data: {
+                    sign: offchainCancel.paymentProcessorV2.generateOffChainCancellationSignatureData(
+                      orderIds.sort()
+                    ),
+                    post: {
+                      endpoint: "/execute/cancel-signature/v1",
+                      method: "POST",
+                      body: {
+                        orderIds: orderIds.sort(),
+                        orderKind: kind,
+                      },
+                    },
                   },
                 },
-              },
-            },
-          ],
-        });
-      } else if (offChainCancellableKind) {
-        steps.push({
-          id: "cancellation-signature",
-          action: "Cancel order",
-          description: "Authorize the cancellation of the order(s)",
-          kind: "signature",
-          items: [
-            {
-              status: "incomplete",
-              data: {
-                sign: offchainCancel.seaport.generateOffChainCancellationSignatureData(
-                  orderResults.map((o) => o.id)
-                ),
-                post: {
-                  endpoint: "/execute/cancel-signature/v1",
-                  method: "POST",
-                  body: {
-                    orderIds: orderResults.map((o) => o.id).sort(),
-                    orderKind: offChainCancellableKind,
+              ],
+            });
+          } else {
+            steps.push({
+              id: "cancellation-signature",
+              action: "Cancel order",
+              description: "Authorize the cancellation of the order(s)",
+              kind: "signature",
+              items: [
+                {
+                  status: "incomplete",
+                  data: {
+                    sign: offchainCancel.seaport.generateOffChainCancellationSignatureData(
+                      orderIds
+                    ),
+                    post: {
+                      endpoint: "/execute/cancel-signature/v1",
+                      method: "POST",
+                      body: {
+                        orderIds: orderIds.sort(),
+                        orderKind: kind,
+                      },
+                    },
                   },
                 },
-              },
-            },
-          ],
-        });
+              ],
+            });
+          }
+        }
+
+        // remove off-chain cancellable orders from orderResult
+        for (const order of cancellable) {
+          ordersResults.splice(
+            ordersResults.findIndex((el) => el === order),
+            1
+          );
+        }
       }
 
       // Handle on-chain cancellations
 
-      let cancelTx: TxData | undefined;
+      // for each of the orders left, we will build the steps needed to cancel
+      for (const [kind, orderResults] of Object.entries(ordersByKind)) {
+        let cancelTx: TxData | undefined;
 
-      // Set up generic filling steps
-      const authStep: Step = {
-        id: "auth",
-        action: "Sign in to Blur",
-        description: "Some marketplaces require signing an auth message before filling",
-        kind: "signature",
-        items: [],
-      };
+        // Set up generic filling steps
+        const authStep: Step = {
+          id: "auth",
+          action: "Sign in to Blur",
+          description: "Some marketplaces require signing an auth message before filling",
+          kind: "signature",
+          items: [],
+        };
 
-      const cancellationStep: Step = {
-        id: "cancellation-signature",
-        action: "Cancel order",
-        description: "To cancel these orders you must confirm the transaction and pay the gas fee",
-        kind: "transaction",
-        items: [],
-      };
+        const cancellationStep: Step = {
+          id: "cancellation-signature",
+          action: "Cancel order",
+          description:
+            "To cancel these orders you must confirm the transaction and pay the gas fee",
+          kind: "transaction",
+          items: [],
+        };
 
-      const maker = fromBuffer(orderResult.maker);
-      switch (orderResult.kind) {
-        case "seaport": {
-          const orders = orderResults.map((dbOrder) => {
-            return new Sdk.SeaportV11.Order(config.chainId, dbOrder.raw_data);
-          });
-          const exchange = new Sdk.SeaportV11.Exchange(config.chainId);
+        const orderResult = orderResults[0];
+        const maker = fromBuffer(orderResult.maker);
+        switch (kind) {
+          case "seaport": {
+            const orders = orderResults.map((dbOrder) => {
+              return new Sdk.SeaportV11.Order(config.chainId, dbOrder.raw_data);
+            });
+            const exchange = new Sdk.SeaportV11.Exchange(config.chainId);
 
-          cancelTx = exchange.cancelOrdersTx(maker, orders);
-          break;
-        }
+            cancelTx = exchange.cancelOrdersTx(maker, orders);
+            break;
+          }
 
-        case "seaport-v1.4": {
-          const orders = orderResults.map((dbOrder) => {
-            return new Sdk.SeaportV14.Order(config.chainId, dbOrder.raw_data);
-          });
-          const exchange = new Sdk.SeaportV14.Exchange(config.chainId);
+          case "seaport-v1.4": {
+            const orders = orderResults.map((dbOrder) => {
+              return new Sdk.SeaportV14.Order(config.chainId, dbOrder.raw_data);
+            });
+            const exchange = new Sdk.SeaportV14.Exchange(config.chainId);
 
-          cancelTx = exchange.cancelOrdersTx(maker, orders);
-          break;
-        }
+            cancelTx = exchange.cancelOrdersTx(maker, orders);
+            break;
+          }
 
-        case "seaport-v1.5": {
-          const orders = orderResults.map((dbOrder) => {
-            return new Sdk.SeaportV15.Order(config.chainId, dbOrder.raw_data);
-          });
-          const exchange = new Sdk.SeaportV15.Exchange(config.chainId);
+          case "seaport-v1.5": {
+            const orders = orderResults.map((dbOrder) => {
+              return new Sdk.SeaportV15.Order(config.chainId, dbOrder.raw_data);
+            });
+            const exchange = new Sdk.SeaportV15.Exchange(config.chainId);
 
-          cancelTx = exchange.cancelOrdersTx(maker, orders);
-          break;
-        }
+            cancelTx = exchange.cancelOrdersTx(maker, orders);
+            break;
+          }
 
-        case "alienswap": {
-          const orders = orderResults.map((dbOrder) => {
-            return new Sdk.Alienswap.Order(config.chainId, dbOrder.raw_data);
-          });
-          const exchange = new Sdk.Alienswap.Exchange(config.chainId);
+          case "alienswap": {
+            const orders = orderResults.map((dbOrder) => {
+              return new Sdk.Alienswap.Order(config.chainId, dbOrder.raw_data);
+            });
+            const exchange = new Sdk.Alienswap.Exchange(config.chainId);
 
-          cancelTx = exchange.cancelOrdersTx(maker, orders);
-          break;
-        }
+            cancelTx = exchange.cancelOrdersTx(maker, orders);
+            break;
+          }
 
-        case "looks-rare-v2": {
-          const order = new Sdk.LooksRareV2.Order(config.chainId, orderResult.raw_data);
-          const exchange = new Sdk.LooksRareV2.Exchange(config.chainId);
+          case "looks-rare-v2": {
+            const order = new Sdk.LooksRareV2.Order(config.chainId, orderResult.raw_data);
+            const exchange = new Sdk.LooksRareV2.Exchange(config.chainId);
 
-          cancelTx = exchange.cancelOrderTx(maker, order);
+            cancelTx = exchange.cancelOrderTx(maker, order);
 
-          break;
-        }
+            break;
+          }
 
-        case "zeroex-v4-erc721":
-        case "zeroex-v4-erc1155": {
-          const order = new Sdk.ZeroExV4.Order(config.chainId, orderResult.raw_data);
-          const exchange = new Sdk.ZeroExV4.Exchange(config.chainId);
+          case "zeroex-v4-erc721":
+          case "zeroex-v4-erc1155": {
+            const order = new Sdk.ZeroExV4.Order(config.chainId, orderResult.raw_data);
+            const exchange = new Sdk.ZeroExV4.Exchange(config.chainId);
 
-          cancelTx = exchange.cancelOrderTx(maker, order);
-          break;
-        }
+            cancelTx = exchange.cancelOrderTx(maker, order);
+            break;
+          }
 
-        case "rarible": {
-          const order = new Sdk.Rarible.Order(config.chainId, orderResult.raw_data);
-          const exchange = new Sdk.Rarible.Exchange(config.chainId);
-          cancelTx = await exchange.cancelOrderTx(order.params);
+          case "rarible": {
+            const order = new Sdk.Rarible.Order(config.chainId, orderResult.raw_data);
+            const exchange = new Sdk.Rarible.Exchange(config.chainId);
+            cancelTx = await exchange.cancelOrderTx(order.params);
 
-          break;
-        }
+            break;
+          }
 
-        case "payment-processor": {
-          const order = new Sdk.PaymentProcessor.Order(config.chainId, orderResult.raw_data);
-          const exchange = new Sdk.PaymentProcessor.Exchange(config.chainId);
-          cancelTx = exchange.cancelOrderTx(maker, order);
+          case "payment-processor": {
+            const order = new Sdk.PaymentProcessor.Order(config.chainId, orderResult.raw_data);
+            const exchange = new Sdk.PaymentProcessor.Exchange(config.chainId);
+            cancelTx = exchange.cancelOrderTx(maker, order);
 
-          break;
-        }
+            break;
+          }
 
-        case "payment-processor-v2": {
-          const order = new Sdk.PaymentProcessorV2.Order(config.chainId, orderResult.raw_data);
-          const exchange = new Sdk.PaymentProcessorV2.Exchange(config.chainId);
-          cancelTx = exchange.cancelOrderTx(maker, order);
+          case "payment-processor-v2": {
+            const order = new Sdk.PaymentProcessorV2.Order(config.chainId, orderResult.raw_data);
+            const exchange = new Sdk.PaymentProcessorV2.Exchange(config.chainId);
+            cancelTx = exchange.cancelOrderTx(maker, order);
 
-          break;
-        }
+            break;
+          }
 
-        case "blur": {
-          // Handle Blur authentication
-          const blurAuthId = b.getAuthId(maker);
-          let blurAuth = await b.getAuth(blurAuthId);
-          if (!blurAuth) {
-            if (payload.blurAuth) {
-              blurAuth = { accessToken: payload.blurAuth };
-            } else {
-              const blurAuthChallengeId = b.getAuthChallengeId(maker);
+          case "blur": {
+            // Handle Blur authentication
+            const blurAuthId = b.getAuthId(maker);
+            let blurAuth = await b.getAuth(blurAuthId);
+            if (!blurAuth) {
+              if (payload.blurAuth) {
+                blurAuth = { accessToken: payload.blurAuth };
+              } else {
+                const blurAuthChallengeId = b.getAuthChallengeId(maker);
 
-              let blurAuthChallenge = await b.getAuthChallenge(blurAuthChallengeId);
-              if (!blurAuthChallenge) {
-                blurAuthChallenge = (await axios
-                  .get(`${config.orderFetcherBaseUrl}/api/blur-auth-challenge?taker=${maker}`)
-                  .then((response) => response.data.authChallenge)) as b.AuthChallenge;
+                let blurAuthChallenge = await b.getAuthChallenge(blurAuthChallengeId);
+                if (!blurAuthChallenge) {
+                  blurAuthChallenge = (await axios
+                    .get(`${config.orderFetcherBaseUrl}/api/blur-auth-challenge?taker=${maker}`)
+                    .then((response) => response.data.authChallenge)) as b.AuthChallenge;
 
-                await b.saveAuthChallenge(
-                  blurAuthChallengeId,
-                  blurAuthChallenge,
-                  // Give a 1 minute buffer for the auth challenge to expire
-                  Math.floor(new Date(blurAuthChallenge?.expiresOn).getTime() / 1000) - now() - 60
-                );
-              }
+                  await b.saveAuthChallenge(
+                    blurAuthChallengeId,
+                    blurAuthChallenge,
+                    // Give a 1 minute buffer for the auth challenge to expire
+                    Math.floor(new Date(blurAuthChallenge?.expiresOn).getTime() / 1000) - now() - 60
+                  );
+                }
 
-              authStep.items.push({
-                status: "incomplete",
-                data: {
-                  sign: {
-                    signatureKind: "eip191",
-                    message: blurAuthChallenge.message,
-                  },
-                  post: {
-                    endpoint: "/execute/auth-signature/v1",
-                    method: "POST",
-                    body: {
-                      kind: "blur",
-                      id: blurAuthChallengeId,
+                authStep.items.push({
+                  status: "incomplete",
+                  data: {
+                    sign: {
+                      signatureKind: "eip191",
+                      message: blurAuthChallenge.message,
+                    },
+                    post: {
+                      endpoint: "/execute/auth-signature/v1",
+                      method: "POST",
+                      body: {
+                        kind: "blur",
+                        id: blurAuthChallengeId,
+                      },
                     },
                   },
-                },
-              });
+                });
 
-              // Force the client to poll
-              cancellationStep.items.push({
-                status: "incomplete",
-                tip: "This step is dependent on a previous step. Once you've completed it, re-call the API to get the data for this step.",
-              });
-            }
-          } else {
-            const blurCancelTx = await axios
-              .post(`${config.orderFetcherBaseUrl}/api/blur-cancel-listings`, {
-                maker,
-                contract: orderResult.raw_data.collection,
-                tokenId: orderResult.raw_data.tokenId,
-                authToken: blurAuth.accessToken,
-              })
-              .then((response) => response.data);
-            if (!blurCancelTx) {
-              throw Boom.badRequest("No matching order(s)");
-            }
+                steps.push(authStep);
 
-            cancelTx = blurCancelTx;
+                // Force the client to poll
+                cancellationStep.items.push({
+                  status: "incomplete",
+                  tip: "This step is dependent on a previous step. Once you've completed it, re-call the API to get the data for this step.",
+                });
+              }
+            } else {
+              const blurCancelTx = await axios
+                .post(`${config.orderFetcherBaseUrl}/api/blur-cancel-listings`, {
+                  maker,
+                  contract: orderResult.raw_data.collection,
+                  tokenId: orderResult.raw_data.tokenId,
+                  authToken: blurAuth.accessToken,
+                })
+                .then((response) => response.data);
+              if (!blurCancelTx) {
+                throw Boom.badRequest("No matching order(s)");
+              }
+
+              cancelTx = blurCancelTx;
+            }
+            break;
           }
-          break;
+
+          default: {
+            throw Boom.notImplemented("Unsupported order kind");
+          }
         }
 
-        default: {
-          throw Boom.notImplemented("Unsupported order kind");
+        if (cancelTx !== undefined) {
+          cancellationStep.items.push({
+            status: "incomplete",
+            data: {
+              ...cancelTx!,
+              ...gasSettings,
+            },
+          });
         }
-      }
 
-      if (cancelTx !== undefined) {
-        cancellationStep.items.push({
-          status: "incomplete",
-          data: {
-            ...cancelTx!,
-            ...gasSettings,
-          },
-        });
-      }
-
-      if (authStep.items.length && authStep.items[0].status !== "complete") {
-        steps.push(authStep);
-      }
-
-      if (cancellationStep.items.length) {
-        steps.push(cancellationStep);
+        if (cancellationStep.items.length) {
+          steps.push(cancellationStep);
+        }
       }
 
       return {
