@@ -412,12 +412,18 @@ export const getExecuteCancelV3Options: RouteOptions = {
             1
           );
         }
+
+        if (ordersResults.length == 0) {
+          delete ordersByKind[kind];
+        }
       }
 
       // Handle on-chain cancellations
 
       // for each of the orders left, we will build the steps needed to cancel
       for (const [kind, orderResults] of Object.entries(ordersByKind)) {
+        if (!orderResults.length) continue;
+
         let cancelTx: TxData | undefined;
 
         // Set up generic filling steps
