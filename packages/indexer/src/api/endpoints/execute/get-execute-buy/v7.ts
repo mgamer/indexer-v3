@@ -206,6 +206,11 @@ export const getExecuteBuyV7Options: RouteOptions = {
       blurAuth: Joi.string().description(
         "Advanced use case to pass personal blurAuthToken; the API will generate one if left empty."
       ),
+      conduitKey: Joi.string()
+        .lowercase()
+        .optional()
+        .pattern(regex.bytes32)
+        .description("Conduit Key to use to fulfill the order (defaults to OpenSea's)"),
     }),
   },
   response: {
@@ -359,6 +364,9 @@ export const getExecuteBuyV7Options: RouteOptions = {
       if (payload.source) {
         await sources.getOrInsert(payload.source);
       }
+
+      const conduitKey =
+        payload.conduitKey ?? Sdk.SeaportBase.Addresses.OpenseaConduitKey[config.chainId];
 
       // First pass at estimating the gas costs
       const txTags = initializeTxTags();
@@ -1760,7 +1768,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
           endTime: Math.floor(Date.now() / 1000) + 5 * 60,
           zoneHash: HashZero,
           salt: getRandomBytes(20).toString(),
-          conduitKey: Sdk.SeaportBase.Addresses.OpenseaConduitKey[config.chainId],
+          conduitKey: conduitKey,
           counter: (
             await new Sdk.SeaportV15.Exchange(config.chainId).getCounter(
               baseProvider,
@@ -1819,7 +1827,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
 
         // Check allowance
         const operator = new Sdk.SeaportBase.ConduitController(config.chainId).deriveConduit(
-          Sdk.SeaportBase.Addresses.OpenseaConduitKey[config.chainId]
+          conduitKey
         );
         const approvedAmount = await onChainData
           .fetchAndUpdateFtApproval(currency.contract.address, order.params.offerer, operator)
@@ -2198,6 +2206,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
           usePermit: payload.usePermit,
           swapProvider: payload.swapProvider,
           blurAuth,
+          conduitKey,
           onError: async (kind, error, data) => {
             errors.push({
               orderId: data.orderId,
