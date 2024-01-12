@@ -18,6 +18,20 @@ import * as offchainCancel from "@/utils/offchain-cancel";
 
 const version = "v3";
 
+type Step = {
+  id: string;
+  action: string;
+  description: string;
+  kind: string;
+  items: StepItem[];
+};
+
+type StepItem = {
+  status: string;
+  tip?: string;
+  data?: object;
+};
+
 export const getExecuteCancelV3Options: RouteOptions = {
   description: "Cancel Orders",
   notes: "Cancel existing orders on any marketplace",
@@ -80,8 +94,10 @@ export const getExecuteCancelV3Options: RouteOptions = {
       throw error;
     },
   },
-  handler: async (request: Request) => {
+  handler: async (request: Request): Promise<{ steps: Step[] }> => {
     const payload = request.payload as any;
+
+    const steps: Step[] = [];
 
     const gasSettings = {
       maxFeePerGas: payload.maxFeePerGas ? bn(payload.maxFeePerGas).toHexString() : undefined,
@@ -136,26 +152,21 @@ export const getExecuteCancelV3Options: RouteOptions = {
         }
       }
 
-      return {
-        steps: [
+      steps.push({
+        id: "cancellation",
+        action: "Submit cancellation",
+        description: "To cancel these orders you must confirm the transaction and pay the gas fee",
+        kind: "transaction",
+        items: [
           {
-            id: "cancellation",
-            action: "Submit cancellation",
-            description:
-              "To cancel these orders you must confirm the transaction and pay the gas fee",
-            kind: "transaction",
-            items: [
-              {
-                status: "incomplete",
-                data: {
-                  ...cancelTx,
-                  ...gasSettings,
-                },
-              },
-            ],
+            status: "incomplete",
+            data: {
+              ...cancelTx,
+              ...gasSettings,
+            },
           },
         ],
-      };
+      });
     }
 
     // Cancel by token or order ids
@@ -165,41 +176,26 @@ export const getExecuteCancelV3Options: RouteOptions = {
         payload.orderIds &&
         payload.orderIds.find((orderId: string) => orderId.startsWith("blur-collection-bid"))
       ) {
-        if (
-          !payload.orderIds.every((orderId: string) => orderId.startsWith("blur-collection-bid"))
-        ) {
-          throw Boom.badRequest("Only Blur bids can be cancelled together");
-        }
-
         const maker = payload.orderIds[0].split(":")[1];
 
-        // Set up generic filling steps
-        let steps: {
-          id: string;
-          action: string;
-          description: string;
-          kind: string;
-          items: {
-            status: string;
-            tip?: string;
-            data?: object;
-          }[];
-        }[] = [
-          {
-            id: "auth",
-            action: "Sign in to Blur",
-            description: "Some marketplaces require signing an auth message before filling",
-            kind: "signature",
-            items: [],
-          },
-          {
-            id: "cancellation-signature",
-            action: "Cancel order",
-            description: "Authorize the cancellation of the order",
-            kind: "signature",
-            items: [],
-          },
-        ];
+        const authStep: Step = {
+          id: "auth",
+          action: "Sign in to Blur",
+          description: "Some marketplaces require signing an auth message before filling",
+          kind: "signature",
+          items: [],
+        };
+
+        const cancellationStep: Step = {
+          id: "cancellation-signature",
+          action: "Cancel order",
+          description: "Authorize the cancellation of the order",
+          kind: "signature",
+          items: [],
+        };
+
+        steps.push(authStep);
+        steps.push(cancellationStep);
 
         // Handle Blur authentication
         const blurAuthId = b.getAuthId(maker);
@@ -224,7 +220,7 @@ export const getExecuteCancelV3Options: RouteOptions = {
               );
             }
 
-            steps[0].items.push({
+            authStep.items.push({
               status: "incomplete",
               data: {
                 sign: {
@@ -243,43 +239,41 @@ export const getExecuteCancelV3Options: RouteOptions = {
             });
 
             // Force the client to poll
-            steps[1].items.push({
+            cancellationStep.items.push({
               status: "incomplete",
               tip: "This step is dependent on a previous step. Once you've completed it, re-call the API to get the data for this step.",
             });
-
-            return { steps };
           }
         } else {
-          steps[0].items.push({
+          authStep.items.push({
             status: "complete",
           });
-        }
 
-        const orderIds = payload.orderIds.sort();
-        steps[1].items.push({
-          status: "incomplete",
-          data: {
-            sign: {
-              signatureKind: "eip191",
-              message: keccak256(["string[]"], [orderIds]),
-            },
-            post: {
-              endpoint: "/execute/cancel-signature/v1",
-              method: "POST",
-              body: {
-                orderIds,
-                orderKind: "blur-bid",
+          const orderIds = payload.orderIds.sort();
+          cancellationStep.items.push({
+            status: "incomplete",
+            data: {
+              sign: {
+                signatureKind: "eip191",
+                message: keccak256(["string[]"], [orderIds]),
+              },
+              post: {
+                endpoint: "/execute/cancel-signature/v1",
+                method: "POST",
+                body: {
+                  orderIds,
+                  orderKind: "blur-bid",
+                },
               },
             },
-          },
-        });
+          });
 
-        if (steps[0].items[0].status === "complete") {
-          steps = steps.slice(1);
+          // remove authStep
+          steps.splice(
+            steps.findIndex((el) => el == authStep),
+            1
+          );
         }
-
-        return { steps };
       }
 
       // Fetch the orders to get cancelled
@@ -337,14 +331,6 @@ export const getExecuteCancelV3Options: RouteOptions = {
         "alienswap",
         "payment-processor-v2",
       ];
-      if (isBulkCancel) {
-        const supportsBulkCancel =
-          supportedKinds.includes(orderResult.kind) &&
-          orderResults.every((o) => o.kind === orderResult.kind);
-        if (!supportsBulkCancel) {
-          throw Boom.notImplemented("Bulk cancelling not supported");
-        }
-      }
 
       // Handle off-chain cancellations
 
@@ -377,97 +363,77 @@ export const getExecuteCancelV3Options: RouteOptions = {
 
       if (offChainCancellableKind === "payment-processor-v2") {
         const orderIds = orderResults.map((o) => o.id).sort();
-        return {
-          steps: [
+        steps.push({
+          id: "cancellation-signature",
+          action: "Cancel order",
+          description: "Authorize the cancellation of the order(s)",
+          kind: "signature",
+          items: [
             {
-              id: "cancellation-signature",
-              action: "Cancel order",
-              description: "Authorize the cancellation of the order(s)",
-              kind: "signature",
-              items: [
-                {
-                  status: "incomplete",
-                  data: {
-                    sign: offchainCancel.paymentProcessorV2.generateOffChainCancellationSignatureData(
-                      orderIds
-                    ),
-                    post: {
-                      endpoint: "/execute/cancel-signature/v1",
-                      method: "POST",
-                      body: {
-                        orderIds,
-                        orderKind: offChainCancellableKind,
-                      },
-                    },
+              status: "incomplete",
+              data: {
+                sign: offchainCancel.paymentProcessorV2.generateOffChainCancellationSignatureData(
+                  orderIds
+                ),
+                post: {
+                  endpoint: "/execute/cancel-signature/v1",
+                  method: "POST",
+                  body: {
+                    orderIds,
+                    orderKind: offChainCancellableKind,
                   },
                 },
-              ],
+              },
             },
           ],
-        };
+        });
       } else if (offChainCancellableKind) {
-        return {
-          steps: [
+        steps.push({
+          id: "cancellation-signature",
+          action: "Cancel order",
+          description: "Authorize the cancellation of the order(s)",
+          kind: "signature",
+          items: [
             {
-              id: "cancellation-signature",
-              action: "Cancel order",
-              description: "Authorize the cancellation of the order(s)",
-              kind: "signature",
-              items: [
-                {
-                  status: "incomplete",
-                  data: {
-                    sign: offchainCancel.seaport.generateOffChainCancellationSignatureData(
-                      orderResults.map((o) => o.id)
-                    ),
-                    post: {
-                      endpoint: "/execute/cancel-signature/v1",
-                      method: "POST",
-                      body: {
-                        orderIds: orderResults.map((o) => o.id).sort(),
-                        orderKind: offChainCancellableKind,
-                      },
-                    },
+              status: "incomplete",
+              data: {
+                sign: offchainCancel.seaport.generateOffChainCancellationSignatureData(
+                  orderResults.map((o) => o.id)
+                ),
+                post: {
+                  endpoint: "/execute/cancel-signature/v1",
+                  method: "POST",
+                  body: {
+                    orderIds: orderResults.map((o) => o.id).sort(),
+                    orderKind: offChainCancellableKind,
                   },
                 },
-              ],
+              },
             },
           ],
-        };
+        });
       }
 
       // Handle on-chain cancellations
 
-      let cancelTx: TxData;
+      let cancelTx: TxData | undefined;
 
       // Set up generic filling steps
-      let steps: {
-        id: string;
-        action: string;
-        description: string;
-        kind: string;
-        items: {
-          status: string;
-          tip?: string;
-          data?: object;
-        }[];
-      }[] = [
-        {
-          id: "auth",
-          action: "Sign in to Blur",
-          description: "Some marketplaces require signing an auth message before filling",
-          kind: "signature",
-          items: [],
-        },
-        {
-          id: "cancellation-signature",
-          action: "Cancel order",
-          description:
-            "To cancel these orders you must confirm the transaction and pay the gas fee",
-          kind: "transaction",
-          items: [],
-        },
-      ];
+      const authStep: Step = {
+        id: "auth",
+        action: "Sign in to Blur",
+        description: "Some marketplaces require signing an auth message before filling",
+        kind: "signature",
+        items: [],
+      };
+
+      const cancellationStep: Step = {
+        id: "cancellation-signature",
+        action: "Cancel order",
+        description: "To cancel these orders you must confirm the transaction and pay the gas fee",
+        kind: "transaction",
+        items: [],
+      };
 
       const maker = fromBuffer(orderResult.maker);
       switch (orderResult.kind) {
@@ -577,7 +543,7 @@ export const getExecuteCancelV3Options: RouteOptions = {
                 );
               }
 
-              steps[0].items.push({
+              authStep.items.push({
                 status: "incomplete",
                 data: {
                   sign: {
@@ -596,33 +562,26 @@ export const getExecuteCancelV3Options: RouteOptions = {
               });
 
               // Force the client to poll
-              steps[1].items.push({
+              cancellationStep.items.push({
                 status: "incomplete",
                 tip: "This step is dependent on a previous step. Once you've completed it, re-call the API to get the data for this step.",
               });
-
-              return { steps };
             }
+          } else {
+            const blurCancelTx = await axios
+              .post(`${config.orderFetcherBaseUrl}/api/blur-cancel-listings`, {
+                maker,
+                contract: orderResult.raw_data.collection,
+                tokenId: orderResult.raw_data.tokenId,
+                authToken: blurAuth.accessToken,
+              })
+              .then((response) => response.data);
+            if (!blurCancelTx) {
+              throw Boom.badRequest("No matching order(s)");
+            }
+
+            cancelTx = blurCancelTx;
           }
-
-          steps[0].items.push({
-            status: "complete",
-          });
-
-          const blurCancelTx = await axios
-            .post(`${config.orderFetcherBaseUrl}/api/blur-cancel-listings`, {
-              maker,
-              contract: orderResult.raw_data.collection,
-              tokenId: orderResult.raw_data.tokenId,
-              authToken: blurAuth.accessToken,
-            })
-            .then((response) => response.data);
-          if (!blurCancelTx) {
-            throw Boom.badRequest("No matching order(s)");
-          }
-
-          cancelTx = blurCancelTx;
-
           break;
         }
 
@@ -631,16 +590,22 @@ export const getExecuteCancelV3Options: RouteOptions = {
         }
       }
 
-      steps[1].items.push({
-        status: "incomplete",
-        data: {
-          ...cancelTx,
-          ...gasSettings,
-        },
-      });
+      if (cancelTx !== undefined) {
+        cancellationStep.items.push({
+          status: "incomplete",
+          data: {
+            ...cancelTx!,
+            ...gasSettings,
+          },
+        });
+      }
 
-      if (!steps[0].items.length || steps[0].items[0].status === "complete") {
-        steps = steps.slice(1);
+      if (authStep.items.length && authStep.items[0].status !== "complete") {
+        steps.push(authStep);
+      }
+
+      if (cancellationStep.items.length) {
+        steps.push(cancellationStep);
       }
 
       return {
