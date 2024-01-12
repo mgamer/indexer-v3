@@ -657,11 +657,11 @@ export const updateAsksTokenData = async (
           {
             script: {
               source:
-                "ctx._source.token.isFlagged = params.token_is_flagged; ctx._source.token.isSpam = params.token_is_spam; ctx._source.token.isNsfw = params.token_is_nsfw; if (params.token_rarity_rank == null) { ctx._source.token.remove('rarityRank') } else { ctx._source.token.rarityRank = params.token_rarity_rank }",
+                "ctx._source.token.isNsfw = params.token_is_nsfw; ctx._source.token.isFlagged = params.token_is_flagged; ctx._source.token.isSpam = params.token_is_spam; if (params.token_rarity_rank == null) { ctx._source.token.remove('rarityRank') } else { ctx._source.token.rarityRank = params.token_rarity_rank }",
               params: {
+                token_is_nsfw: Number(tokenData.nsfwStatus) > 0,
                 token_is_flagged: Boolean(tokenData.isFlagged),
                 token_is_spam: Number(tokenData.isSpam) > 0,
-                token_is_nsfw: Number(tokenData.nsfwStatus) > 0,
                 token_rarity_rank: tokenData.rarityRank ?? null,
               },
             },
