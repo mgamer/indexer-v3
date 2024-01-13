@@ -353,6 +353,7 @@ export class Router {
       // Use permit instead of approvals (only works for USDC)
       usePermit?: boolean;
       swapProvider?: "uniswap" | "1inch";
+      // Conduit key to use when filling Seaport listings
       conduitKey?: string;
       // Callback for handling errors
       onError?: (
@@ -952,8 +953,6 @@ export class Router {
     );
 
     const relayer = options?.relayer ?? taker;
-    const conduitKey =
-      options?.conduitKey ?? (details[0].order as Sdk.SeaportV15.Order).params.conduitKey;
 
     // Direct filling for:
     // - seaport-1.5
@@ -968,7 +967,8 @@ export class Router {
           // All orders must have the same currency
           currency === details[0].currency &&
           // All orders must have the same conduit
-          (order as Sdk.SeaportV15.Order).params.conduitKey === conduitKey &&
+          (order as Sdk.SeaportV15.Order).params.conduitKey ===
+            (details[0].order as Sdk.SeaportV15.Order).params.conduitKey &&
           !fees?.length
       ) &&
       !options?.forceRouter &&
@@ -977,6 +977,8 @@ export class Router {
     ) {
       const exchange = new Sdk.SeaportV15.Exchange(this.chainId);
 
+      const conduitKey =
+        options?.conduitKey ?? (details[0].order as Sdk.SeaportV15.Order).params.conduitKey;
       const conduit = exchange.deriveConduit(conduitKey);
 
       let approval: FTApproval | undefined;
@@ -1059,7 +1061,8 @@ export class Router {
           // All orders must have the same currency
           currency === details[0].currency &&
           // All orders must have the same conduit
-          (order as Sdk.Alienswap.Order).params.conduitKey === conduitKey &&
+          (order as Sdk.Alienswap.Order).params.conduitKey ===
+            (details[0].order as Sdk.Alienswap.Order).params.conduitKey &&
           !fees?.length
       ) &&
       !options?.forceRouter &&
@@ -1068,6 +1071,8 @@ export class Router {
     ) {
       const exchange = new Sdk.Alienswap.Exchange(this.chainId);
 
+      const conduitKey =
+        options?.conduitKey ?? (details[0].order as Sdk.Alienswap.Order).params.conduitKey;
       const conduit = exchange.deriveConduit(conduitKey);
 
       let approval: FTApproval | undefined;
