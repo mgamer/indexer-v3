@@ -3863,7 +3863,7 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
         order: buyOrder,
         price: price2.toString(),
         builtInFeeBps: 550,
-        fees: []
+        fees: [],
       });
     }
 
@@ -3882,34 +3882,21 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
     // Trigger permits
     await seller.sendTransaction(tx.preTxs[0].txData);
 
-    for(const currentTx of tx.txs) {
+    for (const currentTx of tx.txs) {
       // Trigger approvals
       for (const approval of currentTx.approvals) {
         await seller.sendTransaction(approval.txData);
       }
-
-      if (currentTx.ftApprovals) {
-        for (const approval of currentTx.ftApprovals) {
-          await seller.sendTransaction(approval.txData);
-        }
+      for (const approval of currentTx.ftApprovals) {
+        await seller.sendTransaction(approval.txData);
       }
 
       // Trigger sale
-      const recepient = await seller.sendTransaction({
-        ...currentTx.txData,
-        gasLimit: 1000000
-      });
-      // console.log('currentTx', currentTx, recepient.hash)
+      await seller.sendTransaction(currentTx.txData);
     }
 
     const balanceAfter = await ethers.provider.getBalance(seller.address);
     const soldAmount = balanceAfter.sub(balanceBefore);
-
-    console.log({
-      usdc: ethers.utils.formatUnits(await usdc.getBalance(seller.address), 6),
-      weth: ethers.utils.formatEther(await weth.getBalance(seller.address)),
-      balance: ethers.utils.formatEther(soldAmount)
-    })
 
     const token1OwnerAfter = await erc721.ownerOf(tokenId1);
     const token2OwnerAfter = await erc721.ownerOf(tokenId2);
@@ -3924,5 +3911,4 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
     expect(await weth.getBalance(router.contracts.router.address)).to.eq(0);
     expect(await weth.getBalance(router.contracts.seaportV15Module.address)).to.eq(0);
   });
-
 });
