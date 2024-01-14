@@ -14,6 +14,7 @@ export default class PendingTxsJob extends AbstractRabbitMqJobHandler {
 
   protected async process(payload: pendingTxs.PendingMessage) {
     try {
+      logger.info(this.queueName, JSON.stringify(payload));
       await pendingTxs.handlePendingMessage(payload);
     } catch (error) {
       logger.error(
