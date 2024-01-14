@@ -42,7 +42,7 @@ export const getUserTokensV8Options: RouteOptions = {
   description: "User Tokens",
   notes:
     "Get tokens held by a user, along with ownership information such as associated orders and date acquired.",
-  tags: ["api", "Tokens"],
+  tags: ["api", "x-deprecated"],
   plugins: {
     "hapi-swagger": {
       order: 9,
@@ -766,7 +766,12 @@ export const getUserTokensV8Options: RouteOptions = {
               rarityRank: r.rarity_rank,
               supply: !_.isNull(r.supply) ? r.supply : null,
               remainingSupply: !_.isNull(r.remaining_supply) ? r.remaining_supply : null,
-              media: r.media,
+              media: Assets.getResizedImageUrl(
+                r.media,
+                undefined,
+                r.image_version,
+                r.media_mime_type
+              ),
               isFlagged: Boolean(Number(r.is_flagged)),
               isSpam: Number(r.t_is_spam) > 0 || Number(r.c_is_spam) > 0,
               isNsfw: Number(r.t_nsfw_status) > 0 || Number(r.c_nsfw_status) > 0,

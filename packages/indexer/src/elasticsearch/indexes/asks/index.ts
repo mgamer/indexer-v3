@@ -203,6 +203,7 @@ export const searchTokenAsks = async (params: {
   floorAskPrice?: { min?: number; max?: number };
   normalizeRoyalties?: boolean;
   spamTokens?: { operation: "include" | "exclude" };
+  nsfwTokens?: { operation: "include" | "exclude" };
   flaggedTokens?: { operation: "include" | "exclude" };
   sources?: number[];
   limit?: number;
@@ -322,6 +323,24 @@ export const searchTokenAsks = async (params: {
       });
       (esQuery as any).bool.filter.push({
         term: { "collection.isSpam": true },
+      });
+    }
+  }
+
+  if (params.nsfwTokens) {
+    if (params.nsfwTokens.operation === "exclude") {
+      (esQuery as any).bool.must_not.push({
+        term: { "token.isNsfw": true },
+      });
+      (esQuery as any).bool.must_not.push({
+        term: { "collection.isNsfw": true },
+      });
+    } else {
+      (esQuery as any).bool.filter.push({
+        term: { "token.isNsfw": true },
+      });
+      (esQuery as any).bool.filter.push({
+        term: { "collection.isNsfw": true },
       });
     }
   }
@@ -529,6 +548,7 @@ export const updateAsksTokenData = async (
   tokenData: {
     isFlagged: number;
     isSpam: number;
+    nsfwStatus: number;
     rarityRank?: number;
   }
 ): Promise<boolean> => {
@@ -552,6 +572,17 @@ export const updateAsksTokenData = async (
           {
             term: {
               "token.isSpam": Number(tokenData.isSpam) > 0,
+            },
+          },
+        ],
+      },
+    },
+    {
+      bool: {
+        must_not: [
+          {
+            term: {
+              "token.isNsfw": Number(tokenData.nsfwStatus) > 0,
             },
           },
         ],
@@ -626,8 +657,9 @@ export const updateAsksTokenData = async (
           {
             script: {
               source:
-                "ctx._source.token.isFlagged = params.token_is_flagged; ctx._source.token.isSpam = params.token_is_spam; if (params.token_rarity_rank == null) { ctx._source.token.remove('rarityRank') } else { ctx._source.token.rarityRank = params.token_rarity_rank }",
+                "ctx._source.token.isNsfw = params.token_is_nsfw; ctx._source.token.isFlagged = params.token_is_flagged; ctx._source.token.isSpam = params.token_is_spam; if (params.token_rarity_rank == null) { ctx._source.token.remove('rarityRank') } else { ctx._source.token.rarityRank = params.token_rarity_rank }",
               params: {
+                token_is_nsfw: Number(tokenData.nsfwStatus) > 0,
                 token_is_flagged: Boolean(tokenData.isFlagged),
                 token_is_spam: Number(tokenData.isSpam) > 0,
                 token_rarity_rank: tokenData.rarityRank ?? null,
@@ -647,7 +679,7 @@ export const updateAsksTokenData = async (
           "elasticsearch-asks",
           JSON.stringify({
             topic: "updateAsksTokenData",
-            message: `Errors in response`,
+            message: `Errors in response. contract=${contract}, tokenId=${tokenId}`,
             data: {
               contract,
               tokenId,
@@ -661,22 +693,24 @@ export const updateAsksTokenData = async (
       } else {
         keepGoing = pendingUpdateDocuments.length === 1000;
 
-        // logger.info(
-        //   "elasticsearch-asks",
-        //   JSON.stringify({
-        //     topic: "updateAsksTokenData",
-        //     message: `Success`,
-        //     data: {
-        //       contract,
-        //       tokenId,
-        //       tokenData,
-        //     },
-        //     bulkParams,
-        //     bulkParamsJSON: JSON.stringify(bulkParams),
-        //     response,
-        //     keepGoing,
-        //   })
-        // );
+        if (config.chainId === 1) {
+          logger.info(
+            "elasticsearch-asks",
+            JSON.stringify({
+              topic: "updateAsksTokenData",
+              message: `Success. contract=${contract}, tokenId=${tokenId}`,
+              data: {
+                contract,
+                tokenId,
+                tokenData,
+              },
+              bulkParams,
+              bulkParamsJSON: JSON.stringify(bulkParams),
+              response,
+              keepGoing,
+            })
+          );
+        }
       }
     }
   } catch (error) {
@@ -689,7 +723,7 @@ export const updateAsksTokenData = async (
         "elasticsearch-asks",
         JSON.stringify({
           topic: "updateAsksTokenData",
-          message: `Unexpected error`,
+          message: `Retryable error. contract=${contract}, tokenId=${tokenId}`,
           data: {
             contract,
             tokenId,
@@ -705,7 +739,7 @@ export const updateAsksTokenData = async (
         "elasticsearch-asks",
         JSON.stringify({
           topic: "updateAsksTokenData",
-          message: `Unexpected error`,
+          message: `Unexpected error. contract=${contract}, tokenId=${tokenId}`,
           data: {
             contract,
             tokenId,
@@ -726,6 +760,7 @@ export const updateAsksCollectionData = async (
   collectionId: string,
   collectionData: {
     isSpam: number;
+    nsfwStatus: number;
   }
 ): Promise<boolean> => {
   let keepGoing = false;
@@ -737,6 +772,17 @@ export const updateAsksCollectionData = async (
           {
             term: {
               "collection.isSpam": Number(collectionData.isSpam) > 0,
+            },
+          },
+        ],
+      },
+    },
+    {
+      bool: {
+        must_not: [
+          {
+            term: {
+              "collection.isNsfw": Number(collectionData.nsfwStatus) > 0,
             },
           },
         ],
@@ -789,9 +835,11 @@ export const updateAsksCollectionData = async (
           { update: { _index: document.index, _id: document.id, retry_on_conflict: 3 } },
           {
             script: {
-              source: "ctx._source.collection.isSpam = params.collection_is_spam;",
+              source:
+                "ctx._source.collection.isSpam = params.collection_is_spam; ctx._source.collection.isNsfw = params.collection_is_nsfw;",
               params: {
                 collection_is_spam: Number(collectionData.isSpam) > 0,
+                collection_is_nsfw: Number(collectionData.nsfwStatus) > 0,
               },
             },
           },

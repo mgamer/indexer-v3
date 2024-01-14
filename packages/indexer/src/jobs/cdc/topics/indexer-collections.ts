@@ -17,7 +17,6 @@ import {
   EventKind,
   processCollectionEventJob,
 } from "@/jobs/elasticsearch/collections/process-collection-event-job";
-import { collectionCheckSpamJob } from "@/jobs/collections-refresh/collections-check-spam-job";
 import { ActivitiesCollectionCache } from "@/models/activities-collection-cache";
 
 export class IndexerCollectionsHandler extends KafkaEventHandler {
@@ -47,7 +46,10 @@ export class IndexerCollectionsHandler extends KafkaEventHandler {
       },
     ]);
 
-    await collectionCheckSpamJob.addToQueue({ collectionId: payload.after.id });
+    // await collectionCheckSpamJob.addToQueue({
+    //   collectionId: payload.after.id,
+    //   trigger: "metadata-changed",
+    // });
   }
 
   protected async handleUpdate(payload: any): Promise<void> {
@@ -165,31 +167,38 @@ export class IndexerCollectionsHandler extends KafkaEventHandler {
 
       // If the name/url/verification changed check for spam
       if (((nameChanged || urlChanged) && !isSpam) || (verificationChanged && isSpam)) {
-        await collectionCheckSpamJob.addToQueue({ collectionId: payload.after.id });
+        // await collectionCheckSpamJob.addToQueue({
+        //   collectionId: payload.after.id,
+        //   trigger: "metadata-changed",
+        // });
       }
-
-      const spamStatusChanged = Boolean(payload.before.is_spam) !== Boolean(payload.after.is_spam);
 
       // Update the elasticsearch activities index
-      if (spamStatusChanged) {
-        logger.info(
-          "cdc-indexer-collections",
-          JSON.stringify({
-            topic: "debugActivitiesErrors",
-            message: `spamStatusChanged. collectionId=${payload.after.id}, before=${payload.before.is_spam}, after=${payload.after.is_spam}`,
+      if (changed.some((value) => ["is_spam", "nfsw_status"].includes(value))) {
+        const spamStatusChanged = payload.before.is_spam > 0 !== payload.after.is_spam > 0;
+        const nsfwStatusChanged = payload.before.nfsw_status > 0 !== payload.after.nfsw_status > 0;
+
+        if (spamStatusChanged || nsfwStatusChanged) {
+          logger.info(
+            "cdc-indexer-collections",
+            JSON.stringify({
+              topic: "debugActivitiesErrors",
+              message: `change detected. collectionId=${payload.after.id}, before=${payload.before.is_spam}, after=${payload.after.is_spam}`,
+              collectionId: payload.after.id,
+              spamStatusChanged,
+              nsfwStatusChanged,
+            })
+          );
+
+          await refreshActivitiesCollectionMetadataJob.addToQueue({
             collectionId: payload.after.id,
-          })
-        );
+          });
 
-        await refreshActivitiesCollectionMetadataJob.addToQueue({
-          collectionId: payload.after.id,
-          context: "spamStatusChanged",
-        });
-      }
-
-      // Update the elasticsearch asks index
-      if (payload.after.floor_sell_id && spamStatusChanged) {
-        await refreshAsksCollectionJob.addToQueue(payload.after.id);
+          // Update the elasticsearch asks index
+          if (payload.after.floor_sell_id) {
+            await refreshAsksCollectionJob.addToQueue(payload.after.id);
+          }
+        }
       }
 
       // Update the elasticsearch collections index

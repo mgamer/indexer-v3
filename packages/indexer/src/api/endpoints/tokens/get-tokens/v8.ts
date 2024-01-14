@@ -394,9 +394,15 @@ export const getTokensV8Options: RouteOptions = {
 
     let esTokens: any[] = [];
 
-    const enableElasticsearchAsks =
+    let enableElasticsearchAsks =
       query.sortBy === "floorAskPrice" &&
       !["tokenName", "tokenSetId"].some((filter) => query[filter]);
+
+    if (enableElasticsearchAsks && query.continuation) {
+      const contArr = splitContinuation(query.continuation);
+
+      enableElasticsearchAsks = !isNaN(Number(contArr));
+    }
 
     if (enableElasticsearchAsks) {
       logger.info(
@@ -1459,7 +1465,12 @@ export const getTokensV8Options: RouteOptions = {
               metadata: Object.values(metadata).every((el) => el === undefined)
                 ? undefined
                 : metadata,
-              media: r.media,
+              media: Assets.getResizedImageUrl(
+                r.media,
+                undefined,
+                r.image_version,
+                r.media_mime_type
+              ),
               kind: r.kind,
               isFlagged: Boolean(Number(r.is_flagged)),
               isSpam: Number(r.t_is_spam) > 0 || Number(r.c_is_spam) > 0,

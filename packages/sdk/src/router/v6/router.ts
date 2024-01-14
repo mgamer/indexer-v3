@@ -362,6 +362,8 @@ export class Router {
       usePermit?: boolean;
       // What provider to use when doing swaps
       swapProvider?: "uniswap" | "1inch";
+      // Conduit key to use when filling Seaport listings
+      conduitKey?: string;
       // Callback for handling errors
       onError?: (
         kind: string,
@@ -984,7 +986,8 @@ export class Router {
     ) {
       const exchange = new Sdk.SeaportV15.Exchange(this.chainId);
 
-      const conduitKey = (details[0].order as Sdk.SeaportV15.Order).params.conduitKey;
+      const conduitKey =
+        options?.conduitKey ?? (details[0].order as Sdk.SeaportV15.Order).params.conduitKey;
       const conduit = exchange.deriveConduit(conduitKey);
 
       let approval: FTApproval | undefined;
@@ -1077,7 +1080,8 @@ export class Router {
     ) {
       const exchange = new Sdk.Alienswap.Exchange(this.chainId);
 
-      const conduitKey = (details[0].order as Sdk.Alienswap.Order).params.conduitKey;
+      const conduitKey =
+        options?.conduitKey ?? (details[0].order as Sdk.Alienswap.Order).params.conduitKey;
       const conduit = exchange.deriveConduit(conduitKey);
 
       let approval: FTApproval | undefined;
