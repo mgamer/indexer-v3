@@ -13,7 +13,7 @@ export class PendingTxsListener {
   public ws: Websocket;
 
   constructor() {
-    this.ws = new Websocket("wss://virginia.polygon.blxrbdn.com/ws", {
+    this.ws = new Websocket("wss://api.blxrbdn.com/ws", {
       headers: {
         Authorization: config.bloxrouteAuth,
       },
