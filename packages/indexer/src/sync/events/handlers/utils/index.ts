@@ -8,7 +8,9 @@ import {
   assignMintCommentToFillEvents,
   assignSourceToFillEvents,
 } from "@/events-sync/handlers/utils/fills";
+import { BaseEventParams } from "@/events-sync/parser";
 import * as es from "@/events-sync/storage";
+import * as pendingTxs from "@/utils/pending-txs";
 
 import { GenericOrderInfo } from "@/jobs/orderbook/utils";
 import {
@@ -38,8 +40,6 @@ import {
   permitUpdatesJob,
   PermitUpdatesJobPayload,
 } from "@/jobs/permit-updates/permit-updates-job";
-import { BaseEventParams } from "@/events-sync/parser";
-import * as pendingTranscation from "@/utils/pending-transcation";
 
 // Semi-parsed and classified event
 export type EnhancedEvent = {
@@ -154,7 +154,7 @@ export const processOnChainData = async (data: OnChainData, backfill?: boolean) 
   if (!backfill) {
     await Promise.all([
       assignSourceToFillEvents(allFillEvents),
-      pendingTranscation.handleFillEvents(allFillEvents),
+      pendingTxs.onFillEventsCallback(allFillEvents),
     ]);
   }
   const endAssignSourceToFillEvents = Date.now();

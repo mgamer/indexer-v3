@@ -28,7 +28,7 @@ import * as sourcesEndpoints from "@/api/endpoints/sources";
 import * as chainEndpoints from "@/api/endpoints/chain";
 import * as debugEndpoints from "@/api/endpoints/debug";
 import * as currenciesEndpoints from "@/api/endpoints/currencies";
-import * as pendingTranscationEndpoints from "@/api/endpoints/pending-transcation";
+import * as pendingTxsEndpoints from "@/api/endpoints/pending-txs";
 
 export const setupRoutes = (server: Server) => {
   // Activity
@@ -1603,8 +1603,8 @@ export const setupRoutes = (server: Server) => {
   // Pending transcation
   server.route({
     method: "GET",
-    path: "/pending-transcation/tokens/v1",
-    options: pendingTranscationEndpoints.getPendingTokensV1Options,
+    path: "/pending-txs/tokens/v1",
+    options: pendingTxsEndpoints.getPendingTokensV1Options,
   });
 
   // Debug APIs
