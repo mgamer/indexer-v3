@@ -3804,7 +3804,7 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
         order: buyOrder,
         price: price1.toString(),
         permit,
-        builtInFeeBps: 550,
+        builtInFeeBps: fee1.toNumber(),
         fees: [],
       });
     }
@@ -3862,7 +3862,7 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
         tokenId: tokenId2.toString(),
         order: buyOrder,
         price: price2.toString(),
-        builtInFeeBps: 550,
+        builtInFeeBps: fee2.toNumber(),
         fees: [],
       });
     }

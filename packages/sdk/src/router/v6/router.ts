@@ -4661,6 +4661,7 @@ export class Router {
     // Handle different sell currency requests
 
     const ftApprovals: FTApproval[] = [];
+    const ftTransferItems: ApprovalProxy.TransferItem[] = [];
     const successfulSwapInfos: SwapInfo[] = [];
 
     let totalBETHToUnwrap = bn(0);
@@ -4696,6 +4697,14 @@ export class Router {
       for (const swapDetails of Object.values(aggregatedSwapDetails)) {
         // All swap details for this pool will have the same out and in tokens
         const { tokenIn, tokenOut } = swapDetails[0];
+        const transfers = swapDetails.map((s) => {
+          return {
+            recipient: s.recipient,
+            amount: s.tokenInAmount,
+            // Unwrap if the out token is ETH
+            toETH: isETH(this.chainId, s.tokenOut),
+          };
+        });
 
         const totalAmountIn = swapDetails
           .map((order) => bn(order.tokenInAmount))
@@ -4757,6 +4766,36 @@ export class Router {
               operator: conduit,
               txData: generateFTApprovalTxData(tokenIn, taker, conduit),
             });
+
+            if (tokenIn !== tokenOut) {
+              // The swap module will take care of handling additional transfers
+              ftTransferItems.push({
+                items: [
+                  {
+                    itemType: ApprovalProxy.ItemType.ERC20,
+                    token: tokenIn,
+                    identifier: 0,
+                    amount: inAmount,
+                  },
+                ],
+                recipient: swapModule.address,
+              });
+            } else {
+              // Split based on the individual transfers
+              ftTransferItems.push(
+                ...transfers.map((t) => ({
+                  items: [
+                    {
+                      itemType: ApprovalProxy.ItemType.ERC20,
+                      token: tokenIn,
+                      identifier: 0,
+                      amount: t.amount,
+                    },
+                  ],
+                  recipient: t.recipient,
+                }))
+              );
+            }
           }
         } catch (error) {
           if (!options?.partial) {
@@ -4963,15 +5002,30 @@ export class Router {
         txTags: routerTxTags,
         txData: {
           from: taker,
-          to: this.contracts.router.address,
-          data:
-            this.contracts.router.interface.encodeFunctionData("execute", [
-              executions.map((e) => e.info),
-            ]) + generateSourceBytes(options?.source),
-          value: executions
-            .map((e) => bn(e.info.value))
-            .reduce((a, b) => a.add(b))
-            .toHexString(),
+          ...(ftTransferItems.length
+            ? {
+                to: this.contracts.approvalProxy.address,
+                data:
+                  this.contracts.approvalProxy.interface.encodeFunctionData(
+                    "bulkTransferWithExecute",
+                    [
+                      ftTransferItems,
+                      executions.map((e) => e.info),
+                      Sdk.SeaportBase.Addresses.ReservoirConduitKey[this.chainId],
+                    ]
+                  ) + generateSourceBytes(options?.source),
+              }
+            : {
+                to: this.contracts.router.address,
+                data:
+                  this.contracts.router.interface.encodeFunctionData("execute", [
+                    executions.map((e) => e.info),
+                  ]) + generateSourceBytes(options?.source),
+                value: executions
+                  .map((e) => bn(e.info.value))
+                  .reduce((a, b) => a.add(b))
+                  .toHexString(),
+              }),
         },
         orderIds: [...new Set(executions.map((e) => e.orderIds).flat())],
       });

@@ -56,7 +56,9 @@ contract SwapModule is BaseExchangeModule {
 
     uint256 length = targets.length;
     for (uint256 i = 0; i < length; ) {
-      _sendERC20(targets[i].recipient, targets[i].amount, WETH);
+      // Zero represents "everything"
+      uint256 amount = targets[i].amount == 0 ? WETH.balanceOf(address(this)) : targets[i].amount;
+      _sendERC20(targets[i].recipient, amount, WETH);
 
       unchecked {
         ++i;
@@ -72,7 +74,9 @@ contract SwapModule is BaseExchangeModule {
 
     uint256 length = targets.length;
     for (uint256 i = 0; i < length; ) {
-      _sendETH(targets[i].recipient, targets[i].amount);
+      // Zero represents "everything"
+      uint256 amount = targets[i].amount == 0 ? address(this).balance : targets[i].amount;
+      _sendETH(targets[i].recipient, amount);
 
       unchecked {
         ++i;
@@ -98,7 +102,7 @@ contract SwapModule is BaseExchangeModule {
         for (uint256 j = 0; j < length; ) {
           TransferDetail calldata transferDetail = swap.transfers[j];
           if (transferDetail.toETH) {
-            // Zero represents "send everything"
+            // Zero represents "everything"
             uint256 amount = transferDetail.amount == 0
               ? WETH.balanceOf(address(this))
               : transferDetail.amount;
@@ -106,7 +110,7 @@ contract SwapModule is BaseExchangeModule {
             WETH.withdraw(amount);
             _sendETH(transferDetail.recipient, amount);
           } else {
-            // Zero represents "send everything"
+            // Zero represents "everything"
             uint256 amount = transferDetail.amount == 0
               ? IERC20(swap.params.tokenOut).balanceOf(address(this))
               : transferDetail.amount;
@@ -152,7 +156,7 @@ contract SwapModule is BaseExchangeModule {
         for (uint256 j = 0; j < transfersLength; ) {
           TransferDetail calldata transferDetail = swap.transfers[j];
           if (transferDetail.toETH) {
-            // Zero represents "send everything"
+            // Zero represents "everything"
             uint256 amount = transferDetail.amount == 0
               ? WETH.balanceOf(address(this))
               : transferDetail.amount;
@@ -160,7 +164,7 @@ contract SwapModule is BaseExchangeModule {
             WETH.withdraw(amount);
             _sendETH(transferDetail.recipient, amount);
           } else {
-            // Zero represents "send everything"
+            // Zero represents "everything"
             uint256 amount = transferDetail.amount == 0
               ? IERC20(swap.params.tokenOut).balanceOf(address(this))
               : transferDetail.amount;
@@ -203,7 +207,7 @@ contract SwapModule is BaseExchangeModule {
         for (uint256 j = 0; j < transfersLength; ) {
           TransferDetail calldata transferDetail = swap.transfers[j];
           if (transferDetail.toETH) {
-            // Zero represents "send everything"
+            // Zero represents "everything"
             uint256 amount = transferDetail.amount == 0
               ? WETH.balanceOf(address(this))
               : transferDetail.amount;
@@ -211,7 +215,7 @@ contract SwapModule is BaseExchangeModule {
             WETH.withdraw(amount);
             _sendETH(transferDetail.recipient, amount);
           } else {
-            // Zero represents "send everything"
+            // Zero represents "everything"
             uint256 amount = transferDetail.amount == 0
               ? IERC20(swap.params.tokenOut).balanceOf(address(this))
               : transferDetail.amount;
