@@ -49,6 +49,14 @@ export const vaultInit: EventData = {
     numTopics: 1,
     abi: new Interface([`event EnableRedeemUpdated(bool enabled)`]),
   };
+
+  export const enableSwapUpdated: EventData = {
+    kind: "nftx-v3",
+    subKind: "nftx-v3-enable-swap-updated",
+    topic: "0x8f4dc19a0a35d805af4e9053cf101831ab5200b9b57fd5c953cee436833b892b",
+    numTopics: 1,
+    abi: new Interface([`event EnableSwapUpdated(bool enabled)`]),
+  };
   
   export const redeemed: EventData = {
     kind: "nftx-v3",
@@ -124,65 +132,3 @@ export const vaultInit: EventData = {
       )`,
     ]),
   };
-  
-  
-
-
-// OLD VERSIONS BELOW, NEW VERSIONS ABOVE.
-
-
-// The swap event below was the old version and have amount 0 and 1 as in and out, I've left here to check the in/out additional values, check @apoorv.
-// export const swap: EventData = {
-//   kind: "nftx",
-//   subKind: "nftx-swap",
-//   topic: "0xda75130c11e2803fc0c6a1650388bb059fc4bec5f4714f07e300491568d8cae2",
-//   numTopics: 3,
-//   abi: new Interface([
-//     `event Swap(
-//       address indexed sender,
-//       uint256 amount0In,
-//       uint256 amount1In,
-//       uint256 amount0Out,
-//       uint256 amount1Out,
-//       address indexed to
-//     )`,
-//   ]),
-// };
-
-
-//0x1f72ad2a14447fa756b6f5aca53504645af79813493aca2d906b69e4aaeb9492
-
-
-// no longer any mint events, only the minted event. Check @apoorv
-
-// export const mint: EventData = {
-//   kind: "nftx",
-//   subKind: "nftx-mint",
-//   topic: "0x4c209b5fc8ad50758f13e2e1088ba56a560dff690a1c6fef26394f4c03821c4f",
-//   numTopics: 2,
-//   abi: new Interface([
-//     `event Mint(
-//       address indexed sender,
-//       uint256 amount0,
-//       uint256 amount1
-//     )`,
-//   ]),
-// };
-
-
-// @apoorv is there any more burn events?
-
-// export const burn: EventData = {
-//   kind: "nftx",
-//   subKind: "nftx-burn",
-//   topic: "0xdccd412f0b1252819cb1fd330b93224ca42612892bb3f4f789976e6d81936496",
-//   numTopics: 3,
-//   abi: new Interface([
-//     `event Burn(
-//       address indexed sender,
-//       uint256 amount0,
-//       uint256 amount1,
-//       address indexed to
-//     )`,
-//   ]),
-// };

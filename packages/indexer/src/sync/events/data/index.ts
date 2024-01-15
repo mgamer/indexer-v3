@@ -230,6 +230,7 @@ export type EventSubKind =
   | "nftx-v3-eligibility-deployed"
   | "nftx-v3-enable-mint-updated"
   | "nftx-v3-enable-redeem-updated"
+  | "nftx-v3-enable-swap-updated"
   | "blur-orders-matched"
   | "blur-order-cancelled"
   | "blur-nonce-incremented"
