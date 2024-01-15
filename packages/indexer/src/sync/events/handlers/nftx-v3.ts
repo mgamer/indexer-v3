@@ -436,6 +436,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
       case "nftx-v3-vault-init":
       case "nftx-v3-vault-shutdown":
       case "nftx-v3-eligibility-deployed":
+      case "nftx-v3-enable-redeem-updated":
       case "nftx-v3-enable-mint-updated": {
         // Update pool
         onChainData.orders.push({
@@ -454,10 +455,9 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
 
         break;
       }
-// Need to check here what we do with the const ftPool. I set it for nftx-v3 instead of SushiSwap, but is this how we handle is now?  Also, I'm not sure we still have the nftx-v3-burn feature.
-      case "nftx-v3-swap":
-      case "nftx-v3-mint":
-      case "nftx-v3-burn": {
+
+      case "nftx-minted":
+      case "nftx-v3-swap": {
         const ftPool = await nftxV3Utils.getFtPoolDetails(baseEventParams.address, true, "nftx-v3");
         if (ftPool) {
           const token0NftPool = await nftxV3Utils.getNftPoolDetails(ftPool.token0, true);
@@ -499,56 +499,6 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
 
         break;
       }
-
-      // The off-chain order pricing doesn't consider Uniswap V3 yet - and probably doesn't need this either because we've updated the Sushi above to be the NFTX AMM.
-
-      // case "nftx-swap-v3": {
-      //   const skipCheck = false;
-      //   const ftPool = await nftxUtils.getFtPoolDetails(
-      //     baseEventParams.address,
-      //     true,
-      //     "uniswap-v3"
-      //   );
-      //   if (ftPool) {
-      //     const token0NftPool = await nftxUtils.getNftPoolDetails(ftPool.token0, skipCheck);
-      //     if (token0NftPool) {
-      //       // Update pool
-      //       onChainData.orders.push({
-      //         kind: "nftx",
-      //         info: {
-      //           orderParams: {
-      //             pool: ftPool.token0,
-      //             txHash: baseEventParams.txHash,
-      //             txTimestamp: baseEventParams.timestamp,
-      //             txBlock: baseEventParams.block,
-      //             logIndex: baseEventParams.logIndex,
-      //           },
-      //           metadata: {},
-      //         },
-      //       });
-      //     }
-
-      //     const token1NftPool = await nftxUtils.getNftPoolDetails(ftPool.token1, skipCheck);
-      //     if (token1NftPool) {
-      //       // Update pool
-      //       onChainData.orders.push({
-      //         kind: "nftx",
-      //         info: {
-      //           orderParams: {
-      //             pool: ftPool.token1,
-      //             txHash: baseEventParams.txHash,
-      //             txTimestamp: baseEventParams.timestamp,
-      //             txBlock: baseEventParams.block,
-      //             logIndex: baseEventParams.logIndex,
-      //           },
-      //           metadata: {},
-      //         },
-      //       });
-      //     }
-      //   }
-
-      //   break;
-      // }
     }
   }
 };
