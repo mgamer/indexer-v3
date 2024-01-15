@@ -39,21 +39,28 @@ export const getPoolFeatures = async (address: string, provider: JsonRpcProvider
     "function is1155() view returns (bool)",
     "function allowAllItems() view returns (bool)",
     "function enableMint() view returns (bool)",
+    "function enableRedeem() view returns (bool)",
+    "function enableSwap() view returns (bool)",
   ]);
 
   const vault = new Contract(address, iface, provider);
-  const [assetAddress, is1155, allowAllItems, enableMint] = await Promise.all([
-    vault.assetAddress(),
-    vault.is1155(),
-    vault.allowAllItems(),
-    vault.enableMint(),
-  ]);
+  const [assetAddress, is1155, allowAllItems, enableMint, enableRedeem, enableSwap] =
+    await Promise.all([
+      vault.assetAddress(),
+      vault.is1155(),
+      vault.allowAllItems(),
+      vault.enableMint(),
+      vault.enableRedeem(),
+      vault.enableSwap(),
+    ]);
 
   return {
     assetAddress: assetAddress.toLowerCase(),
     is1155: Boolean(is1155),
     allowAllItems: Boolean(allowAllItems),
     enableMint: Boolean(enableMint),
+    enableRedeem: Boolean(enableRedeem),
+    enableSwap: Boolean(enableSwap),
   };
 };
 
