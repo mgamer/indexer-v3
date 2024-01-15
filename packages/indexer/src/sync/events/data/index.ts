@@ -223,8 +223,6 @@ export type EventSubKind =
   | "nftx-v3-user-staked"
   | "nftx-v3-swapped"
   | "nftx-v3-swap"
-  | "nftx-v3-mint"
-  | "nftx-v3-burn"
   | "nftx-v3-vault-init"
   | "nftx-v3-vault-shutdown"
   | "nftx-v3-eligibility-deployed"
