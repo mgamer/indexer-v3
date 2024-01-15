@@ -12,18 +12,7 @@ import {
     saveNftxV3NftPool
 } from "@/models/nftx-v3-pools";
 
-const ifaceUniV2 = new Interface([
-  `event Swap(
-    address indexed sender,
-    uint256 amount0In,
-    uint256 amount1In,
-    uint256 amount0Out,
-    uint256 amount1Out,
-    address indexed to
-  )`,
-]);
-
-const ifaceUniV3 = new Interface([
+const ifaceNftxV3 = new Interface([
   `event Swap(
     address indexed sender,
     address indexed recipient,
@@ -117,10 +106,10 @@ export const isRedeem = (log: Log, address: string) => {
   }
   return false;
 };
-// TODO: @apporv review this area to make sure we're getting the NFTX AMM here. Javery updated the uniswap-v3 to nftx-v3 in the first if statement below and commented out the sushiswap version.  While users could create additional liquidity positions on Uni or Sushi for NFTXV3 items I can't see why they would given we offer the same options (and more) and vault fees are only earned with us.
+
 export const isSwap = (log: Log) => {
   if (
-    [ifaceUniV2.getEventTopic("Swap"), ifaceUniV3.getEventTopic("Swap")].includes(log.topics[0])
+    [ifaceNftxV3.getEventTopic("Swap")].includes(log.topics[0])
   ) {
     return true;
   }
@@ -128,10 +117,11 @@ export const isSwap = (log: Log) => {
 };
 
 export const tryParseSwap = async (log: Log) => {
-  if (log.topics[0] === ifaceUniV3.getEventTopic("Swap")) {
+
+  if (log.topics[0] === ifaceNftxV3.getEventTopic("Swap")) {
     const ftPool = await getFtPoolDetails(log.address.toLowerCase(), false, "nftx-v3");
     if (ftPool) {
-      const parsedLog = ifaceUniV3.parseLog(log);
+      const parsedLog = ifaceNftxV3.parseLog(log);
       const rawAmount0 = parsedLog.args["amount0"].toString();
       const rawAmount1 = parsedLog.args["amount1"].toString();
       // Generate v2-style output
@@ -149,17 +139,4 @@ export const tryParseSwap = async (log: Log) => {
     }
   }
 
-//   if (log.topics[0] === ifaceUniV2.getEventTopic("Swap")) {
-//     const ftPool = await getFtPoolDetails(log.address.toLowerCase(), false, "sushiswap");
-//     if (ftPool) {
-//       const parsedLog = ifaceUniV2.parseLog(log);
-//       return {
-//         ftPool,
-//         amount0In: parsedLog.args["amount0In"].toString(),
-//         amount1In: parsedLog.args["amount1In"].toString(),
-//         amount0Out: parsedLog.args["amount0Out"].toString(),
-//         amount1Out: parsedLog.args["amount1Out"].toString(),
-//       };
-//     }
-//   }
 };
