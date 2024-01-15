@@ -262,15 +262,25 @@ export const getPoolPrice = async (
   }
 };
 
-export const getPoolPriceFromAPI = async (
-  vault: string,
-  side: "sell" | "buy",
-  slippage: number,
-  provider: JsonRpcProvider,
-  userAddress: string,
-  tokenIds: string[],
-  amounts?: string[]
-): Promise<{
+export const getPoolPriceFromAPI = async ({
+  type,
+  provider,
+  side,
+  slippage,
+  tokenIds,
+  userAddress,
+  vault,
+  amounts,
+}: {
+  type: "quote" | "price";
+  vault: string;
+  side: "sell" | "buy";
+  slippage: number;
+  provider: JsonRpcProvider;
+  tokenIds: string[];
+  userAddress?: string;
+  amounts?: string[];
+}): Promise<{
   price: BigNumberish;
   executeCallData: string;
 }> => {
@@ -299,48 +309,63 @@ export const getPoolPriceFromAPI = async (
   };
   let price: BigNumber;
   if (side === "buy") {
-    let tokenIdsQuery = "";
-    let tokenAmountsQuery = "";
+    const queryParams: string[][] = [];
+
     for (const tokenId of tokenIds) {
-      tokenIdsQuery += `&buyTokenIds=${tokenId}`;
+      queryParams.push(["buyTokenIds", tokenId]);
     }
     if (is1155 && amounts) {
       for (const amount of amounts) {
-        tokenAmountsQuery += `&buyAmounts=${amount}`;
+        queryParams.push(["buyAmounts", amount]);
       }
     }
-    apiResponse = await axios.get(
-      `${NFTX_ENDPOINT}/${chainId}/quote?type=${side}&vaultId=${vaultId.toString()}&userAddress=${userAddress}${tokenIdsQuery}${tokenAmountsQuery}`,
-      {
-        headers: {
-          Authorization: process.env.NFTX_API_KEY,
-        },
-      }
-    );
+
+    queryParams.push(["vaultId", vaultId.toString()]);
+    if (userAddress) {
+      queryParams.push(["userAddress", userAddress]);
+    }
+
+    queryParams.push(["type", side]);
+
+    const query = queryParams.map((param) => param.join("=")).join("&");
+
+    const url = `${NFTX_ENDPOINT}/${chainId}/${type}?${query}`;
+    apiResponse = await axios.get(url, {
+      headers: {
+        Authorization: process.env.NFTX_API_KEY,
+      },
+    });
 
     price = bn(apiResponse.data.price);
     if (slippage) {
       price = price.add(price.mul(slippage).div(100000));
     }
   } else {
-    let tokenIdsQuery = "";
-    let tokenAmountsQuery = "";
+    const queryParams: string[][] = [];
+
     for (const tokenId of tokenIds) {
-      tokenIdsQuery += `&sellTokenIds=${tokenId}`;
+      queryParams.push(["sellTokenIds", tokenId]);
     }
     if (is1155 && amounts) {
       for (const amount of amounts) {
-        tokenAmountsQuery += `&sellAmounts=${amount}`;
+        queryParams.push(["sellAmounts", amount]);
       }
     }
-    apiResponse = await axios.get(
-      `${NFTX_ENDPOINT}/${chainId}/quote?type=${side}&vaultId=${vaultId.toString()}&userAddress=${userAddress}${tokenIdsQuery}${tokenAmountsQuery}`,
-      {
-        headers: {
-          Authorization: process.env.NFTX_API_KEY,
-        },
-      }
-    );
+
+    queryParams.push(["type", side]);
+    queryParams.push(["vaultId", vaultId.toString()]);
+    if (userAddress) {
+      queryParams.push(["userAddress", userAddress]);
+    }
+
+    const query = queryParams.map((param) => param.join("=")).join("&");
+    const url = `${NFTX_ENDPOINT}/${chainId}/${type}?${query}`;
+
+    apiResponse = await axios.get(url, {
+      headers: {
+        Authorization: process.env.NFTX_API_KEY,
+      },
+    });
 
     price = bn(apiResponse.data.price);
     if (slippage) {

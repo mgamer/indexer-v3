@@ -106,14 +106,15 @@ describe("[ReservoirV6_0_1] NFTXV3 listings (with NFTX API routing)", () => {
         isCancelled: partial && getRandomBoolean(),
       };
 
-      const poolPrice = await Sdk.NftxV3.Helpers.getPoolPriceFromAPI(
+      const poolPrice = await Sdk.NftxV3.Helpers.getPoolPriceFromAPI({
         vault,
-        "buy",
-        1000,
-        ethers.provider,
-        alice.address,
-        [listing.nft.id.toString()]
-      );
+        side: "buy",
+        slippage: 1000,
+        provider: ethers.provider,
+        userAddress: alice.address,
+        tokenIds: [listing.nft.id.toString()],
+        type: "quote",
+      });
 
       listing.price = bn(poolPrice.price);
       listing.vault = vault;

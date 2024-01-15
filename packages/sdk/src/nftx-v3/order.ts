@@ -25,15 +25,16 @@ export class Order {
 
   async getQuote(slippage: number, provider: Provider) {
     const side = this.params.idsOut?.length ? "buy" : "sell";
-    return getPoolPriceFromAPI(
-      this.vault,
+    return getPoolPriceFromAPI({
+      vault: this.vault,
       side,
       slippage,
-      provider as JsonRpcProvider,
-      this.userAddress,
-      side === "buy" ? this.params.idsOut! : this.params.idsIn!,
-      this.params.amounts
-    );
+      provider: provider as JsonRpcProvider,
+      userAddress: this.userAddress,
+      tokenIds: side === "buy" ? this.params.idsOut! : this.params.idsIn!,
+      amounts: this.params.amounts,
+      type: "quote",
+    });
   }
 }
 

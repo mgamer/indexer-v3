@@ -133,14 +133,14 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
           await Promise.all(
             _.range(0, POOL_ORDERS_MAX_PRICE_POINTS_COUNT).map(async (index) => {
               try {
-                const poolPrice = await Sdk.NftxV3.Helpers.getPoolPriceFromAPI(
-                  orderParams.pool,
-                  "sell",
+                const poolPrice = await Sdk.NftxV3.Helpers.getPoolPriceFromAPI({
+                  vault: orderParams.pool,
+                  side: "sell",
                   slippage,
-                  baseProvider,
-                  userAddress // TODO: Handle sell orders with userAddress to pass to quotor for correct callData.
+                  provider: baseProvider,
+                  userAddress, // TODO: Handle sell orders with userAddress to pass to quotor for correct callData.
                   //tokenIds // TODO: Handle sell orders with token ids
-                );
+                });
                 tmpPriceList[index] = poolPrice;
               } catch {
                 // Ignore errors
