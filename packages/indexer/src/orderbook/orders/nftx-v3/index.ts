@@ -26,6 +26,8 @@ import {
   OrderUpdatesByIdJobPayload,
 } from "@/jobs/order-updates/order-updates-by-id-job";
 
+const userAddress = "0xaA29881aAc939A025A3ab58024D7dd46200fB93D";
+
 export type OrderInfo = {
   orderParams: {
     pool: string;
@@ -93,14 +95,6 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
       // Handle buy orders
       try {
-        // Handle: fees
-        let feeBps = 0;
-        const feeBreakdown: {
-          kind: string;
-          recipient: string;
-          bps: number;
-        }[] = [];
-
         const id = getOrderId(orderParams.pool, "buy");
 
         // Requirements for buy orders:
@@ -132,19 +126,20 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
             triggerKind: "cancel",
           });
         } else {
-          let tmpPriceList: ({ feeBps: BigNumberish; price: BigNumberish } | undefined)[] =
-            Array.from({ length: POOL_ORDERS_MAX_PRICE_POINTS_COUNT }, () => undefined);
+          let tmpPriceList: ({ price: BigNumberish } | undefined)[] = Array.from(
+            { length: POOL_ORDERS_MAX_PRICE_POINTS_COUNT },
+            () => undefined
+          );
           await Promise.all(
             _.range(0, POOL_ORDERS_MAX_PRICE_POINTS_COUNT).map(async (index) => {
               try {
-                // Don't get the price from 0x to avoid being rate-limited
-                const poolPrice = await Sdk.NftxV3.Helpers.getPoolPrice(
+                const poolPrice = await Sdk.NftxV3.Helpers.getPoolPriceFromAPI(
                   orderParams.pool,
-                  index + 1,
                   "sell",
-                  Sdk.NftxV3.Helpers.REWARD_FEE_TIER,
                   slippage,
-                  baseProvider
+                  baseProvider,
+                  userAddress // TODO: Handle sell orders with userAddress to pass to quotor for correct callData.
+                  //tokenIds // TODO: Handle sell orders with token ids
                 );
                 tmpPriceList[index] = poolPrice;
               } catch {
@@ -162,8 +157,8 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
           if (priceList.length) {
             // Handle: prices
-            const { price, feeBps: bps } = priceList[0];
-            const value = bn(price).sub(bn(price).mul(bps).div(10000)).toString();
+            const { price } = priceList[0];
+            const value = bn(price).toString();
 
             const prices: string[] = [];
             for (let i = 0; i < priceList.length; i++) {
@@ -174,15 +169,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
               );
             }
 
-            // Handle: fees
-            feeBps = Number(bps);
-            feeBreakdown.push({
-              kind: "marketplace",
-              recipient: pool.address,
-              bps: feeBps,
-            });
-
-            // Handle: royalties on top
+            // Handle: royalties on top - TODO for V3.1 when royalties are supported
             const defaultRoyalties = await royalties.getRoyaltiesByTokenSet(
               `contract:${pool.nft}`,
               "default"
@@ -220,7 +207,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
             const normalizedValue = bn(value).sub(missingRoyaltyAmount);
 
             // Handle: core sdk order
-            const sdkOrder = new Sdk.NftxV3.Order(config.chainId, {
+            const sdkOrder = new Sdk.NftxV3.Order(config.chainId, orderParams.pool, userAddress, {
               vaultId: pool.vaultId.toString(),
               collection: pool.nft,
               pool: pool.address,
