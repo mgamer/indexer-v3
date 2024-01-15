@@ -2516,18 +2516,21 @@ export class Router {
       const totalPrice = price.add(feeAmount);
 
       executions.push({
-        module: module.address,
-        data: module.interface.encodeFunctionData("buyWithETH", [
-          aggregatedOrders,
-          {
-            fillTo: taker,
-            refundTo: relayer,
-            revertIfIncomplete: Boolean(!options?.partial),
-            amount: price,
-          },
-          fees,
-        ]),
-        value: totalPrice,
+        info: {
+          module: module.address,
+          data: module.interface.encodeFunctionData("buyWithETH", [
+            aggregatedOrders,
+            {
+              fillTo: taker,
+              refundTo: relayer,
+              revertIfIncomplete: Boolean(!options?.partial),
+              amount: price,
+            },
+            fees,
+          ]),
+          value: totalPrice,
+        },
+        orderIds: nftxV3Details.map((d) => d.orderId),
       });
 
       // Track any possibly required swap
@@ -2546,7 +2549,7 @@ export class Router {
       // Mark the listings as successfully handled
       for (const { orderId } of nftxV3Details) {
         success[orderId] = true;
-        orderIds.push(orderId);
+        // orderIds.push(orderId);
       }
     }
 
