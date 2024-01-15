@@ -71,7 +71,7 @@ export const getPoolPrice = async (
   slippage: number,
   feeTier: number,
   provider: JsonRpcProvider,
-  network: Network,
+  network?: Network,
   // for "buy" side
   tokenIds?: number[]
 ): Promise<{
@@ -81,7 +81,7 @@ export const getPoolPrice = async (
   const chainId = await provider.getNetwork().then((n) => n.chainId);
   const weth = Common.Addresses.WNative[chainId];
 
-  if (network.name === "tenderly") {
+  if (network && network.name === "tenderly") {
     await network.provider.send("evm_increaseTime", [
       ethers.utils.hexValue(2 * 60), // hex encoded number of seconds
     ]);

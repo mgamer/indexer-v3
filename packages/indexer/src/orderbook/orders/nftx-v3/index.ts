@@ -142,6 +142,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                   orderParams.pool,
                   index + 1,
                   "sell",
+                  Sdk.NftxV3.Helpers.REWARD_FEE_TIER,
                   slippage,
                   baseProvider
                 );
@@ -549,7 +550,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                       `,
                     { id }
                   );
-                  if (!orderResult && poolFeatures.enableTargetRedeem) {
+                  if (!orderResult && poolFeatures.enableRedeem) {
                     // Handle: token set
                     const schemaHash = generateSchemaHash();
                     const [{ id: tokenSetId }] = await tokenSet.singleToken.save([
