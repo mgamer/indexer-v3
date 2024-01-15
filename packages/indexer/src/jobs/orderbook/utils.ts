@@ -110,7 +110,7 @@ export type GenericOrderInfo =
       ingestMethod?: "websocket" | "rest";
       ingestDelay?: number;
     }
-    | {
+  | {
       kind: "nftx-v3";
       info: orders.nftxV3.OrderInfo;
       validateBidValue?: boolean;

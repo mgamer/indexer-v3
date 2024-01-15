@@ -16,7 +16,7 @@ export * as zora from "@/orderbook/orders/zora";
 export * as blur from "@/orderbook/orders/blur";
 export * as rarible from "@/orderbook/orders/rarible";
 export * as nftx from "@/orderbook/orders/nftx";
-export * as nftxV3 from "@/orderbook/orders/nftx-v3"
+export * as nftxV3 from "@/orderbook/orders/nftx-v3";
 export * as manifold from "@/orderbook/orders/manifold";
 export * as superrare from "@/orderbook/orders/superrare";
 export * as looksRareV2 from "@/orderbook/orders/looks-rare-v2";

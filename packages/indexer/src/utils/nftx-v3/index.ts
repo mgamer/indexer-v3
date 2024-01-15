@@ -6,10 +6,10 @@ import { baseProvider } from "@/common/provider";
 import { config } from "@/config/index";
 import * as nftxV3 from "@/events-sync/data/nftx-v3";
 import {
-    getNftxV3FtPool,
-    getNftxV3NftPool,
-    saveNftxV3FtPool,
-    saveNftxV3NftPool
+  getNftxV3FtPool,
+  getNftxV3NftPool,
+  saveNftxV3FtPool,
+  saveNftxV3NftPool,
 } from "@/models/nftx-v3-pools";
 
 const ifaceNftxV3 = new Interface([
@@ -108,16 +108,13 @@ export const isRedeem = (log: Log, address: string) => {
 };
 
 export const isSwap = (log: Log) => {
-  if (
-    [ifaceNftxV3.getEventTopic("Swap")].includes(log.topics[0])
-  ) {
+  if ([ifaceNftxV3.getEventTopic("Swap")].includes(log.topics[0])) {
     return true;
   }
   return false;
 };
 
 export const tryParseSwap = async (log: Log) => {
-
   if (log.topics[0] === ifaceNftxV3.getEventTopic("Swap")) {
     const ftPool = await getFtPoolDetails(log.address.toLowerCase(), false, "nftx-v3");
     if (ftPool) {
@@ -138,5 +135,4 @@ export const tryParseSwap = async (log: Log) => {
       };
     }
   }
-
 };

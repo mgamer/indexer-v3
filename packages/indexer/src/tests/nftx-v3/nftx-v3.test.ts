@@ -32,8 +32,8 @@ export async function getPoolPrice(
   let buyPrice: BigNumberish | null = null;
   let sellPrice: BigNumberish | null = null;
 
-  let buyPriceRaw: BigNumberish | null = null;
-  let sellPriceRaw: BigNumberish | null = null;
+  let buyPriceRaw: BigNumber | null = null;
+  let sellPriceRaw: BigNumber | null = null;
 
   const iface = new Interface([
     "function getAmountsOut(uint amountIn, address[] memory path) view returns (uint[] memory amounts)",
@@ -66,7 +66,6 @@ export async function getPoolPrice(
 
   let feeBpsSell = null;
   let feeBpsBuy = null;
-  let feeBpsRandomBuy = null;
 
   if (sellPrice) {
     const price = bn(sellPrice).div(bn(amount));
@@ -79,14 +78,13 @@ export async function getPoolPrice(
   if (buyPrice) {
     // 1 ETH = x Vault Token
     const price = bn(buyPrice).div(bn(amount));
-    const targetBuyFeeInETH = bn(fees.targetRedeemFee).mul(price).div(base);
+    const buyFeeInETH = bn(fees.redeemFee).mul(price).div(base);
 
-    buyPriceRaw = price.add(targetBuyFeeInETH);
+    buyPriceRaw = price.add(buyFeeInETH);
 
     buyPrice = addSlippage(buyPriceRaw, slippage);
 
-    feeBpsBuy = targetBuyFeeInETH.mul(bn(10000)).div(buyPriceRaw).toString();
-
+    feeBpsBuy = buyFeeInETH.mul(bn(10000)).div(buyPriceRaw).toString();
   }
 
   return {
@@ -95,18 +93,15 @@ export async function getPoolPrice(
     bps: {
       sell: feeBpsSell,
       buy: feeBpsBuy,
-      randomBuy: feeBpsRandomBuy,
     },
     slippage,
     raw: {
       sell: sellPriceRaw?.toString(),
       buy: buyPriceRaw?.toString(),
-      buyRandom: randomBuyPriceRaw?.toString(),
     },
     currency: WETH,
     sell: sellPrice?.toString(),
     buy: buyPrice?.toString(),
-    buyRandom: randomBuyPrice?.toString(),
   };
 }
 
@@ -129,22 +124,22 @@ export async function getPoolNFTs(vault: string, provider: Provider) {
 export async function getPoolFees(address: string, provider: Provider) {
   const iface = new Interface([
     "function mintFee() public view returns (uint256)",
-    "function targetRedeemFee() public view returns (uint256)",
-    "function randomRedeemFee() public view returns (uint256)",
+    "function redeemFee() public view returns (uint256)",
+    "function swapFee() public view returns (uint256)",
   ]);
 
   const vault = new Contract(address, iface, provider);
 
-  const [mintFee, targetRedeemFee, randomRedeemFee] = await Promise.all([
+  const [mintFee, redeemFee, swapFee] = await Promise.all([
     vault.mintFee(),
-    vault.targetRedeemFee(),
-    vault.randomRedeemFee(),
+    vault.redeemFee(),
+    vault.swapFee(),
   ]);
 
   return {
     mintFee: mintFee.toString(),
-    randomRedeemFee: randomRedeemFee.toString(),
-    targetRedeemFee: targetRedeemFee.toString(),
+    redeemFee: redeemFee.toString(),
+    swapFee: swapFee.toString(),
   };
 }
 
@@ -161,7 +156,7 @@ describe("NFTX", () => {
     // expect(order).not.toBe(null);
   });
 
-  test("get-pooprice", async () => {
+  test("get-poolprice", async () => {
     const info = await getPoolPrice(
       "0x7269c9aaa5ed95f0cc9dc15ff19a4596308c889c",
       1,
