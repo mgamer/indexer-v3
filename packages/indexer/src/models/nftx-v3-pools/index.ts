@@ -35,11 +35,11 @@ export const getNftxV3NftPool = async (address: string): Promise<NftxV3NftPool> 
   const result = await idb.oneOrNone(
     `
       SELECT
-        nftx_nft_pools.address,
-        nftx_nft_pools.nft,
-        nftx_nft_pools.vault_id
-      FROM nftx_nft_pools
-      WHERE nftx_nft_pools.address = $/address/
+        nftx_v3_nft_pools.address,
+        nftx_v3_nft_pools.nft,
+        nftx_v3_nft_pools.vault_id
+      FROM nftx_v3_nft_pools
+      WHERE nftx_v3_nft_pools.address = $/address/
     `,
     { address: toBuffer(address) }
   );
@@ -58,7 +58,9 @@ export type NftxV3FtPool = {
   kind: "nftx-v3" | "sushiswap" | "uniswap-v3";
 };
 
-export const saveNftxV3FtPool = async (NftxV3FtPool: NftxV3FtPool) => {
+// TODO - do we need the sushiswap and uniswap-v3 kinds above here?
+
+export const saveNftxV3FtPool = async (nftxV3FtPool: NftxV3FtPool) => {
   await idb.none(
     `
       INSERT INTO nftx_v3_ft_pools (
@@ -75,25 +77,25 @@ export const saveNftxV3FtPool = async (NftxV3FtPool: NftxV3FtPool) => {
       ON CONFLICT DO NOTHING
     `,
     {
-      address: toBuffer(NftxV3FtPool.address),
-      token0: toBuffer(NftxV3FtPool.token0),
-      token1: toBuffer(NftxV3FtPool.token1),
-      kind: NftxV3FtPool.kind,
+      address: toBuffer(nftxV3FtPool.address),
+      token0: toBuffer(nftxV3FtPool.token0),
+      token1: toBuffer(nftxV3FtPool.token1),
+      kind: nftxV3FtPool.kind,
     }
   );
-  return NftxV3FtPool;
+  return nftxV3FtPool;
 };
 
 export const getNftxV3FtPool = async (address: string): Promise<NftxV3FtPool> => {
   const result = await idb.oneOrNone(
     `
       SELECT
-        nftx_ft_pools.address,
-        nftx_ft_pools.token0,
-        nftx_ft_pools.token1,
-        nftx_ft_pools.pool_kind
-      FROM nftx_ft_pools
-      WHERE nftx_ft_pools.address = $/address/
+        nftx_v3_ft_pools.address,
+        nftx_v3_ft_pools.token0,
+        nftx_v3_ft_pools.token1,
+        nftx_v3_ft_pools.pool_kind
+      FROM nftx_v3_ft_pools
+      WHERE nftx_v3_ft_pools.address = $/address/
     `,
     { address: toBuffer(address) }
   );
