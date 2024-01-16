@@ -1,6 +1,7 @@
 export type OrderParams = {
   vaultId: string;
   collection: string;
+  pool: string;
   currency?: string;
   idsIn?: string[];
   amounts?: string[];
@@ -9,4 +10,7 @@ export type OrderParams = {
   deductRoyalty: boolean;
   idsOut?: string[];
   vTokenPremiumLimit?: string;
+  extra: {
+    prices: string[];
+  };
 };

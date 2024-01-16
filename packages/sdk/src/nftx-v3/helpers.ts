@@ -263,6 +263,41 @@ export const getPoolPrice = async (
 };
 
 export const getPoolPriceFromAPI = async ({
+  tokenIds,
+  amount,
+  ...args
+}: {
+  vault: string;
+  side: "sell" | "buy";
+  slippage: number;
+  provider: JsonRpcProvider;
+  amount?: number;
+  tokenIds?: string[];
+  amounts?: string[];
+}) => {
+  if (!tokenIds) {
+    if (!amount) {
+      amount = 1;
+    }
+    tokenIds = new Array(amount).fill(null).map((_, i) => `-99999${i}}`);
+  }
+
+  return getPoolPriceOrQuoteFromAPI({ ...args, tokenIds, type: "price" });
+};
+
+export const getPoolQuoteFromAPI = async (args: {
+  vault: string;
+  side: "sell" | "buy";
+  slippage: number;
+  provider: JsonRpcProvider;
+  tokenIds: string[];
+  userAddress: string;
+  amounts?: string[];
+}) => {
+  return getPoolPriceOrQuoteFromAPI({ ...args, type: "quote" });
+};
+
+const getPoolPriceOrQuoteFromAPI = async ({
   type,
   provider,
   side,
@@ -281,7 +316,10 @@ export const getPoolPriceFromAPI = async ({
   userAddress?: string;
   amounts?: string[];
 }): Promise<{
-  price: BigNumberish;
+  price: BigNumber;
+  vTokenPrice: BigNumber;
+  premiumPrice: BigNumber;
+  feePrice: BigNumber;
   executeCallData: string;
 }> => {
   const chainId = await provider.getNetwork().then((n) => n.chainId);
@@ -302,12 +340,15 @@ export const getPoolPriceFromAPI = async ({
   let apiResponse: {
     data: {
       price: string;
+      vTokenPrice: string;
+      premiumPrice: string;
+      feePrice: string;
       methodParameters: {
         executeCalldata: string;
       };
     };
   };
-  let price: BigNumber;
+
   if (side === "buy") {
     const queryParams: string[][] = [];
 
@@ -325,6 +366,10 @@ export const getPoolPriceFromAPI = async ({
       queryParams.push(["userAddress", userAddress]);
     }
 
+    if (slippage) {
+      queryParams.push(["slippagePercentage", `${slippage}`]);
+    }
+
     queryParams.push(["type", side]);
 
     const query = queryParams.map((param) => param.join("=")).join("&");
@@ -336,10 +381,7 @@ export const getPoolPriceFromAPI = async ({
       },
     });
 
-    price = bn(apiResponse.data.price);
-    if (slippage) {
-      price = price.add(price.mul(slippage).div(100000));
-    }
+    // price = bn(apiResponse.data.price);
   } else {
     const queryParams: string[][] = [];
 
@@ -357,6 +399,9 @@ export const getPoolPriceFromAPI = async ({
     if (userAddress) {
       queryParams.push(["userAddress", userAddress]);
     }
+    if (slippage) {
+      queryParams.push(["slippagePercentage", `${slippage}`]);
+    }
 
     const query = queryParams.map((param) => param.join("=")).join("&");
     const url = `${NFTX_ENDPOINT}/${chainId}/${type}?${query}`;
@@ -366,18 +411,14 @@ export const getPoolPriceFromAPI = async ({
         Authorization: process.env.NFTX_API_KEY,
       },
     });
-
-    price = bn(apiResponse.data.price);
-    if (slippage) {
-      price = price.sub(price.mul(slippage).div(100000));
-    }
   }
 
-  const executeCallData = apiResponse.data.methodParameters.executeCalldata;
-
   return {
-    price,
-    executeCallData,
+    price: bn(apiResponse.data.price),
+    vTokenPrice: bn(apiResponse.data.vTokenPrice),
+    premiumPrice: bn(apiResponse.data.premiumPrice),
+    feePrice: bn(apiResponse.data.feePrice),
+    executeCallData: apiResponse.data.methodParameters?.executeCalldata,
   };
 };
 

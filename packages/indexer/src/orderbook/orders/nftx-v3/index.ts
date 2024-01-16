@@ -36,6 +36,7 @@ export type OrderInfo = {
     txTimestamp: number;
     txBlock: number;
     logIndex: number;
+    tokenId: string;
     // Misc options
     forceRecheck?: boolean;
   };
@@ -126,6 +127,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
             triggerKind: "cancel",
           });
         } else {
+          // We want to get the price for buying 1-50 items so we can calculate the price impact
           let tmpPriceList: ({ price: BigNumberish } | undefined)[] = Array.from(
             { length: POOL_ORDERS_MAX_PRICE_POINTS_COUNT },
             () => undefined
@@ -138,8 +140,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                   side: "sell",
                   slippage,
                   provider: baseProvider,
-                  userAddress, // TODO: Handle sell orders with userAddress to pass to quotor for correct callData.
-                  //tokenIds // TODO: Handle sell orders with token ids
+                  amount: index + 1,
                 });
                 tmpPriceList[index] = poolPrice;
               } catch {
@@ -156,10 +157,19 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
           const priceList = tmpPriceList.map((p) => p!);
 
           if (priceList.length) {
-            // Handle: prices
-            const { price } = priceList[0];
+            // Get the price of buying this specific token id
+            const { price, executeCallData } = await Sdk.NftxV3.Helpers.getPoolQuoteFromAPI({
+              provider: baseProvider,
+              vault: orderParams.pool,
+              side: "sell",
+              slippage,
+              tokenIds: [orderParams.tokenId],
+              userAddress,
+              // TODO: get ERC1155 amounts
+            });
             const value = bn(price).toString();
 
+            // Get the price impact of buying 1-50 items
             const prices: string[] = [];
             for (let i = 0; i < priceList.length; i++) {
               prices.push(
@@ -211,13 +221,14 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
               vaultId: pool.vaultId.toString(),
               collection: pool.nft,
               pool: pool.address,
-              specificIds: [],
+              idsIn: [orderParams.tokenId],
               currency: Sdk.Common.Addresses.WNative[config.chainId],
-              path: [pool.address, Sdk.Common.Addresses.WNative[config.chainId]],
               price: price.toString(),
               extra: {
                 prices,
               },
+              deductRoyalty: missingRoyalties.length > 0,
+              executeCallData,
             });
 
             let orderResult = await idb.oneOrNone(
@@ -282,9 +293,9 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                 is_reservoir: null,
                 contract: toBuffer(pool.nft),
                 conduit: null,
-                fee_bps: feeBps,
-                fee_breakdown: feeBreakdown,
-                dynamic: null,
+                fee_bps: 0,
+                fee_breakdown: undefined,
+                dynamic: false,
                 raw_data: sdkOrder.params,
                 expiration: validTo,
                 missing_royalties: missingRoyalties,
@@ -354,8 +365,8 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                   missingRoyalties: missingRoyalties,
                   normalizedValue: normalizedValue.toString(),
                   currencyNormalizedValue: normalizedValue.toString(),
-                  feeBps,
-                  feeBreakdown,
+                  feeBps: 0,
+                  feeBreakdown: undefined,
                   currency: toBuffer(Sdk.Common.Addresses.Native[config.chainId]),
                   blockNumber: orderParams.txBlock,
                   logIndex: orderParams.logIndex,
@@ -408,19 +419,20 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
       // Handle sell orders
       try {
-        let tmpPriceList: ({ feeBps: BigNumberish; price: BigNumberish } | undefined)[] =
-          Array.from({ length: POOL_ORDERS_MAX_PRICE_POINTS_COUNT }, () => undefined);
+        let tmpPriceList: ({ price: BigNumberish } | undefined)[] = Array.from(
+          { length: POOL_ORDERS_MAX_PRICE_POINTS_COUNT },
+          () => undefined
+        );
         await Promise.all(
           _.range(0, POOL_ORDERS_MAX_PRICE_POINTS_COUNT).map(async (index) => {
             try {
-              // Don't get the price from 0x to avoid being rate-limited
-              const poolPrice = await Sdk.NftxV3.Helpers.getPoolPrice(
-                orderParams.pool,
-                index + 1,
-                "buy",
+              const poolPrice = await Sdk.NftxV3.Helpers.getPoolPriceFromAPI({
+                provider: baseProvider,
+                side: "buy",
                 slippage,
-                baseProvider
-              );
+                vault: orderParams.pool,
+                amount: index + 1,
+              });
               tmpPriceList[index] = poolPrice;
             } catch {
               // Ignore errors
@@ -458,24 +470,16 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
                 if (priceList.length) {
                   // Handle: prices
-                  const { price, feeBps: bps } = priceList[0];
+                  const { price, premiumPrice, executeCallData } =
+                    await Sdk.NftxV3.Helpers.getPoolQuoteFromAPI({
+                      provider: baseProvider,
+                      vault: orderParams.pool,
+                      side: "buy",
+                      slippage,
+                      tokenIds: [tokenId],
+                      userAddress,
+                    });
                   const value = price;
-
-                  // Handle: fees
-                  let feeBps = 0;
-                  const feeBreakdown: {
-                    kind: string;
-                    recipient: string;
-                    bps: number;
-                  }[] = [];
-
-                  // Handle: fees
-                  feeBps = Number(bps);
-                  feeBreakdown.push({
-                    kind: "marketplace",
-                    recipient: pool.address,
-                    bps: feeBps,
-                  });
 
                   // Handle: royalties on top
                   const defaultRoyalties = await royalties.getRoyaltiesByTokenSet(
@@ -516,19 +520,24 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                   // Removed check to random redeems, no longer supported in V3.
 
                   // Handle: core sdk order
-                  const sdkOrder = new Sdk.NftxV3.Order(config.chainId, {
-                    vaultId: pool.vaultId.toString(),
-                    collection: pool.nft,
-                    pool: pool.address,
-                    specificIds: [tokenId],
-                    currency: Sdk.Common.Addresses.WNative[config.chainId],
-                    amount: "1",
-                    path: [Sdk.Common.Addresses.WNative[config.chainId], pool.address],
-                    price: price.toString(),
-                    extra: {
-                      prices,
-                    },
-                  });
+                  const sdkOrder = new Sdk.NftxV3.Order(
+                    config.chainId,
+                    orderParams.pool,
+                    userAddress,
+                    {
+                      vaultId: pool.vaultId.toString(),
+                      collection: pool.nft,
+                      pool: pool.address,
+                      idsOut: [orderParams.tokenId],
+                      currency: Sdk.Common.Addresses.WNative[config.chainId],
+                      price: price.toString(),
+                      extra: {
+                        prices,
+                      },
+                      deductRoyalty: missingRoyalties.length > 0,
+                      executeCallData,
+                    }
+                  );
 
                   const orderResult = await redb.oneOrNone(
                     `
@@ -581,9 +590,9 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                       is_reservoir: null,
                       contract: toBuffer(pool.nft),
                       conduit: null,
-                      fee_bps: feeBps,
-                      fee_breakdown: feeBreakdown,
-                      dynamic: null,
+                      fee_bps: 0,
+                      fee_breakdown: undefined,
+                      dynamic: premiumPrice.gt(0),
                       raw_data: sdkOrder.params,
                       expiration: validTo,
                       missing_royalties: missingRoyalties,
@@ -634,8 +643,8 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                         missingRoyalties: missingRoyalties,
                         normalizedValue: normalizedValue.toString(),
                         currencyNormalizedValue: normalizedValue.toString(),
-                        feeBps,
-                        feeBreakdown,
+                        feeBps: 0,
+                        feeBreakdown: undefined,
                         currency: toBuffer(Sdk.Common.Addresses.Native[config.chainId]),
                         blockNumber: orderParams.txBlock,
                         logIndex: orderParams.logIndex,
