@@ -64,7 +64,7 @@ export default class UpdateUserCollectionsSpamJob extends AbstractRabbitMqJobHan
           ) x
           WHERE user_collections.collection_id = x.collection_id
           AND user_collections.owner = x.owner
-          RETURNING user_activities.owner
+          RETURNING user_collections.owner
       `,
       {
         collectionId,
