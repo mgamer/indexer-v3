@@ -37,6 +37,7 @@ export type OrderInfo = {
     txBlock: number;
     logIndex: number;
     tokenId: string;
+    amount: number;
     // Misc options
     forceRecheck?: boolean;
   };
@@ -295,7 +296,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                 conduit: null,
                 fee_bps: 0,
                 fee_breakdown: undefined,
-                dynamic: false,
+                dynamic: true,
                 raw_data: sdkOrder.params,
                 expiration: validTo,
                 missing_royalties: missingRoyalties,

@@ -13,6 +13,7 @@ import {
   OrderUpdatesByIdJobPayload,
 } from "@/jobs/order-updates/order-updates-by-id-job";
 import { getUSDAndNativePrices } from "@/utils/prices";
+import { baseProvider } from "@/common/provider";
 
 export type OrderUpdatesDynamicOrderJobPayload = {
   continuation?: string;
@@ -35,15 +36,23 @@ export default class OrderUpdatesDynamicOrderJob extends AbstractRabbitMqJobHand
     try {
       const limit = 500;
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const dynamicOrders: { id: string; kind: string; currency: Buffer; raw_data: any }[] =
-        await idb.manyOrNone(
-          `
+      const dynamicOrders: {
+        id: string;
+        kind: string;
+        currency: Buffer;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        raw_data: any;
+        maker: string;
+        taker: string;
+      }[] = await idb.manyOrNone(
+        `
               SELECT
                 orders.id,
                 orders.kind,
                 orders.currency,
-                orders.raw_data
+                orders.raw_data,
+                orders.maker,
+                orders.taker
               FROM orders
               WHERE orders.dynamic
                 AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
@@ -51,12 +60,19 @@ export default class OrderUpdatesDynamicOrderJob extends AbstractRabbitMqJobHand
               ORDER BY orders.id
               LIMIT ${limit}
             `,
-          { continuation }
-        );
+        { continuation }
+      );
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const values: any[] = [];
-      for (const { id, kind, currency, raw_data } of dynamicOrders) {
+      const values: {
+        id: string;
+        price: string;
+        currency_price: string;
+        value: string;
+        currency_value: string;
+        dynamic: boolean;
+      }[] = [];
+      for (const { id, kind, currency, raw_data, maker, taker } of dynamicOrders) {
         if (
           !_.isNull(raw_data) &&
           ["alienswap", "seaport", "seaport-v1.4", "seaport-v1.5"].includes(kind)
@@ -73,8 +89,21 @@ export default class OrderUpdatesDynamicOrderJob extends AbstractRabbitMqJobHand
               // TODO: We should have a generic method for deriving the `value` from `price`
               value: prices.nativePrice,
               currency_value: newCurrencyPrice,
+              dynamic: true,
             });
           }
+        } else if (kind === "nftx-v3") {
+          const order = new Sdk.NftxV3.Order(config.chainId, maker, taker, raw_data);
+          const { price, premiumPrice } = await order.getPrice(baseProvider);
+
+          values.push({
+            id,
+            price: price.toString(),
+            currency_price: price.toString(),
+            value: price.toString(),
+            currency_value: price.toString(),
+            dynamic: premiumPrice.gt(0),
+          });
         }
       }
 
@@ -86,6 +115,7 @@ export default class OrderUpdatesDynamicOrderJob extends AbstractRabbitMqJobHand
           { name: "value", cast: "numeric(78, 0)" },
           { name: "currency_value", cast: "numeric(78, 0) " },
           { name: "updated_at", mod: ":raw", init: () => "now()" },
+          { name: "dynamic", cast: "boolean" },
         ],
         {
           table: "orders",

@@ -1,7 +1,7 @@
 import { Provider } from "@ethersproject/abstract-provider";
 import { JsonRpcProvider } from "@ethersproject/providers";
 
-import { getPoolPriceFromAPI } from "./helpers";
+import { getPoolPriceFromAPI, getPoolQuoteFromAPI } from "./helpers";
 import * as Types from "./types";
 import { lc, s } from "../utils";
 
@@ -23,9 +23,21 @@ export class Order {
     }
   }
 
-  async getQuote(slippage: number, provider: Provider) {
+  async getPrice(provider: Provider) {
     const side = this.params.idsOut?.length ? "buy" : "sell";
     return getPoolPriceFromAPI({
+      vault: this.vault,
+      side,
+      slippage: 0,
+      provider: provider as JsonRpcProvider,
+      tokenIds: side === "buy" ? this.params.idsOut! : this.params.idsIn!,
+      amounts: this.params.amounts,
+    });
+  }
+
+  async getQuote(slippage: number, provider: Provider) {
+    const side = this.params.idsOut?.length ? "buy" : "sell";
+    return getPoolQuoteFromAPI({
       vault: this.vault,
       side,
       slippage,
@@ -33,7 +45,6 @@ export class Order {
       userAddress: this.userAddress,
       tokenIds: side === "buy" ? this.params.idsOut! : this.params.idsIn!,
       amounts: this.params.amounts,
-      type: "quote",
     });
   }
 }
@@ -55,5 +66,9 @@ const normalize = (order: Types.OrderParams): Types.OrderParams => {
     deductRoyalty: order.deductRoyalty,
     vTokenPremiumLimit: s(order.vTokenPremiumLimit),
     price: s(order.price),
+    pool: s(order.pool),
+    extra: {
+      prices: order.extra?.prices ? order.extra.prices.map(s) : [],
+    },
   };
 };

@@ -463,7 +463,7 @@ export const generateListingDetailsV6 = async (
       return {
         kind: "nftx-v3",
         ...common,
-        order: new Sdk.NftxV3.Order(config.chainId, order.rawData),
+        order: new Sdk.NftxV3.Order(config.chainId, order.rawData.pool, taker, order.rawData),
       };
     }
 
@@ -823,7 +823,12 @@ export const generateBidDetailsV6 = async (
     }
 
     case "nftx-v3": {
-      const sdkOrder = new Sdk.NftxV3.Order(config.chainId, order.rawData);
+      const sdkOrder = new Sdk.NftxV3.Order(
+        config.chainId,
+        order.rawData.pool,
+        taker,
+        order.rawData
+      );
       return {
         kind: "nftx-v3",
         ...common,
