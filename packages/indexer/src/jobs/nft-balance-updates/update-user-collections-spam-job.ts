@@ -3,6 +3,7 @@ import { AbstractRabbitMqJobHandler, BackoffStrategy } from "@/jobs/abstract-rab
 import { fromBuffer } from "@/common/utils";
 import _ from "lodash";
 import { Collections } from "@/models/collections";
+import { config } from "@/config/index";
 import { logger } from "@/common/logger";
 import { RabbitMQMessage } from "@/common/rabbit-mq";
 
@@ -15,7 +16,7 @@ export type UpdateUserCollectionsSpamJobPayload = {
 export default class UpdateUserCollectionsSpamJob extends AbstractRabbitMqJobHandler {
   queueName = "update-user-collections-spam";
   maxRetries = 15;
-  concurrency = 5;
+  concurrency = _.includes([137], config.chainId) ? 1 : 5;
   lazyMode = true;
   backoff = {
     type: "exponential",
