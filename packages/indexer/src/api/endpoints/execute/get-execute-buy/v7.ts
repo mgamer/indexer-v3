@@ -396,7 +396,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
           let poolId: string;
           let priceList: string[];
 
-          if (order.kind === "sudoswap") {
+          if (["sudoswap", "sudoswap-v2"].includes(order.kind)) {
             const rawData = order.rawData as Sdk.Sudoswap.OrderParams;
             poolId = rawData.pair;
             priceList = rawData.extra.prices;
