@@ -1187,24 +1187,26 @@ export const initIndex = async (): Promise<void> => {
 
       const getIndexResponse = await elasticsearch.indices.get({ index: INDEX_NAME });
 
-      const indexName = Object.keys(getIndexResponse)[0];
+      const indexNames = Object.keys(getIndexResponse);
 
-      const putMappingResponse = await elasticsearch.indices.putMapping({
-        index: indexName,
-        properties: indexConfig.mappings.properties,
-      });
+      for (const indexName of indexNames) {
+        const putMappingResponse = await elasticsearch.indices.putMapping({
+          index: indexName,
+          properties: indexConfig.mappings.properties,
+        });
 
-      logger.info(
-        "elasticsearch-activities",
-        JSON.stringify({
-          topic: "initIndex",
-          message: "Updated mappings.",
-          indexName: INDEX_NAME,
-          indexConfig,
-          indexSettings: getNetworkSettings().elasticsearch?.indexes?.activities,
-          putMappingResponse,
-        })
-      );
+        logger.info(
+          "elasticsearch-activities",
+          JSON.stringify({
+            topic: "initIndex",
+            message: `Updated mappings. indexName=${indexName}`,
+            indexName: INDEX_NAME,
+            indexConfig,
+            indexSettings: getNetworkSettings().elasticsearch?.indexes?.activities,
+            putMappingResponse,
+          })
+        );
+      }
     } else {
       logger.info(
         "elasticsearch-activities",
@@ -1962,11 +1964,8 @@ export const updateActivitiesToken = async (
 };
 
 export type ActivitiesCollectionUpdateData = {
-  name: string | null;
-  image: string | null;
   isSpam: number;
   nsfwStatus: number;
-  imageVersion: number | null;
 };
 
 export const updateActivitiesCollectionData = async (
@@ -2031,69 +2030,6 @@ export const updateActivitiesCollectionData = async (
               ],
             },
     },
-    {
-      bool: collectionData.name
-        ? {
-            must_not: [
-              {
-                term: {
-                  "collection.name": collectionData.name,
-                },
-              },
-            ],
-          }
-        : {
-            must: [
-              {
-                exists: {
-                  field: "collection.name",
-                },
-              },
-            ],
-          },
-    },
-    {
-      bool: collectionData.image
-        ? {
-            must_not: [
-              {
-                term: {
-                  "collection.image": collectionData.image,
-                },
-              },
-            ],
-          }
-        : {
-            must: [
-              {
-                exists: {
-                  field: "collection.image",
-                },
-              },
-            ],
-          },
-    },
-    {
-      bool: collectionData.imageVersion
-        ? {
-            must_not: [
-              {
-                term: {
-                  "collection.imageVersion": collectionData.imageVersion,
-                },
-              },
-            ],
-          }
-        : {
-            must: [
-              {
-                exists: {
-                  field: "collection.imageVersion",
-                },
-              },
-            ],
-          },
-    },
   ];
 
   const query = {
@@ -2138,13 +2074,10 @@ export const updateActivitiesCollectionData = async (
           {
             script: {
               source:
-                "if (params.collection_name == null) { ctx._source.collection.remove('name') } else { ctx._source.collection.name = params.collection_name } if (params.collection_image == null) { ctx._source.collection.remove('image') } else { ctx._source.collection.image = params.collection_image } ctx._source.collection.isSpam = params.is_spam; ctx._source.collection.isNsfw = params.is_nsfw; if (params.image_version != null) { ctx._source.collection.imageVersion = params.image_version }",
+                "ctx._source.collection.isSpam = params.is_spam; ctx._source.collection.isNsfw = params.is_nsfw;",
               params: {
-                collection_name: collectionData.name ?? null,
-                collection_image: collectionData.image ?? null,
                 is_spam: collectionData.isSpam > 0,
                 is_nsfw: collectionData.nsfwStatus > 0,
-                image_version: collectionData.imageVersion ?? null,
               },
             },
           },

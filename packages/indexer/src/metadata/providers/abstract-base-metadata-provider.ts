@@ -116,6 +116,7 @@ export abstract class AbstractBaseMetadataProvider {
             );
           }
         }
+
         if (metadata.mediaUrl && !metadata.mediaUrl.startsWith("data:")) {
           metadata.mediaMimeType = await this._getImageMimeType(metadata.mediaUrl);
 
@@ -124,7 +125,7 @@ export abstract class AbstractBaseMetadataProvider {
               "getTokensMetadata",
               JSON.stringify({
                 topic: "debugMimeType",
-                message: `Missing media mime type. contract=${metadata.contract}, tokenId=${metadata.tokenId}, imageUrl=${metadata.mediaUrl}`,
+                message: `Missing media mime type. contract=${metadata.contract}, tokenId=${metadata.tokenId}, mediaUrl=${metadata.mediaUrl}`,
                 metadata: JSON.stringify(metadata),
                 method: this.method,
               })
@@ -143,9 +144,9 @@ export abstract class AbstractBaseMetadataProvider {
           )
         ) {
           metadata.mediaUrl = metadata.imageUrl;
+          metadata.mediaMimeType = metadata.imageMimeType;
           metadata.imageUrl = null;
           metadata.imageMimeType = undefined;
-          metadata.mediaMimeType = metadata.imageMimeType;
         }
       })
     );

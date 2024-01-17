@@ -35,10 +35,6 @@ import { parseMetadata } from "@/api/endpoints/tokens/get-user-tokens/v8";
 const version = "v9";
 
 export const getUserTokensV9Options: RouteOptions = {
-  cache: {
-    privacy: "public",
-    expiresIn: 60000,
-  },
   description: "User Tokens",
   notes:
     "Get tokens held by a user, along with ownership information such as associated orders and date acquired.",
@@ -252,7 +248,7 @@ export const getUserTokensV9Options: RouteOptions = {
       throw error;
     },
   },
-  handler: async (request: Request) => {
+  handler: async (request: Request, response) => {
     const params = request.params as any;
     const query = request.query as any;
 
@@ -924,10 +920,17 @@ export const getUserTokensV9Options: RouteOptions = {
         };
       });
 
-      return {
-        tokens: await Promise.all(result),
-        continuation,
-      };
+      let cacheControl = 1000;
+      if (query.includeTopBid || query.includeAttributes) {
+        cacheControl = 1000 * 60;
+      }
+
+      return response
+        .response({
+          tokens: await Promise.all(result),
+          continuation,
+        })
+        .header("cache-control", `${cacheControl}`);
     } catch (error) {
       logger.error(`get-user-tokens-${version}-handler`, `Handler failure: ${error}`);
       throw error;

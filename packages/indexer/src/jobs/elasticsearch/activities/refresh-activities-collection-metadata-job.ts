@@ -27,11 +27,8 @@ export default class RefreshActivitiesCollectionMetadataJob extends AbstractRabb
     const collection = await Collections.getById(collectionId);
 
     const collectionUpdateData = {
-      name: collection?.name || null,
-      image: collection?.metadata?.imageUrl || null,
       isSpam: Number(collection?.isSpam),
       nsfwStatus: Number(collection?.nsfwStatus),
-      imageVersion: collection?.imageVersion || null,
     };
 
     if (!_.isEmpty(collectionUpdateData)) {

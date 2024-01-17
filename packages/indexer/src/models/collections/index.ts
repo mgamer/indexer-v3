@@ -519,4 +519,41 @@ export class Collections {
     const collectionIds = await idb.manyOrNone(query, { community });
     return _.map(collectionIds, "id");
   }
+
+  public static async updateSpam(
+    collectionIds: string[],
+    newSpamState: number,
+    actionTakerIdentifier: string
+  ) {
+    const updateResult = await idb.manyOrNone(
+      `
+            UPDATE collections
+            SET
+              is_spam = $/spam/,
+              updated_at = now()
+            WHERE id IN ($/ids:list/)
+            AND is_spam IS DISTINCT FROM $/spam/
+            RETURNING id
+          `,
+      {
+        ids: collectionIds,
+        spam: newSpamState,
+      }
+    );
+
+    if (updateResult) {
+      // Track the change
+      await actionsLogJob.addToQueue(
+        updateResult.map((res) => ({
+          context: ActionsLogContext.SpamCollectionUpdate,
+          origin: ActionsLogOrigin.API,
+          actionTakerIdentifier,
+          collection: res.id,
+          data: {
+            newSpamState,
+          },
+        }))
+      );
+    }
+  }
 }
