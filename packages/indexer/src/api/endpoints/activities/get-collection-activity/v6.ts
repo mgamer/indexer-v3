@@ -430,6 +430,7 @@ export const getCollectionActivityV6Options: RouteOptions = {
             },
             collection: {
               collectionId: activity.collection?.id,
+              isSpam: activity.collection?.isSpam,
               isNsfw: activity.collection?.isNsfw,
               collectionName: query.includeMetadata
                 ? collectionMetadata
