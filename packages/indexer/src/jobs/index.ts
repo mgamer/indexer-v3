@@ -175,7 +175,6 @@ import { backfillTransactionsDatesJob } from "@/jobs/backfill/backfill-transacti
 import { backfillActiveUserCollectionsJob } from "@/jobs/backfill/backfill-active-user-collections";
 import { backfillAirdropsJob } from "./backfill/backfill-airdrops";
 import { backfillTransferSpamJob } from "./backfill/backfill-transfer-burst-spam";
-import { backfillAttributesFloorAskJob } from "@/jobs/backfill/backfill-attributes-floor-ask";
 import { syncApiKeysJob } from "@/jobs/api-keys/sync-api-keys-job";
 import { collectionCheckSpamJob } from "@/jobs/collections-refresh/collections-check-spam-job";
 import { backfillNftBalancesDatesJob } from "@/jobs/backfill/backfill-nft-balances-dates";
@@ -340,7 +339,6 @@ export class RabbitMqJobsConsumer {
       backfillActiveUserCollectionsJob,
       backfillAirdropsJob,
       backfillTransferSpamJob,
-      backfillAttributesFloorAskJob,
       syncApiKeysJob,
       collectionCheckSpamJob,
       backfillNftBalancesDatesJob,
