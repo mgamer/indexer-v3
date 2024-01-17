@@ -146,6 +146,7 @@ export const getUserActivityV6Options: RouteOptions = {
             tokenName: Joi.string().allow("", null),
             tokenImage: Joi.string().allow("", null),
             isSpam: Joi.boolean().default(false),
+            isNsfw: Joi.boolean().default(false),
             lastBuy: {
               value: Joi.number().unsafe().allow(null),
               timestamp: Joi.number().unsafe().allow(null),
@@ -167,6 +168,7 @@ export const getUserActivityV6Options: RouteOptions = {
             collectionName: Joi.string().allow("", null),
             collectionImage: Joi.string().allow("", null),
             isSpam: Joi.boolean().default(false),
+            isNsfw: Joi.boolean().default(false),
           }),
           txHash: Joi.string()
             .lowercase()
@@ -292,6 +294,7 @@ export const getUserActivityV6Options: RouteOptions = {
                       ? collectionMetadata.image
                       : activity.collection?.image,
                     isSpam: activity.collection?.isSpam,
+                    isNsfw: activity.collection?.isNsfw,
                   },
                   disabledCollectionMetadata[activity.collection?.id ?? ""],
                   activity.contract
@@ -306,6 +309,7 @@ export const getUserActivityV6Options: RouteOptions = {
                   name: tokenMetadata ? tokenMetadata.name : activity.token?.name,
                   image: tokenMetadata ? tokenMetadata.image : activity.token?.image,
                   isSpam: activity.token?.isSpam,
+                  isNsfw: activity.token?.isNsfw,
                 },
                 tokenMetadata?.metadata_disabled ||
                   disabledCollectionMetadata[activity.collection?.id ?? ""],
@@ -407,6 +411,7 @@ export const getUserActivityV6Options: RouteOptions = {
               tokenRarityRank: query.includeMetadata ? tokenMetadata?.rarity_score : undefined,
               tokenRarityScore: query.includeMetadata ? tokenMetadata?.rarity_rank : undefined,
               isSpam: activity.token?.isSpam,
+              isNsfw: activity.token?.isNsfw,
             },
             collection: {
               collectionId: activity.collection?.id,
@@ -417,6 +422,7 @@ export const getUserActivityV6Options: RouteOptions = {
                 : undefined,
               collectionImage: collectionImageUrl,
               isSpam: activity.collection?.isSpam,
+              isNsfw: activity.collection?.isNsfw,
             },
             txHash: activity.event?.txHash,
             logIndex: activity.event?.logIndex,
