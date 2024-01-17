@@ -27,7 +27,7 @@ export class TransferUpdatesJob extends AbstractRabbitMqJobHandler {
             WHERE contract = $/contract/
             AND token_id = $/tokenId/
             AND owner = $/from/
-            AND (last_token_appraisal_value IS NOT NULL OR is_spam > 0)
+            AND (last_token_appraisal_value IS NOT NULL OR (is_spam IS NOT NULL AND (is_spam > 0 OR is_spam < 0)))
           ) AS x
           WHERE contract = $/contract/
           AND token_id = $/tokenId/
