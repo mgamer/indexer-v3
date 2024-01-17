@@ -32,6 +32,6 @@ export const QuoterV2: ChainIdToAddress = {
 
 export const NFTXV3Module: ChainIdToAddress = {
   [Network.EthereumGoerli]: "0xfe6A828fF94A0F027402A56711F71526593422e5",
-  [Network.EthereumSepolia]: "0xfe6a828ff94a0f027402a56711f71526593422e5",
+  [Network.EthereumSepolia]: "0x38c3ba8ec5ff1767ec6a7258da47d8079f1db227",
   // [Network.Ethereum]: "0xfe6a828ff94a0f027402a56711f71526593422e5",
 };
