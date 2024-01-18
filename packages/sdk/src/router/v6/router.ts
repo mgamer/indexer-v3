@@ -4815,7 +4815,8 @@ export class Router {
     const conduitKey = useOpenseaTransferHelper
       ? Sdk.SeaportBase.Addresses.OpenseaConduitKey[this.chainId]
       : Sdk.SeaportBase.Addresses.ReservoirConduitKey[this.chainId];
-    const conduit = new ConduitController(this.chainId).deriveConduit(conduitKey);
+    const conduitController = new ConduitController(this.chainId, this.provider);
+    const conduit = conduitController.deriveConduit(conduitKey);
 
     const approvals = transferItem.items.map((item) => ({
       orderIds: [],
@@ -4830,7 +4831,11 @@ export class Router {
       ({ txData: { from, to, data } }) => `${from}-${to}-${data}`
     );
 
-    if (useOpenseaTransferHelper) {
+    const isOpenSeaTransferHelperApproved = async (): Promise<boolean> => {
+      return conduitController.getChannelStatus(useOpenseaTransferHelper);
+    };
+
+    if (useOpenseaTransferHelper && (await isOpenSeaTransferHelperApproved())) {
       return {
         txs: [
           {

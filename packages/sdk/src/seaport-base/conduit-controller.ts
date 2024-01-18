@@ -2,14 +2,19 @@ import { Contract } from "@ethersproject/contracts";
 import * as Addresses from "./addresses";
 import ConduitControllerAbi from "./abis/ConduitController.json";
 import { keccak256 as solidityKeccak256 } from "@ethersproject/solidity";
+import { Provider } from "@ethersproject/abstract-provider";
 
 export class ConduitController {
   public chainId: number;
   public contract: Contract;
 
-  constructor(chainId: number) {
+  constructor(chainId: number, provider?: Provider) {
     this.chainId = chainId;
-    this.contract = new Contract(Addresses.ConduitController[this.chainId], ConduitControllerAbi);
+    this.contract = new Contract(
+      Addresses.ConduitController[this.chainId],
+      ConduitControllerAbi,
+      provider
+    );
   }
 
   public deriveConduit(conduitKey: string) {
@@ -25,5 +30,9 @@ export class ConduitController {
         ]
       ).slice(-40)
     );
+  }
+
+  public async getChannelStatus(channelAddress: string): Promise<boolean> {
+    return await this.contract.getChannelStatus(channelAddress);
   }
 }
