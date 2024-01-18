@@ -308,8 +308,8 @@ export const getUserActivityV6Options: RouteOptions = {
                   tokenId: activity.token?.id,
                   name: tokenMetadata ? tokenMetadata.name : activity.token?.name,
                   image: tokenMetadata ? tokenMetadata.image : activity.token?.image,
-                  isSpam: activity.token?.isSpam,
-                  isNsfw: activity.token?.isNsfw,
+                  isSpam: activity.collection?.isSpam || activity.token?.isSpam,
+                  isNsfw: activity.collection?.isNsfw || activity.token?.isNsfw,
                 },
                 tokenMetadata?.metadata_disabled ||
                   disabledCollectionMetadata[activity.collection?.id ?? ""],
@@ -410,8 +410,8 @@ export const getUserActivityV6Options: RouteOptions = {
               tokenMedia: query.includeMetadata ? null : undefined,
               tokenRarityRank: query.includeMetadata ? tokenMetadata?.rarity_score : undefined,
               tokenRarityScore: query.includeMetadata ? tokenMetadata?.rarity_rank : undefined,
-              isSpam: activity.token?.isSpam,
-              isNsfw: activity.token?.isNsfw,
+              isSpam: activity.collection?.isSpam || activity.token?.isSpam,
+              isNsfw: activity.collection?.isNsfw || activity.token?.isNsfw,
             },
             collection: {
               collectionId: activity.collection?.id,
