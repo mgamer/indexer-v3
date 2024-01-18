@@ -32,7 +32,7 @@ export class ConduitController {
     );
   }
 
-  public async getChannelStatus(channelAddress: string): Promise<boolean> {
-    return await this.contract.getChannelStatus(channelAddress);
+  public async getChannelStatus(conduit: string, channelAddress: string): Promise<boolean> {
+    return await this.contract.getChannelStatus(conduit, channelAddress);
   }
 }

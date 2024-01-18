@@ -4832,7 +4832,7 @@ export class Router {
     );
 
     const isOpenSeaTransferHelperApproved = async (): Promise<boolean> => {
-      return conduitController.getChannelStatus(useOpenseaTransferHelper);
+      return conduitController.getChannelStatus(conduit, useOpenseaTransferHelper);
     };
 
     if (useOpenseaTransferHelper && (await isOpenSeaTransferHelperApproved())) {
