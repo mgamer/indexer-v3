@@ -187,3 +187,14 @@ export const OpenseaTransferHelper: ChainIdToAddress = {
   [Network.Base]: "0x0000000000c2d145a2526bd8c716263bfebe1a72",
   [Network.BaseGoerli]: "0x0000000000c2d145a2526bd8c716263bfebe1a72",
 };
+
+export const OracleSupport: ChainIdToAddressList = {
+  [Network.Ethereum]: [
+    "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0", // wsteth
+    "0xd5f7838f5c461feff7fe49ea5ebaf7728bb0adfa", // mETH
+    "0x6b175474e89094c44da98b954eedeac495271d0f", // DAI
+    "0xe95a203b1a91a908f9b9ce46459d101078c2c3cb", // ankrETH
+    // "0xdcee70654261af21c44c093c300ed3bb97b78192", // woETH
+    // "0x583019ff0f430721ada9cfb4fac8f06ca104d0b4", // st-yETH
+  ],
+};

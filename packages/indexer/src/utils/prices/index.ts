@@ -346,6 +346,7 @@ export const getUSDAndNativePrices = async (
 export type USDAndCurrencyPrices = {
   usdPrice?: string;
   currencyPrice?: string;
+  decimals?: number;
 };
 
 export const getUSDAndCurrencyPrices = async (
@@ -360,6 +361,7 @@ export const getUSDAndCurrencyPrices = async (
 ): Promise<USDAndCurrencyPrices> => {
   let usdPrice: string | undefined;
   let currencyPrice: string | undefined;
+  let decimals: number | undefined;
 
   // Only try to get pricing data if the network supports it
   if (
@@ -389,6 +391,8 @@ export const getUSDAndCurrencyPrices = async (
 
     const fromCurrency = await getCurrency(fromCurrencyAddress);
     const toCurrency = await getCurrency(toCurrencyAddress);
+
+    decimals = toCurrency?.decimals;
 
     if (fromCurrency.decimals && fromCurrencyUSDPrice) {
       const fromCurrencyUnit = bn(10).pow(fromCurrency.decimals!);
@@ -420,5 +424,5 @@ export const getUSDAndCurrencyPrices = async (
     currencyPrice = "0";
   }
 
-  return { usdPrice, currencyPrice };
+  return { usdPrice, currencyPrice, decimals };
 };

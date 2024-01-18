@@ -14,7 +14,7 @@ import { logger } from "@/common/logger";
 import { Signers, addressToSigner } from "@/common/signers";
 import { bn, formatPrice, now, regex, safeOracleTimestamp, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
-import { getUSDAndNativePrices } from "@/utils/prices";
+import { getUSDAndCurrencyPrices, getUSDAndNativePrices } from "@/utils/prices";
 
 const version = "v6";
 
@@ -290,6 +290,19 @@ export const getCollectionFloorAskOracleV6Options: RouteOptions = {
         // USDC has 6 decimals
         price = convertedPrices.usdPrice!;
         decimals = 6;
+      } else if (Sdk.Common.Addresses.OracleSupport[config.chainId].includes(query.currency)) {
+        const convertedPrices = await getUSDAndCurrencyPrices(
+          Sdk.Common.Addresses.Native[config.chainId],
+          query.currency,
+          price,
+          now(),
+          {
+            acceptStalePrice: true,
+          }
+        );
+
+        price = convertedPrices.currencyPrice!;
+        decimals = convertedPrices.decimals!;
       } else {
         throw Boom.badRequest("Unsupported currency");
       }
