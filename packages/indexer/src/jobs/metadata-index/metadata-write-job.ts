@@ -18,6 +18,7 @@ import { resyncAttributeValueCountsJob } from "@/jobs/update-attribute/resync-at
 import { resyncAttributeCountsJob } from "@/jobs/update-attribute/update-attribute-counts-job";
 import { tokenWebsocketEventsTriggerJob } from "@/jobs/websocket-events/token-websocket-events-trigger-job";
 import { TokenMetadata } from "@/metadata/types";
+import { refreshAsksTokenAttributesJob } from "@/jobs/elasticsearch/asks/refresh-asks-token-attributes-job";
 
 export type MetadataIndexWriteJobPayload = {
   collection: string;
@@ -152,17 +153,7 @@ export default class MetadataIndexWriteJob extends AbstractRabbitMqJobHandler {
           END
         WHERE tokens.contract = $/contract/
           AND tokens.token_id = $/tokenId/
-        RETURNING collection_id, created_at, image, name, (
-          SELECT
-            json_build_object(
-              'name', tokens.name,
-              'image', tokens.image,
-              'media', tokens.media
-            )
-          FROM tokens
-          WHERE tokens.contract = $/contract/
-            AND tokens.token_id = $/tokenId/
-        ) AS old_metadata
+        RETURNING collection_id, created_at, image, name, floor_sell_id
       `,
       {
         contract: toBuffer(contract),
@@ -537,6 +528,10 @@ export default class MetadataIndexWriteJob extends AbstractRabbitMqJobHandler {
           },
         },
       ]);
+
+      if (result.floor_sell_id) {
+        await refreshAsksTokenAttributesJob.addToQueue(contract, tokenId);
+      }
     }
 
     if (!_.isEmpty(tokenAttributeCounter)) {
