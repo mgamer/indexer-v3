@@ -4811,13 +4811,16 @@ export class Router {
     sender: string
   ): Promise<TransfersResult> {
     const openseaTransferHelper = Sdk.Common.Addresses.OpenseaTransferHelper[this.chainId];
-    const openseaConduit = Sdk.SeaportBase.Addresses.OpenseaConduitKey[this.chainId];
+    const openseaConduitKey = Sdk.SeaportBase.Addresses.OpenseaConduitKey[this.chainId];
 
     const conduitController = new ConduitController(this.chainId, this.provider);
     const useOpenseaTransferHelper =
       openseaTransferHelper &&
-      openseaConduit &&
-      (await conduitController.getChannelStatus(openseaConduit, openseaTransferHelper));
+      openseaConduitKey &&
+      (await conduitController.getChannelStatus(
+        conduitController.deriveConduit(openseaConduitKey),
+        openseaTransferHelper
+      ));
 
     const conduitKey = useOpenseaTransferHelper
       ? Sdk.SeaportBase.Addresses.OpenseaConduitKey[this.chainId]
