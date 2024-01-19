@@ -4870,7 +4870,7 @@ export class Router {
               to: Addresses.ApprovalProxy[this.chainId],
               data: this.contracts.approvalProxy.interface.encodeFunctionData(
                 "bulkTransferWithExecute",
-                [[transferItem], [], conduitKey]
+                [[transferItem], [], Sdk.SeaportBase.Addresses.ReservoirConduitKey[this.chainId]]
               ),
             },
           },
