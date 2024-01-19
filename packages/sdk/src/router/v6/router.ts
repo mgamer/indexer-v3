@@ -4811,11 +4811,17 @@ export class Router {
     sender: string
   ): Promise<TransfersResult> {
     const openseaTransferHelper = Sdk.Common.Addresses.OpenseaTransferHelper[this.chainId];
+    const openseaConduit = Sdk.SeaportBase.Addresses.OpenseaConduitKey[this.chainId];
 
-    const conduitKey = openseaTransferHelper
+    const conduitController = new ConduitController(this.chainId, this.provider);
+    const useOpenseaTransferHelper =
+      openseaTransferHelper &&
+      openseaConduit &&
+      (await conduitController.getChannelStatus(openseaConduit, openseaTransferHelper));
+
+    const conduitKey = useOpenseaTransferHelper
       ? Sdk.SeaportBase.Addresses.OpenseaConduitKey[this.chainId]
       : Sdk.SeaportBase.Addresses.ReservoirConduitKey[this.chainId];
-    const conduitController = new ConduitController(this.chainId, this.provider);
     const conduit = conduitController.deriveConduit(conduitKey);
 
     const approvals = transferItem.items.map((item) => ({
@@ -4832,11 +4838,7 @@ export class Router {
       ({ txData: { from, to, data } }) => `${from}-${to}-${data}`
     );
 
-    const isOpenSeaTransferHelperApproved = async (): Promise<boolean> => {
-      return conduitController.getChannelStatus(conduit, openseaTransferHelper);
-    };
-
-    if (openseaTransferHelper && (await isOpenSeaTransferHelperApproved())) {
+    if (useOpenseaTransferHelper) {
       return {
         txs: [
           {
@@ -4870,7 +4872,7 @@ export class Router {
               to: Addresses.ApprovalProxy[this.chainId],
               data: this.contracts.approvalProxy.interface.encodeFunctionData(
                 "bulkTransferWithExecute",
-                [[transferItem], [], Sdk.SeaportBase.Addresses.ReservoirConduitKey[this.chainId]]
+                [[transferItem], [], conduitKey]
               ),
             },
           },
