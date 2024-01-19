@@ -239,17 +239,19 @@ export class ApiKeyManager {
     };
 
     if (request.payload) {
-      for (const [key, value] of Object.entries(request.payload)) {
-        log.payload[key] = Buffer.isBuffer(value) ? fromBuffer(value) : value;
-      }
+      log.payload = request.payload;
     }
 
     if (request.params) {
-      log.params = request.params;
+      for (const [key, value] of Object.entries(request.params)) {
+        log.params[key] = Buffer.isBuffer(value) ? fromBuffer(value) : value;
+      }
     }
 
     if (request.query) {
-      log.query = request.query;
+      for (const [key, value] of Object.entries(request.query)) {
+        log.query[key] = Buffer.isBuffer(value) ? fromBuffer(value) : value;
+      }
     }
 
     if (request.headers["user-agent"]) {
