@@ -1,8 +1,10 @@
-import { Contract } from "@ethersproject/contracts";
-import * as Addresses from "./addresses";
-import ConduitControllerAbi from "./abis/ConduitController.json";
-import { keccak256 as solidityKeccak256 } from "@ethersproject/solidity";
 import { Provider } from "@ethersproject/abstract-provider";
+import { Contract } from "@ethersproject/contracts";
+import { keccak256 as solidityKeccak256 } from "@ethersproject/solidity";
+
+import * as Addresses from "./addresses";
+
+import ConduitControllerAbi from "./abis/ConduitController.json";
 
 export class ConduitController {
   public chainId: number;
@@ -33,6 +35,6 @@ export class ConduitController {
   }
 
   public async getChannelStatus(conduit: string, channelAddress: string): Promise<boolean> {
-    return await this.contract.getChannelStatus(conduit, channelAddress);
+    return this.contract.getChannelStatus(conduit, channelAddress);
   }
 }

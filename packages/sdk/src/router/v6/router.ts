@@ -4810,9 +4810,9 @@ export class Router {
     transferItem: ApprovalProxy.TransferItem,
     sender: string
   ): Promise<TransfersResult> {
-    const useOpenseaTransferHelper = Sdk.Common.Addresses.OpenseaTransferHelper[this.chainId];
+    const openseaTransferHelper = Sdk.Common.Addresses.OpenseaTransferHelper[this.chainId];
 
-    const conduitKey = useOpenseaTransferHelper
+    const conduitKey = openseaTransferHelper
       ? Sdk.SeaportBase.Addresses.OpenseaConduitKey[this.chainId]
       : Sdk.SeaportBase.Addresses.ReservoirConduitKey[this.chainId];
     const conduitController = new ConduitController(this.chainId, this.provider);
@@ -4825,6 +4825,7 @@ export class Router {
       operator: conduit,
       txData: generateNFTApprovalTxData(item.token, sender, conduit),
     }));
+
     // Ensure approvals are unique
     const uniqueApprovals = uniqBy(
       approvals,
@@ -4832,10 +4833,10 @@ export class Router {
     );
 
     const isOpenSeaTransferHelperApproved = async (): Promise<boolean> => {
-      return conduitController.getChannelStatus(conduit, useOpenseaTransferHelper);
+      return conduitController.getChannelStatus(conduit, openseaTransferHelper);
     };
 
-    if (useOpenseaTransferHelper && (await isOpenSeaTransferHelperApproved())) {
+    if (openseaTransferHelper && (await isOpenSeaTransferHelperApproved())) {
       return {
         txs: [
           {
