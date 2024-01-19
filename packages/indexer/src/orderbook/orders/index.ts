@@ -121,6 +121,7 @@ standardMintSources.set("createdotfun", "mint.fun");
 standardMintSources.set("titlesxyz", "titles.xyz");
 standardMintSources.set("artblocks", "artblocks.io");
 standardMintSources.set("highlightxyz", "highlight.xyz");
+standardMintSources.set("bueno", "bueno.art");
 
 export const getOrderSourceByOrderId = async (
   orderId: string

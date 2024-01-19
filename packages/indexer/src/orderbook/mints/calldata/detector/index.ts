@@ -23,6 +23,7 @@ import * as thirdweb from "@/orderbook/mints/calldata/detector/thirdweb";
 import * as zora from "@/orderbook/mints/calldata/detector/zora";
 import * as titlesxyz from "@/orderbook/mints/calldata/detector/titlesxyz";
 import * as highlightxyz from "@/orderbook/mints/calldata/detector/highlightxyz";
+import * as bueno from "@/orderbook/mints/calldata/detector/bueno";
 
 export {
   artblocks,
@@ -38,6 +39,7 @@ export {
   createdotfun,
   titlesxyz,
   highlightxyz,
+  bueno,
 };
 
 export const extractByTx = async (txHash: string, skipCache = false) => {
@@ -249,6 +251,12 @@ export const extractByTx = async (txHash: string, skipCache = false) => {
   const highlightXyzResults = await highlightxyz.extractByTx(collection, tx);
   if (highlightXyzResults.length) {
     return highlightXyzResults;
+  }
+
+  // bueno
+  const buenoResults = await bueno.extractByTx(collection, tx);
+  if (buenoResults.length) {
+    return buenoResults;
   }
 
   // Generic
