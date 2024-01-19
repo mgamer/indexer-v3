@@ -57,15 +57,13 @@ export const extractByCollection = async (
     if (scheduleNum && !moduleInterfaceId) {
       let minter = new Contract(
         minterAddress,
-        new Interface([`function version() pure returns (string version_)`]),
+        new Interface(["function version() pure returns (string version)"]),
         baseProvider
       );
 
       const version = await minter.version();
 
-      let mintInfo;
-      let totalPrice;
-
+      let mintInfo, totalPrice;
       if (version === "1_1") {
         minter = new Contract(
           minterAddress,
