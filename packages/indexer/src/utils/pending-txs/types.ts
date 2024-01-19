@@ -17,3 +17,10 @@ export type PendingToken = {
   contract: string;
   tokenId: string;
 };
+
+export type TxLog = {
+  contract: string;
+  tokenId: string;
+  txHash: string;
+  seen: string;
+};

@@ -1607,6 +1607,12 @@ export const setupRoutes = (server: Server) => {
     options: pendingTxsEndpoints.getPendingTokensV1Options,
   });
 
+  server.route({
+    method: "GET",
+    path: "/pending-txs/tokens/recent/v1",
+    options: pendingTxsEndpoints.getRecentPendingTokensV1Options,
+  });
+
   // Debug APIs
   if (config.enableDebug) {
     server.route({

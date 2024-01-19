@@ -28,9 +28,16 @@ export const getPendingTokensV1Options: RouteOptions = {
     }),
   },
   response: {
-    schema: Joi.object({
-      tokenIds: Joi.array().items(Joi.string().pattern(regex.number)),
-    }).label(`getPendingTokens${version.toUpperCase()}Response`),
+    schema: Joi.array()
+      .items(
+        Joi.object({
+          tokenId: Joi.string().pattern(regex.number),
+          contract: Joi.string(),
+          txHash: Joi.string(),
+          seen: Joi.string().pattern(regex.number),
+        })
+      )
+      .label(`getPendingTokens${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(`get-pending-tokens-${version}-handler`, `Wrong response schema: ${error}`);
       throw error;
@@ -42,7 +49,7 @@ export const getPendingTokensV1Options: RouteOptions = {
 
     try {
       const tokenIds = await pendingTxs.getContractPendingTokenIds(query.contract);
-      return { tokenIds };
+      return tokenIds;
     } catch (error) {
       logger.error(`get-pending-tokens-${version}-handler`, `Handler failure: ${error}`);
       throw error;

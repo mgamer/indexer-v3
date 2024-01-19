@@ -1,7 +1,9 @@
 import { redis } from "@/common/redis";
 import { extractOrdersFromCalldata } from "@/events-sync/handlers/royalties/calldata";
 import * as es from "@/events-sync/storage";
-import { PendingMessage, PendingToken } from "@/utils/pending-txs/types";
+import { PendingMessage, PendingToken, TxLog } from "@/utils/pending-txs/types";
+
+const RECENT_LIMIT = 2;
 
 export const handlePendingMessage = async (message: PendingMessage) => {
   try {
@@ -30,18 +32,21 @@ export const handlePendingMessage = async (message: PendingMessage) => {
 
 export const addPendingTokens = async (tokens: PendingToken[], txHash: string) => {
   const pipe = redis.multi();
+  const recentPendingTxKey = `pending-tokens:recent`;
 
   for (const { contract, tokenId } of tokens) {
-    // Use a set to track pending tokens
-    pipe.sadd(`pending-tokens:${contract}`, tokenId);
-
-    // Set a flag to store the status
-    pipe.set(`pending-token:${contract}:${tokenId}`, 1, "EX", 2 * 60);
+    pipe.lpush(recentPendingTxKey, `${contract}:${tokenId}:${txHash}:${Date.now()}`);
+    const contractDoneTxsKey = `pending-tokens:${contract}:recent`;
+    pipe.lpush(contractDoneTxsKey, `${contract}:${tokenId}:${txHash}:${Date.now()}`);
+    pipe.expire(contractDoneTxsKey, 10 * 60);
   }
 
   // Link the transaction to its corresponding pending tokens
   pipe.set(`pending-tx:${txHash}`, JSON.stringify(tokens), "EX", 5 * 60);
-
+  pipe.ltrim(recentPendingTxKey, 0, RECENT_LIMIT);
+  for (const { contract } of tokens) {
+    pipe.ltrim(`pending-tokens:${contract}:recent`, 0, RECENT_LIMIT);
+  }
   await pipe.exec();
 };
 
@@ -62,11 +67,14 @@ export const setPendingTxsAsComplete = async (txHashes: string[]) => {
       const txHash = txHashes[i];
       if (pendingTokens.length) {
         for (const { contract, tokenId } of pendingTokens) {
-          // Remove any redis state
-          pipe.srem(`pending-tokens:${contract}`, tokenId);
-          pipe.del(`pending-token:${contract}:${tokenId}`);
+          const contractDoneTxsKey = `pending-tokens:${contract}:done`;
+          pipe.lpush(contractDoneTxsKey, `${contract}:${tokenId}:${txHash}:${Date.now()}`);
+          pipe.lpush(
+            `pending-tokens:recent:done`,
+            `${contract}:${tokenId}:${txHash}:${Date.now()}`
+          );
+          pipe.expire(contractDoneTxsKey, 10 * 60);
         }
-
         pipe.del(`pending-tx:${txHash}`);
       }
     }
@@ -86,39 +94,57 @@ export const onFillEventsCallback = async (fillEvents: es.fills.Event[]) => {
   }
 };
 
-export const getContractPendingTokenIds = async (contract: string) => {
-  const contractPendingTokensKey = `pending-tokens:${contract}`;
-  const tokenIds = await redis.smembers(contractPendingTokensKey);
-
-  const pipe = redis.multi();
-  for (const tokenId of tokenIds) {
-    pipe.get(`pending-token:${contract}:${tokenId}`);
-  }
-  const results = await pipe.exec();
-
-  const expiredTokenIds: string[] = [];
-  const pendingTokenIds = tokenIds.filter((tokenId, i) => {
-    if (!results[i]) {
-      return false;
-    }
-
-    const [error, result] = results[i];
-    if (error) {
-      return false;
-    }
-
-    if (result) {
-      return true;
-    } else {
-      expiredTokenIds.push(tokenId);
-      return false;
-    }
+function convertToTxLog(items: string[]): TxLog[] {
+  return items.map((item: string) => {
+    const [contract, tokenId, txHash, seen] = item.split(":");
+    return {
+      contract,
+      tokenId,
+      txHash,
+      seen,
+    };
   });
+}
 
-  if (expiredTokenIds.length) {
-    // Clean expired items
-    await redis.srem(contractPendingTokensKey, expiredTokenIds);
+async function getPendingTxs(pendingKey: string, doneKey: string) {
+  const pipe = redis.multi();
+
+  pipe.lrange(pendingKey, 0, RECENT_LIMIT);
+  pipe.lrange(doneKey, 0, RECENT_LIMIT);
+
+  const rawResults = await pipe.exec();
+  const [pendingTxs, doneTxs] = rawResults;
+
+  if (pendingTxs[0]) return [];
+
+  const pendingTxLogs = convertToTxLog(pendingTxs[1]);
+  const doneTxLogs = convertToTxLog(doneTxs[1]);
+
+  const finishedTokenIds = new Set();
+  const finishedTxs = new Set();
+
+  for (const doneTxLog of doneTxLogs) {
+    finishedTokenIds.add(doneTxLog.tokenId);
+    finishedTxs.add(doneTxLog.txHash);
   }
 
-  return pendingTokenIds;
+  return pendingTxLogs.filter((c) => {
+    const txIsDone = finishedTxs.has(c.txHash);
+    const tokenFilled = finishedTokenIds.has(c.tokenId);
+    const isExpired = Date.now() - parseInt(c.seen) > 120 * 1000;
+    if (txIsDone || tokenFilled || isExpired) {
+      return false;
+    }
+    return true;
+  });
+}
+
+export const getContractPendingTokenIds = async (contract: string) => {
+  const contractPendingTxsKey = `pending-tokens:${contract}:recent`;
+  const contractDoneTxsKey = `pending-tokens:${contract}:done`;
+  return getPendingTxs(contractPendingTxsKey, contractDoneTxsKey);
+};
+
+export const getRecentPendingTokens = async () => {
+  return getPendingTxs("pending-tokens:recent", "pending-tokens:recent:done");
 };
