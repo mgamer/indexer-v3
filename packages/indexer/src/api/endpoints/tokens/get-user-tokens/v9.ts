@@ -95,7 +95,7 @@ export const getUserTokensV9Options: RouteOptions = {
         .valid("acquiredAt", "lastAppraisalValue", "floorAskPrice")
         .default("acquiredAt")
         .description(
-          "Order the items are returned in the response. Options are `acquiredAt` and `lastAppraisalValue`. `lastAppraisalValue` is the value of the last sale."
+          "Order the items are returned in the response. Options are `acquiredAt`, `lastAppraisalValue` and `floorAskPrice`. `lastAppraisalValue` is the value of the last sale. `floorAskPrice` is the collection floor ask"
         ),
       sortDirection: Joi.string()
         .lowercase()
