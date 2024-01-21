@@ -18,13 +18,14 @@ export const CONFIG_DEFAULT = {
       contractAndTokenId: { type: "keyword" },
       token: {
         properties: {
-          id: { type: "double" },
+          id: { type: "keyword" },
           name: { type: "keyword" },
           image: { type: "keyword" },
           attributes: { type: "flattened" },
           isFlagged: { type: "boolean" },
           rarityRank: { type: "integer" },
           isSpam: { type: "boolean" },
+          isNsfw: { type: "boolean" },
         },
       },
       collection: {
@@ -33,6 +34,7 @@ export const CONFIG_DEFAULT = {
           name: { type: "keyword" },
           image: { type: "keyword" },
           isSpam: { type: "boolean" },
+          isNsfw: { type: "boolean" },
           imageVersion: { type: "date", format: "epoch_second" },
         },
       },
@@ -102,6 +104,8 @@ export const CONFIG_DEFAULT = {
       getNetworkSettings().elasticsearch?.indexes?.asks?.numberOfShards ||
       getNetworkSettings().elasticsearch?.numberOfShards ||
       1,
-    number_of_replicas: 0,
+    number_of_replicas: 1,
+    max_result_window: 1000000,
+    refresh_interval: "1s",
   },
 };

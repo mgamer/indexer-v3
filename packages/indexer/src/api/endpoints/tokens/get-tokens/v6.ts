@@ -221,6 +221,9 @@ export const getTokensV6Options: RouteOptions = {
       excludeSpam: Joi.boolean()
         .default(false)
         .description("If true, will filter any tokens marked as spam."),
+      excludeNsfw: Joi.boolean()
+        .default(false)
+        .description("If true, will filter any tokens marked as nsfw."),
       includeAttributes: Joi.boolean()
         .default(false)
         .description("If true, attributes will be returned in the response."),
@@ -284,6 +287,7 @@ export const getTokensV6Options: RouteOptions = {
             kind: Joi.string().allow("", null).description("Can be erc721, erc115, etc."),
             isFlagged: Joi.boolean().default(false),
             isSpam: Joi.boolean().default(false),
+            isNsfw: Joi.boolean().default(false),
             metadataDisabled: Joi.boolean().default(false),
             lastFlagUpdate: Joi.string().allow("", null),
             lastFlagChange: Joi.string().allow("", null),
@@ -747,6 +751,7 @@ export const getTokensV6Options: RouteOptions = {
           t.rarity_rank,
           t.is_flagged,
           t.is_spam AS t_is_spam,
+          t.nsfw_status AS t_nsfw_status,
           t.last_flag_update,
           t.last_flag_change,
           t.supply,
@@ -788,7 +793,7 @@ export const getTokensV6Options: RouteOptions = {
         ${mintStagesJoinQuery}
         JOIN collections c ON t.collection_id = c.id ${
           query.excludeSpam ? `AND (c.is_spam IS NULL OR c.is_spam <= 0)` : ""
-        }
+        }${query.excludeNsfw ? ` AND (c.nsfw_status IS NULL OR c.nsfw_status <= 0)` : ""}
         JOIN contracts con ON t.contract = con.address
       `;
 
@@ -848,6 +853,10 @@ export const getTokensV6Options: RouteOptions = {
 
       if (query.excludeSpam) {
         conditions.push(`(t.is_spam IS NULL OR t.is_spam <= 0)`);
+      }
+
+      if (query.excludeNsfw) {
+        conditions.push(`(t.nsfw_status IS NULL OR t.nsfw_status <= 0)`);
       }
 
       if (query.minRarityRank) {
@@ -1451,10 +1460,16 @@ export const getTokensV6Options: RouteOptions = {
               metadata: Object.values(metadata).every((el) => el === undefined)
                 ? undefined
                 : metadata,
-              media: r.media,
+              media: Assets.getResizedImageUrl(
+                r.media,
+                undefined,
+                r.image_version,
+                r.media_mime_type
+              ),
               kind: r.kind,
               isFlagged: Boolean(Number(r.is_flagged)),
               isSpam: Number(r.t_is_spam) > 0 || Number(r.c_is_spam) > 0,
+              isNsfw: Number(r.t_nsfw_status) > 0 || Number(r.c_nsfw_status) > 0,
               metadataDisabled:
                 Boolean(Number(r.t_metadata_disabled)) || Boolean(Number(r.c_metadata_disabled)),
               lastFlagUpdate: r.last_flag_update
@@ -1656,7 +1671,7 @@ export const getListedTokensFromES = async (query: any, attributeFloorAskPriceAs
     }
   }
 
-  let tokens: { contract: string; tokenId: string }[] = [];
+  const tokens: { contract: string; tokenId: string }[] = [];
 
   if (query.tokens) {
     if (!_.isArray(query.tokens)) {
@@ -1673,30 +1688,14 @@ export const getListedTokensFromES = async (query: any, attributeFloorAskPriceAs
     }
   }
 
-  if (query.attributes) {
-    const attributes: string[] = [];
+  const attributes: { key: string; value: string }[] = [];
 
+  if (query.attributes) {
     Object.entries(query.attributes).forEach(([key, values]) => {
       (Array.isArray(values) ? values : [values]).forEach((value) =>
-        attributes.push(`('${key}', '${value}')`)
+        attributes.push({ key, value })
       );
     });
-
-    const tokensResult = await redb.manyOrNone(`
-            SELECT contract, token_id
-            FROM token_attributes
-            WHERE collection_id IN ('${query.collection.join(",")}')
-            AND (key, value) IN (${attributes.join(",")});
-          `);
-
-    if (tokensResult.length === 0) {
-      throw Boom.badRequest(`No tokens for attributes ${query.attributes}`);
-    }
-
-    tokens = _.map(tokensResult, (token) => ({
-      contract: fromBuffer(token.contract),
-      tokenId: token.token_id,
-    }));
   }
 
   if (query.source) {
@@ -1745,15 +1744,21 @@ export const getListedTokensFromES = async (query: any, attributeFloorAskPriceAs
     query.spamTokens = { operation: "exclude" };
   }
 
+  if (query.excludeNsfw) {
+    query.nsfwTokens = { operation: "exclude" };
+  }
+
   const { asks, continuation } = await AsksIndex.searchTokenAsks({
     orderKinds: query.orderKinds,
     contracts: query.contract && !_.isArray(query.contract) ? [query.contract] : query.contract,
     collections,
     tokens,
+    attributes,
     rarityRank: { min: query.minRarityRank, max: query.maxRarityRank },
     floorAskPrice: { min: query.minFloorAskPrice, max: query.maxFloorAskPrice },
     flaggedTokens: query.flaggedTokens,
     spamTokens: query.spamTokens,
+    nsfwTokens: query.nsfwTokens,
     normalizeRoyalties: query.normalizeRoyalties,
     limit: query.limit,
     continuation: query.continuation,
@@ -1939,6 +1944,9 @@ export const getListedTokensFromES = async (query: any, attributeFloorAskPriceAs
             t.name,
             t.description,
             t.image,
+            t.image_version,
+            (t.metadata ->> 'image_mime_type')::TEXT AS image_mime_type,
+            (t.metadata ->> 'media_mime_type')::TEXT AS media_mime_type,
             t.metadata,
             t.media,
             t.collection_id,
@@ -1954,6 +1962,7 @@ export const getListedTokensFromES = async (query: any, attributeFloorAskPriceAs
             t.last_flag_change,
             t.supply,
             t.remaining_supply,
+            t.decimals,
             t.metadata_disabled AS t_metadata_disabled,
             extract(epoch from t.updated_at) AS t_updated_at,
             c.slug,
@@ -2163,7 +2172,7 @@ export const getListedTokensFromES = async (query: any, attributeFloorAskPriceAs
             r.image_mime_type
           ),
           metadata: Object.values(metadata).every((el) => el === undefined) ? undefined : metadata,
-          media: r.media,
+          media: Assets.getResizedImageUrl(r.media, undefined, r.image_version, r.media_mime_type),
           kind: r.kind,
           isFlagged: Boolean(Number(r.is_flagged)),
           isSpam: Number(r.t_is_spam) > 0 || Number(r.c_is_spam) > 0,

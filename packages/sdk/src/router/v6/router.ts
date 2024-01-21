@@ -353,6 +353,8 @@ export class Router {
       // Use permit instead of approvals (only works for USDC)
       usePermit?: boolean;
       swapProvider?: "uniswap" | "1inch";
+      // Conduit key to use when filling Seaport listings
+      conduitKey?: string;
       // Callback for handling errors
       onError?: (
         kind: string,
@@ -975,7 +977,8 @@ export class Router {
     ) {
       const exchange = new Sdk.SeaportV15.Exchange(this.chainId);
 
-      const conduitKey = (details[0].order as Sdk.SeaportV15.Order).params.conduitKey;
+      const conduitKey =
+        options?.conduitKey ?? (details[0].order as Sdk.SeaportV15.Order).params.conduitKey;
       const conduit = exchange.deriveConduit(conduitKey);
 
       let approval: FTApproval | undefined;
@@ -1068,7 +1071,8 @@ export class Router {
     ) {
       const exchange = new Sdk.Alienswap.Exchange(this.chainId);
 
-      const conduitKey = (details[0].order as Sdk.Alienswap.Order).params.conduitKey;
+      const conduitKey =
+        options?.conduitKey ?? (details[0].order as Sdk.Alienswap.Order).params.conduitKey;
       const conduit = exchange.deriveConduit(conduitKey);
 
       let approval: FTApproval | undefined;
@@ -4806,12 +4810,22 @@ export class Router {
     transferItem: ApprovalProxy.TransferItem,
     sender: string
   ): Promise<TransfersResult> {
-    const useOpenseaTransferHelper = Sdk.Common.Addresses.OpenseaTransferHelper[this.chainId];
+    const openseaTransferHelper = Sdk.Common.Addresses.OpenseaTransferHelper[this.chainId];
+    const openseaConduitKey = Sdk.SeaportBase.Addresses.OpenseaConduitKey[this.chainId];
+
+    const conduitController = new ConduitController(this.chainId, this.provider);
+    const useOpenseaTransferHelper =
+      openseaTransferHelper &&
+      openseaConduitKey &&
+      (await conduitController.getChannelStatus(
+        conduitController.deriveConduit(openseaConduitKey),
+        openseaTransferHelper
+      ));
 
     const conduitKey = useOpenseaTransferHelper
       ? Sdk.SeaportBase.Addresses.OpenseaConduitKey[this.chainId]
       : Sdk.SeaportBase.Addresses.ReservoirConduitKey[this.chainId];
-    const conduit = new ConduitController(this.chainId).deriveConduit(conduitKey);
+    const conduit = conduitController.deriveConduit(conduitKey);
 
     const approvals = transferItem.items.map((item) => ({
       orderIds: [],
@@ -4820,6 +4834,7 @@ export class Router {
       operator: conduit,
       txData: generateNFTApprovalTxData(item.token, sender, conduit),
     }));
+
     // Ensure approvals are unique
     const uniqueApprovals = uniqBy(
       approvals,
