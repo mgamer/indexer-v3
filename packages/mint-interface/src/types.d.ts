@@ -17,11 +17,12 @@ export interface MintPhase {
 }
 
 export interface ContractCall {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   abi: any;
   functionName: string;
   to?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   inputs?: any[];
-  // pathToValue: string;
 }
 
 export interface TxBuild {
@@ -33,16 +34,20 @@ export interface TxBuild {
 export interface TxParam {
   name: string; // name of the param, to display to the users if needed
   abiType: string; // abi type to encode it
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   value?: any; // value for that parameter. type must satisfy "abiType". if set, kind and values are ignored.
   kind?: string; // keyword for some kind of params
   values?: TxParamValues; // the possible values.
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type TxParamValues = { [k: string]: any } | TxParamValuesOption[];
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type TxParamValuesOption = { label: string; value: any }; // value type must satisfy the abiType for that TxParam
 
 export type BuilderConfig = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   provider: any;
   collection: string;
 };

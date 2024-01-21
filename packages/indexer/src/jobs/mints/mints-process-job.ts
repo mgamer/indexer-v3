@@ -51,6 +51,7 @@ export default class MintsProcessJob extends AbstractRabbitMqJobHandler {
     try {
       let collectionMints: CollectionMint[] = [];
 
+      // Process new mints knowing the mint configuration in the metadata
       if (by === "contractMetadata") {
         collectionMints = await detector.extractByContractMetadata(data.collection, data.metadata);
       }

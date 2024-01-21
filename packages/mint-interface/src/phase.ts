@@ -1,4 +1,6 @@
-import { ethers } from "ethers";
+import { defaultAbiCoder } from "@ethersproject/abi";
+import { AddressZero } from "@ethersproject/constants";
+
 import { Builder } from "./builder.js";
 import type { MintPhase, TxParam } from "./types.d";
 
@@ -31,22 +33,19 @@ export class Phase {
   }
 
   get maxMintsPerWallet(): number {
-    return (
-      this.phase.maxMintsPerWallet ?? this.globalMaxMintPerWallet ?? undefined
-    );
+    return this.phase.maxMintsPerWallet ?? this.globalMaxMintPerWallet ?? undefined;
   }
 
   get maxMintPerTransaction(): number {
-    return (
-      this.phase.maxMintPerTransaction ??
-      this.globalMaxMintPerTransaction ??
-      undefined
-    );
+    return this.phase.maxMintPerTransaction ?? this.globalMaxMintPerTransaction ?? undefined;
   }
 
   get price(): string | null {
-    if (this.phase.price == "0") return null;
-    else return this.phase.price as string;
+    if (this.phase.price == "0") {
+      return null;
+    } else {
+      return this.phase.price as string;
+    }
   }
 
   get currency(): string | null {
@@ -55,26 +54,23 @@ export class Phase {
 
   get isOpen() {
     const timestamp = ~~(Date.now() / 1000);
-    return (
-      this.startTime <= timestamp &&
-      (this.endTime >= timestamp || this.endTime == 0)
-    );
+    return this.startTime <= timestamp && (this.endTime >= timestamp || this.endTime === 0);
   }
 
   hasRecipient() {
-    return this.phase.tx.params?.find((el) => el.kind == "RECIPIENT");
+    return this.phase.tx.params?.find((p) => p.kind === "RECIPIENT");
   }
 
   hasQuantity() {
-    return this.phase.tx.params?.find((el) => el.kind == "QUANTITY");
+    return this.phase.tx.params?.find((p) => p.kind === "QUANTITY");
   }
 
   hasMappingRecipient() {
-    return this.phase.tx.params?.find((el) => el.kind == "MAPPING_RECIPIENT");
+    return this.phase.tx.params?.find((p) => p.kind === "MAPPING_RECIPIENT");
   }
 
   maxMint() {
-    let max =
+    const max =
       this.phase.maxMintPerTransaction ??
       this.phase.maxMintsPerWallet ??
       this.globalMaxMintPerTransaction ??
@@ -84,7 +80,7 @@ export class Phase {
   }
 
   getParams(): TxParam[] {
-    // return the params that are supposed to be filled by the consumer
+    // Return the params that are supposed to be filled by the consumer
     // MAPPING_RRECIPIENT is automatically filled with the value from RECIPIENT
     return (
       this.phase.tx.params?.filter(
@@ -93,7 +89,8 @@ export class Phase {
     );
   }
 
-  // build a transaction with the given params
+  // Build a transaction with the given params
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   buildTransaction(inputs: Record<string, any>) {
     const recipientParam = this.hasRecipient();
     if (recipientParam) {
@@ -109,7 +106,7 @@ export class Phase {
         throw new Error("Quantity needs to be set");
       } else {
         const max = this.maxMint();
-        if (max != 0) {
+        if (max !== 0) {
           if (quantity > max) {
             throw new Error("Quantity too high.");
           }
@@ -123,37 +120,35 @@ export class Phase {
         throw new Error("MAPPING_RECIPIENT kind requires a values field");
       }
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const values = mappingRecipient!.values as { [k: string]: any };
 
-      let recipient = inputs[recipientParam!.name] as string;
-      let mappingValue = values[recipient];
+      const recipient = inputs[recipientParam!.name] as string;
+      const mappingValue = values[recipient];
       if (!mappingValue) {
         throw new Error("Unknown recipient");
       }
 
-      // we autofill inputs[mappingRecipient] with the corresponding value
+      // We autofill inputs[mappingRecipient] with the corresponding value
       inputs[mappingRecipient.name] = mappingValue;
     }
 
-    // now we check that all params have values and we can fill the arrays used to build the tx
+    // Now we check that all params have values and we can fill the arrays used to build the tx
     const txParamsTypes = [];
     const txParamsValues = [];
     for (const param of this.phase.tx.params ?? []) {
       const value = param.value ?? inputs[param.name];
-      if (value === undefined || value == null) {
+      if (value === undefined || value === null) {
         throw new Error(`Parameter ${param.name} value missing`);
       }
 
-      // add the txParam to the build
+      // Add the txParam to the build
       txParamsTypes.push(param.abiType);
       txParamsValues.push(value);
     }
 
-    // use ethers to build the tx
-    const txParamsData = ethers.utils.defaultAbiCoder.encode(
-      txParamsTypes,
-      txParamsValues
-    );
+    // Use ethers to build the tx
+    const txParamsData = defaultAbiCoder.encode(txParamsTypes, txParamsValues);
 
     return {
       to: this.phase.tx.to,
@@ -161,6 +156,7 @@ export class Phase {
     };
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   format(): any {
     const collection = this.parent.config.collection;
     const to = this.phase.tx.to;
@@ -200,7 +196,7 @@ export class Phase {
         },
         additionalInfo,
       },
-      currency: this.phase.currency ?? ethers.constants.AddressZero,
+      currency: this.phase.currency ?? AddressZero,
       price: this.phase.price ?? undefined,
       tokenId: this.phase.tokenId ?? undefined,
       maxMintsPerWallet: this.maxMintsPerWallet,

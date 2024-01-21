@@ -2,6 +2,7 @@ import { AddressZero } from "@ethersproject/constants";
 import { parseConfig } from "@reservoir0x/mint-interface";
 
 import { idb } from "@/common/db";
+import { baseProvider } from "@/common/provider";
 import { redis } from "@/common/redis";
 import { bn, fromBuffer, toBuffer } from "@/common/utils";
 import { getNetworkSettings } from "@/config/network";
@@ -10,7 +11,6 @@ import { mintsCheckJob } from "@/jobs/mints/mints-check-job";
 import { mintsRefreshJob } from "@/jobs/mints/mints-refresh-job";
 import { Sources } from "@/models/sources";
 import { CollectionMint, getCollectionMints } from "@/orderbook/mints";
-import { baseProvider } from "@/common/provider";
 
 import * as artblocks from "@/orderbook/mints/calldata/detector/artblocks";
 import * as createdotfun from "@/orderbook/mints/calldata/detector/createdotfun";
@@ -253,12 +253,22 @@ export const extractByTx = async (txHash: string, skipCache = false) => {
     return highlightXyzResults;
   }
 
+  // Generic via `mintConfig`
   const metadataResult = await idb.oneOrNone(
-    `SELECT metadata FROM contracts WHERE contracts.address = $/collection/ LIMIT 1`,
-    { collection: collection }
+    `
+      SELECT
+        contracts.metadata
+      FROM contracts
+      WHERE contracts.address = $/collection/
+      LIMIT 1
+    `,
+    {
+      collection: toBuffer(collection),
+    }
   );
-
-  // we have a mintConfig in the metadata, the CollectionMints should be handled by the appropriate event
+  // Since we have a `mintConfig` entry in the metadata we want the mints to be handled
+  // by the standard mint configuration event rather than the generic handler (which is
+  // not very accurate)
   if (metadataResult?.metadata?.mintConfig) {
     return [];
   }
@@ -280,17 +290,16 @@ export const extractByTx = async (txHash: string, skipCache = false) => {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const extractByContractMetadata = async (collection: string, contractMetadata: any) => {
   const mintConfig = contractMetadata.mintConfig;
-
   const parsed = await parseConfig(mintConfig, {
     collection,
     provider: baseProvider,
   });
 
   const collectionMints: CollectionMint[] = [];
-
   for (const phase of parsed.phases) {
     const formatted = phase.format();
-    // for the moment we only manage public mints
+
+    // For the moment we only support public mints
     if (formatted.kind == "public") {
       collectionMints.push(phase.format());
     }
