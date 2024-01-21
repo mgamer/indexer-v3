@@ -8,7 +8,7 @@ We use a new field `mintConfig` on the object pointed to by the commonly-used `c
 
 Example of `contractURI` with `mintConfig`:
 
-```json
+```javascript
 {
   "name": "NFT Collection Name",
   "description": "NFT Collection Description",
