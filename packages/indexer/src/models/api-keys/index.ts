@@ -19,7 +19,7 @@ import { config } from "@/config/index";
 import { Boom } from "@hapi/boom";
 import tracer from "@/common/tracer";
 import flat from "flat";
-import { regex } from "@/common/utils";
+import { fromBuffer, regex } from "@/common/utils";
 import { syncApiKeysJob } from "@/jobs/api-keys/sync-api-keys-job";
 
 export type ApiKeyRecord = {
@@ -243,7 +243,13 @@ export class ApiKeyManager {
     }
 
     if (request.params) {
-      log.params = request.params;
+      if (_.isObject(request.params)) {
+        for (const [key, value] of Object.entries(request.params)) {
+          log.params[key] = Buffer.isBuffer(value) ? fromBuffer(value) : value;
+        }
+      } else {
+        log.params = Buffer.isBuffer(request.params) ? fromBuffer(request.params) : request.params;
+      }
     }
 
     if (request.query) {
