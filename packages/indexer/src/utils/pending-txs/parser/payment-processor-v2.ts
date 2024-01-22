@@ -1,22 +1,25 @@
-import { PendingToken } from "../types";
 import { Interface, Result } from "@ethersproject/abi";
+
+import { PendingToken } from "@/utils/pending-txs/types";
 
 import ModuleTradesAbi from "@reservoir0x/sdk/dist/payment-processor-v2/abis/ModuleTrades.json";
 import ModuleTradesAdvancedAbi from "@reservoir0x/sdk/dist/payment-processor-v2/abis/ModuleTradesAdvanced.json";
 import ExchangeAbi from "@reservoir0x/sdk/dist/payment-processor-v2/abis/Exchange.json";
 
-export async function parseTokensFromCalldata(rawCalldata: string): Promise<PendingToken[]> {
+export const parseTokensFromCalldata = async (rawCalldata: string): Promise<PendingToken[]> => {
   const parsedTokens: PendingToken[] = [];
+
   try {
     const exchangeIface = new Interface(ExchangeAbi);
     const forwarderIface = new Interface([
-      "function forwardCall(address target, bytes calldata message) external payable",
+      "function forwardCall(address target, bytes calldata message)",
     ]);
 
     let calldata = rawCalldata;
 
     const forwardCallSighash = forwarderIface.getSighash("forwardCall");
-    // Handle TruestForwarder
+
+    // Handle TrustedForwarder
     if (rawCalldata.includes(forwardCallSighash)) {
       const parsedForwardCall = forwarderIface.parseTransaction({
         data: rawCalldata,
@@ -50,7 +53,6 @@ export async function parseTokensFromCalldata(rawCalldata: string): Promise<Pend
       data: subCalldata,
     });
 
-    // struct Order[]
     let orders = [];
     if (["buyListing", "acceptOffer"].includes(funcName)) {
       orders.push(args.saleDetails);
@@ -66,6 +68,7 @@ export async function parseTokensFromCalldata(rawCalldata: string): Promise<Pend
         };
       });
     }
+
     for (let i = 0; i < orders.length; i++) {
       try {
         const order = orders[i];
@@ -80,5 +83,6 @@ export async function parseTokensFromCalldata(rawCalldata: string): Promise<Pend
   } catch {
     // Skip errors
   }
+
   return parsedTokens;
-}
+};

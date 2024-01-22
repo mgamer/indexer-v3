@@ -1,9 +1,7 @@
 import { redis } from "@/common/redis";
 import { extractOrdersFromCalldata } from "@/events-sync/handlers/royalties/calldata";
 import * as es from "@/events-sync/storage";
-import { PendingMessage, PendingToken, TxLog } from "@/utils/pending-txs/types";
-
-const RECENT_LIMIT = 2;
+import { PendingItem, PendingMessage, PendingToken } from "@/utils/pending-txs/types";
 
 export const handlePendingMessage = async (message: PendingMessage) => {
   try {
@@ -21,7 +19,7 @@ export const handlePendingMessage = async (message: PendingMessage) => {
       .filter((c) => c.tokenId) as PendingToken[];
 
     if (pendingTokens.length) {
-      await addPendingTokens(pendingTokens, txHash);
+      await addPendingItems(pendingTokens, txHash);
     }
 
     return pendingTokens;
@@ -30,23 +28,27 @@ export const handlePendingMessage = async (message: PendingMessage) => {
   }
 };
 
-export const addPendingTokens = async (tokens: PendingToken[], txHash: string) => {
+export const addPendingItems = async (tokens: PendingToken[], txHash: string) => {
   const pipe = redis.multi();
-  const recentPendingTxKey = `pending-tokens:recent`;
 
   for (const { contract, tokenId } of tokens) {
-    pipe.lpush(recentPendingTxKey, `${contract}:${tokenId}:${txHash}:${Date.now()}`);
-    const contractDoneTxsKey = `pending-tokens:${contract}:recent`;
-    pipe.lpush(contractDoneTxsKey, `${contract}:${tokenId}:${txHash}:${Date.now()}`);
-    pipe.expire(contractDoneTxsKey, 10 * 60);
+    const pendingItem = {
+      contract,
+      tokenId,
+      txHash,
+    } as PendingItem;
+
+    // Use a set to track pending tokens (globally and per contract)
+    pipe.sadd("pending-items", JSON.stringify(pendingItem));
+    pipe.sadd(`pending-items:${contract}`, JSON.stringify(pendingItem));
+
+    // Set a flag to store the status
+    pipe.set(`pending-item:${contract}:${tokenId}:${txHash}`, 1, "EX", 2 * 60);
   }
 
   // Link the transaction to its corresponding pending tokens
   pipe.set(`pending-tx:${txHash}`, JSON.stringify(tokens), "EX", 5 * 60);
-  pipe.ltrim(recentPendingTxKey, 0, RECENT_LIMIT);
-  for (const { contract } of tokens) {
-    pipe.ltrim(`pending-tokens:${contract}:recent`, 0, RECENT_LIMIT);
-  }
+
   await pipe.exec();
 };
 
@@ -67,14 +69,18 @@ export const setPendingTxsAsComplete = async (txHashes: string[]) => {
       const txHash = txHashes[i];
       if (pendingTokens.length) {
         for (const { contract, tokenId } of pendingTokens) {
-          const contractDoneTxsKey = `pending-tokens:${contract}:done`;
-          pipe.lpush(contractDoneTxsKey, `${contract}:${tokenId}:${txHash}:${Date.now()}`);
-          pipe.lpush(
-            `pending-tokens:recent:done`,
-            `${contract}:${tokenId}:${txHash}:${Date.now()}`
-          );
-          pipe.expire(contractDoneTxsKey, 10 * 60);
+          const pendingItem = {
+            contract,
+            tokenId,
+            txHash,
+          } as PendingItem;
+
+          // Remove any Redis state
+          pipe.srem("pending-items", JSON.stringify(pendingItem));
+          pipe.srem(`pending-items:${contract}`, JSON.stringify(pendingItem));
+          pipe.del(`pending-item:${contract}:${tokenId}:${txHash}`);
         }
+
         pipe.del(`pending-tx:${txHash}`);
       }
     }
@@ -94,57 +100,48 @@ export const onFillEventsCallback = async (fillEvents: es.fills.Event[]) => {
   }
 };
 
-function convertToTxLog(items: string[]): TxLog[] {
-  return items.map((item: string) => {
-    const [contract, tokenId, txHash, seen] = item.split(":");
-    return {
-      contract,
-      tokenId,
-      txHash,
-      seen,
-    };
-  });
-}
+export const getPendingItems = async (contract?: string) => {
+  const pendingItemsKey = contract ? `pending-items:${contract}` : "pending-items";
 
-async function getPendingTxs(pendingKey: string, doneKey: string) {
+  // Get all cached pending items
+  const pendingItems: PendingItem[] = await redis
+    .smembers(pendingItemsKey)
+    .then((rs) => rs.map((r) => JSON.parse(r)));
+
+  // Get the status of the caches pending items
   const pipe = redis.multi();
-
-  pipe.lrange(pendingKey, 0, RECENT_LIMIT);
-  pipe.lrange(doneKey, 0, RECENT_LIMIT);
-
-  const rawResults = await pipe.exec();
-  const [pendingTxs, doneTxs] = rawResults;
-
-  if (pendingTxs[0]) return [];
-
-  const pendingTxLogs = convertToTxLog(pendingTxs[1]);
-  const doneTxLogs = convertToTxLog(doneTxs[1]);
-
-  const finishedTokenIds = new Set();
-  const finishedTxs = new Set();
-
-  for (const doneTxLog of doneTxLogs) {
-    finishedTokenIds.add(doneTxLog.tokenId);
-    finishedTxs.add(doneTxLog.txHash);
+  for (const pendingItem of pendingItems) {
+    pipe.get(`pending-item:${pendingItem.contract}:${pendingItem.tokenId}:${pendingItem.txHash}`);
   }
+  const results = await pipe.exec();
 
-  return pendingTxLogs.filter((c) => {
-    const txIsDone = finishedTxs.has(c.txHash);
-    const tokenFilled = finishedTokenIds.has(c.tokenId);
-    const isExpired = Date.now() - parseInt(c.seen) > 120 * 1000;
-    if (txIsDone || tokenFilled || isExpired) {
+  // Keep track of expired vs active pending items
+  const expiredPendingItem: PendingItem[] = [];
+  const activePendingItems = pendingItems.filter((pendingItem, i) => {
+    if (!results[i]) {
       return false;
     }
-    return true;
+
+    const [error, result] = results[i];
+    if (error) {
+      return false;
+    }
+
+    if (result) {
+      return true;
+    } else {
+      expiredPendingItem.push(pendingItem);
+      return false;
+    }
   });
-}
 
-export const getContractPendingTokenIds = async (contract: string) => {
-  const contractPendingTxsKey = `pending-tokens:${contract}:recent`;
-  const contractDoneTxsKey = `pending-tokens:${contract}:done`;
-  return getPendingTxs(contractPendingTxsKey, contractDoneTxsKey);
-};
+  if (expiredPendingItem.length) {
+    // Clean expired items
+    await redis.srem(
+      pendingItemsKey,
+      expiredPendingItem.map((item) => JSON.stringify(item))
+    );
+  }
 
-export const getRecentPendingTokens = async () => {
-  return getPendingTxs("pending-tokens:recent", "pending-tokens:recent:done");
+  return activePendingItems;
 };

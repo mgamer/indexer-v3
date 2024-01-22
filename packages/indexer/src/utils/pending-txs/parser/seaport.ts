@@ -1,7 +1,7 @@
 import { extractOrdersFromCalldata } from "@/events-sync/handlers/royalties/calldata";
-import { PendingToken } from "../types";
+import { PendingToken } from "@/utils/pending-txs/types";
 
-export async function parseTokensFromCalldata(calldata: string) {
+export const parseTokensFromCalldata = async (calldata: string) => {
   const parsedOrders = await extractOrdersFromCalldata(calldata);
   return parsedOrders
     .map((c) => {
@@ -11,4 +11,4 @@ export async function parseTokensFromCalldata(calldata: string) {
       };
     })
     .filter((c) => c.tokenId) as PendingToken[];
-}
+};

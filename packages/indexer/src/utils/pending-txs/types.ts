@@ -18,9 +18,6 @@ export type PendingToken = {
   tokenId: string;
 };
 
-export type TxLog = {
-  contract: string;
-  tokenId: string;
+export type PendingItem = PendingToken & {
   txHash: string;
-  seen: string;
 };
