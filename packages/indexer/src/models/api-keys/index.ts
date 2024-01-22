@@ -243,12 +243,9 @@ export class ApiKeyManager {
     }
 
     if (request.params) {
-      if (_.isObject(request.params)) {
-        for (const [key, value] of Object.entries(request.params)) {
-          log.params[key] = Buffer.isBuffer(value) ? fromBuffer(value) : value;
-        }
-      } else {
-        log.params = Buffer.isBuffer(request.params) ? fromBuffer(request.params) : request.params;
+      log.params = {};
+      for (const [key, value] of Object.entries(request.params)) {
+        log.params[key] = Buffer.isBuffer(value) ? fromBuffer(value) : value;
       }
     }
 
