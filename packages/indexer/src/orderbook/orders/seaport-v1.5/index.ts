@@ -553,13 +553,17 @@ export const save = async (
               .toNumber();
         feeBps += bps;
 
-        // First check for opensea hardcoded recipients
-        const kind: "marketplace" | "royalty" = feeRecipients.getByAddress(
-          recipient.toLowerCase(),
-          "marketplace"
-        )
-          ? "marketplace"
-          : "royalty";
+        // If this is opensea only the known address can be marketplace and all other can be only royalty
+        let kind: "marketplace" | "royalty";
+        if (isOpenSea) {
+          kind = _.includes(openSeaFeeRecipients, recipient.toLowerCase())
+            ? "marketplace"
+            : "royalty";
+        } else {
+          kind = feeRecipients.getByAddress(recipient.toLowerCase(), "marketplace")
+            ? "marketplace"
+            : "royalty";
+        }
 
         // Check for unknown fees
         knownFee =
