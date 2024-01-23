@@ -1,5 +1,5 @@
 import { getStateChange, getPayments, searchForCall } from "@georgeroman/evm-tx-simulator";
-import { Payment } from "@georgeroman/evm-tx-simulator/dist/types";
+import { Payment, CallTrace } from "@georgeroman/evm-tx-simulator/dist/types";
 import * as Sdk from "@reservoir0x/sdk";
 
 import { redis } from "@/common/redis";
@@ -20,9 +20,42 @@ import * as utils from "@/events-sync/utils";
 import { FeeRecipients } from "@/models/fee-recipients";
 import { TransactionTrace } from "@/models/transaction-traces";
 import { Royalty, getRoyalties } from "@/utils/royalties";
+import { baseProvider } from "@/common/provider";
+import _ from "lodash";
 
 const findMatchingPayment = (payments: Payment[], fillEvent: PartialFillEvent) =>
   payments.find((payment) => paymentMatches(payment, fillEvent));
+
+const isNFTPayment = (item: Payment) =>
+  item.token.includes("erc1155") || item.token.includes("erc721");
+const isTokenPayment = (item: Payment) =>
+  item.token.includes("native") || item.token.includes("erc20");
+const isSamePayment = (item: Payment, c: Payment) =>
+  c.token === item.token && c.from === item.from && c.to === item.to && c.amount === item.amount;
+
+function checkCallIsInParent(parentCall: CallTrace, subCall: CallTrace) {
+  const globalPayments = getPayments(parentCall);
+  const subcallPayments = getPayments(subCall);
+
+  const nftTransfers = subcallPayments.filter(isNFTPayment);
+  const tokenTransfers = subcallPayments.filter(isTokenPayment);
+
+  const globalNftTransfers = globalPayments.filter(isNFTPayment);
+  const globalTokenTransfers = globalPayments.filter(isTokenPayment);
+
+  const nftTransferAllInParent = nftTransfers.every((item) =>
+    globalNftTransfers.find((c) => isSamePayment(item, c))
+  );
+  const tokenTransferAllInParent = tokenTransfers.every((item) =>
+    globalTokenTransfers.find((c) => isSamePayment(item, c))
+  );
+  return {
+    isMatch: nftTransferAllInParent && tokenTransferAllInParent,
+    parentTransfers: globalTokenTransfers.filter(
+      (item) => !tokenTransfers.find((c) => isSamePayment(item, c))
+    ),
+  };
+}
 
 export const paymentMatches = (payment: Payment, fillEvent: PartialFillEvent) => {
   // Cover regular ERC721/ERC1155 transfers
@@ -147,6 +180,38 @@ export async function extractRoyalties(
     0
   );
 
+  const routerExecutionCalls = [];
+  if (routerCall) {
+    const transaction = await utils.fetchTransaction(txHash);
+    const sdkRouter = new Sdk.RouterV6.Router(config.chainId, baseProvider);
+    const executions = sdkRouter.parseExecutions(transaction.data);
+    if (executions.length) {
+      const executionsByModule = _.groupBy(
+        executions,
+        (execution) => `${execution.sighash}:${execution.module}`
+      );
+      for (const moduleAndSignHash of Object.keys(executionsByModule)) {
+        const moduleExecutions = executionsByModule[moduleAndSignHash];
+        for (let index = 0; index < moduleExecutions.length; index++) {
+          const execution = moduleExecutions[index];
+          const _executionCall = searchForCall(
+            txTrace.calls,
+            {
+              sigHashes: [execution.sighash],
+            },
+            index
+          );
+          if (_executionCall) {
+            routerExecutionCalls.push({
+              execution,
+              call: _executionCall,
+            });
+          }
+        }
+      }
+    }
+  }
+
   const exchangeAddress = supportedExchanges.get(fillEvent.orderKind);
   if (exchangeAddress) {
     // If the fill event is from a supported exchange then search
@@ -200,6 +265,19 @@ export async function extractRoyalties(
         if (matchExchangeCalls[eventIndex]) {
           subcallToAnalyze = matchExchangeCalls[eventIndex];
         }
+      }
+    }
+  }
+
+  let parentCallTransfers: Payment[] = [];
+
+  if (routerCall) {
+    // pin-pointed to the parent module call
+    for (const { call } of routerExecutionCalls) {
+      const checkResult = checkCallIsInParent(call, subcallToAnalyze);
+      if (checkResult.isMatch) {
+        parentCallTransfers = checkResult.parentTransfers;
+        subcallToAnalyze = call;
       }
     }
   }
@@ -306,8 +384,18 @@ export async function extractRoyalties(
   notRoyaltyRecipients.add("0x0b292a7748e52c89f93e66482026c92a335e0d41");
 
   fillEvents.forEach((fillEvent) => {
-    notRoyaltyRecipients.add(fillEvent.maker);
-    notRoyaltyRecipients.add(fillEvent.taker);
+    const makerInParcentCall = parentCallTransfers.find(
+      (c) => c.from.toLowerCase() === fillEvent.maker || c.to.toLowerCase() === fillEvent.maker
+    );
+    const takeInParcentCall = parentCallTransfers.find(
+      (c) => c.from.toLowerCase() === fillEvent.taker || c.to.toLowerCase() === fillEvent.taker
+    );
+    if (!makerInParcentCall) {
+      notRoyaltyRecipients.add(fillEvent.maker);
+    }
+    if (!takeInParcentCall) {
+      notRoyaltyRecipients.add(fillEvent.taker);
+    }
   });
 
   // Try to split the fill events and their associated payments
