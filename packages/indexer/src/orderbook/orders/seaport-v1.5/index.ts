@@ -553,7 +553,7 @@ export const save = async (
               .toNumber();
         feeBps += bps;
 
-        // If this is opensea only the known address can be marketplace and all other can be only royalty
+        // For opensea orders only the known addresses can be marketplace and all other can be only royalty
         let kind: "marketplace" | "royalty";
         if (isOpenSea) {
           kind = _.includes(openSeaFeeRecipients, recipient.toLowerCase())
