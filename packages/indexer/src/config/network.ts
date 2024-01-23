@@ -511,7 +511,7 @@ export const getNetworkSettings = (): NetworkSettings => {
           indexes: {
             activities: {
               ...defaultNetworkSettings.elasticsearch?.indexes?.activities,
-              numberOfShards: 50,
+              numberOfShards: 100,
             },
           },
         },
@@ -864,7 +864,7 @@ export const getNetworkSettings = (): NetworkSettings => {
           indexes: {
             activities: {
               ...defaultNetworkSettings.elasticsearch?.indexes?.activities,
-              numberOfShards: 40,
+              numberOfShards: 100,
             },
           },
         },
@@ -1259,6 +1259,7 @@ export const getNetworkSettings = (): NetworkSettings => {
         realtimeSyncMaxBlockLag: 32,
         realtimeSyncFrequencySeconds: 5,
         lastBlockLatency: 5,
+        customTokenAddresses: ["0x05e986e9ef944ffd425ed07abc2f39e35821d1e0"],
         coingecko: {
           networkId: "arbitrum-nova",
         },

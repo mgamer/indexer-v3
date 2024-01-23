@@ -18,6 +18,8 @@ import {
   processCollectionEventJob,
 } from "@/jobs/elasticsearch/collections/process-collection-event-job";
 import { ActivitiesCollectionCache } from "@/models/activities-collection-cache";
+import { updateUserCollectionsSpamJob } from "@/jobs/nft-balance-updates/update-user-collections-spam-job";
+import { updateNftBalancesSpamJob } from "@/jobs/nft-balance-updates/update-nft-balances-spam-job";
 
 export class IndexerCollectionsHandler extends KafkaEventHandler {
   topicName = "indexer.public.collections";
@@ -179,6 +181,18 @@ export class IndexerCollectionsHandler extends KafkaEventHandler {
         const nsfwStatusChanged = payload.before.nfsw_status > 0 !== payload.after.nfsw_status > 0;
 
         if (spamStatusChanged || nsfwStatusChanged) {
+          if (spamStatusChanged) {
+            await updateUserCollectionsSpamJob.addToQueue({
+              collectionId: payload.after.id,
+              newSpamState: payload.after.is_spam,
+            });
+
+            await updateNftBalancesSpamJob.addToQueue({
+              collectionId: payload.after.id,
+              newSpamState: payload.after.is_spam,
+            });
+          }
+
           logger.info(
             "cdc-indexer-collections",
             JSON.stringify({

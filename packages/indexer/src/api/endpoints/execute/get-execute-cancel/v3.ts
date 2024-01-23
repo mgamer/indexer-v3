@@ -64,6 +64,7 @@ export const getExecuteCancelV3Options: RouteOptions = {
             .items(
               Joi.object({
                 status: Joi.string().valid("complete", "incomplete").required(),
+                orderIds: Joi.array().items(Joi.string()),
                 tip: Joi.string(),
                 data: Joi.object(),
               })
@@ -81,13 +82,14 @@ export const getExecuteCancelV3Options: RouteOptions = {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const payload = request.payload as any;
 
-    const steps: {
+    let steps: {
       id: string;
       action: string;
       description: string;
       kind: string;
       items: {
         status: string;
+        orderIds?: string[];
         tip?: string;
         data?: object;
       }[];
@@ -177,6 +179,9 @@ export const getExecuteCancelV3Options: RouteOptions = {
         },
       });
 
+      // Filter out empty steps
+      steps = steps.filter((s) => s.items.length);
+
       return { steps };
     }
 
@@ -248,6 +253,7 @@ export const getExecuteCancelV3Options: RouteOptions = {
           const orderIds = blurBidsOrderIds.sort();
           steps[1].items.push({
             status: "incomplete",
+            orderIds,
             data: {
               sign: {
                 signatureKind: "eip191",
@@ -340,6 +346,7 @@ export const getExecuteCancelV3Options: RouteOptions = {
           if (kind === "payment-processor-v2") {
             steps[1].items.push({
               status: "incomplete",
+              orderIds,
               data: {
                 sign: offchainCancel.paymentProcessorV2.generateOffChainCancellationSignatureData(
                   orderIds.sort()
@@ -357,6 +364,7 @@ export const getExecuteCancelV3Options: RouteOptions = {
           } else {
             steps[1].items.push({
               status: "incomplete",
+              orderIds,
               data: {
                 sign: offchainCancel.seaport.generateOffChainCancellationSignatureData(orderIds),
                 post: {
@@ -373,8 +381,11 @@ export const getExecuteCancelV3Options: RouteOptions = {
         }
 
         // Onchain cancellations
-        if (data.onchainCancellable) {
-          const cancelTxs: TxData[] = [];
+        if (data.onchainCancellable.length) {
+          const cancelTxs: {
+            data: TxData;
+            orderIds: string[];
+          }[] = [];
 
           // The assumption is that the orders all have the same maker
           const maker = fromBuffer(data.onchainCancellable[0].maker);
@@ -385,7 +396,10 @@ export const getExecuteCancelV3Options: RouteOptions = {
               });
               const exchange = new Sdk.SeaportV11.Exchange(config.chainId);
 
-              cancelTxs.push(exchange.cancelOrdersTx(maker, orders));
+              cancelTxs.push({
+                data: exchange.cancelOrdersTx(maker, orders),
+                orderIds: data.onchainCancellable.map((o) => o.id),
+              });
               break;
             }
 
@@ -395,7 +409,10 @@ export const getExecuteCancelV3Options: RouteOptions = {
               });
               const exchange = new Sdk.SeaportV14.Exchange(config.chainId);
 
-              cancelTxs.push(exchange.cancelOrdersTx(maker, orders));
+              cancelTxs.push({
+                data: exchange.cancelOrdersTx(maker, orders),
+                orderIds: data.onchainCancellable.map((o) => o.id),
+              });
               break;
             }
 
@@ -405,7 +422,10 @@ export const getExecuteCancelV3Options: RouteOptions = {
               });
               const exchange = new Sdk.SeaportV15.Exchange(config.chainId);
 
-              cancelTxs.push(exchange.cancelOrdersTx(maker, orders));
+              cancelTxs.push({
+                data: exchange.cancelOrdersTx(maker, orders),
+                orderIds: data.onchainCancellable.map((o) => o.id),
+              });
               break;
             }
 
@@ -415,7 +435,10 @@ export const getExecuteCancelV3Options: RouteOptions = {
               });
               const exchange = new Sdk.Alienswap.Exchange(config.chainId);
 
-              cancelTxs.push(exchange.cancelOrdersTx(maker, orders));
+              cancelTxs.push({
+                data: exchange.cancelOrdersTx(maker, orders),
+                orderIds: data.onchainCancellable.map((o) => o.id),
+              });
               break;
             }
 
@@ -424,7 +447,10 @@ export const getExecuteCancelV3Options: RouteOptions = {
                 const sdkOrder = new Sdk.LooksRareV2.Order(config.chainId, order.raw_data);
                 const exchange = new Sdk.LooksRareV2.Exchange(config.chainId);
 
-                cancelTxs.push(exchange.cancelOrderTx(maker, sdkOrder));
+                cancelTxs.push({
+                  data: exchange.cancelOrderTx(maker, sdkOrder),
+                  orderIds: [order.id],
+                });
               }
 
               break;
@@ -436,7 +462,10 @@ export const getExecuteCancelV3Options: RouteOptions = {
                 const sdkOrder = new Sdk.ZeroExV4.Order(config.chainId, order.raw_data);
                 const exchange = new Sdk.ZeroExV4.Exchange(config.chainId);
 
-                cancelTxs.push(exchange.cancelOrderTx(maker, sdkOrder));
+                cancelTxs.push({
+                  data: exchange.cancelOrderTx(maker, sdkOrder),
+                  orderIds: [order.id],
+                });
               }
 
               break;
@@ -447,7 +476,10 @@ export const getExecuteCancelV3Options: RouteOptions = {
                 const sdkOrder = new Sdk.Rarible.Order(config.chainId, order.raw_data);
                 const exchange = new Sdk.Rarible.Exchange(config.chainId);
 
-                cancelTxs.push(await exchange.cancelOrderTx(sdkOrder.params));
+                cancelTxs.push({
+                  data: await exchange.cancelOrderTx(sdkOrder.params),
+                  orderIds: [order.id],
+                });
               }
 
               break;
@@ -458,7 +490,10 @@ export const getExecuteCancelV3Options: RouteOptions = {
                 const sdkOrder = new Sdk.PaymentProcessor.Order(config.chainId, order.raw_data);
                 const exchange = new Sdk.PaymentProcessor.Exchange(config.chainId);
 
-                cancelTxs.push(exchange.cancelOrderTx(maker, sdkOrder));
+                cancelTxs.push({
+                  data: exchange.cancelOrderTx(maker, sdkOrder),
+                  orderIds: [order.id],
+                });
               }
 
               break;
@@ -469,7 +504,10 @@ export const getExecuteCancelV3Options: RouteOptions = {
                 const sdkOrder = new Sdk.PaymentProcessorV2.Order(config.chainId, order.raw_data);
                 const exchange = new Sdk.PaymentProcessorV2.Exchange(config.chainId);
 
-                cancelTxs.push(exchange.cancelOrderTx(maker, sdkOrder));
+                cancelTxs.push({
+                  data: exchange.cancelOrderTx(maker, sdkOrder),
+                  orderIds: [order.id],
+                });
               }
 
               break;
@@ -542,7 +580,10 @@ export const getExecuteCancelV3Options: RouteOptions = {
                   throw Boom.badRequest("Could not generate cancellations for all orders");
                 }
 
-                cancelTxs.push(blurCancelTx);
+                cancelTxs.push({
+                  data: blurCancelTx,
+                  orderIds: [order.id],
+                });
               }
 
               break;
@@ -553,17 +594,21 @@ export const getExecuteCancelV3Options: RouteOptions = {
             }
           }
 
-          for (const cancelTx of cancelTxs) {
+          for (const { data, orderIds } of cancelTxs) {
             steps[2].items.push({
               status: "incomplete",
+              orderIds,
               data: {
-                ...cancelTx,
+                ...data,
                 ...gasSettings,
               },
             });
           }
         }
       }
+
+      // Filter out empty steps
+      steps = steps.filter((s) => s.items.length);
 
       return {
         steps,

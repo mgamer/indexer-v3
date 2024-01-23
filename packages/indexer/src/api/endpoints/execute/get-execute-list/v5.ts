@@ -497,22 +497,46 @@ export const getExecuteListV5Options: RouteOptions = {
                   authToken: blurAuth!.accessToken,
                 });
 
-                // Will be set if an approval is needed before listing
-                const approvalTx = (await commonHelpers.getNftApproval(
-                  contract,
-                  maker,
-                  Sdk.BlurV2.Addresses.Delegate[config.chainId]
-                ))
-                  ? undefined
-                  : new Sdk.Common.Helpers.Erc721(baseProvider, contract).approveTransaction(
-                      maker,
-                      Sdk.BlurV2.Addresses.Delegate[config.chainId]
-                    );
+                let id: string;
+                let approvalTx: TxData | undefined;
 
-                // Blur returns the nonce as a BigNumber object
-                signData.value.nonce = signData.value.nonce.hex ?? signData.value.nonce;
+                // Blur uses Seaport in case the Blur contracts are blocked
+                if (signData.value.conduitKey) {
+                  // Will be set if an approval is needed before listing
+                  approvalTx = (await commonHelpers.getNftApproval(
+                    contract,
+                    maker,
+                    new Sdk.SeaportBase.ConduitController(config.chainId).deriveConduit(
+                      signData.value.conduitKey
+                    )
+                  ))
+                    ? undefined
+                    : new Sdk.Common.Helpers.Erc721(baseProvider, contract).approveTransaction(
+                        maker,
+                        new Sdk.SeaportBase.ConduitController(config.chainId).deriveConduit(
+                          signData.value.conduitKey
+                        )
+                      );
 
-                const id = new Sdk.BlurV2.Order(config.chainId, signData.value).hash();
+                  id = new Sdk.SeaportV15.Order(config.chainId, signData.value).hash();
+                } else {
+                  // Will be set if an approval is needed before listing
+                  approvalTx = (await commonHelpers.getNftApproval(
+                    contract,
+                    maker,
+                    Sdk.BlurV2.Addresses.Delegate[config.chainId]
+                  ))
+                    ? undefined
+                    : new Sdk.Common.Helpers.Erc721(baseProvider, contract).approveTransaction(
+                        maker,
+                        Sdk.BlurV2.Addresses.Delegate[config.chainId]
+                      );
+
+                  // Blur returns the nonce as a BigNumber object
+                  signData.value.nonce = signData.value.nonce.hex ?? signData.value.nonce;
+
+                  id = new Sdk.BlurV2.Order(config.chainId, signData.value).hash();
+                }
 
                 steps[1].items.push({
                   status: approvalTx ? "incomplete" : "complete",
