@@ -16,7 +16,7 @@ export default class DeleteArchivedExpiredBidActivitiesJob extends AbstractRabbi
   lazyMode = true;
   singleActiveConsumer = true;
 
-  protected async process() {
+  public async process() {
     const pendingExpiredBidActivitiesQueue = new PendingExpiredBidActivitiesQueue();
     const pendingActivitiesCount = await pendingExpiredBidActivitiesQueue.count();
 

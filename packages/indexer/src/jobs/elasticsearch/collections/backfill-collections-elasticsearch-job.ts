@@ -16,7 +16,7 @@ export class BackfillCollectionsElasticsearchJob extends AbstractRabbitMqJobHand
   persistent = true;
   lazyMode = true;
 
-  protected async process(payload: BackfillCollectionsElasticsearchJobPayload) {
+  public async process(payload: BackfillCollectionsElasticsearchJobPayload) {
     if (!payload.cursor) {
       logger.info(
         this.queueName,

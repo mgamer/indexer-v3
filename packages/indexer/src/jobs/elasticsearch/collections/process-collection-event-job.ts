@@ -26,7 +26,7 @@ export class ProcessCollectionEventJob extends AbstractRabbitMqJobHandler {
   persistent = true;
   lazyMode = true;
 
-  protected async process(payload: ProcessCollectionEventJobPayload) {
+  public async process(payload: ProcessCollectionEventJobPayload) {
     const { kind, data } = payload;
 
     const pendingCollectionEventsQueue = new PendingCollectionEventsQueue();

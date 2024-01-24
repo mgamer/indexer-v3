@@ -16,7 +16,7 @@ export default class ResyncAttributeKeyCountsJob extends AbstractRabbitMqJobHand
   useSharedChannel = true;
   lazyMode = true;
 
-  protected async process(payload: ResyncAttributeKeyCountsJobPayload) {
+  public async process(payload: ResyncAttributeKeyCountsJobPayload) {
     const { collection, key } = payload;
 
     const attributeKeyCount = await Tokens.getTokenAttributesKeyCount(

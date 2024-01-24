@@ -13,7 +13,7 @@ export class OpenseaListingsJob extends AbstractRabbitMqJobHandler {
   } as BackoffStrategy;
   disableErrorLogs = true;
 
-  protected async process(payload: GenericOrderInfo) {
+  public async process(payload: GenericOrderInfo) {
     await processOrder(this, payload);
   }
 

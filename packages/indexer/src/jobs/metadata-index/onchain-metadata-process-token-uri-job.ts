@@ -23,7 +23,7 @@ export default class OnchainMetadataProcessTokenUriJob extends AbstractRabbitMqJ
     delay: 20000,
   } as BackoffStrategy;
 
-  protected async process(payload: OnchainMetadataProcessTokenUriJobPayload) {
+  public async process(payload: OnchainMetadataProcessTokenUriJobPayload) {
     const { contract, tokenId, uri } = payload;
     const fallbackAllowed = true;
     let fallbackError;
