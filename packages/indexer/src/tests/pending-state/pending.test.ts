@@ -18,12 +18,10 @@ describe("PendingState", () => {
         return !parsed?.txContents.input.includes(`0xfd9f1e1`);
       });
       const pendingTokens = await handlePendingMessage(sampleMessage);
-      // console.log("pendingTokens", pendingTokens);
       if (!pendingTokens?.length) continue;
       const contract = pendingTokens[0].contract;
       const pendingTokenIdsBefore = await getPendingItems(contract);
       const recent = await getPendingItems();
-      // console.log("recent", recent);
       await listener.watchTxCompleted(sampleMessage.txHash);
       await new Promise((resolve) => {
         setTimeout(() => resolve(1), 5 * 1000);
