@@ -9,7 +9,6 @@ import {
   SaleWebsocketEventsTriggerQueueJobPayload,
 } from "@/jobs/websocket-events/sale-websocket-events-trigger-job";
 
-import { getTokenMetadata } from "@/jobs/websocket-events/utils";
 import { getCurrency } from "@/utils/currencies";
 import { publishWebsocketEvent, WebsocketMessage } from "@/common/websocketPublisher";
 import { JoiSale } from "@/common/joi";
@@ -18,7 +17,6 @@ import payload from "./__fixtures__/sale/payload-before-empty.json";
 
 jest.setTimeout(1000 * 1000);
 
-const mockGetTokenMetadata = getTokenMetadata as jest.MockedFunction<typeof getTokenMetadata>;
 const mockGetCurrency = getCurrency as jest.MockedFunction<typeof getCurrency>;
 const mockPublishWebsocketEvent = publishWebsocketEvent as jest.MockedFunction<
   typeof publishWebsocketEvent
@@ -31,12 +29,6 @@ jest.mock("@/common/websocketPublisher");
 
 describe("Websocket - Sales", () => {
   it("message-schema-validation", async () => {
-    mockGetTokenMetadata.mockImplementation(async () =>
-      // tokenId: string, contract: string
-      {
-        return {};
-      }
-    );
     mockGetCurrency.mockImplementation(async (currency: string) => {
       return {
         contract: currency,
