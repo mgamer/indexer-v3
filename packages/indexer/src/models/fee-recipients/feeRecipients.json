@@ -130,11 +130,6 @@
     "kind": "marketplace"
   },
   {
-    "address": "0x0000a26b00c1f0df003000390027140000faa719",
-    "domain": "nftearth.exchange",
-    "kind": "marketplace"
-  },
-  {
     "address": "0xc626f08cf88972332cfcb48b227409658be67a1c",
     "domain": "story.xyz",
     "kind": "marketplace"
