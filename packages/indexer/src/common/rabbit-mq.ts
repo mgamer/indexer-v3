@@ -142,7 +142,6 @@ export class RabbitMq {
           queueName,
           Buffer.from(JSON.stringify(content)),
           {
-            priority,
             persistent: content.persistent,
             headers: {
               "x-delay": delay,
@@ -155,7 +154,6 @@ export class RabbitMq {
           queueName,
           Buffer.from(JSON.stringify(content)),
           {
-            priority,
             persistent: content.persistent,
           }
         );
@@ -289,11 +287,23 @@ export class RabbitMq {
       // Create working queue
       await channel.assertQueue(queue.getQueue(), options);
 
-      // Bind queues to the delayed exchange
+      // Bind main working queue to the delayed exchange
       await channel.bindQueue(queue.getQueue(), RabbitMq.delayedExchangeName, queue.getQueue());
 
-      // Create dead letter queue for all jobs the failed more than the max retries
-      await channel.assertQueue(queue.getDeadLetterQueue());
+      // If the queue support priorities
+      if (queue.isPriorityQueue()) {
+        await channel.assertQueue(queue.getPriorityQueue(), options);
+
+        // Bind priority queue to the delayed exchange
+        await channel.bindQueue(
+          queue.getPriorityQueue(),
+          RabbitMq.delayedExchangeName,
+          queue.getQueue()
+        );
+      }
+
+      // Create dead letter queue for all jobs that failed more than the max retries
+      await channel.assertQueue(queue.getDeadLetterQueue(), options);
 
       // If the dead letter queue have custom max length
       if (
@@ -327,7 +337,9 @@ export class RabbitMq {
         await this.createOrUpdatePolicy({
           name: `${queue.getQueue()}-policy`,
           priority: 10,
-          pattern: `^${queue.getQueue()}$`,
+          pattern: queue.isPriorityQueue()
+            ? `^${queue.getQueue()}$|^${queue.getPriorityQueue()}$`
+            : `^${queue.getQueue()}$`,
           applyTo: "queues",
           definition,
         });
@@ -380,6 +392,10 @@ export class RabbitMq {
               if (!job) {
                 queuesToDelete.push(exportedItem.getQueue());
                 queuesToDelete.push(exportedItem.getDeadLetterQueue());
+
+                if (exportedItem.isPriorityQueue()) {
+                  queuesToDelete.push(exportedItem.getPriorityQueue());
+                }
               }
             }
           }

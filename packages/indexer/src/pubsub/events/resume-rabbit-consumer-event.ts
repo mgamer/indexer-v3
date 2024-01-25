@@ -15,7 +15,7 @@ export class ResumeRabbitConsumerEvent {
     const parsedMessage = JSON.parse(message);
     const queueName = parsedMessage.queueName;
 
-    const job = _.find(RabbitMqJobsConsumer.getQueues(), (queue) => queue.getQueue() === queueName);
+    const job = _.find(RabbitMqJobsConsumer.getQueues(), (queue) => queue.queueName === queueName);
     if (job) {
       await PausedRabbitMqQueues.delete(queueName);
       await RabbitMqJobsConsumer.subscribe(job);
