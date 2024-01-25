@@ -4962,6 +4962,14 @@ export class Router {
         });
       }
     } else if (executionsWithDetails.length >= 1) {
+      // Remove duplicate approvals
+      const filtredApprovals = approvals.filter((approval) => {
+        const notInprotectedTx = !protectedSeaportV15Offers.find(
+          (c) => c.detail.orderId === approval.orderIds[0]
+        );
+        return notInprotectedTx;
+      });
+
       txs.push({
         txData: {
           from: taker,
@@ -4977,7 +4985,7 @@ export class Router {
         // Ensure approvals are unique
         approvals: uniqBy(
           // TODO: Exclude approvals for unsuccessful items
-          approvals,
+          filtredApprovals,
           ({ txData: { from, to, data } }) => `${from}-${to}-${data}`
         ),
         ftApprovals: [],
