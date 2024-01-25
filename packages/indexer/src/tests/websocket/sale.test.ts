@@ -10,6 +10,7 @@ import {
 } from "@/jobs/websocket-events/sale-websocket-events-trigger-job";
 
 import { getCurrency } from "@/utils/currencies";
+import { getTokenMetadata } from "@/jobs/websocket-events/utils";
 import { publishWebsocketEvent, WebsocketMessage } from "@/common/websocketPublisher";
 import { JoiSale } from "@/common/joi";
 
@@ -17,6 +18,7 @@ import payload from "./__fixtures__/sale/payload-before-empty.json";
 
 jest.setTimeout(1000 * 1000);
 
+const mockGetTokenMetadata = getTokenMetadata as jest.MockedFunction<typeof getTokenMetadata>;
 const mockGetCurrency = getCurrency as jest.MockedFunction<typeof getCurrency>;
 const mockPublishWebsocketEvent = publishWebsocketEvent as jest.MockedFunction<
   typeof publishWebsocketEvent
@@ -29,6 +31,18 @@ jest.mock("@/common/websocketPublisher");
 
 describe("Websocket - Sales", () => {
   it("message-schema-validation", async () => {
+    mockGetTokenMetadata.mockImplementation(async () =>
+      // tokenId: string, contract: string
+      {
+        return {
+          name: "mockName",
+          image: "mockImage",
+          collectionId: "mockCollectionId",
+          collectionName: "mockCollectionName",
+        };
+      }
+    );
+
     mockGetCurrency.mockImplementation(async (currency: string) => {
       return {
         contract: currency,
@@ -71,8 +85,12 @@ describe("Websocket - Sales", () => {
           token: {
             contract: "0x4e76c23fe2a4e37b5e07b5625e17098baab86c18",
             tokenId: "11847",
-            name: null,
-            collection: { id: null, name: null },
+            name: "mockName",
+            image: "mockImage",
+            collection: {
+              id: null,
+              name: null,
+            },
           },
           orderId: "0xdce19dfc31c2f21c4e64a092911ed5b6013ed50ee9c68d7d34521f9cecc49651",
           orderSource: null,
@@ -94,7 +112,12 @@ describe("Websocket - Sales", () => {
               symbol: "WETH",
               decimals: 18,
             },
-            amount: { raw: "50000000000000000", decimal: 0.05, usd: 88.24652, native: 0.05 },
+            amount: {
+              raw: "50000000000000000",
+              decimal: 0.05,
+              usd: 88.24652,
+              native: 0.05,
+            },
           },
           washTradingScore: 0,
           feeBreakdown: [],
