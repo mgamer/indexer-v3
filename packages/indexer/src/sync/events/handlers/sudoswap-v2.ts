@@ -27,6 +27,8 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
       // that get emitted on trades. As such, we use transaction tracing when
       // we detect sales in order to get more detailed information.
 
+      case "sudoswap-v2-buy-erc1155-hook":
+      case "sudoswap-v2-buy-erc721-hook":
       case "sudoswap-v2-buy-erc721":
       case "sudoswap-v2-buy-erc1155": {
         const swapTokenForSpecificNFTs = "0x6d8b99f7";
@@ -202,6 +204,8 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         break;
       }
 
+      case "sudoswap-v2-sell-erc1155-hook":
+      case "sudoswap-v2-sell-erc721-hook":
       case "sudoswap-v2-sell-erc1155":
       case "sudoswap-v2-sell-erc721": {
         const swapNFTsForToken = "0xb1d3f1c1";
