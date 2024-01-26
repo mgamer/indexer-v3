@@ -129,7 +129,7 @@ export const newERC721Pair: EventData = {
   addresses: { [SudoswapV2.Addresses.PairFactory[config.chainId]?.toLowerCase()]: true },
   topic: "0xe8e1cee58c33f242c87d563bbc00f2ac82eb90f10a252b0ba8498ae6c1dc241a",
   numTopics: 2,
-  abi: new Interface([`event HookERC721Pair(address indexed poolAddress, uint256[] initialIds)`]),
+  abi: new Interface([`event ERC721Pair(address indexed poolAddress, uint256[] initialIds)`]),
 };
 
 export const newERC1155Pair: EventData = {
@@ -138,9 +138,7 @@ export const newERC1155Pair: EventData = {
   addresses: { [SudoswapV2.Addresses.PairFactory[config.chainId]?.toLowerCase()]: true },
   topic: "0x2966b6b401975e778520aec46cbefbe73799119a5670feda3e8f884c7c3ffb11",
   numTopics: 2,
-  abi: new Interface([
-    `event HookERC1155Pair(address indexed poolAddress, uint256 initialBalance)`,
-  ]),
+  abi: new Interface([`event ERC1155Pair(address indexed poolAddress, uint256 initialBalance)`]),
 };
 
 export const erc20Deposit: EventData = {
