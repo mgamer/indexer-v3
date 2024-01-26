@@ -1331,14 +1331,13 @@ export const getExecuteSellV7Options: RouteOptions = {
         steps[5].items.push({
           status: "incomplete",
           orderIds,
-          data:
-            !steps[1].items.length && !steps[2].items.length && !steps[3].items.length
-              ? {
-                  ...txData,
-                  maxFeePerGas,
-                  maxPriorityFeePerGas,
-                }
-              : undefined,
+          data: !steps[3].items.length
+            ? {
+                ...txData,
+                maxFeePerGas,
+                maxPriorityFeePerGas,
+              }
+            : undefined,
           gasEstimate: txTags ? estimateGasFromTxTags(txTags) : undefined,
         });
       }
