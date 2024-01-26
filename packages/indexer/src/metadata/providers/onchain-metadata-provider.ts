@@ -7,7 +7,13 @@ import { metadataIndexingBaseProvider } from "@/common/provider";
 import { defaultAbiCoder } from "ethers/lib/utils";
 import { logger } from "@/common/logger";
 import { ethers } from "ethers";
-import { RequestWasThrottledError, normalizeLink, normalizeMetadata } from "./utils";
+import {
+  RequestWasThrottledError,
+  normalizeLink,
+  normalizeMetadata,
+  TokenUriNotFoundError,
+  TokenUriRequestTimeoutError,
+} from "./utils";
 import _ from "lodash";
 import { AbstractBaseMetadataProvider } from "./abstract-base-metadata-provider";
 import { getNetworkName } from "@/config/network";
@@ -44,6 +50,14 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
           if (error) {
             if (error === 429) {
               throw new RequestWasThrottledError("Request was throttled", 10);
+            }
+
+            if (error === 504) {
+              throw new TokenUriRequestTimeoutError("Request timed out");
+            }
+
+            if (error === 404) {
+              throw new TokenUriNotFoundError("Request timed out");
             }
 
             throw new Error(error);
@@ -554,6 +568,14 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
       uri = uri.replace("gateway.pinata.cloud", "ipfs.io");
     }
 
+    if (uri && uri?.includes("alienworlds.pinata.cloud")) {
+      uri = uri.replace("alienworlds.pinata.cloud", "ipfs.io");
+    }
+
+    if (uri && uri?.includes("metaid.zkbridge.com")) {
+      uri = uri.replace("metaid.zkbridge.com", "ipfs.io");
+    }
+
     return uri;
   }
 
@@ -575,6 +597,11 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
       }
 
       uri = uri.trim();
+
+      if (!uri.startsWith("http")) {
+        // if the uri is not a valid url, return null
+        return [null, "Invalid URI"];
+      }
 
       return axios
         .get(uri, {
