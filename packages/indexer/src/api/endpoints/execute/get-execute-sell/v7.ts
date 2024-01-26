@@ -1274,7 +1274,7 @@ export const getExecuteSellV7Options: RouteOptions = {
 
         const isApproved = bn(approvedAmount).gte(approval.amount);
         if (!isApproved) {
-          steps[3].items.push({
+          steps[2].items.push({
             status: "incomplete",
             data: {
               ...approval.txData,
