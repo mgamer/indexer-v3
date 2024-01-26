@@ -1274,7 +1274,7 @@ export const getExecuteSellV7Options: RouteOptions = {
 
         const isApproved = bn(approvedAmount).gte(approval.amount);
         if (!isApproved) {
-          steps[3].items.push({
+          steps[2].items.push({
             status: "incomplete",
             data: {
               ...approval.txData,
@@ -1331,13 +1331,14 @@ export const getExecuteSellV7Options: RouteOptions = {
         steps[5].items.push({
           status: "incomplete",
           orderIds,
-          data: !steps[3].items.length
-            ? {
-                ...txData,
-                maxFeePerGas,
-                maxPriorityFeePerGas,
-              }
-            : undefined,
+          data:
+            !steps[1].items.length && !steps[2].items.length && !steps[3].items.length
+              ? {
+                  ...txData,
+                  maxFeePerGas,
+                  maxPriorityFeePerGas,
+                }
+              : undefined,
           gasEstimate: txTags ? estimateGasFromTxTags(txTags) : undefined,
         });
       }
