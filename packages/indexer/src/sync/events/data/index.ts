@@ -255,10 +255,6 @@ export type EventSubKind =
   | "sudoswap-v2-sell-erc1155"
   | "sudoswap-v2-buy-erc721"
   | "sudoswap-v2-buy-erc1155"
-  | "sudoswap-v2-sell-erc721-hook"
-  | "sudoswap-v2-sell-erc1155-hook"
-  | "sudoswap-v2-buy-erc721-hook"
-  | "sudoswap-v2-buy-erc1155-hook"
   | "sudoswap-v2-token-deposit"
   | "sudoswap-v2-token-withdrawal"
   | "sudoswap-v2-nft-withdrawal-erc721"
@@ -506,10 +502,6 @@ const allEventData = [
   sudoswapV2.deltaUpdate,
   sudoswapV2.newERC721Pair,
   sudoswapV2.newERC1155Pair,
-  sudoswapV2.buyERC1155Hook,
-  sudoswapV2.buyERC721Hook,
-  sudoswapV2.sellERC1155Hook,
-  sudoswapV2.sellERC721Hook,
   treasure.bidAccepted,
   caviarV1.create,
   caviarV1.add,

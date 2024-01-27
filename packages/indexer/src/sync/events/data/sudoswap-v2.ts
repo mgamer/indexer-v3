@@ -36,46 +36,6 @@ export const buyERC1155: EventData = {
   abi: new Interface([`event SwapNFTOutPair(uint256 amountIn, uint256 numNFTs)`]),
 };
 
-export const sellERC721Hook: EventData = {
-  kind: "sudoswap-v2",
-  subKind: "sudoswap-v2-sell-erc721-hook",
-  topic: "0xb5003a9efa49611ae8d01e9f1d66b3e5fe2c76bb2293b7b1702d56bb4459458a",
-  numTopics: 1,
-  abi: new Interface([
-    `event SwapNFTInPair(uint256 amountOut, uint256[] ids, uint256 royaltyAmount)`,
-  ]),
-};
-
-export const sellERC1155Hook: EventData = {
-  kind: "sudoswap-v2",
-  subKind: "sudoswap-v2-sell-erc1155-hook",
-  topic: "0xc4e3006a9a327c0234c4a84a59a55cee1be8958c331846a50406c074892457c9",
-  numTopics: 1,
-  abi: new Interface([
-    `event SwapNFTInPair(uint256 amountOut, uint256 numNFTs, uint256 royaltyAmount)`,
-  ]),
-};
-
-export const buyERC721Hook: EventData = {
-  kind: "sudoswap-v2",
-  subKind: "sudoswap-v2-buy-erc721-hook",
-  topic: "0xf506468975082788421e0cfe591d415faf7921176896acdaa707638f22549e58",
-  numTopics: 1,
-  abi: new Interface([
-    `event SwapNFTOutPair(uint256 amountIn, uint256[] ids, uint256 royaltyAmount)`,
-  ]),
-};
-
-export const buyERC1155Hook: EventData = {
-  kind: "sudoswap-v2",
-  subKind: "sudoswap-v2-buy-erc1155-hook",
-  topic: "0x515956a82aeb50dd86f3e1f1be05566bc6ed4c43a659be9677fce1a2b185b49d",
-  numTopics: 1,
-  abi: new Interface([
-    `event SwapNFTOutPair(uint256 amountIn, uint256 numNFTs, uint256 royaltyAmount)`,
-  ]),
-};
-
 export const tokenDeposit: EventData = {
   kind: "sudoswap-v2",
   subKind: "sudoswap-v2-token-deposit",
@@ -129,7 +89,7 @@ export const newERC721Pair: EventData = {
   addresses: { [SudoswapV2.Addresses.PairFactory[config.chainId]?.toLowerCase()]: true },
   topic: "0xe8e1cee58c33f242c87d563bbc00f2ac82eb90f10a252b0ba8498ae6c1dc241a",
   numTopics: 2,
-  abi: new Interface([`event HookERC721Pair(address indexed poolAddress, uint256[] initialIds)`]),
+  abi: new Interface([`event NewERC721Pair(address indexed poolAddress, uint256[] initialIds)`]),
 };
 
 export const newERC1155Pair: EventData = {
@@ -138,9 +98,7 @@ export const newERC1155Pair: EventData = {
   addresses: { [SudoswapV2.Addresses.PairFactory[config.chainId]?.toLowerCase()]: true },
   topic: "0x2966b6b401975e778520aec46cbefbe73799119a5670feda3e8f884c7c3ffb11",
   numTopics: 2,
-  abi: new Interface([
-    `event HookERC1155Pair(address indexed poolAddress, uint256 initialBalance)`,
-  ]),
+  abi: new Interface([`event NewERC1155Pair(address indexed poolAddress, uint256 initialBalance)`]),
 };
 
 export const erc20Deposit: EventData = {
