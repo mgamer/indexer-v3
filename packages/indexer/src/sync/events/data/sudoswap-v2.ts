@@ -36,6 +36,46 @@ export const buyERC1155: EventData = {
   abi: new Interface([`event SwapNFTOutPair(uint256 amountIn, uint256 numNFTs)`]),
 };
 
+export const sellERC721Hook: EventData = {
+  kind: "sudoswap-v2",
+  subKind: "sudoswap-v2-sell-erc721-hook",
+  topic: "0xb5003a9efa49611ae8d01e9f1d66b3e5fe2c76bb2293b7b1702d56bb4459458a",
+  numTopics: 1,
+  abi: new Interface([
+    `event SwapNFTInPair(uint256 amountOut, uint256[] ids, uint256 royaltyAmount)`,
+  ]),
+};
+
+export const sellERC1155Hook: EventData = {
+  kind: "sudoswap-v2",
+  subKind: "sudoswap-v2-sell-erc1155-hook",
+  topic: "0xc4e3006a9a327c0234c4a84a59a55cee1be8958c331846a50406c074892457c9",
+  numTopics: 1,
+  abi: new Interface([
+    `event SwapNFTInPair(uint256 amountOut, uint256 numNFTs, uint256 royaltyAmount)`,
+  ]),
+};
+
+export const buyERC721Hook: EventData = {
+  kind: "sudoswap-v2",
+  subKind: "sudoswap-v2-buy-erc721-hook",
+  topic: "0xf506468975082788421e0cfe591d415faf7921176896acdaa707638f22549e58",
+  numTopics: 1,
+  abi: new Interface([
+    `event SwapNFTOutPair(uint256 amountIn, uint256[] ids, uint256 royaltyAmount)`,
+  ]),
+};
+
+export const buyERC1155Hook: EventData = {
+  kind: "sudoswap-v2",
+  subKind: "sudoswap-v2-buy-erc1155-hook",
+  topic: "0x515956a82aeb50dd86f3e1f1be05566bc6ed4c43a659be9677fce1a2b185b49d",
+  numTopics: 1,
+  abi: new Interface([
+    `event SwapNFTOutPair(uint256 amountIn, uint256 numNFTs, uint256 royaltyAmount)`,
+  ]),
+};
+
 export const tokenDeposit: EventData = {
   kind: "sudoswap-v2",
   subKind: "sudoswap-v2-token-deposit",
