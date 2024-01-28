@@ -206,7 +206,7 @@ export const getStatus = async (
   status: CollectionMintStatus;
   reason?: CollectionMintStatusReason;
 }> => {
-  if (collectionMint.status == "closed") {
+  if (collectionMint.status === "closed") {
     return { status: "closed" };
   }
 

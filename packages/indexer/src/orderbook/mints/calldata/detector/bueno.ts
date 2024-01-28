@@ -97,6 +97,7 @@ export const extractByCollectionERC721 = async (
       }
     } else {
       const isPublicActive = await contract.isPublicActive();
+
       const { maxSupply, maxPerWallet, price } = await contract.baseSettings();
       results.push({
         collection,
@@ -150,9 +151,8 @@ export const extractByCollectionERC1155 = async (
   const contract = new Contract(
     collection,
     new Interface([
-      `function getTokenSettingsByTokenId(
-        uint256 id
-        ) view returns (
+      `
+        function getTokenSettingsByTokenId(uint256 id) view returns (
           (
             uint32 maxSupply,
             uint32 maxPerWallet,
@@ -167,7 +167,8 @@ export const extractByCollectionERC1155 = async (
               uint256[] shares
             )
           )
-      )`,
+        )
+      `,
     ]),
     baseProvider
   );
@@ -236,27 +237,24 @@ export const extractByTx = async (
   collection: string,
   tx: Transaction
 ): Promise<CollectionMint[]> => {
-  const iface1155 = new Interface([
-    "function mintToken(uint256 id, uint32 quantity) payable",
-    "function mintTokenTo(address account,uint256 id,uint32 quantity) payable",
-  ]);
-
   const iface721 = new Interface([
-    "function mintPhase(uint256 phaseIndex, uint64 quantity) payable",
-    "function mintPhaseTo(address account, uint256 phaseIndex, uint64 quantity) payable",
-    "function mintPublic(uint64 quantity) payable",
-    "function mintPublicTo(address account, uint64 quantity) payable",
+    "function mintPhase(uint256 phaseIndex, uint64 quantity)",
+    "function mintPhaseTo(address account, uint256 phaseIndex, uint64 quantity)",
+    "function mintPublic(uint64 quantity)",
+    "function mintPublicTo(address account, uint64 quantity)",
   ]);
-
-  const found1155 = iface1155.fragments.find((fragment) => {
-    return tx.data.startsWith(iface1155.getSighash(fragment));
-  });
-
   const found721 = iface721.fragments.find((fragment) => {
     return tx.data.startsWith(iface721.getSighash(fragment));
   });
 
-  // ERC721
+  const iface1155 = new Interface([
+    "function mintToken(uint256 id, uint32 quantity)",
+    "function mintTokenTo(address account, uint256 id, uint32 quantity)",
+  ]);
+  const found1155 = iface1155.fragments.find((fragment) => {
+    return tx.data.startsWith(iface1155.getSighash(fragment));
+  });
+
   if (found721) {
     const data = iface721.decodeFunctionData(found721.name, tx.data);
 
