@@ -257,6 +257,22 @@ export default class MintsProcessJob extends AbstractRabbitMqJobHandler {
 
             break;
           }
+
+          case "bueno": {
+            if (kind === "erc721") {
+              collectionMints = await detector.bueno.extractByCollectionERC721(
+                data.collection,
+                data.additionalInfo.phaseIndex
+              );
+            } else if (kind === "erc1155") {
+              collectionMints = await detector.bueno.extractByCollectionERC1155(
+                data.collection,
+                data.tokenId!
+              );
+            }
+
+            break;
+          }
         }
 
         // Also refresh (to clean up any old stages)
