@@ -1,7 +1,9 @@
 import { getStateChange, getPayments, searchForCall } from "@georgeroman/evm-tx-simulator";
 import { Payment, CallTrace } from "@georgeroman/evm-tx-simulator/dist/types";
 import * as Sdk from "@reservoir0x/sdk";
+import _ from "lodash";
 
+import { baseProvider } from "@/common/provider";
 import { redis } from "@/common/redis";
 import { bn } from "@/common/utils";
 import { config } from "@/config/index";
@@ -20,20 +22,20 @@ import * as utils from "@/events-sync/utils";
 import { FeeRecipients } from "@/models/fee-recipients";
 import { TransactionTrace } from "@/models/transaction-traces";
 import { Royalty, getRoyalties } from "@/utils/royalties";
-import { baseProvider } from "@/common/provider";
-import _ from "lodash";
 
 const findMatchingPayment = (payments: Payment[], fillEvent: PartialFillEvent) =>
   payments.find((payment) => paymentMatches(payment, fillEvent));
 
 const isNFTPayment = (item: Payment) =>
   item.token.includes("erc1155") || item.token.includes("erc721");
+
 const isTokenPayment = (item: Payment) =>
   item.token.includes("native") || item.token.includes("erc20");
-const isSamePayment = (item: Payment, c: Payment) =>
-  c.token === item.token && c.from === item.from && c.to === item.to && c.amount === item.amount;
 
-function checkCallIsInParent(parentCall: CallTrace, subCall: CallTrace) {
+const isSamePayment = (a: Payment, b: Payment) =>
+  a.token === b.token && a.from === b.from && a.to === b.to && a.amount === b.amount;
+
+const checkCallIsInParent = (parentCall: CallTrace, subCall: CallTrace) => {
   const globalPayments = getPayments(parentCall);
   const subcallPayments = getPayments(subCall);
 
@@ -49,13 +51,14 @@ function checkCallIsInParent(parentCall: CallTrace, subCall: CallTrace) {
   const tokenTransferAllInParent = tokenTransfers.every((item) =>
     globalTokenTransfers.find((c) => isSamePayment(item, c))
   );
+
   return {
     isMatch: nftTransferAllInParent && tokenTransferAllInParent,
     parentTransfers: globalTokenTransfers.filter(
       (item) => !tokenTransfers.find((c) => isSamePayment(item, c))
     ),
   };
-}
+};
 
 export const paymentMatches = (payment: Payment, fillEvent: PartialFillEvent) => {
   // Cover regular ERC721/ERC1155 transfers
@@ -183,6 +186,7 @@ export async function extractRoyalties(
   const routerExecutionCalls = [];
   if (routerCall) {
     const transaction = await utils.fetchTransaction(txHash);
+
     const sdkRouter = new Sdk.RouterV6.Router(config.chainId, baseProvider);
     const executions = sdkRouter.parseExecutions(transaction.data);
     if (executions.length) {
@@ -190,6 +194,7 @@ export async function extractRoyalties(
         executions,
         (execution) => `${execution.sighash}:${execution.module}`
       );
+
       for (const moduleAndSignHash of Object.keys(executionsByModule)) {
         const moduleExecutions = executionsByModule[moduleAndSignHash];
         for (let index = 0; index < moduleExecutions.length; index++) {
@@ -201,6 +206,7 @@ export async function extractRoyalties(
             },
             index
           );
+
           if (_executionCall) {
             routerExecutionCalls.push({
               execution,
@@ -270,9 +276,8 @@ export async function extractRoyalties(
   }
 
   let parentCallTransfers: Payment[] = [];
-
   if (routerCall) {
-    // pin-pointed to the parent module call
+    // Pin-point to the parent module call
     for (const { call } of routerExecutionCalls) {
       const checkResult = checkCallIsInParent(call, subcallToAnalyze);
       if (checkResult.isMatch) {
