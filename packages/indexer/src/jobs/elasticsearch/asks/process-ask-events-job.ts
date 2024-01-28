@@ -49,6 +49,7 @@ export default class ProcessAskEventsJob extends AbstractRabbitMqJobHandler {
 
         const response = await elasticsearch.bulk({
           body: bulkOps,
+          refresh: true,
         });
 
         if (response.errors) {
@@ -101,10 +102,10 @@ export const processAskEventsJob = new ProcessAskEventsJob();
 
 if (config.doBackgroundWork && config.doElasticsearchWork) {
   cron.schedule(
-    "*/2 * * * * *",
+    "*/1 * * * * *",
     async () =>
       await redlock
-        .acquire([`${processAskEventsJob.queueName}-queue-lock`], 2 * 1000 - 500)
+        .acquire([`${processAskEventsJob.queueName}-queue-lock`], 1000 - 5)
         .then(async () => processAskEventsJob.addToQueue())
         .catch(() => {
           // Skip on any errors

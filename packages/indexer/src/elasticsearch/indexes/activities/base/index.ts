@@ -45,6 +45,9 @@ export interface ActivityDocument extends BaseDocument {
     blockHash: string;
     fillSourceId?: number;
     washTradingScore: number;
+    collectionIsMinting: boolean;
+    collectionMintType: string;
+    transferIsAirdrop?: boolean;
   };
   token?: {
     id: string;
@@ -52,12 +55,14 @@ export interface ActivityDocument extends BaseDocument {
     image: string;
     media: string;
     isSpam: boolean;
+    isNsfw: boolean;
   };
   collection?: {
     id: string;
     name: string;
     image: string;
     isSpam: boolean;
+    isNsfw: boolean;
     imageVersion: number;
   };
   order?: {
@@ -124,13 +129,17 @@ export interface BuildActivityData extends BuildDocumentData {
   event_fill_source_id?: number;
   event_wash_trading_score?: number;
   event_collection_is_minting?: boolean;
+  event_collection_mint_price?: number;
+  event_transfer_kind?: string;
   order_id?: string | null;
   order_side?: string;
   order_source_id_int?: number;
   order_kind?: string;
   collection_is_spam?: number | null;
+  collection_nsfw_status?: number | null;
   collection_image_version?: number | null;
   token_is_spam?: number | null;
+  token_nsfw_status?: number | null;
   order_criteria?: {
     kind: string;
     data: Record<string, unknown>;
@@ -189,6 +198,15 @@ export class ActivityBuilder extends DocumentBuilder {
             fillSourceId: data.event_fill_source_id,
             washTradingScore: data.event_wash_trading_score,
             collectionIsMinting: data.event_collection_is_minting,
+            collectionMintType:
+              data.event_collection_mint_price != null
+                ? data.event_collection_mint_price > 0
+                  ? "paid"
+                  : "free"
+                : undefined,
+            transferIsAirdrop: data.event_transfer_kind
+              ? data.event_transfer_kind === "airdrop"
+              : undefined,
           }
         : undefined,
       token: data.token_id
@@ -198,6 +216,7 @@ export class ActivityBuilder extends DocumentBuilder {
             image: data.token_image,
             // media: data.token_media,
             isSpam: Number(data.token_is_spam) > 0,
+            isNsfw: Number(data.token_nsfw_status) > 0,
           }
         : undefined,
       collection: data.collection_id
@@ -206,6 +225,7 @@ export class ActivityBuilder extends DocumentBuilder {
             name: data.collection_name,
             image: data.collection_image,
             isSpam: Number(data.collection_is_spam) > 0,
+            isNsfw: Number(data.collection_nsfw_status) > 0,
             imageVersion: data.collection_image_version
               ? Math.floor(new Date(data.collection_image_version).getTime() / 1000)
               : undefined,

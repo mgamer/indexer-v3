@@ -255,6 +255,10 @@ export type EventSubKind =
   | "sudoswap-v2-sell-erc1155"
   | "sudoswap-v2-buy-erc721"
   | "sudoswap-v2-buy-erc1155"
+  | "sudoswap-v2-sell-erc721-hook"
+  | "sudoswap-v2-sell-erc1155-hook"
+  | "sudoswap-v2-buy-erc721-hook"
+  | "sudoswap-v2-buy-erc1155-hook"
   | "sudoswap-v2-token-deposit"
   | "sudoswap-v2-token-withdrawal"
   | "sudoswap-v2-nft-withdrawal-erc721"
@@ -301,6 +305,7 @@ export type EventSubKind =
   | "metadata-update-uri-opensea"
   | "metadata-update-contract-uri-thirdweb"
   | "metadata-update-zora"
+  | "metadata-update-mint-config-changed"
   | "soundxyz-range-edition-mint-created"
   | "soundxyz-merkle-drop-mint-created"
   | "createdotfun-configuration-updated"
@@ -501,6 +506,10 @@ const allEventData = [
   sudoswapV2.deltaUpdate,
   sudoswapV2.newERC721Pair,
   sudoswapV2.newERC1155Pair,
+  sudoswapV2.buyERC1155Hook,
+  sudoswapV2.buyERC721Hook,
+  sudoswapV2.sellERC1155Hook,
+  sudoswapV2.sellERC721Hook,
   treasure.bidAccepted,
   caviarV1.create,
   caviarV1.add,
@@ -537,6 +546,7 @@ const allEventData = [
   metadataUpdate.metadataUpdateURIOpensea,
   metadataUpdate.contractURIUpdateThirdweb,
   metadataUpdate.metadataUpdateURIZora,
+  metadataUpdate.mintConfigChanged,
   soundxyz.rangeEditionMintCreated,
   soundxyz.merkleDropMintCreated,
   createdotfun.configurationUpdated,

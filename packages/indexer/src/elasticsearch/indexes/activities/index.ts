@@ -27,6 +27,7 @@ import { backfillActivitiesElasticsearchJob } from "@/jobs/elasticsearch/activit
 import * as CONFIG from "@/elasticsearch/indexes/activities/config";
 import { ElasticMintResult } from "@/api/endpoints/collections/get-trending-mints/interfaces";
 import { Period, getStartTime } from "@/models/top-selling-collections/top-selling-collections";
+import { config } from "@/config/index";
 
 const INDEX_NAME = `${getNetworkName()}.activities`;
 
@@ -226,13 +227,11 @@ export const getTopTraders = async (params: {
       terms: {
         field: "toAddress",
         size: limit,
+        order: {
+          total_volume: "desc",
+        },
       },
       aggs: {
-        total_sales: {
-          value_count: {
-            field: "id",
-          },
-        },
         total_volume: {
           sum: {
             field: "pricing.priceDecimal",
@@ -243,18 +242,20 @@ export const getTopTraders = async (params: {
   };
 
   const esResult = (await elasticsearch.search({
-    index: INDEX_NAME,
+    index: config.chainId === 137 ? `${INDEX_NAME}-1702050564025` : INDEX_NAME,
     size: 0,
     body: {
       query: salesQuery,
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
       aggs: collectionAggregation,
     },
   })) as any;
 
   return esResult?.aggregations?.collections?.buckets?.map((bucket: any) => {
     return {
-      volume: bucket?.total_volume?.value,
-      count: bucket?.total_sales.value,
+      volume: bucket.total_volume?.value,
+      count: bucket.doc_count,
       address: bucket.key,
     };
   });
@@ -423,11 +424,11 @@ export const getTopSellingCollections = async (params: {
 };
 
 export const getTrendingMints = async (params: {
-  contracts: string[];
+  type?: "free" | "paid" | "any";
   period: Period;
   limit: number;
 }): Promise<ElasticMintResult[]> => {
-  const { contracts, period, limit } = params;
+  const { type, period, limit } = params;
 
   const results: Partial<Record<Period, ElasticMintResult[]>> = {};
 
@@ -452,13 +453,21 @@ export const getTrendingMints = async (params: {
               },
             },
             {
-              terms: {
-                "collection.id": contracts,
+              term: {
+                ["event.collectionIsMinting"]: true,
               },
             },
           ],
         },
       } as any;
+
+      if (type != null && type != "any") {
+        salesQuery.bool.filter.push({
+          term: {
+            ["event.collectionMintType"]: type,
+          },
+        });
+      }
 
       const collectionAggregation = {
         collections: {
@@ -492,6 +501,7 @@ export const getTrendingMints = async (params: {
           aggs: collectionAggregation,
         },
       })) as any;
+
       results[period as Period] = esResult?.aggregations?.collections?.buckets?.map(
         (bucket: any) => {
           return {
@@ -860,6 +870,7 @@ export const search = async (
     continuation?: string | null;
     continuationAsInt?: boolean;
     excludeSpam?: boolean;
+    excludeNsfw?: boolean;
   },
   debug = false
 ): Promise<{ activities: ActivityDocument[]; continuation: string | null }> => {
@@ -979,6 +990,14 @@ export const search = async (
     (esQuery as any).bool.filter.push({
       bool: {
         must_not: [{ term: { "collection.isSpam": true } }, { term: { "token.isSpam": true } }],
+      },
+    });
+  }
+
+  if (params.excludeNsfw) {
+    (esQuery as any).bool.filter.push({
+      bool: {
+        must_not: [{ term: { "collection.isNsfw": true } }, { term: { "token.isNsfw": true } }],
       },
     });
   }
@@ -1301,12 +1320,13 @@ export const updateActivitiesMissingCollection = async (
           {
             script: {
               source:
-                "ctx._source.collection = [:]; ctx._source.collection.id = params.collection_id; ctx._source.collection.name = params.collection_name; ctx._source.collection.image = params.collection_image; ctx._source.collection.isSpam = params.collection_is_spam; ctx._source.collection.imageVersion = params.collection_image_version;",
+                "ctx._source.collection = [:]; ctx._source.collection.id = params.collection_id; ctx._source.collection.name = params.collection_name; ctx._source.collection.image = params.collection_image; ctx._source.collection.isSpam = params.collection_is_spam; ctx._source.collection.isNsfw = params.collection_is_nsfw; ctx._source.collection.imageVersion = params.collection_image_version;",
               params: {
                 collection_id: collection.id,
                 collection_name: collection.name,
                 collection_image: collection.metadata?.imageUrl,
                 collection_is_spam: Number(collection.isSpam) > 0,
+                collection_is_nsfw: Number(collection.nsfwStatus) > 0,
                 collection_image_version: collection.imageVersion,
               },
             },
@@ -1455,12 +1475,13 @@ export const updateActivitiesCollection = async (
           {
             script: {
               source:
-                "ctx._source.collection = [:]; ctx._source.collection.id = params.collection_id; ctx._source.collection.name = params.collection_name; ctx._source.collection.image = params.collection_image; ctx._source.collection.isSpam = params.collection_is_spam; ctx._source.collection.imageVersion = params.collection_image_version;",
+                "ctx._source.collection = [:]; ctx._source.collection.id = params.collection_id; ctx._source.collection.name = params.collection_name; ctx._source.collection.image = params.collection_image; ctx._source.collection.isSpam = params.collection_is_spam; ctx._source.collection.isNsfw = params.collection_is_nsfw; ctx._source.collection.imageVersion = params.collection_image_version;",
               params: {
                 collection_id: newCollection.id,
                 collection_name: newCollection.name,
                 collection_image: newCollection.metadata?.imageUrl,
                 collection_is_spam: Number(newCollection.isSpam) > 0,
+                collection_is_nsfw: Number(newCollection.nsfwStatus) > 0,
                 collection_image_version: newCollection.imageVersion,
               },
             },
@@ -1764,7 +1785,8 @@ export const updateActivitiesTokenMetadata = async (
 export const updateActivitiesToken = async (
   contract: string,
   tokenId: string,
-  isSpam: number
+  isSpam: number,
+  nsfwStatus: number
 ): Promise<boolean> => {
   let keepGoing = false;
 
@@ -1791,6 +1813,33 @@ export const updateActivitiesToken = async (
                 {
                   term: {
                     "token.isSpam": true,
+                  },
+                },
+              ],
+            },
+    },
+    {
+      bool:
+        nsfwStatus > 0
+          ? {
+              must_not: [
+                {
+                  term: {
+                    "token.isNsfw": nsfwStatus > 0,
+                  },
+                },
+              ],
+            }
+          : {
+              must: [
+                {
+                  exists: {
+                    field: "token.isNsfw",
+                  },
+                },
+                {
+                  term: {
+                    "token.isNsfw": true,
                   },
                 },
               ],
@@ -1843,9 +1892,11 @@ export const updateActivitiesToken = async (
           { update: { _index: document.index, _id: document.id, retry_on_conflict: 3 } },
           {
             script: {
-              source: "ctx._source.token.isSpam = params.is_spam",
+              source:
+                "ctx._source.token.isSpam = params.is_spam; ctx._source.token.isNsfw = params.is_nsfw",
               params: {
                 is_spam: isSpam > 0,
+                is_nsfw: nsfwStatus > 0,
               },
             },
           },
@@ -1867,6 +1918,7 @@ export const updateActivitiesToken = async (
               contract,
               tokenId,
               isSpam,
+              nsfwStatus,
             },
             bulkParams,
             response,
@@ -1891,6 +1943,7 @@ export const updateActivitiesToken = async (
             contract,
             tokenId,
             isSpam,
+            nsfwStatus,
           },
           error,
         })
@@ -1907,6 +1960,7 @@ export const updateActivitiesToken = async (
             contract,
             tokenId,
             isSpam,
+            nsfwStatus,
           },
           error,
         })
@@ -1921,6 +1975,7 @@ export const updateActivitiesToken = async (
 
 export type ActivitiesCollectionUpdateData = {
   isSpam: number;
+  nsfwStatus: number;
 };
 
 export const updateActivitiesCollectionData = async (
@@ -1953,6 +2008,33 @@ export const updateActivitiesCollectionData = async (
                 {
                   term: {
                     "collection.isSpam": true,
+                  },
+                },
+              ],
+            },
+    },
+    {
+      bool:
+        collectionData.nsfwStatus > 0
+          ? {
+              must_not: [
+                {
+                  term: {
+                    "collection.isNsfw": collectionData.nsfwStatus > 0,
+                  },
+                },
+              ],
+            }
+          : {
+              must: [
+                {
+                  exists: {
+                    field: "collection.isNsfw",
+                  },
+                },
+                {
+                  term: {
+                    "collection.isNsfw": true,
                   },
                 },
               ],
@@ -2001,9 +2083,11 @@ export const updateActivitiesCollectionData = async (
           { update: { _index: document.index, _id: document.id, retry_on_conflict: 3 } },
           {
             script: {
-              source: "ctx._source.collection.isSpam = params.is_spam;",
+              source:
+                "ctx._source.collection.isSpam = params.is_spam; ctx._source.collection.isNsfw = params.is_nsfw;",
               params: {
                 is_spam: collectionData.isSpam > 0,
+                is_nsfw: collectionData.nsfwStatus > 0,
               },
             },
           },

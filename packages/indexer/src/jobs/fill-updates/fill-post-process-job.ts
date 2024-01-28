@@ -21,6 +21,7 @@ export class FillPostProcessJob extends AbstractRabbitMqJobHandler {
 
   protected async process(payload: es.fills.Event[]) {
     const allFillEvents = payload;
+    const minValidPrice = 10; // Minimum amount of sale to be considered valid, any sale under is automatically considered wash trading
 
     await Promise.all([
       assignRoyaltiesToFillEvents(allFillEvents),
@@ -70,7 +71,7 @@ export class FillPostProcessJob extends AbstractRabbitMqJobHandler {
                    OR net_amount IS DISTINCT FROM $/netAmount/)
           `,
         values: {
-          washTradingScore: event.washTradingScore || 0,
+          washTradingScore: Number(event.price) <= minValidPrice ? 1 : event.washTradingScore || 0,
           royaltyFeeBps: event.royaltyFeeBps || undefined,
           marketplaceFeeBps: event.marketplaceFeeBps || undefined,
           royaltyFeeBreakdown: event.royaltyFeeBreakdown || undefined,

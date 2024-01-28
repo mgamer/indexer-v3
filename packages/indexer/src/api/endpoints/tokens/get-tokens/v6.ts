@@ -400,30 +400,30 @@ export const getTokensV6Options: RouteOptions = {
     if (enableElasticsearchAsks && query.continuation) {
       const contArr = splitContinuation(query.continuation);
 
-      enableElasticsearchAsks = !isNaN(Number(contArr));
+      enableElasticsearchAsks = !isNaN(Number(contArr)) || contArr[0].startsWith("es_");
     }
 
     if (enableElasticsearchAsks) {
-      logger.info(
-        `get-tokens-${version}-handler`,
-        JSON.stringify({
-          topic: "debugAskIndex",
-          message: "Using Elasticsearch for asks",
-          query,
-        })
-      );
+      if (query.continuation) {
+        const contArr = splitContinuation(query.continuation);
 
-      const listedTokens = await getListedTokensFromES(query, false);
-
-      if (listedTokens.continuation || query.source || query.nativeSource) {
-        return { tokens: listedTokens.tokens, continuation: listedTokens.continuation };
+        enableElasticsearchAsks = !isNaN(Number(contArr));
       }
 
-      esTokens = listedTokens.tokens;
+      if (enableElasticsearchAsks) {
+        const listedTokens = await getListedTokensFromES(query);
 
-      query.limit = query.limit - esTokens.length;
+        if (listedTokens.continuation || query.source || query.nativeSource) {
+          return { tokens: listedTokens.tokens, continuation: listedTokens.continuation };
+        }
+
+        esTokens = listedTokens.tokens;
+        query.limit = query.limit - esTokens.length;
+        query.continuation = null;
+      }
+
       query.excludeEOA = false;
-      query.continuation = null;
+      query.sortBy = "notListedTokens";
     }
 
     // Include attributes
@@ -974,7 +974,35 @@ export const getTokensV6Options: RouteOptions = {
       const contractSort = !(query.collection || (query.contract && query.contract.length == 1));
 
       // Continue with the next page, this depends on the sorting used
-      if (query.continuation && !query.token) {
+      if (query.sortBy === "notListedTokens") {
+        if (query.continuation) {
+          let contArr = splitContinuation(
+            query.continuation,
+            /^(es_(([0-9]+\.?[0-9]*|\.[0-9]+)|null|0x[a-fA-F0-9]+)_\d+|\d+)$/
+          );
+
+          if (contArr.length === 1 && contArr[0].includes("_")) {
+            contArr = splitContinuation(contArr[0]);
+          }
+
+          if (contArr.length !== 3) {
+            throw Boom.badRequest("Invalid continuation string used");
+          }
+          const sign = query.sortDirection == "desc" ? "<" : ">";
+          conditions.push(`(t.contract, t.token_id) ${sign} ($/contContract/, $/contTokenId/)`);
+          (query as any).contContract = toBuffer(contArr[1]);
+          (query as any).contTokenId = contArr[2];
+        }
+
+        const sortColumn =
+          query.nativeSource || query.excludeEOA
+            ? "s.floor_sell_value"
+            : query.normalizeRoyalties
+            ? "t.normalized_floor_sell_value"
+            : "t.floor_sell_value";
+
+        conditions.push(`${sortColumn} is null`);
+      } else if (query.continuation && !query.token) {
         let contArr = splitContinuation(
           query.continuation,
           /^((([0-9]+\.?[0-9]*|\.[0-9]+)|null|0x[a-fA-F0-9]+)_\d+|\d+)$/
@@ -1121,6 +1149,7 @@ export const getTokensV6Options: RouteOptions = {
               sortDirection === "asc" ? "desc" : "asc"
             }`;
           }
+          case "notListedTokens":
           case "tokenId": {
             return ` ORDER BY t_contract ${sortDirection}, t_token_id ${sortDirection}`;
           }
@@ -1279,6 +1308,9 @@ export const getTokensV6Options: RouteOptions = {
           query.sortBy === "updatedAt"
         ) {
           switch (query.sortBy) {
+            case "notListedTokens":
+              continuation = "es";
+              break;
             case "rarity":
               continuation = rawResult[rawResult.length - 1].rarity_rank || "null";
               break;
@@ -1671,7 +1703,7 @@ export const getListedTokensFromES = async (query: any, attributeFloorAskPriceAs
     }
   }
 
-  let tokens: { contract: string; tokenId: string }[] = [];
+  const tokens: { contract: string; tokenId: string }[] = [];
 
   if (query.tokens) {
     if (!_.isArray(query.tokens)) {
@@ -1688,30 +1720,14 @@ export const getListedTokensFromES = async (query: any, attributeFloorAskPriceAs
     }
   }
 
-  if (query.attributes) {
-    const attributes: string[] = [];
+  const attributes: { key: string; value: string }[] = [];
 
+  if (query.attributes) {
     Object.entries(query.attributes).forEach(([key, values]) => {
       (Array.isArray(values) ? values : [values]).forEach((value) =>
-        attributes.push(`('${key}', '${value}')`)
+        attributes.push({ key, value })
       );
     });
-
-    const tokensResult = await redb.manyOrNone(`
-            SELECT contract, token_id
-            FROM token_attributes
-            WHERE collection_id IN ('${collections.join(",")}')
-            AND (key, value) IN (${attributes.join(",")});
-          `);
-
-    if (tokensResult.length === 0) {
-      throw Boom.badRequest(`No tokens for attributes ${query.attributes}`);
-    }
-
-    tokens = _.map(tokensResult, (token) => ({
-      contract: fromBuffer(token.contract),
-      tokenId: token.token_id,
-    }));
   }
 
   if (query.source) {
@@ -1769,6 +1785,7 @@ export const getListedTokensFromES = async (query: any, attributeFloorAskPriceAs
     contracts: query.contract && !_.isArray(query.contract) ? [query.contract] : query.contract,
     collections,
     tokens,
+    attributes,
     rarityRank: { min: query.minRarityRank, max: query.maxRarityRank },
     floorAskPrice: { min: query.minFloorAskPrice, max: query.maxFloorAskPrice },
     flaggedTokens: query.flaggedTokens,

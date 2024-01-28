@@ -118,7 +118,7 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
       tokensMetadata.push(data.nft);
     }
 
-    return tokensMetadata.map(super.parseToken).filter(Boolean);
+    return tokensMetadata.map((nft: any) => this.parseToken(nft)).filter(Boolean);
   }
 
   async _getTokenFlagStatus(
@@ -271,7 +271,8 @@ class OpenseaMetadataProvider extends AbstractBaseMetadataProvider {
           JSON.stringify({
             message: `_getTokensFlagStatusByCollectionPaginationViaContract error. contract:${contract}, continuation:${continuation}, error:${error}`,
             url,
-            error,
+            errorResponseStatus: error.response?.status,
+            errorResponseData: error.response?.data,
           })
         );
 
