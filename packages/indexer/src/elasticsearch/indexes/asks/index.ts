@@ -9,9 +9,11 @@ import * as CONFIG from "@/elasticsearch/indexes/asks/config";
 import { AskDocument } from "@/elasticsearch/indexes/asks/base";
 import { buildContinuation, splitContinuation } from "@/common/utils";
 
+import { backfillTokenAsksJob } from "@/jobs/elasticsearch/asks/backfill-token-asks-job";
+import { tokenRefreshCacheJob } from "@/jobs/token-updates/token-refresh-cache-job";
+
 import {
   AggregationsAggregate,
-  ErrorCause,
   QueryDslQueryContainer,
   SearchResponse,
   Sort,
@@ -19,6 +21,7 @@ import {
 } from "@elastic/elasticsearch/lib/api/types";
 import { acquireLockCrossChain } from "@/common/redis";
 import { config } from "@/config/index";
+import { isRetryableError } from "@/elasticsearch/indexes/utils";
 
 const INDEX_NAME = `asks`;
 
@@ -492,17 +495,7 @@ export const searchTokenAsks = async (
 
     return { asks, continuation };
   } catch (error) {
-    let retryableError =
-      (error as any).meta?.meta?.aborted ||
-      (error as any).meta?.body?.error?.caused_by?.type === "node_not_connected_exception";
-
-    const rootCause = (error as any).meta?.body?.error?.root_cause as ErrorCause[];
-
-    if (!retryableError && rootCause?.length) {
-      retryableError = rootCause[0].type === "node_not_connected_exception";
-    }
-
-    if (retryableError) {
+    if (isRetryableError(error)) {
       logger.warn(
         "elasticsearch-asks",
         JSON.stringify({
@@ -584,17 +577,7 @@ export const _search = async (
 
     return esResult;
   } catch (error) {
-    let retryableError =
-      (error as any).meta?.meta?.aborted ||
-      (error as any).meta?.body?.error?.caused_by?.type === "node_not_connected_exception";
-
-    const rootCause = (error as any).meta?.body?.error?.root_cause as ErrorCause[];
-
-    if (!retryableError && rootCause?.length) {
-      retryableError = rootCause[0].type === "node_not_connected_exception";
-    }
-
-    if (retryableError) {
+    if (isRetryableError(error)) {
       logger.warn(
         "elasticsearch-asks",
         JSON.stringify({
@@ -754,21 +737,6 @@ export const updateAsksTokenData = async (
       (hit) => ({ id: hit._id, index: hit._index })
     );
 
-    logger.info(
-      "elasticsearch-asks",
-      JSON.stringify({
-        topic: "updateAsksTokenData",
-        message: `_search. contract=${contract}, tokenId=${tokenId}`,
-        data: {
-          contract,
-          tokenId,
-          tokenData,
-        },
-        query,
-        pendingUpdateDocuments: pendingUpdateDocuments.length,
-      })
-    );
-
     if (pendingUpdateDocuments.length) {
       const bulkParams = {
         body: pendingUpdateDocuments.flatMap((document) => [
@@ -831,17 +799,7 @@ export const updateAsksTokenData = async (
       }
     }
   } catch (error) {
-    let retryableError =
-      (error as any).meta?.meta?.aborted ||
-      (error as any).meta?.body?.error?.caused_by?.type === "node_not_connected_exception";
-
-    const rootCause = (error as any).meta?.body?.error?.root_cause as ErrorCause[];
-
-    if (!retryableError && rootCause?.length) {
-      retryableError = rootCause[0].type === "node_not_connected_exception";
-    }
-
-    if (retryableError) {
+    if (isRetryableError(error)) {
       logger.warn(
         "elasticsearch-asks",
         JSON.stringify({
@@ -923,21 +881,6 @@ export const updateAsksTokenAttributesData = async (
       (hit) => ({ id: hit._id, index: hit._index })
     );
 
-    logger.info(
-      "elasticsearch-asks",
-      JSON.stringify({
-        topic: "updateAsksTokenAttributesData",
-        message: `_search. contract=${contract}, tokenId=${tokenId}`,
-        data: {
-          contract,
-          tokenId,
-          tokenAttributesData,
-        },
-        query,
-        pendingUpdateDocuments: pendingUpdateDocuments.length,
-      })
-    );
-
     if (pendingUpdateDocuments.length) {
       const bulkParams = {
         body: pendingUpdateDocuments.flatMap((document) => [
@@ -994,19 +937,29 @@ export const updateAsksTokenAttributesData = async (
           })
         );
       }
+    } else {
+      logger.info(
+        "elasticsearch-asks",
+        JSON.stringify({
+          topic: "updateAsksTokenAttributesData",
+          message: `No pending documents. contract=${contract}, tokenId=${tokenId}`,
+          data: {
+            contract,
+            tokenId,
+            tokenAttributesData,
+          },
+          query,
+        })
+      );
+
+      // Refresh the token floor sell and top bid
+      await tokenRefreshCacheJob.addToQueue({ contract, tokenId });
+
+      // Refresh the token asks
+      await backfillTokenAsksJob.addToQueue(contract, tokenId);
     }
   } catch (error) {
-    let retryableError =
-      (error as any).meta?.meta?.aborted ||
-      (error as any).meta?.body?.error?.caused_by?.type === "node_not_connected_exception";
-
-    const rootCause = (error as any).meta?.body?.error?.root_cause as ErrorCause[];
-
-    if (!retryableError && rootCause?.length) {
-      retryableError = rootCause[0].type === "node_not_connected_exception";
-    }
-
-    if (retryableError) {
+    if (isRetryableError(error)) {
       logger.warn(
         "elasticsearch-asks",
         JSON.stringify({
@@ -1175,17 +1128,7 @@ export const updateAsksCollectionData = async (
       }
     }
   } catch (error) {
-    let retryableError =
-      (error as any).meta?.meta?.aborted ||
-      (error as any).meta?.body?.error?.caused_by?.type === "node_not_connected_exception";
-
-    const rootCause = (error as any).meta?.body?.error?.root_cause as ErrorCause[];
-
-    if (!retryableError && rootCause?.length) {
-      retryableError = rootCause[0].type === "node_not_connected_exception";
-    }
-
-    if (retryableError) {
+    if (isRetryableError(error)) {
       logger.warn(
         "elasticsearch-asks",
         JSON.stringify({

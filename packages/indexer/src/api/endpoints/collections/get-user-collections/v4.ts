@@ -19,7 +19,7 @@ export const getUserCollectionsV4Options: RouteOptions = {
   description: "User collections",
   notes:
     "Get aggregate stats for a user, grouped by collection. Useful for showing total portfolio information.",
-  tags: ["api", "x-deprecated"],
+  tags: ["api", "Collections"],
   plugins: {
     "hapi-swagger": {
       order: 3,
@@ -48,6 +48,11 @@ export const getUserCollectionsV4Options: RouteOptions = {
         .lowercase()
         .description(
           "Filter to a particular collection with collection-id. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
+        ),
+      name: Joi.string()
+        .lowercase()
+        .description(
+          "Filter to a particular collection with name. This is case insensitive. Example: `ape`"
         ),
       includeTopBid: Joi.boolean()
         .default(false)
@@ -292,6 +297,11 @@ export const getUserCollectionsV4Options: RouteOptions = {
 
       if (query.community) {
         conditions.push(`collections.community = $/community/`);
+      }
+
+      if (query.name) {
+        query.name = `%${query.name}%`;
+        conditions.push(`collections.name ILIKE $/name/`);
       }
 
       if (query.collectionsSetId) {

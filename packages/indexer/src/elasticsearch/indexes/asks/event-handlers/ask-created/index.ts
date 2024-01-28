@@ -70,6 +70,7 @@ export class AskCreatedEventHandler extends BaseAskEventHandler {
               (${orderCriteriaSelectQueryPart}) AS order_criteria,
               orders.created_at AS "order_created_at",
               extract(epoch from orders.updated_at) updated_ts,
+              extract(epoch from orders.created_at) created_ts,
               t.*
             FROM orders
             JOIN LATERAL (
@@ -113,7 +114,7 @@ export class AskCreatedEventHandler extends BaseAskEventHandler {
                 ? `AND orders.fillability_status = 'fillable' AND orders.approval_status = 'approved'`
                 : ""
             }
-            AND orders.kind != 'element-erc1155'
+            AND orders.kind != 'element-erc1155' AND orders.kind != 'element-erc721'
                  `;
   }
 

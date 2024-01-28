@@ -545,6 +545,7 @@ export const generateBidDetailsV6 = async (
     id: string;
     kind: OrderKind;
     unitPrice: string;
+    currency: string;
     rawData: any;
     source?: string;
     fees?: Sdk.RouterV6.Types.Fee[];
@@ -574,6 +575,8 @@ export const generateBidDetailsV6 = async (
     amount: token.amount ?? 1,
     owner: token.owner,
     isProtected: order.isProtected,
+    builtInFeeBps: order.builtInFeeBps,
+    currency: order.currency,
     fees: order.fees ?? [],
     permit: options?.permit,
   };

@@ -6,7 +6,6 @@ import { Network } from "@reservoir0x/sdk/dist/utils";
 
 import { config } from "../../config";
 import { extractByTx } from "../../orderbook/mints/calldata/detector/bueno";
-import type { Info } from "../../orderbook/mints/calldata/detector/bueno";
 import * as utils from "@/events-sync/utils";
 
 jest.setTimeout(60 * 1000);

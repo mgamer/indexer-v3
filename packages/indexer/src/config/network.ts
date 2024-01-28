@@ -418,6 +418,18 @@ export const getNetworkSettings = (): NetworkSettings => {
             },
           ],
           [
+            "0xdaa58a1851672a6490e2bb9fdc8868918cdd86e6",
+            {
+              contract: "0xdaa58a1851672a6490e2bb9fdc8868918cdd86e6",
+              name: "STAR",
+              symbol: "STAR",
+              decimals: 18,
+              metadata: {
+                image: "https://i.ibb.co/YW5NFVH/STAR.png",
+              },
+            },
+          ],
+          [
             "0x4c7c1ec97279a6f3323eab9ab317202dee7ad922",
             {
               contract: "0x4c7c1ec97279a6f3323eab9ab317202dee7ad922",
@@ -500,6 +512,19 @@ export const getNetworkSettings = (): NetworkSettings => {
               metadata: {
                 image:
                   "https://ipfs.io/ipfs/QmQwUUJMBAPmr6ANAvJavC6bKCXFDZJkyd6zzgZxGJddeQ/AURA%20Coin%20Front.png",
+              },
+            },
+          ],
+          [
+            "0x5ec03c1f7fa7ff05ec476d19e34a22eddb48acdc",
+            {
+              contract: "0x5ec03c1f7fa7ff05ec476d19e34a22eddb48acdc",
+              name: "ZED Token",
+              symbol: "ZED",
+              decimals: 18,
+              metadata: {
+                image:
+                  "https://bafkreidcljrhz7hq4h5rarxgxd63tail24mqawllwhxfrvr3esfv2nvyiy.ipfs.nftstorage.link/",
               },
             },
           ],

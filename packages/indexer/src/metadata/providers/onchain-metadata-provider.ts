@@ -7,9 +7,17 @@ import { metadataIndexingBaseProvider } from "@/common/provider";
 import { defaultAbiCoder } from "ethers/lib/utils";
 import { logger } from "@/common/logger";
 import { ethers } from "ethers";
-import { RequestWasThrottledError, normalizeLink, normalizeMetadata } from "./utils";
+import {
+  RequestWasThrottledError,
+  normalizeLink,
+  normalizeMetadata,
+  TokenUriNotFoundError,
+  TokenUriRequestTimeoutError,
+} from "./utils";
 import _ from "lodash";
 import { AbstractBaseMetadataProvider } from "./abstract-base-metadata-provider";
+import { getNetworkName } from "@/config/network";
+import axios from "axios";
 
 const erc721Interface = new ethers.utils.Interface([
   "function supportsInterface(bytes4 interfaceId) view returns (bool)",
@@ -38,12 +46,21 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
             token.contract,
             token.tokenId
           );
-          if (error) {
+
+          if (!metadata) {
             if (error === 429) {
-              throw new RequestWasThrottledError(error.message, 10);
+              throw new RequestWasThrottledError("Request was throttled", 10);
             }
 
-            throw error;
+            if (error === 504) {
+              throw new TokenUriRequestTimeoutError("Request timed out");
+            }
+
+            if (error === 404) {
+              throw new TokenUriNotFoundError("Not found");
+            }
+
+            throw new Error(error || "Unknown error");
           }
 
           return {
@@ -61,7 +78,7 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
         "onchain-fetcher",
         JSON.stringify({
           topic: "_getTokensMetadata",
-          message: `Could not fetch collection. error=${error}`,
+          message: `Could not fetch tokens. error=${error}`,
           tokens,
           error,
         })
@@ -159,7 +176,8 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
     const resolvedURIs = await Promise.all(
       batch.map(async (token: any) => {
         try {
-          const uri = defaultAbiCoder.decode(["string"], token.result)[0];
+          let uri = defaultAbiCoder.decode(["string"], token.result)[0];
+
           if (!uri || uri === "") {
             return {
               contract: idToToken[token.id].contract,
@@ -167,6 +185,20 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
               uri: null,
               error: "Unable to decode tokenURI from contract",
             };
+          }
+
+          if (uri.endsWith("0x{id}")) {
+            if (uri.startsWith("https://api.opensea.io/")) {
+              uri = uri.replace("0x{id}", idToToken[token.id].tokenId);
+            }
+
+            if (uri.startsWith("ens-metadata-service.appspot.com/")) {
+              uri = `https://metadata.ens.domains/${getNetworkName()}/${
+                idToToken[token.id].contract
+              }/${idToToken[token.id].tokenId}`;
+            }
+          } else if (uri.endsWith("/{id}")) {
+            uri = uri.replace("{id}", idToToken[token.id].tokenId);
           }
 
           return {
@@ -538,6 +570,14 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
       uri = uri.replace("gateway.pinata.cloud", "ipfs.io");
     }
 
+    if (uri && uri?.includes("alienworlds.pinata.cloud")) {
+      uri = uri.replace("alienworlds.pinata.cloud", "ipfs.io");
+    }
+
+    if (uri && uri?.includes("metaid.zkbridge.com")) {
+      uri = uri.replace("metaid.zkbridge.com", "ipfs.io");
+    }
+
     return uri;
   }
 
@@ -557,26 +597,44 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
         uri = uri.substring(uri.indexOf(",") + 1);
         return [JSON.parse(uri), null];
       }
+
       uri = uri.trim();
+
       if (!uri.startsWith("http")) {
         // if the uri is not a valid url, return null
-        return [null, `Invalid URI: ${uri}`];
+        return [null, "Invalid URI"];
       }
 
-      const response = await fetch(uri, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+      return axios
+        .get(uri, {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        })
+        .then((res) => {
+          if (res.data !== null && typeof res.data === "object") {
+            return [res.data, null];
+          }
 
-      if (!response.ok) {
-        return [null, response.status];
-      }
+          return [null, "Invalid JSON"];
+        })
+        .catch((error) => {
+          logger.warn(
+            "onchain-fetcher",
+            JSON.stringify({
+              message: `getTokenMetadataFromURI axios error. contract=${contract}, tokenId=${tokenId}`,
+              contract,
+              tokenId,
+              uri,
+              error,
+              errorResponseStatus: error.response?.status,
+              errorResponseData: error.response?.data,
+            })
+          );
 
-      const json = await response.json();
-      return [json, null];
-    } catch (e) {
+          return [null, error.response?.status || `${error}`];
+        });
+    } catch (error) {
       logger.warn(
         "onchain-fetcher",
         JSON.stringify({
@@ -584,10 +642,11 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
           contract,
           tokenId,
           uri,
-          error: e,
+          error,
         })
       );
-      return [null, e];
+
+      return [null, (error as any).message];
     }
   }
 }

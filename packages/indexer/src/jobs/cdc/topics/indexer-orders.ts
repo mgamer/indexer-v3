@@ -29,7 +29,7 @@ export class IndexerOrdersHandler extends KafkaEventHandler {
       eventKind = WebsocketEventKind.BuyOrder;
     } else {
       logger.warn(
-        "kafka-event-handler",
+        "IndexerOrdersHandler",
         `${this.topicName}: Unknown order kind, skipping websocket event router for order=${
           JSON.stringify(payload.after) || "null"
         }`
@@ -80,7 +80,7 @@ export class IndexerOrdersHandler extends KafkaEventHandler {
       eventKind = WebsocketEventKind.BuyOrder;
     } else {
       logger.warn(
-        "kafka-event-handler",
+        "IndexerOrdersHandler",
         `${this.topicName}: Unknown order kind, skipping websocket event router for order=${
           JSON.stringify(payload.after) || "null"
         }`
@@ -161,7 +161,7 @@ export class IndexerOrdersHandler extends KafkaEventHandler {
 
           if (!token?.image && !token?.name) {
             logger.info(
-              "kafka-event-handler",
+              "IndexerOrdersHandler",
               JSON.stringify({
                 topic: "handleSellOrder",
                 message: `Refreshing token metadata. contract=${contract}, tokenId=${tokenId}`,
@@ -178,9 +178,7 @@ export class IndexerOrdersHandler extends KafkaEventHandler {
                 {
                   kind: "single-token",
                   data: {
-                    method: collection?.community
-                      ? metadataIndexFetchJob.getIndexingMethod(collection?.community)
-                      : "simplehash",
+                    method: metadataIndexFetchJob.getIndexingMethod(collection?.community),
                     contract,
                     tokenId,
                     collection: collection?.id || contract,
@@ -205,7 +203,7 @@ export class IndexerOrdersHandler extends KafkaEventHandler {
       }
     } catch (error) {
       logger.error(
-        "kafka-event-handler",
+        "IndexerOrdersHandler",
         JSON.stringify({
           topic: "handleSellOrder",
           message: `Handle sell order error. error=${error}`,

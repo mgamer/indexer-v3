@@ -87,14 +87,18 @@ export class NftTransferEventCreatedEventHandler extends BaseActivityEventHandle
                         tokens.image AS "token_image",
                         tokens.media AS "token_media",
                         tokens.is_spam AS "token_is_spam",
+                        tokens.nsfw_status AS "token_nsfw_status",
                         collections.is_spam AS "collection_is_spam",
+                        collections.nsfw_status AS "collection_nsfw_status",
                         collections.id AS "collection_id",
                         collections.name AS "collection_name",
                         (collections.metadata ->> 'imageUrl')::TEXT AS "collection_image",
                         collections.image_version AS "collection_image_version",
-                        collections.is_minting AS "collection_is_minting"
+                        (CASE WHEN collection_mints.kind = 'public' AND collection_mints.status = 'open' THEN TRUE ELSE FALSE END) AS "event_collection_is_minting",
+                        collection_mints.price AS "event_collection_mint_price"
                     FROM tokens
                     JOIN collections on collections.id = tokens.collection_id
+                    LEFT JOIN collection_mints ON collection_mints.collection_id = collections.id
                     WHERE nft_transfer_events.address = tokens.contract
                     AND nft_transfer_events.token_id = tokens.token_id
                  ) t ON TRUE`;
@@ -102,13 +106,6 @@ export class NftTransferEventCreatedEventHandler extends BaseActivityEventHandle
 
   parseEvent(data: any) {
     data.timestamp = data.event_timestamp;
-
-    const activityType = this.getActivityType(data);
-
-    if (activityType === ActivityType.mint) {
-      data.event_collection_is_minting =
-        data.collection_is_minting != null ? data.collection_is_minting : undefined;
-    }
   }
 
   static async generateActivities(events: NftTransferEventInfo[]): Promise<ActivityDocument[]> {
