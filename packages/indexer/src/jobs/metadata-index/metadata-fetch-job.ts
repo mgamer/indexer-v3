@@ -48,6 +48,19 @@ export default class MetadataIndexFetchJob extends AbstractRabbitMqJobHandler {
       return;
     }
 
+    if (
+      (payload.context === "onchain-fallback" || payload.context === "IndexerTokensHandler") &&
+      payload.kind === "single-token"
+    ) {
+      logger.info(
+        this.queueName,
+        JSON.stringify({
+          message: `Start. contract=${payload.data.contract}, tokenId=${payload.data.tokenId}`,
+          payload,
+        })
+      );
+    }
+
     const { kind, data } = payload;
     const prioritized = !_.isUndefined(this.rabbitMqMessage?.prioritized);
     const limit = 1000;
@@ -57,6 +70,7 @@ export default class MetadataIndexFetchJob extends AbstractRabbitMqJobHandler {
       [
         "0x23581767a106ae21c074b2276d25e5c3e136a68b",
         "0x4481507cc228fa19d203bd42110d679571f7912e",
+        "0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d",
       ].includes(payload.data.collection)
     ) {
       data.method = "simplehash";
@@ -144,7 +158,7 @@ export default class MetadataIndexFetchJob extends AbstractRabbitMqJobHandler {
     });
   }
 
-  public getIndexingMethod(community: string | null) {
+  public getIndexingMethod(community?: string | null) {
     switch (community) {
       case "sound.xyz":
         return "soundxyz";

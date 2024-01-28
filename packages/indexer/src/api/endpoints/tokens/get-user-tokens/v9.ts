@@ -257,14 +257,14 @@ export const getUserTokensV9Options: RouteOptions = {
 
     const tokensCollectionFilters: string[] = [];
     const nftBalanceCollectionFilters: string[] = [];
-    let sharedContract = false;
+    const collections: string[] = [];
+    let listBasedContract = false;
 
     const addCollectionToFilter = (id: string) => {
       const i = nftBalanceCollectionFilters.length;
+      collections.push(id);
 
       if (id.match(/^0x[a-f0-9]{40}:\d+:\d+$/g)) {
-        // Range based collection
-        sharedContract = true;
         const [contract, startTokenId, endTokenId] = id.split(":");
 
         (query as any)[`contract${i}`] = toBuffer(contract);
@@ -278,7 +278,7 @@ export const getUserTokensV9Options: RouteOptions = {
         `);
       } else if (id.match(/^0x[a-f0-9]{40}:[a-zA-Z]+-.+$/g)) {
         // List based collections
-        sharedContract = true;
+        listBasedContract = true;
         const collectionParts = id.split(":");
 
         (query as any)[`collection${i}`] = id;
@@ -295,10 +295,6 @@ export const getUserTokensV9Options: RouteOptions = {
         (query as any)[`collection${i}`] = id;
 
         nftBalanceCollectionFilters.push(`(nft_balances.contract = $/contract${i}/)`);
-
-        tokensCollectionFilters.push(`
-          collection_id = $/collection${i}/
-        `);
       }
     };
 
@@ -596,7 +592,7 @@ export const getUserTokensV9Options: RouteOptions = {
       (query as any).tokenId = tokenId;
       query.sortDirection = query.sortDirection || "desc";
       if (query.sortBy === "acquiredAt") {
-        continuationFilter = ` AND (acquired_at, token_id) ${
+        continuationFilter = ` AND (acquired_at, nft_balances.token_id) ${
           query.sortDirection == "desc" ? "<" : ">"
         } (to_timestamp($/sortByValue/), $/tokenId/)`;
       } else if (query.sortBy === "lastAppraisalValue") {
@@ -611,18 +607,29 @@ export const getUserTokensV9Options: RouteOptions = {
     }
 
     let ucTable = "";
-    if (query.sortBy === "floorAskPrice") {
+    if (query.sortBy === "floorAskPrice" || !_.isEmpty(collections)) {
       ucTable = `
-        SELECT collection_id, c.*
+        SELECT collection_id, COALESCE(c.token_set_id != CONCAT('contract:', collection_id), true) AS "shared_contract", c.*
         FROM user_collections uc
         JOIN collections c ON c.id = uc.collection_id 
         WHERE owner = $/user/
         AND uc.token_count > 0
+        ${!_.isEmpty(collections) ? `AND uc.collection_id IN ($/collections:list/)` : ""}
         ${query.excludeSpam ? `AND (uc.is_spam IS NULL OR uc.is_spam <= 0)` : ""}
         ${query.excludeNsfw ? ` AND (c.nsfw_status IS NULL OR c.nsfw_status <= 0)` : ""}
-        ORDER BY floor_sell_value ${query.sortDirection} NULLS LAST
+        ${
+          query.sortBy === "floorAskPrice"
+            ? `ORDER BY floor_sell_value ${query.sortDirection} NULLS LAST`
+            : ""
+        }
       `;
     }
+
+    const sortFullQuery =
+      query.sortBy === "floorAskPrice" ||
+      listBasedContract ||
+      query.excludeSpam ||
+      query.excludeNsfw;
 
     try {
       const baseQuery = `
@@ -638,7 +645,7 @@ export const getUserTokensV9Options: RouteOptions = {
                c.image_version AS "collection_image_version",
                ot.value as floor_sell_value, ot.currency_value as floor_sell_currency_value, ot.currency_price, ot.currency as floor_sell_currency, ot.maker as floor_sell_maker,
                 date_part('epoch', lower(ot.valid_between)) AS "floor_sell_valid_from",
-                coalesce(nullif(date_part('epoch', upper(ot.valid_between)), 'Infinity'), 0) AS "floor_sell_valid_to",
+                COALESCE(nullif(date_part('epoch', upper(ot.valid_between)), 'Infinity'), 0) AS "floor_sell_valid_to",
                ot.source_id_int as floor_sell_source_id_int, ot.id as floor_sell_id,
                ${query.includeRawData ? "ot.raw_data AS floor_sell_raw_data," : ""}
                ${
@@ -659,31 +666,34 @@ export const getUserTokensV9Options: RouteOptions = {
             FROM nft_balances
             ${
               ucTable
-                ? `JOIN tokens t on nft_balances.contract = t.contract and nft_balances.token_id = t.token_id and t.collection_id = c.collection_id`
+                ? `JOIN tokens t on nft_balances.contract = t.contract AND nft_balances.token_id = t.token_id AND CASE WHEN c.shared_contract IS TRUE THEN c.collection_id = t.collection_id ELSE true END`
                 : ""
             }
             WHERE owner = $/user/
-              AND ${
-                nftBalanceCollectionFilters.length
-                  ? "(" + nftBalanceCollectionFilters.join(" OR ") + ")"
-                  : "TRUE"
-              }
               AND ${
                 tokensFilter.length
                   ? "(nft_balances.contract, nft_balances.token_id) IN ($/tokensFilter:raw/)"
                   : "TRUE"
               }
               AND amount > 0
-              ${ucTable ? `AND nft_balances.contract = c.contract` : ""}
+              ${
+                ucTable
+                  ? `AND nft_balances.contract = c.contract`
+                  : `AND ${
+                      nftBalanceCollectionFilters.length
+                        ? "(" + nftBalanceCollectionFilters.join(" OR ") + ")"
+                        : "TRUE"
+                    }`
+              }
               ${continuationFilter}
-              ${sharedContract || query.excludeSpam || query.excludeNsfw || ucTable ? "" : sorting}
+              ${sortFullQuery ? "" : sorting}
           ) AS b ${ucTable ? ` ON TRUE` : ""}
           ${tokensJoin}
           ${
             ucTable
               ? ""
               : `${
-                  sharedContract || query.excludeSpam || query.excludeNsfw ? "" : "LEFT "
+                  listBasedContract || query.excludeSpam || query.excludeNsfw ? "" : "LEFT "
                 }JOIN collections c ON c.id = t.collection_id ${
                   query.excludeSpam ? `AND (c.is_spam IS NULL OR c.is_spam <= 0)` : ""
                 }${query.excludeNsfw ? ` AND (c.nsfw_status IS NULL OR c.nsfw_status <= 0)` : ""}`
@@ -709,10 +719,10 @@ export const getUserTokensV9Options: RouteOptions = {
             LIMIT 
               1
           ) ELSE t.floor_sell_id END
-          ${sharedContract || query.excludeSpam || query.excludeNsfw || ucTable ? sorting : ""}
+          ${sortFullQuery ? sorting : ""}
       `;
 
-      const userTokens = await redb.manyOrNone(baseQuery, { ...query, ...params });
+      const userTokens = await redb.manyOrNone(baseQuery, { ...query, ...params, collections });
 
       let continuation = null;
       if (userTokens.length === query.limit) {

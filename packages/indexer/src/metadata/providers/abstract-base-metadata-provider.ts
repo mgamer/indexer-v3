@@ -12,10 +12,10 @@ import {
   overrideCollectionMetadata,
 } from "../extend";
 import { limitFieldSize } from "./utils";
-import fetch from "node-fetch";
 
 import { logger } from "@/common/logger";
 import { redis } from "@/common/redis";
+import axios from "axios";
 
 export abstract class AbstractBaseMetadataProvider {
   abstract method: string;
@@ -90,52 +90,77 @@ export abstract class AbstractBaseMetadataProvider {
     // get mimetype for each image/media/metadata url
     await Promise.all(
       extendedMetadata.map(async (metadata) => {
-        if (metadata.imageUrl && !metadata.imageUrl.startsWith("data:")) {
-          metadata.imageMimeType = await this._getImageMimeType(metadata.imageUrl);
+        try {
+          if (
+            metadata.imageUrl &&
+            !metadata.imageUrl.startsWith("data:") &&
+            !metadata.imageMimeType
+          ) {
+            metadata.imageMimeType = await this._getImageMimeType(metadata.imageUrl);
 
-          if (!metadata.imageMimeType) {
-            logger.warn(
-              "getTokensMetadata",
-              JSON.stringify({
-                topic: "debugMimeType",
-                message: `Missing image mime type. contract=${metadata.contract}, tokenId=${metadata.tokenId}, imageUrl=${metadata.imageUrl}`,
-                metadata: JSON.stringify(metadata),
-                method: this.method,
-              })
-            );
+            if (metadata.contract === "0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d") {
+              metadata.imageMimeType = "image/png";
+            }
+
+            if (!metadata.imageMimeType) {
+              logger.warn(
+                "getTokensMetadata",
+                JSON.stringify({
+                  topic: "debugMimeType",
+                  message: `Missing image mime type. contract=${metadata.contract}, tokenId=${metadata.tokenId}, imageUrl=${metadata.imageUrl}`,
+                  metadata: JSON.stringify(metadata),
+                  method: this.method,
+                })
+              );
+            }
           }
-        }
 
-        if (metadata.mediaUrl && !metadata.mediaUrl.startsWith("data:")) {
-          metadata.mediaMimeType = await this._getImageMimeType(metadata.mediaUrl);
+          if (
+            metadata.mediaUrl &&
+            !metadata.mediaUrl.startsWith("data:") &&
+            !metadata.mediaMimeType
+          ) {
+            metadata.mediaMimeType = await this._getImageMimeType(metadata.mediaUrl);
 
-          if (!metadata.mediaMimeType) {
-            logger.warn(
-              "getTokensMetadata",
-              JSON.stringify({
-                topic: "debugMimeType",
-                message: `Missing media mime type. contract=${metadata.contract}, tokenId=${metadata.tokenId}, mediaUrl=${metadata.mediaUrl}`,
-                metadata: JSON.stringify(metadata),
-                method: this.method,
-              })
-            );
+            if (!metadata.mediaMimeType) {
+              logger.warn(
+                "getTokensMetadata",
+                JSON.stringify({
+                  topic: "debugMimeType",
+                  message: `Missing media mime type. contract=${metadata.contract}, tokenId=${metadata.tokenId}, mediaUrl=${metadata.mediaUrl}`,
+                  metadata: JSON.stringify(metadata),
+                  method: this.method,
+                })
+              );
+            }
           }
-        }
 
-        const imageMimeTypesPrefixes = ["image/", "application/octet-stream"];
+          const imageMimeTypesPrefixes = ["image/", "application/octet-stream"];
 
-        // if the imageMimeType is not an "image" mime type, we want to set imageUrl to null and mediaUrl to imageUrl
-        if (
-          metadata.imageUrl &&
-          metadata.imageMimeType &&
-          !imageMimeTypesPrefixes.some((imageMimeTypesPrefix) =>
-            metadata.imageMimeType.startsWith(imageMimeTypesPrefix)
-          )
-        ) {
-          metadata.mediaUrl = metadata.imageUrl;
-          metadata.mediaMimeType = metadata.imageMimeType;
-          metadata.imageUrl = null;
-          metadata.imageMimeType = undefined;
+          // if the imageMimeType is not an "image" mime type, we want to set imageUrl to null and mediaUrl to imageUrl
+          if (
+            metadata.imageUrl &&
+            metadata.imageMimeType &&
+            !imageMimeTypesPrefixes.some((imageMimeTypesPrefix) =>
+              metadata.imageMimeType.startsWith(imageMimeTypesPrefix)
+            )
+          ) {
+            metadata.mediaUrl = metadata.imageUrl;
+            metadata.mediaMimeType = metadata.imageMimeType;
+            metadata.imageUrl = null;
+            metadata.imageMimeType = undefined;
+          }
+        } catch (error) {
+          logger.error(
+            "getTokensMetadata",
+            JSON.stringify({
+              message: `extendedMetadata error. contract=${metadata.contract}, tokenId=${metadata.tokenId}, error=${error}`,
+              metadata,
+              error,
+            })
+          );
+
+          throw error;
         }
       })
     );
@@ -144,16 +169,32 @@ export abstract class AbstractBaseMetadataProvider {
   }
 
   async _getImageMimeType(url: string): Promise<string> {
+    if (url.endsWith(".png")) {
+      return "image/png";
+    }
+    if (url.endsWith(".jpg") || url.endsWith(".jpeg")) {
+      return "image/jpeg";
+    }
+    if (url.endsWith(".gif")) {
+      return "image/gif";
+    }
+    if (url.endsWith(".svg")) {
+      return "image/svg+xml";
+    }
+    if (url.endsWith(".mp4")) {
+      return "video/mp4";
+    }
+    if (!url.startsWith("http")) {
+      return "";
+    }
+
     let imageMimeType = await redis.get(`imageMimeType:${url}`);
 
     if (!imageMimeType) {
       // use fetch
-      imageMimeType = await fetch(url, {
-        method: "HEAD",
-      })
-        .then((res) => {
-          return res.headers.get("content-type") || "";
-        })
+      imageMimeType = await axios
+        .head(url)
+        .then((res) => res.headers["content-type"])
         .catch((error) => {
           logger.warn(
             "_getImageMimeType",
@@ -163,8 +204,6 @@ export abstract class AbstractBaseMetadataProvider {
               error,
             })
           );
-
-          return "";
         });
 
       if (imageMimeType) {
@@ -172,7 +211,7 @@ export abstract class AbstractBaseMetadataProvider {
       }
     }
 
-    return imageMimeType;
+    return imageMimeType || "";
   }
 
   // Internal methods for subclasses
