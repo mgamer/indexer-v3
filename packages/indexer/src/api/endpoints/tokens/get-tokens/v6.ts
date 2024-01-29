@@ -2164,18 +2164,7 @@ export const getListedTokensFromES = async (query: any, attributeFloorAskPriceAs
       }
     }
 
-    const metadata = {
-      imageOriginal: undefined,
-      mediaOriginal: undefined,
-    };
-
-    if (r.metadata?.image_original_url) {
-      metadata.imageOriginal = r.metadata.image_original_url;
-    }
-
-    if (r.metadata?.animation_original_url) {
-      metadata.mediaOriginal = r.metadata.animation_original_url;
-    }
+    const metadata = parseMetadata(r, r.metadata);
 
     return {
       token: getJoiTokenObject(
