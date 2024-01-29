@@ -72,7 +72,7 @@ export const getNetworkName = () => {
     case 1101:
       return "polygon-zkevm";
 
-    case 2863311531:
+    case 28122024:
       return "ancient8-testnet";
 
     case 534352:
@@ -1541,7 +1541,7 @@ export const getNetworkSettings = (): NetworkSettings => {
       };
     }
     // Ancient8 Testnet
-    case 2863311531: {
+    case 28122024: {
       return {
         ...defaultNetworkSettings,
         enableWebSocket: true,

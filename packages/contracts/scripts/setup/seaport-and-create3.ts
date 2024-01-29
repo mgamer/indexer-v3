@@ -31,14 +31,14 @@ export const setup = async () => {
       console.log("- step already executed");
     } else {
       const balance = await provider.getBalance(KEYLESS_CREATE2_DEPLOYER);
-      if (balance.gte(parseEther("0.01"))) {
+      if (balance.gte(parseEther("0.011"))) {
         console.log("- already enough balance to proceed");
       } else {
         console.log("- relaying and waiting for transaction");
         await deployer
           .sendTransaction({
             to: KEYLESS_CREATE2_DEPLOYER,
-            value: parseEther("0.01"),
+            value: parseEther("0.011"),
           })
           .then((tx) => tx.wait());
       }
