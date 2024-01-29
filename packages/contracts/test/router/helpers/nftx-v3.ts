@@ -123,6 +123,7 @@ export const setupNFTXV3Listings = async (listings: NFTXV3Listing[]) => {
       listing.order = new Sdk.NftxV3.Order(chainId, vaultAddress, seller.address, {
         vaultId: _vaultId.toString(),
         collection: nft.contract.address,
+        pool: vaultAddress,
         idsOut: [nft.id.toString()],
         price: isCancelled ? "0" : listing.price.toString(),
         executeCallData: isCancelled ? "0x00" : poolPrice.executeCallData,
@@ -247,6 +248,7 @@ export const setupNFTXV3Offers = async (offers: NFTXV3Offer[]) => {
       offer.order = new Sdk.NftxV3.Order(chainId, vaultAddress, buyer.address, {
         vaultId: _vaultId.toString(),
         collection: nft.contract.address,
+        pool: vaultAddress,
         currency: Sdk.Common.Addresses.WNative[chainId],
         idsIn: [nft.id.toString()],
         amounts: [],
