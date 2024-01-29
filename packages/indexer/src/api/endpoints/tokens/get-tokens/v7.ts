@@ -391,6 +391,7 @@ export const getTokensV7Options: RouteOptions = {
   },
   handler: async (request: Request) => {
     const query = request.query as any;
+    logger.info("tokens-v7", `DEBUG LOG TEST query = ${JSON.stringify(query)}`);
 
     let esTokens: any[] = [];
 
@@ -632,10 +633,6 @@ export const getTokensV7Options: RouteOptions = {
       if (query.contract) {
         sourceConditions.push(`contract IN ($/contract:csv/)`);
       } else if (query.collection) {
-        if (query.collection === "0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d") {
-          logger.info("tokens-v7", `DEBUG LOG TEST ${query.collection}`);
-        }
-
         let contractString = query.collection;
         if (query.collection.includes(":")) {
           const [contract, ,] = query.collection.split(":");
