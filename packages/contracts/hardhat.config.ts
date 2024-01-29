@@ -87,7 +87,7 @@ const getNetworkConfig = (chainId?: number) => {
         url = "https://1rpc.io/sepolia";
         break;
       case 28122024:
-        url = "https://rpcv2-testnet.ancient8.gg/ ";
+        url = "https://rpcv2-testnet.ancient8.gg/";
         break;
       case 204:
         url = "https://opbnb-mainnet-rpc.bnbchain.org";
