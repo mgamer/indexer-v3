@@ -391,7 +391,6 @@ export const getTokensV7Options: RouteOptions = {
   },
   handler: async (request: Request) => {
     const query = request.query as any;
-    logger.info("tokens-v7", `DEBUG LOG TEST query = ${JSON.stringify(query)}`);
 
     let esTokens: any[] = [];
 
@@ -1340,6 +1339,10 @@ export const getTokensV7Options: RouteOptions = {
         continuation = buildContinuation(continuation);
       }
 
+      if (query.collection === "0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d") {
+        logger.info("tokens-v7", JSON.stringify(rawResult));
+      }
+
       const sources = await Sources.getInstance();
       const result = rawResult.map(async (r) => {
         const feeBreakdown = r.top_buy_fee_breakdown;
@@ -1468,14 +1471,6 @@ export const getTokensV7Options: RouteOptions = {
         }
 
         const metadata = parseMetadata(r, r.metadata);
-        if (contract === "0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d" && tokenId === "9860") {
-          logger.info(
-            "tokens-v7",
-            `raw metadata = ${JSON.stringify(r.metadata)} parsed metadata = ${JSON.stringify(
-              metadata
-            )}`
-          );
-        }
 
         return {
           token: getJoiTokenObject(
