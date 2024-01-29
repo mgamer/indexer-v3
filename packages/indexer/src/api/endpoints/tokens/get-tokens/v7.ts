@@ -290,7 +290,6 @@ export const getTokensV7Options: RouteOptions = {
             metadataDisabled: Joi.boolean().default(false),
             lastFlagUpdate: Joi.string().allow("", null),
             lastFlagChange: Joi.string().allow("", null),
-            tokenURI: Joi.string().allow("", null),
             supply: Joi.number()
               .unsafe()
               .allow(null)
@@ -759,7 +758,6 @@ export const getTokensV7Options: RouteOptions = {
           t.nsfw_status AS t_nsfw_status,
           t.last_flag_update,
           t.last_flag_change,
-          t.token_uri,
           t.supply,
           t.remaining_supply,
           t.decimals,
@@ -1517,7 +1515,6 @@ export const getTokensV7Options: RouteOptions = {
               lastFlagChange: r.last_flag_change
                 ? new Date(r.last_flag_change).toISOString()
                 : null,
-              tokenURI: r.token_uri || r.metadata?.metadata_original_url || null,
               supply: !_.isNull(r.supply) ? r.supply : null,
               remainingSupply: !_.isNull(r.remaining_supply) ? r.remaining_supply : null,
               decimals: !_.isNull(r.decimals) ? r.decimals : null,
