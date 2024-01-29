@@ -44,6 +44,7 @@ type Marketplace = {
       traitBidSupported: boolean;
       orderKind: OrderKind | null;
       customFeesSupported: boolean;
+      multipleFeesSupported: boolean;
       collectionBidSupported?: boolean;
       partialOrderSupported: boolean;
       minimumBidExpiry?: number;
@@ -109,6 +110,7 @@ export const getCollectionMarketplaceConfigurationsV1Options: RouteOptions = {
                 orderKind: Joi.string().allow(null),
                 enabled: Joi.boolean(),
                 customFeesSupported: Joi.boolean(),
+                multipleFeesSupported: Joi.boolean(),
                 minimumBidExpiry: Joi.number(),
                 minimumPrecision: Joi.string(),
                 collectionBidSupported: Joi.boolean(),
@@ -199,6 +201,7 @@ export const getCollectionMarketplaceConfigurationsV1Options: RouteOptions = {
               orderKind: "looks-rare-v2",
               minimumBidExpiry: 15 * 60,
               customFeesSupported: false,
+              multipleFeesSupported: false,
               supportedBidCurrencies: [Sdk.Common.Addresses.WNative[config.chainId]],
               partialOrderSupported: false,
               traitBidSupported: false,
@@ -209,6 +212,7 @@ export const getCollectionMarketplaceConfigurationsV1Options: RouteOptions = {
               orderKind: "seaport",
               minimumBidExpiry: 15 * 60,
               customFeesSupported: false,
+              multipleFeesSupported: false,
               supportedBidCurrencies: [Sdk.Common.Addresses.WNative[config.chainId]],
               partialOrderSupported: false,
               traitBidSupported: false,
@@ -234,6 +238,7 @@ export const getCollectionMarketplaceConfigurationsV1Options: RouteOptions = {
               orderKind: "x2y2",
               enabled: false,
               customFeesSupported: false,
+              multipleFeesSupported: false,
               supportedBidCurrencies: [Sdk.Common.Addresses.WNative[config.chainId]],
               partialOrderSupported: false,
               traitBidSupported: false,
@@ -265,6 +270,7 @@ export const getCollectionMarketplaceConfigurationsV1Options: RouteOptions = {
               orderKind: "seaport-v1.5",
               enabled: true,
               customFeesSupported: true,
+              multipleFeesSupported: true,
               collectionBidSupported:
                 Number(collectionResult.token_count) <= config.maxTokenSetSize,
               supportedBidCurrencies: Object.keys(ns.supportedBidCurrencies),
@@ -278,6 +284,7 @@ export const getCollectionMarketplaceConfigurationsV1Options: RouteOptions = {
               orderKind: "payment-processor",
               enabled: true,
               customFeesSupported: true,
+              multipleFeesSupported: false,
               collectionBidSupported:
                 Number(collectionResult.token_count) <= config.maxTokenSetSize,
               supportedBidCurrencies:
@@ -293,6 +300,7 @@ export const getCollectionMarketplaceConfigurationsV1Options: RouteOptions = {
               orderKind: "payment-processor-v2",
               enabled: true,
               customFeesSupported: true,
+              multipleFeesSupported: false,
               collectionBidSupported:
                 Number(collectionResult.token_count) <= config.maxTokenSetSize,
               supportedBidCurrencies:
@@ -347,6 +355,7 @@ export const getCollectionMarketplaceConfigurationsV1Options: RouteOptions = {
               orderKind: "seaport-v1.5",
               enabled: false,
               customFeesSupported: false,
+              multipleFeesSupported: true,
               minimumBidExpiry: 15 * 60,
               supportedBidCurrencies: Object.keys(ns.supportedBidCurrencies),
               paymentTokens: collectionResult.payment_tokens?.opensea,
@@ -386,6 +395,7 @@ export const getCollectionMarketplaceConfigurationsV1Options: RouteOptions = {
                 orderKind: "blur",
                 enabled: false,
                 customFeesSupported: false,
+                multipleFeesSupported: false,
                 minimumPrecision: "0.01",
                 minimumBidExpiry: 10 * 24 * 60 * 60,
                 supportedBidCurrencies: [Sdk.Blur.Addresses.Beth[config.chainId]],
