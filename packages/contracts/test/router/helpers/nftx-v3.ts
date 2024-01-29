@@ -3,6 +3,7 @@ import { Contract } from "@ethersproject/contracts";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 import * as Sdk from "@reservoir0x/sdk/src";
 import { ethers, network } from "hardhat";
+import { time } from "@nomicfoundation/hardhat-network-helpers";
 
 import { getChainId, bn, getCurrentTimestamp } from "../../utils";
 
@@ -96,6 +97,14 @@ export const setupNFTXV3Listings = async (listings: NFTXV3Listing[]) => {
       ethers.provider
     );
     const vaultAddress = await factory.vault(_vaultId.toString());
+
+    if (network && network.name === "tenderly") {
+      await network.provider.send("evm_increaseTime", [
+        ethers.utils.hexValue(2 * 60), // hex encoded number of seconds
+      ]);
+    } else {
+      await time.increase(2 * 60);
+    }
 
     const poolPrice = await Sdk.NftxV3.Helpers.getPoolPrice(
       vaultAddress,
@@ -213,6 +222,14 @@ export const setupNFTXV3Offers = async (offers: NFTXV3Offer[]) => {
       ethers.provider
     );
     const vaultAddress = await factory.vault(_vaultId.toString());
+
+    if (network && network.name === "tenderly") {
+      await network.provider.send("evm_increaseTime", [
+        ethers.utils.hexValue(2 * 60), // hex encoded number of seconds
+      ]);
+    } else {
+      await time.increase(2 * 60);
+    }
 
     const poolPrice = await Sdk.NftxV3.Helpers.getPoolPrice(
       vaultAddress,

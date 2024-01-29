@@ -8,7 +8,6 @@ import { Contract } from "@ethersproject/contracts";
 import { parseEther } from "@ethersproject/units";
 import { ethers } from "ethers";
 import axios from "axios";
-import { time } from "@nomicfoundation/hardhat-network-helpers";
 import { Network } from "hardhat/types";
 
 import * as Addresses from "./addresses";
@@ -80,14 +79,6 @@ export const getPoolPrice = async (
 }> => {
   const chainId = await provider.getNetwork().then((n) => n.chainId);
   const weth = Common.Addresses.WNative[chainId];
-
-  if (network && network.name === "tenderly") {
-    await network.provider.send("evm_increaseTime", [
-      ethers.utils.hexValue(2 * 60), // hex encoded number of seconds
-    ]);
-  } else {
-    await time.increase(2 * 60);
-  }
 
   const localAmount = parseEther(amount.toString());
   const fees = await getPoolETHFees(vault, provider);
