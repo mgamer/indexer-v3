@@ -1467,6 +1467,14 @@ export const getTokensV7Options: RouteOptions = {
         }
 
         const metadata = parseMetadata(r, r.metadata);
+        if (contract === "0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d" && tokenId === "9860") {
+          logger.info(
+            "tokens-debug",
+            `raw metadata = ${JSON.stringify(r.metadata)} parsed metadata = ${JSON.stringify(
+              metadata
+            )}`
+          );
+        }
 
         return {
           token: getJoiTokenObject(
