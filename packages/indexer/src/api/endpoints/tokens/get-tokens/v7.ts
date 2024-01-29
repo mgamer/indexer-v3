@@ -632,6 +632,10 @@ export const getTokensV7Options: RouteOptions = {
       if (query.contract) {
         sourceConditions.push(`contract IN ($/contract:csv/)`);
       } else if (query.collection) {
+        if (query.collection === "0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d") {
+          logger.info("tokens-v7", `DEBUG LOG TEST ${query.collection}`);
+        }
+
         let contractString = query.collection;
         if (query.collection.includes(":")) {
           const [contract, ,] = query.collection.split(":");
@@ -1469,7 +1473,7 @@ export const getTokensV7Options: RouteOptions = {
         const metadata = parseMetadata(r, r.metadata);
         if (contract === "0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d" && tokenId === "9860") {
           logger.info(
-            "tokens-debug",
+            "tokens-v7",
             `raw metadata = ${JSON.stringify(r.metadata)} parsed metadata = ${JSON.stringify(
               metadata
             )}`
