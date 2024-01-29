@@ -111,9 +111,7 @@ describe("[ReservoirV6_0_1] NFTXV3 listings (with NFTX API routing)", () => {
         side: "buy",
         slippage: 1000,
         provider: ethers.provider,
-        userAddress: alice.address,
         tokenIds: [listing.nft.id.toString()],
-        type: "quote",
       });
 
       listing.price = bn(poolPrice.price);
@@ -121,6 +119,7 @@ describe("[ReservoirV6_0_1] NFTXV3 listings (with NFTX API routing)", () => {
       listing.order = new Sdk.NftxV3.Order(chainId, vault, alice.address, {
         vaultId: vaultId.toString(),
         collection: listing.nft.contract.address,
+        pool: vault,
         idsOut: [listing.nft.id.toString()],
         price: listing.isCancelled ? "0" : listing.price.toString(),
         executeCallData: listing.isCancelled ? "0x00" : poolPrice.executeCallData,

@@ -10,7 +10,7 @@ export type OrderParams = {
   deductRoyalty: boolean;
   idsOut?: string[];
   vTokenPremiumLimit?: string;
-  extra: {
+  extra?: {
     prices: string[];
   };
 };

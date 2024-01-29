@@ -111,9 +111,7 @@ describe("[ReservoirV6_0_1] NFTX offers (with NFTX API routing)", () => {
       side: "sell",
       slippage: 100,
       provider: ethers.provider,
-      userAddress: carol.address,
       tokenIds: [offer.nft.id.toString()],
-      type: "quote",
     });
 
     if (poolPrice.price) {
@@ -122,6 +120,7 @@ describe("[ReservoirV6_0_1] NFTX offers (with NFTX API routing)", () => {
       offer.order = new Sdk.NftxV3.Order(chainId, vault, carol.address, {
         vaultId: vaultId.toString(),
         collection: offer.nft.contract.address,
+        pool: vault,
         currency: Sdk.Common.Addresses.WNative[chainId],
         idsIn: [offer.nft.id.toString()],
         amounts: [],
