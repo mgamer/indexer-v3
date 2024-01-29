@@ -3781,7 +3781,9 @@ export class Router {
         continue;
       }
 
-      if (!(details.length === 1 && !options?.forceApprovalProxy)) {
+      // Only if we're not using the "on-received" hook or the offer is not protected
+      // (approvals for protected offers are handled separately from this logic)
+      if (!(details.length === 1 && !options?.forceApprovalProxy) && !detail.isProtected) {
         const contract = detail.contract;
         const owner = taker;
         const conduitController = new Sdk.SeaportBase.ConduitController(this.chainId);

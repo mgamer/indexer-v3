@@ -195,6 +195,7 @@ export const SudoswapModule: ChainIdToAddress = {
 export const SudoswapV2Module: ChainIdToAddress = {
   [Network.Ethereum]: "0xe2840826c43c25e88a5ef43ff790d7105889dd6e",
   [Network.EthereumGoerli]: "0xe2840826c43c25e88a5ef43ff790d7105889dd6e",
+  [Network.Base]: "0xe2840826c43c25e88a5ef43ff790d7105889dd6e",
 };
 
 export const CaviarV1Module: ChainIdToAddress = {

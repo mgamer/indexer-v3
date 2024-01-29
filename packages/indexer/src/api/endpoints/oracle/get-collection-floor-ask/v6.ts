@@ -14,7 +14,8 @@ import { logger } from "@/common/logger";
 import { Signers, addressToSigner } from "@/common/signers";
 import { bn, formatPrice, now, regex, safeOracleTimestamp, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
-import { getUSDAndNativePrices } from "@/utils/prices";
+import { getCurrency } from "@/utils/currencies";
+import { getUSDAndCurrencyPrices } from "@/utils/prices";
 
 const version = "v6";
 
@@ -275,21 +276,28 @@ export const getCollectionFloorAskOracleV6Options: RouteOptions = {
         // ETH: do nothing
       } else if (Object.values(Sdk.Common.Addresses.WNative).includes(query.currency)) {
         // WETH: do nothing
-      } else if (Object.values(Sdk.Common.Addresses.Usdc).flat().includes(query.currency)) {
-        // USDC: convert price to USDC
-        const convertedPrices = await getUSDAndNativePrices(
+      } else if (
+        [
+          ...Object.values(Sdk.Common.Addresses.Usdc).flat(),
+          "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0", // wstETH
+          "0xd5f7838f5c461feff7fe49ea5ebaf7728bb0adfa", // mETH
+          "0x6b175474e89094c44da98b954eedeac495271d0f", // DAI
+          "0xe95a203b1a91a908f9b9ce46459d101078c2c3cb", // ankrETH
+        ].includes(query.currency)
+      ) {
+        // Other: convert price to the requested currency
+        const convertedPrices = await getUSDAndCurrencyPrices(
           Sdk.Common.Addresses.Native[config.chainId],
+          query.currency,
           price,
           now(),
           {
-            onlyUSD: true,
             acceptStalePrice: true,
           }
         );
 
-        // USDC has 6 decimals
-        price = convertedPrices.usdPrice!;
-        decimals = 6;
+        price = convertedPrices.currencyPrice!;
+        decimals = await getCurrency(query.currency).then((c) => c.decimals!);
       } else {
         throw Boom.badRequest("Unsupported currency");
       }

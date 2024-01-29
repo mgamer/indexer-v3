@@ -89,7 +89,7 @@ export const getTokensV8Options: RouteOptions = {
         }),
       tokenName: Joi.string()
         .description(
-          "Filter to a particular token by name. This is case sensitive. Example: `token #1`"
+          "Filter to a particular token by name. This is case insensitive. Example: `token #1`"
         )
         .when("collection", {
           is: Joi.exist(),

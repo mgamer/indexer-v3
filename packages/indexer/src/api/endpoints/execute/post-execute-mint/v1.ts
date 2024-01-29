@@ -871,6 +871,9 @@ export const postExecuteMintV1Options: RouteOptions = {
         };
       }
 
+      const key = request.headers["x-api-key"];
+      const apiKey = await ApiKeyManager.getApiKey(key);
+
       // Cross-chain intent purchasing MVP
       if (useCrossChainIntent) {
         if (!config.crossChainSolverBaseUrl) {
@@ -929,6 +932,15 @@ export const postExecuteMintV1Options: RouteOptions = {
             gasEstimate: needsDeposit ? 21000 : 0,
           };
         }
+
+        logger.info(
+          `post-execute-mint-${version}-handler`,
+          JSON.stringify({
+            request: payload,
+            apiKey,
+            data,
+          })
+        );
 
         const customSteps: StepType[] = [
           {
@@ -1125,8 +1137,6 @@ export const postExecuteMintV1Options: RouteOptions = {
       }
       const requestId = await executionsBuffer.flush();
 
-      const key = request.headers["x-api-key"];
-      const apiKey = await ApiKeyManager.getApiKey(key);
       logger.info(
         `post-execute-mint-${version}-handler`,
         JSON.stringify({

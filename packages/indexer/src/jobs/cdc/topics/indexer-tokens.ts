@@ -11,6 +11,9 @@ import { refreshActivitiesTokenJob } from "@/jobs/elasticsearch/activities/refre
 import _ from "lodash";
 import { ActivitiesTokenCache } from "@/models/activities-token-cache";
 import { backfillTokenAsksJob } from "@/jobs/elasticsearch/asks/backfill-token-asks-job";
+import { Collections } from "@/models/collections";
+import { metadataIndexFetchJob } from "@/jobs/metadata-index/metadata-fetch-job";
+import { config } from "@/config/index";
 
 export class IndexerTokensHandler extends KafkaEventHandler {
   topicName = "indexer.public.tokens";
@@ -134,6 +137,43 @@ export class IndexerTokensHandler extends KafkaEventHandler {
             initializedAt: payload.after.metadata_initialized_at,
           })
         );
+      }
+
+      if (
+        payload.before.image !== null &&
+        payload.after.image === null &&
+        payload.after.media === null
+      ) {
+        logger.error(
+          "IndexerTokensHandler",
+          JSON.stringify({
+            message: `token image missing. contract=${payload.after.contract}, tokenId=${payload.after.token_id}, fallbackMetadataIndexingMethod=${config.fallbackMetadataIndexingMethod}`,
+            payload,
+          })
+        );
+
+        if (config.fallbackMetadataIndexingMethod) {
+          const collection = await Collections.getByContractAndTokenId(
+            payload.after.contract,
+            payload.after.token_id
+          );
+
+          await metadataIndexFetchJob.addToQueue(
+            [
+              {
+                kind: "single-token",
+                data: {
+                  method: config.fallbackMetadataIndexingMethod,
+                  contract: payload.after.contract,
+                  tokenId: payload.after.token_id,
+                  collection: collection?.id || payload.after.contract,
+                },
+                context: "IndexerTokensHandler",
+              },
+            ],
+            true
+          );
+        }
       }
     } catch (error) {
       logger.error(
