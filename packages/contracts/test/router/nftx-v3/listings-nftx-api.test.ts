@@ -12,7 +12,7 @@ import { bn, getRandomBoolean, getRandomFloat, reset } from "../../utils";
 import { Network } from "@reservoir0x/sdk/src/utils";
 
 describe("[ReservoirV6_0_1] NFTXV3 listings (with NFTX API routing)", () => {
-  const chainId = 5;
+  const chainId = Network.EthereumSepolia;
 
   let deployer: SignerWithAddress;
   let alice: SignerWithAddress;
@@ -72,10 +72,10 @@ describe("[ReservoirV6_0_1] NFTXV3 listings (with NFTX API routing)", () => {
   ) => {
     // Setup
 
-    // Collection = CryptoPunks
-    const collection = "0xbB12Ad601d0024aE2cD6B763a823aD3E6A53e1e7";
-    const vault = "0x65696CFa2e38AEadF3FEF5f3Ed0cA6bC79468530";
-    const vaultId = 8;
+    // Collection = MILADY (Sepolia)
+    const collection = "0xeA9aF8dBDdE2A8d3515C3B4E446eCd41afEdB1C6";
+    const vault = "0xEa0bb4De9f595439059aF786614DaF2FfADa72d5";
+    const vaultId = 3;
     const poolNFTs = await Sdk.NftxV3.Helpers.getPoolNFTs(vault, ethers.provider);
     const tokensInVault = [poolNFTs[0]];
 
@@ -91,7 +91,7 @@ describe("[ReservoirV6_0_1] NFTXV3 listings (with NFTX API routing)", () => {
 
       await erc721
         .connect(alice)
-        .setApprovalForAll(Sdk.NftxV3.Addresses.MarketplaceZap[Network.EthereumGoerli], true);
+        .setApprovalForAll(Sdk.NftxV3.Addresses.MarketplaceZap[chainId], true);
       await erc721.connect(alice).setApprovalForAll(router.address, true);
       await erc721.connect(alice).setApprovalForAll(vault, true);
 
@@ -101,7 +101,7 @@ describe("[ReservoirV6_0_1] NFTXV3 listings (with NFTX API routing)", () => {
       const poolPrice = await Sdk.NftxV3.Helpers.getPoolQuoteFromAPI({
         vault,
         side: "buy",
-        slippage: 1000,
+        slippage: 0.05, // 5%
         provider: ethers.provider,
         userAddress: alice.address,
         tokenIds: [tokenId],
@@ -231,4 +231,16 @@ describe("[ReservoirV6_0_1] NFTXV3 listings (with NFTX API routing)", () => {
       }
     }
   }
+
+  const partial = false;
+  const chargeFees = true;
+  const revertIfIncomplete = false;
+
+  const testName =
+    "[eth]" +
+    `${partial ? "[partial]" : "[full]"}` +
+    `${chargeFees ? "[fees]" : "[no-fees]"}` +
+    `${revertIfIncomplete ? "[reverts]" : "[skip-reverts]"}`;
+
+  it.skip(testName, async () => testAcceptListings(chargeFees, revertIfIncomplete, partial));
 });

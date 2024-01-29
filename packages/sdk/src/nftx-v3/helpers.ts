@@ -366,6 +366,7 @@ const getPoolPriceOrQuoteFromAPI = async ({
     const query = queryParams.map((param) => param.join("=")).join("&");
 
     const url = `${NFTX_ENDPOINT}/${chainId}/${type}?${query}`;
+
     apiResponse = await axios.get(url, {
       headers: {
         Authorization: process.env.NFTX_API_KEY,

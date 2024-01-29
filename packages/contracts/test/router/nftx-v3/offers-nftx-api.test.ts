@@ -9,9 +9,10 @@ import { ethers, network } from "hardhat";
 import { NFTXV3Offer } from "../helpers/nftx-v3";
 import { ExecutionInfo } from "../helpers/router";
 import { bn, getRandomBoolean, getRandomFloat, reset } from "../../utils";
+import { Network } from "@reservoir0x/sdk/src/utils";
 
 describe("[ReservoirV6_0_1] NFTX offers (with NFTX API routing)", () => {
-  const chainId = 5;
+  const chainId = Network.EthereumSepolia;
 
   let deployer: SignerWithAddress;
   let alice: SignerWithAddress;
@@ -71,7 +72,7 @@ describe("[ReservoirV6_0_1] NFTX offers (with NFTX API routing)", () => {
     // Setup
 
     // Token owner = carol
-    const owner = "0x4eAc46c2472b32dc7158110825A7443D35a90168";
+    const owner = "0x6ce798Bc8C8C93F3C312644DcbdD2ad6698622C5";
     await network.provider.request({
       method: "hardhat_impersonateAccount",
       params: [owner],
@@ -82,11 +83,11 @@ describe("[ReservoirV6_0_1] NFTX offers (with NFTX API routing)", () => {
     });
     carol = await ethers.getSigner(owner);
 
-    // Collection = CryptoPunks
-    const collection = "0xbB12Ad601d0024aE2cD6B763a823aD3E6A53e1e7";
-    const vault = "0x65696CFa2e38AEadF3FEF5f3Ed0cA6bC79468530";
-    const vaultId = 8;
-    const tokenId = 7;
+    // Collection = MILADY (Sepolia)
+    const collection = "0xeA9aF8dBDdE2A8d3515C3B4E446eCd41afEdB1C6";
+    const vault = "0xEa0bb4De9f595439059aF786614DaF2FfADa72d5";
+    const vaultId = 3;
+    const tokenId = 335;
 
     const factory = await ethers.getContractFactory("MockERC721", deployer);
 
@@ -94,41 +95,39 @@ describe("[ReservoirV6_0_1] NFTX offers (with NFTX API routing)", () => {
     const fees: BigNumber[][] = [];
 
     const erc721 = factory.attach(collection);
+    const isCancelled = partial && getRandomBoolean();
+    const randPrice = parseEther(getRandomFloat(0.6, 5).toFixed(6));
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const offer: any = {
+    const poolPrice = await Sdk.NftxV3.Helpers.getPoolQuoteFromAPI({
+      vault,
+      side: "sell",
+      slippage: 0.05,
+      provider: ethers.provider,
+      userAddress: carol.address,
+      tokenIds: [tokenId.toString()],
+    });
+
+    const offer: NFTXV3Offer = {
       buyer: getRandomBoolean() ? alice : bob,
       nft: {
         contract: erc721,
         id: tokenId,
       },
-      price: parseEther(getRandomFloat(0.6, 5).toFixed(6)),
-      isCancelled: partial && getRandomBoolean(),
-    };
-
-    const poolPrice = await Sdk.NftxV3.Helpers.getPoolPriceFromAPI({
+      isCancelled,
+      price: poolPrice.price ?? randPrice,
       vault,
-      side: "sell",
-      slippage: 100,
-      provider: ethers.provider,
-      tokenIds: [offer.nft.id.toString()],
-    });
-
-    if (poolPrice.price) {
-      offer.price = bn(poolPrice.price);
-      offer.vault = vault;
-      offer.order = new Sdk.NftxV3.Order(chainId, vault, carol.address, {
+      order: new Sdk.NftxV3.Order(chainId, vault, carol.address, {
         vaultId: vaultId.toString(),
-        collection: offer.nft.contract.address,
+        collection: erc721.address,
         pool: vault,
         currency: Sdk.Common.Addresses.WNative[chainId],
-        idsIn: [offer.nft.id.toString()],
+        idsIn: [tokenId.toString()],
         amounts: [],
-        price: offer.isCancelled ? "0" : offer.price.toString(),
-        executeCallData: offer.isCancelled ? "0x00" : poolPrice.executeCallData,
+        price: isCancelled ? "0" : bn(poolPrice.price ?? randPrice).toString(),
+        executeCallData: isCancelled ? "0x00" : poolPrice.executeCallData,
         deductRoyalty: false,
-      });
-    }
+      }),
+    };
 
     offers.push(offer);
 
@@ -231,4 +230,16 @@ describe("[ReservoirV6_0_1] NFTX offers (with NFTX API routing)", () => {
       }
     }
   }
+
+  const partial = false;
+  const chargeFees = true;
+  const revertIfIncomplete = false;
+
+  const testCaseName =
+    "[eth]" +
+    `${partial ? "[partial]" : "[full]"}` +
+    `${chargeFees ? "[fees]" : "[no-fees]"}` +
+    `${revertIfIncomplete ? "[reverts]" : "[skip-reverts]"}`;
+
+  it.skip(testCaseName, async () => testAcceptOffers(chargeFees, revertIfIncomplete, partial));
 });
