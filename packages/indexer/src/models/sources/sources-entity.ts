@@ -40,6 +40,7 @@ export type SourcesMetadata = {
   tokenUrlImmutableZkevmTestnet?: string;
   tokenUrlFrameTestnet?: string;
   tokenUrlOpbnb?: string;
+  tokenUrlAncient8Testnet?: string;
 };
 
 export class SourcesEntity {

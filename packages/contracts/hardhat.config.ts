@@ -86,8 +86,8 @@ const getNetworkConfig = (chainId?: number) => {
       case 11155111:
         url = "https://1rpc.io/sepolia";
         break;
-      case 2863311531:
-        url = "https://rpc-testnet.ancient8.gg/";
+      case 28122024:
+        url = "https://rpcv2-testnet.ancient8.gg/";
         break;
       case 204:
         url = "https://opbnb-mainnet-rpc.bnbchain.org";
@@ -173,7 +173,7 @@ const config: HardhatUserConfig = {
     baseGoerli: getNetworkConfig(84531),
     sepolia: getNetworkConfig(11155111),
     frameTestnet: getNetworkConfig(68840142),
-    ancient8Testnet: getNetworkConfig(2863311531),
+    ancient8Testnet: getNetworkConfig(28122024),
   },
   etherscan: {
     apiKey: {
@@ -320,10 +320,10 @@ const config: HardhatUserConfig = {
       },
       {
         network: "ancient8Testnet",
-        chainId: 2863311531,
+        chainId: 28122024,
         urls: {
-          apiURL: "https://testnet.a8scan.io/api",
-          browserURL: "https://testnet.a8scan.io/",
+          apiURL: "https://scanv2-testnet.ancient8.gg/api",
+          browserURL: "https://scanv2-testnet.ancient8.gg/",
         },
       },
     ],
