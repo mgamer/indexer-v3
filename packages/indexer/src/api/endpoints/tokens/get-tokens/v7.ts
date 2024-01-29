@@ -1339,10 +1339,6 @@ export const getTokensV7Options: RouteOptions = {
         continuation = buildContinuation(continuation);
       }
 
-      if (query.collection === "0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d") {
-        logger.info("tokens-v7", JSON.stringify(rawResult));
-      }
-
       const sources = await Sources.getInstance();
       const result = rawResult.map(async (r) => {
         const feeBreakdown = r.top_buy_fee_breakdown;
