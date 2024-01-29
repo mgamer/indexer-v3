@@ -4,7 +4,7 @@ import { parseEther } from "@ethersproject/units";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 import * as Sdk from "@reservoir0x/sdk/src";
 import { expect } from "chai";
-import { ethers, network } from "hardhat";
+import { ethers } from "hardhat";
 
 import { NFTXV3Listing } from "../helpers/nftx-v3";
 import { ExecutionInfo } from "../helpers/router";
@@ -95,37 +95,41 @@ describe("[ReservoirV6_0_1] NFTXV3 listings (with NFTX API routing)", () => {
       await erc721.connect(alice).setApprovalForAll(router.address, true);
       await erc721.connect(alice).setApprovalForAll(vault, true);
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const listing: any = {
-        seller: alice,
-        nft: {
-          contract: erc721,
-          id: tokensInVault[i],
-        },
-        price: parseEther(getRandomFloat(0.0001, 2).toFixed(6)),
-        isCancelled: partial && getRandomBoolean(),
-      };
+      const tokenId = tokensInVault[i];
+      const isCancelled = partial && getRandomBoolean();
 
-      const poolPrice = await Sdk.NftxV3.Helpers.getPoolPriceFromAPI({
+      const poolPrice = await Sdk.NftxV3.Helpers.getPoolQuoteFromAPI({
         vault,
         side: "buy",
         slippage: 1000,
         provider: ethers.provider,
-        tokenIds: [listing.nft.id.toString()],
+        userAddress: alice.address,
+        tokenIds: [tokenId],
       });
 
-      listing.price = bn(poolPrice.price);
-      listing.vault = vault;
-      listing.order = new Sdk.NftxV3.Order(chainId, vault, alice.address, {
-        vaultId: vaultId.toString(),
-        collection: listing.nft.contract.address,
-        pool: vault,
-        idsOut: [listing.nft.id.toString()],
-        price: listing.isCancelled ? "0" : listing.price.toString(),
-        executeCallData: listing.isCancelled ? "0x00" : poolPrice.executeCallData,
-        vTokenPremiumLimit: ethers.constants.MaxUint256.toString(),
-        deductRoyalty: false,
-      });
+      const listing: NFTXV3Listing = {
+        seller: alice,
+        nft: {
+          contract: erc721,
+          id: Number(tokenId),
+        },
+        price: bn(poolPrice.price),
+        isCancelled,
+        vault,
+        order: new Sdk.NftxV3.Order(chainId, vault, alice.address, {
+          vaultId: vaultId.toString(),
+          collection: erc721.address,
+          idsOut: [tokenId],
+          price: isCancelled ? "0" : bn(poolPrice.price).toString(),
+          executeCallData: isCancelled ? "0x00" : poolPrice.executeCallData,
+          vTokenPremiumLimit: ethers.constants.MaxUint256.toString(),
+          deductRoyalty: false,
+          extra: {
+            prices: [poolPrice.price.toString()],
+          },
+          pool: vault,
+        }),
+      };
 
       listings.push(listing);
 
