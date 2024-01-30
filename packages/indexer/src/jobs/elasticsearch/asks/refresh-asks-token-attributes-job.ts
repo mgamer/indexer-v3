@@ -17,7 +17,6 @@ export default class RefreshAsksTokenAttributesJob extends AbstractRabbitMqJobHa
   maxRetries = 10;
   concurrency = 2;
   persistent = true;
-  lazyMode = true;
 
   protected async process(payload: RefreshAsksTokenAttributesJobPayload) {
     let addToQueue = false;

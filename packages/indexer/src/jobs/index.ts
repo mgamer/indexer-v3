@@ -412,8 +412,8 @@ export class RabbitMqJobsConsumer {
   public static async subscribe(job: AbstractRabbitMqJobHandler) {
     // Check if the queue is paused
     const pausedQueues = await PausedRabbitMqQueues.getPausedQueues();
-    if (_.indexOf(pausedQueues, job.getQueue()) !== -1) {
-      logger.warn("rabbit-subscribe", `${job.getQueue()} is paused`);
+    if (_.indexOf(pausedQueues, job.queueName) !== -1) {
+      logger.warn("rabbit-subscribe", `${job.queueName} is paused`);
       return;
     }
 
@@ -468,13 +468,75 @@ export class RabbitMqJobsConsumer {
               .catch((error) => {
                 logger.error(
                   "rabbit-consume",
-                  `error consuming from ${job.queueName} error ${error}`
+                  `error consuming from ${job.getQueue()} error ${error}`
                 );
               });
           }
         },
         {
           consumerTag: RabbitMqJobsConsumer.getConsumerTag(job.getQueue()),
+          prefetch: job.getConcurrency(),
+          noAck: false,
+        }
+      )
+      .catch((error) => {
+        logger.error(
+          "rabbit-consume",
+          `protocol error consuming from ${job.getQueue()} error ${error}`
+        );
+      });
+
+    // If this is a queue supporting priority subscribe to the priority queue as well
+    if (job.isPriorityQueue()) {
+      await channel
+        .consume(
+          job.getPriorityQueue(),
+          async (msg) => {
+            if (!_.isNull(msg)) {
+              await _.clone(job)
+                .consume(channel, msg)
+                .catch((error) => {
+                  logger.error(
+                    "rabbit-consume",
+                    `error consuming from ${job.getPriorityQueue()} error ${error}`
+                  );
+                });
+            }
+          },
+          {
+            consumerTag: RabbitMqJobsConsumer.getConsumerTag(job.getPriorityQueue()),
+            prefetch: job.getConcurrency(),
+            noAck: false,
+          }
+        )
+        .catch((error) => {
+          logger.error(
+            "rabbit-consume",
+            `protocol error consuming from ${job.getPriorityQueue()} error ${error}`
+          );
+        });
+    }
+
+    // Subscribe to the old non quorum queue
+    await channel
+      .consume(
+        _.replace(job.getQueue(), "quorum-", ""),
+        async (msg) => {
+          if (!_.isNull(msg)) {
+            await _.clone(job)
+              .consume(channel, msg)
+              .catch((error) => {
+                logger.error(
+                  "rabbit-consume",
+                  `error consuming from ${job.queueName} error ${error}`
+                );
+              });
+          }
+        },
+        {
+          consumerTag: RabbitMqJobsConsumer.getConsumerTag(
+            _.replace(job.getQueue(), "quorum-", "")
+          ),
           prefetch: job.getConcurrency(),
           noAck: false,
         }
@@ -494,6 +556,10 @@ export class RabbitMqJobsConsumer {
   static async unsubscribe(job: AbstractRabbitMqJobHandler) {
     for (const [key, channel] of RabbitMqJobsConsumer.queueToChannel) {
       await channel.cancel(RabbitMqJobsConsumer.getConsumerTag(job.getQueue()));
+      if (job.isPriorityQueue()) {
+        await channel.cancel(RabbitMqJobsConsumer.getConsumerTag(job.getPriorityQueue()));
+      }
+
       RabbitMqJobsConsumer.queueToChannel.delete(key);
     }
 

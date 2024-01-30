@@ -9,7 +9,6 @@ export class TransferUpdatesJob extends AbstractRabbitMqJobHandler {
   queueName = "transfer-updates";
   maxRetries = 10;
   concurrency = [137].includes(config.chainId) ? 1 : 5;
-  lazyMode = true;
   timeout = 60000;
 
   protected async process(payload: Event) {

@@ -8,7 +8,6 @@ export default class EventsSyncProcessRealtimeJob extends AbstractRabbitMqJobHan
   queueName = "events-sync-process-realtime";
   maxRetries = 10;
   concurrency = config.chainId === 137 ? 5 : 20;
-  lazyMode = true;
   timeout = 120000;
   backoff = {
     type: "exponential",
@@ -26,10 +25,8 @@ export default class EventsSyncProcessRealtimeJob extends AbstractRabbitMqJobHan
     }
   }
 
-  public async addToQueue(batches: EventsBatch[], prioritized?: boolean) {
-    await this.sendBatch(
-      batches.map((batch) => ({ payload: batch, jobId: batch.id, priority: prioritized ? 1 : 0 }))
-    );
+  public async addToQueue(batches: EventsBatch[]) {
+    await this.sendBatch(batches.map((batch) => ({ payload: batch, jobId: batch.id })));
   }
 }
 

@@ -20,7 +20,6 @@ export class CollectionSlugFlagStatusSyncJob extends AbstractRabbitMqJobHandler 
   queueName = "collection-slug-flag-status-sync-queue";
   maxRetries = 10;
   concurrency = 1;
-  lazyMode = true;
   useSharedChannel = true;
   singleActiveConsumer = true;
 

@@ -21,7 +21,6 @@ export default class UpdateUserCollectionsJob extends AbstractRabbitMqJobHandler
   queueName = "user-collections";
   maxRetries = 15;
   concurrency = _.includes([56, 137], config.chainId) ? 1 : 5;
-  lazyMode = true;
   backoff = {
     type: "exponential",
     delay: 5000,

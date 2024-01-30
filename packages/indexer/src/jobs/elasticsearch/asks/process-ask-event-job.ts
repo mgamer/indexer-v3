@@ -25,7 +25,6 @@ export class ProcessAskEventJob extends AbstractRabbitMqJobHandler {
   maxRetries = 10;
   concurrency = 15;
   persistent = true;
-  lazyMode = true;
 
   protected async process(payload: ProcessAskEventJobPayload) {
     const { kind, data } = payload;

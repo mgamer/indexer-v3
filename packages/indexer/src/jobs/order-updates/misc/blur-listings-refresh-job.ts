@@ -19,7 +19,6 @@ export default class BlurListingsRefreshJob extends AbstractRabbitMqJobHandler {
   queueName = "blur-listings-refresh";
   maxRetries = 3;
   concurrency = 1;
-  lazyMode = true;
   backoff = {
     type: "fixed",
     delay: 30000,

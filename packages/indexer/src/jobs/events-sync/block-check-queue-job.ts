@@ -18,7 +18,6 @@ export default class BlockCheckJob extends AbstractRabbitMqJobHandler {
   queueName = "events-sync-block-check";
   maxRetries = 10;
   concurrency = 1;
-  lazyMode = true;
   timeout = 60000;
   backoff = {
     type: "exponential",

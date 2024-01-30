@@ -17,7 +17,6 @@ export default class MetadataIndexProcessJob extends AbstractRabbitMqJobHandler 
   maxRetries = 10;
   concurrency = 1;
   singleActiveConsumer = true;
-  lazyMode = true;
   timeout = 5 * 60 * 1000;
   backoff = {
     type: "exponential",

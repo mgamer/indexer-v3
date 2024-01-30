@@ -13,7 +13,6 @@ export class CountApiUsageJob extends AbstractRabbitMqJobHandler {
   queueName = "count-api-usage-queue";
   maxRetries = 10;
   concurrency = 30;
-  lazyMode = true;
 
   protected async process(payload: CountApiUsageJobPayload) {
     const { apiKey, route, statusCode, points, timestamp } = payload;

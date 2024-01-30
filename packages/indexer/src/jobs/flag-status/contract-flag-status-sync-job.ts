@@ -20,7 +20,6 @@ export class ContractFlagStatusSyncJob extends AbstractRabbitMqJobHandler {
   queueName = "contract-flag-status-sync-queue";
   maxRetries = 10;
   concurrency = 1;
-  lazyMode = true;
   useSharedChannel = true;
   singleActiveConsumer = true;
 

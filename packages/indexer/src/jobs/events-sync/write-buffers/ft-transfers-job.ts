@@ -12,7 +12,6 @@ export default class EventsSyncFtTransfersWriteBufferJob extends AbstractRabbitM
   queueName = "events-sync-ft-transfers-write";
   maxRetries = 10;
   concurrency = [42161, 43114].includes(config.chainId) ? 1 : 15;
-  lazyMode = true;
   timeout = 30000;
   backoff = {
     type: "exponential",

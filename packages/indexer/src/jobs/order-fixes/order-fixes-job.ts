@@ -53,7 +53,6 @@ export default class OrderFixesJob extends AbstractRabbitMqJobHandler {
   queueName = "order-fixes";
   maxRetries = 5;
   concurrency = 20;
-  lazyMode = true;
   backoff = {
     type: "exponential",
     delay: 10000,
