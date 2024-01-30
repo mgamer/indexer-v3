@@ -375,7 +375,6 @@ export const getCollectionsV7Options: RouteOptions = {
               ) AS attributes
             FROM attribute_keys
               WHERE attribute_keys.collection_id = x.id
-              AND CONCAT('contract:', attribute_keys.collection_id) = x.token_set_id
             GROUP BY attribute_keys.collection_id
           ) w ON TRUE
         `;
