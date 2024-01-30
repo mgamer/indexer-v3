@@ -339,10 +339,6 @@ export const getUserTokensV9Options: RouteOptions = {
       nftBalanceCollectionFilters.push(`(nft_balances.contract = $/contract/)`);
     }
 
-    if (query.tokenName) {
-      query.tokenName = `%${query.tokenName}%`;
-    }
-
     const tokensFilter: string[] = [];
 
     if (query.tokens) {
