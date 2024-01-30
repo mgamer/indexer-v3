@@ -17,7 +17,6 @@ export class OpenseaOrdersProcessJob extends AbstractRabbitMqJobHandler {
   queueName = "opensea-orders-process-queue";
   maxRetries = 10;
   concurrency = 5;
-  lazyMode = true;
   timeout = 60000;
   backoff = {
     type: "exponential",

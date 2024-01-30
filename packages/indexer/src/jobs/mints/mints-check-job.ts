@@ -11,7 +11,6 @@ export class MintsCheckJob extends AbstractRabbitMqJobHandler {
   queueName = "mints-check";
   maxRetries = 1;
   concurrency = 10;
-  lazyMode = true;
   backoff = {
     type: "exponential",
     delay: 10000,

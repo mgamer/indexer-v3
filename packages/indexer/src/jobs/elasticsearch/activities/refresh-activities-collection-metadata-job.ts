@@ -18,7 +18,6 @@ export default class RefreshActivitiesCollectionMetadataJob extends AbstractRabb
   maxRetries = 10;
   concurrency = 1;
   persistent = true;
-  lazyMode = true;
 
   protected async process(payload: RefreshActivitiesCollectionMetadataJobPayload) {
     let addToQueue = false;

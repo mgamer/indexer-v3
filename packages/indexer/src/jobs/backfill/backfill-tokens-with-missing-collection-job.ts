@@ -22,7 +22,6 @@ export class BackfillTokensWithMissingCollectionJob extends AbstractRabbitMqJobH
   maxRetries = 10;
   concurrency = 1;
   persistent = true;
-  lazyMode = true;
   singleActiveConsumer = true;
 
   protected async process(payload: BackfillTokensWithMissingCollectionJobPayload) {

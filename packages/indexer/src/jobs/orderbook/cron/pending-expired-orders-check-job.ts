@@ -11,7 +11,6 @@ export class PendingExpiredOrdersCheckJob extends AbstractRabbitMqJobHandler {
   queueName = "pending-expired-orders-check-queue";
   maxRetries = 1;
   concurrency = 1;
-  lazyMode = true;
   singleActiveConsumer = true;
 
   protected async process() {

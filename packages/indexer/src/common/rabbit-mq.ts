@@ -324,7 +324,7 @@ export class RabbitMq {
       const definition: CreatePolicyPayload["definition"] = {};
 
       // If the queue defined as lazy ie use only disk for this queue messages
-      if (queue.isLazyMode()) {
+      if (queue.getQueueType() === "classic" && queue.isLazyMode()) {
         definition["queue-mode"] = "lazy";
       }
 

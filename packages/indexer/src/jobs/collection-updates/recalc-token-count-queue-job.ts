@@ -14,7 +14,6 @@ export default class RecalcTokenCountQueueJob extends AbstractRabbitMqJobHandler
   queueName = "collection-recalc-token-count-queue";
   maxRetries = 10;
   concurrency = 10;
-  lazyMode = true;
   backoff = {
     type: "exponential",
     delay: 20000,

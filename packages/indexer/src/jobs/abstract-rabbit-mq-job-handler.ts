@@ -37,7 +37,7 @@ export abstract class AbstractRabbitMqJobHandler {
   protected singleActiveConsumer: boolean | undefined;
   protected persistent = true;
   protected useSharedChannel = false;
-  protected lazyMode = false;
+  protected lazyMode = false; // Relevant only for classic queues
   protected queueType: QueueType = "quorum";
   protected timeout = 0; // Job timeout in ms
   protected consumerTimeout = 0; // Rabbitmq timeout in ms default to 1800000ms (30 min) increase only if the job needs to run more than that, this value shouldn't be smaller than `timeout` (expect 0)
@@ -250,7 +250,7 @@ export abstract class AbstractRabbitMqJobHandler {
     return this.backoff;
   }
 
-  public getQueueType(): string {
+  public getQueueType(): QueueType {
     return this.queueType;
   }
 

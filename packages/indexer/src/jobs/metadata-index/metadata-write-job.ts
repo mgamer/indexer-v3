@@ -57,7 +57,6 @@ export default class MetadataIndexWriteJob extends AbstractRabbitMqJobHandler {
   queueName = "metadata-index-write-queue";
   maxRetries = 10;
   concurrency = config.chainId === 7777777 ? 10 : 40;
-  lazyMode = true;
   timeout = 60000;
   backoff = {
     type: "exponential",

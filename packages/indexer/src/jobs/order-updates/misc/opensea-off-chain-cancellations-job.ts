@@ -14,7 +14,6 @@ export default class OpenseaOffChainCancellationsJob extends AbstractRabbitMqJob
   queueName = "opensea-off-chain-cancellations";
   maxRetries = 3;
   concurrency = 30;
-  lazyMode = true;
   backoff = {
     type: "exponential",
     delay: 10000,

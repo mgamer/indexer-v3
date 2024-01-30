@@ -5,7 +5,6 @@ export class OrderbookOrdersJob extends AbstractRabbitMqJobHandler {
   queueName = "orderbook-orders-queue";
   maxRetries = 5;
   concurrency = 75;
-  lazyMode = true;
   timeout = 60000;
   backoff = {
     type: "exponential",

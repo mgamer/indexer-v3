@@ -16,7 +16,6 @@ export default class ProcessAskEventsJob extends AbstractRabbitMqJobHandler {
   maxRetries = 10;
   concurrency = 1;
   persistent = true;
-  lazyMode = true;
 
   protected async process() {
     const pendingAskEventsQueue = new PendingAskEventsQueue();

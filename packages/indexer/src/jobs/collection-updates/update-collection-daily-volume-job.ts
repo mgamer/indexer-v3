@@ -19,7 +19,6 @@ export default class UpdateCollectionDailyVolumeJob extends AbstractRabbitMqJobH
     type: "fixed",
     delay: 5000,
   } as BackoffStrategy;
-  lazyMode = true;
   useSharedChannel = true;
 
   protected async process(payload: UpdateCollectionDailyVolumeJobPayload) {

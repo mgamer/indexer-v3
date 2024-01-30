@@ -23,7 +23,6 @@ export class TopBidWebSocketEventsTriggerJob extends AbstractRabbitMqJobHandler 
   queueName = "top-bid-websocket-events-trigger-queue";
   maxRetries = 5;
   concurrency = 20;
-  lazyMode = true;
 
   protected async process(payload: TopBidWebSocketEventsTriggerJobPayload) {
     const { data } = payload;

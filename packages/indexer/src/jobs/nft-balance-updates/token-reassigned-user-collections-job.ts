@@ -17,7 +17,6 @@ export default class TokenReassignedUserCollectionsJob extends AbstractRabbitMqJ
   queueName = "token-reassigned-user-collections";
   maxRetries = 15;
   concurrency = 10;
-  lazyMode = true;
   backoff = {
     type: "exponential",
     delay: 5000,

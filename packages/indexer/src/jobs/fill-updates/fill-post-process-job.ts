@@ -12,7 +12,6 @@ export class FillPostProcessJob extends AbstractRabbitMqJobHandler {
   queueName = "fill-post-process";
   maxRetries = 5;
   concurrency = 10;
-  lazyMode = true;
   timeout = 60000;
   backoff = {
     type: "exponential",

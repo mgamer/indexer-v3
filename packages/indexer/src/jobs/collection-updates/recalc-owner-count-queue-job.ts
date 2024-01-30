@@ -26,7 +26,6 @@ export default class RecalcOwnerCountQueueJob extends AbstractRabbitMqJobHandler
   queueName = "collection-recalc-owner-count-queue";
   maxRetries = 10;
   concurrency = 10;
-  lazyMode = true;
   timeout = 5 * 60 * 1000;
   backoff = {
     type: "exponential",

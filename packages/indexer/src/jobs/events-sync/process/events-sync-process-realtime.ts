@@ -8,7 +8,6 @@ export default class EventsSyncProcessRealtimeJob extends AbstractRabbitMqJobHan
   queueName = "events-sync-process-realtime";
   maxRetries = 10;
   concurrency = config.chainId === 137 ? 5 : 20;
-  lazyMode = true;
   timeout = 120000;
   backoff = {
     type: "exponential",

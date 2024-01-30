@@ -24,7 +24,6 @@ export default class CollectionMetadataQueueJob extends AbstractRabbitMqJobHandl
   queueName = "collections-metadata-queue";
   maxRetries = 10;
   concurrency = 1;
-  lazyMode = true;
   useSharedChannel = true;
 
   protected async process(payload: MetadataQueueJobPayload) {
