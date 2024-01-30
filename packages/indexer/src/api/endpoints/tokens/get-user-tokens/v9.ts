@@ -140,6 +140,9 @@ export const getUserTokensV9Options: RouteOptions = {
         .description(
           "Input any ERC20 address to return result in given currency. Applies to `topBid` and `floorAsk`."
         ),
+      tokenName: Joi.string().description(
+        "Filter to a particular token by name. This is case sensitive. Example: `token #1`"
+      ),
     }),
   },
   response: {
@@ -336,6 +339,10 @@ export const getUserTokensV9Options: RouteOptions = {
       nftBalanceCollectionFilters.push(`(nft_balances.contract = $/contract/)`);
     }
 
+    if (query.tokenName) {
+      query.tokenName = `%${query.tokenName}%`;
+    }
+
     const tokensFilter: string[] = [];
 
     if (query.tokens) {
@@ -406,6 +413,32 @@ export const getUserTokensV9Options: RouteOptions = {
         `;
     }
 
+    const tokensConditions: string[] = [];
+
+    if (query.excludeSpam) {
+      tokensConditions.push(`t.is_spam IS NULL OR t.is_spam <= 0`);
+    }
+
+    if (query.excludeNsfw) {
+      tokensConditions.push(`t.nsfw_status IS NULL OR t.nsfw_status <= 0`);
+    }
+
+    if (query.tokenName) {
+      (query as any).tokenNameAsId = query.tokenName;
+      query.tokenName = `%${query.tokenName}%`;
+
+      if (isNaN(query.tokenName)) {
+        tokensConditions.push(`t.name ILIKE $/tokenName/`);
+      } else {
+        tokensConditions.push(`
+            CASE
+              WHEN t.name IS NULL THEN t.token_id::text = $/tokenNameAsId/
+              ELSE t.name ILIKE $/tokenName/
+            END
+          `);
+      }
+    }
+
     let tokensJoin = `
       JOIN LATERAL (
         SELECT 
@@ -446,8 +479,11 @@ export const getUserTokensV9Options: RouteOptions = {
         ${includeRoyaltyBreakdownQuery}
         WHERE b.token_id = t.token_id
         AND b.contract = t.contract
-        ${query.excludeSpam ? `AND (t.is_spam IS NULL OR t.is_spam <= 0)` : ""}
-        ${query.excludeNsfw ? `AND (t.nsfw_status IS NULL OR t.nsfw_status <= 0)` : ""}
+        ${
+          tokensConditions.length
+            ? "AND " + tokensConditions.map((c) => `(${c})`).join(" AND ")
+            : ""
+        }
         AND ${
           tokensCollectionFilters.length ? "(" + tokensCollectionFilters.join(" OR ") + ")" : "TRUE"
         }
@@ -488,6 +524,11 @@ export const getUserTokensV9Options: RouteOptions = {
           ${includeRoyaltyBreakdownQuery}
           WHERE b.token_id = t.token_id
           AND b.contract = t.contract
+          ${
+            tokensConditions.length
+              ? "AND " + tokensConditions.map((c) => `(${c})`).join(" AND ")
+              : ""
+          }
           AND ${
             tokensCollectionFilters.length
               ? "(" + tokensCollectionFilters.join(" OR ") + ")"
