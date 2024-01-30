@@ -1917,14 +1917,11 @@ export const getExecuteBuyV7Options: RouteOptions = {
         // item.buyInQuote = formatPrice(quote);
         // item.buyInRawQuote = quote;
 
-        const needsDeposit = bn(data.user.balance).lt(cost);
         const fees = {
-          gas: needsDeposit
-            ? await getJoiPriceObject(
-                { gross: { amount: data.depositGasFee } },
-                Sdk.Common.Addresses.Native[config.chainId]
-              )
-            : undefined,
+          gas: await getJoiPriceObject(
+            { gross: { amount: data.depositGasFee } },
+            Sdk.Common.Addresses.Native[config.chainId]
+          ),
           relayer: await getJoiPriceObject(
             { gross: { amount: data.relayerFee } },
             Sdk.Common.Addresses.Native[config.chainId],
@@ -1940,7 +1937,7 @@ export const getExecuteBuyV7Options: RouteOptions = {
             maxQuantities: preview ? maxQuantities : undefined,
             fees,
             // TODO: To remove, only kept for backwards-compatibility reasons
-            gasEstimate: needsDeposit ? 21000 : 0,
+            gasEstimate: 21000,
           };
         }
 
@@ -1961,59 +1958,25 @@ export const getExecuteBuyV7Options: RouteOptions = {
           },
         ];
 
-        if (needsDeposit) {
-          customSteps[0].items.push({
-            status: "incomplete",
-            data: {
-              from: payload.taker,
-              to: data.solver.address,
-              data: data.shortRequestId,
-              value: bn(cost).sub(data.user.balance).toString(),
-              gasLimit: 22000,
-              // `0x1234` or `4660` denotes cross-chain balance spending
-              chainId: payload.currencyChainId === 4660 ? 1 : payload.currencyChainId,
+        customSteps[0].items.push({
+          status: "incomplete",
+          data: {
+            from: payload.taker,
+            to: data.solver.address,
+            data: data.shortRequestId,
+            value: bn(cost).sub(data.user.balance).toString(),
+            gasLimit: 22000,
+            chainId: payload.currencyChainId,
+          },
+          check: {
+            endpoint: "/execute/status/v1",
+            method: "POST",
+            body: {
+              kind: "cross-chain-intent",
+              id: data.requestId,
             },
-            check: {
-              endpoint: "/execute/status/v1",
-              method: "POST",
-              body: {
-                kind: "cross-chain-intent",
-                id: data.requestId,
-              },
-            },
-          });
-
-          // Trigger to force the solver to start listening to incoming transactions
-          await axios.post(`${config.crossChainSolverBaseUrl}/intents/trigger`, {
-            request: data.request,
-          });
-        } else {
-          customSteps[1].items.push({
-            status: "incomplete",
-            data: {
-              sign: {
-                signatureKind: "eip191",
-                message: data.requestId,
-              },
-              post: {
-                endpoint: "/execute/solve/v1",
-                method: "POST",
-                body: {
-                  kind: "cross-chain-intent",
-                  request: data.request,
-                },
-              },
-            },
-            check: {
-              endpoint: "/execute/status/v1",
-              method: "POST",
-              body: {
-                kind: "cross-chain-intent",
-                id: data.requestId,
-              },
-            },
-          });
-        }
+          },
+        });
 
         const key = request.headers["x-api-key"];
         const apiKey = await ApiKeyManager.getApiKey(key);

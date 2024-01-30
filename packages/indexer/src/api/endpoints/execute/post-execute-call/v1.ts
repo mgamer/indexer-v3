@@ -167,70 +167,34 @@ export const postExecuteCallV1Options: RouteOptions = {
       ];
 
       const cost = bn(price).add(relayerFee);
-      const needsDeposit = bn(ccConfig.user!.balance).lt(cost);
-      if (needsDeposit) {
-        steps[0].items.push({
-          status: "incomplete",
-          data: {
-            from: user,
-            to: ccConfig.solver!.address,
-            data: shortRequestId,
-            value: bn(cost).sub(ccConfig.user!.balance).toString(),
-            gasLimit: 22000,
-            // `0x1234` or `4660` denotes cross-chain balance spending
-            chainId: originChainId === 4660 ? 1 : originChainId,
-          },
-          check: {
-            endpoint: "/execute/status/v1",
-            method: "POST",
-            body: {
-              kind: "cross-chain-intent",
-              id: requestId,
-            },
-          },
-        });
 
-        // Trigger to force the solver to start listening to incoming transactions
-        await axios.post(`${config.crossChainSolverBaseUrl}/intents/trigger`, {
-          request: data.request,
-        });
-      } else {
-        steps[1].items.push({
-          status: "incomplete",
-          data: {
-            sign: {
-              signatureKind: "eip191",
-              message: requestId,
-            },
-            post: {
-              endpoint: "/execute/solve/v1",
-              method: "POST",
-              body: {
-                kind: "cross-chain-intent",
-                request: data.request,
-              },
-            },
+      steps[0].items.push({
+        status: "incomplete",
+        data: {
+          from: user,
+          to: ccConfig.solver!.address,
+          data: shortRequestId,
+          value: bn(cost).sub(ccConfig.user!.balance).toString(),
+          gasLimit: 22000,
+          chainId: originChainId,
+        },
+        check: {
+          endpoint: "/execute/status/v1",
+          method: "POST",
+          body: {
+            kind: "cross-chain-intent",
+            id: requestId,
           },
-          check: {
-            endpoint: "/execute/status/v1",
-            method: "POST",
-            body: {
-              kind: "cross-chain-intent",
-              id: requestId,
-            },
-          },
-        });
-      }
+        },
+      });
 
       return {
         steps,
         fees: {
-          gas: needsDeposit
-            ? await getJoiPriceObject(
-                { gross: { amount: depositGasFee } },
-                Sdk.Common.Addresses.Native[config.chainId]
-              )
-            : undefined,
+          gas: await getJoiPriceObject(
+            { gross: { amount: depositGasFee } },
+            Sdk.Common.Addresses.Native[config.chainId]
+          ),
           relayer: await getJoiPriceObject(
             { gross: { amount: relayerFee } },
             Sdk.Common.Addresses.Native[originChainId],
