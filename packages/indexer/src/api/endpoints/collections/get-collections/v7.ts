@@ -79,7 +79,11 @@ export const getCollectionsV7Options: RouteOptions = {
           otherwise: Joi.when("slug", {
             is: Joi.exist(),
             then: Joi.allow(),
-            otherwise: Joi.forbidden(),
+            otherwise: Joi.when("contract", {
+              is: Joi.exist(),
+              then: Joi.allow(),
+              otherwise: Joi.forbidden(),
+            }),
           }),
         })
         .description(
@@ -371,6 +375,7 @@ export const getCollectionsV7Options: RouteOptions = {
               ) AS attributes
             FROM attribute_keys
               WHERE attribute_keys.collection_id = x.id
+              AND CONCAT('contract:', attribute_keys.collection_id) = x.token_set_id
             GROUP BY attribute_keys.collection_id
           ) w ON TRUE
         `;
