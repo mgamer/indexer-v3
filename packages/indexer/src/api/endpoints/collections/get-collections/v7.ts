@@ -79,7 +79,11 @@ export const getCollectionsV7Options: RouteOptions = {
           otherwise: Joi.when("slug", {
             is: Joi.exist(),
             then: Joi.allow(),
-            otherwise: Joi.forbidden(),
+            otherwise: Joi.when("contract", {
+              is: Joi.exist(),
+              then: Joi.allow(),
+              otherwise: Joi.forbidden(),
+            }),
           }),
         })
         .description(
