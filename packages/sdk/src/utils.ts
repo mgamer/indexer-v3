@@ -148,7 +148,7 @@ export enum Network {
   ScrollAlpha = 534353,
   EthereumSepolia = 11155111,
   Zksync = 324,
-  Ancient8Testnet = 2863311531,
+  Ancient8Testnet = 28122024,
   ImmutableZkevmTestnet = 13472,
   FrameTestnet = 68840142,
 }

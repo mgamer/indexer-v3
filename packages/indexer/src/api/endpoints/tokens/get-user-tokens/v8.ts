@@ -960,7 +960,7 @@ export const parseMetadata = (r: any, token_metadata: any) => {
     metadata.mediaMimeType = token_metadata.animation_mime_type;
   }
 
-  if (token_metadata?.token_uri) {
+  if (token_metadata?.metadata_original_url) {
     metadata.tokenURI = token_metadata.metadata_original_url;
   }
 
