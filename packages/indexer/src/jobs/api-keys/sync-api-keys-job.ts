@@ -11,7 +11,6 @@ export class SyncApiKeysJob extends AbstractRabbitMqJobHandler {
   queueName = "sync-api-keys";
   maxRetries = 10;
   concurrency = 30;
-  lazyMode = true;
   disableConsuming = false;
 
   protected async process(payload: SyncApiKeysJobPayload) {

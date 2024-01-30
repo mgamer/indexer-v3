@@ -20,7 +20,6 @@ export class PermitUpdatesJob extends AbstractRabbitMqJobHandler {
   queueName = "permit-updates";
   maxRetries = 10;
   concurrency = 20;
-  lazyMode = true;
   backoff = {
     type: "exponential",
     delay: 10000,

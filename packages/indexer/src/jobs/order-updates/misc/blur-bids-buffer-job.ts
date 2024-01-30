@@ -19,7 +19,6 @@ export default class BlurBidsBufferJob extends AbstractRabbitMqJobHandler {
   queueName = "blur-bids-buffer";
   maxRetries = 20;
   concurrency = 30;
-  lazyMode = true;
   backoff = {
     type: "fixed",
     delay: 30000,

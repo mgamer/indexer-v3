@@ -21,7 +21,6 @@ export default class CollectionNormalizedJob extends AbstractRabbitMqJobHandler 
     type: "exponential",
     delay: 20000,
   } as BackoffStrategy;
-  lazyMode = true;
 
   protected async process(payload: CollectionNormalizedJobPayload) {
     const { kind, contract, tokenId, txHash, txTimestamp } = payload;

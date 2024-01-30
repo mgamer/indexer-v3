@@ -20,7 +20,6 @@ export class FillUpdatesJob extends AbstractRabbitMqJobHandler {
   queueName = "fill-updates";
   maxRetries = 10;
   concurrency = 5;
-  lazyMode = true;
   timeout = 60000;
 
   protected async process(payload: FillUpdatesJobPayload) {

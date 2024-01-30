@@ -70,7 +70,6 @@ export default class OrderUpdatesByMakerJob extends AbstractRabbitMqJobHandler {
   queueName = "order-updates-by-maker";
   maxRetries = 10;
   concurrency = 30;
-  lazyMode = true;
   backoff = {
     type: "exponential",
     delay: 10000,

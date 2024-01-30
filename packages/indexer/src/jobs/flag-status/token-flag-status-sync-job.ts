@@ -20,7 +20,6 @@ export class TokenFlagStatusSyncJob extends AbstractRabbitMqJobHandler {
   queueName = "token-flag-status-sync-queue";
   maxRetries = 10;
   concurrency = 1;
-  lazyMode = true;
   useSharedChannel = true;
   singleActiveConsumer = true;
 

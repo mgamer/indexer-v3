@@ -12,7 +12,6 @@ export default class MintsRefreshJob extends AbstractRabbitMqJobHandler {
   queueName = "mints-refresh";
   maxRetries = 1;
   concurrency = 10;
-  lazyMode = true;
   backoff = {
     type: "exponential",
     delay: 10000,

@@ -14,7 +14,6 @@ export class BackfillCollectionsElasticsearchJob extends AbstractRabbitMqJobHand
   maxRetries = 10;
   concurrency = 5;
   persistent = true;
-  lazyMode = true;
 
   protected async process(payload: BackfillCollectionsElasticsearchJobPayload) {
     if (!payload.cursor) {

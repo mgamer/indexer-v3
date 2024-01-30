@@ -13,7 +13,6 @@ export class SaveBidEventsJob extends AbstractRabbitMqJobHandler {
   queueName = "save-bid-events-queue";
   maxRetries = 5;
   concurrency = 1;
-  lazyMode = true;
   backoff = {
     type: "exponential",
     delay: 10000,

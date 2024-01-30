@@ -5,7 +5,6 @@ export class OpenseaListingsJob extends AbstractRabbitMqJobHandler {
   queueName = "orderbook-opensea-listings-queue";
   maxRetries = 5;
   concurrency = 75;
-  lazyMode = true;
   timeout = 60000;
   backoff = {
     type: "exponential",

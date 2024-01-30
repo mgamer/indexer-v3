@@ -6,7 +6,6 @@ export default class PendingTxsJob extends AbstractRabbitMqJobHandler {
   queueName = "pending-txs";
   maxRetries = 10;
   concurrency = 20;
-  lazyMode = true;
   backoff = {
     type: "exponential",
     delay: 10000,
