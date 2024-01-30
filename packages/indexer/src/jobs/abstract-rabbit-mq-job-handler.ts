@@ -38,11 +38,12 @@ export abstract class AbstractRabbitMqJobHandler {
   protected persistent = true;
   protected useSharedChannel = false;
   protected lazyMode = false;
-  protected queueType: QueueType = "classic";
+  protected queueType: QueueType = "quorum";
   protected timeout = 0; // Job timeout in ms
   protected consumerTimeout = 0; // Rabbitmq timeout in ms default to 1800000ms (30 min) increase only if the job needs to run more than that, this value shouldn't be smaller than `timeout` (expect 0)
   protected disableConsuming = config.rabbitDisableQueuesConsuming;
   protected disableErrorLogs = false; // Will disable any error logs resulted from retry unless max retries reached and msg goes to dead letter
+  protected priorityQueue = false;
 
   public async consume(channel: ChannelWrapper, consumeMessage: ConsumeMessage): Promise<void> {
     try {
@@ -206,7 +207,11 @@ export abstract class AbstractRabbitMqJobHandler {
   }
 
   public getQueue(): string {
-    return this.queueName;
+    return `quorum-${this.queueName}`;
+  }
+
+  public getPriorityQueue(): string {
+    return `${this.getQueue()}-priority`;
   }
 
   public getDeadLetterQueue(): string {
@@ -233,6 +238,10 @@ export abstract class AbstractRabbitMqJobHandler {
     return this.disableConsuming;
   }
 
+  public isPriorityQueue(): boolean {
+    return this.priorityQueue;
+  }
+
   public getSingleActiveConsumer(): boolean | undefined {
     return this.singleActiveConsumer ? this.singleActiveConsumer : undefined;
   }
@@ -255,10 +264,10 @@ export abstract class AbstractRabbitMqJobHandler {
 
   protected async send(job: { payload?: any; jobId?: string } = {}, delay = 0, priority = 0) {
     await RabbitMq.send(
-      this.getQueue(),
+      priority ? this.getPriorityQueue() : this.getQueue(),
       {
         payload: job.payload,
-        jobId: job?.jobId ? `${this.getQueue()}:${job?.jobId}` : undefined,
+        jobId: job?.jobId ? `${this.queueName}:${job?.jobId}` : undefined,
         persistent: this.persistent,
       },
       delay,
@@ -269,17 +278,29 @@ export abstract class AbstractRabbitMqJobHandler {
   protected async sendBatch(
     jobs: { payload: any; jobId?: string; delay?: number; priority?: number }[]
   ) {
-    await RabbitMq.sendBatch(
-      this.getQueue(),
-      jobs.map((job) => ({
+    const messages = [];
+    const prioritizedMessages = [];
+
+    for (const job of jobs) {
+      const message = {
         content: {
           payload: job.payload,
-          jobId: job?.jobId ? `${this.getQueue()}:${job?.jobId}` : undefined,
+          jobId: job?.jobId ? `${this.queueName}:${job?.jobId}` : undefined,
           persistent: this.persistent,
         },
         delay: job.delay,
         priority: job.priority,
-      }))
-    );
+      };
+
+      job.priority ? prioritizedMessages.push(message) : messages.push(message);
+    }
+
+    if (!_.isEmpty(messages)) {
+      await RabbitMq.sendBatch(this.getQueue(), messages);
+    }
+
+    if (!_.isEmpty(prioritizedMessages)) {
+      await RabbitMq.sendBatch(this.getPriorityQueue(), messages);
+    }
   }
 }

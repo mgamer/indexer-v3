@@ -26,10 +26,8 @@ export default class EventsSyncProcessRealtimeJob extends AbstractRabbitMqJobHan
     }
   }
 
-  public async addToQueue(batches: EventsBatch[], prioritized?: boolean) {
-    await this.sendBatch(
-      batches.map((batch) => ({ payload: batch, jobId: batch.id, priority: prioritized ? 1 : 0 }))
-    );
+  public async addToQueue(batches: EventsBatch[]) {
+    await this.sendBatch(batches.map((batch) => ({ payload: batch, jobId: batch.id })));
   }
 }
 
