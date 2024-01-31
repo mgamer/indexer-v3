@@ -256,6 +256,11 @@ export const getExecuteSellV7Options: RouteOptions = {
         currencyDecimals?: number;
         quote: number;
         rawQuote: string;
+        sellOutCurrency?: string;
+        sellOutCurrencySymbol?: string;
+        sellOutCurrencyDecimals?: number;
+        sellOutQuote?: number;
+        sellOutRawQuote?: string;
         totalPrice: number;
         totalRawPrice: string;
         builtInFees: ExecuteFee[];
@@ -948,6 +953,32 @@ export const getExecuteSellV7Options: RouteOptions = {
             if (detail) {
               await addGlobalFee(detail, item, f);
             }
+          }
+        }
+      }
+
+      const sellOutCurrency = payload.currency;
+
+      // Add the quotes in the "sell-out" currency to the path items
+      for (const item of path) {
+        if (item.currency !== sellOutCurrency) {
+          const sellOurPrices = await getUSDAndCurrencyPrices(
+            item.currency,
+            sellOutCurrency,
+            item.rawQuote,
+            now(),
+            {
+              acceptStalePrice: true,
+            }
+          );
+
+          if (sellOurPrices.currencyPrice) {
+            const c = await getCurrency(sellOutCurrency);
+            item.sellOutCurrency = c.contract;
+            item.sellOutCurrencyDecimals = c.decimals;
+            item.sellOutCurrencySymbol = c.symbol;
+            item.sellOutQuote = formatPrice(sellOurPrices.currencyPrice, c.decimals, true);
+            item.sellOutRawQuote = sellOurPrices.currencyPrice;
           }
         }
       }
