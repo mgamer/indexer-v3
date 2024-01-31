@@ -5083,6 +5083,15 @@ export class Router {
       : Sdk.SeaportBase.Addresses.ReservoirConduitKey[this.chainId];
     const conduit = conduitController.deriveConduit(conduitKey);
 
+    const reservoirApprovalProxy = !useOpenseaTransferHelper
+      ? await conduitController.getChannelStatus(conduit, Addresses.ApprovalProxy[this.chainId])
+      : true;
+
+    // Use native transfer if opensea and reservoir bother are not supported
+    if (!reservoirApprovalProxy) {
+      return ApprovalProxy.createTransferTxsFromTransferItem(transferItem, sender);
+    }
+
     const approvals = transferItem.items.map((item) => ({
       orderIds: [],
       contract: item.token,
