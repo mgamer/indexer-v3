@@ -300,7 +300,7 @@ export abstract class AbstractRabbitMqJobHandler {
     }
 
     if (!_.isEmpty(prioritizedMessages)) {
-      await RabbitMq.sendBatch(this.getPriorityQueue(), messages);
+      await RabbitMq.sendBatch(this.getPriorityQueue(), prioritizedMessages);
     }
   }
 }
