@@ -8,7 +8,7 @@ export default class OrderbookPostOrderExternalOpenseaJob extends AbstractRabbit
   timeout = 60000;
   priorityQueue = true;
 
-  protected async process(payload: PostOrderExternalParams) {
+  public async process(payload: PostOrderExternalParams) {
     await processOrder(this, payload);
   }
 

@@ -63,7 +63,7 @@ export default class MetadataIndexWriteJob extends AbstractRabbitMqJobHandler {
     delay: 20000,
   } as BackoffStrategy;
 
-  protected async process(payload: MetadataIndexWriteJobPayload) {
+  public async process(payload: MetadataIndexWriteJobPayload) {
     const tokenAttributeCounter = {};
 
     const {
