@@ -76,7 +76,6 @@ export default class EventsSyncBackfillJob extends AbstractRabbitMqJobHandler {
     toBlock: number,
     syncOptions: SyncBlockOptions,
     options?: {
-      prioritized?: number;
       delay?: number;
     }
   ) {
@@ -88,8 +87,7 @@ export default class EventsSyncBackfillJob extends AbstractRabbitMqJobHandler {
           syncOptions,
         },
       },
-      options?.delay || 0,
-      options?.prioritized || 1
+      options?.delay || 0
     );
   }
 }
