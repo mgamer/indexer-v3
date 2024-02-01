@@ -518,37 +518,35 @@ export class RabbitMqJobsConsumer {
     }
 
     // Subscribe to the old non quorum queue
-    if (job.queueName !== "pending-tx-websocket-events-trigger-queue") {
-      await channel
-        .consume(
-          _.replace(job.getQueue(), "quorum-", ""),
-          async (msg) => {
-            if (!_.isNull(msg)) {
-              await _.clone(job)
-                .consume(channel, msg)
-                .catch((error) => {
-                  logger.error(
-                    "rabbit-consume",
-                    `error consuming from ${job.queueName} error ${error}`
-                  );
-                });
-            }
-          },
-          {
-            consumerTag: RabbitMqJobsConsumer.getConsumerTag(
-              _.replace(job.getQueue(), "quorum-", "")
-            ),
-            prefetch: job.getConcurrency(),
-            noAck: false,
+    await channel
+      .consume(
+        _.replace(job.getQueue(), "quorum-", ""),
+        async (msg) => {
+          if (!_.isNull(msg)) {
+            await _.clone(job)
+              .consume(channel, msg)
+              .catch((error) => {
+                logger.error(
+                  "rabbit-consume",
+                  `error consuming from ${job.queueName} error ${error}`
+                );
+              });
           }
-        )
-        .catch((error) => {
-          logger.error(
-            "rabbit-consume",
-            `protocol error consuming from ${job.queueName} error ${error}`
-          );
-        });
-    }
+        },
+        {
+          consumerTag: RabbitMqJobsConsumer.getConsumerTag(
+            _.replace(job.getQueue(), "quorum-", "")
+          ),
+          prefetch: job.getConcurrency(),
+          noAck: false,
+        }
+      )
+      .catch((error) => {
+        logger.error(
+          "rabbit-consume",
+          `protocol error consuming from ${job.queueName} error ${error}`
+        );
+      });
   }
 
   /**

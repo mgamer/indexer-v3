@@ -287,6 +287,9 @@ export class RabbitMq {
       // Create working queue
       await channel.assertQueue(queue.getQueue(), options);
 
+      // FOR NOW KEEP MAKING SURE THE OLD NON QUORUM QUEUES EXIST
+      await channel.assertQueue(_.replace(queue.getQueue(), "quorum-", ""), options);
+
       // Bind main working queue to the delayed exchange
       await channel.bindQueue(queue.getQueue(), RabbitMq.delayedExchangeName, queue.getQueue());
 
