@@ -6,6 +6,7 @@ export default class OrderbookPostOrderExternalOpenseaJob extends AbstractRabbit
   maxRetries = 5;
   concurrency = 5;
   timeout = 60000;
+  priorityQueue = true;
 
   protected async process(payload: PostOrderExternalParams) {
     await processOrder(this, payload);
