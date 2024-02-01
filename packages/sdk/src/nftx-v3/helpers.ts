@@ -329,7 +329,7 @@ const getPoolPriceOrQuoteFromAPI = async ({
     }
 
     if (slippage) {
-      queryParams.push(["slippagePercentage", `${slippage}`]);
+      queryParams.push(["slippageTolerance", `${slippage}`]);
     }
 
     queryParams.push(["type", side]);
@@ -361,7 +361,7 @@ const getPoolPriceOrQuoteFromAPI = async ({
       queryParams.push(["userAddress", userAddress]);
     }
     if (slippage) {
-      queryParams.push(["slippagePercentage", `${slippage}`]);
+      queryParams.push(["slippageTolerance", `${slippage}`]);
     }
 
     const query = queryParams.map((param) => param.join("=")).join("&");

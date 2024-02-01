@@ -522,8 +522,6 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
                   const normalizedValue = bn(value).add(missingRoyaltyAmount);
 
-                  // Removed check to random redeems, no longer supported in V3.
-
                   // Handle: core sdk order
                   const sdkOrder = new Sdk.NftxV3.Order(
                     config.chainId,
@@ -533,7 +531,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                       vaultId: pool.vaultId.toString(),
                       collection: pool.nft,
                       pool: pool.address,
-                      idsOut: [orderParams.tokenId],
+                      idsOut: [tokenId],
                       currency: Sdk.Common.Addresses.WNative[config.chainId],
                       price: price.toString(),
                       extra: {

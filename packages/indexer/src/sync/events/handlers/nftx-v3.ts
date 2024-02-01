@@ -186,8 +186,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
 
       case "nftx-v3-redeemed": {
         const { args } = eventData.abi.parseLog(log);
-        const tokenIds = args.nftIds.map(String);
-        const amounts = args.amounts.map(String);
+        const tokenIds = args.specificIds.map(String);
 
         const nftPool = await nftxV3Utils.getNftPoolDetails(baseEventParams.address);
         if (!nftPool) {
@@ -239,7 +238,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           for (let index = 0; index < tokenIds.length; index++) {
             const orderId = orderIds[index];
             const tokenId = tokenIds[index];
-            const amount = Number(amounts[index] || "1");
+            const amount = 1;
 
             onChainData.orders.push({
               kind: "nftx-v3",
@@ -380,7 +379,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
 
             for (let i = 0; i < tokenIds.length; i++) {
               const tokenId = tokenIds[i];
-              const amount = Number(amounts[i] || "1");
+              const amount = 1;
               const orderId = nftxV3.getOrderId(baseEventParams.address, "sell", tokenId);
 
               onChainData.fillEventsOnChain.push({
@@ -409,7 +408,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
                 context: `nftx-v3-${nftPool.nft}-${tokenIds[i]}-${baseEventParams.txHash}`,
                 orderSide: "sell",
                 contract: nftPool.nft,
-                tokenId: tokenId,
+                tokenId,
                 amount: `${amount}`,
                 price: priceData.nativePrice,
                 timestamp: baseEventParams.timestamp,
