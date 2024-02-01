@@ -18,7 +18,7 @@ export default class RefreshContractCollectionsMetadataQueueJob extends Abstract
   concurrency = 1;
   useSharedChannel = true;
 
-  public async process(payload: RefreshContractCollectionsMetadataQueueJobPayload) {
+  protected async process(payload: RefreshContractCollectionsMetadataQueueJobPayload) {
     const { contract } = payload;
 
     const contractCollections = await redb.manyOrNone(

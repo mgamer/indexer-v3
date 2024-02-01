@@ -18,7 +18,7 @@ export default class NftBalanceUpdateFloorAskJob extends AbstractRabbitMqJobHand
     delay: 20000,
   } as BackoffStrategy;
 
-  public async process(payload: NftBalanceUpdateFloorAskJobPayload) {
+  protected async process(payload: NftBalanceUpdateFloorAskJobPayload) {
     const { contract, tokenId, owner } = payload;
 
     try {

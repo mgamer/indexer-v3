@@ -20,7 +20,7 @@ export class TokenAttributeWebsocketEventsTriggerQueueJob extends AbstractRabbit
     delay: 1000,
   } as BackoffStrategy;
 
-  public async process(payload: TokenAttributeWebsocketEventsTriggerQueueJobPayload) {
+  protected async process(payload: TokenAttributeWebsocketEventsTriggerQueueJobPayload) {
     const { data } = payload;
 
     try {

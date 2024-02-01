@@ -16,7 +16,7 @@ export class TraceSyncJob extends AbstractRabbitMqJobHandler {
     delay: 1000,
   } as BackoffStrategy;
 
-  public async process(payload: TraceSyncJobPayload) {
+  protected async process(payload: TraceSyncJobPayload) {
     const { block } = payload;
 
     try {

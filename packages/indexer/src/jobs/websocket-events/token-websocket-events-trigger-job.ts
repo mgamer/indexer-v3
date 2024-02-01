@@ -55,7 +55,7 @@ export class TokenWebsocketEventsTriggerJob extends AbstractRabbitMqJobHandler {
   maxRetries = 5;
   concurrency = 20;
 
-  public async process(payload: TokenWebsocketEventsTriggerJobPayload) {
+  protected async process(payload: TokenWebsocketEventsTriggerJobPayload) {
     const { data, kind } = payload;
 
     if (kind === "ForcedChange") {

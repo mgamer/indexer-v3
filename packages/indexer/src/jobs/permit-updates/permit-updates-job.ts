@@ -25,7 +25,7 @@ export class PermitUpdatesJob extends AbstractRabbitMqJobHandler {
     delay: 10000,
   } as BackoffStrategy;
 
-  public async process(payload: PermitUpdatesJobPayload) {
+  protected async process(payload: PermitUpdatesJobPayload) {
     const { owner, spender, token } = payload;
 
     try {

@@ -9,7 +9,7 @@ export default class EventsSyncProcessBackfillJob extends AbstractRabbitMqJobHan
   concurrency = 5;
   timeout = 120000;
 
-  public async process(payload: EventsBatch) {
+  protected async process(payload: EventsBatch) {
     const { id, events, backfill } = payload;
 
     try {

@@ -17,7 +17,7 @@ export default class CurrenciesFetchJob extends AbstractRabbitMqJobHandler {
     delay: 10000,
   } as BackoffStrategy;
 
-  public async process(payload: CurrenciesFetchJobPayload) {
+  protected async process(payload: CurrenciesFetchJobPayload) {
     const { currency } = payload;
 
     const details = await tryGetCurrencyDetails(currency);

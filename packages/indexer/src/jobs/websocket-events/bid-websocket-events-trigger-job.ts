@@ -36,7 +36,7 @@ export class BidWebsocketEventsTriggerQueueJob extends AbstractRabbitMqJobHandle
     delay: 1000,
   } as BackoffStrategy;
 
-  public async process(payload: BidWebsocketEventsTriggerQueueJobPayload) {
+  protected async process(payload: BidWebsocketEventsTriggerQueueJobPayload) {
     const { data } = payload;
 
     try {

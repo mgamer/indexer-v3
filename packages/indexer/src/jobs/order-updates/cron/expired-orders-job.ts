@@ -20,7 +20,7 @@ export default class OrderUpdatesExpiredOrderJob extends AbstractRabbitMqJobHand
   } as BackoffStrategy;
   intervalInSeconds = 5;
 
-  public async process() {
+  protected async process() {
     logger.info(this.queueName, "Invalidating expired orders");
 
     const currentTime = now();

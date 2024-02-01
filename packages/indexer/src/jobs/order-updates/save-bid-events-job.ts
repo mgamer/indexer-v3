@@ -18,7 +18,7 @@ export class SaveBidEventsJob extends AbstractRabbitMqJobHandler {
     delay: 10000,
   } as BackoffStrategy;
 
-  public async process() {
+  protected async process() {
     const bidEventsList = new BidEventsList();
     let events = await bidEventsList.get(750);
 

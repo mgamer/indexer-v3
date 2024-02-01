@@ -13,7 +13,7 @@ export default class OneDayVolumeJob extends AbstractRabbitMqJobHandler {
   useSharedChannel = true;
   persistent = false;
 
-  public async process(payload: OneDayVolumeJobPayload) {
+  protected async process(payload: OneDayVolumeJobPayload) {
     let { retry } = payload;
 
     const updateResult = await DailyVolume.update1Day();

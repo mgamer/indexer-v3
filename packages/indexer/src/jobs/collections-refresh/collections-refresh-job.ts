@@ -17,7 +17,7 @@ export default class CollectionRefreshJob extends AbstractRabbitMqJobHandler {
   useSharedChannel = true;
   timeout = 120000;
 
-  public async process() {
+  protected async process() {
     let collections: CollectionsEntity[] = [];
 
     // Get all collections minted 24 hours ago

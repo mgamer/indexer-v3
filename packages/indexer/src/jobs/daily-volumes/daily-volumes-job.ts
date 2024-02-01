@@ -16,7 +16,7 @@ export default class DailyVolumeJob extends AbstractRabbitMqJobHandler {
   persistent = false;
   timeout = 2 * 60 * 60 * 1000;
 
-  public async process(payload: DailyVolumeJobPayload) {
+  protected async process(payload: DailyVolumeJobPayload) {
     const startTime = Number(payload.startTime);
     const ignoreInsertedRows = payload.ignoreInsertedRows;
     let retry = Number(payload.retry);

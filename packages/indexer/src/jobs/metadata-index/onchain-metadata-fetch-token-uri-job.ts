@@ -21,7 +21,7 @@ export default class OnchainMetadataFetchTokenUriJob extends AbstractRabbitMqJob
     delay: 20000,
   } as BackoffStrategy;
 
-  public async process() {
+  protected async process() {
     const count = 50; // Default number of tokens to fetch
 
     // Get the onchain tokens from the list

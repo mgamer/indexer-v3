@@ -13,7 +13,7 @@ export default class RemoveUnsyncedEventsActivitiesJob extends AbstractRabbitMqJ
   persistent = true;
   useSharedChannel = true;
 
-  public async process(payload: RemoveUnsyncedEventsActivitiesJobPayload) {
+  protected async process(payload: RemoveUnsyncedEventsActivitiesJobPayload) {
     await ActivitiesIndex.deleteActivitiesByBlockHash(payload.blockHash);
 
     const keepGoing = await ActivitiesIndex.deleteActivitiesByBlockHash(payload.blockHash);

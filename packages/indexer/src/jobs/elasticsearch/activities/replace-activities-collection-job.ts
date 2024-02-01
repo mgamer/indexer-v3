@@ -18,7 +18,7 @@ export default class ReplaceActivitiesCollectionJob extends AbstractRabbitMqJobH
   persistent = true;
   useSharedChannel = true;
 
-  public async process(payload: ReplaceActivitiesCollectionJobPayload) {
+  protected async process(payload: ReplaceActivitiesCollectionJobPayload) {
     const { contract, tokenId, newCollectionId, oldCollectionId } = payload;
 
     if (

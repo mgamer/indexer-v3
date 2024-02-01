@@ -19,7 +19,7 @@ export default class RefreshActivitiesCollectionMetadataJob extends AbstractRabb
   concurrency = 1;
   persistent = true;
 
-  public async process(payload: RefreshActivitiesCollectionMetadataJobPayload) {
+  protected async process(payload: RefreshActivitiesCollectionMetadataJobPayload) {
     let addToQueue = false;
 
     const collectionId = payload.collectionId;

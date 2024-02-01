@@ -18,7 +18,7 @@ export class BackfillUsdPricesDatesJob extends AbstractRabbitMqJobHandler {
   lazyMode = false;
   singleActiveConsumer = true;
 
-  public async process(payload: BackfillUsdPricesDatesJobCursorInfo) {
+  protected async process(payload: BackfillUsdPricesDatesJobCursorInfo) {
     const { currency } = payload;
     const values: {
       limit: number;

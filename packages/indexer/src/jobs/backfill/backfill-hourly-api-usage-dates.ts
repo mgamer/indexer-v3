@@ -17,7 +17,7 @@ export class BackfillHourlyApiUsageDatesJob extends AbstractRabbitMqJobHandler {
   lazyMode = false;
   singleActiveConsumer = true;
 
-  public async process(payload: BackfillHourlyApiUsageDatesJobCursorInfo) {
+  protected async process(payload: BackfillHourlyApiUsageDatesJobCursorInfo) {
     let { id } = payload;
     const values: {
       limit: number;

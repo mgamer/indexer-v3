@@ -58,7 +58,7 @@ export default class OrderFixesJob extends AbstractRabbitMqJobHandler {
     delay: 10000,
   } as BackoffStrategy;
 
-  public async process(payload: OrderFixesJobPayload) {
+  protected async process(payload: OrderFixesJobPayload) {
     const { by, data } = payload;
 
     try {
