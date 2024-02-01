@@ -1025,7 +1025,7 @@ export const getExecuteListV5Options: RouteOptions = {
                       apiKey,
                     })
                   );
-                  return errors.push({ message: "Multiple fees not supported", orderIndex: i });
+                  // return errors.push({ message: "Multiple fees not supported", orderIndex: i });
                 }
 
                 const order = await paymentProcessorSellToken.build({
@@ -1117,7 +1117,7 @@ export const getExecuteListV5Options: RouteOptions = {
                       apiKey,
                     })
                   );
-                  return errors.push({ message: "Multiple fees not supported", orderIndex: i });
+                  // return errors.push({ message: "Multiple fees not supported", orderIndex: i });
                 }
 
                 const options = (params.options?.["payment-processor-v2"] ??

@@ -1377,7 +1377,7 @@ export const getExecuteBidV5Options: RouteOptions = {
                       apiKey,
                     })
                   );
-                  return errors.push({ message: "Multiple fees not supported", orderIndex: i });
+                  // return errors.push({ message: "Multiple fees not supported", orderIndex: i });
                 }
 
                 let order: Sdk.PaymentProcessor.Order;
@@ -1488,7 +1488,7 @@ export const getExecuteBidV5Options: RouteOptions = {
                       apiKey,
                     })
                   );
-                  return errors.push({ message: "Multiple fees not supported", orderIndex: i });
+                  // return errors.push({ message: "Multiple fees not supported", orderIndex: i });
                 }
 
                 const options = params.options?.[params.orderKind] as
