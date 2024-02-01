@@ -65,7 +65,7 @@ export default class ExportDataJob extends AbstractRabbitMqJobHandler {
   useSharedChannel = true;
   timeout = 120000;
 
-  public async process(payload: ExportDataJobPayload) {
+  protected async process(payload: ExportDataJobPayload) {
     const { taskId } = payload;
     const queryLimit = 5000;
 

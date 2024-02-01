@@ -18,7 +18,7 @@ export class BackfillFtTransferEventsDatesJob extends AbstractRabbitMqJobHandler
   lazyMode = false;
   singleActiveConsumer = true;
 
-  public async process(payload: BackfillFtTransferEventsDatesJobCursorInfo) {
+  protected async process(payload: BackfillFtTransferEventsDatesJobCursorInfo) {
     const { block } = payload;
     const values: {
       limit: number;

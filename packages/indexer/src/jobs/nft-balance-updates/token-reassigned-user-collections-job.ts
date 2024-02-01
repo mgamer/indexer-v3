@@ -22,7 +22,7 @@ export default class TokenReassignedUserCollectionsJob extends AbstractRabbitMqJ
     delay: 5000,
   } as BackoffStrategy;
 
-  public async process(payload: TokenReassignedUserCollectionsJobPayload) {
+  protected async process(payload: TokenReassignedUserCollectionsJobPayload) {
     const { contract, tokenId, oldCollectionId, owner } = payload;
     let cursor = "";
 

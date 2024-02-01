@@ -42,7 +42,7 @@ export default class MetadataIndexFetchJob extends AbstractRabbitMqJobHandler {
     delay: 20000,
   } as BackoffStrategy;
 
-  public async process(payload: MetadataIndexFetchJobPayload) {
+  protected async process(payload: MetadataIndexFetchJobPayload) {
     // Do nothing if the indexer is running in liquidity-only mode
     if (config.liquidityOnly) {
       return;

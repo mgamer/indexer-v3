@@ -24,7 +24,7 @@ export class BackfillTokensWithMissingCollectionJob extends AbstractRabbitMqJobH
   persistent = true;
   singleActiveConsumer = true;
 
-  public async process(payload: BackfillTokensWithMissingCollectionJobPayload) {
+  protected async process(payload: BackfillTokensWithMissingCollectionJobPayload) {
     const { contract, cursor } = payload;
 
     let contractFilter = "";

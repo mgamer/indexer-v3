@@ -22,7 +22,7 @@ export class BackfillUserCollectionsJob extends AbstractRabbitMqJobHandler {
   lazyMode = false;
   singleActiveConsumer = true;
 
-  public async process(payload: BackfillUserCollectionsJobCursorInfo) {
+  protected async process(payload: BackfillUserCollectionsJobCursorInfo) {
     const { owner, acquiredAt } = payload;
     const values: {
       limit: number;

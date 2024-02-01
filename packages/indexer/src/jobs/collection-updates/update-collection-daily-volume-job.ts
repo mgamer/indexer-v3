@@ -21,7 +21,7 @@ export default class UpdateCollectionDailyVolumeJob extends AbstractRabbitMqJobH
   } as BackoffStrategy;
   useSharedChannel = true;
 
-  public async process(payload: UpdateCollectionDailyVolumeJobPayload) {
+  protected async process(payload: UpdateCollectionDailyVolumeJobPayload) {
     const result = await ActivitiesIndex.search({
       types: [ActivityType.sale],
       contracts: [payload.contract],

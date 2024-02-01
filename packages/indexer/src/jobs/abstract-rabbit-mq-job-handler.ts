@@ -28,7 +28,7 @@ export abstract class AbstractRabbitMqJobHandler {
   abstract queueName: string;
   abstract maxRetries: number;
 
-  public abstract process(payload: any): Promise<any>;
+  protected abstract process(payload: any): Promise<any>;
 
   protected rabbitMqMessage: RabbitMQMessage | undefined; // Hold the rabbitmq message type with all the extra fields
   protected concurrency = 1;

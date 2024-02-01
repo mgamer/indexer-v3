@@ -18,7 +18,7 @@ export class SaveRedisTransactionsJob extends AbstractRabbitMqJobHandler {
     delay: 1000,
   } as BackoffStrategy;
 
-  public async process(payload: SaveRedisTransactionsJobPayload) {
+  protected async process(payload: SaveRedisTransactionsJobPayload) {
     // get block data from redis
     const block = await redis.get(`block:${payload.block}`);
 

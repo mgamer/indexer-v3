@@ -25,7 +25,7 @@ export default class TopBidCollectionJob extends AbstractRabbitMqJobHandler {
     delay: 20000,
   } as BackoffStrategy;
 
-  public async process(payload: TopBidCollectionJobPayload) {
+  protected async process(payload: TopBidCollectionJobPayload) {
     try {
       const collectionTopBid = await idb.oneOrNone(
         `

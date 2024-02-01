@@ -17,7 +17,7 @@ export default class RefreshAsksTokenJob extends AbstractRabbitMqJobHandler {
   concurrency = 2;
   persistent = true;
 
-  public async process(payload: RefreshAsksTokenJobPayload) {
+  protected async process(payload: RefreshAsksTokenJobPayload) {
     let addToQueue = false;
 
     const { contract, tokenId } = payload;

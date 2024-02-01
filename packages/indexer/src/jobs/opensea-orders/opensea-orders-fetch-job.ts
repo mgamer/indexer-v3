@@ -26,7 +26,7 @@ export class OpenseaOrdersFetchJob extends AbstractRabbitMqJobHandler {
     delay: 5000,
   } as BackoffStrategy;
 
-  public async process() {
+  protected async process() {
     let collectionOffers = [];
     let rateLimitExpiredIn = 0;
 

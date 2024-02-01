@@ -23,7 +23,7 @@ export class OpenseaOrdersProcessJob extends AbstractRabbitMqJobHandler {
     delay: 20000,
   } as BackoffStrategy;
 
-  public async process(payload: OpenseaOrdersProcessJobPayload) {
+  protected async process(payload: OpenseaOrdersProcessJobPayload) {
     const { kind, data } = payload;
     const prioritized = !_.isUndefined(this.rabbitMqMessage?.prioritized);
 

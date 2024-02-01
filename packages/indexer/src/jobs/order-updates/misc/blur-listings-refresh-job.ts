@@ -24,7 +24,7 @@ export default class BlurListingsRefreshJob extends AbstractRabbitMqJobHandler {
     delay: 30000,
   } as BackoffStrategy;
 
-  public async process(payload: BlurListingsRefreshJobPayload) {
+  protected async process(payload: BlurListingsRefreshJobPayload) {
     const { collection } = payload;
 
     if (config.chainId !== 1) {

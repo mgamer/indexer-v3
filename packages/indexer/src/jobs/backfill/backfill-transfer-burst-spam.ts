@@ -14,7 +14,7 @@ export class BackfillTransferSpamJob extends AbstractRabbitMqJobHandler {
   lazyMode = false;
   singleActiveConsumer = true;
 
-  public async process() {
+  protected async process() {
     const blocksPerBatch = 200;
     let blockRangeRedis = await redis.get(`${this.queueName}:blockRange`);
     if (!blockRangeRedis) {

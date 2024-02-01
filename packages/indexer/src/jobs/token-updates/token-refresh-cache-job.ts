@@ -17,7 +17,7 @@ export default class TokenRefreshCacheJob extends AbstractRabbitMqJobHandler {
   maxRetries = 10;
   concurrency = 10;
 
-  public async process(payload: TokenRefreshCacheJobPayload) {
+  protected async process(payload: TokenRefreshCacheJobPayload) {
     const { contract, tokenId, checkTopBid } = payload;
 
     if (contract === "0x4923917e9e288b95405e2c893d0ac46b895dda22") {

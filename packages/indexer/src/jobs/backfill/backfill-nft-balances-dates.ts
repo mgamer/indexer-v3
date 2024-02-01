@@ -22,7 +22,7 @@ export class BackfillNftBalancesDatesJob extends AbstractRabbitMqJobHandler {
   lazyMode = false;
   singleActiveConsumer = true;
 
-  public async process(payload: BackfillNftBalancesDatesJobCursorInfo) {
+  protected async process(payload: BackfillNftBalancesDatesJobCursorInfo) {
     const { contract, tokenId, owner, amount } = payload;
     const values: {
       limit: number;

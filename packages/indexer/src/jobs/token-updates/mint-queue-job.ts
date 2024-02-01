@@ -28,7 +28,7 @@ export default class MintQueueJob extends AbstractRabbitMqJobHandler {
     delay: 20000,
   } as BackoffStrategy;
 
-  public async process(payload: MintQueueJobPayload) {
+  protected async process(payload: MintQueueJobPayload) {
     const { contract, tokenId, mintedTimestamp } = payload;
 
     try {

@@ -28,7 +28,7 @@ export default class OnchainMetadataProcessTokenUriJob extends AbstractRabbitMqJ
   } as BackoffStrategy;
   disableErrorLogs = true;
 
-  public async process(payload: OnchainMetadataProcessTokenUriJobPayload) {
+  protected async process(payload: OnchainMetadataProcessTokenUriJobPayload) {
     const { contract, tokenId, uri } = payload;
     const retryCount = Number(this.rabbitMqMessage?.retryCount);
 

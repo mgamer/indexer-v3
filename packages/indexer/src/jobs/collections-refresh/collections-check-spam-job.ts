@@ -21,7 +21,7 @@ export default class CollectionCheckSpamJob extends AbstractRabbitMqJobHandler {
   concurrency = 1;
   useSharedChannel = true;
 
-  public async process(payload: CollectionCheckSpamJobPayload) {
+  protected async process(payload: CollectionCheckSpamJobPayload) {
     const { collectionId, trigger } = payload;
     const collection = await Collections.getById(collectionId, true);
 

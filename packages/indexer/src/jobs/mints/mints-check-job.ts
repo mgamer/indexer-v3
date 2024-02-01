@@ -16,7 +16,7 @@ export class MintsCheckJob extends AbstractRabbitMqJobHandler {
     delay: 10000,
   } as BackoffStrategy;
 
-  public async process(payload: MintsCheckJobPayload) {
+  protected async process(payload: MintsCheckJobPayload) {
     const { collection } = payload;
 
     const collectionMints = await getCollectionMints(collection, { status: "open" });

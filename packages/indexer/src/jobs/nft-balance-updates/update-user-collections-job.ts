@@ -27,7 +27,7 @@ export default class UpdateUserCollectionsJob extends AbstractRabbitMqJobHandler
   } as BackoffStrategy;
   disableErrorLogs = true;
 
-  public async process(payload: UpdateUserCollectionsJobPayload) {
+  protected async process(payload: UpdateUserCollectionsJobPayload) {
     const { fromAddress, toAddress, contract, tokenId, amount } = payload;
     const queries = [];
 

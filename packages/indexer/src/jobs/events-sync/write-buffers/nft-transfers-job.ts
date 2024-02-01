@@ -13,7 +13,7 @@ export class EventsSyncNftTransfersWriteBufferJob extends AbstractRabbitMqJobHan
   concurrency = 1;
   timeout = 60000;
 
-  public async process(payload: EventsSyncNftTransfersWriteBufferPayload) {
+  protected async process(payload: EventsSyncNftTransfersWriteBufferPayload) {
     const { query } = payload;
 
     try {
