@@ -4,6 +4,7 @@ import cron from "node-cron";
 
 import { idb, pgp } from "@/common/db";
 import { logger } from "@/common/logger";
+import { baseProvider } from "@/common/provider";
 import { redlock } from "@/common/redis";
 import { fromBuffer, now } from "@/common/utils";
 import { config } from "@/config/index";
@@ -13,7 +14,6 @@ import {
   OrderUpdatesByIdJobPayload,
 } from "@/jobs/order-updates/order-updates-by-id-job";
 import { getUSDAndNativePrices } from "@/utils/prices";
-import { baseProvider } from "@/common/provider";
 
 export type OrderUpdatesDynamicOrderJobPayload = {
   continuation?: string;
@@ -42,24 +42,24 @@ export default class OrderUpdatesDynamicOrderJob extends AbstractRabbitMqJobHand
         currency: Buffer;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         raw_data: any;
-        maker: string;
-        taker: string;
+        maker: Buffer;
+        taker: Buffer;
       }[] = await idb.manyOrNone(
         `
-              SELECT
-                orders.id,
-                orders.kind,
-                orders.currency,
-                orders.raw_data,
-                orders.maker,
-                orders.taker
-              FROM orders
-              WHERE orders.dynamic
-                AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
-                ${continuation ? "AND orders.id > $/continuation/" : ""}
-              ORDER BY orders.id
-              LIMIT ${limit}
-            `,
+          SELECT
+            orders.id,
+            orders.kind,
+            orders.currency,
+            orders.raw_data,
+            orders.maker,
+            orders.taker
+          FROM orders
+          WHERE orders.dynamic
+            AND (orders.fillability_status = 'fillable' OR orders.fillability_status = 'no-balance')
+            ${continuation ? "AND orders.id > $/continuation/" : ""}
+          ORDER BY orders.id
+          LIMIT ${limit}
+        `,
         { continuation }
       );
 
@@ -93,8 +93,13 @@ export default class OrderUpdatesDynamicOrderJob extends AbstractRabbitMqJobHand
             });
           }
         } else if (kind === "nftx-v3") {
-          const order = new Sdk.NftxV3.Order(config.chainId, maker, taker, raw_data);
-          const { price, premiumPrice } = await order.getPrice(baseProvider);
+          const order = new Sdk.NftxV3.Order(
+            config.chainId,
+            fromBuffer(maker),
+            fromBuffer(taker),
+            raw_data
+          );
+          const { price, premiumPrice } = await order.getPrice(baseProvider, config.nftxApiKey);
 
           values.push({
             id,

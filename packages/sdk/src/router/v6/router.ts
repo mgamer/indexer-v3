@@ -1,6 +1,6 @@
 import { Interface, Result } from "@ethersproject/abi";
 import { Provider } from "@ethersproject/abstract-provider";
-import { AddressZero, HashZero } from "@ethersproject/constants";
+import { AddressZero, HashZero, MaxUint256 } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import axios from "axios";
 
@@ -73,12 +73,12 @@ import MintModuleAbi from "./abis/MintModule.json";
 import MintProxyAbi from "./abis/MintProxy.json";
 // Exchanges
 import SeaportV15Abi from "../../seaport-v1.5/abis/Exchange.json";
-import { ethers } from "ethers";
 
 type SetupOptions = {
   x2y2ApiKey?: string;
   openseaApiKey?: string;
   cbApiKey?: string;
+  nftxApiKey?: string;
   zeroExApiKey?: string;
   orderFetcherBaseUrl?: string;
   orderFetcherMetadata?: object;
@@ -2479,7 +2479,11 @@ export class Router {
           }
 
           // Attach the Execute Swap calldata
-          const { executeCallData, price } = await order.getQuote(500, this.provider);
+          const { executeCallData, price } = await order.getQuote(
+            500,
+            this.provider,
+            this.options!.nftxApiKey!
+          );
           order.params.executeCallData = executeCallData;
           order.params.price = price.toString();
 
@@ -2502,7 +2506,7 @@ export class Router {
         vaultId: perVaultIdOrders[vaultId][0].params.vaultId,
         collection: perVaultIdOrders[vaultId][0].params.collection,
         idsOut: perVaultIdOrders[vaultId].map((o) => o.params.idsOut![0]),
-        vTokenPremiumLimit: ethers.constants.MaxUint256.toString(),
+        vTokenPremiumLimit: MaxUint256.toString(),
         deductRoyalty: false,
         // Need to use the price and swap calldata of the last order
         executeCallData: perVaultIdOrders[vaultId][orders.length - 1].params.executeCallData,
@@ -2549,7 +2553,6 @@ export class Router {
       // Mark the listings as successfully handled
       for (const { orderId } of nftxV3Details) {
         success[orderId] = true;
-        // orderIds.push(orderId);
       }
     }
 

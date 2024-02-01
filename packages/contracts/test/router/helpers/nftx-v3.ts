@@ -2,6 +2,7 @@ import { BigNumberish } from "@ethersproject/bignumber";
 import { Contract } from "@ethersproject/contracts";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 import * as Sdk from "@reservoir0x/sdk/src";
+import { parseEther } from "ethers/lib/utils";
 import { ethers, network } from "hardhat";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
 
@@ -9,7 +10,6 @@ import { getChainId, bn, getCurrentTimestamp } from "../../utils";
 
 import FactoryAbi from "@reservoir0x/sdk/src/nftx-v3/abis/Factory.json";
 import CreateVaultZapAbi from "@reservoir0x/sdk/src/nftx-v3/abis/CreateVaultZap.json";
-import { parseEther } from "ethers/lib/utils";
 
 // --- Listings ---
 
@@ -113,7 +113,6 @@ export const setupNFTXV3Listings = async (listings: NFTXV3Listing[]) => {
       100,
       Sdk.NftxV3.Helpers.REWARD_FEE_TIER,
       ethers.provider,
-      network,
       [nft.id]
     );
 
@@ -238,8 +237,7 @@ export const setupNFTXV3Offers = async (offers: NFTXV3Offer[]) => {
       "sell",
       100,
       Sdk.NftxV3.Helpers.REWARD_FEE_TIER,
-      ethers.provider,
-      network
+      ethers.provider
     );
 
     if (poolPrice) {

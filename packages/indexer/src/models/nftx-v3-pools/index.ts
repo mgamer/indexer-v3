@@ -58,8 +58,6 @@ export type NftxV3FtPool = {
   kind: "nftx-v3" | "sushiswap" | "uniswap-v3";
 };
 
-// TODO - do we need the sushiswap and uniswap-v3 kinds above here?
-
 export const saveNftxV3FtPool = async (nftxV3FtPool: NftxV3FtPool) => {
   await idb.none(
     `

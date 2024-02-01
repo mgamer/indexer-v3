@@ -273,19 +273,4 @@ describe("[ReservoirV6_0_1] NFTXV3 offers", () => {
       }
     }
   }
-
-  const multiple = true;
-  const partial = true;
-  const chargeFees = false;
-  const revertIfIncomplete = false;
-
-  const testName =
-    "[eth]" +
-    `${multiple ? "[multiple-orders]" : "[single-order]"}` +
-    `${partial ? "[partial]" : "[full]"}` +
-    `${chargeFees ? "[fees]" : "[no-fees]"}` +
-    `${revertIfIncomplete ? "[reverts]" : "[skip-reverts]"}`;
-  it.skip(testName, async () =>
-    testAcceptOffers(chargeFees, revertIfIncomplete, partial, multiple ? getRandomInteger(2, 6) : 1)
-  );
 });

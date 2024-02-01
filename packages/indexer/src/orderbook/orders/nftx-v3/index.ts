@@ -26,7 +26,7 @@ import {
   OrderUpdatesByIdJobPayload,
 } from "@/jobs/order-updates/order-updates-by-id-job";
 
-const userAddress = "0xaA29881aAc939A025A3ab58024D7dd46200fB93D";
+const userAddress = "0xaa29881aac939a025a3ab58024d7dd46200fb93d";
 
 export type OrderInfo = {
   orderParams: {
@@ -142,6 +142,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                   slippage,
                   provider: baseProvider,
                   amount: index + 1,
+                  nftxApiKey: config.nftxApiKey,
                 });
                 tmpPriceList[index] = poolPrice;
               } catch {
@@ -166,7 +167,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
               slippage,
               tokenIds: [orderParams.tokenId],
               userAddress,
-              // TODO: get ERC1155 amounts
+              nftxApiKey: config.nftxApiKey,
             });
             const value = bn(price).toString();
 
@@ -180,7 +181,8 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
               );
             }
 
-            // Handle: royalties on top - TODO for V3.1 when royalties are supported
+            // Handle: royalties on top
+            // TODO: for V3.1 when royalties are supported
             const defaultRoyalties = await royalties.getRoyaltiesByTokenSet(
               `contract:${pool.nft}`,
               "default"
@@ -339,22 +341,22 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                   WHERE orders.id = $/id/
                     ${recheckCondition}
                     AND (
-                    orders.fillability_status != 'fillable' 
-                    OR orders.approval_status != 'approved'
-                    OR orders.price IS DISTINCT FROM $/price/
-                    OR orders.currency_price IS DISTINCT FROM $/price/
-                    OR orders.value IS DISTINCT FROM $/value/
-                    OR orders.currency_value IS DISTINCT FROM $/value/
-                    OR orders.quantity_remaining IS DISTINCT FROM $/quantityRemaining/
-                    OR orders.raw_data IS DISTINCT FROM $/rawData:json/
-                    OR orders.missing_royalties IS DISTINCT FROM $/missingRoyalties:json/
-                    OR orders.normalized_value IS DISTINCT FROM $/normalizedValue/
-                    OR orders.currency_normalized_value IS DISTINCT FROM $/currencyNormalizedValue/
-                    OR orders.fee_bps IS DISTINCT FROM $/feeBps/
-                    OR orders.fee_breakdown IS DISTINCT FROM $/feeBreakdown:json/
-                    OR orders.currency IS DISTINCT FROM $/currency/
-                    OR orders.block_number IS DISTINCT FROM $/blockNumber/
-                    OR orders.log_index IS DISTINCT FROM $/logIndex/
+                      orders.fillability_status != 'fillable'
+                      OR orders.approval_status != 'approved'
+                      OR orders.price IS DISTINCT FROM $/price/
+                      OR orders.currency_price IS DISTINCT FROM $/price/
+                      OR orders.value IS DISTINCT FROM $/value/
+                      OR orders.currency_value IS DISTINCT FROM $/value/
+                      OR orders.quantity_remaining IS DISTINCT FROM $/quantityRemaining/
+                      OR orders.raw_data IS DISTINCT FROM $/rawData:json/
+                      OR orders.missing_royalties IS DISTINCT FROM $/missingRoyalties:json/
+                      OR orders.normalized_value IS DISTINCT FROM $/normalizedValue/
+                      OR orders.currency_normalized_value IS DISTINCT FROM $/currencyNormalizedValue/
+                      OR orders.fee_bps IS DISTINCT FROM $/feeBps/
+                      OR orders.fee_breakdown IS DISTINCT FROM $/feeBreakdown:json/
+                      OR orders.currency IS DISTINCT FROM $/currency/
+                      OR orders.block_number IS DISTINCT FROM $/blockNumber/
+                      OR orders.log_index IS DISTINCT FROM $/logIndex/
                     )
                 `,
                 {
@@ -433,6 +435,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                 slippage,
                 vault: orderParams.pool,
                 amount: index + 1,
+                nftxApiKey: config.nftxApiKey,
               });
               tmpPriceList[index] = poolPrice;
             } catch {
@@ -479,6 +482,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                       slippage,
                       tokenIds: [tokenId],
                       userAddress,
+                      nftxApiKey: config.nftxApiKey,
                     });
                   const value = price;
 
@@ -542,9 +546,9 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
                   const orderResult = await redb.oneOrNone(
                     `
-                        SELECT 1 FROM orders
-                        WHERE orders.id = $/id/
-                      `,
+                      SELECT 1 FROM orders
+                      WHERE orders.id = $/id/
+                    `,
                     { id }
                   );
                   if (!orderResult && poolFeatures.enableRedeem) {
@@ -613,29 +617,29 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                   } else {
                     await idb.none(
                       `
-                          UPDATE orders SET
-                            fillability_status = 'fillable',
-                            approval_status = 'approved',
-                            price = $/price/,
-                            currency_price = $/price/,
-                            value = $/value/,
-                            currency_value = $/value/,
-                            quantity_remaining = 1,
-                            valid_between = tstzrange(date_trunc('seconds', to_timestamp(${orderParams.txTimestamp})), 'Infinity', '[]'),
-                            expiration = 'Infinity',
-                            updated_at = now(),
-                            raw_data = $/rawData:json/,
-                            missing_royalties = $/missingRoyalties:json/,
-                            normalized_value = $/normalizedValue/,
-                            currency_normalized_value = $/currencyNormalizedValue/,
-                            fee_bps = $/feeBps/,
-                            fee_breakdown = $/feeBreakdown:json/,
-                            currency = $/currency/,
-                            block_number = $/blockNumber/,
-                            log_index = $/logIndex/
-                          WHERE orders.id = $/id/
-                            ${recheckCondition}
-                        `,
+                        UPDATE orders SET
+                          fillability_status = 'fillable',
+                          approval_status = 'approved',
+                          price = $/price/,
+                          currency_price = $/price/,
+                          value = $/value/,
+                          currency_value = $/value/,
+                          quantity_remaining = 1,
+                          valid_between = tstzrange(date_trunc('seconds', to_timestamp(${orderParams.txTimestamp})), 'Infinity', '[]'),
+                          expiration = 'Infinity',
+                          updated_at = now(),
+                          raw_data = $/rawData:json/,
+                          missing_royalties = $/missingRoyalties:json/,
+                          normalized_value = $/normalizedValue/,
+                          currency_normalized_value = $/currencyNormalizedValue/,
+                          fee_bps = $/feeBps/,
+                          fee_breakdown = $/feeBreakdown:json/,
+                          currency = $/currency/,
+                          block_number = $/blockNumber/,
+                          log_index = $/logIndex/
+                        WHERE orders.id = $/id/
+                          ${recheckCondition}
+                      `,
                       {
                         id,
                         price,

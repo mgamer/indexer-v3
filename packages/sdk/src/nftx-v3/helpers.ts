@@ -1,6 +1,3 @@
-import { config as dotEnvConfig } from "dotenv";
-dotEnvConfig();
-
 import { Interface } from "@ethersproject/abi";
 import { JsonRpcProvider } from "@ethersproject/providers";
 import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
@@ -8,29 +5,16 @@ import { Contract } from "@ethersproject/contracts";
 import { parseEther } from "@ethersproject/units";
 import { ethers } from "ethers";
 import axios from "axios";
-import { Network } from "hardhat/types";
 
 import * as Addresses from "./addresses";
 import * as Common from "../common";
 import { bn, getCurrentTimestamp } from "../utils";
+
 import QuoterV2ABI from "./abis/QuoterV2.json";
 
 const NFTX_ENDPOINT = "https://api-v3.nftx.xyz";
 
 export const REWARD_FEE_TIER = 3_000;
-
-// const sortTokens = (tokenA: string, tokenB: string) => {
-//   let token0, token1;
-//   if (BigNumber.from(tokenA).lt(BigNumber.from(tokenB))) {
-//     token0 = tokenA;
-//     token1 = tokenB;
-//   } else {
-//     token0 = tokenB;
-//     token1 = tokenA;
-//   }
-
-//   return { token0, token1 };
-// };
 
 export const getPoolFeatures = async (address: string, provider: JsonRpcProvider) => {
   const iface = new Interface([
@@ -70,7 +54,6 @@ export const getPoolPrice = async (
   slippage: number,
   feeTier: number,
   provider: JsonRpcProvider,
-  network?: Network,
   // for "buy" side
   tokenIds?: number[]
 ): Promise<{
@@ -154,16 +137,9 @@ export const getPoolPrice = async (
     const premiumsInETH: BigNumberish[] = await Promise.all(
       premiums.map(async (premium) => {
         const premInEth = await vaultContract.vTokenToETH(premium);
-        // console.log({ premInEth: premInEth.toString() });
         return premInEth;
       })
     );
-
-    // console.log(
-    //   premiums[0].toString(),
-    //   premiumsInETH[0].toString(),
-    //   bn(premiumsInETH[0]).mul(parseEther("1")).div(premiums[0]).toString()
-    // );
 
     const netPremiumInETH = bn(premiumsInETH.reduce((acc, curr) => bn(acc).add(curr), bn(0)));
 
@@ -180,15 +156,6 @@ export const getPoolPrice = async (
     if (slippage) {
       price = price.add(price.mul(slippage).div(10000));
     }
-
-    // const { token0, token1 } = sortTokens(weth, vault);
-
-    // console.log({
-    //   vault: vault,
-    //   weth,
-    //   token0,
-    //   token1,
-    // });
 
     const executeCallData = nftxUniversalRouterIFace.encodeFunctionData("execute", [
       "0x01", // V3_SWAP_EXACT_OUT
@@ -265,6 +232,7 @@ export const getPoolPriceFromAPI = async ({
   amount?: number;
   tokenIds?: string[];
   amounts?: string[];
+  nftxApiKey: string;
 }) => {
   if (!tokenIds) {
     if (!amount) {
@@ -284,6 +252,7 @@ export const getPoolQuoteFromAPI = async (args: {
   tokenIds: string[];
   userAddress: string;
   amounts?: string[];
+  nftxApiKey: string;
 }) => {
   return getPoolPriceOrQuoteFromAPI({ ...args, type: "quote" });
 };
@@ -297,6 +266,7 @@ const getPoolPriceOrQuoteFromAPI = async ({
   userAddress,
   vault,
   amounts,
+  nftxApiKey,
 }: {
   type: "quote" | "price";
   vault: string;
@@ -306,6 +276,7 @@ const getPoolPriceOrQuoteFromAPI = async ({
   tokenIds: string[];
   userAddress?: string;
   amounts?: string[];
+  nftxApiKey: string;
 }): Promise<{
   price: BigNumber;
   vTokenPrice: BigNumber;
@@ -369,11 +340,9 @@ const getPoolPriceOrQuoteFromAPI = async ({
 
     apiResponse = await axios.get(url, {
       headers: {
-        Authorization: process.env.NFTX_API_KEY,
+        Authorization: nftxApiKey,
       },
     });
-
-    // price = bn(apiResponse.data.price);
   } else {
     const queryParams: string[][] = [];
 
@@ -400,7 +369,7 @@ const getPoolPriceOrQuoteFromAPI = async ({
 
     apiResponse = await axios.get(url, {
       headers: {
-        Authorization: process.env.NFTX_API_KEY,
+        Authorization: nftxApiKey,
       },
     });
   }

@@ -23,7 +23,7 @@ export class Order {
     }
   }
 
-  async getPrice(provider: Provider) {
+  async getPrice(provider: Provider, nftxApiKey: string) {
     const side = this.params.idsOut?.length ? "buy" : "sell";
     return getPoolPriceFromAPI({
       vault: this.vault,
@@ -32,10 +32,11 @@ export class Order {
       provider: provider as JsonRpcProvider,
       tokenIds: side === "buy" ? this.params.idsOut! : this.params.idsIn!,
       amounts: this.params.amounts,
+      nftxApiKey,
     });
   }
 
-  async getQuote(slippage: number, provider: Provider) {
+  async getQuote(slippage: number, provider: Provider, nftxApiKey: string) {
     const side = this.params.idsOut?.length ? "buy" : "sell";
     return getPoolQuoteFromAPI({
       vault: this.vault,
@@ -45,6 +46,7 @@ export class Order {
       userAddress: this.userAddress,
       tokenIds: side === "buy" ? this.params.idsOut! : this.params.idsIn!,
       amounts: this.params.amounts,
+      nftxApiKey,
     });
   }
 }

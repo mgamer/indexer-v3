@@ -2,6 +2,7 @@ import { Interface } from "@ethersproject/abi";
 import { Log } from "@ethersproject/abstract-provider";
 import { Contract } from "@ethersproject/contracts";
 import * as Sdk from "@reservoir0x/sdk";
+
 import { baseProvider } from "@/common/provider";
 import { config } from "@/config/index";
 import * as nftxV3 from "@/events-sync/data/nftx-v3";
@@ -121,11 +122,13 @@ export const tryParseSwap = async (log: Log) => {
       const parsedLog = ifaceNftxV3.parseLog(log);
       const rawAmount0 = parsedLog.args["amount0"].toString();
       const rawAmount1 = parsedLog.args["amount1"].toString();
+
       // Generate v2-style output
       const amount0Out = rawAmount0.includes("-");
       const amount1Out = rawAmount1.includes("-");
       const amount0 = amount0Out ? rawAmount0.split("-")[1] : rawAmount0;
       const amount1 = amount1Out ? rawAmount1.split("-")[1] : rawAmount1;
+
       return {
         ftPool,
         amount0Out: amount0Out ? amount0 : "0",

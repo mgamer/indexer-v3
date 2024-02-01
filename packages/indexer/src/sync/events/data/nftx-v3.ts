@@ -9,11 +9,11 @@ export const vaultInit: EventData = {
   numTopics: 2,
   abi: new Interface([
     `event VaultInit(
-        uint256 indexed vaultId,
-        address assetAddress,
-        bool is1155,
-        bool allowAllItems
-      )`,
+      uint256 indexed vaultId,
+      address assetAddress,
+      bool is1155,
+      bool allowAllItems
+    )`,
   ]),
 };
 
@@ -24,10 +24,10 @@ export const vaultShutdown: EventData = {
   numTopics: 1,
   abi: new Interface([
     `event VaultShutdown(
-        address assetAddress,
-        uint256 numItems,
-        address recipient
-      )`,
+      address assetAddress,
+      uint256 numItems,
+      address recipient
+    )`,
   ]),
 };
 
@@ -62,9 +62,9 @@ export const redeemed: EventData = {
   numTopics: 1,
   abi: new Interface([
     `event Redeemed(
-        uint256[] specificIds,
-        address to
-      )`,
+      uint256[] specificIds,
+      address to
+    )`,
   ]),
 };
 
@@ -75,11 +75,11 @@ export const minted: EventData = {
   numTopics: 1,
   abi: new Interface([
     `event Minted(
-        uint256[] nftIds,
-        uint256[] amounts,
-        address to,
-        address depositor
-      )`,
+      uint256[] nftIds,
+      uint256[] amounts,
+      address to,
+      address depositor
+    )`,
   ]),
 };
 
@@ -90,12 +90,12 @@ export const swapped: EventData = {
   numTopics: 1,
   abi: new Interface([
     `event Swapped(
-        uint256[] nftIds,
-        uint256[] amounts,
-        uint256[] specificIds, 
-        address to,
-        address depositor
-      )`,
+      uint256[] nftIds,
+      uint256[] amounts,
+      uint256[] specificIds,
+      address to,
+      address depositor
+    )`,
   ]),
 };
 
@@ -106,14 +106,14 @@ export const swap: EventData = {
   numTopics: 3,
   abi: new Interface([
     `event Swap(
-        address indexed sender,
-        uint256 amount0,
-        uint256 amount1,
-        unit160 sqrtPriceX96,
-        uint128 liquidity,
-        int24 tick,
-        address indexed recipient
-      )`,
+      address indexed sender,
+      uint256 amount0,
+      uint256 amount1,
+      unit160 sqrtPriceX96,
+      uint128 liquidity,
+      int24 tick,
+      address indexed recipient
+    )`,
   ]),
 };
 
@@ -124,8 +124,8 @@ export const eligibilityDeployed: EventData = {
   numTopics: 1,
   abi: new Interface([
     `event EligibilityDeployed(
-        uint256 moduleIndex,
-        address eligibilityAddr
-      )`,
+      uint256 moduleIndex,
+      address eligibilityAddr
+    )`,
   ]),
 };

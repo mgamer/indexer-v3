@@ -30,6 +30,5 @@ export const offChainCheck = async (id: string) => {
     }
   } else {
     // TODO: Add buy side balance checks
-    // ^ previous TODO, not sure anything else needs to be added for this...
   }
 };

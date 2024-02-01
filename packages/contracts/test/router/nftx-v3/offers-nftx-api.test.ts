@@ -3,13 +3,13 @@ import { Contract } from "@ethersproject/contracts";
 import { parseEther } from "@ethersproject/units";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 import * as Sdk from "@reservoir0x/sdk/src";
+import { Network } from "@reservoir0x/sdk/src/utils";
 import { expect } from "chai";
 import { ethers, network } from "hardhat";
 
 import { NFTXV3Offer } from "../helpers/nftx-v3";
 import { ExecutionInfo } from "../helpers/router";
 import { bn, getRandomBoolean, getRandomFloat, reset } from "../../utils";
-import { Network } from "@reservoir0x/sdk/src/utils";
 
 describe("[ReservoirV6_0_1] NFTX offers (with NFTX API routing)", () => {
   const chainId = Network.EthereumSepolia;
@@ -105,6 +105,7 @@ describe("[ReservoirV6_0_1] NFTX offers (with NFTX API routing)", () => {
       provider: ethers.provider,
       userAddress: carol.address,
       tokenIds: [tokenId.toString()],
+      nftxApiKey: process.env.NFTX_API_KEY!,
     });
 
     const offer: NFTXV3Offer = {
@@ -230,16 +231,4 @@ describe("[ReservoirV6_0_1] NFTX offers (with NFTX API routing)", () => {
       }
     }
   }
-
-  const partial = false;
-  const chargeFees = true;
-  const revertIfIncomplete = false;
-
-  const testCaseName =
-    "[eth]" +
-    `${partial ? "[partial]" : "[full]"}` +
-    `${chargeFees ? "[fees]" : "[no-fees]"}` +
-    `${revertIfIncomplete ? "[reverts]" : "[skip-reverts]"}`;
-
-  it.skip(testCaseName, async () => testAcceptOffers(chargeFees, revertIfIncomplete, partial));
 });
