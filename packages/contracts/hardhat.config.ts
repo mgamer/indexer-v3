@@ -137,7 +137,7 @@ const config: HardhatUserConfig = {
       chainId: networkConfig.chainId,
       forking: {
         url: networkConfig.url,
-        blockNumber: Number(process.env.BLOCK_NUMBER),
+        blockNumber: process.env.BLOCK_NUMBER ? Number(process.env.BLOCK_NUMBER) : undefined,
       },
       accounts: {
         // Custom mnemonic so that the wallets have no initial state
@@ -332,7 +332,7 @@ const config: HardhatUserConfig = {
     enabled: Boolean(Number(process.env.REPORT_GAS)),
   },
   mocha: {
-    timeout: 60000 * 10,
+    timeout: 1000000,
   },
 };
 
