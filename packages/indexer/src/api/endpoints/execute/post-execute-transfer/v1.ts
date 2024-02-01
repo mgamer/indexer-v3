@@ -8,6 +8,7 @@ import { baseProvider } from "@/common/provider";
 import { regex } from "@/common/utils";
 import { config } from "@/config/index";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
+import { checkMarketplaceIsFiltered } from "@/utils/marketplace-blacklists";
 
 const version = "v1";
 
@@ -110,6 +111,44 @@ export const postExecuteTransferV1Options: RouteOptions = {
       ];
 
       const router = new Sdk.RouterV6.Router(config.chainId, baseProvider);
+      const allCollections = new Set<string>();
+
+      transferItem.items.reduce((all, item) => {
+        if (
+          [ApprovalProxy.ItemType.ERC1155, ApprovalProxy.ItemType.ERC721].includes(item.itemType)
+        ) {
+          all.add(item.token);
+        }
+        return all;
+      }, allCollections);
+
+      const filterResult = await Promise.all(
+        Array.from(allCollections).map(async (collection) => {
+          let seaportBlocked = true;
+          if (Sdk.SeaportBase.Addresses.OpenseaConduitKey[config.chainId]) {
+            const openseaConduit = new Sdk.SeaportBase.ConduitController(
+              config.chainId
+            ).deriveConduit(Sdk.SeaportBase.Addresses.OpenseaConduitKey[config.chainId]);
+            seaportBlocked = await checkMarketplaceIsFiltered(collection, [openseaConduit]);
+          }
+
+          let reservoirBlocked = true;
+          if (Sdk.SeaportBase.Addresses.ReservoirConduitKey[config.chainId]) {
+            const reservoirConduit = new Sdk.SeaportBase.ConduitController(
+              config.chainId
+            ).deriveConduit(Sdk.SeaportBase.Addresses.ReservoirConduitKey[config.chainId]);
+            reservoirBlocked = await checkMarketplaceIsFiltered(collection, [reservoirConduit]);
+          }
+          return {
+            collection,
+            blocked: {
+              seaport: seaportBlocked,
+              reservoir: reservoirBlocked,
+            },
+          };
+        })
+      );
+
       const { txs } = await router.transfersTx(transferItem, payload.from);
 
       const approvals = txs.map((tx) => tx.approvals).flat();

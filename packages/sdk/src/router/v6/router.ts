@@ -5064,7 +5064,14 @@ export class Router {
 
   public async transfersTx(
     transferItem: ApprovalProxy.TransferItem,
-    sender: string
+    sender: string,
+    filterResults: {
+      collection: string;
+      blocked: {
+        seaport: boolean;
+        reservoir: boolean;
+      };
+    }[]
   ): Promise<TransfersResult> {
     const openseaTransferHelper = Sdk.Common.Addresses.OpenseaTransferHelper[this.chainId];
     const openseaConduitKey = Sdk.SeaportBase.Addresses.OpenseaConduitKey[this.chainId];
@@ -5092,7 +5099,51 @@ export class Router {
       return ApprovalProxy.createTransferTxsFromTransferItem(transferItem, sender);
     }
 
-    const approvals = transferItem.items.map((item) => ({
+    const txs: {
+      approvals: NFTApproval[];
+      txData: TxData;
+    }[] = [];
+
+    const noneBlockedItems: ApprovalProxy.Item[] = [];
+    const blockedItems: ApprovalProxy.Item[] = [];
+
+    // Split item by blocked status
+    transferItem.items.forEach((item) => {
+      if ([ApprovalProxy.ItemType.ERC1155, ApprovalProxy.ItemType.ERC721].includes(item.itemType)) {
+        const filterResult = filterResults.find((c) => c.collection === item.token);
+        if (filterResult) {
+          const { blocked } = filterResult;
+          if (blocked.seaport && useOpenseaTransferHelper) {
+            // Seaport blocked and use opensea
+            blockedItems.push(item);
+          } else if (blocked.reservoir && !useOpenseaTransferHelper) {
+            // Reservoir blocked and use reservoir
+            blockedItems.push(item);
+          } else {
+            noneBlockedItems.push(item);
+          }
+        } else {
+          noneBlockedItems.push(item);
+        }
+      } else {
+        noneBlockedItems.push(item);
+      }
+    });
+
+    if (blockedItems.length) {
+      const transferTxs = ApprovalProxy.createTransferTxsFromTransferItem(
+        {
+          ...transferItem,
+          items: blockedItems,
+        },
+        sender
+      );
+      for (const tx of transferTxs.txs) {
+        txs.push(tx);
+      }
+    }
+
+    const approvals = noneBlockedItems.map((item) => ({
       orderIds: [],
       contract: item.token,
       owner: sender,
@@ -5107,46 +5158,41 @@ export class Router {
     );
 
     if (useOpenseaTransferHelper) {
-      return {
-        txs: [
-          {
-            approvals: uniqueApprovals,
-            txData: {
-              from: sender,
-              to: Sdk.Common.Addresses.OpenseaTransferHelper[this.chainId],
-              data: new Interface(OpenseaTransferHelperAbi).encodeFunctionData("bulkTransfer", [
-                [
-                  {
-                    ...transferItem,
-                    items: transferItem.items.map((item) => ({
-                      ...item,
-                      validateERC721Receiver: true,
-                    })),
-                  },
-                ],
-                conduitKey,
-              ]),
-            },
-          },
-        ],
-      };
+      txs.push({
+        approvals: uniqueApprovals,
+        txData: {
+          from: sender,
+          to: Sdk.Common.Addresses.OpenseaTransferHelper[this.chainId],
+          data: new Interface(OpenseaTransferHelperAbi).encodeFunctionData("bulkTransfer", [
+            [
+              {
+                ...transferItem,
+                items: noneBlockedItems.map((item) => ({
+                  ...item,
+                  validateERC721Receiver: true,
+                })),
+              },
+            ],
+            conduitKey,
+          ]),
+        },
+      });
     } else {
-      return {
-        txs: [
-          {
-            approvals: uniqueApprovals,
-            txData: {
-              from: sender,
-              to: Addresses.ApprovalProxy[this.chainId],
-              data: this.contracts.approvalProxy.interface.encodeFunctionData(
-                "bulkTransferWithExecute",
-                [[transferItem], [], conduitKey]
-              ),
-            },
-          },
-        ],
-      };
+      txs.push({
+        approvals: uniqueApprovals,
+        txData: {
+          from: sender,
+          to: Addresses.ApprovalProxy[this.chainId],
+          data: this.contracts.approvalProxy.interface.encodeFunctionData(
+            "bulkTransferWithExecute",
+            [[transferItem], [], conduitKey]
+          ),
+        },
+      });
     }
+    return {
+      txs,
+    };
   }
 
   public parseExecutions(calldata: string) {

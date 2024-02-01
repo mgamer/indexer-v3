@@ -39,7 +39,7 @@ describe("ApprovalProxy Transfer", () => {
 
   afterEach(reset);
 
-  it("Fill multiple listings", async () => {
+  it("Transer with native call", async () => {
     const recipient = carol;
 
     const seller = alice;
@@ -100,6 +100,106 @@ describe("ApprovalProxy Transfer", () => {
 
     const result = ApprovalProxy.createTransferTxsFromTransferItem(transferItem, seller.address);
     for (const tx of result.txs) {
+      await seller.sendTransaction(tx.txData)
+    }
+
+    const ethBalanceAfter = await recipient.getBalance();
+    const token1OwnerAfter = await erc721.ownerOf(tokenId1);
+    const token3BuyerBalanceAfter = await erc1155.balanceOf(recipient.address, tokenId3);
+    const wethBalanceAfter = await weth.getBalance(recipient.address);
+
+    expect(token1OwnerAfter).to.eq(recipient.address);
+    expect(token3BuyerBalanceAfter).to.eq(totalAmount3);
+
+    expect(wethBalanceAfter.sub(wethBalanceBefore)).to.eq(
+      price2
+    );
+
+    expect(ethBalanceAfter.sub(ethBalanceBefore)).to.eq(
+      price1
+    );
+  });
+
+  it("TranserTx with blocked collection", async () => {
+    const recipient = carol;
+
+    const seller = alice;
+    const tokenId1 = 0;
+
+    const transferItem: ApprovalProxy.TransferItem = {
+      items: [],
+      recipient: recipient.address
+    };
+
+    const price1 = parseEther("1")
+    transferItem.items.push({
+      itemType: ApprovalProxy.ItemType.NATIVE,
+      identifier: "0",
+      token: AddressZero,
+      amount: price1
+    });
+
+    {
+      // Mint erc721 to seller
+      await erc721.connect(seller).mint(tokenId1);
+      transferItem.items.push({
+        itemType: ApprovalProxy.ItemType.ERC721,
+        identifier: tokenId1,
+        token: erc721.address,
+        amount: 1
+      });
+    }
+
+    const tokenId3 = 0;
+    const totalAmount3 = 9;
+    {
+      // Mint erc1155 to seller
+      await erc1155.connect(seller).mintMany(tokenId3, totalAmount3);
+
+      transferItem.items.push({
+        itemType: ApprovalProxy.ItemType.ERC1155,
+        identifier: tokenId3,
+        token: erc1155.address,
+        amount: totalAmount3
+      });
+    }
+
+    const weth = new Sdk.Common.Helpers.WNative(ethers.provider, chainId);
+
+    const price2 = parseEther("1");
+    await weth.deposit(seller, price2);
+
+    transferItem.items.push({
+      itemType: ApprovalProxy.ItemType.ERC20,
+      identifier: "0",
+      token: weth.contract.address,
+      amount: price2
+    });
+
+    const ethBalanceBefore = await recipient.getBalance();
+    const wethBalanceBefore = await weth.getBalance(recipient.address);
+
+    const router = new Sdk.RouterV6.Router(chainId, ethers.provider);
+    const result = await router.transfersTx(
+      transferItem, 
+      seller.address,
+      [
+        {
+          collection: erc721.address,
+          blocked: {
+            seaport: true,
+            reservoir: false,
+          }
+        }
+      ]
+    );
+
+    expect(result.txs.length).to.eq(2);
+
+    for (const tx of result.txs) {
+      for(const approval of tx.approvals) {
+        seller.sendTransaction(approval.txData);
+      }
       await seller.sendTransaction(tx.txData)
     }
 
