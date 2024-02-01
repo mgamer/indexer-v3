@@ -520,7 +520,7 @@ export class RabbitMqJobsConsumer {
     }
 
     // Subscribe to the old non quorum queue
-    if (job.queueName !== "pending-tx-websocket-events-trigger-queue") {
+    if (!_.includes(["pending-tx-websocket-events-trigger-queue"], job.queueName)) {
       await channel
         .consume(
           _.replace(job.getQueue(), "quorum-", ""),
