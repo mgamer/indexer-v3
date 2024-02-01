@@ -13,7 +13,7 @@ import { FeeRecipients } from "@/models/fee-recipients";
 import { Sources } from "@/models/sources";
 import { SourcesEntity } from "@/models/sources/sources-entity";
 import { OrderKind } from "@/orderbook/orders";
-import { isOrderNativeOffChainCancellable } from "@/utils/offchain-cancel";
+import { isOrderNativeOffChainCancellable } from "@/utils/offchain-cancel/utils";
 import { Currency, getCurrency } from "@/utils/currencies";
 import {
   getUSDAndCurrencyPrices,
