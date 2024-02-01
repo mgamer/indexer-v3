@@ -5109,6 +5109,7 @@ export class Router {
 
     // Split item by blocked status
     transferItem.items.forEach((item) => {
+      // Only NFTs
       if ([ApprovalProxy.ItemType.ERC1155, ApprovalProxy.ItemType.ERC721].includes(item.itemType)) {
         const filterResult = filterResults.find((c) => c.collection === item.token);
         if (filterResult) {

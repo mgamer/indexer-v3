@@ -122,7 +122,7 @@ export const postExecuteTransferV1Options: RouteOptions = {
         return all;
       }, allCollections);
 
-      const filterResult = await Promise.all(
+      const filterResults = await Promise.all(
         Array.from(allCollections).map(async (collection) => {
           let seaportBlocked = true;
           if (Sdk.SeaportBase.Addresses.OpenseaConduitKey[config.chainId]) {
@@ -149,7 +149,7 @@ export const postExecuteTransferV1Options: RouteOptions = {
         })
       );
 
-      const { txs } = await router.transfersTx(transferItem, payload.from);
+      const { txs } = await router.transfersTx(transferItem, payload.from, filterResults);
 
       const approvals = txs.map((tx) => tx.approvals).flat();
       for (const approval of approvals) {
