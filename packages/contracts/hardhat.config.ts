@@ -64,6 +64,9 @@ const getNetworkConfig = (chainId?: number) => {
       case 68840142:
         url = "https://rpc.testnet.frame.xyz/http";
         break;
+      case 888888888:
+        url = "https://rpc.ancient8.gg/";
+        break;
       // Testnets
       case 5:
         url = "https://goerli.blockpi.network/v1/rpc/public";
@@ -164,6 +167,7 @@ const config: HardhatUserConfig = {
     scroll: getNetworkConfig(534352),
     zora: getNetworkConfig(7777777),
     opBnb: getNetworkConfig(204),
+    ancient8: getNetworkConfig(888888888),
     // Testnets
     goerli: getNetworkConfig(5),
     zoraTestnet: getNetworkConfig(999),
@@ -191,6 +195,7 @@ const config: HardhatUserConfig = {
       linea: process.env.ETHERSCAN_API_KEY_LINEA ?? "",
       scroll: process.env.ETHERSCAN_API_KEY_SCROLL ?? "",
       zora: "0x",
+      ancient8: "0x",
       // Testnets
       goerli: process.env.ETHERSCAN_API_KEY_GOERLI ?? "",
       zoraTestnet: "0x",
@@ -266,6 +271,14 @@ const config: HardhatUserConfig = {
         urls: {
           apiURL: "https://explorer.zora.energy/api",
           browserURL: "https://explorer.zora.energy",
+        },
+      },
+      {
+        network: "ancient8",
+        chainId: 888888888,
+        urls: {
+          apiURL: "https://scan.ancient8.gg/api",
+          browserURL: "https://scan.ancient8.gg",
         },
       },
       // Testnets
