@@ -213,6 +213,11 @@ export const getExecuteSellV7Options: RouteOptions = {
           // Net price (without fees on top) = price - builtInFees
           quote: Joi.number().unsafe(),
           rawQuote: Joi.string().pattern(regex.number),
+          sellOutCurrency: Joi.string().lowercase().pattern(regex.address),
+          sellOutCurrencySymbol: Joi.string().optional().allow(null),
+          sellOutCurrencyDecimals: Joi.number().optional().allow(null),
+          sellOutQuote: Joi.number().unsafe(),
+          sellOutRawQuote: Joi.string().pattern(regex.number),
           // Total price (with fees on top) = price + feesOnTop
           totalPrice: Joi.number().unsafe(),
           totalRawPrice: Joi.string().pattern(regex.number),
@@ -963,8 +968,8 @@ export const getExecuteSellV7Options: RouteOptions = {
 
       // Add the quotes in the "sell-out" currency to the path items
       for (const item of path) {
-        if (item.currency !== sellOutCurrency) {
-          const sellOurPrices = await getUSDAndCurrencyPrices(
+        if (sellOutCurrency && item.currency !== sellOutCurrency) {
+          const sellOutPrices = await getUSDAndCurrencyPrices(
             item.currency,
             sellOutCurrency,
             item.rawQuote,
@@ -974,13 +979,13 @@ export const getExecuteSellV7Options: RouteOptions = {
             }
           );
 
-          if (sellOurPrices.currencyPrice) {
+          if (sellOutPrices.currencyPrice) {
             const c = await getCurrency(sellOutCurrency);
             item.sellOutCurrency = c.contract;
             item.sellOutCurrencyDecimals = c.decimals;
             item.sellOutCurrencySymbol = c.symbol;
-            item.sellOutQuote = formatPrice(sellOurPrices.currencyPrice, c.decimals, true);
-            item.sellOutRawQuote = sellOurPrices.currencyPrice;
+            item.sellOutQuote = formatPrice(sellOutPrices.currencyPrice, c.decimals, true);
+            item.sellOutRawQuote = sellOutPrices.currencyPrice;
           }
         }
       }
@@ -1243,7 +1248,7 @@ export const getExecuteSellV7Options: RouteOptions = {
         result = await router.fillBidsTx(bidDetails, payload.taker, {
           source: payload.source,
           partial: payload.partial,
-          sellOutCurrency: payload.currency,
+          sellOutCurrency,
           forceApprovalProxy,
           onError: async (kind, error, data) => {
             errors.push({
