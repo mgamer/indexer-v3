@@ -1,5 +1,6 @@
 import { Interface, Result } from "@ethersproject/abi";
 import { Provider } from "@ethersproject/abstract-provider";
+import { BigNumber } from "@ethersproject/bignumber";
 import { AddressZero, HashZero, MaxUint256 } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import axios from "axios";
@@ -81,7 +82,6 @@ import MintModuleAbi from "./abis/MintModule.json";
 import MintProxyAbi from "./abis/MintProxy.json";
 // Exchanges
 import SeaportV15Abi from "../../seaport-v1.5/abis/Exchange.json";
-import { BigNumber } from "ethers";
 
 type SetupOptions = {
   x2y2ApiKey?: string;
