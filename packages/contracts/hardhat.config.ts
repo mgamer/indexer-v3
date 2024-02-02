@@ -95,6 +95,9 @@ const getNetworkConfig = (chainId?: number) => {
       case 204:
         url = "https://opbnb-mainnet-rpc.bnbchain.org";
         break;
+      case 84532:
+        url = "https://sepolia.base.org";
+        break;
       default:
         throw new Error("Unsupported chain id");
     }
@@ -178,6 +181,7 @@ const config: HardhatUserConfig = {
     sepolia: getNetworkConfig(11155111),
     frameTestnet: getNetworkConfig(68840142),
     ancient8Testnet: getNetworkConfig(28122024),
+    baseSepolia: getNetworkConfig(84532),
   },
   etherscan: {
     apiKey: {
@@ -206,6 +210,7 @@ const config: HardhatUserConfig = {
       sepolia: process.env.ETHERSCAN_API_KEY_SEPOLIA ?? "",
       frameTestnet: "0x",
       ancient8Testnet: "0x",
+      baseSepolia: "G3S7U2BHWAFPNV9GHHSC1YURSWW3DGN275",
     },
     customChains: [
       // Mainnets
@@ -337,6 +342,14 @@ const config: HardhatUserConfig = {
         urls: {
           apiURL: "https://scanv2-testnet.ancient8.gg/api",
           browserURL: "https://scanv2-testnet.ancient8.gg/",
+        },
+      },
+      {
+        network: "baseSepolia",
+        chainId: 84532,
+        urls: {
+          apiURL: "https://sepolia.basescan.org/api",
+          browserURL: "https://sepolia.basescan.org/",
         },
       },
     ],

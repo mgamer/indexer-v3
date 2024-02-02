@@ -64,6 +64,7 @@ export const ConduitController: ChainIdToAddress = {
   [Network.FrameTestnet]: "0x00000000f9490004c11cef243f5400493c00ad63",
   [Network.Opbnb]: "0x00000000f9490004c11cef243f5400493c00ad63",
   [Network.Ancient8]: "0x00000000f9490004c11cef243f5400493c00ad63",
+  [Network.BaseSepolia]: "0x00000000f9490004c11cef243f5400493c00ad63",
 };
 
 // https://github.com/ProjectOpenSea/seaport/blob/0a8e82ce7262b5ce0e67fa98a2131fd4c47c84e9/contracts/conduit/ConduitController.sol#L493
@@ -93,6 +94,7 @@ export const ConduitControllerCodeHash: ChainIdToAddress = {
   [Network.FrameTestnet]: "0x023d904f2503c37127200ca07b976c3a53cc562623f67023115bf311f5805059",
   [Network.Opbnb]: "0x023d904f2503c37127200ca07b976c3a53cc562623f67023115bf311f5805059",
   [Network.Ancient8]: "0x023d904f2503c37127200ca07b976c3a53cc562623f67023115bf311f5805059",
+  [Network.BaseSepolia]: "0x023d904f2503c37127200ca07b976c3a53cc562623f67023115bf311f5805059",
 };
 
 export const OperatorFilterRegistry: ChainIdToAddress = {

@@ -90,6 +90,9 @@ export const getNetworkName = () => {
     case 888888888:
       return "ancient8";
 
+    case 84532:
+      return "base-sepolia";
+
     default:
       return "unknown";
   }
@@ -125,6 +128,8 @@ export const getOpenseaNetworkName = () => {
       return "zora";
     case 999:
       return "zora_testnet";
+    case 84532:
+      return "base-sepolia";
     default:
       return null;
   }
@@ -1720,6 +1725,39 @@ export const getNetworkSettings = (): NetworkSettings => {
         enableWebSocket: true,
         realtimeSyncMaxBlockLag: 32,
         realtimeSyncFrequencySeconds: 2,
+        lastBlockLatency: 5,
+        onStartup: async () => {
+          // Insert the native currency
+          await Promise.all([
+            idb.none(
+              `
+                    INSERT INTO currencies (
+                      contract,
+                      name,
+                      symbol,
+                      decimals,
+                      metadata
+                    ) VALUES (
+                      '\\x0000000000000000000000000000000000000000',
+                      'Ether',
+                      'ETH',
+                      18,
+                      '{"coingeckoCurrencyId": "ethereum", "image": "https://assets.coingecko.com/coins/images/279/large/ethereum.png"}'
+                    ) ON CONFLICT DO NOTHING
+                  `
+            ),
+          ]);
+        },
+      };
+    }
+    // Base Goerli
+    case 84532: {
+      return {
+        ...defaultNetworkSettings,
+        isTestnet: true,
+        enableWebSocket: false,
+        realtimeSyncMaxBlockLag: 32,
+        realtimeSyncFrequencySeconds: 5,
         lastBlockLatency: 5,
         onStartup: async () => {
           // Insert the native currency

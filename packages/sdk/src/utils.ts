@@ -152,6 +152,7 @@ export enum Network {
   Ancient8Testnet = 28122024,
   ImmutableZkevmTestnet = 13472,
   FrameTestnet = 68840142,
+  BaseSepolia = 84532,
 }
 
 export type ChainIdToAddress = { [chainId: number]: string };
