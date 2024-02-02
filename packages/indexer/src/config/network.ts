@@ -87,6 +87,9 @@ export const getNetworkName = () => {
     case 204:
       return "opbnb";
 
+    case 888888888:
+      return "ancient8";
+
     default:
       return "unknown";
   }
@@ -1705,6 +1708,38 @@ export const getNetworkSettings = (): NetworkSettings => {
                   '{"coingeckoCurrencyId": "binancecoin", "image": "https://assets.coingecko.com/coins/images/12591/large/binance-coin-logo.png"}'
                 ) ON CONFLICT DO NOTHING
               `
+            ),
+          ]);
+        },
+      };
+    }
+    // ancient8
+    case 888888888: {
+      return {
+        ...defaultNetworkSettings,
+        enableWebSocket: true,
+        realtimeSyncMaxBlockLag: 32,
+        realtimeSyncFrequencySeconds: 2,
+        lastBlockLatency: 5,
+        onStartup: async () => {
+          // Insert the native currency
+          await Promise.all([
+            idb.none(
+              `
+                    INSERT INTO currencies (
+                      contract,
+                      name,
+                      symbol,
+                      decimals,
+                      metadata
+                    ) VALUES (
+                      '\\x0000000000000000000000000000000000000000',
+                      'Ether',
+                      'ETH',
+                      18,
+                      '{"coingeckoCurrencyId": "ethereum", "image": "https://assets.coingecko.com/coins/images/279/large/ethereum.png"}'
+                    ) ON CONFLICT DO NOTHING
+                  `
             ),
           ]);
         },

@@ -41,6 +41,7 @@ export type SourcesMetadata = {
   tokenUrlFrameTestnet?: string;
   tokenUrlOpbnb?: string;
   tokenUrlAncient8Testnet?: string;
+  tokenUrlAncient8?: string;
 };
 
 export class SourcesEntity {

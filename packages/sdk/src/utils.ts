@@ -138,6 +138,7 @@ export enum Network {
   PolygonZkevm = 1101,
   Scroll = 534352,
   Opbnb = 204,
+  Ancient8 = 888888888,
   // Testnets
   EthereumGoerli = 5,
   ZoraTestnet = 999,
