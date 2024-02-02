@@ -11,10 +11,8 @@ export class SyncApiKeysJob extends AbstractRabbitMqJobHandler {
   queueName = "sync-api-keys";
   maxRetries = 10;
   concurrency = 30;
-  lazyMode = true;
-  disableConsuming = false;
 
-  protected async process(payload: SyncApiKeysJobPayload) {
+  public async process(payload: SyncApiKeysJobPayload) {
     const { apiKey } = payload;
 
     const apiKeyValues = await redb.oneOrNone(`SELECT * FROM api_keys WHERE key = $/apiKey/`, {

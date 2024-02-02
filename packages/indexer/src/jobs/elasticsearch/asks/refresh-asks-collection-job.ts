@@ -15,9 +15,8 @@ export default class RefreshAsksCollectionJob extends AbstractRabbitMqJobHandler
   maxRetries = 10;
   concurrency = 2;
   persistent = true;
-  lazyMode = true;
 
-  protected async process(payload: RefreshAsksCollectionJobPayload) {
+  public async process(payload: RefreshAsksCollectionJobPayload) {
     let addToQueue = false;
 
     const { collectionId } = payload;

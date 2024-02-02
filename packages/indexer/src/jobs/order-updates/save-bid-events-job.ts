@@ -13,13 +13,12 @@ export class SaveBidEventsJob extends AbstractRabbitMqJobHandler {
   queueName = "save-bid-events-queue";
   maxRetries = 5;
   concurrency = 1;
-  lazyMode = true;
   backoff = {
     type: "exponential",
     delay: 10000,
   } as BackoffStrategy;
 
-  protected async process() {
+  public async process() {
     const bidEventsList = new BidEventsList();
     let events = await bidEventsList.get(750);
 

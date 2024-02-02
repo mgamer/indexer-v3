@@ -11,13 +11,12 @@ export class MintsCheckJob extends AbstractRabbitMqJobHandler {
   queueName = "mints-check";
   maxRetries = 1;
   concurrency = 10;
-  lazyMode = true;
   backoff = {
     type: "exponential",
     delay: 10000,
   } as BackoffStrategy;
 
-  protected async process(payload: MintsCheckJobPayload) {
+  public async process(payload: MintsCheckJobPayload) {
     const { collection } = payload;
 
     const collectionMints = await getCollectionMints(collection, { status: "open" });

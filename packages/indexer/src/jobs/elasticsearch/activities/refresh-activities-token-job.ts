@@ -15,9 +15,8 @@ export default class RefreshActivitiesTokenJob extends AbstractRabbitMqJobHandle
   maxRetries = 10;
   concurrency = 2;
   persistent = true;
-  lazyMode = true;
 
-  protected async process(payload: RefreshActivitiesTokenJobPayload) {
+  public async process(payload: RefreshActivitiesTokenJobPayload) {
     let addToQueue = false;
 
     const { contract, tokenId } = payload;

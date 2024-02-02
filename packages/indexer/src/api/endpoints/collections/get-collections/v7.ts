@@ -79,7 +79,11 @@ export const getCollectionsV7Options: RouteOptions = {
           otherwise: Joi.when("slug", {
             is: Joi.exist(),
             then: Joi.allow(),
-            otherwise: Joi.forbidden(),
+            otherwise: Joi.when("contract", {
+              is: Joi.exist(),
+              then: Joi.allow(),
+              otherwise: Joi.forbidden(),
+            }),
           }),
         })
         .description(
@@ -1072,7 +1076,10 @@ export const getCollectionsV7Options: RouteOptions = {
         continuation: continuation ? continuation : undefined,
       };
     } catch (error) {
-      logger.error(`get-collections-${version}-handler`, `Handler failure: ${error}`);
+      logger.error(
+        `get-collections-${version}-handler`,
+        `Handler failure: ${JSON.stringify(error)}`
+      );
       throw error;
     }
   },

@@ -5,10 +5,10 @@ export default class OrderbookPostOrderExternalJob extends AbstractRabbitMqJobHa
   queueName = "orderbook-post-order-external-queue";
   maxRetries = 5;
   concurrency = 5;
-  lazyMode = true;
   timeout = 60000;
+  priorityQueue = true;
 
-  protected async process(payload: PostOrderExternalParams) {
+  public async process(payload: PostOrderExternalParams) {
     await processOrder(this, payload);
   }
 

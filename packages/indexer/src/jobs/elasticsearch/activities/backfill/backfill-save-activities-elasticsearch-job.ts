@@ -38,7 +38,6 @@ export class BackfillSaveActivitiesElasticsearchJob extends AbstractRabbitMqJobH
   maxRetries = 10;
   concurrency = 1;
   persistent = true;
-  lazyMode = true;
   timeout = 5 * 60 * 1000;
 
   backoff = {
@@ -46,7 +45,7 @@ export class BackfillSaveActivitiesElasticsearchJob extends AbstractRabbitMqJobH
     delay: 5000,
   } as BackoffStrategy;
 
-  protected async process(payload: BackfillSaveActivitiesElasticsearchJobPayload) {
+  public async process(payload: BackfillSaveActivitiesElasticsearchJobPayload) {
     const type = payload.type;
     const cursor = payload.cursor;
     const fromTimestamp = payload.fromTimestamp || 0;

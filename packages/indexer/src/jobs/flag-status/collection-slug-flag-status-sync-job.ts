@@ -20,11 +20,10 @@ export class CollectionSlugFlagStatusSyncJob extends AbstractRabbitMqJobHandler 
   queueName = "collection-slug-flag-status-sync-queue";
   maxRetries = 10;
   concurrency = 1;
-  lazyMode = true;
   useSharedChannel = true;
   singleActiveConsumer = true;
 
-  protected async process() {
+  public async process() {
     let addToQueue = false;
 
     const lockAcquired = await acquireLock(this.getLockName(), DEFAULT_JOB_DELAY_SECONDS);

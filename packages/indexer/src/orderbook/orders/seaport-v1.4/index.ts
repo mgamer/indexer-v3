@@ -164,7 +164,6 @@ export const save = async (
               ingestDelay: startTime - currentTime + 5,
             },
           ],
-          false,
           startTime - currentTime + 5,
           id
         );

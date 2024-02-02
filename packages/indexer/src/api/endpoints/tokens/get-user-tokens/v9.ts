@@ -131,6 +131,9 @@ export const getUserTokensV9Options: RouteOptions = {
       excludeNsfw: Joi.boolean()
         .default(false)
         .description("If true, will filter any tokens marked as nsfw."),
+      onlyListed: Joi.boolean()
+        .default(false)
+        .description("If true, will filter any tokens that are not listed"),
       useNonFlaggedFloorAsk: Joi.boolean()
         .default(false)
         .description("If true, will return the collection non flagged floor ask."),
@@ -140,6 +143,9 @@ export const getUserTokensV9Options: RouteOptions = {
         .description(
           "Input any ERC20 address to return result in given currency. Applies to `topBid` and `floorAsk`."
         ),
+      tokenName: Joi.string().description(
+        "Filter to a particular token by name. This is case sensitive. Example: `token #1`"
+      ),
     }),
   },
   response: {
@@ -406,6 +412,36 @@ export const getUserTokensV9Options: RouteOptions = {
         `;
     }
 
+    const tokensConditions: string[] = [];
+
+    if (query.excludeSpam) {
+      tokensConditions.push(`t.is_spam IS NULL OR t.is_spam <= 0`);
+    }
+
+    if (query.excludeNsfw) {
+      tokensConditions.push(`t.nsfw_status IS NULL OR t.nsfw_status <= 0`);
+    }
+
+    if (query.tokenName) {
+      if (isNaN(query.tokenName)) {
+        tokensConditions.push(`t.name ILIKE $/tokenName/`);
+      } else {
+        tokensConditions.push(`
+            CASE
+              WHEN t.name IS NULL THEN t.token_id::text = $/tokenNameAsId/
+              ELSE t.name ILIKE $/tokenName/
+            END
+          `);
+      }
+
+      (query as any).tokenNameAsId = query.tokenName;
+      query.tokenName = `%${query.tokenName}%`;
+    }
+
+    if (query.onlyListed) {
+      tokensConditions.push(`t.floor_sell_value IS NOT NULL`);
+    }
+
     let tokensJoin = `
       JOIN LATERAL (
         SELECT 
@@ -446,8 +482,11 @@ export const getUserTokensV9Options: RouteOptions = {
         ${includeRoyaltyBreakdownQuery}
         WHERE b.token_id = t.token_id
         AND b.contract = t.contract
-        ${query.excludeSpam ? `AND (t.is_spam IS NULL OR t.is_spam <= 0)` : ""}
-        ${query.excludeNsfw ? `AND (t.nsfw_status IS NULL OR t.nsfw_status <= 0)` : ""}
+        ${
+          tokensConditions.length
+            ? "AND " + tokensConditions.map((c) => `(${c})`).join(" AND ")
+            : ""
+        }
         AND ${
           tokensCollectionFilters.length ? "(" + tokensCollectionFilters.join(" OR ") + ")" : "TRUE"
         }
@@ -488,6 +527,11 @@ export const getUserTokensV9Options: RouteOptions = {
           ${includeRoyaltyBreakdownQuery}
           WHERE b.token_id = t.token_id
           AND b.contract = t.contract
+          ${
+            tokensConditions.length
+              ? "AND " + tokensConditions.map((c) => `(${c})`).join(" AND ")
+              : ""
+          }
           AND ${
             tokensCollectionFilters.length
               ? "(" + tokensCollectionFilters.join(" OR ") + ")"
@@ -561,22 +605,16 @@ export const getUserTokensV9Options: RouteOptions = {
     }
 
     // Sorting
-    let sorting = "";
+    let nftBalanceSorting = "";
+    let userCollectionsSorting = "";
+    const limit = `LIMIT $/limit/`;
+
     if (query.sortBy === "acquiredAt") {
-      sorting = `
-        ORDER BY acquired_at ${query.sortDirection}, token_id ${query.sortDirection}
-        LIMIT $/limit/
-      `;
+      nftBalanceSorting = `ORDER BY acquired_at ${query.sortDirection}, token_id ${query.sortDirection}`;
     } else if (query.sortBy === "lastAppraisalValue") {
-      sorting = `
-        ORDER BY last_token_appraisal_value ${query.sortDirection} NULLS LAST, token_id ${query.sortDirection}
-        LIMIT $/limit/
-      `;
+      nftBalanceSorting = `ORDER BY last_token_appraisal_value ${query.sortDirection} NULLS LAST, token_id ${query.sortDirection}`;
     } else if (query.sortBy === "floorAskPrice") {
-      sorting = `
-          ORDER BY c.floor_sell_value ${query.sortDirection} NULLS LAST, token_id ${query.sortDirection}
-          LIMIT $/limit/
-        `;
+      userCollectionsSorting = `ORDER BY c.floor_sell_value ${query.sortDirection} NULLS LAST, token_id ${query.sortDirection}`;
     }
 
     // Continuation
@@ -625,11 +663,14 @@ export const getUserTokensV9Options: RouteOptions = {
       `;
     }
 
-    const sortFullQuery =
+    // When filtering tokens based on data which doesn't exist in the nft_balances we need to sort on the full results set
+    const limitFullResultsSet =
       query.sortBy === "floorAskPrice" ||
       listBasedContract ||
       query.excludeSpam ||
-      query.excludeNsfw;
+      query.excludeNsfw ||
+      query.tokenName ||
+      query.onlyListed;
 
     try {
       const baseQuery = `
@@ -686,7 +727,8 @@ export const getUserTokensV9Options: RouteOptions = {
                     }`
               }
               ${continuationFilter}
-              ${sortFullQuery ? "" : sorting}
+              ${nftBalanceSorting}
+              ${limitFullResultsSet ? "" : limit}
           ) AS b ${ucTable ? ` ON TRUE` : ""}
           ${tokensJoin}
           ${
@@ -700,7 +742,9 @@ export const getUserTokensV9Options: RouteOptions = {
           }
           LEFT JOIN orders o ON o.id = c.floor_sell_id
           LEFT JOIN contracts con ON b.contract = con.address
-          LEFT JOIN orders ot ON ot.id = CASE WHEN con.kind = 'erc1155' THEN (
+          ${
+            query.onlyListed ? "" : "LEFT"
+          } JOIN orders ot ON ot.id = CASE WHEN con.kind = 'erc1155' THEN (
             SELECT 
               id 
             FROM 
@@ -719,7 +763,8 @@ export const getUserTokensV9Options: RouteOptions = {
             LIMIT 
               1
           ) ELSE t.floor_sell_id END
-          ${sortFullQuery ? sorting : ""}
+          ${userCollectionsSorting}
+          ${limitFullResultsSet ? limit : ""}
       `;
 
       const userTokens = await redb.manyOrNone(baseQuery, { ...query, ...params, collections });
