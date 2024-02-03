@@ -2516,10 +2516,13 @@ export class Router {
 
       for (const [vaultId, orders] of Object.entries(perVaultIdOrders)) {
         const [order] = orders;
+
         const idsOut = orders.flatMap((o) => o.params.idsOut || []);
-        const amounts = orders.flatMap((o) => o.params.amounts || []);
         order.params.idsOut = idsOut;
+
+        const amounts = orders.flatMap((o) => o.params.amounts || []);
         order.params.amounts = amounts;
+
         const { executeCallData, price } = await order.getQuote(
           5,
           this.provider,
@@ -2528,7 +2531,7 @@ export class Router {
 
         aggregatedOrders.push({
           vaultId,
-          collection: orders[0].params.collection,
+          collection: order.params.collection,
           idsOut,
           amounts,
           vTokenPremiumLimit: MaxUint256.toString(),
@@ -4703,12 +4706,24 @@ export class Router {
           const tokenId = detail.tokenId;
           order.params.idsIn = [tokenId];
 
+          const { executeCallData, price } = await order.getQuote(
+            5,
+            this.provider,
+            this.options!.nftxApiKey!
+          );
+
           executionsWithDetails.push({
             detail,
             execution: {
               module: module.address,
               data: module.interface.encodeFunctionData("sell", [
-                [order.params],
+                [
+                  {
+                    ...order.params,
+                    price,
+                    executeCallData,
+                  },
+                ],
                 {
                   fillTo: taker,
                   refundTo: taker,
