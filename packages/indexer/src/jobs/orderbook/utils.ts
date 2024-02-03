@@ -236,7 +236,6 @@ export const processOrder = async (job: AbstractRabbitMqJobHandler, payload: Gen
 
       case "nftx-v3": {
         result = await orders.nftxV3.save([info]);
-        logger.error("orders-nftx-v3-save", `Result: ${JSON.stringify(result)}`);
         break;
       }
 
