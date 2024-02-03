@@ -67,6 +67,8 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
   const handleOrder = async ({ orderParams }: OrderInfo) => {
     try {
+      logger.error("orders-nftx-v3-save", `Order params: ${JSON.stringify(orderParams)}`);
+
       const pool = await nftxV3.getNftPoolDetails(orderParams.pool);
       if (!pool) {
         // Return early if no pool was found
@@ -696,7 +698,9 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                     triggerKind: "reprice",
                   });
                 }
-              } catch {
+              } catch (error) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                logger.error("orders-nftx-v3-save", `Error: ${error} (${(error as any).stack})`);
                 // Ignore any errors
               }
             })

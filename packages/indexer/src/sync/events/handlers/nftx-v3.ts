@@ -1,4 +1,5 @@
 import { idb } from "@/common/db";
+import { logger } from "@/common/logger";
 import { bn, fromBuffer } from "@/common/utils";
 import { getEventData } from "@/events-sync/data";
 import { EnhancedEvent, OnChainData } from "@/events-sync/handlers/utils";
@@ -553,4 +554,6 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
       }
     }
   }
+
+  logger.error("orders-nftx-v3-save", `On-chain data: ${JSON.stringify(onChainData)}`);
 };
