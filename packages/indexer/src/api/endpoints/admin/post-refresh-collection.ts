@@ -65,6 +65,7 @@ export const postRefreshCollectionOptions: RouteOptions = {
           `,
           { collection: payload.collection }
         );
+
         if (tokenResult) {
           await fetchCollectionMetadataJob.addToQueue([
             {
@@ -117,17 +118,6 @@ export const postRefreshCollectionOptions: RouteOptions = {
         // Refresh the collection metadata
         const tokenId = await Tokens.getSingleToken(payload.collection);
 
-        if (collection.contract === "0x495f947276749ce646f68ac8c248420045cb7b5e") {
-          logger.info(
-            "post-refresh-collection",
-            JSON.stringify({
-              topic: "debugCollectionRefresh",
-              message: `collectionMetadataQueueJob.addToQueue. contract=${collection.contract}, tokenId=${tokenId}`,
-              collection,
-            })
-          );
-        }
-
         await collectionMetadataQueueJob.addToQueue({
           contract: collection.contract,
           tokenId,
@@ -167,13 +157,18 @@ export const postRefreshCollectionOptions: RouteOptions = {
           context: "post-refresh-collection",
         };
 
-        if (method === "opensea") {
-          // Refresh contract orders from OpenSea
-          await OpenseaIndexerApi.fastContractSync(collection.id);
+        if (collection.id === "0xe22575fad77781d730c6ed5d24dd1908d6d5b730") {
+          logger.info(
+            `post-collections-refresh-handler`,
+            JSON.stringify({
+              message: `metadataIndexFetchJob. collection=${collection.id}`,
+              payload,
+            })
+          );
         }
 
         // Refresh the collection tokens metadata
-        await metadataIndexFetchJob.addToQueue([metadataIndexInfo], true);
+        await metadataIndexFetchJob.addToQueue([metadataIndexInfo]);
 
         if (collection.slug) {
           await PendingFlagStatusSyncCollectionSlugs.add([
@@ -192,6 +187,11 @@ export const postRefreshCollectionOptions: RouteOptions = {
               continuation: null,
             },
           ]);
+        }
+
+        if (method === "opensea") {
+          // Refresh contract orders from OpenSea
+          await OpenseaIndexerApi.fastContractSync(collection.id);
         }
       }
 

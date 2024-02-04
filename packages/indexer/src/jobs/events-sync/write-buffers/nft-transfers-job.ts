@@ -11,10 +11,9 @@ export class EventsSyncNftTransfersWriteBufferJob extends AbstractRabbitMqJobHan
   queueName = "events-sync-nft-transfers-write";
   maxRetries = 10;
   concurrency = 1;
-  lazyMode = true;
   timeout = 60000;
 
-  protected async process(payload: EventsSyncNftTransfersWriteBufferPayload) {
+  public async process(payload: EventsSyncNftTransfersWriteBufferPayload) {
     const { query } = payload;
 
     try {

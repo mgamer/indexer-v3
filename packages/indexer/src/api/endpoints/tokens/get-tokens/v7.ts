@@ -397,6 +397,7 @@ export const getTokensV7Options: RouteOptions = {
     let enableElasticsearchAsks =
       config.enableElasticsearchAsks &&
       query.sortBy === "floorAskPrice" &&
+      query.sortDirection !== "desc" &&
       !["tokenName", "tokenSetId"].some((filter) => query[filter]);
 
     if (enableElasticsearchAsks && query.continuation) {
@@ -931,9 +932,6 @@ export const getTokensV7Options: RouteOptions = {
       }
 
       if (query.tokenName) {
-        (query as any).tokenNameAsId = query.tokenName;
-        query.tokenName = `%${query.tokenName}%`;
-
         if (isNaN(query.tokenName)) {
           conditions.push(`t.name ILIKE $/tokenName/`);
         } else {
@@ -944,6 +942,9 @@ export const getTokensV7Options: RouteOptions = {
             END
           `);
         }
+
+        (query as any).tokenNameAsId = query.tokenName;
+        query.tokenName = `%${query.tokenName}%`;
       }
 
       if (query.tokenSetId) {
@@ -1436,7 +1437,9 @@ export const getTokensV7Options: RouteOptions = {
                 },
               };
             } else if (
-              ["sudoswap", "sudoswap-v2", "nftx", "caviar-v1"].includes(r.floor_sell_order_kind)
+              ["sudoswap", "sudoswap-v2", "nftx", "nftx-v3", "caviar-v1"].includes(
+                r.floor_sell_order_kind
+              )
             ) {
               // Pool orders
               dynamicPricing = {

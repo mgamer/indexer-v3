@@ -14,13 +14,12 @@ export default class RecalcTokenCountQueueJob extends AbstractRabbitMqJobHandler
   queueName = "collection-recalc-token-count-queue";
   maxRetries = 10;
   concurrency = 10;
-  lazyMode = true;
   backoff = {
     type: "exponential",
     delay: 20000,
   } as BackoffStrategy;
 
-  protected async process(payload: RecalcTokenCountQueueJobPayload) {
+  public async process(payload: RecalcTokenCountQueueJobPayload) {
     const { collection, fromTokenId } = payload;
     const limit = 5000;
     const continuation = fromTokenId ? `AND token_id > $/fromTokenId/` : "";

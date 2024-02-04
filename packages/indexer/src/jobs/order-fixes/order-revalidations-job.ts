@@ -32,13 +32,12 @@ export default class OrderRevalidationsJob extends AbstractRabbitMqJobHandler {
   queueName = "order-revalidations";
   maxRetries = 10;
   concurrency = 20;
-  lazyMode = true;
   backoff = {
     type: "exponential",
     delay: 10000,
   } as BackoffStrategy;
 
-  protected async process(payload: OrderRevalidationsJobPayload) {
+  public async process(payload: OrderRevalidationsJobPayload) {
     const { by, data } = payload;
 
     try {

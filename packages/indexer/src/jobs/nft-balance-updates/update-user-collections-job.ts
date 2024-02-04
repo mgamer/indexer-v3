@@ -21,14 +21,13 @@ export default class UpdateUserCollectionsJob extends AbstractRabbitMqJobHandler
   queueName = "user-collections";
   maxRetries = 15;
   concurrency = _.includes([56, 137], config.chainId) ? 1 : 5;
-  lazyMode = true;
   backoff = {
     type: "exponential",
     delay: 5000,
   } as BackoffStrategy;
   disableErrorLogs = true;
 
-  protected async process(payload: UpdateUserCollectionsJobPayload) {
+  public async process(payload: UpdateUserCollectionsJobPayload) {
     const { fromAddress, toAddress, contract, tokenId, amount } = payload;
     const queries = [];
 

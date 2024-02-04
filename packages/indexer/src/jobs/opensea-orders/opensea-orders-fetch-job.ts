@@ -19,7 +19,6 @@ export class OpenseaOrdersFetchJob extends AbstractRabbitMqJobHandler {
   queueName = "opensea-orders-fetch-queue";
   maxRetries = 10;
   concurrency = 1;
-  lazyMode = true;
   timeout = 5 * 60 * 1000;
   singleActiveConsumer = true;
   backoff = {
@@ -27,7 +26,7 @@ export class OpenseaOrdersFetchJob extends AbstractRabbitMqJobHandler {
     delay: 5000,
   } as BackoffStrategy;
 
-  protected async process() {
+  public async process() {
     let collectionOffers = [];
     let rateLimitExpiredIn = 0;
 

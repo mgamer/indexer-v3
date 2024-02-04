@@ -89,7 +89,7 @@ export const getTokensV8Options: RouteOptions = {
         }),
       tokenName: Joi.string()
         .description(
-          "Filter to a particular token by name. This is case sensitive. Example: `token #1`"
+          "Filter to a particular token by name. This is case insensitive. Example: `token #1`"
         )
         .when("collection", {
           is: Joi.exist(),
@@ -396,6 +396,7 @@ export const getTokensV8Options: RouteOptions = {
 
     let enableElasticsearchAsks =
       query.sortBy === "floorAskPrice" &&
+      query.sortDirection !== "desc" &&
       !["tokenName", "tokenSetId"].some((filter) => query[filter]);
 
     if (enableElasticsearchAsks && query.continuation) {
@@ -940,9 +941,6 @@ export const getTokensV8Options: RouteOptions = {
       }
 
       if (query.tokenName) {
-        (query as any).tokenNameAsId = query.tokenName;
-        query.tokenName = `%${query.tokenName}%`;
-
         if (isNaN(query.tokenName)) {
           conditions.push(`t.name ILIKE $/tokenName/`);
         } else {
@@ -953,6 +951,9 @@ export const getTokensV8Options: RouteOptions = {
             END
           `);
         }
+
+        (query as any).tokenNameAsId = query.tokenName;
+        query.tokenName = `%${query.tokenName}%`;
       }
 
       if (query.tokenSetId) {
@@ -1437,7 +1438,9 @@ export const getTokensV8Options: RouteOptions = {
                 },
               };
             } else if (
-              ["sudoswap", "sudoswap-v2", "nftx", "caviar-v1"].includes(r.floor_sell_order_kind)
+              ["sudoswap", "sudoswap-v2", "nftx", "nftx-v3", "caviar-v1"].includes(
+                r.floor_sell_order_kind
+              )
             ) {
               // Pool orders
               dynamicPricing = {

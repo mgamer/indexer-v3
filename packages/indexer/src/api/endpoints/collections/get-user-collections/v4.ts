@@ -49,6 +49,11 @@ export const getUserCollectionsV4Options: RouteOptions = {
         .description(
           "Filter to a particular collection with collection-id. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
         ),
+      name: Joi.string()
+        .lowercase()
+        .description(
+          "Filter to a particular collection with name. This is case insensitive. Example: `ape`"
+        ),
       includeTopBid: Joi.boolean()
         .default(false)
         .description("If true, top bid will be returned in the response."),
@@ -83,10 +88,10 @@ export const getUserCollectionsV4Options: RouteOptions = {
           "Input any ERC20 address to return result in given currency. Applies to `topBid` and `floorAsk`."
         ),
       sortBy: Joi.string()
-        .valid("allTimeVolume", "totalValue")
+        .valid("allTimeVolume", "totalValue", "floorAskPrice")
         .default("allTimeVolume")
         .description(
-          "Order the items are returned in the response. Options are `allTimeVolume`, `totalValue`"
+          "Order the items are returned in the response. Options are `allTimeVolume`, `totalValue`, `floorAskPrice`"
         ),
       sortDirection: Joi.string()
         .lowercase()
@@ -294,6 +299,11 @@ export const getUserCollectionsV4Options: RouteOptions = {
         conditions.push(`collections.community = $/community/`);
       }
 
+      if (query.name) {
+        query.name = `%${query.name}%`;
+        conditions.push(`collections.name ILIKE $/name/`);
+      }
+
       if (query.collectionsSetId) {
         const collectionsIds = await CollectionSets.getCollectionsIds(query.collectionsSetId);
 
@@ -313,6 +323,10 @@ export const getUserCollectionsV4Options: RouteOptions = {
 
       // Sorting
       switch (query.sortBy) {
+        case "floorAskPrice":
+          baseQuery += ` ORDER BY collections.floor_sell_value ${query.sortDirection} NULLS LAST`;
+          break;
+
         case "totalValue":
           baseQuery += ` ORDER BY (COALESCE(collections.floor_sell_value, 0) * uc.token_count) ${query.sortDirection}`;
           break;

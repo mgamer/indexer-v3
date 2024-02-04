@@ -17,13 +17,12 @@ export default class UpdateUserCollectionsSpamJob extends AbstractRabbitMqJobHan
   queueName = "update-user-collections-spam";
   maxRetries = 15;
   concurrency = _.includes([137], config.chainId) ? 3 : 5;
-  lazyMode = true;
   backoff = {
     type: "exponential",
     delay: 5000,
   } as BackoffStrategy;
 
-  protected async process(payload: UpdateUserCollectionsSpamJobPayload) {
+  public async process(payload: UpdateUserCollectionsSpamJobPayload) {
     const { collectionId, newSpamState, owner } = payload;
     const limit = 1000;
     let continuationFilter = "";

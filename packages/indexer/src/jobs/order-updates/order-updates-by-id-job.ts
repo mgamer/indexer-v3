@@ -58,14 +58,13 @@ export default class OrderUpdatesByIdJob extends AbstractRabbitMqJobHandler {
   queueName = "order-updates-by-id";
   maxRetries = 10;
   concurrency = 80;
-  lazyMode = true;
   timeout = 60000;
   backoff = {
     type: "exponential",
     delay: 10000,
   } as BackoffStrategy;
 
-  protected async process(payload: OrderUpdatesByIdJobPayload) {
+  public async process(payload: OrderUpdatesByIdJobPayload) {
     const { id, trigger, ingestMethod, ingestDelay } = payload;
     let { side, tokenSetId } = payload;
 

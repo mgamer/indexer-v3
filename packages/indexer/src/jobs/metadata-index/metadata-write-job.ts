@@ -57,16 +57,13 @@ export default class MetadataIndexWriteJob extends AbstractRabbitMqJobHandler {
   queueName = "metadata-index-write-queue";
   maxRetries = 10;
   concurrency = config.chainId === 7777777 ? 10 : 40;
-  lazyMode = true;
   timeout = 60000;
   backoff = {
     type: "exponential",
     delay: 20000,
   } as BackoffStrategy;
 
-  protected async process(payload: MetadataIndexWriteJobPayload) {
-    // const startTime = Date.now();
-
+  public async process(payload: MetadataIndexWriteJobPayload) {
     const tokenAttributeCounter = {};
 
     const {
@@ -91,6 +88,17 @@ export default class MetadataIndexWriteJob extends AbstractRabbitMqJobHandler {
       mediaMimeType,
       decimals,
     } = payload;
+
+    if (collection === "0xe22575fad77781d730c6ed5d24dd1908d6d5b730") {
+      logger.info(
+        this.queueName,
+        JSON.stringify({
+          message: `Start. collection=${collection}`,
+          payload,
+          metadataMethod,
+        })
+      );
+    }
 
     // Update the token's metadata
     const result = await idb.oneOrNone(

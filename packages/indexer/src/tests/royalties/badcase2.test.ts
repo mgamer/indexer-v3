@@ -266,4 +266,50 @@ describe("Royalties", () => {
       }
     }
   });
+
+  it("fee-outside-of-exchange-call", async () => {
+    const { fillEvents } = await getFillEventsFromTx(
+      "0x4372aa8811f06a8c7c8faebe3401256c3a930f605042cdf6fc79ec5ee905361d"
+    );
+    const testCollectionRoyalties = [
+      {
+        collection: "0xa87dbcfa18adb7c00593e2c2469d83213c87aecd",
+        data: [
+          {
+            bps: 650,
+            recipient: "0x1e818f09233942044a18b8d78ebcc36456b5d280",
+          },
+        ],
+      },
+    ];
+
+    mockGetRoyalties.mockImplementation(async (contract: string) => {
+      const matched = testCollectionRoyalties.find((c) => c.collection === contract);
+      return matched?.data ?? [];
+    });
+
+    const feesList = [
+      {
+        contract: "0x0e7d92d67043e83bac21bf0db5b87b4ef9e3444e",
+        tokenId: "0",
+        royaltyFeeBps: 600,
+        marketplaceFeeBps: 0,
+        paidFullRoyalty: true,
+      },
+    ];
+
+    await assignRoyaltiesToFillEvents(fillEvents, false, true);
+    for (let index = 0; index < fillEvents.length; index++) {
+      const fillEvent = fillEvents[index];
+      const matchFee = feesList.find(
+        (c) => c.contract === fillEvent.contract && c.tokenId === fillEvent.tokenId
+      );
+
+      if (matchFee) {
+        expect(fillEvent.royaltyFeeBps).toEqual(matchFee.royaltyFeeBps);
+        expect(fillEvent.marketplaceFeeBps).toEqual(matchFee.marketplaceFeeBps);
+        expect(fillEvent.paidFullRoyalty).toEqual(matchFee.paidFullRoyalty);
+      }
+    }
+  });
 });

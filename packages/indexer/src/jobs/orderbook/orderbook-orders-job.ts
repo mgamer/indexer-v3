@@ -5,7 +5,6 @@ export class OrderbookOrdersJob extends AbstractRabbitMqJobHandler {
   queueName = "orderbook-orders-queue";
   maxRetries = 5;
   concurrency = 75;
-  lazyMode = true;
   timeout = 60000;
   backoff = {
     type: "exponential",
@@ -13,20 +12,14 @@ export class OrderbookOrdersJob extends AbstractRabbitMqJobHandler {
   } as BackoffStrategy;
   disableErrorLogs = true;
 
-  protected async process(payload: GenericOrderInfo) {
+  public async process(payload: GenericOrderInfo) {
     await processOrder(this, payload);
   }
 
-  public async addToQueue(
-    orderInfos: GenericOrderInfo[],
-    prioritized = false,
-    delay = 0,
-    jobId?: string
-  ) {
+  public async addToQueue(orderInfos: GenericOrderInfo[], delay = 0, jobId?: string) {
     await this.sendBatch(
       orderInfos.map((orderInfo) => ({
         payload: orderInfo,
-        priority: prioritized ? 1 : 0,
         delay: delay ? delay * 1000 : 0,
         jobId,
       }))

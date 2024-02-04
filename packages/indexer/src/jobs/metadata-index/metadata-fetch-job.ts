@@ -35,17 +35,27 @@ export default class MetadataIndexFetchJob extends AbstractRabbitMqJobHandler {
   queueName = "metadata-index-fetch-queue";
   maxRetries = 10;
   concurrency = 5;
-  lazyMode = true;
   timeout = 60000;
+  priorityQueue = true;
   backoff = {
     type: "exponential",
     delay: 20000,
   } as BackoffStrategy;
 
-  protected async process(payload: MetadataIndexFetchJobPayload) {
+  public async process(payload: MetadataIndexFetchJobPayload) {
     // Do nothing if the indexer is running in liquidity-only mode
     if (config.liquidityOnly) {
       return;
+    }
+
+    if (payload.data.collection === "0xe22575fad77781d730c6ed5d24dd1908d6d5b730") {
+      logger.info(
+        this.queueName,
+        JSON.stringify({
+          message: `Start. collection=${payload.data.collection}`,
+          payload,
+        })
+      );
     }
 
     const { kind, data } = payload;
@@ -57,13 +67,22 @@ export default class MetadataIndexFetchJob extends AbstractRabbitMqJobHandler {
       [
         "0x23581767a106ae21c074b2276d25e5c3e136a68b",
         "0x4481507cc228fa19d203bd42110d679571f7912e",
+        "0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d",
+        "0x4b15a9c28034dc83db40cd810001427d3bd7163d",
       ].includes(payload.data.collection)
     ) {
       data.method = "simplehash";
     }
 
     if (kind === "full-collection") {
-      logger.info(this.queueName, `Full collection. data=${JSON.stringify(data)}`);
+      logger.info(
+        this.queueName,
+        JSON.stringify({
+          message: `Full collection. collection=${payload.data.collection}`,
+          data,
+          prioritized,
+        })
+      );
 
       // Get batch of tokens for the collection
       const [contract, tokenId] = data.continuation
@@ -81,7 +100,15 @@ export default class MetadataIndexFetchJob extends AbstractRabbitMqJobHandler {
       if (_.size(refreshTokens) == limit) {
         const lastToken = refreshTokens[limit - 1];
         const continuation = `${lastToken.contract}:${lastToken.tokenId}`;
-        logger.info(this.queueName, `Trigger token sync continuation: ${continuation}`);
+
+        logger.info(
+          this.queueName,
+          JSON.stringify({
+            message: `Trigger token sync continuation. collection=${payload.data.collection}, continuation=${continuation}`,
+            data,
+            prioritized,
+          })
+        );
 
         await this.addToQueue(
           [

@@ -43,9 +43,8 @@ export default class MintsProcessJob extends AbstractRabbitMqJobHandler {
   queueName = "mints-process";
   maxRetries = 3;
   concurrency = 30;
-  lazyMode = true;
 
-  protected async process(payload: MintsProcessJobPayload) {
+  public async process(payload: MintsProcessJobPayload) {
     const { by, data } = payload;
 
     try {
@@ -254,6 +253,22 @@ export default class MintsProcessJob extends AbstractRabbitMqJobHandler {
                 vectorId: data.additionalInfo.vectorId,
               }
             );
+
+            break;
+          }
+
+          case "bueno": {
+            if (kind === "erc721") {
+              collectionMints = await detector.bueno.extractByCollectionERC721(
+                data.collection,
+                data.additionalInfo.phaseIndex
+              );
+            } else if (kind === "erc1155") {
+              collectionMints = await detector.bueno.extractByCollectionERC1155(
+                data.collection,
+                data.tokenId!
+              );
+            }
 
             break;
           }
