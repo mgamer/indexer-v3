@@ -297,9 +297,6 @@ export const getExecuteListV5Options: RouteOptions = {
     const perfTime1 = performance.now();
 
     try {
-      const key = request.headers["x-api-key"];
-      const apiKey = await ApiKeyManager.getApiKey(key);
-
       // Set up generic listing steps
       let steps: {
         id: string;
@@ -423,6 +420,9 @@ export const getExecuteListV5Options: RouteOptions = {
       }
 
       const feeRecipients = await FeeRecipients.getInstance();
+
+      const key = request.headers["x-api-key"];
+      const apiKey = await ApiKeyManager.getApiKey(key);
 
       const errors: { message: string; orderIndex: number }[] = [];
       await Promise.all(

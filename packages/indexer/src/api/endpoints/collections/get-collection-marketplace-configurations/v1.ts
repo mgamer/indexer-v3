@@ -13,9 +13,9 @@ import { getOrUpdateBlurRoyalties } from "@/utils/blur";
 import { getCurrency } from "@/utils/currencies";
 import { checkMarketplaceIsFiltered } from "@/utils/marketplace-blacklists";
 import * as marketplaceFees from "@/utils/marketplace-fees";
-import * as registry from "@/utils/royalties/registry";
 import * as paymentProcessor from "@/utils/payment-processor";
 import * as paymentProcessorV2 from "@/utils/payment-processor-v2";
+import * as registry from "@/utils/royalties/registry";
 
 type PaymentToken = {
   address: string;

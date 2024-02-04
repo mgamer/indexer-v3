@@ -283,9 +283,6 @@ export const getExecuteBidV5Options: RouteOptions = {
       });
 
     try {
-      const key = request.headers["x-api-key"];
-      const apiKey = await ApiKeyManager.getApiKey(key);
-
       const maker = payload.maker as string;
       const source = payload.source as string | undefined;
       const params = payload.params as {
@@ -573,6 +570,9 @@ export const getExecuteBidV5Options: RouteOptions = {
       }
 
       const feeRecipients = await FeeRecipients.getInstance();
+
+      const key = request.headers["x-api-key"];
+      const apiKey = await ApiKeyManager.getApiKey(key);
 
       const errors: { message: string; orderIndex: number }[] = [];
       await Promise.all(
