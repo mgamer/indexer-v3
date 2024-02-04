@@ -10,14 +10,13 @@ export default class MintsExpiredJob extends AbstractRabbitMqJobHandler {
   queueName = "expired-mints";
   maxRetries = 1;
   concurrency = 1;
-  lazyMode = true;
   backoff = {
     type: "exponential",
     delay: 10000,
   } as BackoffStrategy;
   intervalInSeconds = 60;
 
-  protected async process() {
+  public async process() {
     logger.info(this.queueName, "Invalidating expired mints");
 
     await idb.none(

@@ -13,13 +13,12 @@ export default class NftBalanceUpdateFloorAskJob extends AbstractRabbitMqJobHand
   queueName = "nft-balance-updates-update-floor-ask-price-queue";
   maxRetries = 10;
   concurrency = 15;
-  lazyMode = true;
   backoff = {
     type: "exponential",
     delay: 20000,
   } as BackoffStrategy;
 
-  protected async process(payload: NftBalanceUpdateFloorAskJobPayload) {
+  public async process(payload: NftBalanceUpdateFloorAskJobPayload) {
     const { contract, tokenId, owner } = payload;
 
     try {

@@ -14,9 +14,8 @@ export default class FlagStatusUpdateJob extends AbstractRabbitMqJobHandler {
   queueName = "flag-status-update";
   maxRetries = 10;
   concurrency = 20;
-  lazyMode = true;
 
-  protected async process(payload: FlagStatusUpdateJobPayload) {
+  public async process(payload: FlagStatusUpdateJobPayload) {
     const { contract, tokenId, isFlagged } = payload;
 
     const result = await idb.oneOrNone(

@@ -12,14 +12,13 @@ export class FillPostProcessJob extends AbstractRabbitMqJobHandler {
   queueName = "fill-post-process";
   maxRetries = 5;
   concurrency = 10;
-  lazyMode = true;
   timeout = 60000;
   backoff = {
     type: "exponential",
     delay: 1000,
   } as BackoffStrategy;
 
-  protected async process(payload: es.fills.Event[]) {
+  public async process(payload: es.fills.Event[]) {
     const allFillEvents = payload;
     const minValidPrice = 10; // Minimum amount of sale to be considered valid, any sale under is automatically considered wash trading
 

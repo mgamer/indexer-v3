@@ -15,7 +15,7 @@ export class PauseRabbitConsumerAllChainsEvent {
     const parsedMessage = JSON.parse(message);
     const queueName = parsedMessage.queueName;
 
-    const job = _.find(RabbitMqJobsConsumer.getQueues(), (queue) => queue.getQueue() === queueName);
+    const job = _.find(RabbitMqJobsConsumer.getQueues(), (queue) => queue.queueName === queueName);
     if (job) {
       if (await RabbitMqJobsConsumer.unsubscribe(job)) {
         await PausedRabbitMqQueues.add(queueName);

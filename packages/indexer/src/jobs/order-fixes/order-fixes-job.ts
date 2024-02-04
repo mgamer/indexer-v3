@@ -53,13 +53,12 @@ export default class OrderFixesJob extends AbstractRabbitMqJobHandler {
   queueName = "order-fixes";
   maxRetries = 5;
   concurrency = 20;
-  lazyMode = true;
   backoff = {
     type: "exponential",
     delay: 10000,
   } as BackoffStrategy;
 
-  protected async process(payload: OrderFixesJobPayload) {
+  public async process(payload: OrderFixesJobPayload) {
     const { by, data } = payload;
 
     try {

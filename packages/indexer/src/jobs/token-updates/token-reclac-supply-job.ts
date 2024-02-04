@@ -18,9 +18,8 @@ export default class TokenReclacSupplyJob extends AbstractRabbitMqJobHandler {
   maxRetries = 1;
   concurrency = 10;
   useSharedChannel = true;
-  lazyMode = true;
 
-  protected async process(payload: TokenRecalcSupplyPayload) {
+  public async process(payload: TokenRecalcSupplyPayload) {
     const { contract, tokenId } = payload;
 
     const token = await Tokens.getByContractAndTokenId(contract, tokenId);

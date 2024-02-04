@@ -395,6 +395,7 @@ export const getTokensV6Options: RouteOptions = {
     let enableElasticsearchAsks =
       config.enableElasticsearchAsks &&
       query.sortBy === "floorAskPrice" &&
+      query.sortDirection !== "desc" &&
       !["tokenName", "tokenSetId"].some((filter) => query[filter]);
 
     if (enableElasticsearchAsks && query.continuation) {
@@ -926,9 +927,6 @@ export const getTokensV6Options: RouteOptions = {
       }
 
       if (query.tokenName) {
-        (query as any).tokenNameAsId = query.tokenName;
-        query.tokenName = `%${query.tokenName}%`;
-
         if (isNaN(query.tokenName)) {
           conditions.push(`t.name ILIKE $/tokenName/`);
         } else {
@@ -939,6 +937,9 @@ export const getTokensV6Options: RouteOptions = {
             END
           `);
         }
+
+        (query as any).tokenNameAsId = query.tokenName;
+        query.tokenName = `%${query.tokenName}%`;
       }
 
       if (query.tokenSetId) {
@@ -1431,7 +1432,9 @@ export const getTokensV6Options: RouteOptions = {
                 },
               };
             } else if (
-              ["sudoswap", "sudoswap-v2", "nftx", "caviar-v1"].includes(r.floor_sell_order_kind)
+              ["sudoswap", "sudoswap-v2", "nftx", "nftx-v3", "caviar-v1"].includes(
+                r.floor_sell_order_kind
+              )
             ) {
               // Pool orders
               dynamicPricing = {
@@ -2135,7 +2138,9 @@ export const getListedTokensFromES = async (query: any, attributeFloorAskPriceAs
               },
             },
           };
-        } else if (["sudoswap", "sudoswap-v2", "nftx", "caviar-v1"].includes(ask.order.kind)) {
+        } else if (
+          ["sudoswap", "sudoswap-v2", "nftx", "nftx-v3", "caviar-v1"].includes(ask.order.kind)
+        ) {
           // Pool orders
           dynamicPricing = {
             kind: "pool",
@@ -2164,18 +2169,7 @@ export const getListedTokensFromES = async (query: any, attributeFloorAskPriceAs
       }
     }
 
-    const metadata = {
-      imageOriginal: undefined,
-      mediaOriginal: undefined,
-    };
-
-    if (r.metadata?.image_original_url) {
-      metadata.imageOriginal = r.metadata.image_original_url;
-    }
-
-    if (r.metadata?.animation_original_url) {
-      metadata.mediaOriginal = r.metadata.animation_original_url;
-    }
+    const metadata = parseMetadata(r, r.metadata);
 
     return {
       token: getJoiTokenObject(

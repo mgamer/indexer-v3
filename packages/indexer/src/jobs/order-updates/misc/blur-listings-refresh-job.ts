@@ -19,13 +19,12 @@ export default class BlurListingsRefreshJob extends AbstractRabbitMqJobHandler {
   queueName = "blur-listings-refresh";
   maxRetries = 3;
   concurrency = 1;
-  lazyMode = true;
   backoff = {
     type: "fixed",
     delay: 30000,
   } as BackoffStrategy;
 
-  protected async process(payload: BlurListingsRefreshJobPayload) {
+  public async process(payload: BlurListingsRefreshJobPayload) {
     const { collection } = payload;
 
     if (config.chainId !== 1) {

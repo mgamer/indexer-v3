@@ -12,13 +12,12 @@ export default class MintsRefreshJob extends AbstractRabbitMqJobHandler {
   queueName = "mints-refresh";
   maxRetries = 1;
   concurrency = 10;
-  lazyMode = true;
   backoff = {
     type: "exponential",
     delay: 10000,
   } as BackoffStrategy;
 
-  protected async process(payload: MintsRefreshJobPayload) {
+  public async process(payload: MintsRefreshJobPayload) {
     const { collection, forceRefresh } = payload;
 
     const lockKey = `mints-refresh-lock:${collection}`;

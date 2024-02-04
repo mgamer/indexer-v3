@@ -17,14 +17,13 @@ export class OpenseaOrdersProcessJob extends AbstractRabbitMqJobHandler {
   queueName = "opensea-orders-process-queue";
   maxRetries = 10;
   concurrency = 5;
-  lazyMode = true;
   timeout = 60000;
   backoff = {
     type: "exponential",
     delay: 20000,
   } as BackoffStrategy;
 
-  protected async process(payload: OpenseaOrdersProcessJobPayload) {
+  public async process(payload: OpenseaOrdersProcessJobPayload) {
     const { kind, data } = payload;
     const prioritized = !_.isUndefined(this.rabbitMqMessage?.prioritized);
 
@@ -49,16 +48,11 @@ export class OpenseaOrdersProcessJob extends AbstractRabbitMqJobHandler {
     }
   }
 
-  public async addToQueue(
-    infos: OpenseaOrdersProcessJobPayload[],
-    prioritized = false,
-    delayInSeconds = 0
-  ) {
+  public async addToQueue(infos: OpenseaOrdersProcessJobPayload[], delayInSeconds = 0) {
     await this.sendBatch(
       infos.map((info) => ({
         payload: info,
         delay: delayInSeconds * 1000,
-        priority: prioritized ? 1 : 0,
       }))
     );
   }

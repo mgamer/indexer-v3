@@ -6,13 +6,12 @@ export default class PendingTxsJob extends AbstractRabbitMqJobHandler {
   queueName = "pending-txs";
   maxRetries = 10;
   concurrency = 20;
-  lazyMode = true;
   backoff = {
     type: "exponential",
     delay: 10000,
   } as BackoffStrategy;
 
-  protected async process(payload: pendingTxs.PendingMessage) {
+  public async process(payload: pendingTxs.PendingMessage) {
     try {
       const results = await pendingTxs.handlePendingMessage(payload);
       if (results && results.length) {

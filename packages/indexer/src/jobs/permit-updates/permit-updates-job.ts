@@ -20,13 +20,12 @@ export class PermitUpdatesJob extends AbstractRabbitMqJobHandler {
   queueName = "permit-updates";
   maxRetries = 10;
   concurrency = 20;
-  lazyMode = true;
   backoff = {
     type: "exponential",
     delay: 10000,
   } as BackoffStrategy;
 
-  protected async process(payload: PermitUpdatesJobPayload) {
+  public async process(payload: PermitUpdatesJobPayload) {
     const { owner, spender, token } = payload;
 
     try {

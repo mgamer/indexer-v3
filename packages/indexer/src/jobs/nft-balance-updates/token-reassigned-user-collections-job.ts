@@ -17,13 +17,12 @@ export default class TokenReassignedUserCollectionsJob extends AbstractRabbitMqJ
   queueName = "token-reassigned-user-collections";
   maxRetries = 15;
   concurrency = 10;
-  lazyMode = true;
   backoff = {
     type: "exponential",
     delay: 5000,
   } as BackoffStrategy;
 
-  protected async process(payload: TokenReassignedUserCollectionsJobPayload) {
+  public async process(payload: TokenReassignedUserCollectionsJobPayload) {
     const { contract, tokenId, oldCollectionId, owner } = payload;
     let cursor = "";
 
