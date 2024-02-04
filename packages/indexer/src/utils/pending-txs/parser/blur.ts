@@ -1,16 +1,20 @@
 import { Interface } from "@ethersproject/abi";
+
 import { PendingToken } from "@/utils/pending-txs/types";
-import ExchangeAbi from "@reservoir0x/sdk/dist/blur/abis/Exchange.json";
+
 import BlendAbi from "@reservoir0x/sdk/dist/blend/abis/Blend.json";
+import BlurAbi from "@reservoir0x/sdk/dist/blur/abis/Exchange.json";
 
 export const parseTokensFromCalldata = async (calldata: string): Promise<PendingToken[]> => {
   const parsedTokens: PendingToken[] = [];
   try {
-    const exchangeIface = new Interface(ExchangeAbi);
+    // Blur
+
+    const blurIface = new Interface(BlurAbi);
 
     let executions = [];
     try {
-      const { name: funcName, args } = exchangeIface.parseTransaction({
+      const { name: funcName, args } = blurIface.parseTransaction({
         data: calldata,
       });
       if (["execute"].includes(funcName)) {
@@ -25,9 +29,11 @@ export const parseTokensFromCalldata = async (calldata: string): Promise<Pending
     for (let i = 0; i < executions.length; i++) {
       try {
         const { sell, buy } = executions[i];
+
         const sellTokenId = sell.order.tokenId.toString();
         const buyTokenId = buy.order.tokenId.toString();
         const contract = buy.order.collection;
+
         parsedTokens.push({
           contract: contract,
           tokenId: sellTokenId || buyTokenId,
@@ -38,32 +44,39 @@ export const parseTokensFromCalldata = async (calldata: string): Promise<Pending
     }
 
     // Blend
+
     const blendIface = new Interface(BlendAbi);
-    const { name: funcName, args } = blendIface.parseTransaction({
+    const { name: methodName, args } = blendIface.parseTransaction({
       data: calldata,
     });
-    if (["buyToBorrow", "buyToBorrowV2", "buyToBorrowETH", "buyToBorrowV2ETH"].includes(funcName)) {
+    if (
+      ["buyToBorrow", "buyToBorrowV2", "buyToBorrowETH", "buyToBorrowV2ETH"].includes(methodName)
+    ) {
       const { offer, execution } = args;
+
       parsedTokens.push({
         contract: offer.collection.toLowerCase(),
         tokenId: execution.listing
           ? execution.listing.tokenId.toString()
           : execution.makerOrder.order.tokenId.toString(),
       });
-    } else if (["buyLocked", "buyLockedETH"].includes(funcName)) {
+    } else if (["buyLocked", "buyLockedETH"].includes(methodName)) {
       const { lien } = args;
+
       parsedTokens.push({
         contract: lien.collection.toLowerCase(),
         tokenId: lien.tokenId.toString(),
       });
-    } else if (["borrow"].includes(funcName)) {
+    } else if (["borrow"].includes(methodName)) {
       const { offer, collateralTokenId } = args;
+
       parsedTokens.push({
         contract: offer.collection.toLowerCase(),
         tokenId: collateralTokenId.toString(),
       });
-    } else if (["repay", "takeBid", "takeBidV2"].includes(funcName)) {
+    } else if (["repay", "takeBid", "takeBidV2"].includes(methodName)) {
       const { lien } = args;
+
       parsedTokens.push({
         contract: lien.collection.toLowerCase(),
         tokenId: lien.tokenId.toString(),
