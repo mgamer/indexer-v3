@@ -493,7 +493,9 @@ export class Router {
 
       // All other non-trusted channel listings are handled separately
       const nonChannelDetails = allPPv2Details.filter((c) => !c.extraArgs?.trustedChannel);
-      splittedDetails.push(nonChannelDetails);
+      if (nonChannelDetails.length) {
+        splittedDetails.push(nonChannelDetails);
+      }
 
       for (const ppv2Details of splittedDetails) {
         const exchange = new Sdk.PaymentProcessorV2.Exchange(this.chainId);
@@ -3830,7 +3832,9 @@ export class Router {
 
       // All other non-trusted channel bids are handled separately
       const nonChannelDetails = allPPv2Details.filter((c) => !c.extraArgs?.trustedChannel);
-      splittedDetails.push(nonChannelDetails);
+      if (nonChannelDetails.length) {
+        splittedDetails.push(nonChannelDetails);
+      }
 
       for (const ppv2Details of splittedDetails) {
         const exchange = new Sdk.PaymentProcessorV2.Exchange(this.chainId);
