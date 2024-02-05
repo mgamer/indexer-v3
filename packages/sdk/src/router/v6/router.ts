@@ -40,9 +40,9 @@ import { SwapInfo, generateSwapInfo, mergeSwapInfos } from "./swap/index";
 import {
   generateFTApprovalTxData,
   generateNFTApprovalTxData,
-  isETH,
-  isWETH,
   isBETH,
+  isNative,
+  isWNative,
 } from "./utils";
 
 // Tokens
@@ -530,7 +530,7 @@ export class Router {
 
         const approvals: FTApproval[] = [];
         for (const { currency, price } of ppv2Details) {
-          if (!isETH(this.chainId, currency)) {
+          if (!isNative(this.chainId, currency)) {
             approvals.push({
               currency,
               amount: price,
@@ -644,7 +644,7 @@ export class Router {
 
       const approvals: FTApproval[] = [];
       for (const { currency, price } of blockedPaymentProcessorDetails) {
-        if (!isETH(this.chainId, currency)) {
+        if (!isNative(this.chainId, currency)) {
           approvals.push({
             currency,
             amount: price,
@@ -999,7 +999,7 @@ export class Router {
       const conduit = exchange.deriveConduit(conduitKey);
 
       let approval: FTApproval | undefined;
-      if (!isETH(this.chainId, details[0].currency)) {
+      if (!isNative(this.chainId, details[0].currency)) {
         approval = {
           currency: details[0].currency,
           amount: details[0].price,
@@ -1093,7 +1093,7 @@ export class Router {
       const conduit = exchange.deriveConduit(conduitKey);
 
       let approval: FTApproval | undefined;
-      if (!isETH(this.chainId, details[0].currency)) {
+      if (!isNative(this.chainId, details[0].currency)) {
         approval = {
           currency: details[0].currency,
           amount: details[0].price,
@@ -1671,8 +1671,8 @@ export class Router {
         const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
         const totalPrice = price.add(feeAmount);
 
-        const currencyIsETH = isETH(this.chainId, currency);
-        const buyInCurrencyIsETH = isETH(this.chainId, buyInCurrency);
+        const currencyisNative = isNative(this.chainId, currency);
+        const buyInCurrencyisNative = isNative(this.chainId, buyInCurrency);
 
         executions.push({
           info: {
@@ -1680,7 +1680,7 @@ export class Router {
             data:
               orders.length === 1
                 ? module.interface.encodeFunctionData(
-                    `accept${currencyIsETH ? "ETH" : "ERC20"}Listing`,
+                    `accept${currencyisNative ? "ETH" : "ERC20"}Listing`,
                     [
                       {
                         parameters: {
@@ -1704,7 +1704,7 @@ export class Router {
                     ]
                   )
                 : module.interface.encodeFunctionData(
-                    `accept${currencyIsETH ? "ETH" : "ERC20"}Listings`,
+                    `accept${currencyisNative ? "ETH" : "ERC20"}Listings`,
                     [
                       await Promise.all(
                         orders.map(async (order, i) => {
@@ -1722,7 +1722,7 @@ export class Router {
                             extraData: await exchange.getExtraData(order),
                           };
 
-                          if (currencyIsETH) {
+                          if (currencyisNative) {
                             return {
                               order: orderData,
                               price: bn(orders[i].getMatchingPrice())
@@ -1745,7 +1745,7 @@ export class Router {
                       fees,
                     ]
                   ),
-            value: buyInCurrencyIsETH && currencyIsETH ? totalPrice : 0,
+            value: buyInCurrencyisNative && currencyisNative ? totalPrice : 0,
           },
           orderIds: currencyDetails.map((d) => d.orderId),
         });
@@ -1791,8 +1791,8 @@ export class Router {
         const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
         const totalPrice = price.add(feeAmount);
 
-        const currencyIsETH = isETH(this.chainId, currency);
-        const buyInCurrencyIsETH = isETH(this.chainId, buyInCurrency);
+        const currencyisNative = isNative(this.chainId, currency);
+        const buyInCurrencyisNative = isNative(this.chainId, buyInCurrency);
 
         executions.push({
           info: {
@@ -1800,7 +1800,7 @@ export class Router {
             data:
               orders.length === 1
                 ? module.interface.encodeFunctionData(
-                    `accept${currencyIsETH ? "ETH" : "ERC20"}Listing`,
+                    `accept${currencyisNative ? "ETH" : "ERC20"}Listing`,
                     [
                       {
                         parameters: {
@@ -1826,7 +1826,7 @@ export class Router {
                     ]
                   )
                 : module.interface.encodeFunctionData(
-                    `accept${currencyIsETH ? "ETH" : "ERC20"}Listings`,
+                    `accept${currencyisNative ? "ETH" : "ERC20"}Listings`,
                     [
                       await Promise.all(
                         orders.map(async (order, i) => {
@@ -1846,7 +1846,7 @@ export class Router {
                             }),
                           };
 
-                          if (currencyIsETH) {
+                          if (currencyisNative) {
                             return {
                               order: orderData,
                               price: bn(orders[i].getMatchingPrice())
@@ -1869,7 +1869,7 @@ export class Router {
                       fees,
                     ]
                   ),
-            value: buyInCurrencyIsETH && currencyIsETH ? totalPrice : 0,
+            value: buyInCurrencyisNative && currencyisNative ? totalPrice : 0,
           },
           orderIds: currencyDetails.map((d) => d.orderId),
         });
@@ -1915,8 +1915,8 @@ export class Router {
         const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
         const totalPrice = price.add(feeAmount);
 
-        const currencyIsETH = isETH(this.chainId, currency);
-        const buyInCurrencyIsETH = isETH(this.chainId, buyInCurrency);
+        const currencyisNative = isNative(this.chainId, currency);
+        const buyInCurrencyisNative = isNative(this.chainId, buyInCurrency);
 
         executions.push({
           info: {
@@ -1924,7 +1924,7 @@ export class Router {
             data:
               orders.length === 1
                 ? module.interface.encodeFunctionData(
-                    `accept${currencyIsETH ? "ETH" : "ERC20"}Listing`,
+                    `accept${currencyisNative ? "ETH" : "ERC20"}Listing`,
                     [
                       {
                         parameters: {
@@ -1951,7 +1951,7 @@ export class Router {
                     ]
                   )
                 : module.interface.encodeFunctionData(
-                    `accept${currencyIsETH ? "ETH" : "ERC20"}Listings`,
+                    `accept${currencyisNative ? "ETH" : "ERC20"}Listings`,
                     [
                       await Promise.all(
                         orders.map(async (order, i) => {
@@ -1972,7 +1972,7 @@ export class Router {
                             }),
                           };
 
-                          if (currencyIsETH) {
+                          if (currencyisNative) {
                             return {
                               order: orderData,
                               price: bn(orders[i].getMatchingPrice())
@@ -1995,7 +1995,7 @@ export class Router {
                       fees,
                     ]
                   ),
-            value: buyInCurrencyIsETH && currencyIsETH ? totalPrice : 0,
+            value: buyInCurrencyisNative && currencyisNative ? totalPrice : 0,
           },
           orderIds: currencyDetails.map((d) => d.orderId),
         });
@@ -2040,8 +2040,8 @@ export class Router {
         const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
         const totalPrice = price.add(feeAmount);
 
-        const currencyIsETH = isETH(this.chainId, currency);
-        const buyInCurrencyIsETH = isETH(this.chainId, buyInCurrency);
+        const currencyisNative = isNative(this.chainId, currency);
+        const buyInCurrencyisNative = isNative(this.chainId, buyInCurrency);
 
         executions.push({
           info: {
@@ -2049,7 +2049,7 @@ export class Router {
             data:
               orders.length === 1
                 ? module.interface.encodeFunctionData(
-                    `accept${currencyIsETH ? "ETH" : "ERC20"}Listing`,
+                    `accept${currencyisNative ? "ETH" : "ERC20"}Listing`,
                     [
                       {
                         parameters: {
@@ -2075,7 +2075,7 @@ export class Router {
                     ]
                   )
                 : module.interface.encodeFunctionData(
-                    `accept${currencyIsETH ? "ETH" : "ERC20"}Listings`,
+                    `accept${currencyisNative ? "ETH" : "ERC20"}Listings`,
                     [
                       await Promise.all(
                         orders.map(async (order, i) => {
@@ -2095,7 +2095,7 @@ export class Router {
                             }),
                           };
 
-                          if (currencyIsETH) {
+                          if (currencyisNative) {
                             return {
                               order: orderData,
                               price: bn(orders[i].getMatchingPrice())
@@ -2118,7 +2118,7 @@ export class Router {
                       fees,
                     ]
                   ),
-            value: buyInCurrencyIsETH && currencyIsETH ? totalPrice : 0,
+            value: buyInCurrencyisNative && currencyisNative ? totalPrice : 0,
           },
           orderIds: currencyDetails.map((d) => d.orderId),
         });
@@ -2782,8 +2782,8 @@ export class Router {
           const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
           const totalPrice = price.add(feeAmount);
 
-          const currencyIsETH = isETH(this.chainId, currency);
-          const buyInCurrencyIsETH = isETH(this.chainId, buyInCurrency);
+          const currencyisNative = isNative(this.chainId, currency);
+          const buyInCurrencyisNative = isNative(this.chainId, buyInCurrency);
 
           executions.push({
             info: {
@@ -2791,7 +2791,7 @@ export class Router {
               data:
                 orders.length === 1
                   ? module.interface.encodeFunctionData(
-                      `accept${currencyIsETH ? "ETH" : "ERC20"}ListingERC721`,
+                      `accept${currencyisNative ? "ETH" : "ERC20"}ListingERC721`,
                       [
                         orders[0].getRaw(),
                         orders[0].params,
@@ -2807,7 +2807,7 @@ export class Router {
                       ]
                     )
                   : this.contracts.zeroExV4Module.interface.encodeFunctionData(
-                      `accept${currencyIsETH ? "ETH" : "ERC20"}ListingsERC721`,
+                      `accept${currencyisNative ? "ETH" : "ERC20"}ListingsERC721`,
                       [
                         orders.map((order) => order.getRaw()),
                         orders.map((order) => order.params),
@@ -2822,7 +2822,7 @@ export class Router {
                         fees,
                       ]
                     ),
-              value: buyInCurrencyIsETH && currencyIsETH ? totalPrice : 0,
+              value: buyInCurrencyisNative && currencyisNative ? totalPrice : 0,
             },
             orderIds: currencyDetails.map((d) => d.orderId),
           });
@@ -2901,8 +2901,8 @@ export class Router {
           const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
           const totalPrice = price.add(feeAmount);
 
-          const currencyIsETH = isETH(this.chainId, currency);
-          const buyInCurrencyIsETH = isETH(this.chainId, buyInCurrency);
+          const currencyisNative = isNative(this.chainId, currency);
+          const buyInCurrencyisNative = isNative(this.chainId, buyInCurrency);
 
           executions.push({
             info: {
@@ -2910,7 +2910,7 @@ export class Router {
               data:
                 orders.length === 1
                   ? module.interface.encodeFunctionData(
-                      `accept${currencyIsETH ? "ETH" : "ERC20"}ListingERC1155`,
+                      `accept${currencyisNative ? "ETH" : "ERC20"}ListingERC1155`,
                       [
                         orders[0].getRaw(),
                         orders[0].params,
@@ -2927,7 +2927,7 @@ export class Router {
                       ]
                     )
                   : this.contracts.zeroExV4Module.interface.encodeFunctionData(
-                      `accept${currencyIsETH ? "ETH" : "ERC20"}ListingsERC1155`,
+                      `accept${currencyisNative ? "ETH" : "ERC20"}ListingsERC1155`,
                       [
                         orders.map((order) => order.getRaw()),
                         orders.map((order) => order.params),
@@ -2943,7 +2943,7 @@ export class Router {
                         fees,
                       ]
                     ),
-              value: buyInCurrencyIsETH && currencyIsETH ? totalPrice : 0,
+              value: buyInCurrencyisNative && currencyisNative ? totalPrice : 0,
             },
             orderIds: currencyDetails.map((d) => d.orderId),
           });
@@ -3259,14 +3259,14 @@ export class Router {
         const feeAmount = fees.map(({ amount }) => bn(amount)).reduce((a, b) => a.add(b), bn(0));
         const totalPrice = price.add(feeAmount);
 
-        const currencyIsETH = isETH(this.chainId, currency);
-        const buyInCurrencyIsETH = isETH(this.chainId, buyInCurrency);
+        const currencyisNative = isNative(this.chainId, currency);
+        const buyInCurrencyisNative = isNative(this.chainId, buyInCurrency);
 
         executions.push({
           info: {
             module: module.address,
             data: module.interface.encodeFunctionData(
-              `accept${currencyIsETH ? "ETH" : "ERC20"}Listings`,
+              `accept${currencyisNative ? "ETH" : "ERC20"}Listings`,
               [
                 orders.map((order) =>
                   order.getMatchedOrder(
@@ -3288,7 +3288,7 @@ export class Router {
                 fees,
               ]
             ),
-            value: buyInCurrencyIsETH && currencyIsETH ? totalPrice : 0,
+            value: buyInCurrencyisNative && currencyisNative ? totalPrice : 0,
           },
           orderIds: currencyDetails.map((d) => d.orderId),
         });
@@ -3324,15 +3324,15 @@ export class Router {
         const { tokenOut, tokenIn } = current;
 
         let pool: string;
-        if (isETH(this.chainId, tokenIn) && isWETH(this.chainId, tokenOut)) {
+        if (isNative(this.chainId, tokenIn) && isWNative(this.chainId, tokenOut)) {
           pool = `${tokenIn}:${tokenOut}`;
-        } else if (isWETH(this.chainId, tokenIn) && isETH(this.chainId, tokenOut)) {
+        } else if (isWNative(this.chainId, tokenIn) && isNative(this.chainId, tokenOut)) {
           pool = `${tokenIn}:${tokenOut}`;
         } else {
-          const normalizedTokenIn = isETH(this.chainId, tokenIn)
+          const normalizedTokenIn = isNative(this.chainId, tokenIn)
             ? Sdk.Common.Addresses.WNative[this.chainId]
             : tokenIn;
-          const normalizedTokenOut = isETH(this.chainId, tokenOut)
+          const normalizedTokenOut = isNative(this.chainId, tokenOut)
             ? Sdk.Common.Addresses.WNative[this.chainId]
             : tokenOut;
           pool = `${normalizedTokenIn}:${normalizedTokenOut}`;
@@ -3356,7 +3356,7 @@ export class Router {
             recipient: s.recipient,
             amount: s.tokenOutAmount,
             // Unwrap if the out token is ETH
-            toETH: isETH(this.chainId, s.tokenOut),
+            toETH: isNative(this.chainId, s.tokenOut),
           };
         });
 
@@ -3394,7 +3394,7 @@ export class Router {
             inAmount = swapInfo.amountIn.toString();
           }
 
-          if (!isETH(this.chainId, tokenIn)) {
+          if (!isNative(this.chainId, tokenIn)) {
             const conduitController = new Sdk.SeaportBase.ConduitController(this.chainId);
             const conduit = conduitController.deriveConduit(
               Sdk.SeaportBase.Addresses.ReservoirConduitKey[this.chainId]
@@ -4833,21 +4833,22 @@ export class Router {
     const successfulSwapInfos: SwapInfo[] = [];
 
     let totalBETHToUnwrap = bn(0);
+    let totalWNativeToUnwrap = bn(0);
     if (swapDetails.length) {
       // Aggregate any swap details for the same token pair
       const aggregatedSwapDetails = swapDetails.reduce((perPoolDetails, current) => {
         const { tokenOut, tokenIn } = current;
 
         let pool: string;
-        if (isETH(this.chainId, tokenIn) && isWETH(this.chainId, tokenOut)) {
+        if (isNative(this.chainId, tokenIn) && isWNative(this.chainId, tokenOut)) {
           pool = `${tokenIn}:${tokenOut}`;
-        } else if (isWETH(this.chainId, tokenIn) && isETH(this.chainId, tokenOut)) {
+        } else if (isWNative(this.chainId, tokenIn) && isNative(this.chainId, tokenOut)) {
           pool = `${tokenIn}:${tokenOut}`;
         } else {
-          const normalizedTokenIn = isETH(this.chainId, tokenIn)
+          const normalizedTokenIn = isNative(this.chainId, tokenIn)
             ? Sdk.Common.Addresses.WNative[this.chainId]
             : tokenIn;
-          const normalizedTokenOut = isETH(this.chainId, tokenOut)
+          const normalizedTokenOut = isNative(this.chainId, tokenOut)
             ? Sdk.Common.Addresses.WNative[this.chainId]
             : tokenOut;
           pool = `${normalizedTokenIn}:${normalizedTokenOut}`;
@@ -4870,7 +4871,7 @@ export class Router {
             recipient: s.recipient,
             amount: s.tokenInAmount,
             // Unwrap if the out token is ETH
-            toETH: isETH(this.chainId, s.tokenOut),
+            toETH: isNative(this.chainId, s.tokenOut),
           };
         });
 
@@ -4881,12 +4882,20 @@ export class Router {
         const swapProvider = options?.swapProvider ?? "uniswap";
         const swapModule = this.contracts.swapModule;
 
+        // Custom rule for BETH unwrapping
         if (isBETH(this.chainId, tokenIn)) {
-          if (isETH(this.chainId, tokenOut)) {
+          if (isNative(this.chainId, tokenOut)) {
             totalBETHToUnwrap = totalBETHToUnwrap.add(totalAmountIn);
           } else {
             throw new Error("BETH can only be swapped to ETH");
           }
+
+          continue;
+        }
+
+        // Custom rule for WNative unwrapping
+        if (isWNative(this.chainId, tokenIn) && isNative(this.chainId, tokenOut)) {
+          totalWNativeToUnwrap = totalWNativeToUnwrap.add(totalAmountIn);
 
           continue;
         }
@@ -4911,7 +4920,7 @@ export class Router {
                     // Zero represents "send everything"
                     amount: 0,
                     // Unwrap if the out token is ETH
-                    toETH: isETH(this.chainId, tokenOut),
+                    toETH: isNative(this.chainId, tokenOut),
                   },
                 ],
                 refundTo: taker,
@@ -4921,7 +4930,7 @@ export class Router {
             successfulSwapInfos.push(sellInfo);
           }
 
-          if (!isETH(this.chainId, tokenIn)) {
+          if (!isNative(this.chainId, tokenIn)) {
             const conduitController = new Sdk.SeaportBase.ConduitController(this.chainId);
             const conduit = conduitController.deriveConduit(
               Sdk.SeaportBase.Addresses.ReservoirConduitKey[this.chainId]
@@ -5197,24 +5206,42 @@ export class Router {
         },
         orderIds: [...new Set(executions.map((e) => e.orderIds).flat())],
       });
+    }
 
-      // BETH unwrapping needs a separate transaction
-      if (totalBETHToUnwrap.gt(0)) {
-        txs.push({
-          approvals: [],
-          ftApprovals: [],
-          preSignatures: [],
-          orderIds: [],
-          txData: {
-            from: taker,
-            to: Sdk.Blur.Addresses.Beth[this.chainId],
-            data: new Interface(["function withdraw(uint256 amount)"]).encodeFunctionData(
-              "withdraw",
-              [totalBETHToUnwrap]
-            ),
-          },
-        });
-      }
+    // BETH unwrapping needs a separate transaction
+    if (totalBETHToUnwrap.gt(0)) {
+      txs.push({
+        approvals: [],
+        ftApprovals: [],
+        preSignatures: [],
+        orderIds: [],
+        txData: {
+          from: taker,
+          to: Sdk.Blur.Addresses.Beth[this.chainId],
+          data: new Interface(["function withdraw(uint256 amount)"]).encodeFunctionData(
+            "withdraw",
+            [totalBETHToUnwrap]
+          ),
+        },
+      });
+    }
+
+    // WNative unwrapping needs a separate transaction
+    if (totalWNativeToUnwrap.gt(0)) {
+      txs.push({
+        approvals: [],
+        ftApprovals: [],
+        preSignatures: [],
+        orderIds: [],
+        txData: {
+          from: taker,
+          to: Sdk.Common.Addresses.WNative[this.chainId],
+          data: new Interface(["function withdraw(uint256 amount)"]).encodeFunctionData(
+            "withdraw",
+            [totalWNativeToUnwrap]
+          ),
+        },
+      });
     }
 
     if (!txs.length) {
