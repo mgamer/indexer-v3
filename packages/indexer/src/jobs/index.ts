@@ -523,7 +523,7 @@ export class RabbitMqJobsConsumer {
     if (
       !(
         _.includes(["pending-tx-websocket-events-trigger-queue"], job.queueName) ||
-        _.includes([84532, 888888888], config.chainId)
+        _.includes([204, 84532, 888888888], config.chainId)
       )
     ) {
       await channel
