@@ -1401,7 +1401,7 @@ export const getNetworkSettings = (): NetworkSettings => {
       return {
         ...defaultNetworkSettings,
         metadataMintDelay: 300,
-        enableWebSocket: true,
+        enableWebSocket: false,
         realtimeSyncMaxBlockLag: 32,
         realtimeSyncFrequencySeconds: 5,
         lastBlockLatency: 5,
@@ -1761,7 +1761,7 @@ export const getNetworkSettings = (): NetworkSettings => {
         },
       };
     }
-    // Base Goerli
+    // Base Sepolia
     case 84532: {
       return {
         ...defaultNetworkSettings,
