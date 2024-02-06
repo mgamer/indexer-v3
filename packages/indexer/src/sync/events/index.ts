@@ -763,7 +763,7 @@ export const checkForMissingBlocks = async (block: number) => {
     if (block - latestBlockNumber > 1) {
       // if we are missing more than 1 block, we need to sync the missing blocks
       for (let i = latestBlockNumber + 1; i <= block; i++) {
-        if (!(await redis.exists(`${eventsSyncRealtimeJob.queueName}:${block}`))) {
+        if (!(await redis.exists(`${eventsSyncRealtimeJob.queueName}:${i}`))) {
           logger.info(
             "sync-events-realtime",
             `Found missing block: ${i} latest block ${block} latestBlock ${latestBlockNumber}`
