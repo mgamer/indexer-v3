@@ -42,7 +42,7 @@ if (config.catchup) {
               await eventsSyncRealtimeJob.addToQueue({ block });
             }
 
-            if (![204, 1101, 80001].includes(config.chainId)) {
+            if (![204, 80001].includes(config.chainId)) {
               await checkForMissingBlocks(block);
             }
           } catch (error) {
