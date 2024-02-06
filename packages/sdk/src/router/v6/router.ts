@@ -5167,6 +5167,7 @@ export class Router {
       });
     }
 
+    // Generate calldata for any needed swaps
     if (successfulSwapInfos.length) {
       const executions = mergeSwapInfos(this.chainId, successfulSwapInfos, "sell").map((info) => ({
         info: info.execution,
@@ -5180,7 +5181,9 @@ export class Router {
           ({ txData: { from, to, data } }) => `${from}-${to}-${data}`
         ),
         preSignatures: [],
-        txTags: routerTxTags,
+        txTags: {
+          swaps: successfulSwapInfos.length,
+        },
         txData: {
           from: taker,
           ...(ftTransferItems.length
@@ -5219,6 +5222,9 @@ export class Router {
         ftApprovals: [],
         preSignatures: [],
         orderIds: [],
+        txTags: {
+          swaps: 1,
+        },
         txData: {
           from: taker,
           to: Sdk.Blur.Addresses.Beth[this.chainId],
@@ -5237,6 +5243,9 @@ export class Router {
         ftApprovals: [],
         preSignatures: [],
         orderIds: [],
+        txTags: {
+          swaps: 1,
+        },
         txData: {
           from: taker,
           to: Sdk.Common.Addresses.WNative[this.chainId],
