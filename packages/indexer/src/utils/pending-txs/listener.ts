@@ -125,13 +125,15 @@ export const startListener = () => {
 
   startNewListener();
 
-  // Every 10 minutes check to see if we got any message in the last 10 minutes.
-  // If not, we assume the connection is stale and we reinitiate the connection.
-  const TEN_MINUTES = 10 * 60 * 1000;
+  // Every 5 minutes check to see if we got any message in the last 5 minutes.
+  // If not, we assume the connection is stale and we reinitiate it.
+  const FIVE_MINUTES = 5 * 60 * 1000;
   setInterval(() => {
-    if (lastMessageTimestamp && lastMessageTimestamp <= Date.now() - TEN_MINUTES) {
+    if (lastMessageTimestamp && lastMessageTimestamp <= Date.now() - FIVE_MINUTES) {
+      logger.error(COMPONENT, "Stale pending-tx websocket, reinitiating");
+
       listener.close();
       startNewListener();
     }
-  }, TEN_MINUTES);
+  }, FIVE_MINUTES);
 };
