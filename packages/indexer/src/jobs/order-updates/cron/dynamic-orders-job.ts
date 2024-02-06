@@ -114,7 +114,9 @@ export default class OrderUpdatesDynamicOrderJob extends AbstractRabbitMqJobHand
           } catch (error: any) {
             logger.error(
               this.queueName,
-              `Failed to update dynamic nftx-v3 order: ${error} (${error.response?.data})`
+              `Failed to update dynamic nftx-v3 order: ${error} (${JSON.stringify(
+                error.response?.data
+              )})`
             );
           }
         }
