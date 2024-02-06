@@ -30,6 +30,10 @@ export class PendingTxsListener {
     });
   }
 
+  close() {
+    this.ws.close();
+  }
+
   subscribe() {
     const params: {
       include: string[];
@@ -107,9 +111,27 @@ export class PendingTxsListener {
   }
 }
 
-export function startListener() {
-  const listenner = new PendingTxsListener();
-  listenner.listen(async (message) => {
-    await pendingTxsJob.addToQueue([message]);
-  });
-}
+export const startListener = () => {
+  let listener: PendingTxsListener;
+  let lastMessageTimestamp: number | undefined;
+
+  const startNewListener = () => {
+    listener = new PendingTxsListener();
+    listener.listen(async (message) => {
+      lastMessageTimestamp = Date.now();
+      await pendingTxsJob.addToQueue([message]);
+    });
+  };
+
+  startNewListener();
+
+  // Every 10 minutes check to see if we got any message in the last 10 minutes.
+  // If not, we assume the connection is stale and we reinitiate the connection.
+  const TEN_MINUTES = 10 * 60 * 1000;
+  setInterval(() => {
+    if (lastMessageTimestamp && lastMessageTimestamp <= Date.now() - TEN_MINUTES) {
+      listener.close();
+      startNewListener();
+    }
+  }, TEN_MINUTES);
+};
