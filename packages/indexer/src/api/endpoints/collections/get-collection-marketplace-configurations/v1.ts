@@ -208,7 +208,7 @@ export const getCollectionMarketplaceConfigurationsV1Options: RouteOptions = {
             },
             seaport: {
               enabled: false,
-              orderKind: "seaport",
+              orderKind: "seaport-v1.5",
               minimumBidExpiry: 15 * 60,
               customFeesSupported: false,
               supportedBidCurrencies: [Sdk.Common.Addresses.WNative[config.chainId]],
