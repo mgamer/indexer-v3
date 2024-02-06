@@ -65,7 +65,6 @@ export async function processTopBid(payload: topBidPayload, queueName: string) {
               `,
       { tokenSetId: payload.tokenSetId }
     );
-
     if (!tokenSetTopBid.length && payload.kind === "revalidation") {
       // When revalidating, force revalidation of the attribute / collection
       const tokenSetsResult = await ridb.manyOrNone(
@@ -80,7 +79,6 @@ export async function processTopBid(payload: topBidPayload, queueName: string) {
           tokenSetId: payload.tokenSetId,
         }
       );
-
       if (tokenSetsResult.length) {
         tokenSetTopBid = tokenSetsResult.map(
           (result: { collection_id: any; attribute_id: any }) => ({
@@ -93,7 +91,6 @@ export async function processTopBid(payload: topBidPayload, queueName: string) {
         );
       }
     }
-
     if (tokenSetTopBid.length) {
       if (
         payload.kind === "new-order" &&
@@ -108,12 +105,10 @@ export async function processTopBid(payload: topBidPayload, queueName: string) {
           },
         });
       }
-
       for (const result of tokenSetTopBid) {
         if (!_.isNull(result.attributeId)) {
           await handleNewBuyOrderJob.addToQueue(result);
         }
-
         if (!_.isNull(result.collectionId)) {
           await topBidCollectionJob.addToQueue([
             {
