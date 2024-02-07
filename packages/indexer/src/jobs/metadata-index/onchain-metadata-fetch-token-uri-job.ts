@@ -121,7 +121,7 @@ export default class OnchainMetadataFetchTokenUriJob extends AbstractRabbitMqJob
         await onchainMetadataProcessTokenUriJob.addToQueueBulk(tokensToProcess);
       }
 
-      if (config.fallbackMetadataIndexingMethod) {
+      if (config.fallbackMetadataIndexingMethod && fallbackTokens.length) {
         logger.info(
           this.queueName,
           JSON.stringify({
