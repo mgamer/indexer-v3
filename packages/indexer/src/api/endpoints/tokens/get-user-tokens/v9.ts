@@ -1027,7 +1027,7 @@ export const getUserTokensV9Options: RouteOptions = {
           tokens: await Promise.all(result),
           continuation,
         })
-        .header("cache-control", `${cacheControl}`);
+        .header("cache-control", `max-age=${cacheControl}, must-revalidate, public`);
     } catch (error) {
       logger.error(`get-user-tokens-${version}-handler`, `Handler failure: ${error}`);
       throw error;
