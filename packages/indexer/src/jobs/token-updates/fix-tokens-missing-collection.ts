@@ -33,7 +33,7 @@ export default class FixTokensMissingCollectionJob extends AbstractRabbitMqJobHa
         if (
           await acquireLock(
             `${this.queueName}-${fromBuffer(token.contract)}-${token.token_id}`,
-            5 * 60
+            15 * 60
           )
         ) {
           logger.info(
@@ -61,7 +61,7 @@ export default class FixTokensMissingCollectionJob extends AbstractRabbitMqJobHa
 
 export const fixTokensMissingCollectionJob = new FixTokensMissingCollectionJob();
 
-if (config.doBackgroundWork) {
+if (config.doBackgroundWork && !_.includes([204], config.chainId)) {
   cron.schedule("* * * * *", async () => {
     try {
       if (await acquireLock(`${fixTokensMissingCollectionJob}-lock`, 10)) {
