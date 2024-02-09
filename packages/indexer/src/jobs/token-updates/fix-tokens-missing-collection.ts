@@ -21,7 +21,7 @@ export default class FixTokensMissingCollectionJob extends AbstractRabbitMqJobHa
           WHERE collection_id IS NULL
           AND updated_at < now() - INTERVAL '1 minutes'
           AND updated_at > now() - INTERVAL '1 hour'
-          AND updated_at = created_at
+          --AND updated_at = created_at
           ORDER BY updated_at DESC
         `
     );
