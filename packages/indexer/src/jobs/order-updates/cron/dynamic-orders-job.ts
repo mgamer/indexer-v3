@@ -39,6 +39,7 @@ export default class OrderUpdatesDynamicOrderJob extends AbstractRabbitMqJobHand
       const dynamicOrders: {
         id: string;
         kind: string;
+        side: string;
         currency: Buffer;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         raw_data: any;
@@ -49,6 +50,7 @@ export default class OrderUpdatesDynamicOrderJob extends AbstractRabbitMqJobHand
           SELECT
             orders.id,
             orders.kind,
+            orders.side,
             orders.currency,
             orders.raw_data,
             orders.maker,
@@ -72,7 +74,7 @@ export default class OrderUpdatesDynamicOrderJob extends AbstractRabbitMqJobHand
         currency_value: string;
         dynamic: boolean;
       }[] = [];
-      for (const { id, kind, currency, raw_data, maker, taker } of dynamicOrders) {
+      for (const { id, kind, side, currency, raw_data, maker, taker } of dynamicOrders) {
         if (
           !_.isNull(raw_data) &&
           ["alienswap", "seaport", "seaport-v1.4", "seaport-v1.5"].includes(kind)
@@ -108,7 +110,7 @@ export default class OrderUpdatesDynamicOrderJob extends AbstractRabbitMqJobHand
               currency_price: price.toString(),
               value: price.toString(),
               currency_value: price.toString(),
-              dynamic: premiumPrice.gt(0),
+              dynamic: side === "sell" && premiumPrice.gt(0),
             });
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
           } catch (error: any) {
