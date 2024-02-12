@@ -34,7 +34,7 @@ export class BackfillTokensWithMissingCollectionJob extends AbstractRabbitMqJobH
     let contractFilter = "";
     let continuationFilter = "";
 
-    const limit = 200;
+    const limit = 600;
 
     if (contract) {
       contractFilter = `AND tokens.contract = $/contract/`;
