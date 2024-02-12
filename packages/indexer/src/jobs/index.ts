@@ -186,6 +186,7 @@ import { updateUserCollectionsSpamJob } from "@/jobs/nft-balance-updates/update-
 import { updateNftBalancesSpamJob } from "@/jobs/nft-balance-updates/update-nft-balances-spam-job";
 import { pendingTxWebsocketEventsTriggerQueueJob } from "@/jobs/websocket-events/pending-tx-websocket-events-trigger-job";
 import { fixTokensMissingCollectionJob } from "@/jobs/token-updates/fix-tokens-missing-collection";
+import { backfillTokensWithMissingCollectionJob } from "@/jobs/backfill/backfill-tokens-with-missing-collection-job";
 
 export const allJobQueues = [
   backfillWrongNftBalances.queue,
@@ -355,6 +356,7 @@ export class RabbitMqJobsConsumer {
       updateNftBalancesSpamJob,
       pendingTxWebsocketEventsTriggerQueueJob,
       fixTokensMissingCollectionJob,
+      backfillTokensWithMissingCollectionJob,
     ];
   }
 
@@ -522,7 +524,12 @@ export class RabbitMqJobsConsumer {
     }
 
     // Subscribe to the old name quorum queue
-    if (!_.includes(["fix-tokens-missing-collection"], job.queueName)) {
+    if (
+      !_.includes(
+        ["fix-tokens-missing-collection", "backfill-tokens-with-missing-collection-queue"],
+        job.queueName
+      )
+    ) {
       await channel
         .consume(
           `quorum-${job.getQueue()}`,
