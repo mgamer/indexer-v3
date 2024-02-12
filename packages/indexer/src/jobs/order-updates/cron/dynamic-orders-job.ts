@@ -153,14 +153,8 @@ export default class OrderUpdatesDynamicOrderJob extends AbstractRabbitMqJobHand
                 dynamic: false,
               });
             }
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          } catch (error: any) {
-            logger.error(
-              this.queueName,
-              `Failed to update dynamic nftx-v3 order: ${error} (${JSON.stringify(
-                error.response?.data
-              )}) (id = ${id}) (${JSON.stringify(raw_data, null, 2)})`
-            );
+          } catch (error) {
+            // Skip errors
           }
         }
       }

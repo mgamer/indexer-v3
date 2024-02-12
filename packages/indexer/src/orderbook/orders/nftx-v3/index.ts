@@ -475,8 +475,6 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
           .getNfts(pool.nft, pool.address)
           .then((nfts) => nfts.map((nft) => nft.tokenId));
 
-        logger.info("debug", JSON.stringify({ pool, poolOwnedTokenIds }));
-
         const limit = pLimit(50);
         await Promise.all(
           poolOwnedTokenIds.map((tokenId) =>
@@ -700,14 +698,8 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                     triggerKind: "reprice",
                   });
                 }
-              } catch (error) {
+              } catch {
                 // Ignore any errors
-                logger.info(
-                  "debug",
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  JSON.stringify({ msg: error, response: (error as any).response?.data, tokenId })
-                );
-                return;
               }
             })
           )
