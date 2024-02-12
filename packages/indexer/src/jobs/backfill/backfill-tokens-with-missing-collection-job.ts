@@ -54,7 +54,7 @@ export class BackfillTokensWithMissingCollectionJob extends AbstractRabbitMqJobH
           WHERE tokens.collection_id IS NULL
           ${contractFilter}
           ${continuationFilter}
-          ORDER BY tokens.contract, tokens.token_id
+          ORDER BY tokens.collection_id, tokens.contract, tokens.token_id
           LIMIT $/limit/
         `,
       {
