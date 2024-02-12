@@ -79,7 +79,7 @@ export class BackfillTokensWithMissingCollectionJob extends AbstractRabbitMqJobH
         } else {
           tokensToUpdate.push({
             contract: token.contract,
-            tokenId: token.token_id,
+            token_id: token.token_id,
             collection: fromBuffer(token.contract),
           });
         }
