@@ -34,7 +34,7 @@ export class BackfillTokensWithMissingCollectionJob extends AbstractRabbitMqJobH
     let contractFilter = "";
     let continuationFilter = "";
 
-    const limit = 1000;
+    const limit = 500;
 
     if (contract) {
       contractFilter = `AND tokens.contract = $/contract/`;
@@ -112,14 +112,14 @@ export class BackfillTokensWithMissingCollectionJob extends AbstractRabbitMqJobH
         };
 
         await this.addToQueue(contract, nextCursor);
-      }
 
-      logger.info(
-        this.queueName,
-        `Sent to mint ${tokensToMint.length} updated ${
-          tokensToUpdate.length
-        }. cursor=${JSON.stringify(cursor)}`
-      );
+        logger.info(
+          this.queueName,
+          `Sent to mint ${tokensToMint.length} updated ${
+            tokensToUpdate.length
+          }. cursor=${JSON.stringify(nextCursor)}`
+        );
+      }
     }
   }
 
