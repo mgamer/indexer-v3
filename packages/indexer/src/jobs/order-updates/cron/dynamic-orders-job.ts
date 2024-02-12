@@ -179,7 +179,7 @@ export default class OrderUpdatesDynamicOrderJob extends AbstractRabbitMqJobHand
           { name: "price", cast: "numeric(78, 0)" },
           { name: "currency_price", cast: "numeric(78, 0)" },
           { name: "value", cast: "numeric(78, 0)" },
-          { name: "currency_value", cast: "numeric(78, 0) " },
+          { name: "currency_value", cast: "numeric(78, 0)" },
           { name: "updated_at", mod: ":raw", init: () => "now()" },
           { name: "dynamic", cast: "boolean" },
           { name: "raw_data", mod: ":json" },
@@ -189,6 +189,7 @@ export default class OrderUpdatesDynamicOrderJob extends AbstractRabbitMqJobHand
         }
       );
       if (values.length) {
+        logger.info("debug", pgp.helpers.update(values, columns));
         await idb.none(pgp.helpers.update(values, columns) + " WHERE t.id = v.id");
       }
 
