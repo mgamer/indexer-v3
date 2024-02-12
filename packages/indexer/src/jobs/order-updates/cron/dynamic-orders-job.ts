@@ -104,6 +104,15 @@ export default class OrderUpdatesDynamicOrderJob extends AbstractRabbitMqJobHand
             );
             const { price, premiumPrice } = await order.getPrice(baseProvider, config.nftxApiKey);
 
+            logger.info(
+              this.queueName,
+              `Updating dynamic nftx-v3 order: ${JSON.stringify({
+                order,
+                price: price.toString(),
+                premiumPrice: premiumPrice.toString(),
+              })}`
+            );
+
             values.push({
               id,
               price: price.toString(),
