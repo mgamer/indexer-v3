@@ -125,6 +125,7 @@ export default class OrderUpdatesDynamicOrderJob extends AbstractRabbitMqJobHand
 
             if (side === "sell") {
               const { price, premiumPrice } = await order.getPrice(baseProvider, config.nftxApiKey);
+
               const oldPremium = bn(raw_data.extra.premiumPrice || "0");
               const prices = (raw_data.extra.prices as string[]).map((price) =>
                 bn(price).sub(oldPremium).add(premiumPrice).toString()
@@ -147,7 +148,13 @@ export default class OrderUpdatesDynamicOrderJob extends AbstractRabbitMqJobHand
                 value: price.toString(),
                 currency_value: price.toString(),
                 dynamic: premiumPrice.gt(0),
-                raw_data: { ...raw_data, extra: { premiumPrice: premiumPrice.toString(), prices } },
+                raw_data: {
+                  ...raw_data,
+                  extra: {
+                    premiumPrice: premiumPrice.toString(),
+                    prices,
+                  },
+                },
               });
             } else {
               values.push({
