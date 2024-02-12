@@ -92,13 +92,13 @@ export class BackfillTokensWithMissingCollectionJob extends AbstractRabbitMqJobH
       if (!_.isEmpty(tokensToUpdate)) {
         const updateQuery = `
           UPDATE tokens
-          SET collection = x.collectionColumn
+          SET collection_id = x.collectionColumn
           FROM (VALUES ${pgp.helpers.values(
             tokensToUpdate,
             columns
           )}) AS x(contractColumn, tokenIdColumn, collectionColumn)
-          WHERE x.contractColumn = tokens.contract
-          AND x.tokenIdColumn = tokens.token_id`;
+          WHERE CAST(x.contractColumn AS bytea) = tokens.contract
+          AND x.tokenIdColumn::numeric = tokens.token_id`;
 
         await idb.none(updateQuery);
       }
