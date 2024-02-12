@@ -159,7 +159,7 @@ export default class OrderUpdatesDynamicOrderJob extends AbstractRabbitMqJobHand
               this.queueName,
               `Failed to update dynamic nftx-v3 order: ${error} (${JSON.stringify(
                 error.response?.data
-              )}) (${JSON.stringify(raw_data, null, 2)})`
+              )}) (id = ${id}) (${JSON.stringify(raw_data, null, 2)})`
             );
           }
         }
