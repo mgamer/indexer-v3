@@ -130,8 +130,8 @@ export class IndexerCollectionsHandler extends KafkaEventHandler {
               WHERE tokens.collection_id = $/collectionId/
               AND tokens.floor_sell_value IS NOT NULL
           ) AS count_query 
-          LEFT JOIN orders fs ON orders.id = $/askOrderId/
-          LEFT JOIN orders tb ON orders.id = $/topBidOrderId/;
+          LEFT JOIN orders fs ON fs.id = $/askOrderId/
+          LEFT JOIN orders tb ON tb.id = $/topBidOrderId/;
         `;
 
         const result = await redb.one(collectionMetadataQuery, {
