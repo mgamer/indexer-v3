@@ -46,11 +46,8 @@ export const extractByCollection = async (
 
     const edition = await nft.getEdition(editionId);
 
-    // TODO: Is there a way to do this without hardcoding this address?
-    const stagesRegistry = "0x6e51c392067d6276de6a52eb8e1934893b99dc37";
-
     const registry = new Contract(
-      stagesRegistry,
+      Sdk.FairXyz.Addresses.StagesRegistry[config.chainId],
       new Interface([
         `
           function viewActiveStage(address registrant, uint256 scheduleId) view returns (
@@ -80,7 +77,8 @@ export const extractByCollection = async (
     const signatureReleased = edition.signatureReleased || stage.signatureReleased;
 
     if (signatureReleased) {
-      const costPerToken = stage.price.add(fairxyzParameters.fairxyzFee);
+      const price = stage.price.add(fairxyzParameters.fairxyzFee).toString();
+
       results.push({
         collection,
         contract: collection,
@@ -131,7 +129,7 @@ export const extractByCollection = async (
           },
         },
         currency: Sdk.Common.Addresses.Native[config.chainId],
-        price: costPerToken,
+        price,
         maxMintsPerWallet: edition.maxMintsPerWallet,
         maxSupply: toSafeNumber(edition.maxSupply),
         startTime: toSafeTimestamp(stage.startTime),
