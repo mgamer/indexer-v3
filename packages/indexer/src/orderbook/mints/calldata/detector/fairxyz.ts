@@ -29,51 +29,53 @@ export const extractByCollection = async (
     const nft = new Contract(
       collection,
       new Interface([
-        `function getEdition(
-          uint256 editionId
-        ) view returns (
-          (
-            uint40 maxMintsPerWallet,
-            uint40 maxSupply,
-            bool burnable,
-            bool signatureReleased,
-            bool soulbound
-          ) edition
-        )`,
+        `
+          function getEdition(uint256 editionId) view returns (
+            (
+              uint40 maxMintsPerWallet,
+              uint40 maxSupply,
+              bool burnable,
+              bool signatureReleased,
+              bool soulbound
+            ) edition
+          )
+        `,
       ]),
       baseProvider
     );
 
     const edition = await nft.getEdition(editionId);
-    const stagesRegistry = "0x6e51c392067d6276dE6A52Eb8e1934893b99dC37";
+
+    // TODO: Is there a way to do this without hardcoding this address?
+    const stagesRegistry = "0x6e51c392067d6276de6a52eb8e1934893b99dc37";
 
     const registry = new Contract(
       stagesRegistry,
       new Interface([
-        `function viewActiveStage(
-          address registrant,
-          uint256 scheduleId
-        ) external view returns (
-          (
-            address fairxyzSigner,
-            address fairxyzWithdrawAddress,
-            uint256 fairxyzFee,
-          ) fairxyzParameters,
-          uint256 index,
-          (
-            uint40 startTime,
-            uint40 endTime,
-            uint40 mintsPerWallet,
-            uint40 phaseLimit,
-            uint96 price,
-            bool signatureReleased
-          ) stage
-        )`,
+        `
+          function viewActiveStage(address registrant, uint256 scheduleId) view returns (
+            (
+              address fairxyzSigner,
+              address fairxyzWithdrawAddress,
+              uint256 fairxyzFee,
+            ) fairxyzParameters,
+            uint256 index,
+            (
+              uint40 startTime,
+              uint40 endTime,
+              uint40 mintsPerWallet,
+              uint40 phaseLimit,
+              uint96 price,
+              bool signatureReleased
+            ) stage
+          )
+        `,
       ]),
       baseProvider
     );
 
     const result = await registry.viewActiveStage(collection, editionId);
+
     const { stage, fairxyzParameters } = result;
     const signatureReleased = edition.signatureReleased || stage.signatureReleased;
 
@@ -170,11 +172,12 @@ export const extractByTx = async (
           uint256 quantity,
           uint40 signatureNonce,
           uint256 signatureMaxMints,
-          bytes memory signature
+          bytes signature
         )`,
       ]).parseTransaction({
         data: tx.data,
       });
+
       const editionId = parsed.args.editionId.toString();
       return extractByCollection(collection, editionId);
     } catch {

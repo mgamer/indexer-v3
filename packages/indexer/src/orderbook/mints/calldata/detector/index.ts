@@ -264,6 +264,12 @@ export const extractByTx = async (txHash: string, skipCache = false) => {
     return buenoResults;
   }
 
+  // Fairxyz
+  const fairXyzResults = await fairxyz.extractByTx(collection, tx);
+  if (fairXyzResults.length) {
+    return fairXyzResults;
+  }
+
   // Generic via `mintConfig`
   const metadataResult = await idb.oneOrNone(
     `

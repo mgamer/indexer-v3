@@ -20,6 +20,7 @@ export type FetchCollectionMetadataJobPayload = {
   allowFallbackCollectionMetadata?: boolean;
   context?: string;
 };
+
 export default class FetchCollectionMetadataJob extends AbstractRabbitMqJobHandler {
   queueName = "token-updates-fetch-collection-metadata-queue";
   maxRetries = 10;

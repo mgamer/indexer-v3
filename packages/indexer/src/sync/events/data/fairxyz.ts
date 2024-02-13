@@ -1,4 +1,5 @@
 import { Interface } from "@ethersproject/abi";
+
 import { EventData } from "@/events-sync/data";
 
 export const editionCreated: EventData = {
@@ -8,15 +9,15 @@ export const editionCreated: EventData = {
   numTopics: 2,
   abi: new Interface([
     `event EditionCreated(
-        uint256 indexed editionId,
-        uint256 externalId,
-        (
-            uint40 maxMintsPerWallet,
-            uint40 maxSupply,
-            bool burnable,
-            bool signatureReleased,
-            bool soulbound
-        ) edition
+      uint256 indexed editionId,
+      uint256 externalId,
+      (
+        uint40 maxMintsPerWallet,
+        uint40 maxSupply,
+        bool burnable,
+        bool signatureReleased,
+        bool soulbound
+      ) edition
     )`,
   ]),
 };
