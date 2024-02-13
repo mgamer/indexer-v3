@@ -5273,10 +5273,10 @@ export class Router {
     sender: string,
     contractToBlockingStatus: { [contract: string]: { seaport: boolean; reservoir: boolean } }
   ): Promise<TransfersResult> {
+    const conduitController = new ConduitController(this.chainId, this.provider);
+
     const openseaTransferHelper = Sdk.Common.Addresses.OpenseaTransferHelper[this.chainId];
     const openseaConduitKey = Sdk.SeaportBase.Addresses.OpenseaConduitKey[this.chainId];
-
-    const conduitController = new ConduitController(this.chainId, this.provider);
     const useOpenseaTransferHelper =
       openseaTransferHelper &&
       openseaConduitKey &&
@@ -5290,12 +5290,13 @@ export class Router {
       : Sdk.SeaportBase.Addresses.ReservoirConduitKey[this.chainId];
     const conduit = conduitController.deriveConduit(conduitKey);
 
-    const reservoirApprovalProxy = !useOpenseaTransferHelper
-      ? await conduitController.getChannelStatus(conduit, Addresses.ApprovalProxy[this.chainId])
-      : true;
+    const useReservoirApprovalProxy = !useOpenseaTransferHelper
+      ? Addresses.ApprovalProxy[this.chainId] &&
+        (await conduitController.getChannelStatus(conduit, Addresses.ApprovalProxy[this.chainId]))
+      : false;
 
-    // Use native transfer if opensea and reservoir bother are not supported
-    if (!reservoirApprovalProxy) {
+    // Use native transfer if neither opensea nor reservoir are not supported
+    if (!useOpenseaTransferHelper && !useReservoirApprovalProxy) {
       return ApprovalProxy.createTransferTxsFromTransferItem(transferItem, sender);
     }
 
