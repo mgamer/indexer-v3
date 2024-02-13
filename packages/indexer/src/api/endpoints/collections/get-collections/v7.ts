@@ -24,6 +24,7 @@ import { Sources } from "@/models/sources";
 import { Assets, ImageSize } from "@/utils/assets";
 import * as erc721c from "@/utils/erc721c";
 import * as marketplaceBlacklist from "@/utils/marketplace-blacklists";
+import { redis } from "@/common/redis";
 
 const version = "v7";
 
@@ -317,6 +318,7 @@ export const getCollectionsV7Options: RouteOptions = {
               stage: Joi.string().required(),
               tokenId: Joi.string().pattern(regex.number).allow(null),
               kind: Joi.string().required(),
+              standard: Joi.string(),
               price: JoiPrice.allow(null),
               pricePerQuantity: Joi.array()
                 .items(
@@ -355,6 +357,18 @@ export const getCollectionsV7Options: RouteOptions = {
   },
   handler: async (request: Request) => {
     const query = request.query as any;
+    let cacheKey = "";
+
+    if (
+      _.includes(["0xb932a70a57673d89f4acffbe830e8ed7f75fb9e0"], query.contract) &&
+      request.raw.req.url
+    ) {
+      cacheKey = request.raw.req.url;
+      const cachedData = await redis.get(cacheKey);
+      if (cachedData && cacheKey === request.raw.req.url) {
+        return JSON.parse(cachedData);
+      }
+    }
 
     try {
       // Include attributes
@@ -393,6 +407,7 @@ export const getCollectionsV7Options: RouteOptions = {
                   'stage', collection_mints.stage,
                   'tokenId', collection_mints.token_id::TEXT,
                   'kind', collection_mints.kind,
+                  'standard', collection_mint_standards.standard,
                   'currency', concat('0x', encode(collection_mints.currency, 'hex')),
                   'price', collection_mints.price::TEXT,
                   'pricePerQuantity', collection_mints.price_per_quantity,
@@ -403,6 +418,8 @@ export const getCollectionsV7Options: RouteOptions = {
                 )
               ) AS mint_stages
             FROM collection_mints
+            JOIN collection_mint_standards
+              ON collection_mints.collection_id = collection_mint_standards.collection_id
             WHERE collection_mints.collection_id = x.id
               AND collection_mints.status = 'open'
           ) v ON TRUE
@@ -984,6 +1001,7 @@ export const getCollectionsV7Options: RouteOptions = {
                     r.mint_stages.map(async (m: any) => ({
                       stage: m.stage,
                       kind: m.kind,
+                      standard: m.standard,
                       tokenId: m.tokenId,
                       price: m.price
                         ? await getJoiPriceObject({ gross: { amount: m.price } }, m.currency)
@@ -1069,6 +1087,18 @@ export const getCollectionsV7Options: RouteOptions = {
             }
           }
         }
+      }
+
+      if (cacheKey) {
+        await redis.set(
+          cacheKey,
+          JSON.stringify({
+            collections,
+            continuation: continuation ? continuation : undefined,
+          }),
+          "EX",
+          60
+        );
       }
 
       return {
