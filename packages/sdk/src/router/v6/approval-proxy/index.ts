@@ -1,5 +1,5 @@
-import { BigNumberish } from "@ethersproject/bignumber";
 import { Interface } from "@ethersproject/abi";
+import { BigNumberish } from "@ethersproject/bignumber";
 
 export enum ItemType {
   NATIVE,
@@ -20,23 +20,26 @@ export type TransferItem = {
   recipient: string;
 };
 
-export function createTransferTxsFromTransferItem(transferItem: TransferItem, sender: string) {
+export const createTransferTxsFromTransferItem = (transferItem: TransferItem, sender: string) => {
   const { recipient } = transferItem;
+
   return {
     txs: transferItem.items.map((item) => {
       let data: string;
       let value = "0";
+
       switch (item.itemType) {
         case ItemType.ERC20: {
           data = new Interface([
-            `function transfer(address recipient, uint256 amount)`,
+            "function transfer(address recipient, uint256 amount)",
           ]).encodeFunctionData("transfer", [recipient, item.amount]);
+
           break;
         }
 
         case ItemType.ERC1155: {
           data = new Interface([
-            `function safeTransferFrom(address from, address to, uint256 id, uint256 amount, bytes data)`,
+            "function safeTransferFrom(address from, address to, uint256 id, uint256 amount, bytes data)",
           ]).encodeFunctionData("safeTransferFrom", [
             sender,
             recipient,
@@ -44,19 +47,22 @@ export function createTransferTxsFromTransferItem(transferItem: TransferItem, se
             item.amount,
             "0x",
           ]);
+
           break;
         }
 
         case ItemType.ERC721: {
           data = new Interface([
-            `function transferFrom(address from, address to, uint256 tokenId)`,
+            "function transferFrom(address from, address to, uint256 tokenId)",
           ]).encodeFunctionData("transferFrom", [sender, recipient, item.identifier]);
+
           break;
         }
 
         case ItemType.NATIVE: {
           data = "0x";
           value = item.amount.toString();
+
           break;
         }
       }
@@ -72,4 +78,4 @@ export function createTransferTxsFromTransferItem(transferItem: TransferItem, se
       };
     }),
   };
-}
+};

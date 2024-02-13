@@ -111,25 +111,29 @@ export const postExecuteTransferV1Options: RouteOptions = {
       ];
 
       const router = new Sdk.RouterV6.Router(config.chainId, baseProvider);
-      const allCollections = new Set<string>();
 
-      transferItem.items.reduce((all, item) => {
+      // Get all unique contracts being transferred
+      const contracts = transferItem.items.reduce((previous, item) => {
         if (
           [ApprovalProxy.ItemType.ERC1155, ApprovalProxy.ItemType.ERC721].includes(item.itemType)
         ) {
-          all.add(item.token);
+          previous.add(item.token);
         }
-        return all;
-      }, allCollections);
+        return previous;
+      }, new Set<string>());
 
-      const filterResults = await Promise.all(
-        Array.from(allCollections).map(async (collection) => {
+      // Determine the blocking status of the transferred contracts
+      const contractToBlockingStatus: {
+        [contract: string]: { seaport: boolean; reservoir: boolean };
+      } = {};
+      await Promise.all(
+        Array.from(contracts).map(async (contract) => {
           let seaportBlocked = true;
           if (Sdk.SeaportBase.Addresses.OpenseaConduitKey[config.chainId]) {
             const openseaConduit = new Sdk.SeaportBase.ConduitController(
               config.chainId
             ).deriveConduit(Sdk.SeaportBase.Addresses.OpenseaConduitKey[config.chainId]);
-            seaportBlocked = await checkMarketplaceIsFiltered(collection, [openseaConduit]);
+            seaportBlocked = await checkMarketplaceIsFiltered(contract, [openseaConduit]);
           }
 
           let reservoirBlocked = true;
@@ -137,19 +141,21 @@ export const postExecuteTransferV1Options: RouteOptions = {
             const reservoirConduit = new Sdk.SeaportBase.ConduitController(
               config.chainId
             ).deriveConduit(Sdk.SeaportBase.Addresses.ReservoirConduitKey[config.chainId]);
-            reservoirBlocked = await checkMarketplaceIsFiltered(collection, [reservoirConduit]);
+            reservoirBlocked = await checkMarketplaceIsFiltered(contract, [reservoirConduit]);
           }
-          return {
-            collection,
-            blocked: {
-              seaport: seaportBlocked,
-              reservoir: reservoirBlocked,
-            },
+
+          contractToBlockingStatus[contract] = {
+            seaport: seaportBlocked,
+            reservoir: reservoirBlocked,
           };
         })
       );
 
-      const { txs } = await router.transfersTx(transferItem, payload.from, filterResults);
+      const { txs } = await router.transfersTx(
+        transferItem,
+        payload.from,
+        contractToBlockingStatus
+      );
 
       const approvals = txs.map((tx) => tx.approvals).flat();
       for (const approval of approvals) {

@@ -130,7 +130,7 @@ export const extractByCollection = async (
         },
         currency: Sdk.Common.Addresses.Native[config.chainId],
         price,
-        maxMintsPerWallet: edition.maxMintsPerWallet,
+        maxMintsPerWallet: toSafeNumber(edition.maxMintsPerWallet),
         maxSupply: toSafeNumber(edition.maxSupply),
         startTime: toSafeTimestamp(stage.startTime),
         endTime: toSafeTimestamp(stage.endTime),

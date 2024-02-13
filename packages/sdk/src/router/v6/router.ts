@@ -5271,13 +5271,7 @@ export class Router {
   public async transfersTx(
     transferItem: ApprovalProxy.TransferItem,
     sender: string,
-    filterResults: {
-      collection: string;
-      blocked: {
-        seaport: boolean;
-        reservoir: boolean;
-      };
-    }[]
+    contractToBlockingStatus: { [contract: string]: { seaport: boolean; reservoir: boolean } }
   ): Promise<TransfersResult> {
     const openseaTransferHelper = Sdk.Common.Addresses.OpenseaTransferHelper[this.chainId];
     const openseaConduitKey = Sdk.SeaportBase.Addresses.OpenseaConduitKey[this.chainId];
@@ -5310,33 +5304,31 @@ export class Router {
       txData: TxData;
     }[] = [];
 
-    const noneBlockedItems: ApprovalProxy.Item[] = [];
+    const allowedItems: ApprovalProxy.Item[] = [];
     const blockedItems: ApprovalProxy.Item[] = [];
 
-    // Split item by blocked status
+    // Split items by blocked status
     transferItem.items.forEach((item) => {
       // Only NFTs
       if ([ApprovalProxy.ItemType.ERC1155, ApprovalProxy.ItemType.ERC721].includes(item.itemType)) {
-        const filterResult = filterResults.find((c) => c.collection === item.token);
-        if (filterResult) {
-          const { blocked } = filterResult;
-          if (blocked.seaport && useOpenseaTransferHelper) {
-            // Seaport blocked and use opensea
+        const blockingData = contractToBlockingStatus[item.token];
+        if (blockingData) {
+          if (blockingData.seaport && useOpenseaTransferHelper) {
             blockedItems.push(item);
-          } else if (blocked.reservoir && !useOpenseaTransferHelper) {
-            // Reservoir blocked and use reservoir
+          } else if (blockingData.reservoir && !useOpenseaTransferHelper) {
             blockedItems.push(item);
           } else {
-            noneBlockedItems.push(item);
+            allowedItems.push(item);
           }
         } else {
-          noneBlockedItems.push(item);
+          allowedItems.push(item);
         }
       } else {
-        noneBlockedItems.push(item);
+        allowedItems.push(item);
       }
     });
 
+    // Transfer blocked items directly
     if (blockedItems.length) {
       const transferTxs = ApprovalProxy.createTransferTxsFromTransferItem(
         {
@@ -5350,53 +5342,57 @@ export class Router {
       }
     }
 
-    const approvals = noneBlockedItems.map((item) => ({
-      orderIds: [],
-      contract: item.token,
-      owner: sender,
-      operator: conduit,
-      txData: generateNFTApprovalTxData(item.token, sender, conduit),
-    }));
+    // Transfer allowed items in batch
+    if (allowedItems) {
+      const approvals = allowedItems.map((item) => ({
+        orderIds: [],
+        contract: item.token,
+        owner: sender,
+        operator: conduit,
+        txData: generateNFTApprovalTxData(item.token, sender, conduit),
+      }));
 
-    // Ensure approvals are unique
-    const uniqueApprovals = uniqBy(
-      approvals,
-      ({ txData: { from, to, data } }) => `${from}-${to}-${data}`
-    );
+      // Ensure approvals are unique
+      const uniqueApprovals = uniqBy(
+        approvals,
+        ({ txData: { from, to, data } }) => `${from}-${to}-${data}`
+      );
 
-    if (useOpenseaTransferHelper) {
-      txs.push({
-        approvals: uniqueApprovals,
-        txData: {
-          from: sender,
-          to: Sdk.Common.Addresses.OpenseaTransferHelper[this.chainId],
-          data: new Interface(OpenseaTransferHelperAbi).encodeFunctionData("bulkTransfer", [
-            [
-              {
-                ...transferItem,
-                items: noneBlockedItems.map((item) => ({
-                  ...item,
-                  validateERC721Receiver: true,
-                })),
-              },
-            ],
-            conduitKey,
-          ]),
-        },
-      });
-    } else {
-      txs.push({
-        approvals: uniqueApprovals,
-        txData: {
-          from: sender,
-          to: Addresses.ApprovalProxy[this.chainId],
-          data: this.contracts.approvalProxy.interface.encodeFunctionData(
-            "bulkTransferWithExecute",
-            [[transferItem], [], conduitKey]
-          ),
-        },
-      });
+      if (useOpenseaTransferHelper) {
+        txs.push({
+          approvals: uniqueApprovals,
+          txData: {
+            from: sender,
+            to: Sdk.Common.Addresses.OpenseaTransferHelper[this.chainId],
+            data: new Interface(OpenseaTransferHelperAbi).encodeFunctionData("bulkTransfer", [
+              [
+                {
+                  ...transferItem,
+                  items: allowedItems.map((item) => ({
+                    ...item,
+                    validateERC721Receiver: true,
+                  })),
+                },
+              ],
+              conduitKey,
+            ]),
+          },
+        });
+      } else {
+        txs.push({
+          approvals: uniqueApprovals,
+          txData: {
+            from: sender,
+            to: Addresses.ApprovalProxy[this.chainId],
+            data: this.contracts.approvalProxy.interface.encodeFunctionData(
+              "bulkTransferWithExecute",
+              [[transferItem], [], conduitKey]
+            ),
+          },
+        });
+      }
     }
+
     return {
       txs,
     };
