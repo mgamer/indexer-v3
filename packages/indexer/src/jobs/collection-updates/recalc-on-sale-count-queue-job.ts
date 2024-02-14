@@ -8,7 +8,7 @@ export type RecalcOnSaleCountQueueJobPayload = {
 };
 
 export default class RecalcOnSaleCountQueueJob extends AbstractRabbitMqJobHandler {
-  queueName = "collection-onsale-token-count-queue";
+  queueName = "recalc-onsale-token-count-queue";
   maxRetries = 10;
   concurrency = 10;
   backoff = {
@@ -19,7 +19,7 @@ export default class RecalcOnSaleCountQueueJob extends AbstractRabbitMqJobHandle
   public async process(payload: RecalcOnSaleCountQueueJobPayload) {
     const { collection } = payload;
 
-    const onSaleCount = await AsksIndex.getOnSaleCount({ collection });
+    const onSaleCount = await AsksIndex.getCollectionOnSaleCount({ collection });
 
     // No more tokens to count, update collections table
     const query = `
@@ -36,13 +36,13 @@ export default class RecalcOnSaleCountQueueJob extends AbstractRabbitMqJobHandle
     });
   }
 
-  public async addToQueue(collection: RecalcOnSaleCountQueueJobPayload, delay = 0) {
+  public async addToQueue(payload: RecalcOnSaleCountQueueJobPayload, delay = 0) {
     await this.send(
       {
-        payload: collection,
-        jobId: collection.force ? undefined : `${collection.collection}`,
+        payload: payload,
+        jobId: payload.force ? undefined : `${payload.collection}`,
       },
-      collection.force ? 0 : delay
+      payload.force ? 0 : delay
     );
   }
 }

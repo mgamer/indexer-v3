@@ -198,7 +198,7 @@ export const initIndex = async (): Promise<void> => {
   }
 };
 
-export const getOnSaleCount = async (params: { collection: string }): Promise<number> => {
+export const getCollectionOnSaleCount = async (params: { collection: string }): Promise<number> => {
   const esQuery = {};
 
   (esQuery as any).bool = {
