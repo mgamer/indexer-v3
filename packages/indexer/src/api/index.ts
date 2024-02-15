@@ -22,6 +22,7 @@ import { RateLimitRules } from "@/models/rate-limit-rules";
 import { BlockedRouteError } from "@/models/rate-limit-rules/errors";
 import { countApiUsageJob } from "@/jobs/metrics/count-api-usage-job";
 import { generateOpenApiSpec } from "./endpoints/admin";
+import { RateLimitRuleEntity } from "@/models/rate-limit-rules/rate-limit-rule-entity";
 
 let server: Hapi.Server;
 
@@ -190,6 +191,27 @@ export const start = async (): Promise<void> => {
       const key = request.headers["x-api-key"];
       const apiKey = await ApiKeyManager.getApiKey(key, remoteAddress, origin);
       const tier = apiKey?.tier || 0;
+
+      if (tier < 0) {
+        let message = `This request was blocked as an invalid API key was detected. Please check your key has be set correctly or contact us at support@reservoir.tools for assistance.`;
+        if (tier === -2) {
+          message = `This request was blocked as you have exceeded your included requests. Please upgrade your plan or contact us at support@reservoir.tools for assistance.`;
+        }
+
+        const tooManyRequestsResponse = {
+          statusCode: 429,
+          error: "Too Many Requests",
+          message,
+        };
+
+        return reply
+          .response(tooManyRequestsResponse)
+          .header("tier", `${tier}`)
+          .type("application/json")
+          .code(429)
+          .takeover();
+      }
+
       let rateLimitRule;
 
       // Get the rule for the incoming request
