@@ -19,7 +19,7 @@ import { getSubDomain } from "@/config/network";
 import { allJobQueues } from "@/jobs/index";
 import { ApiKeyManager } from "@/models/api-keys";
 import { RateLimitRules } from "@/models/rate-limit-rules";
-import { BlockedRouteError } from "@/models/rate-limit-rules/errors";
+import { BlockedKeyError, BlockedRouteError } from "@/models/rate-limit-rules/errors";
 import { countApiUsageJob } from "@/jobs/metrics/count-api-usage-job";
 import { generateOpenApiSpec } from "./endpoints/admin";
 
@@ -190,27 +190,6 @@ export const start = async (): Promise<void> => {
       const key = request.headers["x-api-key"];
       const apiKey = await ApiKeyManager.getApiKey(key, remoteAddress, origin);
       const tier = apiKey?.tier || 0;
-
-      if (tier < 0) {
-        let message = `This request was blocked as an invalid API key was detected. Please check your key has be set correctly or contact us at support@reservoir.tools for assistance.`;
-        if (tier === -2) {
-          message = `This request was blocked as you have exceeded your included requests. Please upgrade your plan or contact us at support@reservoir.tools for assistance.`;
-        }
-
-        const tooManyRequestsResponse = {
-          statusCode: 429,
-          error: "Too Many Requests",
-          message,
-        };
-
-        return reply
-          .response(tooManyRequestsResponse)
-          .header("tier", `${tier}`)
-          .type("application/json")
-          .code(429)
-          .takeover();
-      }
-
       let rateLimitRule;
 
       // Get the rule for the incoming request
@@ -225,15 +204,15 @@ export const start = async (): Promise<void> => {
           new Map(Object.entries(_.merge(request.payload, request.query, request.params)))
         );
       } catch (error) {
-        if (error instanceof BlockedRouteError) {
-          const blockedRouteResponse = {
+        if (error instanceof BlockedRouteError || error instanceof BlockedKeyError) {
+          const blockedResponse = {
             statusCode: 429,
-            error: "Route is suspended",
-            message: `Request to ${request.route.path} is currently suspended`,
+            error: error instanceof BlockedRouteError ? "Route is suspended" : "Too Many Requests",
+            message: error.message,
           };
 
           return reply
-            .response(blockedRouteResponse)
+            .response(blockedResponse)
             .type("application/json")
             .code(429)
             .header("tier", `${tier}`)
