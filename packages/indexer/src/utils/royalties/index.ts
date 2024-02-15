@@ -254,6 +254,8 @@ export const refreshDefaultRoyalties = async (collection: string) => {
     defaultRoyalties = royaltiesResult.new_royalties["onchain"];
   } else if (royaltiesResult.new_royalties["opensea"]) {
     defaultRoyalties = royaltiesResult.new_royalties["opensea"];
+  } else if (royaltiesResult.new_royalties["pp-v2-backfill"]) {
+    defaultRoyalties = royaltiesResult.new_royalties["pp-v2-backfill"];
   }
 
   await idb.none(
