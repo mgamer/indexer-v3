@@ -6,6 +6,7 @@ import { getEventData } from "@/events-sync/data";
 import { EnhancedEvent, OnChainData } from "@/events-sync/handlers/utils";
 import { metadataIndexFetchJob } from "@/jobs/metadata-index/metadata-fetch-job";
 import { onchainMetadataProvider } from "@/metadata/providers/onchain-metadata-provider";
+import { Collections } from "@/models/collections";
 
 export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChainData) => {
   // Handle the events
@@ -16,6 +17,8 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
     if (config.chainId === 1 && subKind.includes("opensea")) {
       continue;
     }
+
+    const collection = await Collections.getById(baseEventParams.address.toLowerCase());
 
     switch (subKind) {
       case "metadata-update-single-token-opensea": {
@@ -28,7 +31,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
             {
               kind: "single-token",
               data: {
-                method: metadataIndexFetchJob.getIndexingMethod(baseEventParams.address || null),
+                method: metadataIndexFetchJob.getIndexingMethod(collection),
                 collection: baseEventParams.address.toLowerCase(),
                 contract: baseEventParams.address.toLowerCase(),
                 tokenId: tokenId,
@@ -56,7 +59,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
               {
                 kind: "full-collection",
                 data: {
-                  method: metadataIndexFetchJob.getIndexingMethod(baseEventParams.address),
+                  method: metadataIndexFetchJob.getIndexingMethod(collection),
                   collection: baseEventParams.address.toLowerCase(),
                 },
                 context: "onchain-metadata-update-batch-tokens",
@@ -72,11 +75,12 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
           if (parseInt(toToken) - parseInt(fromToken) > config.maxTokenSetSize) {
             break;
           }
+
           await metadataIndexFetchJob.addToQueue(
             _.range(parseInt(fromToken), parseInt(toToken) + 1).map((tokenId) => ({
               kind: "single-token",
               data: {
-                method: metadataIndexFetchJob.getIndexingMethod(baseEventParams.address),
+                method: metadataIndexFetchJob.getIndexingMethod(collection),
                 collection: baseEventParams.address.toLowerCase(),
                 contract: baseEventParams.address.toLowerCase(),
                 tokenId: tokenId.toString(),
@@ -99,7 +103,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
             {
               kind: "full-collection",
               data: {
-                method: metadataIndexFetchJob.getIndexingMethod(baseEventParams.address),
+                method: metadataIndexFetchJob.getIndexingMethod(collection),
                 collection: baseEventParams.address.toLowerCase(),
               },
               context: "onchain-metadata-update-batch-tokens",
