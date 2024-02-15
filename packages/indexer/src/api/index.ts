@@ -22,7 +22,6 @@ import { RateLimitRules } from "@/models/rate-limit-rules";
 import { BlockedRouteError } from "@/models/rate-limit-rules/errors";
 import { countApiUsageJob } from "@/jobs/metrics/count-api-usage-job";
 import { generateOpenApiSpec } from "./endpoints/admin";
-import { RateLimitRuleEntity } from "@/models/rate-limit-rules/rate-limit-rule-entity";
 
 let server: Hapi.Server;
 
