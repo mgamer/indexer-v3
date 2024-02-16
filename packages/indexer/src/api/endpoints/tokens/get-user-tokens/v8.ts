@@ -242,12 +242,12 @@ export const getUserTokensV8Options: RouteOptions = {
               rawData: Joi.object().optional().allow(null),
               isNativeOffChainCancellable: Joi.boolean().optional(),
             }).description("Can be null if no asks."),
-            acquiredAt: Joi.string().allow(null),
+            acquiredAt: Joi.string().allow(null, ""),
           }),
         })
       ),
       continuation: Joi.string().pattern(regex.base64).allow(null),
-    }).label(`getUserTokensV8Response`),
+    }).label(`getUserTokens${version.toUpperCase()}Response`),
     failAction: (_request, _h, error) => {
       logger.error(`get-user-tokens-${version}-handler`, `Wrong response schema: ${error}`);
       throw error;
