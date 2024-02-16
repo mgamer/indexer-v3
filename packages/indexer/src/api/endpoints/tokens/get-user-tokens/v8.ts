@@ -247,7 +247,7 @@ export const getUserTokensV8Options: RouteOptions = {
         })
       ),
       continuation: Joi.string().pattern(regex.base64).allow(null),
-    }).label(`getUserTokens${version.toUpperCase()}Response`),
+    }).label(`getUserTokensV8Response`),
     failAction: (_request, _h, error) => {
       logger.error(`get-user-tokens-${version}-handler`, `Wrong response schema: ${error}`);
       throw error;

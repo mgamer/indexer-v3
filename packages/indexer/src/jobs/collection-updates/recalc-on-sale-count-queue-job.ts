@@ -1,8 +1,6 @@
 import { idb } from "@/common/db";
 import { AbstractRabbitMqJobHandler, BackoffStrategy } from "@/jobs/abstract-rabbit-mq-job-handler";
 import * as AsksIndex from "@/elasticsearch/indexes/asks";
-import { redlock } from "@/common/redis";
-import { config } from "@/config/index";
 
 export type RecalcOnSaleCountQueueJobPayload = {
   collection: string;
@@ -50,24 +48,3 @@ export default class RecalcOnSaleCountQueueJob extends AbstractRabbitMqJobHandle
 }
 
 export const recalcOnSaleCountQueueJob = new RecalcOnSaleCountQueueJob();
-
-if (config.doBackgroundWork) {
-  redlock
-    .acquire([`${recalcOnSaleCountQueueJob.getQueue()}-lock`], 60 * 60 * 24 * 30 * 1000)
-    .then(async () => {
-      const collections = await idb.query(`
-      select id, on_sale_count 
-      from collections 
-      order by day1_volume desc
-      limit 1000`);
-
-      for (const collection of collections) {
-        if (Number(collection.on_sale_count) === 0) {
-          await recalcOnSaleCountQueueJob.addToQueue({ collection: collection.id });
-        }
-      }
-    })
-    .catch(() => {
-      // Skip on any errors
-    });
-}
