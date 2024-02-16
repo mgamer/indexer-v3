@@ -29,7 +29,7 @@ export type CollectionsEntityUpdateParams = {
   creator?: string;
   isSpam?: number;
   nsfwStatus?: number;
-  tokenIndexingMethod?: string;
+  tokenIndexingMethod?: string | null;
 };
 
 export type CollectionsMetadata = {

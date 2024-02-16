@@ -16,7 +16,7 @@ export const postSetTokenIndexingMethodOptions: RouteOptions = {
       "x-admin-api-key": Joi.string().required(),
     }).options({ allowUnknown: true }),
     payload: Joi.object({
-      method: Joi.string().required().valid("opensea", "simplehash"),
+      method: Joi.string().required().valid("opensea", "simplehash", null),
       collection: Joi.string()
         .lowercase()
         .description("Collection to update. Example: `0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`")
