@@ -172,7 +172,7 @@ export const getUserTokensV8Options: RouteOptions = {
               .description("No rarity for collections over 100k"),
             rarityRank: Joi.number()
               .allow(null)
-              .description("No rarity rank for collections over 100k"),
+              .description("No rarity rank for collections over 100k."),
             media: Joi.string().allow(null),
             isFlagged: Joi.boolean().default(false),
             isSpam: Joi.boolean().default(false),
@@ -242,7 +242,7 @@ export const getUserTokensV8Options: RouteOptions = {
               rawData: Joi.object().optional().allow(null),
               isNativeOffChainCancellable: Joi.boolean().optional(),
             }).description("Can be null if no asks."),
-            acquiredAt: Joi.string().allow(null, ""),
+            acquiredAt: Joi.string().allow(null),
           }),
         })
       ),
