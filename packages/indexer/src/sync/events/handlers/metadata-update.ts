@@ -6,6 +6,7 @@ import { getEventData } from "@/events-sync/data";
 import { EnhancedEvent, OnChainData } from "@/events-sync/handlers/utils";
 import { metadataIndexFetchJob } from "@/jobs/metadata-index/metadata-fetch-job";
 import { onchainMetadataProvider } from "@/metadata/providers/onchain-metadata-provider";
+import { logger } from "@/common/logger";
 
 export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChainData) => {
   // Handle the events
@@ -16,6 +17,8 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
     if (config.chainId === 1 && subKind.includes("opensea")) {
       continue;
     }
+
+    logger.info(`handleEventsDebug`, `event for ${baseEventParams.address.toLowerCase()}`);
 
     switch (subKind) {
       case "metadata-update-single-token-opensea": {
