@@ -1272,6 +1272,12 @@ export const setupRoutes = (server: Server) => {
 
   server.route({
     method: "GET",
+    path: "/search/collections/v3",
+    options: searchEndpoints.getSearchCollectionsV3Options,
+  });
+
+  server.route({
+    method: "GET",
     path: "/search/activities/v1",
     options: searchEndpoints.getSearchActivitiesV1Options,
   });

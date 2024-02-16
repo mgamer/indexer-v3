@@ -49,6 +49,13 @@ export default class MetadataIndexFetchJob extends AbstractRabbitMqJobHandler {
       return;
     }
 
+    if (
+      payload?.context === "onchain-metadata-update-single-token" ||
+      payload?.context === "onchain-metadata-update-batch-tokens"
+    ) {
+      logger.info(`${this.queueName}-debug`, `${payload.context}`);
+    }
+
     const tokenMetadataIndexingDebug = await redis.sismember(
       "metadata-indexing-debug-contracts",
       payload.data.collection

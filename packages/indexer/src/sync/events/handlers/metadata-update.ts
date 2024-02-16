@@ -6,6 +6,7 @@ import { getEventData } from "@/events-sync/data";
 import { EnhancedEvent, OnChainData } from "@/events-sync/handlers/utils";
 import { metadataIndexFetchJob } from "@/jobs/metadata-index/metadata-fetch-job";
 import { onchainMetadataProvider } from "@/metadata/providers/onchain-metadata-provider";
+import { logger } from "@/common/logger";
 import { Collections } from "@/models/collections";
 
 export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChainData) => {
@@ -18,6 +19,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
       continue;
     }
 
+    logger.info(`handleEventsDebug`, `event for ${baseEventParams.address.toLowerCase()}`);
     const collection = await Collections.getById(baseEventParams.address.toLowerCase());
 
     switch (subKind) {
