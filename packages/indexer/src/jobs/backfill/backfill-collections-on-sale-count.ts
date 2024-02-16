@@ -5,7 +5,6 @@ import { RabbitMQMessage } from "@/common/rabbit-mq";
 import _ from "lodash";
 import { config } from "@/config/index";
 import { recalcOnSaleCountQueueJob } from "@/jobs/collection-updates/recalc-on-sale-count-queue-job";
-import { redlock } from "@/common/redis";
 import { logger } from "@/common/logger";
 
 export type BackfillCollectionsOnSaleCountJobCursorInfo = {
@@ -92,14 +91,3 @@ export class BackfillCollectionsOnSaleCountJob extends AbstractRabbitMqJobHandle
 }
 
 export const backfillCollectionsOnSaleCountJob = new BackfillCollectionsOnSaleCountJob();
-
-if (config.doBackgroundWork) {
-  redlock
-    .acquire([`${backfillCollectionsOnSaleCountJob.getQueue()}-lock-2`], 60 * 60 * 24 * 30 * 1000)
-    .then(async () => {
-      await backfillCollectionsOnSaleCountJob.addToQueue();
-    })
-    .catch(() => {
-      // Skip on any errors
-    });
-}
