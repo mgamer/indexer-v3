@@ -258,8 +258,8 @@ export const extractByCollectionERC721 = async (
               tx: {
                 to: extension.toLowerCase(),
                 data: {
-                  // `mintBatch`
-                  signature: "0x26c858a4",
+                  // `mintProxy`
+                  signature: "0x07591acc",
                   params: [
                     {
                       kind: "contract",
@@ -324,8 +324,8 @@ export const extractByCollectionERC721 = async (
               tx: {
                 to: extension.toLowerCase(),
                 data: {
-                  // `mintBatch`
-                  signature: "0x26c858a4",
+                  // `mintProxy`
+                  signature: "0x07591acc",
                   params: [
                     {
                       kind: "contract",
