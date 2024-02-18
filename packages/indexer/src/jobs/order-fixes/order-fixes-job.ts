@@ -12,6 +12,7 @@ import {
   orderUpdatesByIdJob,
   OrderUpdatesByIdJobPayload,
 } from "@/jobs/order-updates/order-updates-by-id-job";
+import { Royalty } from "@/utils/royalties";
 
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import * as looksRareV2Check from "@/orderbook/orders/looks-rare-v2/check";
@@ -524,6 +525,39 @@ export default class OrderFixesJob extends AbstractRabbitMqJobHandler {
                     } else {
                       return;
                     }
+                  }
+
+                  // Also check the royalty built into the order vs the actual on-chain royalties of the collection
+                  let royaltyBpsToPay = 0;
+                  const royalties = await idb.oneOrNone(
+                    `
+                      SELECT
+                        COALESCE(collections.new_royalties, '{}') AS new_royalties
+                      FROM collections
+                      WHERE collections.id = $/collection/
+                    `,
+                    { collection: order.params.tokenAddress }
+                  );
+                  if (royalties.new_royalties["onchain"]) {
+                    royaltyBpsToPay = (royalties.new_royalties["onchain"] as Royalty[])
+                      .map((r) => r.bps)
+                      .reduce((a, b) => a + b, 0);
+                  } else if (royalties.new_royalties["pp-v2-backfill"]) {
+                    royaltyBpsToPay = (royalties.new_royalties["pp-v2-backfill"] as Royalty[])
+                      .map((r) => r.bps)
+                      .reduce((a, b) => a + b, 0);
+                  }
+
+                  if (
+                    order.params.maxRoyaltyFeeNumerator &&
+                    Number(order.params.maxRoyaltyFeeNumerator) < royaltyBpsToPay
+                  ) {
+                    logger.info(
+                      "debug",
+                      JSON.stringify({
+                        msg: `Order id ${result.id} (token-set=${result.token_set_id}, side=${result.side}) has lower royalties than what will get paid (has=${order.params.maxRoyaltyFeeNumerator}, need=${royaltyBpsToPay})`,
+                      })
+                    );
                   }
 
                   break;
