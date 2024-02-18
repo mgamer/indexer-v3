@@ -527,34 +527,29 @@ export default class OrderFixesJob extends AbstractRabbitMqJobHandler {
                   }
 
                   if (Number(order.params.maxRoyaltyFeeNumerator ?? 0) < royaltyBpsToPay) {
-                    logger.info(
-                      "debug",
-                      JSON.stringify({
-                        msg: `Order id ${result.id} (token-set=${result.token_set_id}, side=${result.side}) has lower royalties than what will get paid (has=${order.params.maxRoyaltyFeeNumerator}, need=${royaltyBpsToPay})`,
-                      })
-                    );
-                  }
-
-                  try {
-                    await paymentProcessorV2Check.offChainCheck(order, {
-                      onChainApprovalRecheck: true,
-                      checkFilledOrCancelled: true,
-                    });
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  } catch (error: any) {
-                    if (error.message === "cancelled") {
-                      fillabilityStatus = "cancelled";
-                    } else if (error.message === "filled") {
-                      fillabilityStatus = "filled";
-                    } else if (error.message === "no-balance") {
-                      fillabilityStatus = "no-balance";
-                    } else if (error.message === "no-approval") {
-                      approvalStatus = "no-approval";
-                    } else if (error.message === "no-balance-no-approval") {
-                      fillabilityStatus = "no-balance";
-                      approvalStatus = "no-approval";
-                    } else {
-                      return;
+                    fillabilityStatus = "cancelled";
+                  } else {
+                    try {
+                      await paymentProcessorV2Check.offChainCheck(order, {
+                        onChainApprovalRecheck: true,
+                        checkFilledOrCancelled: true,
+                      });
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    } catch (error: any) {
+                      if (error.message === "cancelled") {
+                        fillabilityStatus = "cancelled";
+                      } else if (error.message === "filled") {
+                        fillabilityStatus = "filled";
+                      } else if (error.message === "no-balance") {
+                        fillabilityStatus = "no-balance";
+                      } else if (error.message === "no-approval") {
+                        approvalStatus = "no-approval";
+                      } else if (error.message === "no-balance-no-approval") {
+                        fillabilityStatus = "no-balance";
+                        approvalStatus = "no-approval";
+                      } else {
+                        return;
+                      }
                     }
                   }
 
