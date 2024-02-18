@@ -526,10 +526,7 @@ export default class OrderFixesJob extends AbstractRabbitMqJobHandler {
                       .reduce((a, b) => a + b, 0);
                   }
 
-                  if (
-                    order.params.maxRoyaltyFeeNumerator &&
-                    Number(order.params.maxRoyaltyFeeNumerator) < royaltyBpsToPay
-                  ) {
+                  if (Number(order.params.maxRoyaltyFeeNumerator ?? 0) < royaltyBpsToPay) {
                     logger.info(
                       "debug",
                       JSON.stringify({
