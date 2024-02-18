@@ -527,7 +527,7 @@ export default class OrderFixesJob extends AbstractRabbitMqJobHandler {
                   }
 
                   if (
-                    order.params.maxRoyaltyFeeNumerator &&
+                    order.params.maxRoyaltyFeeNumerator !== undefined &&
                     Number(order.params.maxRoyaltyFeeNumerator) < royaltyBpsToPay
                   ) {
                     logger.info(
