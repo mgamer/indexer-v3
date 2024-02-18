@@ -526,7 +526,10 @@ export default class OrderFixesJob extends AbstractRabbitMqJobHandler {
                       .reduce((a, b) => a + b, 0);
                   }
 
-                  if (Number(order.params.maxRoyaltyFeeNumerator ?? 0) < royaltyBpsToPay) {
+                  if (
+                    order.params.maxRoyaltyFeeNumerator !== undefined &&
+                    Number(order.params.maxRoyaltyFeeNumerator) < royaltyBpsToPay
+                  ) {
                     fillabilityStatus = "cancelled";
                   } else {
                     try {
