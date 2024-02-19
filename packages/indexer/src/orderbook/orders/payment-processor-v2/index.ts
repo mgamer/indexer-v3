@@ -471,7 +471,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         if (
           replacedOrderResult &&
           // Replacement is only possible if the replaced order is an off-chain cancellable order
-          replacedOrderResult.raw_data.cosigner?.toLowerCase() !== cosigner().address.toLowerCase()
+          replacedOrderResult.raw_data.cosigner?.toLowerCase() === cosigner().address.toLowerCase()
         ) {
           const rawOrder = new Sdk.PaymentProcessorV2.Order(
             config.chainId,
