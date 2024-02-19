@@ -459,6 +459,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
         const replacedOrderResult = await idb.oneOrNone(
           `
             SELECT
+              orders.id,
               orders.raw_data
             FROM orders
             WHERE orders.id = $/id/
