@@ -1,6 +1,7 @@
 import { Interface } from "@ethersproject/abi";
 import { Contract } from "@ethersproject/contracts";
 
+import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
 import { getEventData } from "@/events-sync/data";
 import { EnhancedEvent } from "@/events-sync/handlers/utils";
@@ -16,6 +17,8 @@ export const handleEvents = async (events: EnhancedEvent[]) => {
         const registrant = args["registrant"].toLowerCase();
 
         try {
+          logger.info("debug", JSON.stringify({ msg: `Refreshing royalties`, registrant, log }));
+
           const registry = new Contract(
             baseEventParams.address,
             new Interface(["function subscribers(address registrant) view returns (address[])"]),
@@ -28,8 +31,18 @@ export const handleEvents = async (events: EnhancedEvent[]) => {
               marketplaceBlacklists.updateMarketplaceBlacklist(subscriber.toLowerCase())
             )
           );
-        } catch {
-          // Skip errors
+        } catch (error) {
+          logger.info(
+            "debug",
+            JSON.stringify({
+              msg: `Error refreshing royalties`,
+              registrant,
+              log,
+              error,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              stack: (error as any).stack,
+            })
+          );
         }
 
         break;
