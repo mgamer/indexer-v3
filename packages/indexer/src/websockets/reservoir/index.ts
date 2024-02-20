@@ -1,7 +1,7 @@
 import WebSocket from "ws";
 import { config } from "@/config/index";
 import { logger } from "@/common/logger";
-import { getNetworkName } from "@/config/network";
+import { getNetworkName, getNetworkSettings } from "@/config/network";
 
 if ([1, 11155111].includes(config.chainId) && config.doWebsocketWork && config.debugWsApiKey) {
   const wsUrl = `wss://ws${
@@ -13,7 +13,7 @@ if ([1, 11155111].includes(config.chainId) && config.doWebsocketWork && config.d
   logger.info(
     "reservoir-websocket",
     JSON.stringify({
-      topic: "debugMissingSaleWsEvents",
+      topic: "debugMissingTokenNormalizedFloorAskChangedEvents",
       message: `WebSocket connection start`,
     })
   );
@@ -22,7 +22,7 @@ if ([1, 11155111].includes(config.chainId) && config.doWebsocketWork && config.d
     logger.info(
       "reservoir-websocket",
       JSON.stringify({
-        topic: "debugMissingSaleWsEvents",
+        topic: "debugMissingTokenNormalizedFloorAskChangedEvents",
         message: "WebSocket connection established",
       })
     );
@@ -35,10 +35,14 @@ if ([1, 11155111].includes(config.chainId) && config.doWebsocketWork && config.d
         ws.send(
           JSON.stringify({
             type: "subscribe",
-            event: "sale.created",
+            event: "token.updated",
+            changed: "market.floorAskNormalized.id",
+            filters: {
+              contract: getNetworkSettings().multiCollectionContracts,
+            },
           })
         );
-      } else if (messageJson.event === "sale.created") {
+      } else if (messageJson.event === "token.updated") {
         const eventData = messageJson.data;
 
         const ts2 = new Date(eventData.timestamp * 1000);
@@ -49,11 +53,13 @@ if ([1, 11155111].includes(config.chainId) && config.doWebsocketWork && config.d
         logger.info(
           "reservoir-websocket",
           JSON.stringify({
-            topic: "debugMissingSaleWsEvents",
-            message: `receivedSaleEvent. saleId=${eventData.id}`,
-            saleId: eventData.id,
-            saleTimestamp: eventData.timestamp,
+            topic: "debugMissingTokenNormalizedFloorAskChangedEvents",
+            message: `receivedEvent. collectionId=${eventData.collection?.id},  contract=${eventData.contract}, tokenId=${eventData.tokenId}`,
+            collectionId: eventData.collection?.id,
+            contract: eventData.contract,
+            tokenId: eventData.tokenId,
             txHash: eventData.txHash,
+            eventData,
             timestamps: {
               ts2: ts2.toISOString(),
               ts3: ts3.toISOString(),
@@ -77,7 +83,7 @@ if ([1, 11155111].includes(config.chainId) && config.doWebsocketWork && config.d
     logger.info(
       "reservoir-websocket",
       JSON.stringify({
-        topic: "debugMissingSaleWsEvents",
+        topic: "debugMissingTokenNormalizedFloorAskChangedEvents",
         message: `WebSocket connection closed. code=${code}, reason=${reason}, wsUrl=${wsUrl}`,
       })
     );
@@ -87,7 +93,7 @@ if ([1, 11155111].includes(config.chainId) && config.doWebsocketWork && config.d
     logger.error(
       "reservoir-websocket",
       JSON.stringify({
-        topic: "debugMissingSaleWsEvents",
+        topic: "debugMissingTokenNormalizedFloorAskChangedEvents",
         message: `WebSocket error. error=${error.message}, wsUrl=${wsUrl}`,
       })
     );

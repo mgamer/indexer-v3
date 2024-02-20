@@ -28,6 +28,7 @@ export type MetadataIndexFetchJobPayload =
         collection: string;
         contract: string;
         tokenId: string;
+        isFallback?: boolean;
       };
       context?: string;
     };
@@ -47,6 +48,21 @@ export default class MetadataIndexFetchJob extends AbstractRabbitMqJobHandler {
     // Do nothing if the indexer is running in liquidity-only mode
     if (config.liquidityOnly) {
       return;
+    }
+
+    if (config.chainId === 11155111) {
+      logger.info(
+        this.queueName,
+        JSON.stringify({
+          topic: "tokenMetadataIndexingDebug",
+          message: `Start. collection=${payload.data.collection}, tokenId=${
+            payload.kind === "single-token" ? payload.data.tokenId : ""
+          }`,
+          collection: payload.data.collection,
+          tokenId: payload.kind === "single-token" ? payload.data.tokenId : null,
+          payload,
+        })
+      );
     }
 
     if (config.chainId === 1) {
@@ -133,6 +149,7 @@ export default class MetadataIndexFetchJob extends AbstractRabbitMqJobHandler {
         collection: data.collection,
         contract: data.contract,
         tokenId: data.tokenId,
+        isFallback: data.isFallback,
       });
     }
 

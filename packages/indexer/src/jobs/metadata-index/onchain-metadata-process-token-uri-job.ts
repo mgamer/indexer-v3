@@ -95,12 +95,13 @@ export default class OnchainMetadataProcessTokenUriJob extends AbstractRabbitMqJ
                     contract,
                     tokenId,
                     collection: contract,
+                    isFallback: true,
                   },
                   context: "onchain-fallback-image-encoding",
                 },
               ],
               true,
-              10
+              30
             );
 
             return;
@@ -137,11 +138,13 @@ export default class OnchainMetadataProcessTokenUriJob extends AbstractRabbitMqJ
                     contract,
                     tokenId,
                     collection: contract,
+                    isFallback: true,
                   },
                   context: "onchain-fallback-missing-mime-type",
                 },
               ],
-              true
+              true,
+              30
             );
 
             return;
@@ -175,11 +178,13 @@ export default class OnchainMetadataProcessTokenUriJob extends AbstractRabbitMqJ
                     contract,
                     tokenId,
                     collection: contract,
+                    isFallback: true,
                   },
                   context: "onchain-fallback-gif",
                 },
               ],
-              true
+              true,
+              30
             );
 
             return;
@@ -267,11 +272,13 @@ export default class OnchainMetadataProcessTokenUriJob extends AbstractRabbitMqJ
             contract,
             tokenId,
             collection: contract,
+            isFallback: true,
           },
           context: "onchain-fallback-get-metadata-error",
         },
       ],
-      true
+      true,
+      30
     );
   }
 

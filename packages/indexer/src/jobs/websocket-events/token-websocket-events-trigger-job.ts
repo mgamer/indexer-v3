@@ -14,6 +14,7 @@ import { Assets, ImageSize } from "@/utils/assets";
 import * as Sdk from "@reservoir0x/sdk";
 import { Sources } from "@/models/sources";
 import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handler";
+import { getNetworkSettings } from "@/config/network";
 
 export type TokenWebsocketEventsTriggerJobPayload =
   | {
@@ -291,6 +292,26 @@ export class TokenWebsocketEventsTriggerJob extends AbstractRabbitMqJobHandler {
 
             return;
           }
+        }
+      }
+
+      if (
+        [1, 11155111].includes(config.chainId) &&
+        config.debugWsApiKey &&
+        getNetworkSettings().multiCollectionContracts.includes(contract)
+      ) {
+        if (changed.some((value) => ["market.floorAskNormalized.id"].includes(value))) {
+          logger.info(
+            this.queueName,
+            JSON.stringify({
+              topic: "debugMissingTokenNormalizedFloorAskChangedEvents",
+              message: `publishWebsocketEvent. collectionId=${data.after.collection_id}, contract=${contract}, tokenId=${tokenId}`,
+              collectionId: data.after.collection_id,
+              contract,
+              tokenId,
+              data: JSON.stringify(data),
+            })
+          );
         }
       }
 
