@@ -5460,7 +5460,7 @@ export class Router {
     }
 
     // Transfer allowed items in batch
-    if (allowedItems) {
+    if (allowedItems.length) {
       const approvals = allowedItems.map((item) => ({
         orderIds: [],
         contract: item.token,
