@@ -3912,7 +3912,7 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
     expect(await weth.getBalance(router.contracts.seaportV15Module.address)).to.eq(0);
   });
 
-  it("Fill multiple seaport private listings", async () => {
+  it("Fill multiple Seaport private listings", async () => {
     const buyer = dan;
 
     const listings: ListingDetails[] = [];
@@ -4070,7 +4070,7 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
 
     expect(token1OwnerAfter).to.eq(buyer.address);
     expect(token2OwnerAfter).to.eq(buyer.address);
-  
+
     // Router is stateless (it shouldn't keep any funds)
     expect(await ethers.provider.getBalance(router.contracts.router.address)).to.eq(0);
     expect(await ethers.provider.getBalance(router.contracts.seaportV15Module.address)).to.eq(0);

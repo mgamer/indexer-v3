@@ -174,7 +174,7 @@ contract SeaportV15Module is BaseExchangeModule {
     }
   }
 
-    // --- Multiple ETH Private listings ---
+  // --- Multiple ETH private listings ---
 
   function acceptETHPrivateListings(
     SeaportPrivateListingWithPrice[] calldata orders,
@@ -193,7 +193,13 @@ contract SeaportV15Module is BaseExchangeModule {
     // Execute the fills
     if (params.revertIfIncomplete) {
       for (uint256 i; i < length; ) {
-        _fillPrivateOrderWithRevertIfIncomplete(orders[i].orders, criteriaResolvers, orders[i].fulfillments, params.fillTo, orders[i].price);
+        _fillPrivateOrderWithRevertIfIncomplete(
+          orders[i].orders,
+          criteriaResolvers,
+          orders[i].fulfillments,
+          params.fillTo,
+          orders[i].price
+        );
 
         unchecked {
           ++i;
@@ -201,8 +207,13 @@ contract SeaportV15Module is BaseExchangeModule {
       }
     } else {
       for (uint256 i; i < length; ) {
-
-        _fillPrivateOrder(orders[i].orders, criteriaResolvers, orders[i].fulfillments, params.fillTo, orders[i].price);
+        _fillPrivateOrder(
+          orders[i].orders,
+          criteriaResolvers,
+          orders[i].fulfillments,
+          params.fillTo,
+          orders[i].price
+        );
 
         unchecked {
           ++i;
@@ -232,7 +243,13 @@ contract SeaportV15Module is BaseExchangeModule {
     // Execute the fills
     if (params.revertIfIncomplete) {
       for (uint256 i; i < length; ) {
-        _fillPrivateOrderWithRevertIfIncomplete(orders[i].orders, criteriaResolvers, orders[i].fulfillments, params.fillTo, 0);
+        _fillPrivateOrderWithRevertIfIncomplete(
+          orders[i].orders,
+          criteriaResolvers,
+          orders[i].fulfillments,
+          params.fillTo,
+          0
+        );
 
         unchecked {
           ++i;
@@ -240,7 +257,13 @@ contract SeaportV15Module is BaseExchangeModule {
       }
     } else {
       for (uint256 i; i < length; ) {
-        _fillPrivateOrder(orders[i].orders, criteriaResolvers, orders[i].fulfillments, params.fillTo, 0);
+        _fillPrivateOrder(
+          orders[i].orders,
+          criteriaResolvers,
+          orders[i].fulfillments,
+          params.fillTo,
+          0
+        );
 
         unchecked {
           ++i;
@@ -384,6 +407,13 @@ contract SeaportV15Module is BaseExchangeModule {
     EXCHANGE.matchOrders(orders, fulfillments);
   }
 
+  // --- ERC1271 ---
+
+  function isValidSignature(bytes32, bytes memory) external pure returns (bytes4) {
+    // Needed for filling private listings
+    return this.isValidSignature.selector;
+  }
+
   // --- ERC721 / ERC1155 hooks ---
 
   // Single token offer acceptance can be done approval-less by using the
@@ -493,7 +523,12 @@ contract SeaportV15Module is BaseExchangeModule {
   ) internal {
     // Execute the fill
     try
-      EXCHANGE.matchAdvancedOrders{value: value}(advancedOrders, criteriaResolvers, fulfillments, receiver)
+      EXCHANGE.matchAdvancedOrders{value: value}(
+        advancedOrders,
+        criteriaResolvers,
+        fulfillments,
+        receiver
+      )
     {} catch {}
   }
 
@@ -505,10 +540,14 @@ contract SeaportV15Module is BaseExchangeModule {
     address receiver,
     uint256 value
   ) internal {
- 
     // Execute the fill
     try
-      EXCHANGE.matchAdvancedOrders{value: value}(advancedOrders, criteriaResolvers, fulfillments, receiver)
+      EXCHANGE.matchAdvancedOrders{value: value}(
+        advancedOrders,
+        criteriaResolvers,
+        fulfillments,
+        receiver
+      )
     {} catch {
       revert UnsuccessfulFill();
     }
@@ -537,11 +576,5 @@ contract SeaportV15Module is BaseExchangeModule {
   ) internal view returns (uint256 adjustedTotalFilled) {
     (, , uint256 totalFilled, uint256 totalSize) = EXCHANGE.getOrderStatus(orderHash);
     adjustedTotalFilled = totalSize > 0 ? (totalFilled * adjustedTotalSize) / totalSize : 0;
-  }
-
-  // --- ERC1271 ---
-
-  function isValidSignature(bytes32, bytes memory) external pure returns (bytes4) {
-    return this.isValidSignature.selector;
   }
 }

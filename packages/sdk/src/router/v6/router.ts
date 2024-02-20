@@ -985,8 +985,6 @@ export class Router {
           buyInCurrency === currency &&
           // All orders must have the same currency
           currency === details[0].currency &&
-          // All orders must not the private orders
-          !(order as Sdk.SeaportV15.Order).isPrivateOrder() &&
           // All orders must have the same conduit
           (order as Sdk.SeaportV15.Order).params.conduitKey ===
             (details[0].order as Sdk.SeaportV15.Order).params.conduitKey &&
@@ -1910,7 +1908,7 @@ export class Router {
       for (const currency of Object.keys(seaportV15Details)) {
         const rawCurrencyDetails = seaportV15Details[currency];
 
-        const splittedDetails: Sdk.RouterV6.Types.ListingDetails[][] = [];
+        // Account private vs non-private orders separately
         const privateDetails: Sdk.RouterV6.Types.ListingDetails[] = [];
         const normalDetails: Sdk.RouterV6.Types.ListingDetails[] = [];
         for (const currencyDetail of rawCurrencyDetails) {
@@ -1921,12 +1919,17 @@ export class Router {
           }
         }
 
-        if (privateDetails.length) splittedDetails.push(privateDetails);
-        if (normalDetails.length) splittedDetails.push(normalDetails);
+        const splittedDetails: Sdk.RouterV6.Types.ListingDetails[][] = [];
+        if (privateDetails.length) {
+          splittedDetails.push(privateDetails);
+        }
+        if (normalDetails.length) {
+          splittedDetails.push(normalDetails);
+        }
 
         for (const currencyDetails of splittedDetails) {
           const orders = currencyDetails.map((d) => d.order as Sdk.SeaportV15.Order);
-          const isPrivateOrder = orders[0].isPrivateOrder();
+          const isPrivate = orders[0].isPrivateOrder();
 
           const module = this.contracts.seaportV15Module;
 
@@ -1945,7 +1948,7 @@ export class Router {
           const currencyIsNative = isNative(this.chainId, currency);
           const buyInCurrencyIsNative = isNative(this.chainId, buyInCurrency);
 
-          if (isPrivateOrder) {
+          if (isPrivate) {
             executions.push({
               info: {
                 module: module.address,
@@ -1956,10 +1959,11 @@ export class Router {
                       orders.map(async (order, i) => {
                         const totalAmount = order.getInfo()!.amount;
                         const filledAmount = currencyDetails[i].amount ?? 1;
+
                         const counterOrder = order.constructPrivateListingCounterOrder(taker);
                         const fulfillments = order.getPrivateListingFulfillments();
 
-                        // Set offerer as module
+                        // Set the module as the offerer
                         counterOrder.parameters.offerer = module.address;
 
                         const orderData = {
@@ -2090,6 +2094,7 @@ export class Router {
               orderIds: currencyDetails.map((d) => d.orderId),
             });
           }
+
           // Track any possibly required swap
           swapDetails.push({
             tokenIn: buyInCurrency,
