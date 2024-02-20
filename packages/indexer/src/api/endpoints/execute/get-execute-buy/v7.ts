@@ -1531,7 +1531,9 @@ export const getExecuteBuyV7Options: RouteOptions = {
 
         const { requestId, shortRequestId, price, relayerFee, depositGasFee } = await axios
           .post(`${config.crossChainSolverBaseUrl}/intents/quote`, data, {
-            headers: request.headers["origin"],
+            headers: {
+              origin: request.headers["origin"],
+            },
           })
           .then((response) => ({
             requestId: response.data.requestId,
