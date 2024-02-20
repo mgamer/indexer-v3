@@ -4053,10 +4053,7 @@ describe("[ReservoirV6_0_1] Filling listings and bids via the SDK", () => {
       }
     );
 
-    await buyer.sendTransaction({
-      ...tx.txs[0].txData,
-      gasLimit: 1000000
-    });
+    await buyer.sendTransaction(tx.txs[0].txData);
 
     const seller1EthBalanceAfter = await seller1.getBalance();
     const seller2EthBalanceAfter = await seller2.getBalance();
