@@ -1978,6 +1978,7 @@ export class Router {
 
                         // Set the module as the offerer
                         counterOrder.parameters.offerer = module.address;
+                        counterOrder.parameters.conduitKey = HashZero;
 
                         const orderData = {
                           parameters: {
