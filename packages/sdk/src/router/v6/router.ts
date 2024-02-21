@@ -1988,7 +1988,7 @@ export class Router {
                           numerator: filledAmount,
                           denominator: totalAmount,
                           signature: order.params.signature,
-                          extraData: "0x",
+                          extraData: order.params.extraData ?? "0x",
                         };
 
                         return {
