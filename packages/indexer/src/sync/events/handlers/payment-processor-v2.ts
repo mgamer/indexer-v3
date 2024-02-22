@@ -92,6 +92,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
 
         const tokenIdOfEvent = parsedLog.args["tokenId"].toString();
         const tokenAddressOfEvent = parsedLog.args["tokenAddress"].toLowerCase();
+        const tokenAmountOfEvent = parsedLog.args["amount"].toString();
         const paymentCoinOfEvent = parsedLog.args["paymentCoin"].toLowerCase();
 
         const methods = [
@@ -284,7 +285,6 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
 
             const tokenAddress = saleDetail["tokenAddress"].toLowerCase();
             const tokenId = saleDetail["tokenId"].toString();
-            const amount = saleDetail["amount"].toString();
             const currency = saleDetail["paymentMethod"].toLowerCase();
             const currencyPrice = saleDetail["itemPrice"].div(saleDetail["amount"]).toString();
             const paymentMethod = saleDetail["paymentMethod"].toLowerCase();
@@ -449,7 +449,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
               usdPrice: priceData.usdPrice,
               contract: tokenAddress,
               tokenId,
-              amount,
+              amount: tokenAmountOfEvent,
               orderSourceId: attributionData.orderSource?.id,
               aggregatorSourceId: attributionData.aggregatorSource?.id,
               fillSourceId: attributionData.fillSource?.id,
@@ -462,7 +462,7 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
               orderSide,
               contract: tokenAddress,
               tokenId,
-              amount,
+              amount: tokenAmountOfEvent,
               price: priceData.nativePrice,
               timestamp: baseEventParams.timestamp,
               maker,
