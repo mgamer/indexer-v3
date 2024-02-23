@@ -22,7 +22,7 @@ export type OnchainMetadataProcessTokenUriJobPayload = {
 export default class OnchainMetadataProcessTokenUriJob extends AbstractRabbitMqJobHandler {
   queueName = "onchain-metadata-index-process-token-uri-queue";
   maxRetries = 10;
-  concurrency = 15;
+  concurrency = 30;
   timeout = 5 * 60 * 1000;
   backoff = {
     type: "fixed",
@@ -34,20 +34,24 @@ export default class OnchainMetadataProcessTokenUriJob extends AbstractRabbitMqJ
     const { contract, tokenId, uri } = payload;
     const retryCount = Number(this.rabbitMqMessage?.retryCount);
 
-    const tokenMetadataIndexingDebug = await redis.sismember(
-      "metadata-indexing-debug-contracts",
-      contract
-    );
+    let tokenMetadataIndexingDebug = 0;
 
-    if (tokenMetadataIndexingDebug) {
-      logger.info(
-        this.queueName,
-        JSON.stringify({
-          topic: "tokenMetadataIndexingDebug",
-          message: `Start. contract=${contract}, tokenId=${tokenId}, uri=${uri}, fallbackMetadataIndexingMethod=${config.fallbackMetadataIndexingMethod}`,
-          payload,
-        })
+    if ([1, 137, 11155111].includes(config.chainId)) {
+      tokenMetadataIndexingDebug = await redis.sismember(
+        "metadata-indexing-debug-contracts",
+        contract
       );
+
+      if (tokenMetadataIndexingDebug) {
+        logger.info(
+          this.queueName,
+          JSON.stringify({
+            topic: "tokenMetadataIndexingDebug",
+            message: `Start. contract=${contract}, tokenId=${tokenId}, uri=${uri}, fallbackMetadataIndexingMethod=${config.fallbackMetadataIndexingMethod}`,
+            payload,
+          })
+        );
+      }
     }
 
     let fallbackError;
@@ -91,11 +95,13 @@ export default class OnchainMetadataProcessTokenUriJob extends AbstractRabbitMqJ
                     contract,
                     tokenId,
                     collection: contract,
+                    isFallback: true,
                   },
                   context: "onchain-fallback-image-encoding",
                 },
               ],
-              true
+              true,
+              30
             );
 
             return;
@@ -132,11 +138,13 @@ export default class OnchainMetadataProcessTokenUriJob extends AbstractRabbitMqJ
                     contract,
                     tokenId,
                     collection: contract,
+                    isFallback: true,
                   },
                   context: "onchain-fallback-missing-mime-type",
                 },
               ],
-              true
+              true,
+              30
             );
 
             return;
@@ -170,11 +178,13 @@ export default class OnchainMetadataProcessTokenUriJob extends AbstractRabbitMqJ
                     contract,
                     tokenId,
                     collection: contract,
+                    isFallback: true,
                   },
                   context: "onchain-fallback-gif",
                 },
               ],
-              true
+              true,
+              30
             );
 
             return;
@@ -262,11 +272,13 @@ export default class OnchainMetadataProcessTokenUriJob extends AbstractRabbitMqJ
             contract,
             tokenId,
             collection: contract,
+            isFallback: true,
           },
           context: "onchain-fallback-get-metadata-error",
         },
       ],
-      true
+      true,
+      30
     );
   }
 

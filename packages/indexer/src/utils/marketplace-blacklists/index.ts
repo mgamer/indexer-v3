@@ -103,7 +103,7 @@ export const isBlockedByCustomLogic = async (
       const blockedOperators = await registry
         .getDenylistOperators()
         .then((ops: string[]) => ops.map((op) => op.toLowerCase()));
-      result = operators.every((c) => !blockedOperators.includes(c));
+      result = operators.every((c) => blockedOperators.includes(c));
     } catch {
       // Skip errors
     }
@@ -168,7 +168,7 @@ export const getMarketplaceBlacklistFromDb = async (
   return { blacklist: result?.filtered_operators || [] };
 };
 
-const updateMarketplaceBlacklist = async (contract: string) => {
+export const updateMarketplaceBlacklist = async (contract: string) => {
   const blacklist = await getMarketplaceBlacklist(contract);
   await idb.none(
     `
