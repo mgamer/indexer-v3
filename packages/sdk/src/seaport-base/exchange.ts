@@ -123,7 +123,7 @@ export abstract class SeaportBaseExchange {
       }
 
       if (
-        // Order is not private
+        // The recipient is the taker
         (recipient === AddressZero || recipient === taker) &&
         // Order is single quantity
         info.amount === "1" &&
@@ -214,7 +214,7 @@ export abstract class SeaportBaseExchange {
       }
     } else {
       if (
-        // Order is not private
+        // The recipient is the taker
         (recipient === AddressZero || recipient === taker) &&
         // Order is single quantity
         info.amount === "1" &&
