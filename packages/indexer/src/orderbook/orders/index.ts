@@ -38,6 +38,7 @@ import { config } from "@/config/index";
 import { Sources } from "@/models/sources";
 import { SourcesEntity } from "@/models/sources/sources-entity";
 import { CollectionMintStandard } from "@/orderbook/mints";
+import * as paymentProcessorV2BuildUtils from "@/orderbook/orders/payment-processor-v2/build/utils";
 import { checkMarketplaceIsFiltered } from "@/utils/marketplace-blacklists";
 import * as offchainCancel from "@/utils/offchain-cancel";
 import * as paymentProcessorV2Utils from "@/utils/payment-processor-v2";
@@ -983,8 +984,8 @@ export const generateBidDetailsV6 = async (
         order: sdkOrder,
         extraArgs: {
           ...extraArgs,
-          maxRoyaltyFeeNumerator: await onchain
-            .getOnChainRoyalties(common.contract, common.tokenId, "onchain")
+          maxRoyaltyFeeNumerator: await paymentProcessorV2BuildUtils
+            .getRoyaltiesToBePaid(common.contract, common.tokenId)
             .then((royalties) => royalties.map((r) => r.bps).reduce((a, b) => a + b, 0)),
         },
       };
