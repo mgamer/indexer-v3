@@ -129,11 +129,10 @@ export const blurBidsRefreshJob = new BlurBidsRefreshJob();
 
 if (config.doBackgroundWork) {
   cron.schedule(
-    // Every 20 minutes
-    "*/20 * * * *",
+    // Every 10 minutes
+    "*/10 * * * *",
     async () => {
       const keys = await redis.keys("blur-collection-with-bids:*");
-      logger.info("blur-debug", JSON.stringify({ msg: "Cron refresh blur bids", keys }));
       await Promise.all(keys.map((key) => blurBidsRefreshJob.addToQueue(key.split(":")[1])));
     }
   );
