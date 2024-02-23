@@ -127,7 +127,7 @@ export default class BlurBidsRefreshJob extends AbstractRabbitMqJobHandler {
 
 export const blurBidsRefreshJob = new BlurBidsRefreshJob();
 
-if (config.doBackgroundWork) {
+if (config.chainId === 1 && config.doBackgroundWork) {
   cron.schedule(
     // Every 10 minutes
     "*/10 * * * *",
