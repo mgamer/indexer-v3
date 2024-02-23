@@ -224,10 +224,25 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
             for (const call of calls) {
               relevantCalls.push(call.input ?? "0x");
             }
-          } catch {
+          } catch (error) {
+            logger.info(
+              "pp-v2",
+              JSON.stringify({
+                msg: "Could not get transaction trace",
+                log,
+                parsingError: true,
+                error,
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                stack: (error as any).stack,
+              })
+            );
             throw new Error("Could not get transaction trace");
           }
         } else {
+          logger.info(
+            "pp-v2",
+            JSON.stringify({ msg: "Could not get transaction trace", log, isMissingTrace: true })
+          );
           throw new Error("Could not get transaction trace");
         }
 
