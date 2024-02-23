@@ -4,7 +4,7 @@ import _ from "lodash";
 import { idb } from "@/common/db";
 import { regex, toBuffer } from "@/common/utils";
 import { orderFixesJob } from "@/jobs/order-fixes/order-fixes-job";
-import * as registry from "@/utils/royalties/registry";
+import * as onchain from "@/utils/royalties/onchain";
 
 export type Royalty = {
   recipient: string;
@@ -239,7 +239,8 @@ export const refreshAllRoyaltySpecs = async (
 
   if (refreshOnChain) {
     // Refresh the on-chain royalties
-    await registry.refreshRegistryRoyalties(collection);
+    await onchain.refreshOnChainRoyalties(collection, "onchain");
+    await onchain.refreshOnChainRoyalties(collection, "eip2981");
   }
 };
 
