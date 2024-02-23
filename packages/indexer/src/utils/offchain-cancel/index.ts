@@ -3,6 +3,7 @@ import { Wallet } from "@ethersproject/wallet";
 import { idb, pgp } from "@/common/db";
 import { config } from "@/config/index";
 import { orderUpdatesByIdJob } from "@/jobs/order-updates/order-updates-by-id-job";
+import { Sources } from "@/models/sources";
 
 export * as paymentProcessorV2 from "@/utils/offchain-cancel/payment-processor-v2";
 export * as seaport from "@/utils/offchain-cancel/seaport";
@@ -61,3 +62,15 @@ export const saveOffChainCancellations = async (orderIds: string[]) => {
     }))
   );
 };
+
+export async function getOrderSource(orderId: string) {
+  const order = await idb.oneOrNone(
+    `SELECT source_id_int FROM "orders" "o" WHERE "o"."id" = $/id/`,
+    {
+      id: orderId,
+    }
+  );
+  const sources = await Sources.getInstance();
+  const source = sources.get(order.source_id_int);
+  return source;
+}

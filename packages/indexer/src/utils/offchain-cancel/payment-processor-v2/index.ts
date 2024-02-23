@@ -3,18 +3,23 @@ import * as Sdk from "@reservoir0x/sdk";
 
 import { idb } from "@/common/db";
 import { config } from "@/config/index";
-import { cosigner, saveOffChainCancellations } from "@/utils/offchain-cancel";
+import { cosigner, saveOffChainCancellations, getOrderSource } from "@/utils/offchain-cancel";
 import {
   ExternalTypedDataSigner,
   getExternalCosigner,
 } from "@/utils/offchain-cancel/external-cosign";
 
 // Reuse the cancellation format of `seaport` orders
-export const generateOffChainCancellationSignatureData = (orderIds: string[]) => {
+export const generateOffChainCancellationSignatureData = async (orderIds: string[]) => {
+  const orderSource = await getOrderSource(orderIds[0]);
+  const domainName =
+    orderSource && orderSource.metadata && orderSource.metadata.adminTitle
+      ? orderSource.metadata.adminTitle
+      : "Off-Chain Cancellation";
   return {
     signatureKind: "eip712",
     domain: {
-      name: "Off-Chain Cancellation",
+      name: domainName,
       version: "1.0.0",
       chainId: config.chainId,
     },
@@ -26,12 +31,12 @@ export const generateOffChainCancellationSignatureData = (orderIds: string[]) =>
   };
 };
 
-export const verifyOffChainCancellationSignature = (
+export const verifyOffChainCancellationSignature = async (
   orderIds: string[],
   signature: string,
   signer: string
 ) => {
-  const message = generateOffChainCancellationSignatureData(orderIds);
+  const message = await generateOffChainCancellationSignatureData(orderIds);
   const recoveredSigner = verifyTypedData(message.domain, message.types, message.value, signature);
   return recoveredSigner.toLowerCase() === signer.toLowerCase();
 };
@@ -45,7 +50,7 @@ export const doCancel = async ({
   signature: string;
   maker: string;
 }) => {
-  const success = verifyOffChainCancellationSignature(orderIds, signature, maker);
+  const success = await verifyOffChainCancellationSignature(orderIds, signature, maker);
   if (!success) {
     throw new Error("Cancellation failed");
   }
