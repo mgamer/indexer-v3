@@ -613,6 +613,16 @@ export class Sources {
 
         return _.replace(sourceEntity.metadata.url, "${tokenId}", tokenId);
       }
+    } else if (config.chainId == 168587773) {
+      if (sourceEntity.metadata.tokenUrlBlastSepolia && contract && tokenId) {
+        sourceEntity.metadata.url = _.replace(
+          sourceEntity.metadata.tokenUrlBlastSepolia,
+          "${contract}",
+          contract
+        );
+
+        return _.replace(sourceEntity.metadata.url, "${tokenId}", tokenId);
+      }
     } else {
       if (sourceEntity.metadata.tokenUrlGoerli && contract && tokenId) {
         sourceEntity.metadata.url = _.replace(

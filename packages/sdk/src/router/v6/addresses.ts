@@ -30,6 +30,7 @@ export const Router: ChainIdToAddress = {
   [Network.Opbnb]: "0xc2c862322e9c97d6244a3506655da95f05246fd8",
   [Network.Ancient8]: "0x1aed60a97192157fda7fb26267a439d523d09c5e",
   [Network.BaseSepolia]: "0x1aed60a97192157fda7fb26267a439d523d09c5e",
+  [Network.BlastSepolia]: "0x1aed60a97192157fda7fb26267a439d523d09c5e",
 };
 
 // Approval proxy
@@ -60,6 +61,7 @@ export const ApprovalProxy: ChainIdToAddress = {
   [Network.Opbnb]: "0x79ce8f93063f8be4573a58f250b003859ebb7a24",
   [Network.Ancient8]: "0x224ecb4eae96d31372d1090c3b0233c8310dbbab",
   [Network.BaseSepolia]: "0x224ecb4eae96d31372d1090c3b0233c8310dbbab",
+  [Network.BlastSepolia]: "0x224ecb4eae96d31372d1090c3b0233c8310dbbab",
 };
 
 // Permit proxy
@@ -116,6 +118,7 @@ export const MintModule: ChainIdToAddress = {
   [Network.Opbnb]: "0x849ef788b40af342e2883c3112dd636f03a4203e",
   [Network.Ancient8]: "0xe3de16f7ed5a124686cc27571898e394959e8b39",
   [Network.BaseSepolia]: "0xe3de16f7ed5a124686cc27571898e394959e8b39",
+  [Network.BlastSepolia]: "0xe3de16f7ed5a124686cc27571898e394959e8b39",
 };
 
 export const DittoModule: ChainIdToAddress = {

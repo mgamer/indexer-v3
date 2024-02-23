@@ -43,6 +43,7 @@ export type SourcesMetadata = {
   tokenUrlAncient8Testnet?: string;
   tokenUrlAncient8?: string;
   tokenUrlBaseSepolia?: string;
+  tokenUrlBlastSepolia?: string;
 };
 
 export class SourcesEntity {
