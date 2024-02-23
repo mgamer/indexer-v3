@@ -41,7 +41,7 @@ import { CollectionMintStandard } from "@/orderbook/mints";
 import { checkMarketplaceIsFiltered } from "@/utils/marketplace-blacklists";
 import * as offchainCancel from "@/utils/offchain-cancel";
 import * as paymentProcessorV2Utils from "@/utils/payment-processor-v2";
-import * as registry from "@/utils/royalties/registry";
+import * as onchain from "@/utils/royalties/onchain";
 
 // Whenever a new order kind is added, make sure to also include an
 // entry/implementation in the below types/methods in order to have
@@ -916,8 +916,8 @@ export const generateBidDetailsV6 = async (
         ...common,
         order: sdkOrder,
         extraArgs: {
-          maxRoyaltyFeeNumerator: await registry
-            .getRegistryRoyalties(common.contract, common.tokenId)
+          maxRoyaltyFeeNumerator: await onchain
+            .getOnChainRoyalties(common.contract, common.tokenId, "onchain")
             .then((royalties) => royalties.map((r) => r.bps).reduce((a, b) => a + b, 0)),
         },
       };
@@ -983,8 +983,8 @@ export const generateBidDetailsV6 = async (
         order: sdkOrder,
         extraArgs: {
           ...extraArgs,
-          maxRoyaltyFeeNumerator: await registry
-            .getRegistryRoyalties(common.contract, common.tokenId)
+          maxRoyaltyFeeNumerator: await onchain
+            .getOnChainRoyalties(common.contract, common.tokenId, "onchain")
             .then((royalties) => royalties.map((r) => r.bps).reduce((a, b) => a + b, 0)),
         },
       };
