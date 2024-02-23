@@ -35,6 +35,7 @@ import * as onChainData from "@/utils/on-chain-data";
 import { getPersistentPermit } from "@/utils/permits";
 import { getPreSignatureId, getPreSignature, savePreSignature } from "@/utils/pre-signatures";
 import { getUSDAndCurrencyPrices } from "@/utils/prices";
+import { checkAddressIsBlockedByOFAC } from "@/utils/ofac";
 
 const version = "v7";
 
@@ -287,6 +288,11 @@ export const getExecuteSellV7Options: RouteOptions = {
       // Save the fill source if it doesn't exist yet
       if (payload.source) {
         await sources.getOrInsert(payload.source);
+      }
+
+      const takerBlocked = await checkAddressIsBlockedByOFAC(payload.taker);
+      if (takerBlocked) {
+        throw getExecuteError("Taker is blocked by OFAC");
       }
 
       const addToPath = async (

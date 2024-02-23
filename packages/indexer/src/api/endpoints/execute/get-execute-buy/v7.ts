@@ -49,6 +49,7 @@ import * as onChainData from "@/utils/on-chain-data";
 import { getEphemeralPermitId, getEphemeralPermit, saveEphemeralPermit } from "@/utils/permits";
 import { getPreSignatureId, getPreSignature, savePreSignature } from "@/utils/pre-signatures";
 import { getUSDAndCurrencyPrices } from "@/utils/prices";
+import { checkAddressIsBlockedByOFAC } from "@/utils/ofac";
 
 const version = "v7";
 
@@ -347,6 +348,11 @@ export const getExecuteBuyV7Options: RouteOptions = {
         gasCost?: string;
         fromChainId?: number;
       }[] = [];
+
+      const takerBlocked = await checkAddressIsBlockedByOFAC(payload.taker);
+      if (takerBlocked) {
+        throw getExecuteError("Taker is blocked by OFAC");
+      }
 
       // Keep track of dynamically-priced orders (eg. from pools like Sudoswap and NFTX)
       const poolPrices: { [pool: string]: string[] } = {};

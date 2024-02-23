@@ -1,7 +1,9 @@
 import axios from "axios";
 import * as cheerio from "cheerio";
+import { redis } from "@/common/redis";
 
 const SDN_LIST = "https://www.treasury.gov/ofac/downloads/sanctions/1.0/sdn_advanced.xml";
+const OFAC_BLACKLIST_KEY = "ofac_blacklist";
 
 export async function getSDNList() {
   const { data } = await axios.get(SDN_LIST);
@@ -38,7 +40,24 @@ export async function getSDNList() {
       }
     }
   }
-  //   const ethData = currencyTypes.find((c) => c.name === "Digital Currency Address - ETH");
-  //   console.log("currencyTypes", currencyTypes);
   return currencyTypes;
+}
+
+export async function getETHSDNList(): Promise<string[]> {
+  const currencyTypes = await getSDNList();
+  const ethData = currencyTypes.find((c) => c.name === "Digital Currency Address - ETH");
+  return ethData ? ethData.list : [];
+}
+
+export async function updateSNDList() {
+  const addressList = await getETHSDNList();
+  await redis.set(OFAC_BLACKLIST_KEY, JSON.stringify(addressList));
+  return addressList;
+}
+
+export async function checkAddressIsBlockedByOFAC(address: string) {
+  const blacklistList = await redis
+    .get(OFAC_BLACKLIST_KEY)
+    .then((s) => (s ? (JSON.parse(s) as string[]) : []));
+  return blacklistList.includes(address);
 }

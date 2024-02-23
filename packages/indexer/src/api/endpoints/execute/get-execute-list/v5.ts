@@ -21,6 +21,7 @@ import { getExecuteError } from "@/orderbook/orders/errors";
 import { OrderKind, checkBlacklistAndFallback } from "@/orderbook/orders";
 import * as b from "@/utils/auth/blur";
 import { ExecutionsBuffer } from "@/utils/executions";
+import { checkAddressIsBlockedByOFAC } from "@/utils/ofac";
 
 // Blur
 import * as blurSellToken from "@/orderbook/orders/blur/build/sell/token";
@@ -423,11 +424,19 @@ export const getExecuteListV5Options: RouteOptions = {
 
       const key = request.headers["x-api-key"];
       const apiKey = await ApiKeyManager.getApiKey(key);
+      const makerIsBlocked = await checkAddressIsBlockedByOFAC(maker);
 
       const errors: { message: string; orderIndex: number }[] = [];
       await Promise.all(
         params.map(async (params, i) => {
           const [contract, tokenId] = params.token.split(":");
+
+          if (makerIsBlocked) {
+            return errors.push({
+              message: `Maker is blocked by OFAC`,
+              orderIndex: i,
+            });
+          }
 
           // Force usage of seaport-v1.5
           if (params.orderKind === "seaport") {

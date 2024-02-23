@@ -26,6 +26,7 @@ import * as e from "@/utils/auth/erc721c";
 import * as erc721c from "@/utils/erc721c";
 import { ExecutionsBuffer } from "@/utils/executions";
 import { getEphemeralPermit, getEphemeralPermitId, saveEphemeralPermit } from "@/utils/permits";
+import { checkAddressIsBlockedByOFAC } from "@/utils/ofac";
 
 // Blur
 import * as blurBuyCollection from "@/orderbook/orders/blur/build/buy/collection";
@@ -574,6 +575,8 @@ export const getExecuteBidV5Options: RouteOptions = {
       const key = request.headers["x-api-key"];
       const apiKey = await ApiKeyManager.getApiKey(key);
 
+      const makerIsBlocked = await checkAddressIsBlockedByOFAC(maker);
+
       const errors: { message: string; orderIndex: number }[] = [];
       await Promise.all(
         params.map(async (params, i) => {
@@ -582,6 +585,13 @@ export const getExecuteBidV5Options: RouteOptions = {
           const tokenSetId = params.tokenSetId;
           const attributeKey = params.attributeKey;
           const attributeValue = params.attributeValue;
+
+          if (makerIsBlocked) {
+            return errors.push({
+              message: `Maker is blocked by OFAC`,
+              orderIndex: i,
+            });
+          }
 
           // Force usage of seaport-v1.5
           if (params.orderKind === "seaport") {
