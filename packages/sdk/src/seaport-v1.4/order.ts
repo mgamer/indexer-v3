@@ -239,8 +239,11 @@ export class Order implements IOrder {
     this.params.extraData = extraDataComponent.toString();
   }
 
-  public constructPrivateListingCounterOrder(privateSaleRecipient: string): Types.OrderWithCounter {
-    return constructPrivateListingCounterOrder(privateSaleRecipient, this.params);
+  public constructPrivateListingCounterOrder(
+    orderMaker: string,
+    privateSaleRecipient: string
+  ): Types.OrderWithCounter {
+    return constructPrivateListingCounterOrder(orderMaker, privateSaleRecipient, this.params);
   }
 
   public getFeeAmount(): BigNumber {

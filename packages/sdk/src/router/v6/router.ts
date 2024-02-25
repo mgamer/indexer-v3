@@ -1975,11 +1975,13 @@ export class Router {
                         const totalAmount = order.getInfo()!.amount;
                         const filledAmount = currencyDetails[i].amount ?? 1;
 
-                        const counterOrder = order.constructPrivateListingCounterOrder(taker);
+                        const counterOrder = order.constructPrivateListingCounterOrder(
+                          module.address,
+                          taker
+                        );
                         const fulfillments = order.getPrivateListingFulfillments();
 
-                        // Set the module as the offerer
-                        counterOrder.parameters.offerer = module.address;
+                        // The module will always approve Seaport directly
                         counterOrder.parameters.conduitKey = HashZero;
 
                         const orderData = {

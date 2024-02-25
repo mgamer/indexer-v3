@@ -80,7 +80,7 @@ export abstract class SeaportBaseExchange {
     if (info.side === "sell") {
       if (order.isPrivateOrder()) {
         info = info as BaseOrderInfo;
-        const counterOrder = order.constructPrivateListingCounterOrder(recipient);
+        const counterOrder = order.constructPrivateListingCounterOrder(taker, recipient);
         const fulfillments = order.getPrivateListingFulfillments();
 
         const advancedOrder = {

@@ -240,8 +240,11 @@ export class Order implements IOrder {
     return computeReceivedItems(this, matchParams);
   }
 
-  public constructPrivateListingCounterOrder(privateSaleRecipient: string): Types.OrderWithCounter {
-    return constructPrivateListingCounterOrder(privateSaleRecipient, this.params);
+  public constructPrivateListingCounterOrder(
+    orderMaker: string,
+    privateSaleRecipient: string
+  ): Types.OrderWithCounter {
+    return constructPrivateListingCounterOrder(orderMaker, privateSaleRecipient, this.params);
   }
 
   // Private methods
