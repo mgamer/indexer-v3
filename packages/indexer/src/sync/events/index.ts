@@ -369,6 +369,11 @@ export const syncTraces = async (block: number) => {
     throw new Error(`Block ${block} not found with RPC provider`);
   }
 
+  if (blockData.transactions.length === 0) {
+    logger.info("sync-traces", `Block ${block} has no transactions`);
+    return;
+  }
+
   const { traces, getTransactionTracesTime } = await syncEventsUtils._getTransactionTraces(
     blockData.transactions,
     block
