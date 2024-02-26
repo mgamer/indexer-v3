@@ -93,6 +93,9 @@ export const getNetworkName = () => {
     case 84532:
       return "base-sepolia";
 
+    case 168587773:
+      return "blast-sepolia";
+
     default:
       return "unknown";
   }
@@ -1760,6 +1763,39 @@ export const getNetworkSettings = (): NetworkSettings => {
     }
     // Base Sepolia
     case 84532: {
+      return {
+        ...defaultNetworkSettings,
+        isTestnet: true,
+        enableWebSocket: true,
+        realtimeSyncMaxBlockLag: 32,
+        realtimeSyncFrequencySeconds: 5,
+        lastBlockLatency: 5,
+        onStartup: async () => {
+          // Insert the native currency
+          await Promise.all([
+            idb.none(
+              `
+                    INSERT INTO currencies (
+                      contract,
+                      name,
+                      symbol,
+                      decimals,
+                      metadata
+                    ) VALUES (
+                      '\\x0000000000000000000000000000000000000000',
+                      'Ether',
+                      'ETH',
+                      18,
+                      '{"coingeckoCurrencyId": "ethereum", "image": "https://assets.coingecko.com/coins/images/279/large/ethereum.png"}'
+                    ) ON CONFLICT DO NOTHING
+                  `
+            ),
+          ]);
+        },
+      };
+    }
+    // Blast Sepolia
+    case 168587773: {
       return {
         ...defaultNetworkSettings,
         isTestnet: true,
