@@ -30,14 +30,16 @@ type OrderBuildInfo = {
 };
 
 export const getRoyaltiesToBePaid = async (contract: string, tokenId?: string) => {
-  // Royalty ordering: `eip2981` > `pp-v2-backfill` > `onchain`
+  // Royalty ordering: `eip2981` > `pp-v2-backfill` > `onchain` > `opensea` > `custom`
   return (await hasRoyalties("eip2981", contract))
     ? await getRoyalties(contract, tokenId, "eip2981")
     : (await hasRoyalties("pp-v2-backfill", contract))
     ? await getRoyalties(contract, tokenId, "pp-v2-backfill")
     : (await hasRoyalties("onchain", contract))
     ? await getRoyalties(contract, tokenId, "onchain")
-    : await getRoyalties(contract, tokenId, "opensea");
+    : (await hasRoyalties("opensea", contract))
+    ? await getRoyalties(contract, tokenId, "opensea")
+    : await getRoyalties(contract, tokenId, "custom");
 };
 
 export const getBuildInfo = async (
