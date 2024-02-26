@@ -175,11 +175,6 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
             // Handle: fees
             feeBps = Number(bps);
-            feeBreakdown.push({
-              kind: "marketplace",
-              recipient: pool.address,
-              bps: feeBps,
-            });
 
             // Handle: royalties on top
             const defaultRoyalties = await royalties.getRoyaltiesByTokenSet(
