@@ -1042,8 +1042,9 @@ export const checkBlacklistAndFallback = async (
     ]);
 
     // https://linear.app/reservoir/issue/PRO-1163/failing-ppv1-purchase
-    const isBlockedCustom =
-      config.chainId === 137 && collection === "0xdbc52cd5b8eda1a7bcbabb838ca927d23e3673e5";
+    // const isBlockedCustom =
+    //   config.chainId === 137 && collection === "0xdbc52cd5b8eda1a7bcbabb838ca927d23e3673e5";
+    const isBlockedCustom = false;
 
     if (isBlocked || isBlockedCustom) {
       if (!seaportIsBlocked) {
