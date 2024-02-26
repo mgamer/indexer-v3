@@ -31,6 +31,7 @@ import * as sudoswap from "@/orderbook/orders/sudoswap";
 import * as b from "@/utils/auth/blur";
 import { getCurrency } from "@/utils/currencies";
 import { ExecutionsBuffer } from "@/utils/executions";
+import { checkAddressIsBlockedByOFAC } from "@/utils/ofac";
 import * as onChainData from "@/utils/on-chain-data";
 import { getPersistentPermit } from "@/utils/permits";
 import { getPreSignatureId, getPreSignature, savePreSignature } from "@/utils/pre-signatures";
@@ -271,6 +272,11 @@ export const getExecuteSellV7Options: RouteOptions = {
         builtInFees: ExecuteFee[];
         feesOnTop: ExecuteFee[];
       }[] = [];
+
+      // OFAC blocklist
+      if (await checkAddressIsBlockedByOFAC(payload.taker)) {
+        throw Boom.unauthorized("Address is blocked by OFAC");
+      }
 
       // Keep track of dynamically-priced orders (eg. from pools like Sudoswap and NFTX)
       const poolPrices: { [pool: string]: string[] } = {};

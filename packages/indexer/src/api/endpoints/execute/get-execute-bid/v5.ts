@@ -25,6 +25,7 @@ import * as b from "@/utils/auth/blur";
 import * as e from "@/utils/auth/erc721c";
 import * as erc721c from "@/utils/erc721c";
 import { ExecutionsBuffer } from "@/utils/executions";
+import { checkAddressIsBlockedByOFAC } from "@/utils/ofac";
 import { getEphemeralPermit, getEphemeralPermitId, saveEphemeralPermit } from "@/utils/permits";
 
 // Blur
@@ -311,6 +312,11 @@ export const getExecuteBidV5Options: RouteOptions = {
         nonce?: string;
         usePermit?: string;
       }[];
+
+      // OFAC blocklist
+      if (await checkAddressIsBlockedByOFAC(maker)) {
+        throw Boom.unauthorized("Address is blocked by OFAC");
+      }
 
       // Set up generic bid steps
       let steps: {

@@ -21,6 +21,7 @@ import { getExecuteError } from "@/orderbook/orders/errors";
 import { OrderKind, checkBlacklistAndFallback } from "@/orderbook/orders";
 import * as b from "@/utils/auth/blur";
 import { ExecutionsBuffer } from "@/utils/executions";
+import { checkAddressIsBlockedByOFAC } from "@/utils/ofac";
 
 // Blur
 import * as blurSellToken from "@/orderbook/orders/blur/build/sell/token";
@@ -295,6 +296,11 @@ export const getExecuteListV5Options: RouteOptions = {
     }[];
 
     const perfTime1 = performance.now();
+
+    // OFAC blocklist
+    if (await checkAddressIsBlockedByOFAC(maker)) {
+      throw Boom.unauthorized("Address is blocked by OFAC");
+    }
 
     try {
       // Set up generic listing steps
