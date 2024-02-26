@@ -16,6 +16,7 @@ import { now, regex, bn } from "@/common/utils";
 import { config } from "@/config/index";
 import { ApiKeyManager } from "@/models/api-keys";
 import { FeeRecipients } from "@/models/fee-recipients";
+import { Sources } from "@/models/sources";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import { getExecuteError } from "@/orderbook/orders/errors";
 import { OrderKind, checkBlacklistAndFallback } from "@/orderbook/orders";
@@ -296,6 +297,19 @@ export const getExecuteListV5Options: RouteOptions = {
     }[];
 
     const perfTime1 = performance.now();
+
+    // Source restrictions
+    if (source) {
+      const sources = await Sources.getInstance();
+      const sourceObject = sources.getByDomain(source);
+      if (sourceObject && sourceObject.metadata?.allowedApiKeys?.length) {
+        const key = request.headers["x-api-key"];
+        const apiKey = await ApiKeyManager.getApiKey(key);
+        if (!apiKey || !sourceObject.metadata.allowedApiKeys.includes(apiKey.key)) {
+          throw Boom.unauthorized("Restricted source");
+        }
+      }
+    }
 
     // OFAC blocklist
     if (await checkAddressIsBlockedByOFAC(maker)) {
