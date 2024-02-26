@@ -2280,22 +2280,24 @@ export const getListedTokensFromES = async (query: any, attributeFloorAskPriceAs
                       value: attribute.value,
                       tokenCount: attribute.tokenCount,
                       onSaleCount: attribute.onSaleCount,
-                      floorAskPrice: attribute.floorAskValue
-                        ? await getJoiPriceObject(
-                            {
-                              gross: {
-                                amount: String(
-                                  attribute.floorAskCurrencyValue ?? attribute.floorAskValue
-                                ),
-                                nativeAmount: String(attribute.floorAskValue),
+                      floorAskPrice:
+                        attribute.tokenCount <= ResyncAttributeCacheJob.maxTokensPerAttribute &&
+                        attribute.floorAskValue
+                          ? await getJoiPriceObject(
+                              {
+                                gross: {
+                                  amount: String(
+                                    attribute.floorAskCurrencyValue ?? attribute.floorAskValue
+                                  ),
+                                  nativeAmount: String(attribute.floorAskValue),
+                                },
                               },
-                            },
-                            attribute.floorAskCurrency
-                              ? _.replace(attribute.floorAskCurrency, "\\x", "0x")
-                              : Sdk.Common.Addresses.Native[config.chainId],
-                            query.displayCurrency
-                          )
-                        : null,
+                              attribute.floorAskCurrency
+                                ? _.replace(attribute.floorAskCurrency, "\\x", "0x")
+                                : Sdk.Common.Addresses.Native[config.chainId],
+                              query.displayCurrency
+                            )
+                          : null,
                       topBidValue: attribute.topBidValue
                         ? formatEth(attribute.topBidValue)
                         : attribute.topBidValue,
