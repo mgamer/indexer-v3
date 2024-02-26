@@ -4,11 +4,13 @@ import { HashZero } from "@ethersproject/constants";
 import { searchForCalls } from "@georgeroman/evm-tx-simulator";
 import * as Sdk from "@reservoir0x/sdk";
 
+import { logger } from "@/common/logger";
 import { config } from "@/config/index";
 import { getEventData } from "@/events-sync/data";
 import { EnhancedEvent, OnChainData } from "@/events-sync/handlers/utils";
 import { getERC20Transfer } from "@/events-sync/handlers/utils/erc20";
 import * as utils from "@/events-sync/utils";
+import { orderFixesJob } from "@/jobs/order-fixes/order-fixes-job";
 import * as commonHelpers from "@/orderbook/orders/common/helpers";
 import * as paymentProcessorV2Utils from "@/utils/payment-processor-v2";
 import { getUSDAndNativePrices } from "@/utils/prices";
@@ -85,7 +87,6 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
         const parsedLog = eventData.abi.parseLog(log);
 
         const txHash = baseEventParams.txHash;
-        const tx = await utils.fetchTransaction(txHash);
 
         const exchange = new Sdk.PaymentProcessorV2.Exchange(config.chainId);
         const exchangeAddress = exchange.contract.address;
@@ -224,16 +225,35 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
             for (const call of calls) {
               relevantCalls.push(call.input ?? "0x");
             }
-          } catch {
-            relevantCalls.push(tx.data);
+          } catch (error) {
+            logger.info(
+              "pp-v2",
+              JSON.stringify({
+                msg: "Could not get transaction trace",
+                log,
+                parsingError: true,
+                error,
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                stack: (error as any).stack,
+              })
+            );
+            throw new Error("Could not get transaction trace");
           }
         } else {
-          relevantCalls.push(tx.data);
+          logger.info(
+            "pp-v2",
+            JSON.stringify({ msg: "Could not get transaction trace", log, isMissingTrace: true })
+          );
+          throw new Error("Could not get transaction trace");
         }
 
         for (const relevantCalldata of relevantCalls) {
           const matchedMethod = methods.find((c) => relevantCalldata.includes(c.selector));
           if (!matchedMethod) {
+            logger.info(
+              "pp-v2",
+              JSON.stringify({ msg: "Missing matched method", log, relevantCalldata })
+            );
             continue;
           }
 
@@ -424,6 +444,14 @@ export const handleEvents = async (events: EnhancedEvent[], onChainData: OnChain
                 order.params.sellerOrBuyer,
                 order.params.nonce
               );
+            }
+
+            if (
+              orderId &&
+              order.params.protocol ===
+                Sdk.PaymentProcessorV2.Types.OrderProtocols.ERC1155_FILL_PARTIAL
+            ) {
+              await orderFixesJob.addToQueue([{ by: "id", data: { id: orderId } }], 5000);
             }
 
             // Handle: attribution
