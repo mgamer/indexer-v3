@@ -109,6 +109,7 @@ export const isCosignedOrder = (params: Types.OrderComponents, chainId: number) 
 export const constructPrivateListingCounterOrder = (
   orderMaker: string,
   privateSaleRecipient: string,
+  conduitKey: string,
   params: Types.OrderComponents
 ): Types.OrderWithCounter => {
   // Counter order offers up all the items in the private listing consideration
@@ -141,6 +142,7 @@ export const constructPrivateListingCounterOrder = (
     parameters: {
       ...params,
       zone: AddressZero,
+      conduitKey,
       orderType: 0,
       offerer: orderMaker,
       offer: [

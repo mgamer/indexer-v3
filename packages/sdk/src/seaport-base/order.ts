@@ -20,7 +20,8 @@ export interface IOrder {
   isPrivateOrder(): boolean;
   constructPrivateListingCounterOrder(
     orderMaker: string,
-    privateSaleRecipient: string
+    privateSaleRecipient: string,
+    conduitKey: string
   ): Types.OrderWithCounter;
   getPrivateListingFulfillments(): Types.MatchOrdersFulfillment[];
 
