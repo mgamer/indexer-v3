@@ -302,10 +302,6 @@ export const extractEventsBatches = (enhancedEvents: EnhancedEvent[]): EventsBat
         kind: "operator-filter",
         data: kindToEvents.get("operator-filter") ?? [],
       },
-      {
-        kind: "metadata-update",
-        data: kindToEvents.get("metadata-update") ?? [],
-      },
     ];
 
     txHashToEventsBatch.set(txHash, {
