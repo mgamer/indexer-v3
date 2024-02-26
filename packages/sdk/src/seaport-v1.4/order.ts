@@ -241,9 +241,15 @@ export class Order implements IOrder {
 
   public constructPrivateListingCounterOrder(
     orderMaker: string,
-    privateSaleRecipient: string
+    privateSaleRecipient: string,
+    conduitKey: string
   ): Types.OrderWithCounter {
-    return constructPrivateListingCounterOrder(orderMaker, privateSaleRecipient, this.params);
+    return constructPrivateListingCounterOrder(
+      orderMaker,
+      privateSaleRecipient,
+      conduitKey,
+      this.params
+    );
   }
 
   public getFeeAmount(): BigNumber {

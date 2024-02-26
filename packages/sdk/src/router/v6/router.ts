@@ -1977,12 +1977,10 @@ export class Router {
 
                         const counterOrder = order.constructPrivateListingCounterOrder(
                           module.address,
-                          taker
+                          taker,
+                          HashZero
                         );
                         const fulfillments = order.getPrivateListingFulfillments();
-
-                        // The module will always approve Seaport directly
-                        counterOrder.parameters.conduitKey = HashZero;
 
                         const orderData = {
                           parameters: {
