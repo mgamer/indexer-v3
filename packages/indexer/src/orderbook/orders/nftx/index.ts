@@ -161,8 +161,8 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
 
           if (priceList.length) {
             // Handle: prices
-            const { price, feeBps: bps } = priceList[0];
-            const value = bn(price).sub(bn(price).mul(bps).div(10000)).toString();
+            const { price } = priceList[0];
+            const value = bn(price).toString();
 
             const prices: string[] = [];
             for (let i = 0; i < priceList.length; i++) {
