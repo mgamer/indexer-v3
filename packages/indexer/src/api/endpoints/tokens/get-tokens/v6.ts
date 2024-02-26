@@ -1577,8 +1577,9 @@ export const getTokensV6Options: RouteOptions = {
                       tokenCount: attribute.tokenCount,
                       onSaleCount: attribute.onSaleCount,
                       floorAskPrice:
-                        attribute.tokenCount <= ResyncAttributeCacheJob.maxTokensPerAttribute &&
-                        attribute.floorAskPrice
+                        attribute.tokenCount <= ResyncAttributeCacheJob.maxTokensPerAttribute
+                          ? null
+                          : attribute.floorAskPrice
                           ? formatEth(attribute.floorAskPrice)
                           : attribute.floorAskPrice,
                       topBidValue: attribute.topBidValue
