@@ -45,11 +45,11 @@ import * as e from "@/utils/auth/erc721c";
 import { getCurrency } from "@/utils/currencies";
 import * as erc721c from "@/utils/erc721c";
 import { ExecutionsBuffer } from "@/utils/executions";
+import { checkAddressIsBlockedByOFAC } from "@/utils/ofac";
 import * as onChainData from "@/utils/on-chain-data";
 import { getEphemeralPermitId, getEphemeralPermit, saveEphemeralPermit } from "@/utils/permits";
 import { getPreSignatureId, getPreSignature, savePreSignature } from "@/utils/pre-signatures";
 import { getUSDAndCurrencyPrices } from "@/utils/prices";
-import { checkAddressIsBlockedByOFAC } from "@/utils/ofac";
 
 const version = "v7";
 
@@ -349,9 +349,9 @@ export const getExecuteBuyV7Options: RouteOptions = {
         fromChainId?: number;
       }[] = [];
 
-      const takerBlocked = await checkAddressIsBlockedByOFAC(payload.taker);
-      if (takerBlocked) {
-        throw getExecuteError("Taker is blocked by OFAC");
+      // OFAC blocklist
+      if (await checkAddressIsBlockedByOFAC(payload.taker)) {
+        throw Boom.unauthorized("Address is blocked by OFAC");
       }
 
       // Keep track of dynamically-priced orders (eg. from pools like Sudoswap and NFTX)

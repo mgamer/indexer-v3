@@ -297,6 +297,11 @@ export const getExecuteListV5Options: RouteOptions = {
 
     const perfTime1 = performance.now();
 
+    // OFAC blocklist
+    if (await checkAddressIsBlockedByOFAC(maker)) {
+      throw Boom.unauthorized("Address is blocked by OFAC");
+    }
+
     try {
       // Set up generic listing steps
       let steps: {
@@ -424,19 +429,11 @@ export const getExecuteListV5Options: RouteOptions = {
 
       const key = request.headers["x-api-key"];
       const apiKey = await ApiKeyManager.getApiKey(key);
-      const makerIsBlocked = await checkAddressIsBlockedByOFAC(maker);
 
       const errors: { message: string; orderIndex: number }[] = [];
       await Promise.all(
         params.map(async (params, i) => {
           const [contract, tokenId] = params.token.split(":");
-
-          if (makerIsBlocked) {
-            return errors.push({
-              message: `Maker is blocked by OFAC`,
-              orderIndex: i,
-            });
-          }
 
           // Force usage of seaport-v1.5
           if (params.orderKind === "seaport") {

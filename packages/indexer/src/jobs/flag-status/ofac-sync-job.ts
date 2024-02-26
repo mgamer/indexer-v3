@@ -1,8 +1,9 @@
-import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handler";
+import cron from "node-cron";
+
 import { redlock } from "@/common/redis";
 import { config } from "@/config/index";
-import { updateSNDList } from "@/utils/ofac";
-import cron from "node-cron";
+import { updateETHSDNList } from "@/utils/ofac";
+import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handler";
 
 export default class OfacSyncJob extends AbstractRabbitMqJobHandler {
   queueName = "ofac-sync-queue";
@@ -13,7 +14,7 @@ export default class OfacSyncJob extends AbstractRabbitMqJobHandler {
 
   public async process() {
     try {
-      await updateSNDList();
+      await updateETHSDNList();
     } catch {
       // Skip errors
     }
@@ -33,9 +34,7 @@ if (config.doBackgroundWork) {
     async () =>
       await redlock
         .acquire([`ofac-sync-cron-lock`], (5 * 60 - 5) * 1000)
-        .then(async () => {
-          await ofacSyncJob.addToQueue();
-        })
+        .then(async () => ofacSyncJob.addToQueue())
         .catch(() => {
           // Skip on any errors
         })
