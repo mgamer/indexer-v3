@@ -1099,7 +1099,7 @@ export const getTokensV5Options: RouteOptions = {
                       tokenCount: attribute.tokenCount,
                       onSaleCount: attribute.onSaleCount,
                       floorAskPrice:
-                        attribute.tokenCount <= ResyncAttributeCacheJob.maxTokensPerAttribute
+                        attribute.tokenCount > ResyncAttributeCacheJob.maxTokensPerAttribute
                           ? null
                           : attribute.floorAskPrice
                           ? formatEth(attribute.floorAskPrice)
