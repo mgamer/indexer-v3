@@ -411,7 +411,7 @@ export const getExecuteSellV7Options: RouteOptions = {
           }),
           feesOnTop: [
             ...additionalFees.map((f) => ({
-              kind: "marketplace",
+              kind: "royalty",
               recipient: f.recipient,
               bps: bn(f.amount).mul(10000).div(unitPrice).toNumber(),
               amount: formatPrice(f.amount, currency.decimals, true),
