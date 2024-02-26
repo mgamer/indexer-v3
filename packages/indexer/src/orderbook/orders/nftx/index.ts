@@ -174,7 +174,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
             }
 
             // Handle: fees
-            feeBps = Number(bps);
+            feeBps = Number(0);
 
             // Handle: royalties on top
             const defaultRoyalties = await royalties.getRoyaltiesByTokenSet(
@@ -278,7 +278,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                 taker: toBuffer(AddressZero),
                 price: price.toString(),
                 value,
-                currency: toBuffer(Sdk.Common.Addresses.Native[config.chainId]),
+                currency: toBuffer(Sdk.Common.Addresses.WNative[config.chainId]),
                 currency_price: price.toString(),
                 currency_value: value,
                 needs_conversion: null,
@@ -363,7 +363,7 @@ export const save = async (orderInfos: OrderInfo[]): Promise<SaveResult[]> => {
                   currencyNormalizedValue: normalizedValue.toString(),
                   feeBps,
                   feeBreakdown,
-                  currency: toBuffer(Sdk.Common.Addresses.Native[config.chainId]),
+                  currency: toBuffer(Sdk.Common.Addresses.WNative[config.chainId]),
                   blockNumber: orderParams.txBlock,
                   logIndex: orderParams.logIndex,
                 }
