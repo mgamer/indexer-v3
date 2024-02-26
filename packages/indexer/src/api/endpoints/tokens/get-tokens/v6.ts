@@ -37,6 +37,7 @@ import * as AsksIndex from "@/elasticsearch/indexes/asks";
 import { OrderComponents } from "@reservoir0x/sdk/dist/seaport-base/types";
 import { hasExtendCollectionHandler } from "@/metadata/extend";
 import { parseMetadata } from "@/api/endpoints/tokens/get-user-tokens/v8";
+import ResyncAttributeCacheJob from "@/jobs/update-attribute/resync-attribute-cache-job";
 
 const version = "v6";
 
@@ -1575,9 +1576,11 @@ export const getTokensV6Options: RouteOptions = {
                       value: attribute.value,
                       tokenCount: attribute.tokenCount,
                       onSaleCount: attribute.onSaleCount,
-                      floorAskPrice: attribute.floorAskPrice
-                        ? formatEth(attribute.floorAskPrice)
-                        : attribute.floorAskPrice,
+                      floorAskPrice:
+                        attribute.tokenCount <= ResyncAttributeCacheJob.maxTokensPerAttribute &&
+                        attribute.floorAskPrice
+                          ? formatEth(attribute.floorAskPrice)
+                          : attribute.floorAskPrice,
                       topBidValue: attribute.topBidValue
                         ? formatEth(attribute.topBidValue)
                         : attribute.topBidValue,
