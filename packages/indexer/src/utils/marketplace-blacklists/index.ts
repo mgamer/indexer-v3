@@ -76,11 +76,27 @@ export const isBlockedByCustomLogic = async (
       [
         "0x0c86cdc978b7d191f11b36731107e924c699af10",
         "0x4d7d2e237d64d1484660b55c0a4cc092fa5e6716",
+        "0x4b15a9c28034dc83db40cd810001427d3bd7163d",
+        "0x2358693f4faec9d658bb97fc9cd8885f62105dc1",
+        "0x769272677fab02575e84945f03eca517acc544cc",
+        "0x8f1b132e9fd2b9a2b210baa186bf1ae650adf7ac",
+        "0xd4b7d9bb20fa20ddada9ecef8a7355ca983cccb1",
+        "0x572e33ffa523865791ab1c26b42a86ac244df784",
+        "0x7daec605e9e2a1717326eedfd660601e2753a057",
       ].includes(contract) &&
       (operators.includes(BLUR) || operators.includes(OPENSEA))
     ) {
       result = true;
       blacklist = [BLUR, OPENSEA];
+    }
+
+    if (
+      config.chainId === 1 &&
+      ["0xc379e535caff250a01caa6c3724ed1359fe5c29b"].includes(contract) &&
+      operators.includes(OPENSEA)
+    ) {
+      result = true;
+      blacklist = [OPENSEA];
     }
 
     // `registry()`
