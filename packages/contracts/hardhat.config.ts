@@ -209,6 +209,7 @@ const config: HardhatUserConfig = {
       zora: "0x",
       ancient8: "0x",
       opBnb: "0x",
+      apex: "0x",
       // Testnets
       goerli: process.env.ETHERSCAN_API_KEY_GOERLI ?? "",
       zoraTestnet: "0x",
