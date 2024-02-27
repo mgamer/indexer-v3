@@ -627,6 +627,22 @@ export const getExecuteBidV5Options: RouteOptions = {
             return errors.push({ message: (error as any).message, orderIndex: i });
           }
 
+          // PPv2 restrictions
+          try {
+            if (process.env.PP_V2_ALLOWED_KEYS) {
+              const ppv2AllowedKeys = JSON.parse(process.env.PP_V2_ALLOWED_KEYS) as string[];
+              if (!apiKey || !ppv2AllowedKeys.includes(apiKey.key)) {
+                return errors.push({
+                  message:
+                    "Unable to create Payment Processor order. Please change orderKind or contact Reservoir team for access.",
+                  orderIndex: i,
+                });
+              }
+            }
+          } catch {
+            // Skip errors
+          }
+
           // Only single-contract token sets are biddable
           if (tokenSetId && tokenSetId.startsWith("list") && tokenSetId.split(":").length !== 3) {
             return errors.push({
