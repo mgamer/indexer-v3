@@ -24,14 +24,15 @@ export const handleEvents = async (events: EnhancedEvent[]) => {
             baseProvider
           );
 
+          // TODO: Use a job queue for these updates
           const subscribers: string[] = await registry.subscribers(registrant);
-          if (subscribers.length <= 1000) {
-            await Promise.all(
-              subscribers.map((subscriber) =>
+          await Promise.all(
+            subscribers
+              .slice(0, 1000)
+              .map((subscriber) =>
                 marketplaceBlacklists.updateMarketplaceBlacklist(subscriber.toLowerCase())
               )
-            );
-          }
+          );
         } catch (error) {
           logger.info(
             "debug",
