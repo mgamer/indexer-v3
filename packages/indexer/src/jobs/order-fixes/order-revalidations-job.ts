@@ -83,7 +83,7 @@ export default class OrderRevalidationsJob extends AbstractRabbitMqJobHandler {
 
           await redis.set(lockKey, "locked", "EX", 5 * 60);
 
-          if (!blacklistedOperators?.length && !whitelistedOperators?.length) {
+          if (!blacklistedOperators && !whitelistedOperators) {
             return;
           }
 
