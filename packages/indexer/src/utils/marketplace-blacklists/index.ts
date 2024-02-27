@@ -21,15 +21,6 @@ export const checkMarketplaceIsFiltered = async (
   operators: string[],
   refresh?: boolean
 ) => {
-  // Custom rules
-  if (
-    config.chainId === 1 &&
-    contract === "0x0c86cdc978b7d191f11b36731107e924c699af10" &&
-    operators.includes(Sdk.BlurV2.Addresses.Delegate[config.chainId])
-  ) {
-    return true;
-  }
-
   let result: string[] | null = [];
   if (refresh) {
     result = await updateMarketplaceBlacklist(contract);
@@ -65,7 +56,7 @@ export const isBlockedByCustomLogic = async (
   operators: string[],
   refresh?: boolean
 ) => {
-  const cacheKey = `marketplace-blacklist-custom-logic-2:${contract}:${JSON.stringify(operators)}`;
+  const cacheKey = `marketplace-blacklist-custom-logic-3:${contract}:${JSON.stringify(operators)}`;
   let cache = await redis.get(cacheKey);
   if (refresh || !cache) {
     const iface = new Interface([
@@ -76,6 +67,21 @@ export const isBlockedByCustomLogic = async (
 
     let result = false;
     let blacklist: string[] = [];
+
+    // CUSTOM RULES
+    const BLUR = Sdk.BlurV2.Addresses.Delegate[config.chainId];
+    const OPENSEA = "0x1e0049783f008a0085193e00003d00cd54003c71";
+    if (
+      config.chainId === 1 &&
+      [
+        "0x0c86cdc978b7d191f11b36731107e924c699af10",
+        "0x4d7d2e237d64d1484660b55c0a4cc092fa5e6716",
+      ].includes(contract) &&
+      (operators.includes(BLUR) || operators.includes(OPENSEA))
+    ) {
+      result = true;
+      blacklist = [BLUR, OPENSEA];
+    }
 
     // `registry()`
     try {
@@ -90,7 +96,7 @@ export const isBlockedByCustomLogic = async (
       const allowed = await Promise.all(operators.map((c) => registry.isAllowedOperator(c)));
       result = allowed.some((c) => !c);
 
-      if (!result) {
+      if (result) {
         blacklist = operators;
       }
     } catch {
