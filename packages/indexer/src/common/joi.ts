@@ -316,7 +316,6 @@ export const JoiOrder = Joi.object({
       Joi.object({
         kind: Joi.string().description("Can be marketplace or royalty"),
         recipient: Joi.string().allow("", null),
-        required: Joi.boolean(),
         bps: Joi.number(),
       })
     )

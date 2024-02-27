@@ -418,7 +418,9 @@ export const getExecuteSellV7Options: RouteOptions = {
             const amount = formatPrice(rawAmount, currency.decimals);
 
             return {
-              ...f,
+              kind: f.kind,
+              recipient: f.recipient,
+              bps: f.bps,
               amount,
               rawAmount,
             };
