@@ -38,7 +38,7 @@ export const checkMarketplaceIsFiltered = async (
     result = await redis.get(cacheKey).then((r) => (r ? (JSON.parse(r) as string[]) : null));
     if (!result) {
       result = await getMarketplaceBlacklistFromDb(contract).then((r) => r.blacklist);
-      await redis.set(cacheKey, JSON.stringify(result), "EX", 60);
+      await redis.set(cacheKey, JSON.stringify(result), "EX", 5 * 60);
     }
   }
 
@@ -65,7 +65,7 @@ export const isBlockedByCustomLogic = async (
   operators: string[],
   refresh?: boolean
 ) => {
-  const cacheKey = `marketplace-blacklist-custom-logic:${contract}:${JSON.stringify(operators)}`;
+  const cacheKey = `marketplace-blacklist-custom-logic-2:${contract}:${JSON.stringify(operators)}`;
   let cache = await redis.get(cacheKey);
   if (refresh || !cache) {
     const iface = new Interface([
@@ -75,6 +75,7 @@ export const isBlockedByCustomLogic = async (
     const nft = new Contract(contract, iface, baseProvider);
 
     let result = false;
+    let blacklist: string[] = [];
 
     // `registry()`
     try {
@@ -88,6 +89,10 @@ export const isBlockedByCustomLogic = async (
 
       const allowed = await Promise.all(operators.map((c) => registry.isAllowedOperator(c)));
       result = allowed.some((c) => !c);
+
+      if (!result) {
+        blacklist = operators;
+      }
     } catch {
       // Skip errors
     }
@@ -104,18 +109,35 @@ export const isBlockedByCustomLogic = async (
         .getDenylistOperators()
         .then((ops: string[]) => ops.map((op) => op.toLowerCase()));
       result = operators.every((c) => blockedOperators.includes(c));
+
+      blacklist = blockedOperators;
     } catch {
       // Skip errors
     }
 
     // Positive case
     if (result) {
-      await redis.set(cacheKey, "1", "EX", 24 * 3600);
+      // Invalid any orders relying on the blacklisted operator
+      if (blacklist.length) {
+        await orderRevalidationsJob.addToQueue([
+          {
+            by: "operator",
+            data: {
+              origin: "marketplace-blacklist",
+              contract,
+              blacklistedOperators: blacklist,
+              status: "inactive",
+            },
+          },
+        ]);
+      }
+
+      await redis.set(cacheKey, "1", "EX", 5 * 60);
       return result;
     }
 
     // Negative case
-    await redis.set(cacheKey, "0", "EX", 24 * 3600);
+    await redis.set(cacheKey, "0", "EX", 5 * 60);
     cache = "0";
   }
 
