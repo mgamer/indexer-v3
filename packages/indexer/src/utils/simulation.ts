@@ -1,9 +1,8 @@
 import { BigNumberish } from "@ethersproject/bignumber";
 import { parseEther } from "@ethersproject/units";
 import { Wallet } from "@ethersproject/wallet";
-import { getCallTrace, getStateChange } from "@georgeroman/evm-tx-simulator";
+import { getCallTrace, getStateChange, getPayments } from "@georgeroman/evm-tx-simulator";
 import { TxData } from "@reservoir0x/sdk/dist/utils";
-import { getNFTTransferEvents } from "@/orderbook/mints/simulation";
 
 import { bn, now } from "@/common/utils";
 import { baseProvider } from "@/common/provider";
@@ -49,26 +48,20 @@ export const ensureBuyTxSucceeds = async (
     { skipReverts: true }
   );
 
-  // https://github.com/Pandora-Labs-Org/erc404/blob/main/contracts/ERC404.sol#L73
-  const isERC404 = bn(token.tokenId).gte(
-    bn("57896044618658097711785492504343953926634992332820282019728792003956564819968")
-  );
-
-  if (isERC404) {
-    const nftTransferEvents = await getNFTTransferEvents(tx);
-    const matchedNftTransfer = nftTransferEvents.find(
-      (c) =>
-        c.contract === token.contract &&
-        c.to == taker &&
-        c.tokenId == token.tokenId &&
-        c.amount == bn(token.amount).toString()
+  // ERC404 supports
+  const payments = getPayments(callTrace);
+  const relatedPayments = payments.filter((c) => {
+    return (
+      c.token.toLowerCase().includes(token.contract) &&
+      c.to.toLowerCase() == taker &&
+      c.amount === token.tokenId
     );
-    if (matchedNftTransfer) {
-      return {
-        result: true,
-        callTrace,
-      };
-    }
+  });
+  if (bn(relatedPayments.length).toString() === bn(token.amount).toString()) {
+    return {
+      result: true,
+      callTrace,
+    };
   }
 
   if (callTrace.error) {
@@ -135,25 +128,20 @@ export const ensureSellTxSucceeds = async (
 
   const result = getStateChange(callTrace);
 
-  // https://github.com/Pandora-Labs-Org/erc404/blob/main/contracts/ERC404.sol#L73
-  const isERC404 = bn(token.tokenId).gte(
-    bn("57896044618658097711785492504343953926634992332820282019728792003956564819968")
-  );
-  if (isERC404) {
-    const nftTransferEvents = await getNFTTransferEvents(tx);
-    const matchedNftTransfer = nftTransferEvents.find(
-      (c) =>
-        c.contract === token.contract &&
-        c.from == taker &&
-        c.tokenId == token.tokenId &&
-        c.amount == bn(token.amount).toString()
+  // ERC404 supports
+  const payments = getPayments(callTrace);
+  const relatedPayments = payments.filter((c) => {
+    return (
+      c.token.toLowerCase().includes(token.contract) &&
+      c.from.toLowerCase() == taker &&
+      c.amount === token.tokenId
     );
-    if (matchedNftTransfer) {
-      return {
-        result: true,
-        callTrace,
-      };
-    }
+  });
+  if (bn(relatedPayments.length).toString() === bn(token.amount).toString()) {
+    return {
+      result: true,
+      callTrace,
+    };
   }
 
   if (
