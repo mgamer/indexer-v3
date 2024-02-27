@@ -56,7 +56,7 @@ export const isBlockedByCustomLogic = async (
   operators: string[],
   refresh?: boolean
 ) => {
-  const cacheKey = `marketplace-blacklist-custom-logic-2:${contract}:${JSON.stringify(operators)}`;
+  const cacheKey = `marketplace-blacklist-custom-logic-3:${contract}:${JSON.stringify(operators)}`;
   let cache = await redis.get(cacheKey);
   if (refresh || !cache) {
     const iface = new Interface([
@@ -96,7 +96,7 @@ export const isBlockedByCustomLogic = async (
       const allowed = await Promise.all(operators.map((c) => registry.isAllowedOperator(c)));
       result = allowed.some((c) => !c);
 
-      if (!result) {
+      if (result) {
         blacklist = operators;
       }
     } catch {
