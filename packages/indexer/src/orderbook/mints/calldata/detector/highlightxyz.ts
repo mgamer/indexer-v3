@@ -22,6 +22,7 @@ export interface Info {
   prices?: string[];
   pricePeriodDuration?: number;
   lowestPriceIndex?: number;
+  platformFee?: string;
 }
 
 interface MechanicVectorMetadata {
@@ -211,8 +212,8 @@ export const extractByCollectionERC721 = async (
     } else {
       // Skipping this for now
       // // "Mechanics" are equivalent to the "Strategy" pattern
-      // const vector: MechanicVectorMetadata = await mintManager.mechanicVectorMetadata(vectorId);
-      // await tryDetectDutchAuction(results, mintManager, collection, vectorId, vector);
+      const vector: MechanicVectorMetadata = await mintManager.mechanicVectorMetadata(vectorId);
+      await tryDetectDutchAuction(results, mintManager, collection, vectorId, vector);
     }
   } catch (error) {
     logger.error("mint-detector", JSON.stringify({ kind: STANDARD, error }));
@@ -297,6 +298,10 @@ const tryDetectDutchAuction = async (
   const maxUserClaimableViaVector = toSafeNumber(rawVector.maxUserClaimableViaVector);
   const tokenLimitPerTx = toSafeNumber(rawVector.tokenLimitPerTx);
 
+  const platformFee = await baseProvider
+    .getStorageAt(mintManager.address, 166)
+    .then((value) => bn(value));
+
   // "mechanicVector" data
   const price = daState.currentPrice.toString();
   const maxSupply = toSafeNumber(daState.collectionSize);
@@ -344,6 +349,7 @@ const tryDetectDutchAuction = async (
         prices: daState.prices.map((price) => price.toString()),
         pricePeriodDuration: rawVector.periodDuration,
         lowestPriceIndex: rawVector.lowestPriceSoldAtIndex,
+        platformFee: platformFee.toString(),
       },
     },
     maxSupply,
@@ -410,4 +416,16 @@ export const extractByTx = async (
   }
 
   return [];
+};
+
+export const getPrice = async (mint: CollectionMint) => {
+  const info = mint.details.info as Info;
+  const latestBlock = await baseProvider.getBlockNumber();
+  const timestamp = await baseProvider.getBlock(latestBlock - 1).then((b) => b.timestamp);
+  const priceList = info.prices ?? [];
+  const numPrices = priceList.length;
+  const hypotheticalIndex = Math.ceil((timestamp - mint.startTime!) / info.pricePeriodDuration!);
+  const priceIndex = hypotheticalIndex >= numPrices ? numPrices - 1 : hypotheticalIndex;
+  const dutchPrice = priceList[priceIndex];
+  return bn(dutchPrice).add(bn(info.platformFee!)).toString();
 };

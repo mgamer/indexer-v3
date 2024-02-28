@@ -64,7 +64,6 @@ export async function processTopBid(payload: topBidPayload, queueName: string) {
       `,
       { tokenSetId: payload.tokenSetId }
     );
-
     if (!tokenSetTopBid.length && payload.kind === "revalidation") {
       // When revalidating, force revalidation of the attribute / collection
       const tokenSetsResult = await ridb.manyOrNone(
@@ -91,7 +90,6 @@ export async function processTopBid(payload: topBidPayload, queueName: string) {
         );
       }
     }
-
     if (tokenSetTopBid.length) {
       if (
         payload.kind === "new-order" &&

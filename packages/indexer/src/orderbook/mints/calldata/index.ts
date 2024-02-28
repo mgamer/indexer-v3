@@ -385,6 +385,14 @@ export const generateCollectionMintTxData = async (
     );
   }
 
+  // Compute the price just-in-time
+  if (
+    collectionMint.standard === "highlightxyz" &&
+    (collectionMint.details.info as mints.highlightxyz.Info).pricePeriodDuration
+  ) {
+    price = await mints.highlightxyz.getPrice(collectionMint);
+  }
+
   // If the price is not available on the main `CollectionMint`
 
   // First, try get it from the allowlist
