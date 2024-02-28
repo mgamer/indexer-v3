@@ -181,7 +181,7 @@ export const SeaportV15Module: ChainIdToAddress = {
   [Network.Scroll]: "0x4e9aaa72727a2f5aa5d2bef80ab5642661e29ef6",
   [Network.FrameTestnet]: "0x4e9aaa72727a2f5aa5d2bef80ab5642661e29ef6",
   [Network.Opbnb]: "0x00ca04c45da318d5b7e7b14d5381ca59f09c73f0",
-  [Network.Ancient8]: "0x4e9aaa72727a2f5aa5d2bef80ab5642661e29ef6",
+  [Network.Ancient8]: "0x16b7f92cdfc9e1aaf30fc7af8914d539b5340a55",
   [Network.BaseSepolia]: "0x4e9aaa72727a2f5aa5d2bef80ab5642661e29ef6",
   [Network.BlastSepolia]: "0x16b7f92cdfc9e1aaf30fc7af8914d539b5340a55",
 };
