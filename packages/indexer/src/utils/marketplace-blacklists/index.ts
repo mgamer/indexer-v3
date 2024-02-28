@@ -153,12 +153,12 @@ export const isBlockedByCustomLogic = async (
         ]);
       }
 
-      await redis.set(cacheKey, "1", "EX", 60 * 60);
+      await redis.set(cacheKey, "1", "EX", 24 * 60 * 60);
       return result;
     }
 
     // Negative case
-    await redis.set(cacheKey, "0", "EX", 60 * 60);
+    await redis.set(cacheKey, "0", "EX", 24 * 60 * 60);
     cache = "0";
   }
 
