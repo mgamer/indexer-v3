@@ -332,6 +332,8 @@ export const getNetworkSettings = (): NetworkSettings => {
           ...defaultNetworkSettings.supportedBidCurrencies,
           // Prime
           "0xb23d80f5fefcddaa212212f028021b41ded428cf": true,
+          // USDT
+          "0xdac17f958d2ee523a2206206994597c13d831ec7": true,
         },
         whitelistedCurrencies: new Map([
           [
