@@ -22,10 +22,10 @@ export const extractByCollectionERC721 = async (collection: string): Promise<Col
   const contract = new Contract(
     collection,
     new Interface([
-      "function tps() external view returns (uint256)",
-      "function minPurchaseSeconds() external view returns (uint256)",
-      "function paused() public view returns (bool)",
-      "function supplyDetail() external view returns (uint256, uint256)",
+      "function tps() view returns (uint256)",
+      "function minPurchaseSeconds() view returns (uint256)",
+      "function paused() view returns (bool)",
+      "function supplyDetail() view returns (uint256, uint256)",
     ]),
     baseProvider
   );
@@ -58,9 +58,13 @@ export const extractByCollectionERC721 = async (collection: string): Promise<Col
         tx: {
           to: collection,
           data: {
-            // "mint"
-            signature: "0xa0712d68",
+            // "mintFor"
+            signature: "0xda1919b3",
             params: [
+              {
+                kind: "recipient",
+                abiType: "address",
+              },
               {
                 kind: "unknown",
                 abiType: "uint256",
@@ -73,7 +77,7 @@ export const extractByCollectionERC721 = async (collection: string): Promise<Col
       currency: Sdk.Common.Addresses.Native[config.chainId],
       price: endPrice,
       maxSupply: toSafeNumber(maxSupply),
-      maxMintsPerWallet: toSafeNumber(1), // TODO: An account can only have one token, but can call mint as long as it's not paused
+      maxMintsPerWallet: toSafeNumber(1),
     });
   } catch (error) {
     logger.error("mint-detector", JSON.stringify({ kind: STANDARD, error }));
@@ -97,12 +101,11 @@ export const extractByTx = async (
   tx: Transaction
 ): Promise<CollectionMint[]> => {
   if (
-    // All of these emit a PurchaseEvent ... all have the price paid in the method signature
     [
-      "0xa0712d68", // mint(uint256 price)
-      "0xda1919b3", // mintFor(address recipient, uint256 price)
-      "0x8d8818af", // mintWithReferral(uint256 price, uint256 referralCode, address referrer)
-      "0xfeed3a9c", // mintWithReferralFor(address recipient, uint256 price, uint256 referralCode, address referrer)
+      "0xa0712d68", // `mint`
+      "0xda1919b3", // `mintFor`
+      "0x8d8818af", // `mintWithReferral`
+      "0xfeed3a9c", // `mintWithReferralFor`
     ].some((bytes4) => tx.data.startsWith(bytes4))
   ) {
     return extractByCollectionERC721(collection);
