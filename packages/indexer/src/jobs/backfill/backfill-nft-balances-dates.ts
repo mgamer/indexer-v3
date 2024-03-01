@@ -31,7 +31,7 @@ export class BackfillNftBalancesDatesJob extends AbstractRabbitMqJobHandler {
       owner?: Buffer;
       amount?: string;
     } = {
-      limit: _.includes([56, 137, 324, 42161, 42170, 43114, 80001], config.chainId) ? 20 : 300,
+      limit: _.includes([56, 137, 324, 42161, 42170, 43114, 80001], config.chainId) ? 50 : 300,
     };
 
     let cursor = "";
