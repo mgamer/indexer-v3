@@ -3,6 +3,7 @@ import { Signer } from "@ethersproject/abstract-signer";
 import { BigNumberish } from "@ethersproject/bignumber";
 import { AddressZero, HashZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
+import { constructListingCounterOrderAndFulfillments } from "../seaport-base/helpers";
 
 import { BaseOrderInfo } from "./builders/base";
 import { IOrder } from "./order";
@@ -324,7 +325,7 @@ export abstract class SeaportBaseExchange {
   ): Promise<TxData> {
     const recipient = options?.recipient ?? AddressZero;
     const conduitKey = options?.conduitKey ?? HashZero;
-    const isPrivateOrder = orders.every((c) => c.isPrivateOrder());
+    const isPrivateOrder = orders.some((c) => c.isPrivateOrder());
     if (isPrivateOrder) {
       const allAdvancedOrders: Types.AdvancedOrder[] = [];
       const allFulfillments: Types.MatchOrdersFulfillment[] = [];
@@ -332,16 +333,47 @@ export abstract class SeaportBaseExchange {
       for (let index = 0; index < fillOrders.length; index++) {
         const order = fillOrders[index];
         const info = order.getInfo();
+        const matchParam = matchParams[index];
         if (!info) {
           throw new Error("Could not get order info");
         }
+
+        if (!order.isPrivateOrder()) {
+          const { order: counterOrder, fulfillments } = constructListingCounterOrderAndFulfillments(
+            order.params,
+            taker,
+            allAdvancedOrders.length
+          );
+          const advancedOrder = {
+            parameters: {
+              ...order.params,
+              totalOriginalConsiderationItems: order.params.consideration.length,
+            },
+            signature: order.params.signature!,
+            numerator: matchParam.amount?.toString() ?? "1",
+            denominator: info.amount,
+            extraData: matchParam.extraData ?? order.params.extraData ?? "0x",
+          };
+          allAdvancedOrders.push(advancedOrder);
+          allAdvancedOrders.push({
+            ...counterOrder,
+            numerator: matchParam.amount?.toString() ?? "1",
+            denominator: info.amount,
+            extraData: "0x",
+          });
+          for (const fulfillment of fulfillments) {
+            allFulfillments.push(fulfillment);
+          }
+          continue;
+        }
+
+        // Handle private order
         const counterOrder = order.constructPrivateListingCounterOrder(
           taker,
           recipient,
           conduitKey
         );
         const fulfillments = order.getPrivateListingFulfillments(allAdvancedOrders.length);
-        const matchParam = matchParams[index];
         const advancedOrder = {
           parameters: {
             ...order.params,
@@ -364,6 +396,7 @@ export abstract class SeaportBaseExchange {
           allFulfillments.push(fulfillment);
         }
       }
+
       return {
         from: taker,
         to: this.contract.address,

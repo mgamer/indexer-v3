@@ -315,3 +315,124 @@ export const computeDynamicPrice = (
 
   return price;
 };
+
+export const constructListingCounterOrderAndFulfillments = (
+  params: Types.OrderComponents,
+  taker: string,
+  startOrderIndex = 0
+): {
+  order: Types.OrderWithCounter;
+  fulfillments: Types.MatchOrdersFulfillment[];
+} => {
+  const paymentItems = params.consideration.filter(
+    (item) => item.recipient.toLowerCase() !== taker.toLowerCase()
+  );
+
+  if (!paymentItems.every((item) => isCurrencyItem(item))) {
+    throw new Error(
+      "The consideration for the private listing did not contain only currency items"
+    );
+  }
+  if (!paymentItems.every((item) => item.itemType === paymentItems[0].itemType)) {
+    throw new Error("Not all currency items were the same for private order");
+  }
+
+  const { aggregatedStartAmount, aggregatedEndAmount } = paymentItems.reduce(
+    ({ aggregatedStartAmount, aggregatedEndAmount }, item) => ({
+      aggregatedStartAmount: aggregatedStartAmount.add(item.startAmount),
+      aggregatedEndAmount: aggregatedEndAmount.add(item.endAmount),
+    }),
+    {
+      aggregatedStartAmount: BigNumber.from(0),
+      aggregatedEndAmount: BigNumber.from(0),
+    }
+  );
+
+  const counterOrder = {
+    parameters: {
+      ...params,
+      zone: AddressZero,
+      orderType: 0,
+      offerer: taker,
+      offer: [
+        {
+          itemType: paymentItems[0].itemType,
+          token: paymentItems[0].token,
+          identifierOrCriteria: paymentItems[0].identifierOrCriteria,
+          startAmount: aggregatedStartAmount.toString(),
+          endAmount: aggregatedEndAmount.toString(),
+        },
+      ],
+      consideration: params.offer.map((item) => {
+        return {
+          itemType: item.itemType,
+          token: item.token,
+          identifierOrCriteria: item.identifierOrCriteria,
+          startAmount: item.startAmount.toString(),
+          endAmount: item.endAmount.toString(),
+          recipient: taker,
+        };
+      }),
+      salt: generateRandomSalt(),
+      totalOriginalConsiderationItems: params.offer.length,
+    },
+    signature: "0x",
+  };
+
+  return {
+    order: counterOrder,
+    fulfillments: getListingFulfillments(params, startOrderIndex),
+  };
+};
+
+export const getListingFulfillments = (
+  listingOrder: Types.OrderComponents,
+  startOrderIndex = 0
+): Types.MatchOrdersFulfillment[] => {
+  const nftRelatedFulfillments: Types.MatchOrdersFulfillment[] = [];
+
+  listingOrder.offer.forEach((offerItem, offerIndex) => {
+    nftRelatedFulfillments.push({
+      offerComponents: [
+        {
+          orderIndex: startOrderIndex,
+          itemIndex: offerIndex,
+        },
+      ],
+      considerationComponents: [
+        {
+          orderIndex: startOrderIndex + 1,
+          itemIndex: offerIndex,
+        },
+      ],
+    });
+  });
+
+  const currencyRelatedFulfillments: Types.MatchOrdersFulfillment[] = [];
+
+  // For the original order, we need to match everything offered with every consideration item
+  // on the original order that's set to go to the private listing recipient
+  listingOrder.consideration.forEach((considerationItem, considerationIndex) => {
+    if (!isCurrencyItem(considerationItem)) {
+      return;
+    }
+    // We always match the offer item (index 0) of the counter order (index 1)
+    // with all of the payment items on the private listing
+    currencyRelatedFulfillments.push({
+      offerComponents: [
+        {
+          orderIndex: startOrderIndex + 1,
+          itemIndex: 0,
+        },
+      ],
+      considerationComponents: [
+        {
+          orderIndex: startOrderIndex,
+          itemIndex: considerationIndex,
+        },
+      ],
+    });
+  });
+
+  return [...nftRelatedFulfillments, ...currencyRelatedFulfillments];
+};
