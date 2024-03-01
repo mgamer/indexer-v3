@@ -328,15 +328,6 @@ export const constructListingCounterOrderAndFulfillments = (
     (item) => item.recipient.toLowerCase() !== taker.toLowerCase()
   );
 
-  if (!paymentItems.every((item) => isCurrencyItem(item))) {
-    throw new Error(
-      "The consideration for the private listing did not contain only currency items"
-    );
-  }
-  if (!paymentItems.every((item) => item.itemType === paymentItems[0].itemType)) {
-    throw new Error("Not all currency items were the same for private order");
-  }
-
   const { aggregatedStartAmount, aggregatedEndAmount } = paymentItems.reduce(
     ({ aggregatedStartAmount, aggregatedEndAmount }, item) => ({
       aggregatedStartAmount: aggregatedStartAmount.add(item.startAmount),
@@ -391,7 +382,7 @@ export const getListingFulfillments = (
 ): Types.MatchOrdersFulfillment[] => {
   const nftRelatedFulfillments: Types.MatchOrdersFulfillment[] = [];
 
-  listingOrder.offer.forEach((offerItem, offerIndex) => {
+  listingOrder.offer.forEach((_, offerIndex) => {
     nftRelatedFulfillments.push({
       offerComponents: [
         {
@@ -410,14 +401,11 @@ export const getListingFulfillments = (
 
   const currencyRelatedFulfillments: Types.MatchOrdersFulfillment[] = [];
 
-  // For the original order, we need to match everything offered with every consideration item
-  // on the original order that's set to go to the private listing recipient
   listingOrder.consideration.forEach((considerationItem, considerationIndex) => {
     if (!isCurrencyItem(considerationItem)) {
       return;
     }
-    // We always match the offer item (index 0) of the counter order (index 1)
-    // with all of the payment items on the private listing
+
     currencyRelatedFulfillments.push({
       offerComponents: [
         {

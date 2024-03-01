@@ -3,15 +3,14 @@ import { Signer } from "@ethersproject/abstract-signer";
 import { BigNumberish } from "@ethersproject/bignumber";
 import { AddressZero, HashZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
-import { constructListingCounterOrderAndFulfillments } from "../seaport-base/helpers";
 
 import { BaseOrderInfo } from "./builders/base";
 import { IOrder } from "./order";
 import * as Types from "./types";
 import * as CommonAddresses from "../common/addresses";
-import { TxData, bn, generateSourceBytes, lc, n, s } from "../utils";
-
 import { ConduitController } from "../seaport-base";
+import { constructListingCounterOrderAndFulfillments } from "../seaport-base/helpers";
+import { TxData, bn, generateSourceBytes, lc, n, s } from "../utils";
 
 export abstract class SeaportBaseExchange {
   public chainId: number;
@@ -325,15 +324,18 @@ export abstract class SeaportBaseExchange {
   ): Promise<TxData> {
     const recipient = options?.recipient ?? AddressZero;
     const conduitKey = options?.conduitKey ?? HashZero;
-    const isPrivateOrder = orders.some((c) => c.isPrivateOrder());
-    if (isPrivateOrder) {
+
+    const containsPrivateOrders = orders.some((c) => c.isPrivateOrder());
+    if (containsPrivateOrders) {
       const allAdvancedOrders: Types.AdvancedOrder[] = [];
       const allFulfillments: Types.MatchOrdersFulfillment[] = [];
+
       const fillOrders = orders;
-      for (let index = 0; index < fillOrders.length; index++) {
-        const order = fillOrders[index];
+      for (let i = 0; i < fillOrders.length; i++) {
+        const order = fillOrders[i];
+        const match = matchParams[i];
+
         const info = order.getInfo();
-        const matchParam = matchParams[index];
         if (!info) {
           throw new Error("Could not get order info");
         }
@@ -344,56 +346,59 @@ export abstract class SeaportBaseExchange {
             taker,
             allAdvancedOrders.length
           );
+
           const advancedOrder = {
             parameters: {
               ...order.params,
               totalOriginalConsiderationItems: order.params.consideration.length,
             },
             signature: order.params.signature!,
-            numerator: matchParam.amount?.toString() ?? "1",
+            numerator: match.amount?.toString() ?? "1",
             denominator: info.amount,
-            extraData: matchParam.extraData ?? order.params.extraData ?? "0x",
+            extraData: match.extraData ?? order.params.extraData ?? "0x",
           };
+
           allAdvancedOrders.push(advancedOrder);
           allAdvancedOrders.push({
             ...counterOrder,
-            numerator: matchParam.amount?.toString() ?? "1",
+            numerator: match.amount?.toString() ?? "1",
             denominator: info.amount,
             extraData: "0x",
           });
+
           for (const fulfillment of fulfillments) {
             allFulfillments.push(fulfillment);
           }
-          continue;
-        }
+        } else {
+          const counterOrder = order.constructPrivateListingCounterOrder(
+            taker,
+            recipient,
+            conduitKey
+          );
+          const fulfillments = order.getPrivateListingFulfillments(allAdvancedOrders.length);
 
-        // Handle private order
-        const counterOrder = order.constructPrivateListingCounterOrder(
-          taker,
-          recipient,
-          conduitKey
-        );
-        const fulfillments = order.getPrivateListingFulfillments(allAdvancedOrders.length);
-        const advancedOrder = {
-          parameters: {
-            ...order.params,
-            totalOriginalConsiderationItems: order.params.consideration.length,
-          },
-          signature: order.params.signature!,
-          numerator: matchParam.amount?.toString() ?? "1",
-          denominator: info.amount,
-          extraData: matchParam.extraData ?? order.params.extraData ?? "0x",
-        };
+          const advancedOrder = {
+            parameters: {
+              ...order.params,
+              totalOriginalConsiderationItems: order.params.consideration.length,
+            },
+            signature: order.params.signature!,
+            numerator: match.amount?.toString() ?? "1",
+            denominator: info.amount,
+            extraData: match.extraData ?? order.params.extraData ?? "0x",
+          };
 
-        allAdvancedOrders.push(advancedOrder);
-        allAdvancedOrders.push({
-          ...counterOrder,
-          numerator: matchParam.amount?.toString() ?? "1",
-          denominator: info.amount,
-          extraData: "0x",
-        });
-        for (const fulfillment of fulfillments) {
-          allFulfillments.push(fulfillment);
+          allAdvancedOrders.push(advancedOrder);
+          allAdvancedOrders.push({
+            ...counterOrder,
+            numerator: match.amount?.toString() ?? "1",
+            denominator: info.amount,
+            extraData: "0x",
+          });
+
+          for (const fulfillment of fulfillments) {
+            allFulfillments.push(fulfillment);
+          }
         }
       }
 
