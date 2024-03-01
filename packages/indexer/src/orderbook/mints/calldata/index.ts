@@ -488,7 +488,7 @@ export const refreshMintsForCollection = async (collection: string) => {
         await mints.fairxyz.refreshByCollection(collection);
         break;
 
-      case "frabric":
+      case "fabric":
         await mints.fabric.refreshByCollection(collection);
         break;
     }
