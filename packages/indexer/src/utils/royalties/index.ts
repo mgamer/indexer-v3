@@ -190,7 +190,7 @@ export const updateRoyaltySpec = async (
       )
     : undefined;
 
-  if (collection === "0x7241a12c95807afe4b6171fa1e458f0cb5851abe") {
+  if (collection === "0x7037ae030238c688dd7bb421d4a4f78d7684533a") {
     logger.info("royalty-debug", `updateRoyaltySpec ${JSON.stringify(royalties)}`);
   }
 
