@@ -12,7 +12,8 @@ export const isCurrencyItem = ({ itemType }: { itemType: Types.ItemType }) =>
   [Types.ItemType.NATIVE, Types.ItemType.ERC20].includes(itemType);
 
 export const getPrivateListingFulfillments = (
-  privateListingOrder: Types.OrderComponents
+  privateListingOrder: Types.OrderComponents,
+  startOrderIndex = 0
 ): Types.MatchOrdersFulfillment[] => {
   const nftRelatedFulfillments: Types.MatchOrdersFulfillment[] = [];
 
@@ -33,13 +34,13 @@ export const getPrivateListingFulfillments = (
     nftRelatedFulfillments.push({
       offerComponents: [
         {
-          orderIndex: 0,
+          orderIndex: startOrderIndex,
           itemIndex: offerIndex,
         },
       ],
       considerationComponents: [
         {
-          orderIndex: 0,
+          orderIndex: startOrderIndex,
           itemIndex: considerationIndex,
         },
       ],
@@ -59,13 +60,13 @@ export const getPrivateListingFulfillments = (
     currencyRelatedFulfillments.push({
       offerComponents: [
         {
-          orderIndex: 1,
+          orderIndex: startOrderIndex + 1,
           itemIndex: 0,
         },
       ],
       considerationComponents: [
         {
-          orderIndex: 0,
+          orderIndex: startOrderIndex,
           itemIndex: considerationIndex,
         },
       ],

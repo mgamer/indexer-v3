@@ -324,6 +324,75 @@ export abstract class SeaportBaseExchange {
   ): Promise<TxData> {
     const recipient = options?.recipient ?? AddressZero;
     const conduitKey = options?.conduitKey ?? HashZero;
+    const isPrivateOrder = orders.every((c) => c.isPrivateOrder());
+    if (isPrivateOrder) {
+      const allAdvancedOrders: Types.AdvancedOrder[] = [];
+      const allFulfillments: Types.MatchOrdersFulfillment[] = [];
+      const fillOrders = orders;
+      for (let index = 0; index < fillOrders.length; index++) {
+        const order = fillOrders[index];
+        const info = order.getInfo();
+        if (!info) {
+          throw new Error("Could not get order info");
+        }
+        const counterOrder = order.constructPrivateListingCounterOrder(
+          taker,
+          recipient,
+          conduitKey
+        );
+        const fulfillments = order.getPrivateListingFulfillments(allAdvancedOrders.length);
+        const matchParam = matchParams[index];
+        const advancedOrder = {
+          parameters: {
+            ...order.params,
+            totalOriginalConsiderationItems: order.params.consideration.length,
+          },
+          signature: order.params.signature!,
+          numerator: matchParam.amount?.toString() ?? "1",
+          denominator: info.amount,
+          extraData: matchParam.extraData ?? order.params.extraData ?? "0x",
+        };
+
+        allAdvancedOrders.push(advancedOrder);
+        allAdvancedOrders.push({
+          ...counterOrder,
+          numerator: matchParam.amount?.toString() ?? "1",
+          denominator: info.amount,
+          extraData: "0x",
+        });
+        for (const fulfillment of fulfillments) {
+          allFulfillments.push(fulfillment);
+        }
+      }
+      return {
+        from: taker,
+        to: this.contract.address,
+        data:
+          this.contract.interface.encodeFunctionData("matchAdvancedOrders", [
+            allAdvancedOrders,
+            [],
+            allFulfillments,
+            taker,
+          ]) + generateSourceBytes(options?.source),
+        value: bn(
+          orders
+            .filter((order) => {
+              const info = order.getInfo();
+              return (
+                info &&
+                info.side === "sell" &&
+                info.paymentToken === CommonAddresses.Native[this.chainId]
+              );
+            })
+            .map((order, i) =>
+              bn(order.getMatchingPrice(options?.timestampOverride))
+                .mul(matchParams[i].amount || "1")
+                .div(order.getInfo()!.amount)
+            )
+            .reduce((a, b) => bn(a).add(b), bn(0))
+        ).toHexString(),
+      };
+    }
 
     return {
       from: taker,
