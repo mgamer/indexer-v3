@@ -375,7 +375,7 @@ export const generateCollectionMintTxData = async (
 
   let price = collectionMint.price;
 
-  // Compute the price just-in-time
+  // For DA mints, compute the price just-in-time
   if (
     collectionMint.standard === "artblocks" &&
     (collectionMint.details.info as mints.artblocks.Info).daConfig
@@ -384,8 +384,6 @@ export const generateCollectionMintTxData = async (
       (collectionMint.details.info as mints.artblocks.Info).daConfig!
     );
   }
-
-  // Compute the price just-in-time
   if (
     collectionMint.standard === "highlightxyz" &&
     (collectionMint.details.info as mints.highlightxyz.Info).pricePeriodDuration
