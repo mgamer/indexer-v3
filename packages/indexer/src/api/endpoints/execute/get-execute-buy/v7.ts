@@ -2325,8 +2325,6 @@ export const getExecuteBuyV7Options: RouteOptions = {
         payload.skipBalanceCheck = false;
       }
 
-      const hasBlurOrder = path.some((p) => p.source === "blur.io");
-
       // Custom gas settings
       const maxFeePerGas = payload.maxFeePerGas
         ? bn(payload.maxFeePerGas).toHexString()
@@ -2439,17 +2437,18 @@ export const getExecuteBuyV7Options: RouteOptions = {
         if (buyInCurrency === Sdk.Common.Addresses.Native[config.chainId]) {
           // Get the price in the buy-in currency via the transaction value
           const totalBuyInCurrencyPrice = bn(txData.value ?? 0);
-          // Include the Blur ETH balance if there are Blur orders
+
+          // Include the BETH balance when filling Blur orders
           const beth = new Sdk.Common.Helpers.Erc20(
             baseProvider,
             Sdk.Blur.Addresses.Beth[config.chainId]
           );
-          const [ethBalance, bethBalance] = await Promise.all([
+          const [nativeBalance, bethBalance] = await Promise.all([
             baseProvider.getBalance(txSender),
-            hasBlurOrder ? beth.getBalance(txSender) : Promise.resolve(bn(0)),
+            hasBlurListings ? beth.getBalance(txSender) : Promise.resolve(bn(0)),
           ]);
 
-          const balance = ethBalance.add(bethBalance);
+          const balance = nativeBalance.add(bethBalance);
           if (!payload.skipBalanceCheck && bn(balance).lt(totalBuyInCurrencyPrice)) {
             throw getExecuteError(
               "Balance too low to proceed with transaction (use skipBalanceCheck=true to skip balance checking)"
