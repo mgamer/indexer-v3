@@ -206,9 +206,11 @@ export const processOnChainData = async (data: OnChainData, backfill?: boolean) 
   await mintQueueJob.addToQueue(data.mintInfos);
   await fillUpdatesJob.addToQueue(data.fillInfos);
 
+  const startMintProcess = Date.now();
   if (!backfill) {
     await mintsProcessJob.addToQueue(data.mints);
   }
+  const endMintProcess = Date.now();
 
   const startFillPostProcess = Date.now();
   if (allFillEvents.length) {
@@ -228,9 +230,11 @@ export const processOnChainData = async (data: OnChainData, backfill?: boolean) 
       },
     }));
 
+  const startProcessRecalcOwnerCount = Date.now();
   if (recalcCollectionOwnerCountInfo.length) {
     await recalcOwnerCountQueueJob.addToQueue(recalcCollectionOwnerCountInfo);
   }
+  const endProcessRecalcOwnerCount = Date.now();
 
   // Process fill activities
   const fillActivityInfos: ProcessActivityEventJobPayload[] = allFillEvents.map((event) => {
@@ -281,7 +285,9 @@ export const processOnChainData = async (data: OnChainData, backfill?: boolean) 
   const endProcessTransferActivityEvent = Date.now();
 
   return {
+    mintProcess: endMintProcess - startMintProcess,
     // Return the time it took to process each step
+    processRecalcOwnerCount: endProcessRecalcOwnerCount - startProcessRecalcOwnerCount,
     assignMintCommentToFillEvents:
       endAssignMintCommentToFillEvents - startAssignMintCommentToFillEvents,
     assignSourceToFillEvents: endAssignSourceToFillEvents - startAssignSourceToFillEvents,
