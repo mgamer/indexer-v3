@@ -191,7 +191,7 @@ export const updateRoyaltySpec = async (
     : undefined;
 
   if (collection === "0x7037ae030238c688dd7bb421d4a4f78d7684533a") {
-    logger.info("royalty-debug", `updateRoyaltySpec ${JSON.stringify(royalties)}`);
+    logger.info("royalty-debug", `updateRoyaltySpec spec ${spec} ${JSON.stringify(royalties)}`);
   }
 
   // Fetch the current royalties
