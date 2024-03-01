@@ -83,6 +83,10 @@ export const refreshOnChainRoyalties = async (collection: string, spec: Spec) =>
       }
     }
 
+    if (collection === "0x7241a12c95807afe4b6171fa1e458f0cb5851abe") {
+      logger.info("royalty-debug", `refreshOnChainRoyalties ${JSON.stringify(latestRoyalties)}`);
+    }
+
     // Save the retrieved royalty spec
     await updateRoyaltySpec(collection, spec, latestRoyalties.length ? latestRoyalties : undefined);
   } catch {
