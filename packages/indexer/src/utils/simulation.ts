@@ -48,22 +48,6 @@ export const ensureBuyTxSucceeds = async (
     { skipReverts: true }
   );
 
-  // ERC404 supports
-  const payments = getPayments(callTrace);
-  const relatedPayments = payments.filter((c) => {
-    return (
-      c.token.toLowerCase().includes(token.contract) &&
-      c.to.toLowerCase() == taker &&
-      c.amount === token.tokenId
-    );
-  });
-  if (bn(relatedPayments.length).toString() === bn(token.amount).toString()) {
-    return {
-      result: true,
-      callTrace,
-    };
-  }
-
   if (callTrace.error) {
     return {
       result: false,
@@ -76,6 +60,22 @@ export const ensureBuyTxSucceeds = async (
     result[taker].tokenBalanceState[`${token.kind}:${token.contract}:${token.tokenId}`] !==
     bn(token.amount).toString()
   ) {
+    // Support for non-standard tokens (ERC404)
+    const payments = getPayments(callTrace);
+    const relatedPayments = payments.filter((p) => {
+      return (
+        p.token.toLowerCase().includes(token.contract) &&
+        p.to.toLowerCase() === taker &&
+        p.amount === token.tokenId
+      );
+    });
+    if (bn(relatedPayments.length).toString() === bn(token.amount).toString()) {
+      return {
+        result: true,
+        callTrace,
+      };
+    }
+
     return {
       result: false,
       callTrace,
