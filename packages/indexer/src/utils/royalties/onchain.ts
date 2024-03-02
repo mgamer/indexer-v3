@@ -55,21 +55,7 @@ export const refreshOnChainRoyalties = async (collection: string, spec: Spec) =>
       tokenResults.map(async (r) => getOnChainRoyalties(token, r.token_id, spec))
     );
 
-    if (collection === "0x7037ae030238c688dd7bb421d4a4f78d7684533a") {
-      logger.info(
-        "royalty-debug",
-        `refreshOnChainRoyalties spec ${spec} tokenRoyalties ${JSON.stringify(tokenRoyalties)}`
-      );
-    }
-
     const uniqueRoyalties = _.uniqBy(tokenRoyalties, (r) => stringify(r));
-
-    if (collection === "0x7037ae030238c688dd7bb421d4a4f78d7684533a") {
-      logger.info(
-        "royalty-debug",
-        `refreshOnChainRoyalties spec ${spec} uniqueRoyalties ${JSON.stringify(uniqueRoyalties)}`
-      );
-    }
 
     let latestRoyalties: Royalty[] = [];
     if (uniqueRoyalties.length === 1) {
@@ -96,13 +82,6 @@ export const refreshOnChainRoyalties = async (collection: string, spec: Spec) =>
         // Protect against the case where querying the royalties of a non-existent token reverts
         latestRoyalties = [];
       }
-    }
-
-    if (collection === "0x7037ae030238c688dd7bb421d4a4f78d7684533a") {
-      logger.info(
-        "royalty-debug",
-        `refreshOnChainRoyalties spec ${spec} latestRoyalties ${JSON.stringify(latestRoyalties)}`
-      );
     }
 
     // Save the retrieved royalty spec

@@ -5,7 +5,6 @@ import { idb } from "@/common/db";
 import { regex, toBuffer } from "@/common/utils";
 import { orderFixesJob } from "@/jobs/order-fixes/order-fixes-job";
 import * as onchain from "@/utils/royalties/onchain";
-import { logger } from "@/common/logger";
 
 export type Royalty = {
   recipient: string;
@@ -189,10 +188,6 @@ export const updateRoyaltySpec = async (
         ({ bps, recipient }) => bps && recipient !== AddressZero && recipient.match(regex.address)
       )
     : undefined;
-
-  if (collection === "0x7037ae030238c688dd7bb421d4a4f78d7684533a") {
-    logger.info("royalty-debug", `updateRoyaltySpec spec ${spec} ${JSON.stringify(royalties)}`);
-  }
 
   // Fetch the current royalties
   const currentRoyalties = await idb.oneOrNone(
