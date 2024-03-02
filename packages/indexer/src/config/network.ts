@@ -1845,6 +1845,7 @@ export const getNetworkSettings = (): NetworkSettings => {
         realtimeSyncMaxBlockLag: 32,
         realtimeSyncFrequencySeconds: 5,
         lastBlockLatency: 5,
+        customTokenAddresses: ["0x32a93c3e9a3be8f0fdd0835aba7299cba3624b13"],
         onStartup: async () => {
           // Insert the native currency
           await Promise.all([
