@@ -51,8 +51,7 @@ export class SingleTokenBuilder extends BaseBuilder {
       amount: s(params.amount),
       itemPrice: s(params.itemPrice),
       expiration: s(params.expiration),
-      fallbackRoyaltyRecipient:
-        kind === "sale-approval" ? params.fallbackRoyaltyRecipient ?? AddressZero : AddressZero,
+      fallbackRoyaltyRecipient: params.fallbackRoyaltyRecipient ?? AddressZero,
       marketplaceFeeNumerator: s(params.marketplaceFeeNumerator ?? "0"),
       nonce: s(params.nonce),
       masterNonce: s(params.masterNonce),
