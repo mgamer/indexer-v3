@@ -2328,6 +2328,7 @@ export const getListedTokensFromES = async (query: any, attributeFloorAskPriceAs
                   }))
               : []
             : undefined,
+          decimals: !_.isNull(r.decimals) ? r.decimals : null,
           mintStages: r.mint_stages
             ? await Promise.all(
                 r.mint_stages.map(async (m: any) => ({
