@@ -2438,7 +2438,18 @@ export const getExecuteBuyV7Options: RouteOptions = {
           // Get the price in the buy-in currency via the transaction value
           const totalBuyInCurrencyPrice = bn(txData.value ?? 0);
 
-          const balance = await baseProvider.getBalance(txSender);
+          // Include the BETH balance when filling Blur orders
+          const [nativeBalance, bethBalance] = await Promise.all([
+            baseProvider.getBalance(txSender),
+            hasBlurListings
+              ? new Sdk.Common.Helpers.Erc20(
+                  baseProvider,
+                  Sdk.Blur.Addresses.Beth[config.chainId]
+                ).getBalance(txSender)
+              : Promise.resolve(bn(0)),
+          ]);
+
+          const balance = nativeBalance.add(bethBalance);
           if (!payload.skipBalanceCheck && bn(balance).lt(totalBuyInCurrencyPrice)) {
             throw getExecuteError(
               "Balance too low to proceed with transaction (use skipBalanceCheck=true to skip balance checking)"

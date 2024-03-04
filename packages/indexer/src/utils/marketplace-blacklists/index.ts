@@ -16,6 +16,13 @@ export type Operator = {
   marketplace: OrderKind;
 };
 
+export const deleteCollectionCaches = async (contract: string) => {
+  await redis.del(`marketplace-blacklist:${contract}`);
+
+  const keys = await redis.keys(`marketplace-blacklist-custom-logic:${contract}:*`);
+  await Promise.all(keys.map((key) => redis.del(key)));
+};
+
 export const checkMarketplaceIsFiltered = async (
   contract: string,
   operators: string[],

@@ -33,6 +33,7 @@ export const Native: ChainIdToAddress = {
   [Network.BaseSepolia]: AddressZero,
   [Network.BlastSepolia]: AddressZero,
   [Network.Apex]: AddressZero,
+  [Network.Blast]: AddressZero,
   [Network.AstarZkevm]: AddressZero,
 };
 
@@ -65,8 +66,9 @@ export const WNative: ChainIdToAddress = {
   [Network.FrameTestnet]: "0x822b4c4713433c6b88547845850a39343bf0957e",
   [Network.Ancient8]: "0x4200000000000000000000000000000000000006",
   [Network.BaseSepolia]: "0x4200000000000000000000000000000000000006",
-  [Network.BlastSepolia]: "0x4200000000000000000000000000000000000006",
-  [Network.Apex]: "0x77684A04145a5924eFCE0D92A7c4a2A2E8C359de",
+  [Network.BlastSepolia]: "0x4200000000000000000000000000000000000023",
+  [Network.Apex]: "0x77684a04145a5924efce0d92a7c4a2a2e8c359de",
+  [Network.Blast]: "0x4300000000000000000000000000000000000004",
   [Network.AstarZkevm]: "0xe9cc37904875b459fa5d0fe37680d36f1ed55e38",
 };
 
@@ -181,6 +183,7 @@ export const Create3Factory: ChainIdToAddress = {
   [Network.BaseSepolia]: "0x0000000000000a9efe52e741bcb25da0e4438e71",
   [Network.BlastSepolia]: "0x0000000000000a9efe52e741bcb25da0e4438e71",
   [Network.Apex]: "0x0000000000000a9efe52e741bcb25da0e4438e71",
+  [Network.Blast]: "0x0000000000000a9efe52e741bcb25da0e4438e71",
   [Network.AstarZkevm]: "0x0000000000000a9efe52e741bcb25da0e4438e71",
 };
 

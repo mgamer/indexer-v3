@@ -54,6 +54,7 @@ export const refreshOnChainRoyalties = async (collection: string, spec: Spec) =>
     const tokenRoyalties = await Promise.all(
       tokenResults.map(async (r) => getOnChainRoyalties(token, r.token_id, spec))
     );
+
     const uniqueRoyalties = _.uniqBy(tokenRoyalties, (r) => stringify(r));
 
     let latestRoyalties: Royalty[] = [];
