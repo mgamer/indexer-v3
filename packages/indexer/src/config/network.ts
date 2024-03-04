@@ -102,6 +102,9 @@ export const getNetworkName = () => {
     case 81457:
       return "blast";
 
+    case 3776:
+      return "astar-zkevm";
+
     default:
       return "unknown";
   }
