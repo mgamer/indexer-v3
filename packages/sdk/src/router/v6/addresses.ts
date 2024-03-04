@@ -32,6 +32,7 @@ export const Router: ChainIdToAddress = {
   [Network.BaseSepolia]: "0x1aed60a97192157fda7fb26267a439d523d09c5e",
   [Network.BlastSepolia]: "0x1aed60a97192157fda7fb26267a439d523d09c5e",
   [Network.Apex]: "0x1aed60a97192157fda7fb26267a439d523d09c5e",
+  [Network.AstarZkevm]: "0x1aed60a97192157fda7fb26267a439d523d09c5e",
 };
 
 // Approval proxy
@@ -64,6 +65,7 @@ export const ApprovalProxy: ChainIdToAddress = {
   [Network.BaseSepolia]: "0x224ecb4eae96d31372d1090c3b0233c8310dbbab",
   [Network.BlastSepolia]: "0x224ecb4eae96d31372d1090c3b0233c8310dbbab",
   [Network.Apex]: "0x224ecb4eae96d31372d1090c3b0233c8310dbbab",
+  [Network.AstarZkevm]: "0x224ecb4eae96d31372d1090c3b0233c8310dbbab",
 };
 
 // Permit proxy
@@ -74,6 +76,7 @@ export const PermitProxy: ChainIdToAddress = {
   [Network.EthereumSepolia]: "0x30b3de99ab1de0c9700181f7a2597150e9416aa6",
   [Network.Polygon]: "0x30b3de99ab1de0c9700181f7a2597150e9416aa6",
   [Network.Mumbai]: "0x30b3de99ab1de0c9700181f7a2597150e9416aa6",
+  [Network.AstarZkevm]: "0xe3de16f7ed5a124686cc27571898e394959e8b39",
 };
 
 // Utility modules
@@ -122,11 +125,13 @@ export const MintModule: ChainIdToAddress = {
   [Network.BaseSepolia]: "0xe3de16f7ed5a124686cc27571898e394959e8b39",
   [Network.BlastSepolia]: "0xe3de16f7ed5a124686cc27571898e394959e8b39",
   [Network.Apex]: "0xe3de16f7ed5a124686cc27571898e394959e8b39",
+  [Network.AstarZkevm]: "0xe3de16f7ed5a124686cc27571898e394959e8b39",
 };
 
 export const DittoModule: ChainIdToAddress = {
   [Network.EthereumGoerli]: "0x1090afe10281912678a05d89fabd5fbe77d7f97f",
   [Network.EthereumSepolia]: "0x2da6ebbdb78b6df0802c4d32afa6d8277c479552",
+  [Network.AstarZkevm]: "0x16b7f92cdfc9e1aaf30fc7af8914d539b5340a55",
 };
 
 export const FoundationModule: ChainIdToAddress = {

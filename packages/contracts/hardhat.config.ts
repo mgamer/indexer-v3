@@ -40,6 +40,9 @@ const getNetworkConfig = (chainId?: number) => {
       case 1101:
         url = "https://zkevm-rpc.com";
         break;
+      case 3776:
+        url = "https://rpc.startale.com/astar-zkevm";
+        break;
       case 8453:
         url = "https://developer-access-mainnet.base.org";
         break;
@@ -167,6 +170,7 @@ const config: HardhatUserConfig = {
     bsc: getNetworkConfig(56),
     polygon: getNetworkConfig(137),
     zkSync: getNetworkConfig(324),
+    astarZkevm: getNetworkConfig(3776),
     polygonZkevm: getNetworkConfig(1101),
     base: getNetworkConfig(8453),
     arbitrum: getNetworkConfig(42161),
@@ -199,6 +203,7 @@ const config: HardhatUserConfig = {
       bsc: process.env.ETHERSCAN_API_KEY_BSC ?? "",
       polygon: process.env.ETHERSCAN_API_KEY_POLYGON ?? "",
       zkSync: "0x",
+      astarZkevm: "0x",
       polygonZkevm: process.env.ETHERSCAN_API_KEY_POLYGON_ZKEVM ?? "",
       base: process.env.ETHERSCAN_API_KEY_BASE ?? "",
       arbitrumOne: process.env.ETHERSCAN_API_KEY_ARBITRUM ?? "",
@@ -239,6 +244,14 @@ const config: HardhatUserConfig = {
         urls: {
           apiURL: "https://api-zkevm.polygonscan.com/api",
           browserURL: "https://zkevm.polygonscan.com",
+        },
+      },
+      {
+        network: "astarZkevm",
+        chainId: 3776,
+        urls: {
+          apiURL: "https://astar-zkevm.explorer.startale.com/api",
+          browserURL: "https://astar-zkevm.explorer.startale.com",
         },
       },
       {
