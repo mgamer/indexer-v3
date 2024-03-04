@@ -34,6 +34,7 @@ export const Native: ChainIdToAddress = {
   [Network.BlastSepolia]: AddressZero,
   [Network.Apex]: AddressZero,
   [Network.Blast]: AddressZero,
+  [Network.AstarZkevm]: AddressZero,
 };
 
 // Wrapped native currency
@@ -68,6 +69,7 @@ export const WNative: ChainIdToAddress = {
   [Network.BlastSepolia]: "0x4200000000000000000000000000000000000023",
   [Network.Apex]: "0x77684a04145a5924efce0d92a7c4a2a2e8c359de",
   [Network.Blast]: "0x4300000000000000000000000000000000000004",
+  [Network.AstarZkevm]: "0xe9cc37904875b459fa5d0fe37680d36f1ed55e38",
 };
 
 export const Usdc: ChainIdToAddressList = {
@@ -110,6 +112,9 @@ export const Usdc: ChainIdToAddressList = {
   [Network.Base]: [
     "0xd9aaec86b65d86f6a7b5b1b0c42ffa531710b6ca", // Bridged
     "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", // Native
+  ],
+  [Network.AstarZkevm]: [
+    "0xa8ce8aee21bc2a48a5ef670afcc9274c7bbbc035", // Bridged
   ],
 };
 
@@ -179,6 +184,7 @@ export const Create3Factory: ChainIdToAddress = {
   [Network.BlastSepolia]: "0x0000000000000a9efe52e741bcb25da0e4438e71",
   [Network.Apex]: "0x0000000000000a9efe52e741bcb25da0e4438e71",
   [Network.Blast]: "0x0000000000000a9efe52e741bcb25da0e4438e71",
+  [Network.AstarZkevm]: "0x0000000000000a9efe52e741bcb25da0e4438e71",
 };
 
 export const GelatoRelay1BalanceERC2771: ChainIdToAddress = {
