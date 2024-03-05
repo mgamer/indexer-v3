@@ -476,26 +476,39 @@ export default class OrderFixesJob extends AbstractRabbitMqJobHandler {
 
                 case "payment-processor": {
                   const order = new Sdk.PaymentProcessor.Order(config.chainId, result.raw_data);
-                  try {
-                    await paymentProcessorCheck.offChainCheck(order, {
-                      onChainApprovalRecheck: true,
-                      checkFilledOrCancelled: true,
-                    });
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  } catch (error: any) {
-                    if (error.message === "cancelled") {
-                      fillabilityStatus = "cancelled";
-                    } else if (error.message === "filled") {
-                      fillabilityStatus = "filled";
-                    } else if (error.message === "no-balance") {
-                      fillabilityStatus = "no-balance";
-                    } else if (error.message === "no-approval") {
-                      approvalStatus = "no-approval";
-                    } else if (error.message === "no-balance-no-approval") {
-                      fillabilityStatus = "no-balance";
-                      approvalStatus = "no-approval";
-                    } else {
-                      return;
+
+                  // Also check the royalty built into the order vs the actual on-chain royalties of the collection
+                  const royaltyBpsToPay = await getRoyaltiesToBePaid(
+                    order.params.tokenAddress
+                  ).then((r) => r.map((r) => r.bps).reduce((a, b) => a + b, 0));
+
+                  if (
+                    order.params.maxRoyaltyFeeNumerator !== undefined &&
+                    Number(order.params.maxRoyaltyFeeNumerator) < royaltyBpsToPay
+                  ) {
+                    fillabilityStatus = "cancelled";
+                  } else {
+                    try {
+                      await paymentProcessorCheck.offChainCheck(order, {
+                        onChainApprovalRecheck: true,
+                        checkFilledOrCancelled: true,
+                      });
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    } catch (error: any) {
+                      if (error.message === "cancelled") {
+                        fillabilityStatus = "cancelled";
+                      } else if (error.message === "filled") {
+                        fillabilityStatus = "filled";
+                      } else if (error.message === "no-balance") {
+                        fillabilityStatus = "no-balance";
+                      } else if (error.message === "no-approval") {
+                        approvalStatus = "no-approval";
+                      } else if (error.message === "no-balance-no-approval") {
+                        fillabilityStatus = "no-balance";
+                        approvalStatus = "no-approval";
+                      } else {
+                        return;
+                      }
                     }
                   }
 
