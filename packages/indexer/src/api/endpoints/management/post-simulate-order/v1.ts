@@ -82,6 +82,8 @@ export const postSimulateOrderV1Options: RouteOptions = {
         callTrace?: CallTrace;
         payload?: object;
         revalidate?: boolean;
+        createdTime?: number;
+        tokenSetId?: string;
       }
     ) => {
       if (!payload.skipRevalidation && options?.revalidate) {
@@ -96,6 +98,20 @@ export const postSimulateOrderV1Options: RouteOptions = {
             status,
           })
         );
+
+        if (status === "inactive" && options.createdTime && options.createdTime <= now() - 60) {
+          logger.warn(
+            `post-revalidate-order-${version}-handler`,
+            JSON.stringify({
+              msg: "Order invalidated right after creation",
+              callTrace: options?.callTrace,
+              block: await baseProvider.getBlock("latest").then((b) => b.number),
+              payload: options?.payload,
+              orderId: id,
+              tokenSetId: options?.tokenSetId,
+            })
+          );
+        }
 
         // Revalidate the order
         await inject({
@@ -175,7 +191,8 @@ export const postSimulateOrderV1Options: RouteOptions = {
             orders.fillability_status,
             orders.approval_status,
             orders.conduit,
-            orders.raw_data
+            orders.raw_data,
+            floor(extract(epoch FROM orders.created_at)) AS created_at
           FROM orders
           WHERE orders.id = $/id/
         `,
@@ -392,6 +409,8 @@ export const postSimulateOrderV1Options: RouteOptions = {
             callTrace,
             payload: parsedPayload,
             revalidate: needRevalidation,
+            createdTime: orderResult.created_at,
+            tokenSetId: orderResult.token_set_id,
           });
 
           return { message: "Order is not fillable" };
@@ -515,6 +534,8 @@ export const postSimulateOrderV1Options: RouteOptions = {
             callTrace,
             payload: parsedPayload,
             revalidate: needRevalidation,
+            createdTime: orderResult.created_at,
+            tokenSetId: orderResult.token_set_id,
           });
 
           return { message: "Order is not fillable" };
