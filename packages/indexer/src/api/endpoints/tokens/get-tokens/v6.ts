@@ -332,6 +332,10 @@ export const getTokensV6Options: RouteOptions = {
                 })
               )
               .optional(),
+            decimals: Joi.number()
+              .allow(null)
+              .description("Can be set for ERC1155 tokens according to the standard")
+              .optional(),
             mintStages: Joi.array().items(
               Joi.object({
                 stage: Joi.string().required(),
