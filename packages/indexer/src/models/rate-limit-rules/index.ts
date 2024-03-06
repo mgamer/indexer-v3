@@ -14,7 +14,11 @@ import { AllChainsChannel, Channel } from "@/pubsub/channels";
 import { logger } from "@/common/logger";
 import { ApiKeyManager } from "@/models/api-keys";
 import { RateLimiterRedis } from "rate-limiter-flexible";
-import { BlockedKeyError, BlockedRouteError } from "@/models/rate-limit-rules/errors";
+import {
+  BlockedKeyError,
+  BlockedKeyErrorMessages,
+  BlockedRouteError,
+} from "@/models/rate-limit-rules/errors";
 import { config } from "@/config/index";
 
 export class RateLimitRules {
@@ -397,14 +401,16 @@ export class RateLimitRules {
   ): { ruleParams: RateLimitRuleEntity; rule: RateLimiterRedis; pointsToConsume: number } | null {
     const rule = this.findMostMatchingRule(route, method, tier, apiKey, payload);
 
+    if (tier < 0) {
+      throw new BlockedKeyError(
+        tier === -2 ? BlockedKeyErrorMessages.Restricted : BlockedKeyErrorMessages.Blocked
+      );
+    }
+
     if (rule) {
       // If the route is blocked
       if (rule.options.points === -1) {
         throw new BlockedRouteError(`Request to ${route} is currently suspended`);
-      } else if (rule.tier < 0) {
-        throw new BlockedKeyError(
-          rule.getRateLimitMessage(apiKey, rule.options.points ?? 0, rule.options.duration ?? 0)
-        );
       }
 
       const rateLimitObject = this.rules.get(rule.id);
