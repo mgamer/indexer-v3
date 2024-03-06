@@ -196,7 +196,14 @@ export const getUserTokensV10Options: RouteOptions = {
               isNsfw: Joi.boolean().default(false),
               metadataDisabled: Joi.boolean().default(false),
               openseaVerificationStatus: Joi.string().allow("", null),
-              floorAskPrice: JoiPrice.allow(null).description("Can be null if no active asks."),
+              floorAsk: {
+                id: Joi.string().allow(null),
+                price: JoiPrice.allow(null),
+                maker: Joi.string().lowercase().pattern(regex.address).allow(null),
+                validFrom: Joi.number().unsafe().allow(null),
+                validUntil: Joi.number().unsafe().allow(null),
+                source: JoiSource.allow(null),
+              },
               royaltiesBps: Joi.number().allow(null),
               royalties: Joi.array()
                 .items(
@@ -378,8 +385,28 @@ export const getUserTokensV10Options: RouteOptions = {
       (query as any).tokensFilter = _.join(tokensFilter, ",");
     }
 
-    let selectFloorData;
+    let selectCollectionFloorData;
+    if (query.useNonFlaggedFloorAsk) {
+      selectCollectionFloorData = `
+      , 
+      c.non_flagged_floor_sell_id AS collection_floor_sell_id,
+      c.non_flagged_floor_sell_value AS collection_floor_sell_value,
+      c.non_flagged_floor_sell_maker AS collection_floor_sell_maker,
+      c.non_flagged_floor_sell_valid_between AS collection_floor_sell_valid_between,
+      c.non_flagged_floor_sell_source_id_int AS collection_floor_sell_source_id_int
+    `;
+    } else {
+      selectCollectionFloorData = `
+      , 
+      c.floor_sell_id AS collection_floor_sell_id,
+      c.floor_sell_value AS collection_floor_sell_value,
+      c.floor_sell_maker AS collection_floor_sell_maker,
+      c.floor_sell_valid_between AS collection_floor_sell_valid_between,
+      c.floor_sell_source_id_int AS collection_floor_sell_source_id_int
+    `;
+    }
 
+    let selectFloorData;
     if (query.normalizeRoyalties) {
       selectFloorData = `
       t.normalized_floor_sell_id AS floor_sell_id,
@@ -716,7 +743,7 @@ export const getUserTokensV10Options: RouteOptions = {
                t.rarity_score, t.t_is_spam, t.t_nsfw_status, t.image_version, t.image_mime_type, t.media_mime_type,
                ${selectLastSale}
                top_bid_id, top_bid_price, top_bid_value, top_bid_currency, top_bid_currency_price, top_bid_currency_value, top_bid_source_id_int,
-               o.currency AS collection_floor_sell_currency, o.currency_price AS collection_floor_sell_currency_price,
+               o.currency AS collection_floor_sell_currency, o.currency_price AS collection_floor_sell_currency_price, o.currency_value AS collection_floor_sell_currency_value, o.token_set_id AS collection_floor_sell_token_set_id,
                c.name as collection_name, con.kind, con.symbol, c.metadata, c.royalties, (c.metadata ->> 'safelistRequestStatus')::TEXT AS "opensea_verification_status",
                c.royalties_bps, ot.kind AS floor_sell_kind, c.slug, c.is_spam AS c_is_spam, c.nsfw_status AS c_nsfw_status, c.metadata_disabled AS c_metadata_disabled, t_metadata_disabled,
                c.image_version AS "collection_image_version",
@@ -725,17 +752,13 @@ export const getUserTokensV10Options: RouteOptions = {
                 COALESCE(nullif(date_part('epoch', upper(ot.valid_between)), 'Infinity'), 0) AS "floor_sell_valid_to",
                ot.source_id_int as floor_sell_source_id_int, ot.id as floor_sell_id,
                ${query.includeRawData ? "ot.raw_data AS floor_sell_raw_data," : ""}
-               ${
-                 query.useNonFlaggedFloorAsk
-                   ? "c.floor_sell_value"
-                   : "c.non_flagged_floor_sell_value"
-               } AS "collection_floor_sell_value",
                (
                     CASE WHEN ot.value IS NOT NULL
                     THEN 1
                     ELSE 0
                     END
                ) AS on_sale_count
+               ${selectCollectionFloorData}
                ${selectAttributes}
                ${selectIncludeDynamicPricing}
         FROM
@@ -778,7 +801,9 @@ export const getUserTokensV10Options: RouteOptions = {
                 }${query.excludeNsfw ? ` AND (c.nsfw_status IS NULL OR c.nsfw_status <= 0)` : ""}`
           }
           ${includeDynamicPricingQuery}
-          LEFT JOIN orders o ON o.id = c.floor_sell_id
+          LEFT JOIN orders o ON o.id = ${
+            query.useNonFlaggedFloorAsk ? "c.floor_sell_id" : "c.non_flagged_floor_sell_id"
+          }
           LEFT JOIN contracts con ON b.contract = con.address
           ${
             query.onlyListed ? "" : "LEFT"
@@ -861,6 +886,16 @@ export const getUserTokensV10Options: RouteOptions = {
           ? sources.get(Number(r.top_bid_source_id_int), contract, tokenId)
           : undefined;
         const acquiredTime = new Date(r.acquired_at * 1000).toISOString();
+        const collectionFloorSellSource = r.collection_floor_sell_value
+          ? sources.get(
+              Number(r.collection_floor_sell_source_id_int),
+              r.collection_floor_sell_token_set_id.split(":")[1],
+              r.collection_floor_sell_token_set_id.split(":")[2]
+            )
+          : undefined;
+        const collectionFloorSellValidBetween = r.collection_floor_sell_valid_between
+          ? r.collection_floor_sell_valid_between.slice(1, -1).split(",")
+          : undefined;
 
         let dynamicPricing = undefined;
         if (query.includeDynamicPricing) {
@@ -1002,20 +1037,39 @@ export const getUserTokensV10Options: RouteOptions = {
                 isNsfw: Number(r.c_nsfw_status) > 0,
                 metadataDisabled: Boolean(Number(r.c_metadata_disabled)),
                 openseaVerificationStatus: r.opensea_verification_status,
-                floorAskPrice: r.collection_floor_sell_value
-                  ? await getJoiPriceObject(
-                      {
-                        gross: {
-                          amount: String(
-                            r.collection_floor_sell_currency_price ?? r.collection_floor_sell_value
-                          ),
-                          nativeAmount: String(r.collection_floor_sell_value),
+                floorAsk: {
+                  id: r.collection_floor_sell_id,
+                  price: r.collection_floor_sell_id
+                    ? await getJoiPriceObject(
+                        {
+                          gross: {
+                            amount:
+                              r.collection_floor_sell_currency_value ??
+                              r.collection_floor_sell_value,
+                            nativeAmount: r.collection_floor_sell_value,
+                          },
                         },
-                      },
-                      collectionFloorSellCurrency,
-                      query.displayCurrency
-                    )
-                  : null,
+                        collectionFloorSellCurrency,
+                        query.displayCurrency
+                      )
+                    : null,
+                  maker: r.collection_floor_sell_maker
+                    ? fromBuffer(r.collection_floor_sell_maker)
+                    : null,
+                  validFrom: collectionFloorSellValidBetween
+                    ? Math.round(
+                        new Date(collectionFloorSellValidBetween[0].slice(1, -1)).getTime() / 1000
+                      )
+                    : null,
+                  validUntil: collectionFloorSellValidBetween
+                    ? collectionFloorSellValidBetween[1] === "infinity"
+                      ? 0
+                      : Math.round(
+                          new Date(collectionFloorSellValidBetween[1].slice(1, -1)).getTime() / 1000
+                        )
+                    : null,
+                  source: getJoiSourceObject(collectionFloorSellSource),
+                },
                 royaltiesBps: r.royalties_bps ?? 0,
                 royalties: r.royalties
                   ? r.royalties.map((r: any) => ({ bps: r.bps, recipient: r.recipient }))
