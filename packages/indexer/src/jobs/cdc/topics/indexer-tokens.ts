@@ -84,20 +84,6 @@ export class IndexerTokensHandler extends KafkaEventHandler {
       }
     }
 
-    if (changed.some((value) => ["remaining_supply"].includes(value))) {
-      logger.info(
-        "IndexerTokensHandler",
-        JSON.stringify({
-          topic: "debugMissingTokenNormalizedFloorAskChangedEvents",
-          message: `normalizedFloorSellIdChanged. collectionId=${payload.after.collection_id}, contract=${payload.after.contract}, tokenId=${payload.after.token_id}`,
-          collectionId: payload.after.collection_id,
-          contract: payload.after.contract,
-          tokenId: payload.after.token_id,
-          payload: JSON.stringify(payload),
-        })
-      );
-    }
-
     if (
       [1, 11155111].includes(config.chainId) &&
       config.debugWsApiKey &&
