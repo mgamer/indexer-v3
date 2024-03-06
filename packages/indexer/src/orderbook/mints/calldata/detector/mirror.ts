@@ -74,9 +74,8 @@ export const extractByCollectionERC721 = async (collection: string): Promise<Col
                 abiType: "address",
               },
               {
-                kind: "unknown",
+                kind: "comment",
                 abiType: "string",
-                abiValue: "",
               },
               {
                 kind: "referrer",
