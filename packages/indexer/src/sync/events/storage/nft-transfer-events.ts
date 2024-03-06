@@ -362,7 +362,7 @@ function buildTokenValuesQueries(tokenValuesChunk: erc721Token[] | erc1155Token[
     WHERE EXCLUDED.minted_timestamp < tokens.minted_timestamp
     ${
       kind === "erc721"
-        ? `AND EXCLUDED.remaining_supply IS DISTINCT FROM tokens.remaining_supply`
+        ? `OR EXCLUDED.remaining_supply IS DISTINCT FROM tokens.remaining_supply`
         : ""
     }
   `;
