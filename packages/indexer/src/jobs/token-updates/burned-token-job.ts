@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { idb, redb } from "@/common/db";
+import { idb, pgp, redb } from "@/common/db";
 import { toBuffer } from "@/common/utils";
 import { AbstractRabbitMqJobHandler } from "@/jobs/abstract-rabbit-mq-job-handler";
 import { Collections } from "@/models/collections";
@@ -12,12 +12,12 @@ export type BurnedTokenJobPayload = {
 
 export default class BurnedTokenJob extends AbstractRabbitMqJobHandler {
   queueName = "burned-token";
-  maxRetries = 1;
+  maxRetries = 5;
   concurrency = 10;
-  useSharedChannel = true;
 
   public async process(payload: BurnedTokenJobPayload) {
     const { contract, tokenId } = payload;
+    const queries = [];
 
     const contractKind = await redb.oneOrNone(
       `SELECT kind FROM contracts WHERE address = $/address/`,
@@ -29,6 +29,13 @@ export default class BurnedTokenJob extends AbstractRabbitMqJobHandler {
       const collection = await Collections.getByContractAndTokenId(contract, Number(tokenId));
 
       if (collection) {
+        queries.push(`
+          UPDATE collections SET
+            token_count = GREATEST(token_count - 1, 0),
+            updated_at = now()
+          WHERE id = $/collection/
+        `);
+
         await idb.none(
           `
           UPDATE collections SET
@@ -42,7 +49,7 @@ export default class BurnedTokenJob extends AbstractRabbitMqJobHandler {
         );
       }
 
-      const updateAttributesQuery = `
+      queries.push(`
         UPDATE attributes SET
           token_count = GREATEST(token_count - 1, 0),
           updated_at = now()
@@ -54,9 +61,13 @@ export default class BurnedTokenJob extends AbstractRabbitMqJobHandler {
           AND ta.token_id = $/tokenId/
           AND ta.key != ''
         )
-      `;
+      `);
 
-      await idb.none(updateAttributesQuery, { contract: toBuffer(contract), tokenId });
+      await idb.none(pgp.helpers.concat(queries), {
+        contract: toBuffer(contract),
+        tokenId,
+        collection: collection?.id,
+      });
     }
   }
 
