@@ -2,6 +2,7 @@ import { idb } from "@/common/db";
 import { AbstractRabbitMqJobHandler, BackoffStrategy } from "@/jobs/abstract-rabbit-mq-job-handler";
 import _ from "lodash";
 import { toBuffer } from "@/common/utils";
+import { logger } from "@/common/logger";
 
 export type RecalcTokenCountQueueJobPayload = {
   collection: string;
@@ -21,6 +22,10 @@ export default class RecalcTokenCountQueueJob extends AbstractRabbitMqJobHandler
 
   public async process(payload: RecalcTokenCountQueueJobPayload) {
     const { collection, fromTokenId } = payload;
+    if (collection === "0x2358693f4faec9d658bb97fc9cd8885f62105dc1") {
+      logger.info(this.queueName, JSON.stringify(payload));
+    }
+
     const limit = 5000;
     const continuation = fromTokenId ? `AND token_id > $/fromTokenId/` : "";
 
@@ -69,6 +74,10 @@ export default class RecalcTokenCountQueueJob extends AbstractRabbitMqJobHandler
       });
 
       if (lastToken) {
+        if (collection === "0x2358693f4faec9d658bb97fc9cd8885f62105dc1") {
+          logger.info(this.queueName, `lastToken = ${lastToken} ${JSON.stringify(payload)}`);
+        }
+
         // Trigger the next count job from the last token_id of the current batch
         await this.addToQueue(
           {
@@ -80,6 +89,13 @@ export default class RecalcTokenCountQueueJob extends AbstractRabbitMqJobHandler
         );
       }
     } else {
+      if (collection === "0x2358693f4faec9d658bb97fc9cd8885f62105dc1") {
+        logger.info(
+          this.queueName,
+          `totalCurrentCount = ${totalCurrentCount} ${JSON.stringify(payload)}`
+        );
+      }
+
       // No more tokens to count, update collections table
       const query = `
           UPDATE "collections"
