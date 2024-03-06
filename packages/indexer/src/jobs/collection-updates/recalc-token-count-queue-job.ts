@@ -2,7 +2,6 @@ import { idb } from "@/common/db";
 import { AbstractRabbitMqJobHandler, BackoffStrategy } from "@/jobs/abstract-rabbit-mq-job-handler";
 import _ from "lodash";
 import { toBuffer } from "@/common/utils";
-import { logger } from "@/common/logger";
 
 export type RecalcTokenCountQueueJobPayload = {
   collection: string;
@@ -22,18 +21,11 @@ export default class RecalcTokenCountQueueJob extends AbstractRabbitMqJobHandler
 
   public async process(payload: RecalcTokenCountQueueJobPayload) {
     const { collection, fromTokenId } = payload;
-    if (collection === "0x2358693f4faec9d658bb97fc9cd8885f62105dc1") {
-      logger.info(
-        this.queueName,
-        `totalCurrentCount = ${Number(payload.totalCurrentCount)} ${JSON.stringify(payload)}`
-      );
-    }
-
     const limit = 5000;
     const continuation = fromTokenId ? `AND token_id > $/fromTokenId/` : "";
 
     let { totalCurrentCount } = payload;
-    totalCurrentCount = Number(totalCurrentCount);
+    totalCurrentCount = Number(totalCurrentCount ?? 0);
     const [contract] = _.split(collection, ":"); // Get the contract from the collection
 
     const tokenQuery = `
@@ -77,15 +69,6 @@ export default class RecalcTokenCountQueueJob extends AbstractRabbitMqJobHandler
       });
 
       if (lastToken) {
-        if (collection === "0x2358693f4faec9d658bb97fc9cd8885f62105dc1") {
-          logger.info(
-            this.queueName,
-            `totalCurrentCount = ${totalCurrentCount} lastToken = ${
-              lastToken.token_id
-            } ${JSON.stringify(payload)}`
-          );
-        }
-
         // Trigger the next count job from the last token_id of the current batch
         await this.addToQueue(
           {
@@ -97,13 +80,6 @@ export default class RecalcTokenCountQueueJob extends AbstractRabbitMqJobHandler
         );
       }
     } else {
-      if (collection === "0x2358693f4faec9d658bb97fc9cd8885f62105dc1") {
-        logger.info(
-          this.queueName,
-          `totalCurrentCount = ${totalCurrentCount} ${JSON.stringify(payload)}`
-        );
-      }
-
       // No more tokens to count, update collections table
       const query = `
           UPDATE "collections"
