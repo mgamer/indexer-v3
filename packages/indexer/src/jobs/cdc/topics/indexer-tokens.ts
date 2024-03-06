@@ -89,7 +89,9 @@ export class IndexerTokensHandler extends KafkaEventHandler {
       config.debugWsApiKey &&
       getNetworkSettings().multiCollectionContracts.includes(payload.after.contract)
     ) {
-      if (changed.some((value) => ["normalized_floor_sell_id"].includes(value))) {
+      if (
+        changed.some((value) => ["normalized_floor_sell_id", "remaining_supply"].includes(value))
+      ) {
         logger.info(
           "IndexerTokensHandler",
           JSON.stringify({
