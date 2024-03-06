@@ -319,6 +319,28 @@ export const extractByTx = async (txHash: string, skipCache = false) => {
   return [];
 };
 
+export const reserveMethods = [
+  "0x095ea7b3", // approve
+  "0x23b872dd", // transferFrom
+  "0x42966c68", // burn
+  "0xa9059cbb", // transfer
+  "0xd73dd623", // increaseApproval
+  "0x39509351", // increaseAllowance
+  "0xb88d4fde", // safeTransferFrom
+  "0x42842e0e", // safeTransferFrom
+  "0xa22cb465", // setApprovalForAll
+];
+
+export const checkMintIsSafe = (mint: CollectionMint): boolean => {
+  let isSafe = true;
+  const mintTx = mint.details.tx;
+  const methodId = mintTx.data.signature;
+  if (reserveMethods.includes(methodId)) {
+    isSafe = false;
+  }
+  return isSafe;
+};
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const extractByContractMetadata = async (collection: string, contractMetadata: any) => {
   const mintConfig = contractMetadata.mintConfig;
@@ -333,7 +355,11 @@ export const extractByContractMetadata = async (collection: string, contractMeta
 
     // For the moment we only support public mints
     if (formatted.kind === "public") {
-      collectionMints.push(phase.format());
+      const mint = phase.format();
+      const isSafe = checkMintIsSafe(mint);
+      if (isSafe) {
+        collectionMints.push(mint);
+      }
     }
   }
 
