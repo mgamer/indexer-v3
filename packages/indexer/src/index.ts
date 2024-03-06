@@ -19,7 +19,7 @@ if (Number(process.env.LOCAL_TESTING)) {
       if (await acquireLock(config.imageTag, 75)) {
         const hash = await RabbitMq.assertQueuesAndExchangesHash();
         logger.info("rabbit-timing", `rabbit assertion hash ${hash}`);
-        if (await redis.get('rabbit_assert_queues_exchanges_hash') !== hash) {
+        if (await redis.get(RabbitMq.hashKey) !== hash) {
           const start = _.now();
 
           logger.info("rabbit-timing", `rabbit assertion starting in ${start}`);
@@ -33,7 +33,7 @@ if (Number(process.env.LOCAL_TESTING)) {
             logger.error("rabbit-delete-queue", `Error deleting queue ${error}`);
           }
 
-          await redis.set('rabbit_assert_queues_exchanges_hash', hash);
+          await redis.set(RabbitMq.hashKey, hash);
         }
 
         await redis.set(config.imageTag, "DONE", "EX", 60 * 60 * 24); // Update the lock ttl

@@ -8,7 +8,7 @@ import { ConsumeMessage } from "amqplib";
 import { extendLock, releaseLock } from "@/common/redis";
 import { ChannelWrapper } from "amqp-connection-manager";
 import { config } from "@/config/index";
-import { md5 } from "@/common/utils";
+import { sha256 } from "@/common/utils";
 
 export type BackoffStrategy =
   | {
@@ -318,7 +318,7 @@ export abstract class AbstractRabbitMqJobHandler {
   }
 
   public getHash(): string {
-    return md5(
+    return sha256(
       [
         this.getQueue(),
         this.getQueueType(),
