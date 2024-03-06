@@ -89,9 +89,7 @@ export class IndexerTokensHandler extends KafkaEventHandler {
       config.debugWsApiKey &&
       getNetworkSettings().multiCollectionContracts.includes(payload.after.contract)
     ) {
-      if (
-        changed.some((value) => ["normalized_floor_sell_id", "remaining_supply"].includes(value))
-      ) {
+      if (changed.some((value) => ["normalized_floor_sell_id"].includes(value))) {
         logger.info(
           "IndexerTokensHandler",
           JSON.stringify({
@@ -174,7 +172,7 @@ export class IndexerTokensHandler extends KafkaEventHandler {
       // If the token was burned
       if (
         changed.some((value) => ["remaining_supply"].includes(value)) &&
-        payload.after.remaining_supply === 0
+        payload.after.remaining_supply === "0"
       ) {
         await burnedTokenJob.addToQueue([
           { contract: payload.after.contract, tokenId: payload.after.token_id },
