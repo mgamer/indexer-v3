@@ -23,7 +23,10 @@ export default class RecalcTokenCountQueueJob extends AbstractRabbitMqJobHandler
   public async process(payload: RecalcTokenCountQueueJobPayload) {
     const { collection, fromTokenId } = payload;
     if (collection === "0x2358693f4faec9d658bb97fc9cd8885f62105dc1") {
-      logger.info(this.queueName, JSON.stringify(payload));
+      logger.info(
+        this.queueName,
+        `totalCurrentCount = ${Number(payload.totalCurrentCount)} ${JSON.stringify(payload)}`
+      );
     }
 
     const limit = 5000;
@@ -75,7 +78,12 @@ export default class RecalcTokenCountQueueJob extends AbstractRabbitMqJobHandler
 
       if (lastToken) {
         if (collection === "0x2358693f4faec9d658bb97fc9cd8885f62105dc1") {
-          logger.info(this.queueName, `lastToken = ${lastToken} ${JSON.stringify(payload)}`);
+          logger.info(
+            this.queueName,
+            `totalCurrentCount = ${totalCurrentCount} lastToken = ${
+              lastToken.token_id
+            } ${JSON.stringify(payload)}`
+          );
         }
 
         // Trigger the next count job from the last token_id of the current batch
@@ -112,15 +120,15 @@ export default class RecalcTokenCountQueueJob extends AbstractRabbitMqJobHandler
     }
   }
 
-  public async addToQueue(collection: RecalcTokenCountQueueJobPayload, delay = 5 * 60 * 1000) {
-    collection.totalCurrentCount = collection.totalCurrentCount ?? 0;
+  public async addToQueue(payload: RecalcTokenCountQueueJobPayload, delay = 5 * 60 * 1000) {
+    payload.totalCurrentCount = payload.totalCurrentCount ?? 0;
 
     await this.send(
       {
-        payload: collection,
-        jobId: collection.force ? undefined : `${collection.collection}:${collection.fromTokenId}`,
+        payload,
+        jobId: payload.force ? undefined : `${payload.collection}:${payload.fromTokenId}`,
       },
-      collection.force ? 0 : delay
+      payload.force ? 0 : delay
     );
   }
 }
