@@ -40,6 +40,10 @@ export const decrypt = (text: string) => {
   return decryptedAsset.toString();
 };
 
+export const md5 = (text: string) : string => {
+  return crypto.createHash('md5').update(text).digest("hex");
+}
+
 // --- Buffers ---
 
 export const fromBuffer = (buffer: Buffer) => "0x" + buffer.toString("hex");

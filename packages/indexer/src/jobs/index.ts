@@ -46,6 +46,7 @@ import { PausedRabbitMqQueues } from "@/models/paused-rabbit-mq-queues";
 import { RabbitMq, RabbitMQMessage } from "@/common/rabbit-mq";
 import { getNetworkName } from "@/config/network";
 import { logger } from "@/common/logger";
+import { md5 } from "@/common/utils";
 import { tokenReclacSupplyJob } from "@/jobs/token-updates/token-reclac-supply-job";
 import { tokenRefreshCacheJob } from "@/jobs/token-updates/token-refresh-cache-job";
 import { recalcOwnerCountQueueJob } from "@/jobs/collection-updates/recalc-owner-count-queue-job";
@@ -362,6 +363,14 @@ export class RabbitMqJobsConsumer {
       backfillTokensWithMissingCollectionJob,
       recalcOnSaleCountQueueJob,
     ];
+  }
+
+  public static getQueuesHash(): string {
+    return md5(
+      RabbitMqJobsConsumer.getQueues().map(queue => {
+        return queue.getHash();
+      }).join('-')
+    );
   }
 
   public static getSharedChannelName(connectionIndex: number) {
