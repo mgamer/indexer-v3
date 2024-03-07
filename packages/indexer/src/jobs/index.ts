@@ -24,6 +24,7 @@ import amqplibConnectionManager, {
 } from "amqp-connection-manager";
 
 import * as backfillWrongNftBalances from "@/jobs/backfill/backfill-wrong-nft-balances";
+import * as backfillWrongERC1155Balances from "@/jobs/backfill/backfill-wrong-erc1155-balances";
 import * as backfillExpiredOrders from "@/jobs/backfill/backfill-expired-orders";
 import * as backfillExpiredOrders2 from "@/jobs/backfill/backfill-expired-orders-2";
 import * as backfillRefreshCollectionMetadata from "@/jobs/backfill/backfill-refresh-collections-metadata";
@@ -192,6 +193,7 @@ import { recalcOnSaleCountQueueJob } from "@/jobs/collection-updates/recalc-on-s
 
 export const allJobQueues = [
   backfillWrongNftBalances.queue,
+  backfillWrongERC1155Balances.queue,
   backfillExpiredOrders.queue,
   backfillExpiredOrders2.queue,
   backfillRefreshCollectionMetadata.queue,
