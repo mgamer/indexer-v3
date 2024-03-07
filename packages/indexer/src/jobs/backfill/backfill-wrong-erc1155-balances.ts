@@ -1,5 +1,5 @@
 import { Interface } from "@ethersproject/abi";
-import { HashZero } from "@ethersproject/constants";
+import { AddressZero, HashZero } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import { Queue, QueueScheduler, Worker } from "bullmq";
 
@@ -70,14 +70,16 @@ if (config.doBackgroundWork) {
             const owner = fromBuffer(r.owner);
             const tokenId = r.token_id;
 
-            const actualBalance = await onchainContract.balanceOf(owner, tokenId);
-            if (actualBalance.toString() !== r.amount) {
-              values.push({
-                contract: toBuffer(contract),
-                token_id: r.token_id,
-                owner: r.owner,
-                amount: actualBalance.toString(),
-              });
+            if (owner !== AddressZero) {
+              const actualBalance = await onchainContract.balanceOf(owner, tokenId);
+              if (actualBalance.toString() !== r.amount) {
+                values.push({
+                  contract: toBuffer(contract),
+                  token_id: r.token_id,
+                  owner: r.owner,
+                  amount: actualBalance.toString(),
+                });
+              }
             }
           })
         );
