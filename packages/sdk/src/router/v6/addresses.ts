@@ -187,6 +187,7 @@ export const SeaportV15Module: ChainIdToAddress = {
   [Network.BlastSepolia]: "0x16b7f92cdfc9e1aaf30fc7af8914d539b5340a55",
   [Network.Apex]: "0x16b7f92cdfc9e1aaf30fc7af8914d539b5340a55",
   [Network.Blast]: "0x16b7f92cdfc9e1aaf30fc7af8914d539b5340a55",
+  [Network.AstarZkevm]: "0x16b7f92cdfc9e1aaf30fc7af8914d539b5340a55",
 };
 
 export const AlienswapModule: ChainIdToAddress = {

@@ -37,6 +37,9 @@ export const getSearchCollectionsV3Options: RouteOptions = {
       excludeSpam: Joi.boolean()
         .default(false)
         .description("If true, will filter any collections marked as spam."),
+      boostVerified: Joi.boolean()
+        .default(false)
+        .description("If true, will promote verified collections."),
       fuzzy: Joi.boolean()
         .default(false)
         .description("If true, fuzzy search to help with misspellings."),
@@ -74,6 +77,7 @@ export const getSearchCollectionsV3Options: RouteOptions = {
             }).description("Total volume in given time period."),
             floorAskPrice: JoiPrice.allow(null).description("Current floor ask price."),
             openseaVerificationStatus: Joi.string().allow("", null),
+            magicedenVerificationStatus: Joi.string().allow("", null),
           }),
           score: Joi.number().unsafe().allow(null),
         })
@@ -97,15 +101,34 @@ export const getSearchCollectionsV3Options: RouteOptions = {
       }
     }
 
-    const { results } = await collectionsIndex.autocomplete({
-      prefix: query.prefix,
-      collectionIds: collectionIds,
-      communities: query.community ? [query.community] : undefined,
-      excludeSpam: query.excludeSpam,
-      excludeNsfw: query.excludeNsfw,
-      fuzzy: query.fuzzy,
-      limit: query.limit,
-    });
+    let results;
+
+    if (query.boostVerified) {
+      results = (
+        await collectionsIndex.autocompleteV2({
+          prefix: query.prefix,
+          collectionIds: collectionIds,
+          communities: query.community ? [query.community] : undefined,
+          excludeSpam: query.excludeSpam,
+          excludeNsfw: query.excludeNsfw,
+          fuzzy: query.fuzzy,
+          limit: query.limit,
+          boostVerified: query.boostVerified,
+        })
+      ).results;
+    } else {
+      results = (
+        await collectionsIndex.autocomplete({
+          prefix: query.prefix,
+          collectionIds: collectionIds,
+          communities: query.community ? [query.community] : undefined,
+          excludeSpam: query.excludeSpam,
+          excludeNsfw: query.excludeNsfw,
+          fuzzy: query.fuzzy,
+          limit: query.limit,
+        })
+      ).results;
+    }
 
     return {
       collections: await Promise.all(
@@ -195,6 +218,7 @@ export const getSearchCollectionsV3Options: RouteOptions = {
                     )
                   : undefined,
                 openseaVerificationStatus: collection.openseaVerificationStatus,
+                magicedenVerificationStatus: collection.magicedenVerificationStatus,
               },
               collection.metadataDisabled
             ),
