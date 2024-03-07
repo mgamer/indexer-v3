@@ -12,7 +12,7 @@ export type BurnedTokenJobPayload = {
 
 export default class BurnedTokenJob extends AbstractRabbitMqJobHandler {
   queueName = "burned-token";
-  maxRetries = 5;
+  maxRetries = 0;
   concurrency = 10;
 
   public async process(payload: BurnedTokenJobPayload) {
@@ -35,18 +35,6 @@ export default class BurnedTokenJob extends AbstractRabbitMqJobHandler {
             updated_at = now()
           WHERE id = $/collection/
         `);
-
-        await idb.none(
-          `
-          UPDATE collections SET
-            token_count = GREATEST(token_count - 1, 0),
-            updated_at = now()
-          WHERE id = $/collection/
-        `,
-          {
-            collection: collection.id,
-          }
-        );
       }
 
       queries.push(`
