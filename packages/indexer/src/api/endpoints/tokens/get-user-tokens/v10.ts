@@ -741,17 +741,19 @@ export const getUserTokensV10Options: RouteOptions = {
                t.name, t.image, t.metadata AS token_metadata, t.media, t.rarity_rank, t.collection_id,
                t.supply, t.remaining_supply, t.description,
                t.rarity_score, t.t_is_spam, t.t_nsfw_status, t.image_version, t.image_mime_type, t.media_mime_type,
+               t.floor_sell_id, t.floor_sell_maker, t.floor_sell_valid_from, t.floor_sell_valid_to,
+               t.floor_sell_source_id_int, t.floor_sell_value, t.floor_sell_currency, t.floor_sell_currency_value,
                ${selectLastSale}
                top_bid_id, top_bid_price, top_bid_value, top_bid_currency, top_bid_currency_price, top_bid_currency_value, top_bid_source_id_int,
                o.currency AS collection_floor_sell_currency, o.currency_price AS collection_floor_sell_currency_price, o.currency_value AS collection_floor_sell_currency_value, o.token_set_id AS collection_floor_sell_token_set_id,
                c.name as collection_name, con.kind, con.symbol, c.metadata, c.royalties, (c.metadata ->> 'safelistRequestStatus')::TEXT AS "opensea_verification_status",
-               c.royalties_bps, ot.kind AS floor_sell_kind, c.slug, c.is_spam AS c_is_spam, c.nsfw_status AS c_nsfw_status, c.metadata_disabled AS c_metadata_disabled, t_metadata_disabled,
+               c.royalties_bps, ot.kind AS ownership_floor_sell_kind, c.slug, c.is_spam AS c_is_spam, c.nsfw_status AS c_nsfw_status, c.metadata_disabled AS c_metadata_disabled, t_metadata_disabled,
                c.image_version AS "collection_image_version",
-               ot.value as floor_sell_value, ot.currency_value as floor_sell_currency_value, ot.currency_price, ot.currency as floor_sell_currency, ot.maker as floor_sell_maker,
-                date_part('epoch', lower(ot.valid_between)) AS "floor_sell_valid_from",
-                COALESCE(nullif(date_part('epoch', upper(ot.valid_between)), 'Infinity'), 0) AS "floor_sell_valid_to",
-               ot.source_id_int as floor_sell_source_id_int, ot.id as floor_sell_id,
-               ${query.includeRawData ? "ot.raw_data AS floor_sell_raw_data," : ""}
+               ot.value as ownership_floor_sell_value, ot.currency_value as ownership_floor_sell_currency_value, ot.currency as ownership_floor_sell_currency, ot.maker as ownership_floor_sell_maker,
+                date_part('epoch', lower(ot.valid_between)) AS "ownership_floor_sell_valid_from",
+                COALESCE(nullif(date_part('epoch', upper(ot.valid_between)), 'Infinity'), 0) AS "ownership_floor_sell_valid_to",
+               ot.source_id_int as ownership_floor_sell_source_id_int, ot.id as ownership_floor_sell_id,
+               ${query.includeRawData ? "ot.raw_data AS ownership_floor_sell_raw_data," : ""}
                (
                     CASE WHEN ot.value IS NOT NULL
                     THEN 1
@@ -873,29 +875,35 @@ export const getUserTokensV10Options: RouteOptions = {
         const floorAskCurrency = r.floor_sell_currency
           ? fromBuffer(r.floor_sell_currency)
           : Sdk.Common.Addresses.Native[config.chainId];
+        const ownershipFloorAskCurrency = r.ownership_floor_sell_currency
+          ? fromBuffer(r.ownership_floor_sell_currency)
+          : Sdk.Common.Addresses.Native[config.chainId];
+        const collectionFloorAskCurrency = r.collection_floor_sell_currency
+          ? fromBuffer(r.collection_floor_sell_currency)
+          : Sdk.Common.Addresses.Native[config.chainId];
         const topBidCurrency = r.top_bid_currency
           ? fromBuffer(r.top_bid_currency)
           : Sdk.Common.Addresses.WNative[config.chainId];
-        const collectionFloorSellCurrency = r.collection_floor_sell_currency
-          ? fromBuffer(r.collection_floor_sell_currency)
-          : Sdk.Common.Addresses.Native[config.chainId];
-        const floorSellSource = r.floor_sell_value
+        const floorAskSource = r.floor_sell_value
           ? sources.get(Number(r.floor_sell_source_id_int), contract, tokenId)
           : undefined;
-        const topBidSource = r.top_bid_source_id_int
-          ? sources.get(Number(r.top_bid_source_id_int), contract, tokenId)
+        const ownershipFloorAskSource = r.ownership_floor_sell_value
+          ? sources.get(Number(r.ownership_floor_sell_source_id_int), contract, tokenId)
           : undefined;
-        const acquiredTime = new Date(r.acquired_at * 1000).toISOString();
-        const collectionFloorSellSource = r.collection_floor_sell_value
+        const collectionFloorAskSource = r.collection_floor_sell_value
           ? sources.get(
               Number(r.collection_floor_sell_source_id_int),
               r.collection_floor_sell_token_set_id.split(":")[1],
               r.collection_floor_sell_token_set_id.split(":")[2]
             )
           : undefined;
-        const collectionFloorSellValidBetween = r.collection_floor_sell_valid_between
+        const topBidSource = r.top_bid_source_id_int
+          ? sources.get(Number(r.top_bid_source_id_int), contract, tokenId)
+          : undefined;
+        const collectionFloorAskValidBetween = r.collection_floor_sell_valid_between
           ? r.collection_floor_sell_valid_between.slice(1, -1).split(",")
           : undefined;
+        const acquiredTime = new Date(r.acquired_at * 1000).toISOString();
 
         let dynamicPricing = undefined;
         if (query.includeDynamicPricing) {
@@ -1049,26 +1057,26 @@ export const getUserTokensV10Options: RouteOptions = {
                             nativeAmount: r.collection_floor_sell_value,
                           },
                         },
-                        collectionFloorSellCurrency,
+                        collectionFloorAskCurrency,
                         query.displayCurrency
                       )
                     : null,
                   maker: r.collection_floor_sell_maker
                     ? fromBuffer(r.collection_floor_sell_maker)
                     : null,
-                  validFrom: collectionFloorSellValidBetween
+                  validFrom: collectionFloorAskValidBetween
                     ? Math.round(
-                        new Date(collectionFloorSellValidBetween[0].slice(1, -1)).getTime() / 1000
+                        new Date(collectionFloorAskValidBetween[0].slice(1, -1)).getTime() / 1000
                       )
                     : null,
-                  validUntil: collectionFloorSellValidBetween
-                    ? collectionFloorSellValidBetween[1] === "infinity"
+                  validUntil: collectionFloorAskValidBetween
+                    ? collectionFloorAskValidBetween[1] === "infinity"
                       ? 0
                       : Math.round(
-                          new Date(collectionFloorSellValidBetween[1].slice(1, -1)).getTime() / 1000
+                          new Date(collectionFloorAskValidBetween[1].slice(1, -1)).getTime() / 1000
                         )
                     : null,
-                  source: getJoiSourceObject(collectionFloorSellSource),
+                  source: getJoiSourceObject(collectionFloorAskSource),
                 },
                 royaltiesBps: r.royalties_bps ?? 0,
                 royalties: r.royalties
@@ -1135,16 +1143,8 @@ export const getUserTokensV10Options: RouteOptions = {
                 maker: r.floor_sell_maker ? fromBuffer(r.floor_sell_maker) : null,
                 validFrom: r.floor_sell_value ? r.floor_sell_valid_from : null,
                 validUntil: r.floor_sell_value ? r.floor_sell_valid_to : null,
-                quantityFilled:
-                  query.includeQuantity && r.floor_sell_value
-                    ? r.floor_sell_quantity_filled
-                    : undefined,
-                quantityRemaining:
-                  query.includeQuantity && r.floor_sell_value
-                    ? r.floor_sell_quantity_remaining
-                    : undefined,
                 dynamicPricing,
-                source: getJoiSourceObject(floorSellSource),
+                source: getJoiSourceObject(floorAskSource),
               },
               lastAppraisalValue: r.last_token_appraisal_value
                 ? formatEth(r.last_token_appraisal_value)
@@ -1190,27 +1190,28 @@ export const getUserTokensV10Options: RouteOptions = {
             tokenCount: String(r.token_count),
             onSaleCount: String(r.on_sale_count),
             floorAsk: {
-              id: r.floor_sell_id,
-              price: r.floor_sell_id
+              id: r.ownership_floor_sell_id,
+              price: r.ownership_floor_sell_id
                 ? await getJoiPriceObject(
                     {
                       gross: {
-                        amount: r.floor_sell_currency_value ?? r.floor_sell_value,
-                        nativeAmount: r.floor_sell_value,
+                        amount:
+                          r.ownership_floor_sell_currency_value ?? r.ownership_floor_sell_value,
+                        nativeAmount: r.ownership_floor_sell_value,
                       },
                     },
-                    floorAskCurrency,
+                    ownershipFloorAskCurrency,
                     query.displayCurrency
                   )
                 : null,
-              maker: r.floor_sell_maker ? fromBuffer(r.floor_sell_maker) : null,
-              kind: r.floor_sell_kind,
-              validFrom: r.floor_sell_value ? r.floor_sell_valid_from : null,
-              validUntil: r.floor_sell_value ? r.floor_sell_valid_to : null,
-              source: getJoiSourceObject(floorSellSource),
-              rawData: query.includeRawData ? r.floor_sell_raw_data : undefined,
+              maker: r.ownership_floor_sell_maker ? fromBuffer(r.ownership_floor_sell_maker) : null,
+              kind: r.ownership_floor_sell_kind,
+              validFrom: r.ownership_floor_sell_value ? r.ownership_floor_sell_valid_from : null,
+              validUntil: r.ownership_floor_sell_value ? r.ownership_floor_sell_valid_to : null,
+              source: getJoiSourceObject(ownershipFloorAskSource),
+              rawData: query.includeRawData ? r.ownership_floor_sell_raw_data : undefined,
               isNativeOffChainCancellable: query.includeRawData
-                ? isOrderNativeOffChainCancellable(r.floor_sell_raw_data)
+                ? isOrderNativeOffChainCancellable(r.ownership_floor_sell_raw_data)
                 : undefined,
             },
             acquiredAt: acquiredTime,
