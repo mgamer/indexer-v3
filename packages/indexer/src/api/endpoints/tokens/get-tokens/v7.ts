@@ -814,9 +814,27 @@ export const getTokensV7Options: RouteOptions = {
 
       if (query.attributes) {
         const attributes: { key: string; value: any }[] = [];
-        Object.entries(query.attributes).forEach(([key, value]) => attributes.push({ key, value }));
+        const rangeAttributes: { [key: string]: { value: number; operator: "gte" | "lte" }[] } = {};
+        let i = 0;
 
-        for (let i = 0; i < attributes.length; i++) {
+        Object.entries(query.attributes).forEach(([key, value]) => {
+          if (_.endsWith(key, "::gte")) {
+            rangeAttributes[_.trimEnd(key, "::gte")] = [{ value: Number(value), operator: "gte" }];
+          } else if (_.endsWith(key, "::lte")) {
+            _.has(rangeAttributes, _.trimEnd(key, "::lte"))
+              ? rangeAttributes[_.trimEnd(key, "::lte")].push({
+                  value: Number(value),
+                  operator: "lte",
+                })
+              : (rangeAttributes[_.trimEnd(key, "::lte")] = [
+                  { value: Number(value), operator: "lte" },
+                ]);
+          } else {
+            attributes.push({ key, value });
+          }
+        });
+
+        for (; i < attributes.length; i++) {
           const multipleSelection = Array.isArray(attributes[i].value);
 
           (query as any)[`key${i}`] = attributes[i].key;
@@ -829,6 +847,29 @@ export const getTokensV7Options: RouteOptions = {
               AND ta${i}.key = $/key${i}/
               AND ta${i}.value ${multipleSelection ? `IN ($/value${i}:csv/)` : `= $/value${i}/`}
           `;
+        }
+
+        for (const [key, range] of Object.entries(rangeAttributes)) {
+          (query as any)[`key${i}`] = key;
+
+          let valueRangeFilter = "";
+          if (_.size(range) > 1) {
+            valueRangeFilter = `CASE WHEN ta${i}.value ~ '^[0-9]+\\.?[0-9]*$' THEN CAST(ta${i}.value AS NUMERIC) ELSE 0 END BETWEEN ${range[0].value} AND ${range[1].value}`;
+          } else {
+            valueRangeFilter = `CASE WHEN ta${i}.value ~ '^[0-9]+\\.?[0-9]*$' THEN CAST(ta${i}.value AS NUMERIC) ELSE 0 END ${
+              range[0].operator === "lte" ? "<=" : ">="
+            } ${range[0].value}`;
+          }
+
+          baseQuery += `
+            JOIN token_attributes ta${i}
+              ON t.contract = ta${i}.contract
+              AND t.token_id = ta${i}.token_id
+              AND ta${i}.key = $/key${i}/
+              AND ${valueRangeFilter}
+          `;
+
+          i++;
         }
       }
 
