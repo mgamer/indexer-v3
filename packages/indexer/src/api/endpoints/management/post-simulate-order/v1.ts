@@ -465,7 +465,7 @@ export const postSimulateOrderV1Options: RouteOptions = {
           }
         );
         if (!tokenResult) {
-          throw Boom.internal("Could not simulate order");
+          throw Boom.badRequest("Could not simulate order");
         }
 
         const owner = fromBuffer(tokenResult.owner);
@@ -555,7 +555,10 @@ export const postSimulateOrderV1Options: RouteOptions = {
         }
       }
     } catch (error) {
-      logger.error(`post-simulate-order-${version}-handler`, `Handler failure: ${error}`);
+      if (!(error instanceof Boom.Boom)) {
+        logger.error(`post-simulate-order-${version}-handler`, `Handler failure: ${error}`);
+      }
+
       throw error;
     }
   },
