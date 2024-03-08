@@ -821,14 +821,13 @@ export const getTokensV7Options: RouteOptions = {
           if (_.endsWith(key, "::gte")) {
             rangeAttributes[_.trimEnd(key, "::gte")] = [{ value: Number(value), operator: "gte" }];
           } else if (_.endsWith(key, "::lte")) {
-            _.has(rangeAttributes, _.trimEnd(key, "::lte"))
-              ? rangeAttributes[_.trimEnd(key, "::lte")].push({
+            const trimmedKey = _.trimEnd(key, "::lte");
+            _.has(rangeAttributes, trimmedKey)
+              ? rangeAttributes[trimmedKey].push({
                   value: Number(value),
                   operator: "lte",
                 })
-              : (rangeAttributes[_.trimEnd(key, "::lte")] = [
-                  { value: Number(value), operator: "lte" },
-                ]);
+              : (rangeAttributes[trimmedKey] = [{ value: Number(value), operator: "lte" }]);
           } else {
             attributes.push({ key, value });
           }
