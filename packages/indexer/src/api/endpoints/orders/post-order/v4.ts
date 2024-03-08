@@ -15,6 +15,7 @@ import * as orders from "@/orderbook/orders";
 
 import { orderbookPostOrderExternalOpenseaJob } from "@/jobs/orderbook/post-order-external/orderbook-post-order-external-opensea-job";
 import { orderbookPostOrderExternalJob } from "@/jobs/orderbook/post-order-external/orderbook-post-order-external-job";
+import { inject } from "@/api/index";
 
 const version = "v4";
 
@@ -628,6 +629,25 @@ export const postOrderV4Options: RouteOptions = {
               );
 
               if (["already-exists", "success"].includes(result.status)) {
+                try {
+                  const response = await inject({
+                    method: "POST",
+                    url: "/management/orders/simulate/v1",
+                    headers: {
+                      "Content-Type": "application/json",
+                    },
+                    payload: {
+                      id: result.id,
+                    },
+                  });
+                  logger.info(
+                    "validate-order-on-creation",
+                    JSON.stringify({ id: result.id, response: response.payload })
+                  );
+                } catch {
+                  // Skip errors
+                }
+
                 return results.push({ message: "success", orderIndex: i, orderId: result.id });
               } else {
                 return results.push({ message: result.status, orderIndex: i, orderId: result.id });
