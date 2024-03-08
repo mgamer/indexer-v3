@@ -56,5 +56,4 @@ export const runDBMigration = async () => {
     await delay(CHECK_MIGRATION_INTERVAL);
   }
   logger.info("postgresql-migration", `postgresql database schema is up to date`);
-  await delay(5000);
 }
