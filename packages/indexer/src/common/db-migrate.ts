@@ -9,7 +9,7 @@ export const runDBMigration = async () => {
   const EXPIRATION_LOCK = 300
   const CHECK_MIGRATION_INTERVAL = 1000
   const dbMigrationLock = "db-migration-lock";
-  const dbMigrationStatus = "db-migration-status";
+  const dbMigrationVersion = "db-migration-version";
 
   const doRun = async () => {
     if (await acquireLock(dbMigrationLock, EXPIRATION_LOCK)) {
@@ -39,7 +39,7 @@ export const runDBMigration = async () => {
           decamelize: undefined
         });
 
-        await redis.set(dbMigrationStatus, config.imageTag);
+        await redis.set(dbMigrationVersion, config.imageTag);
 
         logger.info("postgresql-migration", `Stop postgresql migration`);
       } catch(err) {
@@ -53,7 +53,7 @@ export const runDBMigration = async () => {
     }
   }
 
-  while(await redis.get(dbMigrationStatus) !== config.imageTag) {
+  while(await redis.get(dbMigrationVersion) !== config.imageTag) {
     await doRun();
   }
   logger.info("postgresql-migration", `postgresql database schema is up to date`);
