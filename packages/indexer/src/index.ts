@@ -10,7 +10,6 @@ import { config } from "@/config/index";
 import { logger } from "@/common/logger";
 import _ from "lodash";
 
-
 runDBMigration().then(() => {
   if (Number(process.env.LOCAL_TESTING)) {
     import("./setup");

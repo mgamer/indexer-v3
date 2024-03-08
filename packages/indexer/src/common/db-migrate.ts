@@ -6,8 +6,8 @@ import { delay } from "@/common/utils";
 import { config } from "@/config/index";
 
 export const runDBMigration = async () => {
-  const EXPIRATION_LOCK = 300
-  const CHECK_MIGRATION_INTERVAL = 1000
+  const EXPIRATION_LOCK = 300;
+  const CHECK_MIGRATION_INTERVAL = 1000;
   const dbMigrationLock = "db-migration-lock";
   const dbMigrationVersion = "db-migration-version";
 
@@ -18,43 +18,46 @@ export const runDBMigration = async () => {
         await migrationRunner({
           dryRun: false,
           databaseUrl: {
-            connectionString: config.databaseUrl
+            connectionString: config.databaseUrl,
           },
-          dir: './src/migrations',
-          ignorePattern: '\\..*',
-          schema: 'public',
+          dir: "./src/migrations",
+          ignorePattern: "\\..*",
+          schema: "public",
           createSchema: undefined,
           migrationsSchema: undefined,
           createMigrationsSchema: undefined,
-          migrationsTable: 'pgmigrations',
+          migrationsTable: "pgmigrations",
           count: undefined,
           timestamp: false,
           file: undefined,
           checkOrder: false,
           verbose: true,
-          direction: 'up',
+          direction: "up",
           singleTransaction: true,
           noLock: false,
           fake: false,
-          decamelize: undefined
+          decamelize: undefined,
         });
 
         await redis.set(dbMigrationVersion, config.imageTag);
 
         logger.info("postgresql-migration", `Stop postgresql migration`);
-      } catch(err) {
+      } catch (err) {
         logger.error("postgresql-migration", `${err}`);
       } finally {
-        releaseLock(dbMigrationLock);
+        await releaseLock(dbMigrationLock);
       }
     } else {
-      logger.debug("postgresql-migration", `postgresql migration in progress in a different instance`);
+      logger.debug(
+        "postgresql-migration",
+        `postgresql migration in progress in a different instance`
+      );
       await delay(CHECK_MIGRATION_INTERVAL);
     }
-  }
+  };
 
-  while(await redis.get(dbMigrationVersion) !== config.imageTag) {
+  while ((await redis.get(dbMigrationVersion)) !== config.imageTag) {
     await doRun();
   }
   logger.info("postgresql-migration", `postgresql database schema is up to date`);
-}
+};
