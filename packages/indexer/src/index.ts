@@ -12,17 +12,12 @@ import _ from "lodash";
 
 
 runDBMigration().then(() => {
-  console.log('2')
-
   if (Number(process.env.LOCAL_TESTING)) {
-    console.log('3')
     import("./setup");
   } else {
-    console.log('4')
     RabbitMq.createVhost()
       .then(() => RabbitMq.connect())
       .then(async () => {
-        console.log('5')
         // Sync the pods so rabbit queues assertion will run only once per deployment by a single pod
         if (await acquireLock(config.imageTag, 75)) {
           const hash = await RabbitMq.assertQueuesAndExchangesHash();
@@ -47,7 +42,6 @@ runDBMigration().then(() => {
           await redis.set(config.imageTag, "DONE", "EX", 60 * 60 * 24); // Update the lock ttl
           import("./setup");
         } else {
-          console.log('6')
           // Check every 1s if the rabbit queues assertion completed
           const intervalId = setInterval(async () => {
             if ((await redis.get(config.imageTag)) === "DONE") {
