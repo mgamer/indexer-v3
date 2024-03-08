@@ -16,7 +16,7 @@ export const runDBMigration = async () => {
       logger.info("postgresql-migration", `Start postgresql migration`);
       try {
         await migrationRunner({
-          dryRun: true,
+          dryRun: false,
           databaseUrl: {
             connectionString: config.databaseUrl
           },
@@ -47,13 +47,14 @@ export const runDBMigration = async () => {
       } finally {
         releaseLock(dbMigrationLock);
       }
+    } else {
+      logger.debug("postgresql-migration", `postgresql migration in progress in a different instance`);
+      await delay(CHECK_MIGRATION_INTERVAL);
     }
   }
 
   while(await redis.get(dbMigrationStatus) !== config.imageTag) {
     await doRun();
-    logger.debug("postgresql-migration", `postgresql migration in progress in a different instance`);
-    await delay(CHECK_MIGRATION_INTERVAL);
   }
   logger.info("postgresql-migration", `postgresql database schema is up to date`);
 }
