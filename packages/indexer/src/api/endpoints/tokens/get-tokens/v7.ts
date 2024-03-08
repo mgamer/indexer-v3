@@ -819,7 +819,13 @@ export const getTokensV7Options: RouteOptions = {
 
         Object.entries(query.attributes).forEach(([key, value]) => {
           if (_.endsWith(key, "::gte")) {
-            rangeAttributes[_.trimEnd(key, "::gte")] = [{ value: Number(value), operator: "gte" }];
+            const trimmedKey = _.trimEnd(key, "::gte");
+            _.has(rangeAttributes, trimmedKey)
+              ? rangeAttributes[trimmedKey].push({
+                  value: Number(value),
+                  operator: "gte",
+                })
+              : (rangeAttributes[trimmedKey] = [{ value: Number(value), operator: "gte" }]);
           } else if (_.endsWith(key, "::lte")) {
             const trimmedKey = _.trimEnd(key, "::lte");
             _.has(rangeAttributes, trimmedKey)
@@ -853,7 +859,8 @@ export const getTokensV7Options: RouteOptions = {
 
           let valueRangeFilter = "";
           if (_.size(range) > 1) {
-            valueRangeFilter = `CASE WHEN ta${i}.value ~ '^[0-9]+\\.?[0-9]*$' THEN CAST(ta${i}.value AS NUMERIC) ELSE 0 END BETWEEN ${range[0].value} AND ${range[1].value}`;
+            const sortedRange = _.sortBy(range, "operator");
+            valueRangeFilter = `CASE WHEN ta${i}.value ~ '^[0-9]+\\.?[0-9]*$' THEN CAST(ta${i}.value AS NUMERIC) ELSE 0 END BETWEEN ${sortedRange[0].value} AND ${sortedRange[1].value}`;
           } else {
             valueRangeFilter = `CASE WHEN ta${i}.value ~ '^[0-9]+\\.?[0-9]*$' THEN CAST(ta${i}.value AS NUMERIC) ELSE 0 END ${
               range[0].operator === "lte" ? "<=" : ">="
