@@ -407,6 +407,14 @@ export const getTokensV7Options: RouteOptions = {
       enableElasticsearchAsks = !isNaN(Number(contArr)) || contArr[0].startsWith("es_");
     }
 
+    if (query.attributes) {
+      Object.entries(query.attributes).forEach(([key]) => {
+        _.endsWith(key, "::gte") || _.endsWith(key, "::lte")
+          ? (enableElasticsearchAsks = false)
+          : undefined;
+      });
+    }
+
     if (enableElasticsearchAsks) {
       if (query.continuation) {
         const contArr = splitContinuation(query.continuation);
