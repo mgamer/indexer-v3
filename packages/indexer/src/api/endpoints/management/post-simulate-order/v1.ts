@@ -260,6 +260,9 @@ export const postSimulateOrderV1Options: RouteOptions = {
           // Quirklings on mainnet
           (fromBuffer(orderResult.contract) === "0x8f1b132e9fd2b9a2b210baa186bf1ae650adf7ac" &&
             config.chainId === Network.Ethereum) ||
+          // Quirklings on mainnet
+          (fromBuffer(orderResult.contract) === "0xd4b7d9bb20fa20ddada9ecef8a7355ca983cccb1" &&
+            config.chainId === Network.Ethereum) ||
           // Creepz on mainner
           (fromBuffer(orderResult.contract) === "0x5946aeaab44e65eb370ffaa6a7ef2218cff9b47d" &&
             config.chainId === Network.Ethereum) ||
