@@ -84,6 +84,7 @@ export const postSimulateOrderV1Options: RouteOptions = {
         revalidate?: boolean;
         createdTime?: number;
         tokenSetId?: string;
+        side?: string;
       }
     ) => {
       if (!payload.skipRevalidation && options?.revalidate) {
@@ -109,6 +110,7 @@ export const postSimulateOrderV1Options: RouteOptions = {
               payload: options?.payload,
               orderId: id,
               tokenSetId: options?.tokenSetId,
+              side: options?.side,
             })
           );
         }
@@ -420,6 +422,7 @@ export const postSimulateOrderV1Options: RouteOptions = {
             revalidate: needRevalidation,
             createdTime: orderResult.created_at,
             tokenSetId: orderResult.token_set_id,
+            side: orderResult.side,
           });
 
           return { message: "Order is not fillable" };
