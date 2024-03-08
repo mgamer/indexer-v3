@@ -443,6 +443,7 @@ export const postSimulateOrderV1Options: RouteOptions = {
                 ORDER BY nft_approval_events.block DESC
                 LIMIT 1
               )
+            ORDER BY tokens.created_at DESC
             LIMIT 1
           `,
           {
