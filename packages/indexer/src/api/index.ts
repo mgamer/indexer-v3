@@ -128,6 +128,8 @@ export const start = async (): Promise<void> => {
             "x-default": "demo-api-key",
           },
         },
+        documentationPage: config.environment !== "prod",
+        swaggerUI: config.environment !== "prod",
         schemes: ["https", "http"],
         host: `${getSubDomain()}.reservoir.tools`,
         cors: true,
