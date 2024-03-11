@@ -210,7 +210,7 @@ export const getPaymentMethods = async (paymentMethodWhitelistId: number, refres
       result = await exchange
         .getWhitelistedPaymentMethods(paymentMethodWhitelistId)
         .then((c: Result) => c.map((d) => d.toLowerCase()));
-      await redis.set(cacheKey, JSON.stringify(result), "EX", 3 * 3600);
+      await redis.set(cacheKey, JSON.stringify(_.uniq(result)), "EX", 3 * 3600);
     } catch {
       // Skip errors
     }
