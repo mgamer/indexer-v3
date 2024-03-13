@@ -319,7 +319,7 @@ export const extractByTx = async (txHash: string, skipCache = false) => {
   return [];
 };
 
-export const reserveMethods = [
+const RESERVED_METHODS = [
   "0x095ea7b3", // approve
   "0x23b872dd", // transferFrom
   "0x42966c68", // burn
@@ -331,14 +331,13 @@ export const reserveMethods = [
   "0xa22cb465", // setApprovalForAll
 ];
 
-export const checkMintIsSafe = (mint: CollectionMint): boolean => {
-  let isSafe = true;
-  const mintTx = mint.details.tx;
-  const methodId = mintTx.data.signature;
-  if (reserveMethods.includes(methodId)) {
-    isSafe = false;
+const checkMintIsSafe = (mint: CollectionMint): boolean => {
+  const methodId = mint.details.tx.data.signature;
+  if (RESERVED_METHODS.includes(methodId)) {
+    return false;
   }
-  return isSafe;
+
+  return true;
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
