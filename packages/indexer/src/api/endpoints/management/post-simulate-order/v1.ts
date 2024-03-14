@@ -192,6 +192,7 @@ export const postSimulateOrderV1Options: RouteOptions = {
             orders.token_set_id,
             orders.fillability_status,
             orders.approval_status,
+            orders.order_kind,
             orders.conduit,
             orders.raw_data,
             floor(extract(epoch FROM orders.created_at)) AS created_at
@@ -434,6 +435,7 @@ export const postSimulateOrderV1Options: RouteOptions = {
           return { message: "Order is not fillable" };
         }
       } else {
+        const isPPv2 = ["payment-processor-v2"].includes(orderResult?.order_kind);
         const tokenResult = await idb.oneOrNone(
           `
             SELECT
@@ -448,9 +450,15 @@ export const postSimulateOrderV1Options: RouteOptions = {
               ON nft_balances.contract = tokens.contract
               AND nft_balances.token_id = tokens.token_id
             WHERE token_sets_tokens.token_set_id = $/tokenSetId/
-              AND (tokens.is_flagged IS NULL OR tokens.is_flagged = 0)
               AND nft_balances.amount > 0
-              AND nft_balances.acquired_at < now() - interval '3 hours'
+              ${
+                isPPv2
+                  ? ``
+                  : `
+                  AND (tokens.is_flagged IS NULL OR tokens.is_flagged = 0)
+                  AND nft_balances.acquired_at < now() - interval '3 hours'
+                `
+              }
               AND (
                 SELECT
                   approved
