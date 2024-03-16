@@ -29,7 +29,8 @@ export type CollectionMintStandard =
   | "bueno"
   | "fairxyz"
   | "fabric"
-  | "paragraph";
+  | "paragraph"
+  | "mirror";
 
 export type CollectionMintDetails = {
   tx: MintTxSchema;

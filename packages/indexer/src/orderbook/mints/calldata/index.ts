@@ -501,6 +501,10 @@ export const refreshMintsForCollection = async (collection: string) => {
       case "paragraph":
         await mints.paragraph.refreshByCollection(collection);
         break;
+
+      case "mirror":
+        await mints.mirror.refreshByCollection(collection);
+        break;
     }
   }
 

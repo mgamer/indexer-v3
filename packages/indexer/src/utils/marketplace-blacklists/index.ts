@@ -98,11 +98,23 @@ export const isBlockedByCustomLogic = async (
 
     if (
       config.chainId === 1 &&
-      ["0xc379e535caff250a01caa6c3724ed1359fe5c29b"].includes(contract) &&
+      [
+        "0xc379e535caff250a01caa6c3724ed1359fe5c29b",
+        "0xccc1825cf04cae4d497b202d1434ec0f79ee535f",
+      ].includes(contract) &&
       operators.includes(OPENSEA)
     ) {
       result = true;
       blacklist = [OPENSEA];
+    }
+
+    if (
+      config.chainId === 1 &&
+      ["0xcc7542d4736fca6df3a13615a49d0e1f510ef510"].includes(contract) &&
+      !operators.includes(OPENSEA)
+    ) {
+      result = true;
+      blacklist = operators;
     }
 
     // `registry()`

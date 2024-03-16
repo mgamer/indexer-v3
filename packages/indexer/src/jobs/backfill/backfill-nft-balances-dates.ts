@@ -5,6 +5,7 @@ import { RabbitMQMessage } from "@/common/rabbit-mq";
 import _ from "lodash";
 import { fromBuffer, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
+// import { logger } from "@/common/logger";
 // import { redlock } from "@/common/redis";
 
 export type BackfillNftBalancesDatesJobCursorInfo = {
@@ -31,7 +32,7 @@ export class BackfillNftBalancesDatesJob extends AbstractRabbitMqJobHandler {
       owner?: Buffer;
       amount?: string;
     } = {
-      limit: _.includes([56, 137, 324, 42161, 42170, 43114, 80001], config.chainId) ? 50 : 300,
+      limit: _.includes([56, 137, 324, 42161, 42170, 43114, 80001], config.chainId) ? 300 : 300,
     };
 
     let cursor = "";
@@ -70,10 +71,6 @@ export class BackfillNftBalancesDatesJob extends AbstractRabbitMqJobHandler {
         createdAtValue = "WHERE created_at = '2024-01-09 19:39:22.132056+00'";
         break;
 
-      case 534353:
-        createdAtValue = "WHERE created_at = '2024-01-09 19:39:38.475734+00'";
-        break;
-
       case 11155111:
         createdAtValue = "WHERE created_at = '2024-01-09 19:39:37.536578+00'";
         break;
@@ -82,16 +79,8 @@ export class BackfillNftBalancesDatesJob extends AbstractRabbitMqJobHandler {
         createdAtValue = "WHERE created_at = '2024-01-09 19:39:37.56473+00'";
         break;
 
-      case 84531:
-        createdAtValue = "WHERE created_at = '2024-01-09 19:39:23.973227+00'";
-        break;
-
       case 42170:
         createdAtValue = "WHERE created_at = '2024-01-09 19:39:22.234949+00'";
-        break;
-
-      case 999:
-        createdAtValue = "WHERE created_at = '2024-01-09 19:39:23.972381+00'";
         break;
 
       case 7777777:
@@ -143,6 +132,15 @@ export class BackfillNftBalancesDatesJob extends AbstractRabbitMqJobHandler {
     // Check if there are more potential users to sync
     if (results.length == values.limit) {
       const lastItem = _.last(results);
+
+      // logger.info(
+      //   this.queueName,
+      //   `Processed ${results.length} tokens. last contract=${fromBuffer(
+      //     lastItem.contract
+      //   )}, tokenId=${lastItem.token_id}, owner=${fromBuffer(lastItem.owner)}, amount=${
+      //     lastItem.amount
+      //   }`
+      // );
 
       return {
         addToQueue: true,

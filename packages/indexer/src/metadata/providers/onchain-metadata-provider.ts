@@ -230,6 +230,11 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
               }/${idToToken[token.id].tokenId}`;
             }
           } else if (uri.endsWith("/{id}")) {
+            uri = uri.replace(
+              "{id}",
+              Number(idToToken[token.id].tokenId).toString(16).padStart(64, "0")
+            );
+          } else if (uri.endsWith("/{id}.json")) {
             uri = uri.replace("{id}", idToToken[token.id].tokenId);
           }
 
@@ -324,27 +329,27 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
 
   // parsers
   _parseToken(metadata: any): TokenMetadata {
-    // add handling for metadata.properties, convert to attributes
-    if (metadata?.properties && !metadata?.attributes) {
-      metadata.attributes = Object.keys(metadata.properties).map((key) => {
-        if (typeof metadata.properties[key] === "object") {
+    let attributes = metadata?.attributes || metadata?.properties || [];
+
+    if (typeof attributes === "string") {
+      attributes = JSON.parse(attributes);
+    }
+
+    if (!Array.isArray(attributes)) {
+      attributes = Object.keys(attributes).map((key) => {
+        if (typeof attributes[key] === "object") {
           return {
             trait_type: key,
-            value: metadata.properties[key],
+            value: attributes[key],
           };
         } else {
           return {
             trait_type: key,
-            value: metadata.properties[key],
+            value: attributes[key],
           };
         }
       });
     }
-
-    const attributes =
-      typeof metadata.attributes === "string"
-        ? JSON.parse(metadata.attributes)
-        : metadata?.attributes || [];
 
     return {
       contract: metadata.contract,
@@ -352,7 +357,7 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
       tokenURI: metadata.uri,
       tokenId: metadata.tokenId,
       collection: _.toLower(metadata.contract),
-      name: metadata?.name || null,
+      name: metadata?.name || metadata?.tokenName || null,
       flagged: null,
       // Token descriptions are a waste of space for most collections we deal with
       // so by default we ignore them (this behaviour can be overridden if needed).
@@ -360,6 +365,7 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
       imageUrl:
         normalizeLink(metadata?.image) ||
         normalizeLink(metadata?.image_url) ||
+        normalizeLink(metadata?.imageUrl) ||
         normalizeLink(metadata?.image_data) ||
         null,
       imageOriginalUrl: metadata?.image || metadata?.image_url || null,
@@ -669,11 +675,7 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
         }
       }
 
-      if (uri.startsWith("json:")) {
-        uri = uri.replace("json:\n", "");
-      }
-
-      uri = this.parseIPFSURI(uri);
+      uri = uri.trim();
 
       if (uri.startsWith("data:application/json;base64,")) {
         uri = uri.replace("data:application/json;base64,", "");
@@ -684,7 +686,23 @@ export class OnchainMetadataProvider extends AbstractBaseMetadataProvider {
         return [JSON.parse(uri), null];
       }
 
-      uri = uri.trim();
+      if (uri.startsWith("{") && uri.endsWith("}")) {
+        try {
+          return [JSON.parse(uri), null];
+        } catch {
+          return [null, "Invalid URI"];
+        }
+      }
+
+      if (uri.startsWith("json:")) {
+        uri = uri.replace("json:\n", "");
+      }
+
+      if (uri.startsWith("ar://")) {
+        uri = uri.replace("ar://", "https://arweave.net/");
+      }
+
+      uri = this.parseIPFSURI(uri);
 
       if (!uri.startsWith("http")) {
         // if the uri is not a valid url, return null

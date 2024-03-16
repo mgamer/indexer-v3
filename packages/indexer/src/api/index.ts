@@ -19,9 +19,9 @@ import { getSubDomain } from "@/config/network";
 import { allJobQueues } from "@/jobs/index";
 import { ApiKeyManager } from "@/models/api-keys";
 import { RateLimitRules } from "@/models/rate-limit-rules";
-import { BlockedRouteError } from "@/models/rate-limit-rules/errors";
+import { BlockedKeyError, BlockedRouteError } from "@/models/rate-limit-rules/errors";
 import { countApiUsageJob } from "@/jobs/metrics/count-api-usage-job";
-import { generateOpenApiSpec } from "./endpoints/admin";
+import { RateLimitRuleEntity } from "@/models/rate-limit-rules/rate-limit-rule-entity";
 
 let server: Hapi.Server;
 
@@ -128,6 +128,8 @@ export const start = async (): Promise<void> => {
             "x-default": "demo-api-key",
           },
         },
+        documentationPage: config.environment !== "prod",
+        swaggerUI: config.environment !== "prod",
         schemes: ["https", "http"],
         host: `${getSubDomain()}.reservoir.tools`,
         cors: true,
@@ -204,15 +206,15 @@ export const start = async (): Promise<void> => {
           new Map(Object.entries(_.merge(request.payload, request.query, request.params)))
         );
       } catch (error) {
-        if (error instanceof BlockedRouteError) {
-          const blockedRouteResponse = {
+        if (error instanceof BlockedRouteError || error instanceof BlockedKeyError) {
+          const blockedResponse = {
             statusCode: 429,
-            error: "Route is suspended",
-            message: `Request to ${request.route.path} is currently suspended`,
+            error: error instanceof BlockedRouteError ? "Route is suspended" : "Too Many Requests",
+            message: error.message,
           };
 
           return reply
-            .response(blockedRouteResponse)
+            .response(blockedResponse)
             .type("application/json")
             .code(429)
             .header("tier", `${tier}`)
@@ -279,8 +281,9 @@ export const start = async (): Promise<void> => {
               logger.warn("rate-limiter", JSON.stringify(log));
             }
 
-            const message = rateLimitRule.ruleParams.getRateLimitMessage(
+            const message = RateLimitRuleEntity.getRateLimitMessage(
               key,
+              rateLimitRule.ruleParams.tier,
               rateLimitRule.rule.points,
               rateLimitRule.rule.duration
             );
@@ -384,7 +387,6 @@ export const start = async (): Promise<void> => {
   setupRoutes(server);
 
   server.listener.keepAliveTimeout = 61000;
-  await generateOpenApiSpec();
   await server.start();
   logger.info("process", `Started on port ${config.port}`);
 };

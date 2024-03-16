@@ -30,7 +30,7 @@ const getMethod = (object: { [key: string]: any }) => {
   }
 };
 
-let openapiData = {};
+let openapiData: object;
 
 export const generateOpenApiSpec = async () => {
   try {
@@ -78,16 +78,7 @@ export const generateOpenApiSpec = async () => {
         url: "https://api-base.reservoir.tools",
       },
       {
-        url: "https://api-base-goerli.reservoir.tools",
-      },
-      {
-        url: "https://api-scroll-alpha.reservoir.tools",
-      },
-      {
         url: "https://api-zora.reservoir.tools",
-      },
-      {
-        url: "https://api-zora-testnet.reservoir.tools",
       },
       {
         url: "https://api-linea.reservoir.tools",
@@ -118,6 +109,15 @@ export const generateOpenApiSpec = async () => {
       },
       {
         url: "https://api-opbnb.reservoir.tools",
+      },
+      {
+        url: "https://api-blast.reservoir.tools",
+      },
+      {
+        url: "https://api-blast-sepolia.reservoir.tools",
+      },
+      {
+        url: "https://api-astar-zkevm.reservoir.tools",
       },
     ];
 

@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { logger } from "@/common/logger";
 import { config } from "@/config/index";
 
@@ -223,7 +225,36 @@ export default class OnchainMetadataProcessTokenUriJob extends AbstractRabbitMqJ
         }
       }
 
-      fallbackError = `${error}`;
+      fallbackError = `${(error as any).message}`;
+
+      if (fallbackError === "Not found") {
+        try {
+          const urlParts = uri.split("/");
+          const tokenIdPart = urlParts[urlParts.length - 1];
+
+          if (parseInt(tokenIdPart, 16) == Number(tokenId)) {
+            const newUri = uri.replace(tokenIdPart, tokenId);
+
+            await onchainMetadataProcessTokenUriJob.addToQueue({
+              contract,
+              tokenId,
+              uri: newUri,
+            });
+
+            return;
+          }
+        } catch (error) {
+          logger.error(
+            this.queueName,
+            JSON.stringify({
+              topic: "simpleHashFallbackDebug",
+              message: `Not found Error - Error Parsing TokenId. contract=${contract}, tokenId=${tokenId}, uri=${uri}`,
+              payload,
+              error,
+            })
+          );
+        }
+      }
 
       logger.warn(
         this.queueName,
@@ -231,15 +262,28 @@ export default class OnchainMetadataProcessTokenUriJob extends AbstractRabbitMqJ
           topic: tokenMetadataIndexingDebug
             ? "tokenMetadataIndexingDebug"
             : "simpleHashFallbackDebug",
-          message: `Error. contract=${contract}, tokenId=${tokenId}, uri=${uri}, retryCount=${retryCount}, error=${error}, fallbackMetadataIndexingMethod=${config.fallbackMetadataIndexingMethod}`,
+          message: `Error. contract=${contract}, tokenId=${tokenId}, uri=${uri}, retryCount=${retryCount}, error=${error}`,
           contract,
           tokenId,
-          error: `${error}`,
+          error: fallbackError,
         })
       );
     }
 
     if (!config.fallbackMetadataIndexingMethod) {
+      return;
+    }
+
+    if (fallbackError === "Invalid URI") {
+      logger.info(
+        this.queueName,
+        JSON.stringify({
+          topic: "simpleHashFallbackDebug",
+          message: `Skip Fallback. contract=${contract}, tokenId=${tokenId}, uri=${uri}`,
+          payload,
+        })
+      );
+
       return;
     }
 

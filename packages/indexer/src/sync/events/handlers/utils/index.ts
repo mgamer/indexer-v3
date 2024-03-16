@@ -40,6 +40,7 @@ import {
   permitUpdatesJob,
   PermitUpdatesJobPayload,
 } from "@/jobs/permit-updates/permit-updates-job";
+import { format } from "date-fns";
 
 // Semi-parsed and classified event
 export type EnhancedEvent = {
@@ -184,6 +185,7 @@ export const processOnChainData = async (data: OnChainData, backfill?: boolean) 
 
   const endPersistOtherEvents = Date.now();
 
+  const startAddingToQueues = Date.now();
   // Trigger further processes:
   // - revalidate potentially-affected orders
   // - store on-chain orders
@@ -200,11 +202,14 @@ export const processOnChainData = async (data: OnChainData, backfill?: boolean) 
       orderbookOrdersJob.addToQueue(data.orders),
     ]);
   }
+  const endAddingToQueues = Date.now();
 
   // Mints and last sales
+  const startAddingToQueuesMintAndLastSales = Date.now();
   await transferUpdatesJob.addToQueue(nonFillTransferEvents);
   await mintQueueJob.addToQueue(data.mintInfos);
   await fillUpdatesJob.addToQueue(data.fillInfos);
+  const endAddingToQueuesMintAndLastSales = Date.now();
 
   const startMintProcess = Date.now();
   if (!backfill) {
@@ -285,6 +290,9 @@ export const processOnChainData = async (data: OnChainData, backfill?: boolean) 
   const endProcessTransferActivityEvent = Date.now();
 
   return {
+    addingToQueues: endAddingToQueues - startAddingToQueues,
+    addingToQueuesMintAndLastSales:
+      endAddingToQueuesMintAndLastSales - startAddingToQueuesMintAndLastSales,
     mintProcess: endMintProcess - startMintProcess,
     // Return the time it took to process each step
     processRecalcOwnerCount: endProcessRecalcOwnerCount - startProcessRecalcOwnerCount,
@@ -292,6 +300,7 @@ export const processOnChainData = async (data: OnChainData, backfill?: boolean) 
       endAssignMintCommentToFillEvents - startAssignMintCommentToFillEvents,
     assignSourceToFillEvents: endAssignSourceToFillEvents - startAssignSourceToFillEvents,
     persistEvents: endPersistEvents - startPersistEvents,
+    endPersistEvents: format(new Date(endPersistEvents), "yyyy-MM-dd HH:mm:ss.SSS"),
     persistOtherEvents: endPersistOtherEvents - startPersistOtherEvents,
     fillPostProcess: endFillPostProcess - startFillPostProcess,
     processActivityEvent: endProcessActivityEvent - startProcessActivityEvent,
