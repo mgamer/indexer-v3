@@ -34,13 +34,14 @@ export const extractByCollectionERC721 = async (collection: string): Promise<Col
     const treasuryConfigurationAddress = await contract.treasuryConfiguration();
     const treasuryConfiguration = new Contract(
       treasuryConfigurationAddress,
-      new Interface([`function feeConfiguration() view returns (address)`]),
+      new Interface(["function feeConfiguration() view returns (address)"]),
       baseProvider
     );
+
     const feeConfigurationAddress = await treasuryConfiguration.feeConfiguration();
     const feeConfiguration = new Contract(
       feeConfigurationAddress,
-      new Interface([`function flatFeeAmount() view returns (uint256)`]),
+      new Interface(["function flatFeeAmount() view returns (uint256)"]),
       baseProvider
     );
 
@@ -58,7 +59,7 @@ export const extractByCollectionERC721 = async (collection: string): Promise<Col
     results.push({
       collection,
       contract: collection,
-      stage: `public-sale`,
+      stage: "public-sale",
       kind: "public",
       status: isOpen ? "open" : "closed",
       standard: STANDARD,
