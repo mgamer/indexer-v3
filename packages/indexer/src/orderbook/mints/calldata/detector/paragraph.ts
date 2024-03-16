@@ -56,6 +56,7 @@ export const extractByCollectionERC721 = async (collection: string): Promise<Col
       },
       currency: Sdk.Common.Addresses.Native[config.chainId],
       price: mintPrice.toString(),
+      maxMintsPerTransaction: "1",
     });
   } catch (error) {
     logger.error("mint-detector", JSON.stringify({ kind: STANDARD, error }));
