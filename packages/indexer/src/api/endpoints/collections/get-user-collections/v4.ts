@@ -48,7 +48,7 @@ export const getUserCollectionsV4Options: RouteOptions = {
         Joi.array()
           .items(Joi.string().lowercase())
           .min(1)
-          .max(50)
+          .max(100)
           .description(
             "Array of collections. Max limit is 50. Example: `collections[0]: 0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63`"
           ),

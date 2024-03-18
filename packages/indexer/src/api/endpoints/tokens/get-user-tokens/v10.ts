@@ -92,7 +92,7 @@ export const getUserTokensV10Options: RouteOptions = {
         ),
       tokens: Joi.alternatives().try(
         Joi.array()
-          .max(50)
+          .max(100)
           .items(Joi.string().lowercase().pattern(regex.token))
           .description(
             "Array of tokens. Max limit is 50. Example: `tokens[0]: 0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:704 tokens[1]: 0x8d04a8c79ceb0889bdd12acdf3fa9d207ed3ff63:979`"
