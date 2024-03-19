@@ -388,8 +388,8 @@ const config: HardhatUserConfig = {
         network: "blastSepolia",
         chainId: 168587773,
         urls: {
-          apiURL: "https://testnet.blastscan.io/api",
-          browserURL: "https://testnet.blastscan.io/",
+          apiURL: "https://sepolia.blastscan.io/api",
+          browserURL: "https://sepolia.blastscan.io/",
         },
       },
       {

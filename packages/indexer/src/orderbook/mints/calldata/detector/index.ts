@@ -29,6 +29,8 @@ import * as highlightxyz from "@/orderbook/mints/calldata/detector/highlightxyz"
 import * as bueno from "@/orderbook/mints/calldata/detector/bueno";
 import * as fairxyz from "@/orderbook/mints/calldata/detector/fairxyz";
 import * as fabric from "@/orderbook/mints/calldata/detector/fabric";
+import * as paragraph from "@/orderbook/mints/calldata/detector/paragraph";
+import * as mirror from "@/orderbook/mints/calldata/detector/mirror";
 
 export {
   artblocks,
@@ -47,6 +49,8 @@ export {
   bueno,
   fairxyz,
   fabric,
+  paragraph,
+  mirror,
 };
 
 export const extractByTx = async (txHash: string, skipCache = false) => {
@@ -284,6 +288,18 @@ export const extractByTx = async (txHash: string, skipCache = false) => {
     return fabricResults;
   }
 
+  // Paragraph
+  const paragraphResults = await paragraph.extractByTx(collection, tx);
+  if (paragraphResults.length) {
+    return paragraphResults;
+  }
+
+  // Mirror
+  const mirrorResults = await mirror.extractByTx(collection, tx);
+  if (mirrorResults.length) {
+    return mirrorResults;
+  }
+
   // Generic via `mintConfig`
   const metadataResult = await idb.oneOrNone(
     `
@@ -319,6 +335,27 @@ export const extractByTx = async (txHash: string, skipCache = false) => {
   return [];
 };
 
+const RESERVED_METHODS = [
+  "0x095ea7b3", // approve
+  "0x23b872dd", // transferFrom
+  "0x42966c68", // burn
+  "0xa9059cbb", // transfer
+  "0xd73dd623", // increaseApproval
+  "0x39509351", // increaseAllowance
+  "0xb88d4fde", // safeTransferFrom
+  "0x42842e0e", // safeTransferFrom
+  "0xa22cb465", // setApprovalForAll
+];
+
+const checkMintIsSafe = (mint: CollectionMint): boolean => {
+  const methodId = mint.details.tx.data.signature;
+  if (RESERVED_METHODS.includes(methodId)) {
+    return false;
+  }
+
+  return true;
+};
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const extractByContractMetadata = async (collection: string, contractMetadata: any) => {
   const mintConfig = contractMetadata.mintConfig;
@@ -333,7 +370,11 @@ export const extractByContractMetadata = async (collection: string, contractMeta
 
     // For the moment we only support public mints
     if (formatted.kind === "public") {
-      collectionMints.push(phase.format());
+      const mint = phase.format();
+      const isSafe = checkMintIsSafe(mint);
+      if (isSafe) {
+        collectionMints.push(mint);
+      }
     }
   }
 
