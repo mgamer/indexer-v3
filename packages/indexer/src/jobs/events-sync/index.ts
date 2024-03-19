@@ -78,13 +78,5 @@ if (config.catchup) {
         }
       });
     });
-
-    if (config.chainId === 1) {
-      safeWebSocketSubscription(async (provider) => {
-        provider.on("block", async (block) => {
-          logger.info("events-sync-catchup-debug", `debug - new block ${block}`);
-        });
-      }, process.env.BASE_NETWORK_WS_URL_DEBUG);
-    }
   }
 }
