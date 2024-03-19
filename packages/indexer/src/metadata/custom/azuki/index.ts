@@ -4,7 +4,6 @@ import _ from "lodash";
 import axios from "axios";
 import cbor from "cbor";
 import { config } from "@/config/index";
-import { logger } from "@/common/logger";
 
 export const fetchSatInformation = async (satUri: string) => {
   const splitUri = _.split(satUri, ":");
@@ -28,48 +27,24 @@ export const fetchSatInformation = async (satUri: string) => {
 };
 
 export const fetchTokenUriMetadata = async (
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   { contract, tokenId }: { contract: string; tokenId: string },
   uri: string
 ) => {
-  let info;
-  try {
-    info = await fetchSatInformation(uri);
-  } catch (error) {
-    logger.error(
-      "azuki-custom",
-      `failed to get info from uri ${uri} for ${contract}:${tokenId} error = ${JSON.stringify(
-        error
-      )}`
-    );
-    return {};
-  }
+  const info = await fetchSatInformation(uri);
+  let image = null;
 
-  if (_.isEmpty(info)) {
-    return {};
-  }
+  if (info?.data?.image) {
+    image = `${config.ordinalsMetadataUrl}/content/${info?.inscriptionId}`;
 
-  let image = `${config.ordinalsMetadataUrl}/content/${info?.inscriptionId}`;
-  if (info?.data?.image && info.data.image !== uri) {
-    const imageInfo = await fetchSatInformation(info.data.image);
-    image = `${config.ordinalsMetadataUrl}/content/${imageInfo?.inscriptionId}`;
+    if (info.data.image !== uri) {
+      const imageInfo = await fetchSatInformation(info.data.image);
+      image = `${config.ordinalsMetadataUrl}/content/${imageInfo?.inscriptionId}`;
+    }
   }
 
   return {
-    contract,
-    tokenId,
-    collection: contract,
-    name: info?.data.name,
-    description: info?.data.description,
-    imageUrl: image,
-    imageOriginalUrl: image,
-    metadataOriginalUrl: uri,
-    attributes: info?.data.attributes.map((attribute: any) => {
-      return {
-        key: attribute.trait_type,
-        value: attribute.value,
-        kind: "string",
-        rank: 1,
-      };
-    }),
+    ...info?.data,
+    image,
   };
 };
