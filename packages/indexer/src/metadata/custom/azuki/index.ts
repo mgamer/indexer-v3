@@ -4,6 +4,7 @@ import _ from "lodash";
 import axios from "axios";
 import cbor from "cbor";
 import { config } from "@/config/index";
+import { logger } from "@/common/logger";
 
 export const fetchSatInformation = async (satUri: string) => {
   const splitUri = _.split(satUri, ":");
@@ -30,7 +31,19 @@ export const fetchTokenUriMetadata = async (
   { contract, tokenId }: { contract: string; tokenId: string },
   uri: string
 ) => {
-  const info = await fetchSatInformation(uri);
+  let info;
+  try {
+    info = await fetchSatInformation(uri);
+  } catch (error) {
+    logger.error(
+      "azuki-custom",
+      `failed to get info from uri ${uri} for ${contract}:${tokenId} error = ${JSON.stringify(
+        error
+      )}`
+    );
+    return {};
+  }
+
   if (_.isEmpty(info)) {
     return {};
   }
