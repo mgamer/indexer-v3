@@ -377,6 +377,8 @@ export class Router {
       swapProvider?: "uniswap" | "1inch";
       // Conduit key to use when filling Seaport listings
       conduitKey?: string;
+      // Whether to skip returning gas limit suggestions for every transaction
+      skipGasSuggestions?: boolean;
       // Callback for handling errors
       onError?: (
         kind: string,
@@ -972,11 +974,11 @@ export class Router {
             details[i] = {
               ...detail,
               kind: "seaport-v1.5",
-              order: new Sdk.SeaportV15.Order(this.chainId, result.data.order),
-              extraArgs: {
-                ...details[i].extraArgs,
+              order: new Sdk.SeaportV15.Order(this.chainId, {
+                ...result.data.order,
                 extraData: result.data.extraData,
-              },
+              }),
+              extraArgs: details[i].extraArgs,
             };
           } catch (error) {
             if (options?.onError) {
@@ -4037,6 +4039,13 @@ export class Router {
           },
           ...txs,
         ];
+      }
+    }
+
+    // Remove any `gas` fields
+    if (options?.skipGasSuggestions) {
+      for (const tx of txs) {
+        delete tx.txData.gas;
       }
     }
 
