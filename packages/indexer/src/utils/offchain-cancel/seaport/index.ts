@@ -8,7 +8,12 @@ import { config } from "@/config/index";
 import { cosigner, saveOffChainCancellations } from "@/utils/offchain-cancel";
 import { Features, FlaggedTokensChecker } from "@/utils/offchain-cancel/seaport/flagged-tokens";
 
-type OrderKind = "seaport-v1.4" | "seaport-v1.5" | "alienswap";
+type OrderKind = "seaport-v1.4" | "seaport-v1.5" | "alienswap" | "seaport-v1.6";
+type Order =
+  | Sdk.SeaportV14.Order
+  | Sdk.SeaportV15.Order
+  | Sdk.Alienswap.Order
+  | Sdk.SeaportV16.Order;
 
 type CancelCall = {
   orderKind: OrderKind;
@@ -25,21 +30,20 @@ type ReplacementCall = {
 export const createOrder = (
   chainId: number,
   orderData: OrderComponents,
-  orderKind: "seaport-v1.4" | "seaport-v1.5" | "alienswap"
-): Sdk.SeaportV14.Order | Sdk.SeaportV15.Order | Sdk.Alienswap.Order => {
+  orderKind: OrderKind
+): Order => {
   if (orderKind === "alienswap") {
     return new Sdk.Alienswap.Order(chainId, orderData);
   } else if (orderKind === "seaport-v1.4") {
     return new Sdk.SeaportV14.Order(chainId, orderData);
-  } else {
+  } else if (orderKind === "seaport-v1.5") {
     return new Sdk.SeaportV15.Order(chainId, orderData);
+  } else {
+    return new Sdk.SeaportV16.Order(chainId, orderData);
   }
 };
 
-export const hashOrders = async (
-  orders: OrderComponents[],
-  orderKind: "seaport-v1.4" | "seaport-v1.5" | "alienswap"
-) => {
+export const hashOrders = async (orders: OrderComponents[], orderKind: OrderKind) => {
   let orderSigner: string | undefined;
 
   const orderHashes = [];
@@ -149,11 +153,7 @@ export const doReplacement = async ({ replacedOrders, newOrders, orderKind }: Re
   await saveOffChainCancellations(salts);
 };
 
-export const doSignOrder = async (
-  order: Sdk.SeaportV14.Order | Sdk.SeaportV15.Order | Sdk.Alienswap.Order,
-  taker: string,
-  matchParams: MatchParams
-) => {
+export const doSignOrder = async (order: Order, taker: string, matchParams: MatchParams) => {
   if (order.isCosignedOrder()) {
     const isOffChainCancelled = await idb.oneOrNone(
       `SELECT 1 FROM off_chain_cancellations WHERE order_id = $/orderId/`,

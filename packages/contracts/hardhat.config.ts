@@ -7,7 +7,8 @@ import "@nomiclabs/hardhat-ethers";
 import "@nomiclabs/hardhat-etherscan";
 import "@nomiclabs/hardhat-waffle";
 import "hardhat-gas-reporter";
-import "hardhat-tracer";
+
+// import "hardhat-tracer";
 
 // For zkSync
 import "@matterlabs/hardhat-zksync-deploy";
@@ -135,13 +136,14 @@ const config: HardhatUserConfig = {
   solidity: {
     compilers: [
       {
-        version: "0.8.17",
+        version: "0.8.24",
         settings: {
+          evmVersion: "cancun",
           viaIR: true,
-          optimizer: {
-            enabled: true,
-            runs: 200,
-          },
+          // optimizer: {
+          //   enabled: true,
+          //   runs: 200,
+          // },
         },
       },
     ],
@@ -149,6 +151,7 @@ const config: HardhatUserConfig = {
   networks: {
     // Devnets
     hardhat: {
+      hardfork: "cancun",
       chainId: networkConfig.chainId,
       forking: {
         url: networkConfig.url,
