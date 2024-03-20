@@ -465,25 +465,28 @@ describe("[ReservoirV6_0_1] SeaportV15 listings", () => {
       {
         module: swapModule.address,
         data: swapModule.interface.encodeFunctionData("erc20ToExactOutput", [
-          {
-            params: {
-              tokenIn: Sdk.Common.Addresses.Usdc[chainId][0],
-              tokenOut: Sdk.Common.Addresses.WNative[chainId],
-              fee: 500,
-              recipient: swapModule.address,
-              amountOut: bn(listing.price),
-              amountInMaximum: parseUnits("10000", 6),
-              sqrtPriceLimitX96: 0,
-            },
-            transfers: [
-              {
-                recipient: seaportV15Module.address,
-                amount: bn(listing.price),
-                toETH: true,
+          [
+            {
+              params: {
+                tokenIn: Sdk.Common.Addresses.Usdc[chainId][0],
+                tokenOut: Sdk.Common.Addresses.WNative[chainId],
+                fee: 500,
+                recipient: swapModule.address,
+                amountOut: bn(listing.price),
+                amountInMaximum: parseUnits("10000", 6),
+                sqrtPriceLimitX96: 0,
               },
-            ],
-          },
+              transfers: [
+                {
+                  recipient: seaportV15Module.address,
+                  amount: bn(listing.price),
+                  toETH: true,
+                },
+              ],
+            },
+          ],
           bob.address,
+          true,
         ]),
         value: 0,
       },
@@ -772,25 +775,28 @@ describe("[ReservoirV6_0_1] SeaportV15 listings", () => {
       {
         module: swapModule.address,
         data: swapModule.interface.encodeFunctionData("erc20ToExactOutput", [
-          {
-            params: {
-              tokenIn: Sdk.Common.Addresses.Usdc[chainId][0],
-              tokenOut: Sdk.Common.Addresses.WNative[chainId],
-              fee: 500,
-              recipient: swapModule.address,
-              amountOut: bn(listing.price),
-              amountInMaximum: parseUnits("10000", 6),
-              sqrtPriceLimitX96: 0,
-            },
-            transfers: [
-              {
-                recipient: seaportV15Module.address,
-                amount: listing.price,
-                toETH: false,
+          [
+            {
+              params: {
+                tokenIn: Sdk.Common.Addresses.Usdc[chainId][0],
+                tokenOut: Sdk.Common.Addresses.WNative[chainId],
+                fee: 500,
+                recipient: swapModule.address,
+                amountOut: bn(listing.price),
+                amountInMaximum: parseUnits("10000", 6),
+                sqrtPriceLimitX96: 0,
               },
-            ],
-          },
+              transfers: [
+                {
+                  recipient: seaportV15Module.address,
+                  amount: listing.price,
+                  toETH: false,
+                },
+              ],
+            },
+          ],
           bob.address,
+          true,
         ]),
         value: 0,
       },
@@ -977,6 +983,7 @@ describe("[ReservoirV6_0_1] SeaportV15 listings", () => {
     expect(ethBalancesAfter.swapModule).to.eq(0);
   });
 
+  // USDT has a few restrictions which we check here
   it("ApprovalProxy - Fill ETH listing with USDT", async () => {
     // Setup
 
@@ -993,7 +1000,7 @@ describe("[ReservoirV6_0_1] SeaportV15 listings", () => {
       price: parseEther("0.5"),
     };
 
-    const erc20Currency = '0xdac17f958d2ee523a2206206994597c13d831ec7';
+    const erc20Currency = "0xdac17f958d2ee523a2206206994597c13d831ec7";
     const swapExecutions: ExecutionInfo[] = [
       // 1. Swap ETH for USDC (for testing purposes only)
       {
@@ -1032,10 +1039,7 @@ describe("[ReservoirV6_0_1] SeaportV15 listings", () => {
       value: swapExecutions.map(({ value }) => value).reduce((a, b) => bn(a).add(b)),
     });
 
-    const erc20 = new Sdk.Common.Helpers.Erc20(
-      ethers.provider,
-      erc20Currency
-    );
+    const erc20 = new Sdk.Common.Helpers.Erc20(ethers.provider, erc20Currency);
     await erc20.approve(
       bob,
       new Sdk.SeaportBase.ConduitController(chainId).deriveConduit(conduitKey)
@@ -1067,10 +1071,10 @@ describe("[ReservoirV6_0_1] SeaportV15 listings", () => {
                   toETH: true,
                 },
               ],
-            }
+            },
           ],
           bob.address,
-          true
+          true,
         ]),
         value: 0,
       },
@@ -1108,7 +1112,7 @@ describe("[ReservoirV6_0_1] SeaportV15 listings", () => {
 
     // Execute
 
-    const tx = await approvalProxy.connect(bob).bulkTransferWithExecute(
+    await approvalProxy.connect(bob).bulkTransferWithExecute(
       [
         {
           items: [
@@ -1123,13 +1127,8 @@ describe("[ReservoirV6_0_1] SeaportV15 listings", () => {
         },
       ],
       executions,
-      conduitKey,
-      {
-        gasLimit: 1000000
-      }
+      conduitKey
     );
-
-    const recepient = await tx.wait();
 
     // Fetch post-state
 
