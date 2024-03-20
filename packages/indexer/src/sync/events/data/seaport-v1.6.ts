@@ -1,5 +1,5 @@
 import { Interface } from "@ethersproject/abi";
-import { SeaportV15 } from "@reservoir0x/sdk";
+import { SeaportV16 } from "@reservoir0x/sdk";
 
 import { config } from "@/config/index";
 import { EventData } from "@/events-sync/data";
@@ -7,7 +7,7 @@ import { EventData } from "@/events-sync/data";
 export const orderCancelled: EventData = {
   kind: "seaport",
   subKind: "seaport-v1.6-order-cancelled",
-  addresses: { [SeaportV15.Addresses.Exchange[config.chainId]?.toLowerCase()]: true },
+  addresses: { [SeaportV16.Addresses.Exchange[config.chainId]?.toLowerCase()]: true },
   topic: "0x6bacc01dbe442496068f7d234edd811f1a5f833243e0aec824f86ab861f3c90d",
   numTopics: 3,
   abi: new Interface([
@@ -22,7 +22,7 @@ export const orderCancelled: EventData = {
 export const orderFulfilled: EventData = {
   kind: "seaport",
   subKind: "seaport-v1.6-order-filled",
-  addresses: { [SeaportV15.Addresses.Exchange[config.chainId]?.toLowerCase()]: true },
+  addresses: { [SeaportV16.Addresses.Exchange[config.chainId]?.toLowerCase()]: true },
   topic: "0x9d9af8e38d66c62e2c12f0225249fd9d721c54b83f48d9352c97c6cacdcb6f31",
   numTopics: 3,
   abi: new Interface([
@@ -51,7 +51,7 @@ export const orderFulfilled: EventData = {
 export const ordersMatched: EventData = {
   kind: "seaport",
   subKind: "seaport-v1.6-orders-matched",
-  addresses: { [SeaportV15.Addresses.Exchange[config.chainId]?.toLowerCase()]: true },
+  addresses: { [SeaportV16.Addresses.Exchange[config.chainId]?.toLowerCase()]: true },
   topic: "0x4b9f2d36e1b4c93de62cc077b00b1a91d84b6c31b4a14e012718dcca230689e7",
   numTopics: 1,
   abi: new Interface([`event OrdersMatched(bytes32[] orderHashes)`]),
@@ -60,7 +60,7 @@ export const ordersMatched: EventData = {
 export const counterIncremented: EventData = {
   kind: "seaport",
   subKind: "seaport-v1.6-counter-incremented",
-  addresses: { [SeaportV15.Addresses.Exchange[config.chainId]?.toLowerCase()]: true },
+  addresses: { [SeaportV16.Addresses.Exchange[config.chainId]?.toLowerCase()]: true },
   topic: "0x721c20121297512b72821b97f5326877ea8ecf4bb9948fea5bfcb6453074d37f",
   numTopics: 2,
   abi: new Interface([
@@ -74,7 +74,7 @@ export const counterIncremented: EventData = {
 export const orderValidated: EventData = {
   kind: "seaport",
   subKind: "seaport-v1.6-order-validated",
-  addresses: { [SeaportV15.Addresses.Exchange[config.chainId]?.toLowerCase()]: true },
+  addresses: { [SeaportV16.Addresses.Exchange[config.chainId]?.toLowerCase()]: true },
   topic: "0xf280791efe782edcf06ce15c8f4dff17601db3b88eb3805a0db7d77faf757f04",
   numTopics: 1,
   abi: new Interface([

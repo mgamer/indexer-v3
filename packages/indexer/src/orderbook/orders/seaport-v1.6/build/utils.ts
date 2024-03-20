@@ -57,11 +57,6 @@ export const getBuildInfo = async (
   const exchange = new Sdk.SeaportV16.Exchange(config.chainId);
   const conduitKey = getConduitKeyWithDefault(options.conduitKey);
 
-  // LooksRare requires their source in the salt
-  if (options.orderbook === "looks-rare") {
-    options.source = "looksrare.org";
-  }
-
   // Check if the marketplace is blocked
   const isBlocked = await checkMarketplaceIsFiltered(fromBuffer(collectionResult.contract), [
     exchange.deriveConduit(conduitKey),
@@ -71,21 +66,14 @@ export const getBuildInfo = async (
   }
 
   // Generate the salt
-  let salt = bn(
+  const salt = bn(
     padSourceToSalt(options.salt ?? getRandomBytes(16).toString(), options.source)
   ).toHexString();
 
   // No zone by default
-  let zone = AddressZero;
+  const zone = AddressZero;
   if (options.useOffChainCancellation) {
-    if (options.orderbook === "opensea") {
-      throw new Error("Off-chain cancellation not supported when cross-posting to OpenSea");
-    }
-
-    zone = Sdk.SeaportBase.Addresses.ReservoirCancellationZone[config.chainId];
-    if (options.replaceOrderId) {
-      salt = options.replaceOrderId;
-    }
+    throw new Error("Off-chain cancellation not supported");
   }
 
   const buildParams: Sdk.SeaportBase.BaseBuildParams = {
@@ -118,7 +106,7 @@ export const getBuildInfo = async (
   let totalEndFees = bn(0);
 
   // Include royalties
-  if (options.automatedRoyalties && options.orderbook !== "looks-rare") {
+  if (options.automatedRoyalties) {
     let royalties: { bps: number; recipient: string }[] =
       (options.orderbook === "opensea"
         ? collectionResult.new_royalties?.opensea
@@ -190,10 +178,6 @@ export const getBuildInfo = async (
       options.fee.push(openseaMarketplaceFee.bps);
       options.feeRecipient.push(openseaMarketplaceFee.recipient);
     }
-  } else if (options.orderbook === "looks-rare") {
-    // Override any fees
-    options.fee = [50];
-    options.feeRecipient = [Sdk.LooksRareV2.Addresses.ProtocolFeeRecipient[config.chainId]];
   }
 
   if (options.fee && options.feeRecipient) {

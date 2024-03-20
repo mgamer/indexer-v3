@@ -1048,7 +1048,7 @@ export const getExecuteBidV5Options: RouteOptions = {
               }
 
               case "seaport-v1.6": {
-                if (!["reservoir", "opensea", "looks-rare"].includes(params.orderbook)) {
+                if (!["reservoir", "opensea"].includes(params.orderbook)) {
                   return errors.push({
                     message: "Unsupported orderbook",
                     orderIndex: i,

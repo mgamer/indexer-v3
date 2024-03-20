@@ -8,12 +8,8 @@ import { config } from "@/config/index";
 import { cosigner, saveOffChainCancellations } from "@/utils/offchain-cancel";
 import { Features, FlaggedTokensChecker } from "@/utils/offchain-cancel/seaport/flagged-tokens";
 
-type OrderKind = "seaport-v1.4" | "seaport-v1.5" | "alienswap" | "seaport-v1.6";
-type Order =
-  | Sdk.SeaportV14.Order
-  | Sdk.SeaportV15.Order
-  | Sdk.Alienswap.Order
-  | Sdk.SeaportV16.Order;
+type OrderKind = "seaport-v1.4" | "seaport-v1.5" | "alienswap";
+type Order = Sdk.SeaportV14.Order | Sdk.SeaportV15.Order | Sdk.Alienswap.Order;
 
 type CancelCall = {
   orderKind: OrderKind;
@@ -36,10 +32,8 @@ export const createOrder = (
     return new Sdk.Alienswap.Order(chainId, orderData);
   } else if (orderKind === "seaport-v1.4") {
     return new Sdk.SeaportV14.Order(chainId, orderData);
-  } else if (orderKind === "seaport-v1.5") {
-    return new Sdk.SeaportV15.Order(chainId, orderData);
   } else {
-    return new Sdk.SeaportV16.Order(chainId, orderData);
+    return new Sdk.SeaportV15.Order(chainId, orderData);
   }
 };
 

@@ -1,26 +1,32 @@
 import { AddressZero } from "@ethersproject/constants";
 import * as Sdk from "@reservoir0x/sdk";
 import { generateMerkleTree } from "@reservoir0x/sdk/dist/common/helpers/merkle";
-import { OrderKind } from "@reservoir0x/sdk/dist/seaport-base/types";
 import _ from "lodash";
 import pLimit from "p-limit";
 
 import { idb, pgp, ridb } from "@/common/db";
 import { logger } from "@/common/logger";
 import { baseProvider } from "@/common/provider";
-import { acquireLock, redis } from "@/common/redis";
 import { bn, now, toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import { getNetworkSettings } from "@/config/network";
 import { FeeRecipients } from "@/models/fee-recipients";
 import { addPendingData } from "@/jobs/arweave-relay";
-import { Collections } from "@/models/collections";
-import { getDittoPools } from "@/models/ditto-pools";
+import {
+  orderUpdatesByIdJob,
+  OrderUpdatesByIdJobPayload,
+} from "@/jobs/order-updates/order-updates-by-id-job";
+import { orderbookOrdersJob } from "@/jobs/orderbook/orderbook-orders-job";
 import { Sources } from "@/models/sources";
 import { SourcesEntity } from "@/models/sources/sources-entity";
 import { topBidsCache } from "@/models/top-bids-caching";
 import { DbOrder, OrderMetadata, generateSchemaHash } from "@/orderbook/orders/utils";
 import { offChainCheck } from "@/orderbook/orders/seaport-base/check";
+import {
+  OpenseaOrderParams,
+  getCollection,
+  getCollectionFloorAskValue,
+} from "@/orderbook/orders/seaport-base/utils";
 import * as tokenSet from "@/orderbook/token-sets";
 import { getCurrency } from "@/utils/currencies";
 import { checkMarketplaceIsFiltered } from "@/utils/marketplace-blacklists";
@@ -28,40 +34,12 @@ import { getUSDAndNativePrices } from "@/utils/prices";
 import * as royalties from "@/utils/royalties";
 import { isOpen } from "@/utils/seaport-conduits";
 
-import { refreshContractCollectionsMetadataQueueJob } from "@/jobs/collection-updates/refresh-contract-collections-metadata-queue-job";
-import {
-  orderUpdatesByIdJob,
-  OrderUpdatesByIdJobPayload,
-} from "@/jobs/order-updates/order-updates-by-id-job";
-import { orderbookOrdersJob } from "@/jobs/orderbook/orderbook-orders-job";
-import * as offchainCancel from "@/utils/offchain-cancel";
-
 export type OrderInfo = {
   orderParams: Sdk.SeaportBase.Types.OrderComponents;
   metadata: OrderMetadata;
   isReservoir?: boolean;
   isOpenSea?: boolean;
-  isOkx?: boolean;
   openSeaOrderParams?: OpenseaOrderParams;
-};
-
-export declare type OpenseaOrderParams = {
-  kind: OrderKind;
-  side: "buy" | "sell";
-  hash: string;
-  price?: string;
-  paymentToken?: string;
-  amount?: number;
-  startTime?: number;
-  endTime?: number;
-  contract: string;
-  tokenId?: string;
-  offerer?: string;
-  taker?: string;
-  isDynamic?: boolean;
-  collectionSlug: string;
-  attributeKey?: string;
-  attributeValue?: string;
 };
 
 type SaveResult = {
@@ -85,7 +63,6 @@ export const save = async (
     metadata: OrderMetadata,
     isReservoir?: boolean,
     isOpenSea?: boolean,
-    isOkx?: boolean,
     openSeaOrderParams?: OpenseaOrderParams
   ) => {
     try {
@@ -163,7 +140,7 @@ export const save = async (
           [
             {
               kind: "seaport-v1.6",
-              info: { orderParams, metadata, isReservoir, isOpenSea, isOkx, openSeaOrderParams },
+              info: { orderParams, metadata, isReservoir, isOpenSea, openSeaOrderParams },
               validateBidValue,
               ingestMethod,
               ingestDelay: startTime - currentTime + 5,
@@ -216,48 +193,19 @@ export const save = async (
         });
       }
 
-      const isProtectedOffer =
-        Sdk.SeaportBase.Addresses.OpenSeaProtectedOffersZone[config.chainId] ===
-          order.params.zone && info.side === "buy";
-
-      let zoneIsDittoPool = false;
-
       // Check: order has a known zone
       if (order.params.orderType > 1) {
         if (
           ![
             // No zone
             AddressZero,
-            // Reservoir cancellation zone
-            Sdk.SeaportBase.Addresses.ReservoirCancellationZone[config.chainId],
-            // Okx cancellation zone
-            Sdk.SeaportBase.Addresses.OkxCancellationZone[config.chainId],
-            // FxHash pausable zone
-            Sdk.SeaportBase.Addresses.FxHashPausableZone[config.chainId],
-            // Immutable protected zone
-            Sdk.SeaportBase.Addresses.ImmutableProtectedZone[config.chainId],
-          ].includes(order.params.zone) &&
-          // Protected offers zone
-          !isProtectedOffer
+          ].includes(order.params.zone)
         ) {
-          // Check if the zone is a ditto pool
-          const dittoPools = await getDittoPools();
-          if (!dittoPools.some((p) => p.address === order.params.zone)) {
-            return results.push({
-              id,
-              status: "unsupported-zone",
-            });
-          } else {
-            zoneIsDittoPool = true;
-          }
+          return results.push({
+            id,
+            status: "unsupported-zone",
+          });
         }
-      }
-
-      if (order.params.extraData && !zoneIsDittoPool) {
-        return results.push({
-          id,
-          status: "unsupported-extra-data",
-        });
       }
 
       // Check: order is valid
@@ -275,26 +223,8 @@ export const save = async (
         order.params.signature = undefined;
       }
 
-      if (
-        order.params.zone === Sdk.SeaportBase.Addresses.OkxCancellationZone[config.chainId] &&
-        !isOkx
-      ) {
-        return results.push({
-          id,
-          status: "unsupported-zone",
-        });
-      }
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      if (isOkx && !(orderParams as any).okxOrderId) {
-        return results.push({
-          id,
-          status: "missing-okx-order-id",
-        });
-      }
-
       // Check: order has a valid signature
-      if (metadata.fromOnChain || ((isOpenSea || isOkx) && !order.params.signature)) {
+      if (metadata.fromOnChain || (isOpenSea && !order.params.signature)) {
         // Skip if:
         // - the order was validated on-chain
         // - the order is coming from OpenSea / Okx and it doesn't have a signature
@@ -651,8 +581,6 @@ export const save = async (
 
       if (isOpenSea) {
         source = await sources.getOrInsert("opensea.io");
-      } else if (isOkx) {
-        source = await sources.getOrInsert("okx.com");
       }
 
       // If the order is native, override any default source
@@ -793,40 +721,6 @@ export const save = async (
         (order.params as any).partial = true;
       }
 
-      if (isOkx) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (order.params as any).okxOrderId = (orderParams as any).okxOrderId;
-      }
-
-      // Handle: off-chain cancellation via replacement
-      if (
-        order.params.zone === Sdk.SeaportBase.Addresses.ReservoirCancellationZone[config.chainId]
-      ) {
-        const replacedOrderResult = await idb.oneOrNone(
-          `
-            SELECT
-              orders.raw_data
-            FROM orders
-            WHERE orders.id = $/id/
-          `,
-          {
-            id: order.params.salt,
-          }
-        );
-        if (
-          replacedOrderResult &&
-          // Replacement is only possible if the replaced order is an off-chain cancellable one
-          replacedOrderResult.raw_data.zone ===
-            Sdk.SeaportBase.Addresses.ReservoirCancellationZone[config.chainId]
-        ) {
-          await offchainCancel.seaport.doReplacement({
-            newOrders: [order.params],
-            replacedOrders: [replacedOrderResult.raw_data],
-            orderKind: "seaport-v1.6",
-          });
-        }
-      }
-
       const validFrom = `date_trunc('seconds', to_timestamp(${startTime}))`;
       const validTo = endTime
         ? `date_trunc('seconds', to_timestamp(${order.params.endTime}))`
@@ -913,7 +807,6 @@ export const save = async (
           orderInfo.metadata,
           orderInfo.isReservoir,
           orderInfo.isOpenSea,
-          orderInfo.isOkx,
           orderInfo.openSeaOrderParams
         )
       )
@@ -981,116 +874,4 @@ export const save = async (
   }
 
   return results;
-};
-
-const getCollection = async (
-  orderParams: OpenseaOrderParams
-): Promise<{
-  id: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  royalties: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  new_royalties: any;
-  token_set_id: string | null;
-} | null> => {
-  if (orderParams.kind === "single-token") {
-    return ridb.oneOrNone(
-      `
-        SELECT
-          collections.id,
-          collections.royalties,
-          collections.new_royalties,
-          collections.token_set_id
-        FROM tokens
-        JOIN collections
-          ON tokens.collection_id = collections.id
-        WHERE tokens.contract = $/contract/
-          AND tokens.token_id = $/tokenId/
-        LIMIT 1
-      `,
-      {
-        contract: toBuffer(orderParams.contract),
-        tokenId: orderParams.tokenId,
-      }
-    );
-  } else {
-    const collection = await ridb.oneOrNone(
-      `
-        SELECT
-          collections.id,
-          collections.royalties,
-          collections.new_royalties,
-          collections.token_set_id
-        FROM collections
-        WHERE collections.contract = $/contract/
-          AND collections.slug = $/collectionSlug/
-        ORDER BY created_at DESC  
-        LIMIT 1  
-      `,
-      {
-        contract: toBuffer(orderParams.contract),
-        collectionSlug: orderParams.collectionSlug,
-      }
-    );
-
-    if (!collection) {
-      const lockAcquired = await acquireLock(
-        `unknown-slug-refresh-contract-collections-metadata-lock:${orderParams.contract}:${orderParams.collectionSlug}`,
-        60 * 60
-      );
-
-      logger.info(
-        "unknown-collection-slug",
-        JSON.stringify({
-          orderId: orderParams.hash,
-          contract: orderParams.contract,
-          collectionSlug: orderParams.collectionSlug,
-        })
-      );
-
-      if (lockAcquired) {
-        // Try to refresh the contract collections metadata.
-        await refreshContractCollectionsMetadataQueueJob.addToQueue({
-          contract: orderParams.contract,
-        });
-      }
-    }
-
-    return collection;
-  }
-};
-
-const getCollectionFloorAskValue = async (
-  contract: string,
-  tokenId: number
-): Promise<number | undefined> => {
-  if (getNetworkSettings().multiCollectionContracts.includes(contract)) {
-    const collection = await Collections.getByContractAndTokenId(contract, tokenId);
-    return collection?.floorSellValue;
-  } else {
-    const collectionFloorAskValue = await redis.get(`collection-floor-ask:${contract}`);
-
-    if (collectionFloorAskValue) {
-      return Number(collectionFloorAskValue);
-    } else {
-      const query = `
-        SELECT floor_sell_value
-        FROM collections
-        WHERE collections.contract = $/contract/
-          AND collections.token_id_range @> $/tokenId/::NUMERIC(78, 0)
-        LIMIT 1
-      `;
-
-      const collection = await ridb.oneOrNone(query, {
-        contract: toBuffer(contract),
-        tokenId,
-      });
-
-      const collectionFloorAskValue = collection?.floorSellValue || 0;
-
-      await redis.set(`collection-floor-ask:${contract}`, collectionFloorAskValue, "EX", 3600);
-
-      return collectionFloorAskValue;
-    }
-  }
 };
