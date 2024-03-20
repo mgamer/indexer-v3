@@ -4,6 +4,7 @@ import _ from "lodash";
 import axios from "axios";
 import cbor from "cbor";
 import { config } from "@/config/index";
+import { logger } from "@/common/logger";
 
 export const fetchSatInformation = async (satUri: string) => {
   const splitUri = _.split(satUri, ":");
@@ -42,6 +43,8 @@ export const fetchTokenUriMetadata = async (
       image = `${config.ordinalsMetadataUrl}/content/${imageInfo?.inscriptionId}`;
     }
   }
+
+  logger.info("fetchTokenUriMetadata", JSON.stringify({ ...info?.data, image }));
 
   return {
     ...info?.data,
