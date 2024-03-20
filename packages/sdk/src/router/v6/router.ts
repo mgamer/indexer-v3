@@ -65,6 +65,7 @@ import RaribleModuleAbi from "./abis/RaribleModule.json";
 import SeaportModuleAbi from "./abis/SeaportModule.json";
 import SeaportV14ModuleAbi from "./abis/SeaportV14Module.json";
 import SeaportV15ModuleAbi from "./abis/SeaportV15Module.json";
+import SeaportV16ModuleAbi from "./abis/SeaportV16Module.json";
 import AlienswapModuleAbi from "./abis/AlienswapModule.json";
 import SudoswapModuleAbi from "./abis/SudoswapModule.json";
 import SuperRareModuleAbi from "./abis/SuperRareModule.json";
@@ -152,7 +153,7 @@ export class Router {
       ),
       seaportV16Module: new Contract(
         Addresses.SeaportV16Module[chainId] ?? AddressZero,
-        SeaportV15ModuleAbi,
+        SeaportV16ModuleAbi,
         provider
       ),
       sudoswapModule: new Contract(
@@ -955,7 +956,7 @@ export class Router {
               throw new Error(getErrorMessage(error));
             }
           }
-        } else if (["seaport-v1.5-partial-okx"].includes(detail.kind)) {
+        } else if (["seaport-v1.5-partial-okx", "seaport-v1.6-partial-okx"].includes(detail.kind)) {
           const order = detail.order as Sdk.SeaportBase.Types.OkxPartialOrder;
 
           try {
@@ -971,15 +972,27 @@ export class Router {
             );
 
             // Override the details
-            details[i] = {
-              ...detail,
-              kind: "seaport-v1.5",
-              order: new Sdk.SeaportV15.Order(this.chainId, {
-                ...result.data.order,
-                extraData: result.data.extraData,
-              }),
-              extraArgs: details[i].extraArgs,
-            };
+            if (detail.kind === "seaport-v1.5-partial-okx") {
+              details[i] = {
+                ...detail,
+                kind: "seaport-v1.5",
+                order: new Sdk.SeaportV15.Order(this.chainId, {
+                  ...result.data.order,
+                  extraData: result.data.extraData,
+                }),
+                extraArgs: details[i].extraArgs,
+              };
+            } else {
+              details[i] = {
+                ...detail,
+                kind: "seaport-v1.6",
+                order: new Sdk.SeaportV16.Order(this.chainId, {
+                  ...result.data.order,
+                  extraData: result.data.extraData,
+                }),
+                extraArgs: details[i].extraArgs,
+              };
+            }
           } catch (error) {
             if (options?.onError) {
               options.onError("order-fetcher-okx-listing", error, {

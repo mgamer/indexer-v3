@@ -1,8 +1,8 @@
 import { BigNumberish } from "@ethersproject/bignumber";
 
+import { Permit } from "./permit";
 import * as Sdk from "../../index";
 import { TxData } from "../../utils";
-import { Permit } from "./permit";
 
 // NFT
 

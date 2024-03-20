@@ -9,7 +9,7 @@ import { ethers } from "hardhat";
 
 import { getChainId, getCurrentTimestamp, reset, setupNFTs } from "../../../utils";
 
-describe("SeaportV15 - TokenList ERC1155", () => {
+describe("SeaportV16 - TokenList ERC1155", () => {
   const chainId = getChainId();
 
   let deployer: SignerWithAddress;

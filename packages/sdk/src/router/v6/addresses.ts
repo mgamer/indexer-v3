@@ -291,6 +291,4 @@ export const PaymentProcessorModule: ChainIdToAddress = {
   [Network.Mumbai]: "0x273c845e0ad06530dfa408dc2531accd80d170a9",
 };
 
-export const SeaportV16Module: ChainIdToAddress = {
-  [Network.Ethereum]: "",
-};
+export const SeaportV16Module: ChainIdToAddress = {};
