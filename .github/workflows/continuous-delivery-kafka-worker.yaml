@@ -2,7 +2,7 @@ name: Continuous Delivery kafka worker
 
 on:
   push:
-    branches: [main, development]
+    branches: [kafka-future] # delete this file / change for future use of kafka
     paths:
       - "packages/indexer/src/jobs/cdc/**"
 
