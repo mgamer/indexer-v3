@@ -15,7 +15,7 @@ import { RateLimiterRes } from "rate-limiter-flexible";
 import { setupRoutes } from "@/api/routes";
 import { logger } from "@/common/logger";
 import { config } from "@/config/index";
-import { getSubDomain } from "@/config/network";
+// import { getSubDomain } from "@/config/network";
 import { allJobQueues } from "@/jobs/index";
 import { ApiKeyManager } from "@/models/api-keys";
 import { RateLimitRules } from "@/models/rate-limit-rules";
@@ -131,7 +131,7 @@ export const start = async (): Promise<void> => {
         documentationPage: config.environment !== "prod",
         swaggerUI: config.environment !== "prod",
         schemes: ["https", "http"],
-        host: `${getSubDomain()}.reservoir.tools`,
+        host: config.swaggerHost, // host: `${getSubDomain()}.reservoir.tools`,
         cors: true,
         tryItOutEnabled: true,
         documentationPath: "/",

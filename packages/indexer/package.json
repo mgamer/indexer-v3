@@ -17,7 +17,7 @@
     "test": "jest --no-watchman"
   },
   "dependencies": {
-    "@bull-board/hapi": "4.0.1",
+    "@bull-board/hapi": "5.15.1",
     "@commitlint/cli": "^16.2.1",
     "@commitlint/config-conventional": "^16.2.1",
     "@elastic/elasticsearch": "^8.6.0",

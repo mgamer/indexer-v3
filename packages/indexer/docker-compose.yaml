@@ -21,7 +21,7 @@ services:
       - 6379:6379
 
   rabbitmq:
-    image: ipelegi/rabbitmq:latest
+    image: hunglv46/rabbitmq-delayed-message-exchange:latest
     container_name: 'rabbitmq'
     environment:
       - RABBITMQ_DEFAULT_USER=guest
@@ -34,14 +34,33 @@ services:
 
   elasticsearch:
     container_name: 'elasticsearch'
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.7.0
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.2
     environment:
       - xpack.security.enabled=false
-      - 'discovery.type=single-node'
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
     networks:
       - local
     ports:
       - 9200:9200
+
+  redisinsight:
+    image: redislabs/redisinsight:latest
+    container_name: "redisinsight"
+    ports:
+      - "8001:8001"
+    networks:
+      - local
+    depends_on:
+      - redis
+
+  adminer:
+    image: adminer:4-standalone
+    ports:
+      - "8080:8080"
+    container_name: "adminer"
+    networks:
+      - local
 
 networks:
   local:

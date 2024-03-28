@@ -4,6 +4,7 @@ export const config = {
   chainId: Number(process.env.CHAIN_ID),
   environment: String(process.env.ENVIRONMENT),
 
+  swaggerHost: String(process.env.SWAGGER_HOST || `localhost:${process.env.PORT}`),
   adminApiKey: String(process.env.ADMIN_API_KEY),
   bullmqAdminPassword: String(process.env.BULLMQ_ADMIN_PASSWORD),
   arweaveRelayerKey: process.env.ARWEAVE_RELAYER_KEY

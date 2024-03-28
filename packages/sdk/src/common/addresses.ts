@@ -33,6 +33,7 @@ export const Native: ChainIdToAddress = {
   [Network.Blast]: AddressZero,
   [Network.AstarZkevm]: AddressZero,
   [Network.ApexTestnet]: AddressZero,
+  [Network.EvmosTestnet]: AddressZero,
 };
 
 // Wrapped native currency
@@ -66,6 +67,7 @@ export const WNative: ChainIdToAddress = {
   [Network.Blast]: "0x4300000000000000000000000000000000000004",
   [Network.AstarZkevm]: "0xe9cc37904875b459fa5d0fe37680d36f1ed55e38",
   [Network.ApexTestnet]: "0xf470ba53f14B1073cC16839c0f80474105d159a5",
+  [Network.EvmosTestnet]: "0xE9cF9154212D862264E794b72B8aB4568Bb50813",
 };
 
 export const Usdc: ChainIdToAddressList = {
@@ -135,6 +137,7 @@ export const RoyaltyEngine: ChainIdToAddress = {
   [Network.PolygonZkevm]: "0x60b433ee91680189deb2c94b0b062ea283f6b4dd",
   [Network.Ancient8Testnet]: "0x8755310f937528173e7c5a106131d79a3601c9d9",
   [Network.Scroll]: "0xc055b6d9fd8146bc76fcd6f944c8669d5279ed95",
+  [Network.EvmosTestnet]: "0x135803cA38824Cc8A40aCC67Ea1Bd3D5E6A23082",
 };
 
 // Uniswap's `SwapRouter02`
