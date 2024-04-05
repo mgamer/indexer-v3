@@ -12,6 +12,7 @@ import {
   CollectionMintStatus,
   CollectionMintStatusReason,
 } from "@/orderbook/mints";
+import { config } from "@/config/index";
 
 // Any number greater than a particular threshold is assumed to represent "infinite" / "unknown"
 export const toSafeTimestamp = (value?: BigNumberish) => {
@@ -49,7 +50,11 @@ export const toSafeNumber = (value?: BigNumberish) => {
 
 export const fetchMetadata = async (url: string) => {
   if (url.startsWith("ipfs://")) {
-    url = `https://ipfs.io/ipfs/${url.slice(7)}`;
+    if (config.ipfsGatewayDomain) {
+      url = `http://${config.ipfsGatewayDomain}:8080/ipfs/${url.slice(7)}`;
+    } else {
+      url = `https://ipfs.io/ipfs/${url.slice(7)}`;
+    }
   }
 
   return axios.get(url).then((response) => response.data);
