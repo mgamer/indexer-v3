@@ -728,6 +728,7 @@ export const getTopSellingCollectionsV2 = async (params: {
   const { trendingExcludedContracts } = getNetworkSettings();
   const spamCollectionsCache = await redis.get("active-spam-collection-ids");
   const spamCollections = spamCollectionsCache ? JSON.parse(spamCollectionsCache) : [];
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const excludedCollections = spamCollections.concat(trendingExcludedContracts || []);
 
   const salesQuery = {
@@ -749,22 +750,23 @@ export const getTopSellingCollectionsV2 = async (params: {
         },
       ],
 
-      must_not: [
-        {
-          term: {
-            "event.washTradingScore": 1,
-          },
-        },
-        ...(excludedCollections.length > 0
-          ? [
-              {
-                terms: {
-                  "collection.id": excludedCollections,
-                },
-              },
-            ]
-          : []),
-      ],
+      // TODO filterout wash trading from collection top trend
+      // must_not: [
+      //   {
+      //     term: {
+      //       "event.washTradingScore": 1,
+      //     },
+      //   },
+      //   ...(excludedCollections.length > 0
+      //     ? [
+      //         {
+      //           terms: {
+      //             "collection.id": excludedCollections,
+      //           },
+      //         },
+      //       ]
+      //     : []),
+      // ],
     },
   } as any;
 
