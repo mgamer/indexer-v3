@@ -167,6 +167,28 @@ export const getAmountMinted = async (
   return bn(amountMinted);
 };
 
+export const getMaxMintableAmount = async (
+  allowlistId: string,
+  user: string
+): Promise<BigNumber> => {
+  const maxMintableAmount = await idb
+    .one(
+      `
+    SELECT max_mints
+    FROM allowlists_items
+    WHERE allowlists_items.allowlist_id = $/allowlist_id/
+      AND allowlists_items.address = $/address/
+  `,
+      {
+        allowlist_id: allowlistId,
+        address: toBuffer(user),
+      }
+    )
+    .then((r) => r.max_mints);
+
+  return bn(maxMintableAmount);
+};
+
 export const getCurrentSupply = async (collectionMint: CollectionMint): Promise<BigNumber> => {
   let tokenCount: string;
   if (collectionMint.tokenId) {

@@ -5,7 +5,11 @@ import { logger } from "@/common/logger";
 import { bn, fromBuffer, now, toBuffer } from "@/common/utils";
 import { mintsRefreshJob } from "@/jobs/mints/mints-refresh-job";
 import { MintTxSchema, CustomInfo } from "@/orderbook/mints/calldata";
-import { getAmountMinted, getCurrentSupply } from "@/orderbook/mints/calldata/helpers";
+import {
+  getAmountMinted,
+  getCurrentSupply,
+  getMaxMintableAmount,
+} from "@/orderbook/mints/calldata/helpers";
 import { simulateCollectionMint } from "@/orderbook/mints/simulation";
 
 export type CollectionMintKind = "public" | "allowlist";
@@ -455,6 +459,18 @@ export const getAmountMintableByWallet = async (
   if (collectionMint.maxMintsPerWallet) {
     const mintedAmount = await getAmountMinted(collectionMint, user);
     const remainingAmount = bn(collectionMint.maxMintsPerWallet).sub(mintedAmount);
+    if (!amountMintable) {
+      amountMintable = remainingAmount;
+    } else {
+      amountMintable = remainingAmount.lt(amountMintable) ? remainingAmount : amountMintable;
+    }
+  }
+
+  // Handle remaining supply for zora presale mint stage
+  if (collectionMint.allowlistId) {
+    const mintedAmount = await getAmountMinted(collectionMint, user);
+    const maxMintableAmount = await getMaxMintableAmount(collectionMint.allowlistId, user);
+    const remainingAmount = maxMintableAmount.sub(mintedAmount);
     if (!amountMintable) {
       amountMintable = remainingAmount;
     } else {
